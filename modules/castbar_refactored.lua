@@ -95,6 +95,7 @@ local castbarStates = {
         casting = false,
         isChanneling = false,
         spellStartTime = 0,
+        spellEndTime = 0, -- AÑADIDO: Para seguimiento de tiempo absoluto y pushback
         spellDuration = 0,
         holdTime = 0,
         currentSpellName = "",
@@ -682,15 +683,24 @@ local function UpdateCastTimeText(castbarType)
     end
 
     local seconds = 0;
-    local secondsMax = state.maxValue or 0;
+    local secondsMax = 0;
 
-    if state.casting or state.isChanneling then
-        if state.casting and not state.isChanneling then
-            -- Para casts regulares, mostrar tiempo restante
-            seconds = math.max(0, state.maxValue - state.currentValue);
-        else
-            -- Para channels, mostrar currentValue como tiempo restante
-            seconds = math.max(0, state.currentValue);
+    -- ARREGLO PUSHBACK: Usar tiempo absoluto para el jugador, relativo para los demás
+    if castbarType == "player" and state.spellStartTime > 0 and state.spellEndTime > 0 then
+        local now = GetTime();
+        secondsMax = state.spellEndTime - state.spellStartTime;
+        seconds = math.max(0, state.spellEndTime - now);
+    else
+        -- Lógica original para target/focus
+        secondsMax = state.maxValue or 0;
+        if state.casting or state.isChanneling then
+            if state.casting and not state.isChanneling then
+                -- Para casts regulares, mostrar tiempo restante
+                seconds = math.max(0, state.maxValue - state.currentValue);
+            else
+                -- Para channels, mostrar currentValue como tiempo restante
+                seconds = math.max(0, state.currentValue);
+            end
         end
     end
 
@@ -792,8 +802,12 @@ local function FinishSpell(castbarType)
 
     -- Establecer valor final
     if state.maxValue then
-        frameData.castbar:SetValue(state.maxValue);
-        state.currentValue = state.maxValue;
+        if castbarType == "player" then
+            frameData.castbar:SetValue(state.spellEndTime);
+        else
+            frameData.castbar:SetValue(state.maxValue);
+            state.currentValue = state.maxValue;
+        end
         -- CORREGIDO: Asegurar que la textura se muestre completamente al finalizar
         if frameData.castbar.UpdateTextureClipping then
             frameData.castbar:UpdateTextureClipping(1.0, state.isChanneling);
@@ -826,6 +840,10 @@ local function FinishSpell(castbarType)
     -- Resetear estado de casting
     state.casting = false;
     state.isChanneling = false;
+    if castbarType == "player" then
+        state.spellStartTime = 0;
+        state.spellEndTime = 0;
+    end
 
     -- Establecer tiempo de hold
     state.holdTime = cfg.holdTime or 0.3;
@@ -852,13 +870,20 @@ local function HandleCastStop(castbarType, event, isInterrupted)
 
     -- Calcular porcentaje de completado
     local completionPercentage = 0;
-    if state.maxValue and state.maxValue > 0 then
-        if state.isChanneling then
-            completionPercentage = (state.maxValue - state.currentValue) / state.maxValue;
-        else
-            completionPercentage = state.currentValue / state.maxValue;
+    if castbarType == "player" then
+        if state.spellEndTime > state.spellStartTime then
+            completionPercentage = (GetTime() - state.spellStartTime) / (state.spellEndTime - state.spellStartTime);
+        end
+    else
+        if state.maxValue and state.maxValue > 0 then
+            if state.isChanneling then
+                completionPercentage = (state.maxValue - state.currentValue) / state.maxValue;
+            else
+                completionPercentage = state.currentValue / state.maxValue;
+            end
         end
     end
+
 
     -- Manejar según el tipo de evento y completado
     if isInterrupted then
@@ -873,7 +898,11 @@ local function HandleCastStop(castbarType, event, isInterrupted)
         ForceStatusBarTextureLayer(frameData.castbar);
 
         -- CORREGIDO: Para interrupciones, usar el sistema de clipping como las otras barras
-        frameData.castbar:SetValue(state.maxValue); -- Llenar completamente la barra
+        if castbarType == "player" then
+             frameData.castbar:SetValue(state.spellEndTime);
+        else
+            frameData.castbar:SetValue(state.maxValue); -- Llenar completamente la barra
+        end
 
         -- Usar UpdateTextureClipping para mantener capas consistentes
         if frameData.castbar.UpdateTextureClipping then
@@ -1017,7 +1046,7 @@ local function UpdateCastbar(castbarType, self, elapsed)
             state.currentValue = state.maxValue;
         end
 
-        self:SetValue(state.maxValue);
+        self:SetValue(state.spellEndTime);
         if self.UpdateTextureClipping then
             self:UpdateTextureClipping(1.0, state.isChanneling);
         end
@@ -1099,12 +1128,31 @@ local function UpdateCastbar(castbarType, self, elapsed)
         end
 
         if shouldSync then
-            -- Intentar sincronizar con castbar de Blizzard primero  
-            local syncSucceeded = SyncWithBlizzardCastbar(castbarType, self);
+            local syncSucceeded = false;
+            if castbarType ~= "player" then
+                syncSucceeded = SyncWithBlizzardCastbar(castbarType, self);
+            end
 
-            -- Para player castbar, siempre hacer fallback a cálculo manual
-            if not syncSucceeded or castbarType == "player" then
-                -- Fallback a cálculo manual
+            -- ARREGLO PUSHBACK: La barra del jugador ahora usa un modelo de tiempo absoluto de alta precisión.
+            if castbarType == "player" then
+                if state.spellStartTime > 0 and state.spellEndTime > 0 then
+                    local now = GetTime();
+                    self:SetValue(math.min(now, state.spellEndTime));
+
+                    local totalDuration = state.spellEndTime - state.spellStartTime;
+                    local progress = 0;
+                    if totalDuration > 0 then
+                        progress = (now - state.spellStartTime) / totalDuration;
+                    end
+                    progress = math.max(0, math.min(1, progress));
+
+                    if self.UpdateTextureClipping then
+                        self:UpdateTextureClipping(progress, state.isChanneling);
+                    end
+                    UpdateCastTimeText(castbarType);
+                end
+            elseif not syncSucceeded then
+                -- Fallback a cálculo manual para target/focus
                 if state.casting and not state.isChanneling then
                     state.currentValue = state.currentValue + elapsed;
                     if state.currentValue >= state.maxValue then
@@ -1119,13 +1167,10 @@ local function UpdateCastbar(castbarType, self, elapsed)
 
                 -- Aplicar valores manuales
                 self:SetValue(state.currentValue);
-                -- CORREGIDO: Calcular progreso correcto para channels vs casting
                 local progress;
                 if state.isChanneling then
-                    -- Para channels: mostrar como progreso de consumo (de 1 a 0)
                     progress = state.currentValue / state.maxValue;
                 else
-                    -- Para casting: mostrar como progreso de construcción (de 0 a 1)
                     progress = state.currentValue / state.maxValue;
                 end
                 if self.UpdateTextureClipping then
@@ -1137,15 +1182,18 @@ local function UpdateCastbar(castbarType, self, elapsed)
 
         -- Actualizar posición del spark
         if (state.casting or state.isChanneling) and frameData.spark and frameData.spark:IsShown() then
-            -- CORREGIDO: Usar el mismo progreso que la barra para mantener sincronización
-            local progress;
-            if state.isChanneling then
-                -- Para channels: spark sigue el progreso de la barra (de 1 a 0)
-                progress = state.currentValue / state.maxValue;
+            local progress = 0;
+            if castbarType == "player" then
+                if state.spellEndTime > state.spellStartTime then
+                    progress = (GetTime() - state.spellStartTime) / (state.spellEndTime - state.spellStartTime);
+                end
             else
-                -- Para casting: spark va de izquierda a derecha (de 0 a 1)
-                progress = state.currentValue / state.maxValue;
+                if state.maxValue > 0 then
+                    progress = state.currentValue / state.maxValue;
+                end
             end
+            progress = math.max(0, math.min(1, progress));
+
             local actualWidth = self:GetWidth() * progress;
             frameData.spark:ClearAllPoints();
             frameData.spark:SetPoint('CENTER', self, 'LEFT', actualWidth, 0);
@@ -1157,6 +1205,7 @@ local function UpdateCastbar(castbarType, self, elapsed)
         end
     end
 end
+
 
 -- Crear funciones de OnUpdate específicas para cada tipo
 local function CreateUpdateFunction(castbarType)
@@ -1221,11 +1270,21 @@ local function HandleCastStart(castbarType, unit)
         end
     end
 
-    state.currentValue = 0;
-    state.maxValue = spellDuration;
+    -- ARREGLO PUSHBACK: Almacenar tiempos absolutos para todas las barras para consistencia
+    state.spellStartTime = startTimeSeconds;
+    state.spellEndTime = endTimeSeconds;
 
-    frameData.castbar:SetMinMaxValues(0, state.maxValue);
-    frameData.castbar:SetValue(state.currentValue);
+    if castbarType == "player" then
+        -- Usar modelo de tiempo absoluto para el jugador
+        frameData.castbar:SetMinMaxValues(startTimeSeconds, endTimeSeconds);
+        frameData.castbar:SetValue(GetTime());
+    else
+        -- Usar modelo de tiempo relativo para target/focus
+        state.currentValue = 0;
+        state.maxValue = spellDuration;
+        frameData.castbar:SetMinMaxValues(0, state.maxValue);
+        frameData.castbar:SetValue(state.currentValue);
+    end
 
     -- Mostrar castbar
     frameData.castbar:Show();
@@ -1311,12 +1370,22 @@ local function HandleChannelStart(castbarType, unit)
     -- CORREGIDO: Usar parsing correcto para channeling como el original
     local startTimeSeconds, endTimeSeconds, spellDuration = ParseCastTimes(startTime, endTime);
 
-    -- CRITICAL FIX: Para channeling empezar desde max y contar hacia abajo
-    state.maxValue = spellDuration;
-    state.currentValue = spellDuration; -- Empezar desde el máximo para channeling
+    -- ARREGLO PUSHBACK: Almacenar tiempos absolutos para todas las barras
+    state.spellStartTime = startTimeSeconds;
+    state.spellEndTime = endTimeSeconds;
 
-    frameData.castbar:SetMinMaxValues(0, state.maxValue);
-    frameData.castbar:SetValue(state.currentValue);
+    if castbarType == "player" then
+        -- Usar modelo de tiempo absoluto para el jugador
+        frameData.castbar:SetMinMaxValues(startTimeSeconds, endTimeSeconds);
+        frameData.castbar:SetValue(GetTime());
+    else
+        -- CRITICAL FIX: Para channeling empezar desde max y contar hacia abajo
+        state.maxValue = spellDuration;
+        state.currentValue = spellDuration; -- Empezar desde el máximo para channeling
+        frameData.castbar:SetMinMaxValues(0, state.maxValue);
+        frameData.castbar:SetValue(state.currentValue);
+    end
+
 
     -- Mostrar castbar
     frameData.castbar:Show();
@@ -1420,9 +1489,15 @@ local function HandleCastingEvents(castbarType, event, unit, ...)
         local state = castbarStates[castbarType];
         local isInterrupted = false;
 
-        -- Si el channel se detiene antes del 90% de completado, probablemente fue interrumpido
-        if state.isChanneling and state.maxValue > 0 then
-            local completionPercentage = (state.maxValue - state.currentValue) / state.maxValue;
+        if state.isChanneling then
+            local completionPercentage = 0;
+            if castbarType == "player" then
+                if state.spellEndTime > state.spellStartTime then
+                     completionPercentage = (GetTime() - state.spellStartTime) / (state.spellEndTime - state.spellStartTime);
+                end
+            elseif state.maxValue > 0 then
+                completionPercentage = (state.maxValue - state.currentValue) / state.maxValue;
+            end
             isInterrupted = completionPercentage < 0.9;
         end
 
@@ -1790,8 +1865,6 @@ RefreshCastbar = function(castbarType)
     -- Crear castbar si no existe
     if not frames[castbarType].castbar then
         CreateCastbar(castbarType);
-
-        -- PROBANDO
     end
 
     local frameData = frames[castbarType];
@@ -1934,10 +2007,6 @@ RefreshCastbar = function(castbarType)
     -- Asegurar que el color de vértice se mantenga después del refresh
     ApplyVertexColor(frameData.castbar);
 
-    -- CRITICAL: Forzar orden de capas después del refresh (doble seguridad)
-    -- Esto garantiza que múltiples refreshes no alteren el sublevel del spark
-    -- CORREGIDO: Usar la función helper para asegurar que se usa el sublevel correcto (5)
-
     -- Aplicar configuración de modo de texto
     if cfg.text_mode then
         SetTextMode(castbarType, cfg.text_mode);
@@ -2004,6 +2073,29 @@ function OnCastbarEvent(self, event, unit, ...)
         return;
     end
 
+    -- ARREGLO PUSHBACK: Manejar eventos de retraso para el jugador
+    if (event == 'UNIT_SPELLCAST_DELAYED' or event == 'UNIT_SPELLCAST_CHANNEL_UPDATE') and unit == 'player' then
+        local state = castbarStates.player
+        local frameData = frames.player
+        local name, _, _, _, startTime, endTime
+
+        if event == 'UNIT_SPELLCAST_DELAYED' then
+            name, _, _, _, startTime, endTime = UnitCastingInfo(unit)
+        else
+            name, _, _, _, startTime, endTime = UnitChannelInfo(unit)
+        end
+        
+        if name and startTime and endTime then
+            local startTimeSecs, endTimeSecs, _ = ParseCastTimes(startTime, endTime)
+            state.spellStartTime = startTimeSecs
+            state.spellEndTime = endTimeSecs
+            if frameData.castbar then
+                 frameData.castbar:SetMinMaxValues(startTimeSecs, endTimeSecs)
+            end
+        end
+        return;
+    end
+
     -- Determinar tipo de castbar basado en unit
     local castbarType;
     if unit == 'player' then
@@ -2051,7 +2143,8 @@ local function InitializeCastbar()
     -- Registrar todos los eventos necesarios en un solo lugar
     local allEvents = {'PLAYER_ENTERING_WORLD', 'UNIT_SPELLCAST_START', 'UNIT_SPELLCAST_STOP', 'UNIT_SPELLCAST_FAILED',
                        'UNIT_SPELLCAST_INTERRUPTED', 'UNIT_SPELLCAST_CHANNEL_START', 'UNIT_SPELLCAST_CHANNEL_STOP',
-                       'UNIT_SPELLCAST_SUCCEEDED', 'UNIT_AURA', 'PLAYER_TARGET_CHANGED', 'PLAYER_FOCUS_CHANGED'};
+                       'UNIT_SPELLCAST_SUCCEEDED', 'UNIT_AURA', 'PLAYER_TARGET_CHANGED', 'PLAYER_FOCUS_CHANGED',
+                       'UNIT_SPELLCAST_DELAYED', 'UNIT_SPELLCAST_CHANNEL_UPDATE'}; -- ARREGLO PUSHBACK: Eventos nuevos añadidos
 
     for _, event in ipairs(allEvents) do
         initFrame:RegisterEvent(event);
@@ -2077,4 +2170,3 @@ end
 
 -- Iniciar inicialización
 InitializeCastbar();
-
