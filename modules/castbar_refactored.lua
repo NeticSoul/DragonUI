@@ -1766,8 +1766,11 @@ local function CreateCastbar(castbarType)
     frameData.ticks = {};
     CreateChannelTicks(frameData.castbar, frameData.ticks, 15);
 
-    -- PASO 5: SPARK - SE CREARÁ DESPUÉS EN RefreshCastbar() cuando el frame esté posicionado
-    frameData.spark = nil; -- Placeholder
+    -- PASO 5: SPARK (OVERLAY layer) - CORREGIDO
+    frameData.spark = frameData.castbar:CreateTexture(nil, 'OVERLAY', nil, 1);
+    frameData.spark:SetTexture(TEXTURES.spark);
+    frameData.spark:SetBlendMode('ADD');
+    frameData.spark:Hide();
 
     -- PASO 6: FLASH DE COMPLETADO (OVERLAY layer)
     frameData.flash = frameData.castbar:CreateTexture(nil, 'OVERLAY');
@@ -1852,7 +1855,6 @@ RefreshCastbar = function(castbarType)
     local timeSinceLastRefresh = currentTime - (lastRefreshTime[castbarType] or 0);
     -- No permitir refreshes más frecuentes que cada 0.1 segundos (excepto primer refresh)
     if timeSinceLastRefresh < 0.1 and (lastRefreshTime[castbarType] or 0) > 0 then
-        -- Descomentar para debug: print("[DragonUI Castbar] BLOCKED rapid refresh for " .. castbarType .. " (time since last: " .. string.format("%.3f", timeSinceLastRefresh) .. "s)");
         return;
     end
 
@@ -1922,23 +1924,7 @@ RefreshCastbar = function(castbarType)
     frameData.castbar:SetPoint(anchorPoint, anchorFrame, relativePoint, xPos, yPos - auraOffset);
     frameData.castbar:SetSize(cfg.sizeX or 200, cfg.sizeY or 16);
     frameData.castbar:SetScale(cfg.scale or 1);
-
-    -- CRÍTICO: Crear/configurar la chispa DESPUÉS de que el frame padre esté completamente configurado
-    if not frameData.spark then
-        -- Convertir el spark en un frame independiente para un control de capas superior
-        frameData.spark = CreateFrame("Frame", frameName .. "Spark", UIParent);
-        frameData.spark:SetFrameStrata("MEDIUM");
-        frameData.spark:SetFrameLevel(11); -- Nivel superior al castbar (10)
-        frameData.spark:SetSize(16, 16);
-        frameData.spark:SetPoint('CENTER', frameData.castbar, 'LEFT', 0, 0);
-        frameData.spark:Hide();
-
-        local sparkTexture = frameData.spark:CreateTexture(nil, 'ARTWORK');
-        sparkTexture:SetTexture(TEXTURES.spark);
-        sparkTexture:SetAllPoints(frameData.spark);
-        sparkTexture:SetBlendMode('ADD');
-    end
-
+    
     -- Posicionar frame de fondo de texto
     if frameData.textBackground then
         frameData.textBackground:ClearAllPoints();
@@ -2004,10 +1990,9 @@ RefreshCastbar = function(castbarType)
 
     -- Actualizar tamaño del spark (proporcional a la altura del castbar)
     if frameData.spark then
-        local sparkSize = cfg.sizeY or 16;
-        frameData.spark:SetSize(sparkSize, sparkSize * 2);
-        frameData.spark:ClearAllPoints();
-        frameData.spark:SetPoint('CENTER', frameData.castbar, 'LEFT', 0, 0);
+        local sparkHeight = (cfg.sizeY or 16) * 2;
+        local sparkWidth = sparkHeight / 2; -- Mantener la proporción
+        frameData.spark:SetSize(sparkWidth, sparkHeight);
     end
 
     -- Actualizar tamaños de ticks
