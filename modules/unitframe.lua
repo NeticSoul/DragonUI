@@ -945,7 +945,11 @@ function unitframe:ApplySettings()
         else
             unitframe.MoveTargetFrame(objLocal.anchor, objLocal.anchorParent, objLocal.x, objLocal.y)
         end
+		-- Support for Combo Points scaling
         TargetFrame:SetScale(obj.scale)
+			if ComboFrame and TargetFrame then
+				ComboFrame:SetScale(TargetFrame:GetScale() or 1)
+			end
         -- unitframe.ReApplyTargetFrame() -- REMOVED: Redundant call.
         -- unitframe.ChangeToT() -- REMOVED: Redundant call.
         -- if UnitExists('targettarget') then -- REMOVED: Redundant call.
