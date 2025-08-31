@@ -1857,6 +1857,54 @@ function unitframe.UpdatePlayerFrameTextSelective(showHealth, showMana)
             dragonFrame.PlayerFrameManaBarTextRight:SetText("")
             dragonFrame.PlayerFrameManaBarTextRight:Hide()
         end
+	end
+		
+	-- Handle Druid Alternate Mana Bar
+    if PlayerFrameAlternateManaBar and PlayerFrameAlternateManaBar:IsVisible() then
+        if not _G["DragonUIDruidManaText"] then
+            local text = PlayerFrameAlternateManaBar:CreateFontString("DragonUIDruidManaText", "OVERLAY", "TextStatusBarText")
+            text:SetPoint("CENTER", PlayerFrameAlternateManaBar, "CENTER", 0, 0)
+        end
+        if not _G["DragonUIDruidManaTextLeft"] then
+            local textLeft = PlayerFrameAlternateManaBar:CreateFontString("DragonUIDruidManaTextLeft", "OVERLAY", "TextStatusBarText")
+            textLeft:SetPoint("LEFT", PlayerFrameAlternateManaBar, "LEFT", 6, 0)
+            textLeft:SetJustifyH("LEFT")
+        end
+        if not _G["DragonUIDruidManaTextRight"] then
+            local textRight = PlayerFrameAlternateManaBar:CreateFontString("DragonUIDruidManaTextRight", "OVERLAY", "TextStatusBarText")
+            textRight:SetPoint("RIGHT", PlayerFrameAlternateManaBar, "RIGHT", -6, 0)
+            textRight:SetJustifyH("RIGHT")
+        end
+        
+        local textFrame = _G["DragonUIDruidManaText"]
+        local textFrameLeft = _G["DragonUIDruidManaTextLeft"]
+        local textFrameRight = _G["DragonUIDruidManaTextRight"]
+
+        if showMana then
+            local mana, maxMana = UnitPower("player", 0), UnitPowerMax("player", 0)
+            local formattedText = FormatStatusText(mana, maxMana, config.textFormat, config.breakUpLargeNumbers, "player")
+
+            if type(formattedText) == "table" then
+                textFrameLeft:SetText(formattedText.percentage or "")
+                textFrameRight:SetText(formattedText.current or "")
+                textFrameLeft:Show()
+                textFrameRight:Show()
+                textFrame:Hide()
+            else
+                textFrame:SetText(formattedText)
+                textFrame:Show()
+                textFrameLeft:Hide()
+                textFrameRight:Hide()
+            end
+        else
+            textFrame:Hide()
+            textFrameLeft:Hide()
+            textFrameRight:Hide()
+        end
+    elseif _G["DragonUIDruidManaText"] then
+        _G["DragonUIDruidManaText"]:Hide()
+        if _G["DragonUIDruidManaTextLeft"] then _G["DragonUIDruidManaTextLeft"]:Hide() end
+        if _G["DragonUIDruidManaTextRight"] then _G["DragonUIDruidManaTextRight"]:Hide() end
     end
 end
 
@@ -7849,4 +7897,3 @@ profileCallbackFrame:SetScript("OnEvent", function(self, event, addonName)
         self:UnregisterEvent("ADDON_LOADED")
     end
 end)
-
