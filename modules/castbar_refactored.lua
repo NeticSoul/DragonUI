@@ -909,7 +909,7 @@ local function HandleCastStop(castbarType, event, isInterrupted)
             frameData.castbar:UpdateTextureClipping(1.0, false); -- Mostrar completo sin recorte
         end
 
-        SetCastText(castbarType, "Interrumpido");
+        SetCastText(castbarType, "Interrupted");
 
         state.casting = false;
         state.isChanneling = false;
