@@ -32,18 +32,18 @@ local UV_COORDS = {
 
 -- Configuración de canal ticks
 local CHANNEL_TICKS = {
-    -- Warlock
+    -- Brujo
     ["Drain Soul"] = 5,
     ["Drain Life"] = 5,
     ["Drain Mana"] = 5,
     ["Rain of Fire"] = 4,
     ["Hellfire"] = 15,
     ["Ritual of Summoning"] = 5,
-    -- Priest
+    -- Sacerdote
     ["Mind Flay"] = 3,
     ["Mind Control"] = 8,
     ["Penance"] = 2,
-    -- Mage
+    -- Mago
     ["Blizzard"] = 8,
     ["Evocation"] = 4,
     ["Arcane Missiles"] = 5,
@@ -156,7 +156,7 @@ local auraCache = {
 -- =================================================================
 
 local RefreshCastbar;
--- Forward declarations for functions used before definition
+-- Declaraciones anticipadas para funciones usadas antes de su definición
 local HandleCastStop;
 
 -- Función para forzar la capa correcta de StatusBar texture
@@ -203,7 +203,7 @@ local function GetSpellIconImproved(spellName, texture, castID)
         if spellTexture then
             return spellTexture
         end
-        -- Búsqueda en spellbook
+        -- Búsqueda en el libro de hechizos
         for i = 1, 1024 do
             local name, _, icon = GetSpellInfo(i, BOOKTYPE_SPELL);
             if not name then
@@ -909,7 +909,7 @@ local function HandleCastStop(castbarType, event, isInterrupted)
             frameData.castbar:UpdateTextureClipping(1.0, false); -- Mostrar completo sin recorte
         end
 
-        SetCastText(castbarType, "Interrupted");
+        SetCastText(castbarType, "Interrumpido");
 
         state.casting = false;
         state.isChanneling = false;
@@ -940,11 +940,11 @@ local function UpdateCastbar(castbarType, self, elapsed)
             return
         end
 
-        -- FIXED: Check if target/focus still exists - if not, immediately hide castbar
+        -- CORREGIDO: Comprobar si el objetivo/foco todavía existe - si no, ocultar inmediatamente la barra de lanzamiento
         local unit = castbarType;
         if not UnitExists(unit) then
             if state.casting or state.isChanneling then
-                -- Target/focus died or disappeared during casting - hide castbar immediately
+                -- El objetivo/foco murió o desapareció durante el lanzamiento - ocultar la barra de lanzamiento inmediatamente
                 self:Hide();
                 if frameData.background then
                     frameData.background:Hide()
@@ -965,7 +965,7 @@ local function UpdateCastbar(castbarType, self, elapsed)
                     frameData.icon:Hide()
                 end
 
-                -- Reset state
+                -- Restablecer estado
                 state.casting = false;
                 state.isChanneling = false;
                 state.holdTime = 0;
@@ -977,9 +977,9 @@ local function UpdateCastbar(castbarType, self, elapsed)
     elseif not cfg or not cfg.enabled then
         return;
     else
-        -- FIXED: For player castbar, check if target exists when casting target spells
+        -- CORREGIDO: Para la barra de lanzamiento del jugador, comprobar si el objetivo existe al lanzar hechizos de objetivo
         if (state.casting or state.isChanneling) and state.currentSpellName then
-            -- Common target spells that should be interrupted if target dies
+            -- Hechizos de objetivo comunes que deben interrumpirse si el objetivo muere
             local targetSpells = {
                 ["Fireball"] = true,
                 ["Frostbolt"] = true,
@@ -1001,9 +1001,9 @@ local function UpdateCastbar(castbarType, self, elapsed)
                 ["Corruption"] = true
             };
 
-            -- If casting a target spell and target doesn't exist, cancel the cast
+            -- Si se está lanzando un hechizo de objetivo y el objetivo no existe, cancelar el lanzamiento
             if targetSpells[state.currentSpellName] and not UnitExists("target") then
-                -- Target died during player casting - hide castbar immediately
+                -- El objetivo murió durante el lanzamiento del jugador - ocultar la barra de lanzamiento inmediatamente
                 self:Hide();
                 if frameData.background then
                     frameData.background:Hide()
@@ -1024,7 +1024,7 @@ local function UpdateCastbar(castbarType, self, elapsed)
                     frameData.icon:Hide()
                 end
 
-                -- Reset state
+                -- Restablecer estado
                 state.casting = false;
                 state.isChanneling = false;
                 state.holdTime = 0;
@@ -1102,24 +1102,24 @@ local function UpdateCastbar(castbarType, self, elapsed)
 
     -- Usar valores perfectos de Blizzard para casts y channels
     if state.casting or state.isChanneling then
-        -- FIXED: Detect silent interruptions (e.g., from CC or other game mechanics)
+        -- CORREGIDO: Detectar interrupciones silenciosas (p. ej., de CC u otras mecánicas del juego)
         local unit = castbarType == "player" and "player" or castbarType;
         local isStillCasting = UnitCastingInfo(unit);
         local isStillChanneling = UnitChannelInfo(unit);
 
         if not isStillCasting and not isStillChanneling then
-            -- The game says we are not casting/channeling, but our addon thinks we are.
-            -- This is a silent interruption.
+            -- El juego dice que no estamos lanzando/canalizando, pero nuestro addon cree que sí.
+            -- Esto es una interrupción silenciosa.
             if HandleCastStop then
                 HandleCastStop(castbarType, 'UNIT_SPELLCAST_INTERRUPTED', true);
             else
-                -- Fallback: hide castbar immediately
+                -- Alternativa: ocultar la barra de lanzamiento inmediatamente
                 self:Hide();
                 state.casting = false;
                 state.isChanneling = false;
                 state.holdTime = 0;
             end
-            return; -- Stop further processing for this frame
+            return; -- Detener el procesamiento posterior para este fotograma
         end
         -- No sincronizar con Blizzard durante período de gracia
         local shouldSync = true;
@@ -1137,7 +1137,15 @@ local function UpdateCastbar(castbarType, self, elapsed)
             if castbarType == "player" then
                 if state.spellStartTime > 0 and state.spellEndTime > 0 then
                     local now = GetTime();
-                    self:SetValue(math.min(now, state.spellEndTime));
+                    
+                    -- CORRECCIÓN: Para la canalización, forzar la barra a su valor máximo para que el
+                    -- sistema de recorte de textura sea el único responsable del efecto de drenaje.
+                    -- De lo contrario, la barra crece mientras la textura se encoge, creando una imagen confusa.
+                    if state.isChanneling then
+                        self:SetValue(state.spellEndTime);
+                    else
+                        self:SetValue(math.min(now, state.spellEndTime));
+                    end
 
                     local totalDuration = state.spellEndTime - state.spellStartTime;
                     local progress = 0;
@@ -1145,6 +1153,11 @@ local function UpdateCastbar(castbarType, self, elapsed)
                         progress = (now - state.spellStartTime) / totalDuration;
                     end
                     progress = math.max(0, math.min(1, progress));
+
+                    -- CORRECCIÓN: El progreso de la canalización del jugador debe invertirse para el efecto de drenaje de derecha a izquierda.
+                    if state.isChanneling then
+                        progress = 1.0 - progress
+                    end
 
                     if self.UpdateTextureClipping then
                         self:UpdateTextureClipping(progress, state.isChanneling);
@@ -1186,6 +1199,10 @@ local function UpdateCastbar(castbarType, self, elapsed)
             if castbarType == "player" then
                 if state.spellEndTime > state.spellStartTime then
                     progress = (GetTime() - state.spellStartTime) / (state.spellEndTime - state.spellStartTime);
+                    -- CORRECCIÓN: La chispa también debe moverse de derecha a izquierda para la canalización, por lo que también invertimos su progreso.
+                    if state.isChanneling then
+                        progress = 1.0 - progress
+                    end
                 end
             else
                 if state.maxValue > 0 then
@@ -1379,7 +1396,7 @@ local function HandleChannelStart(castbarType, unit)
         frameData.castbar:SetMinMaxValues(startTimeSeconds, endTimeSeconds);
         frameData.castbar:SetValue(GetTime());
     else
-        -- CRITICAL FIX: Para channeling empezar desde max y contar hacia abajo
+        -- CORRECCIÓN CRÍTICA: Para la canalización, empezar desde el máximo y contar hacia abajo
         state.maxValue = spellDuration;
         state.currentValue = spellDuration; -- Empezar desde el máximo para channeling
         frameData.castbar:SetMinMaxValues(0, state.maxValue);
@@ -1401,7 +1418,7 @@ local function HandleChannelStart(castbarType, unit)
 
     -- CORREGIDO: Color correcto para player channeling
     if castbarType == "player" then
-        frameData.castbar:SetStatusBarColor(0, 1, 0, 1); -- Verde para player
+        frameData.castbar:SetStatusBarColor(1, 1, 1, 1); -- Usar blanco para no teñir la textura y evitar fondo sólido
     else
         frameData.castbar:SetStatusBarColor(1, 1, 1, 1); -- Blanco para target/focus
     end
@@ -1610,7 +1627,7 @@ end
 -- SISTEMA DE CREACIÓN DE CASTBARS UNIFICADO
 -- =================================================================
 
--- Sistema de recorte dinámico  usando coordenadas UV
+-- Sistema de recorte dinámico usando coordenadas UV
 local function CreateTextureClippingSystem(statusBar)
 
     statusBar.UpdateTextureClipping = function(self, progress, isChanneling)
@@ -1619,26 +1636,39 @@ local function CreateTextureClippingSystem(statusBar)
             return
         end
 
-        -- Asegurar que la textura llene todo el frame
-        currentTexture:ClearAllPoints();
-        currentTexture:SetPoint('TOPLEFT', self, 'TOPLEFT', 0, 0);
-        currentTexture:SetPoint('BOTTOMRIGHT', self, 'BOTTOMRIGHT', 0, 0);
-
-        -- CRITICAL: Forzar que la StatusBar texture esté en la capa correcta
-        -- En WoW 3.3.5a, algunas veces se reposiciona mal después de SetStatusBarTexture
+        -- CRÍTICO: Forzar que la textura de la StatusBar esté en la capa correcta
         if currentTexture.SetDrawLayer then
             currentTexture:SetDrawLayer('BORDER', 0);
         end
 
         -- Aplicar recorte dinámico profesional usando coordenadas UV
-        local clampedProgress = math.max(0.001, math.min(1, progress)); -- Evitar valores extremos
+        local clampedProgress = math.max(0, math.min(1, progress)); -- Clamp from 0 to 1
 
         if isChanneling then
-            -- Para channeling: mostrar como barra que se vacía de derecha a izquierda
-            -- progress va de 1.0 a 0.0, mostramos desde izquierda hasta esa posición
-            currentTexture:SetTexCoord(0, clampedProgress, 0, 1);
+            -- Para channeling, la barra se vacía de derecha a izquierda.
+            -- 'progress' es el tiempo restante (1.0 -> 0.0).
+            local elapsedProgress = 1.0 - clampedProgress;
+
+            -- 1. Anclamos la textura a la izquierda y ajustamos su tamaño para que se encoja
+            currentTexture:ClearAllPoints();
+            currentTexture:SetPoint("TOPLEFT", self, "TOPLEFT");
+            currentTexture:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT");
+            currentTexture:SetSize(self:GetWidth() * clampedProgress, self:GetHeight());
+            
+            -- 2. Desplazamos las coordenadas de la textura para que siga animándose
+            -- Esto crea la ilusión de que la textura se mueve a través de la barra que se encoge.
+            currentTexture:SetTexCoord(elapsedProgress, elapsedProgress + clampedProgress, 0, 1);
+
         else
-            -- Para casting: recorte de izquierda a derecha (empezar vacío, llenarse)
+            -- Para casting: la barra se llena de izquierda a derecha.
+            -- 'progress' es el tiempo transcurrido (0.0 -> 1.0).
+
+            -- Asegurar que la textura llene todo el frame si no está casteando
+            currentTexture:ClearAllPoints();
+            currentTexture:SetPoint('TOPLEFT', self, 'TOPLEFT', 0, 0);
+            currentTexture:SetPoint('BOTTOMRIGHT', self, 'BOTTOMRIGHT', 0, 0);
+            
+            -- Recortamos la textura mostrando solo la parte correspondiente al progreso.
             currentTexture:SetTexCoord(0, clampedProgress, 0, 1);
         end
     end;
@@ -1817,7 +1847,7 @@ end
 
 -- Función unificada para refresh de castbars
 RefreshCastbar = function(castbarType)
-    -- CRITICAL: Protección contra refreshes muy frecuentes (causa problemas de capas)
+    -- CRÍTICO: Protección contra refreshes muy frecuentes (causa problemas de capas)
     local currentTime = GetTime();
     local timeSinceLastRefresh = currentTime - (lastRefreshTime[castbarType] or 0);
     -- No permitir refreshes más frecuentes que cada 0.1 segundos (excepto primer refresh)
@@ -1893,7 +1923,7 @@ RefreshCastbar = function(castbarType)
     frameData.castbar:SetSize(cfg.sizeX or 200, cfg.sizeY or 16);
     frameData.castbar:SetScale(cfg.scale or 1);
 
-    -- CRITICAL: Crear/configurar spark DESPUÉS de que el frame padre esté completamente configurado
+    -- CRÍTICO: Crear/configurar la chispa DESPUÉS de que el frame padre esté completamente configurado
     if not frameData.spark then
         -- Convertir el spark en un frame independiente para un control de capas superior
         frameData.spark = CreateFrame("Frame", frameName .. "Spark", UIParent);
