@@ -1,0 +1,13 @@
+tag v1.6.6
+e5976a3af453c2809418ef39c3a78f7b3896f951
+Shadowed <shadowed.wow@gmail.com>
+2010-06-28 02:34:28 -0700
+
+Tagging as release 1.6.6
+
+
+--------------------
+
+Shadowed:
+	- Incoming heals are now ignored if the healer is currently mind controlled.
+	- Added hardening to stop a rare-ish nil guid passing through to heals.
