@@ -566,7 +566,36 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
 		KeyRingButtonCount:SetClearPoint('CENTER', KeyRingButton, 'CENTER', 0, -10);
 		KeyRingButtonCount:SetDrawLayer('OVERLAY')
 	end
-	
+
+	local KEYRING_CONTAINER = -2
+	local function SyncKeyRingButton()
+		if KeyRingButton then
+			-- In 3.3.5a, IsBagOpen(-2) returns nil/false if the keyring is not open
+			KeyRingButton:SetChecked(IsBagOpen(KEYRING_CONTAINER) and true or false)
+		end
+	end
+
+	-- If the keyring is explicitly toggled
+	if ToggleKeyRing then
+		hooksecurefunc("ToggleKeyRing", function()
+			SyncKeyRingButton()
+		end)
+	end
+
+	-- When bags are closed globally (X, ESC, CloseAll, etc.)
+	if CloseAllBags then
+		hooksecurefunc("CloseAllBags", function()
+			if KeyRingButton then KeyRingButton:SetChecked(false) end
+		end)
+	end
+
+	-- When a container frame disappears (closing via the X of individual pockets)
+	if ContainerFrame_OnHide then
+		hooksecurefunc("ContainerFrame_OnHide", function()
+			SyncKeyRingButton()
+		end)
+	end
+
 	for _,bags in pairs(bagslots) do
 		bags:SetHighlightTexture''
 		bags:SetCheckedTexture''
