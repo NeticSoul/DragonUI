@@ -2063,7 +2063,7 @@ unitframe.lastHealthValues = {}
 
 --[[
 * Creates the "loss bar" used to visualize recent damage.
-* This bar sits behind the main health bar.
+* This version uses a manual script-driven animation for maximum compatibility.
 *
 * @param parentFrame Frame - The main unit frame (e.g., PlayerFrame).
 * @param mainHealthBar StatusBar - The primary health bar to attach to.
@@ -2080,19 +2080,32 @@ local function CreateHealthLossBar(parentFrame, mainHealthBar)
     
     -- Set texture and color (red)
     lossBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    lossBar:SetStatusBarColor(1, 0, 0, 0.9) -- Red, mostly opaque
+    lossBar:SetStatusBarColor(1, 0, 0, 1)
     
-    -- Create the fade-out animation
+    -- Create the fade-out animation MANUALLY
     lossBar.fadeOutAnimation = lossBar:CreateAnimationGroup()
     lossBar.fadeOutAnimation:SetScript("OnFinished", function()
+        lossBar:SetAlpha(0)
         lossBar:Hide()
     end)
 
-	local fadeOut = lossBar.fadeOutAnimation:CreateAnimation("Alpha")
-    fadeOut:SetOrder(1)
-    fadeOut:SetDuration(0.7) -- How long the fade takes in seconds
-    fadeOut:SetFromAlpha(0.9)
-    fadeOut:SetToAlpha(0)
+    -- This is a script-driven animation, which is more robust
+    local manualFade = lossBar.fadeOutAnimation:CreateAnimation("Script")
+    manualFade:SetDuration(0.7) -- How long the animation should take
+
+    -- Script to run when the animation STARTS
+    manualFade:SetScript("OnPlay", function()
+        lossBar:SetAlpha(0.9)
+    end)
+
+    -- Script to run on EVERY FRAME of the animation
+    manualFade:SetScript("OnUpdate", function(self, elapsed)
+        -- GetProgress() returns a number from 0.0 (start) to 1.0 (end)
+        local progress = self:GetProgress() 
+        -- Calculate the new transparency based on progress
+        local newAlpha = 0.9 * (1 - progress) 
+        lossBar:SetAlpha(newAlpha)
+    end)
     
     lossBar:Hide()
     parentFrame.HealthLossBar = lossBar
