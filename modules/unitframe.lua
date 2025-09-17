@@ -749,6 +749,9 @@ function unitframe:OnEnable()
     -- Initialization - save current settings and apply configurations
     unitframe:SaveLocalSettings()
     unitframe:ApplySettings()
+	
+	-- Hook for Health Loss effect
+	unitframe.HookHealthBarValues()
 
     -- Basic hooks (only the original ones)
     unitframe.HookFunctions()
@@ -2051,6 +2054,116 @@ function unitframe.MovePlayerTargetPreset(name)
     end
 end
 
+-- =====================================================================
+-- START: HEALTH LOSS VISUALIZATION MODULE
+-- =====================================================================
+
+-- Table to store the last known health values for units
+unitframe.lastHealthValues = {}
+
+--[[
+* Creates the "loss bar" used to visualize recent damage.
+* This bar sits behind the main health bar.
+*
+* @param parentFrame Frame - The main unit frame (e.g., PlayerFrame).
+* @param mainHealthBar StatusBar - The primary health bar to attach to.
+--]]
+local function CreateHealthLossBar(parentFrame, mainHealthBar)
+    -- Do nothing if the bar already exists
+    if parentFrame.HealthLossBar then return end
+
+    local lossBar = CreateFrame("StatusBar", nil, parentFrame)
+    lossBar:SetAllPoints(mainHealthBar)
+    
+    -- Set the draw layer to be just behind the main health bar
+    lossBar:SetFrameLevel(mainHealthBar:GetFrameLevel() - 1)
+    
+    -- Set texture and color (red)
+    lossBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    lossBar:SetStatusBarColor(1, 0, 0, 0.9) -- Red, mostly opaque
+    
+    -- Create the fade-out animation
+    lossBar.fadeOutAnimation = lossBar:CreateAnimationGroup()
+    lossBar.fadeOutAnimation:SetScript("OnFinished", function()
+        lossBar:Hide()
+    end)
+
+	local fadeOut = lossBar.fadeOutAnimation:CreateAnimation("Alpha")
+    fadeOut:SetOrder(1)
+    fadeOut:SetDuration(0.7) -- How long the fade takes in seconds
+    fadeOut:SetFromAlpha(0.9)
+    fadeOut:SetToAlpha(0)
+    
+    lossBar:Hide()
+    parentFrame.HealthLossBar = lossBar
+end
+
+--[[
+* This is the new, faster function that triggers on health bar value changes.
+* It's called by our hook on :SetValue().
+*
+* @param healthBar StatusBar - The health bar object that changed.
+* @param value number - The new health value.
+--]]
+function unitframe.OnHealthBarValueChanged(healthBar, value)
+    local parentFrame = healthBar:GetParent()
+    if not parentFrame or not parentFrame.HealthLossBar or not parentFrame.unit then return end
+
+    local lossBar = parentFrame.HealthLossBar
+    local unit = parentFrame.unit
+    
+    local currentHealth = value
+    local maxHealth = UnitHealthMax(unit)
+    
+    if not maxHealth or maxHealth == 0 then
+        unitframe.lastHealthValues[unit] = currentHealth
+        return
+    end
+
+    local previousHealth = unitframe.lastHealthValues[unit] or currentHealth
+    
+    if currentHealth < previousHealth then
+        lossBar.fadeOutAnimation:Stop()
+        lossBar:SetMinMaxValues(0, maxHealth)
+        lossBar:SetValue(previousHealth)
+        lossBar:Show()
+        lossBar.fadeOutAnimation:Play()
+    end
+    
+    unitframe.lastHealthValues[unit] = currentHealth
+end
+-- =====================================================================
+-- END: HEALTH LOSS VISUALIZATION MODULE
+-- =====================================================================
+
+--[[
+* Applies secure hooks to the main unit frame health bars.
+* This connects our animation logic to the game's health updates.
+--]]
+function unitframe.HookHealthBarValues()
+    if PlayerFrameHealthBar then
+        hooksecurefunc(PlayerFrameHealthBar, "SetValue", unitframe.OnHealthBarValueChanged)
+    end
+    if TargetFrameHealthBar then
+        hooksecurefunc(TargetFrameHealthBar, "SetValue", unitframe.OnHealthBarValueChanged)
+    end
+    if FocusFrameHealthBar then
+        hooksecurefunc(FocusFrameHealthBar, "SetValue", unitframe.OnHealthBarValueChanged)
+    end
+    if PetFrameHealthBar then
+        hooksecurefunc(PetFrameHealthBar, "SetValue", unitframe.OnHealthBarValueChanged)
+    end
+
+    for i=1, 4 do
+        local healthbar = _G['PartyMemberFrame'..i..'HealthBar']
+        if healthbar then
+            -- Create the loss bar for party frames here as well
+            CreateHealthLossBar(_G['PartyMemberFrame'..i], healthbar)
+            hooksecurefunc(healthbar, "SetValue", unitframe.OnHealthBarValueChanged)
+        end
+    end
+end
+
 local frame = CreateFrame('FRAME', 'DragonUIUnitframeFrame', UIParent)
 
 -- =============================================================================
@@ -3065,6 +3178,10 @@ function unitframe.ChangePlayerframe()
 
     -- Update custom text displays with proper settings
     unitframe.SafeUpdatePlayerFrameText()
+	
+	-- Hook for Health Loss effect
+	PlayerFrame.unit = "player"
+	CreateHealthLossBar(PlayerFrame, PlayerFrameHealthBar)
 end
 -- ChangePlayerframe()
 -- frame:RegisterEvent('PLAYER_ENTERING_WORLD')
@@ -3685,6 +3802,10 @@ function unitframe.ChangeTargetFrame()
             end
         end
     end
+	
+	-- Hook for Health Loss effect
+	TargetFrame.unit = "target"
+	CreateHealthLossBar(TargetFrame, TargetFrameHealthBar)
 end
 function unitframe.ReApplyTargetFrame()
     -- Lógica de la barra de vida (se mantiene igual)
@@ -4860,6 +4981,10 @@ function unitframe.ChangeFocusFrame()
             end
         end
     end
+	
+	-- Hook for Health Loss effect
+	FocusFrame.unit = "focus"
+	CreateHealthLossBar(FocusFrame, FocusFrameHealthBar)
 end
 
 function unitframe.MoveFocusFrame(point, relativeTo, relativePoint, xOfs, yOfs)
@@ -5791,6 +5916,7 @@ end
 function unitframe.ConfigurePartyFrameStructure(i)
     local pf = _G['PartyMemberFrame' .. i]
     if not pf then return end
+	pf.unit = "party"..i
     
     pf:SetParent(unitframe.PartyMoveFrame)
     pf:SetSize(120, 53)
@@ -7199,6 +7325,10 @@ function unitframe.ChangePetFrame()
     -- =====================================================================
     -- END: DEFINITIVE TAINT-PROOF PET THREAT SYSTEM
     -- =====================================================================
+	
+	-- Hook for Health Loss effect
+	PetFrame.unit = "pet"
+	CreateHealthLossBar(PetFrame, PetFrameHealthBar)
 end
 
 -- FIXED: Create options for pet frame with proper defaults
@@ -8066,4 +8196,3 @@ profileCallbackFrame:SetScript("OnEvent", function(self, event, addonName)
         self:UnregisterEvent("ADDON_LOADED")
     end
 end)
-
