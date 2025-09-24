@@ -798,6 +798,43 @@ function CastbarModule:HandleChannelStart(unitType, unit)
     end
 end
 
+function CastbarModule:HandleCastDelayed(unitType, unit)
+    local name, _, _, iconTex, startTime, endTime, isTradeSkill, castID, notInterruptible = UnitCastingInfo(unit)
+    if not name then return end
+    
+    local state = self.states[unitType]
+    local frames = self.frames[unitType]
+    
+    -- Only handle if we're currently casting the same spell
+    if not state.casting or state.spellName ~= name then return end
+    
+    local start, finish, duration = ParseCastTimes(startTime, endTime)
+    local currentTime = GetTime()
+    local elapsed = currentTime - start
+    
+    -- Update timing due to pushback/knockback
+    state.maxValue = duration
+    state.currentValue = max(0, min(elapsed, duration))
+    
+    frames.castbar:SetMinMaxValues(0, state.maxValue)
+    frames.castbar:SetValue(state.currentValue)
+    
+    -- Update visual elements
+    local progress = state.currentValue / state.maxValue
+    if frames.castbar.UpdateTextureClipping then
+        frames.castbar:UpdateTextureClipping(progress, false)
+    end
+    
+    -- Update spark position
+    if frames.spark and frames.spark:IsShown() then
+        local actualWidth = frames.castbar:GetWidth() * progress
+        frames.spark:ClearAllPoints()
+        frames.spark:SetPoint('CENTER', frames.castbar, 'LEFT', actualWidth, 0)
+    end
+    
+    UpdateTimeText(unitType)
+end
+
 function CastbarModule:HandleCastStop(unitType, isInterrupted)
     local state = self.states[unitType]
     local frames = self.frames[unitType]
@@ -921,15 +958,56 @@ function CastbarModule:OnUpdate(unitType, castbar, elapsed)
     
     -- Update casting/channeling
     if state.casting or state.isChanneling then
-        --  ELIMINADO: Ya no verificamos UnitCastingInfo/UnitChannelInfo aquí
-        -- Esto causaba falsos "interrupted" con lag porque el OnUpdate
-        -- corría antes que los eventos llegaran del servidor
+        --  CHECK FOR KNOCKBACK/PUSHBACK: Verify if spell info has changed
+        local unit = unitType == "player" and "player" or unitType
+        local hasSpellInfoChanged = false
         
-        -- Update progress
         if state.casting and not state.isChanneling then
-            state.currentValue = min(state.currentValue + elapsed, state.maxValue)
+            local name, _, _, _, startTime, endTime = UnitCastingInfo(unit)
+            if name and name == state.spellName then
+                local start, finish, duration = ParseCastTimes(startTime, endTime)
+                -- Check if the end time has changed (indicates knockback/pushback)
+                if abs(duration - state.maxValue) > 0.1 then
+                    -- Spell got pushback - update timing
+                    state.maxValue = duration
+                    local currentTime = GetTime()
+                    local elapsed_real = currentTime - start
+                    state.currentValue = max(0, min(elapsed_real, duration))
+                    castbar:SetMinMaxValues(0, state.maxValue)
+                    hasSpellInfoChanged = true
+                end
+            elseif not name then
+                -- Spell was interrupted or finished, but we haven't received the event yet
+                -- Don't update progress to avoid showing false completion
+                hasSpellInfoChanged = true
+            end
         elseif state.isChanneling then
-            state.currentValue = max(state.currentValue - elapsed, 0)
+            local name, _, _, _, startTime, endTime = UnitChannelInfo(unit)
+            if name and name == state.spellName then
+                local start, finish, duration = ParseCastTimes(startTime, endTime)
+                -- Check if the end time has changed
+                if abs(duration - state.maxValue) > 0.1 then
+                    -- Channel got pushback - update timing
+                    state.maxValue = duration
+                    local currentTime = GetTime()
+                    local elapsed_real = currentTime - start
+                    state.currentValue = max(0, duration - elapsed_real)
+                    castbar:SetMinMaxValues(0, state.maxValue)
+                    hasSpellInfoChanged = true
+                end
+            elseif not name then
+                -- Channel was interrupted or finished
+                hasSpellInfoChanged = true
+            end
+        end
+        
+        -- Only update progress if spell info hasn't changed (no pushback detected)
+        if not hasSpellInfoChanged then
+            if state.casting and not state.isChanneling then
+                state.currentValue = min(state.currentValue + elapsed, state.maxValue)
+            elseif state.isChanneling then
+                state.currentValue = max(state.currentValue - elapsed, 0)
+            end
         end
         
         castbar:SetValue(state.currentValue)
@@ -1156,6 +1234,8 @@ function CastbarModule:HandleCastingEvent(event, unit)
     
     if event == 'UNIT_SPELLCAST_START' then
         self:HandleCastStart(unitType, unit)
+    elseif event == 'UNIT_SPELLCAST_DELAYED' then
+        self:HandleCastDelayed(unitType, unit)
     elseif event == 'UNIT_SPELLCAST_SUCCEEDED' and unitType == "player" then
         local state = self.states[unitType]
         if state.casting or state.isChanneling then
@@ -1269,6 +1349,7 @@ local eventFrame = CreateFrame('Frame', 'DragonUICastbarEventHandler')
 local events = {
     'PLAYER_ENTERING_WORLD',
     'UNIT_SPELLCAST_START',
+    'UNIT_SPELLCAST_DELAYED',
     'UNIT_SPELLCAST_STOP',
     'UNIT_SPELLCAST_FAILED',
     'UNIT_SPELLCAST_INTERRUPTED',
