@@ -15,7 +15,7 @@ QuestTrackerModule.questTrackerFrame = nil
 local function ReplaceBlizzardFrame(frame)
     local watchFrame = WatchFrame
     if not watchFrame then return end
-    
+
     watchFrame:SetMovable(true)
     watchFrame:SetUserPlaced(true)
     watchFrame:ClearAllPoints()
@@ -60,7 +60,7 @@ local function WatchFrame_Update(self)
     watchFrame.background = watchFrame.background or watchFrame:CreateTexture(nil, 'BACKGROUND')
     local background = watchFrame.background
     background:SetPoint('RIGHT', WatchFrameCollapseExpandButton, 'RIGHT', 0, 0)
-    
+
     --  FUNCIÓN ATLAS IGUAL QUE RETAILUI
     SetAtlasTexture(background, 'QuestTracker-Header')
     background:SetSize(watchFrame:GetWidth(), 36)
@@ -88,11 +88,16 @@ end
 
 local function UpdateQuestTrackerPosition()
     if InCombatLockdown() then return end
-    
+
     if QuestTrackerModule.questTrackerFrame then
         local x, y, anchor = GetQuestTrackerConfig()
         QuestTrackerModule.questTrackerFrame:ClearAllPoints()
         QuestTrackerModule.questTrackerFrame:SetPoint(anchor, UIParent, anchor, x, y)
+    end
+
+    if _G["WatchFrameLines"] then
+        _G["WatchFrameLines"]:ClearAllPoints()
+        _G["WatchFrameLines"]:SetPoint("TOPLEFT", _G["WatchFrameHeader"], 'BOTTOMLEFT', 0, -15)
     end
 end
 
@@ -102,7 +107,7 @@ end
 function addon.RefreshQuestTracker()
     if InCombatLockdown() then return end
     UpdateQuestTrackerPosition()
-    
+
     --  FORZAR ACTUALIZACIÓN DEL HEADER EN TIEMPO REAL
     if WatchFrame_Update and WatchFrame then
         WatchFrame_Update(WatchFrame)
@@ -116,18 +121,18 @@ function QuestTrackerModule:Initialize()
     --  IGUAL QUE RETAILUI (CreateUIFrame equivalente)
     self.questTrackerFrame = CreateFrame('Frame', 'DragonUI_QuestTrackerFrame', UIParent)
     self.questTrackerFrame:SetSize(230, 500)
-    
+
     -- Position the frame
     UpdateQuestTrackerPosition()
-    
+
     -- Replace Blizzard frame (igual que RetailUI)
     ReplaceBlizzardFrame(self.questTrackerFrame)
-    
+
     --  HOOKS EXACTOS COMO RETAILUI (SecureHook equivalent)
     hooksecurefunc('WatchFrame_Collapse', WatchFrame_Collapse)
     hooksecurefunc('WatchFrame_Update', WatchFrame_Update)
-    
-    
+
+
 end
 
 -- =============================================================================
@@ -158,7 +163,7 @@ function QuestTrackerModule:ShowEditorTest()
             end
         end)
 
-        
+
     end
 end
 
@@ -171,7 +176,7 @@ function QuestTrackerModule:HideEditorTest(savePosition)
 
         if savePosition then
             UpdateQuestTrackerPosition()
-            
+
         end
     end
 end
