@@ -41,7 +41,7 @@ end
 
 -- Main text formatting function
 function TextSystem.FormatStatusText(current, maximum, textFormat, useBreakup, frameType)
-    if not current or not maximum or maximum == 0 then
+    if maximum == nil or maximum == 0 or current == nil then
         return ""
     end
 

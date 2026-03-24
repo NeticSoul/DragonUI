@@ -666,6 +666,67 @@ local CreateCustomTexts
 local UpdateHealthText
 local UpdateManaText
 
+-- Party bar -> member frame (parent may not be PartyMemberFrameN if UI was reparented; name is stable)
+local function GetPartyMemberFrameFromStatusBar(statusBar)
+    if not statusBar then return nil, nil end
+    local parent = statusBar:GetParent()
+    if parent and parent.GetName then
+        local pname = parent:GetName()
+        if pname then
+            local idx = pname:match("^PartyMemberFrame(%d+)$")
+            if idx then
+                return parent, idx
+            end
+        end
+    end
+    local sbName = statusBar.GetName and statusBar:GetName()
+    if sbName then
+        local idx = sbName:match("^PartyMemberFrame(%d+)HealthBar$")
+            or sbName:match("^PartyMemberFrame(%d+)ManaBar$")
+        if idx then
+            local frame = _G["PartyMemberFrame" .. idx]
+            if frame then
+                return frame, idx
+            end
+        end
+    end
+    return nil, nil
+end
+
+-- FontString:SetText errors on 3.3.5 if no valid font (e.g. failed SetFont path, legacy refresh).
+local PARTY_FONT_SIZE = 10
+local PARTY_FONT_FLAGS = "OUTLINE"
+
+local function EnsurePartyFontStringReady(fs)
+    if not fs then return false end
+    local _, size = fs:GetFont()
+    if type(size) == "number" and size > 0 then
+        return true
+    end
+    local fallbacks = {
+        UF.DEFAULT_FONT,
+        "Fonts\\FRIZQT__.TTF",
+        "Fonts\\ARIALN.TTF",
+    }
+    for _, fp in ipairs(fallbacks) do
+        if type(fp) == "string" and fp ~= "" then
+            fs:SetFont(fp, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            _, size = fs:GetFont()
+            if type(size) == "number" and size > 0 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function PartyBarFontStringSetText(fs, txt)
+    if not fs then return false end
+    if not EnsurePartyFontStringReady(fs) then return false end
+    fs:SetText(txt or "")
+    return true
+end
+
 -- ===============================================================
 -- TEXT AND COLOR UPDATE FUNCTIONS
 -- ===============================================================
@@ -674,9 +735,8 @@ local UpdateManaText
 UpdateHealthText = function(statusBar, forceShow)
     if not statusBar then return end
     
-    local frame = statusBar:GetParent()
-    local frameIndex = frame:GetName():match("PartyMemberFrame(%d+)")
-    if not frameIndex then return end
+    local frame, frameIndex = GetPartyMemberFrameFromStatusBar(statusBar)
+    if not frame or not frameIndex then return end
     
     local partyUnit = "party" .. frameIndex
     if not UnitExists(partyUnit) then return end
@@ -725,7 +785,7 @@ UpdateHealthText = function(statusBar, forceShow)
     local current = UnitHealth(partyUnit)
     local max = UnitHealthMax(partyUnit)
     
-    if current and max and max > 0 then
+    if type(max) == "number" and max > 0 and type(current) == "number" then
         local textFormat = settings and settings.textFormat or "formatted"
         local breakUp = settings and settings.breakUpLargeNumbers
         local finalText = GetFormattedText(current, max, textFormat, breakUp)
@@ -734,20 +794,20 @@ UpdateHealthText = function(statusBar, forceShow)
         if textFormat == "both" and type(finalText) == "table" then
             -- Dual format: use left and right, hide center
             if frame.DragonUI_HealthText then frame.DragonUI_HealthText:Hide() end
-            if frame.DragonUI_HealthTextLeft and frame.DragonUI_HealthTextLeft:GetFont() then
-                frame.DragonUI_HealthTextLeft:SetText(finalText.left or "")
+            if frame.DragonUI_HealthTextLeft then
+                PartyBarFontStringSetText(frame.DragonUI_HealthTextLeft, finalText.left or "")
                 frame.DragonUI_HealthTextLeft:Show()
             end
-            if frame.DragonUI_HealthTextRight and frame.DragonUI_HealthTextRight:GetFont() then
-                frame.DragonUI_HealthTextRight:SetText(finalText.right or "")
+            if frame.DragonUI_HealthTextRight then
+                PartyBarFontStringSetText(frame.DragonUI_HealthTextRight, finalText.right or "")
                 frame.DragonUI_HealthTextRight:Show()
             end
         else
             -- Simple format: use center, hide left and right
             if frame.DragonUI_HealthTextLeft then frame.DragonUI_HealthTextLeft:Hide() end
             if frame.DragonUI_HealthTextRight then frame.DragonUI_HealthTextRight:Hide() end
-            if healthText and healthText:GetFont() then
-                healthText:SetText(finalText or "")
+            if healthText then
+                PartyBarFontStringSetText(healthText, finalText or "")
                 healthText:Show()
             end
         end
@@ -763,15 +823,13 @@ end
 UpdateManaText = function(statusBar, forceShow)
     if not statusBar then return end
     
-    local frameName = statusBar:GetParent():GetName()
-    local frameIndex = frameName:match("PartyMemberFrame(%d+)")
-    if not frameIndex then return end
+    local frame, frameIndex = GetPartyMemberFrameFromStatusBar(statusBar)
+    if not frame or not frameIndex then return end
     
     local partyUnit = "party" .. frameIndex
     if not UnitExists(partyUnit) then return end
     
     -- Don't show mana numbers when player is disconnected
-    local frame = statusBar:GetParent()
     if not UnitIsConnected(partyUnit) then
         if frame.DragonUI_ManaText then frame.DragonUI_ManaText:Hide() end
         if frame.DragonUI_ManaTextLeft then frame.DragonUI_ManaTextLeft:Hide() end
@@ -815,7 +873,7 @@ UpdateManaText = function(statusBar, forceShow)
     local current = UnitPower(partyUnit)
     local max = UnitPowerMax(partyUnit)
     
-    if current and max and max > 0 then
+    if type(max) == "number" and max > 0 and type(current) == "number" then
         local textFormat = settings and settings.textFormat or "formatted"
         local breakUp = settings and settings.breakUpLargeNumbers
         local finalText = GetFormattedText(current, max, textFormat, breakUp)
@@ -824,20 +882,20 @@ UpdateManaText = function(statusBar, forceShow)
         if textFormat == "both" and type(finalText) == "table" then
             -- Dual format: use left and right, hide center
             if customText then customText:Hide() end
-            if frame.DragonUI_ManaTextLeft and frame.DragonUI_ManaTextLeft:GetFont() then
-                frame.DragonUI_ManaTextLeft:SetText(finalText.left or "")
+            if frame.DragonUI_ManaTextLeft then
+                PartyBarFontStringSetText(frame.DragonUI_ManaTextLeft, finalText.left or "")
                 frame.DragonUI_ManaTextLeft:Show()
             end
-            if frame.DragonUI_ManaTextRight and frame.DragonUI_ManaTextRight:GetFont() then
-                frame.DragonUI_ManaTextRight:SetText(finalText.right or "")
+            if frame.DragonUI_ManaTextRight then
+                PartyBarFontStringSetText(frame.DragonUI_ManaTextRight, finalText.right or "")
                 frame.DragonUI_ManaTextRight:Show()
             end
         else
             -- Simple format: use center, hide left and right
             if frame.DragonUI_ManaTextLeft then frame.DragonUI_ManaTextLeft:Hide() end
             if frame.DragonUI_ManaTextRight then frame.DragonUI_ManaTextRight:Hide() end
-            if customText and customText:GetFont() then
-                customText:SetText(finalText or "")
+            if customText then
+                PartyBarFontStringSetText(customText, finalText or "")
                 customText:Show()
             end
         end
@@ -918,9 +976,12 @@ CreateCustomTexts = function(frame)
     if not frame or frame.DragonUI_CustomTexts then return end
     
     local frameIndex = frame:GetID()
+    if type(frameIndex) ~= "number" or frameIndex < 1 or frameIndex > 4 then
+        local n = frame:GetName() and frame:GetName():match("^PartyMemberFrame(%d+)$")
+        frameIndex = tonumber(n)
+    end
     if not frameIndex or frameIndex < 1 or frameIndex > 4 then return end
     
-    -- Validate font before creating text elements
     local font = UF.DEFAULT_FONT or "Fonts\\FRIZQT__.TTF"
     
     -- Initialize hover states (separate for health and mana)
@@ -945,7 +1006,8 @@ CreateCustomTexts = function(frame)
         -- Center text for simple formats (numeric, percentage, formatted)
         if not frame.DragonUI_HealthText then
             frame.DragonUI_HealthText = frame.DragonUI_TextFrame:CreateFontString(nil, "OVERLAY")
-            frame.DragonUI_HealthText:SetFont(font, 10, "OUTLINE")
+            frame.DragonUI_HealthText:SetFont(font, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            EnsurePartyFontStringReady(frame.DragonUI_HealthText)
             frame.DragonUI_HealthText:SetTextColor(1, 1, 1, 1)
             frame.DragonUI_HealthText:SetPoint("CENTER", healthBar, "CENTER", 0, 0)
             frame.DragonUI_HealthText:SetJustifyH("CENTER")
@@ -954,7 +1016,8 @@ CreateCustomTexts = function(frame)
         -- Left text for "both" format (percentage)
         if not frame.DragonUI_HealthTextLeft then
             frame.DragonUI_HealthTextLeft = frame.DragonUI_TextFrame:CreateFontString(nil, "OVERLAY")
-            frame.DragonUI_HealthTextLeft:SetFont(font, 10, "OUTLINE")
+            frame.DragonUI_HealthTextLeft:SetFont(font, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            EnsurePartyFontStringReady(frame.DragonUI_HealthTextLeft)
             frame.DragonUI_HealthTextLeft:SetTextColor(1, 1, 1, 1)
             frame.DragonUI_HealthTextLeft:SetPoint("RIGHT", healthBar, "RIGHT", -39, 0)
             frame.DragonUI_HealthTextLeft:SetJustifyH("LEFT")
@@ -963,7 +1026,8 @@ CreateCustomTexts = function(frame)
         -- Right text for "both" format (numbers)
         if not frame.DragonUI_HealthTextRight then
             frame.DragonUI_HealthTextRight = frame.DragonUI_TextFrame:CreateFontString(nil, "OVERLAY")
-            frame.DragonUI_HealthTextRight:SetFont(font, 10, "OUTLINE")
+            frame.DragonUI_HealthTextRight:SetFont(font, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            EnsurePartyFontStringReady(frame.DragonUI_HealthTextRight)
             frame.DragonUI_HealthTextRight:SetTextColor(1, 1, 1, 1)
             frame.DragonUI_HealthTextRight:SetPoint("RIGHT", healthBar, "RIGHT", -3, 0)
             frame.DragonUI_HealthTextRight:SetJustifyH("RIGHT")
@@ -977,7 +1041,8 @@ CreateCustomTexts = function(frame)
         -- Center text for simple formats
         if not frame.DragonUI_ManaText then
             frame.DragonUI_ManaText = frame.DragonUI_TextFrame:CreateFontString(nil, "OVERLAY")
-            frame.DragonUI_ManaText:SetFont(font, 10, "OUTLINE")
+            frame.DragonUI_ManaText:SetFont(font, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            EnsurePartyFontStringReady(frame.DragonUI_ManaText)
             frame.DragonUI_ManaText:SetTextColor(1, 1, 1, 1)
             frame.DragonUI_ManaText:SetPoint("CENTER", manaBar, "CENTER", 1.5, 0)
             frame.DragonUI_ManaText:SetJustifyH("CENTER")
@@ -986,7 +1051,8 @@ CreateCustomTexts = function(frame)
         -- Left text for "both" format (percentage)
         if not frame.DragonUI_ManaTextLeft then
             frame.DragonUI_ManaTextLeft = frame.DragonUI_TextFrame:CreateFontString(nil, "OVERLAY")
-            frame.DragonUI_ManaTextLeft:SetFont(font, 10, "OUTLINE")
+            frame.DragonUI_ManaTextLeft:SetFont(font, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            EnsurePartyFontStringReady(frame.DragonUI_ManaTextLeft)
             frame.DragonUI_ManaTextLeft:SetTextColor(1, 1, 1, 1)
             frame.DragonUI_ManaTextLeft:SetPoint("RIGHT", manaBar, "RIGHT", -39, 0)
             frame.DragonUI_ManaTextLeft:SetJustifyH("LEFT")
@@ -995,7 +1061,8 @@ CreateCustomTexts = function(frame)
         -- Right text for "both" format (numbers)
         if not frame.DragonUI_ManaTextRight then
             frame.DragonUI_ManaTextRight = frame.DragonUI_TextFrame:CreateFontString(nil, "OVERLAY")
-            frame.DragonUI_ManaTextRight:SetFont(font, 10, "OUTLINE")
+            frame.DragonUI_ManaTextRight:SetFont(font, PARTY_FONT_SIZE, PARTY_FONT_FLAGS)
+            EnsurePartyFontStringReady(frame.DragonUI_ManaTextRight)
             frame.DragonUI_ManaTextRight:SetTextColor(1, 1, 1, 1)
             frame.DragonUI_ManaTextRight:SetPoint("RIGHT", manaBar, "RIGHT", -3, 0)
             frame.DragonUI_ManaTextRight:SetJustifyH("RIGHT")
@@ -1659,7 +1726,10 @@ local function SetupPartyHooks()
     -- Handle hover text display with persistent state (portrait hover - shows both texts)
     hooksecurefunc("UnitFrame_OnEnter", function(self)
         if self and self:GetName() and self:GetName():match("^PartyMemberFrame%d+$") then
-            local frameIndex = tonumber(self:GetID())
+            local frameIndex = self:GetID()
+            if type(frameIndex) ~= "number" or frameIndex < 1 or frameIndex > 4 then
+                frameIndex = tonumber((self:GetName():match("^PartyMemberFrame(%d+)$")))
+            end
             if frameIndex and hoverStates[frameIndex] then
                 hoverStates[frameIndex].portrait = true  -- Mark portrait as hovering
             end
@@ -1677,7 +1747,10 @@ local function SetupPartyHooks()
     
     hooksecurefunc("UnitFrame_OnLeave", function(self)
         if self and self:GetName() and self:GetName():match("^PartyMemberFrame%d+$") then
-            local frameIndex = tonumber(self:GetID())
+            local frameIndex = self:GetID()
+            if type(frameIndex) ~= "number" or frameIndex < 1 or frameIndex > 4 then
+                frameIndex = tonumber((self:GetName():match("^PartyMemberFrame(%d+)$")))
+            end
             if frameIndex and hoverStates[frameIndex] then
                 hoverStates[frameIndex].portrait = false  -- Clear portrait hover state
             end
