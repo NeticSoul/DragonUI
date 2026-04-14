@@ -1,6 +1,6 @@
 # DragonUI for WotLK 3.3.5a
 
-### ⚠️ **Active Development:** This addon is under active development on the **[experimental branch](https://github.com/NeticSoul/DragonUI/tree/experimental)** for ongoing changes, new features, and bug fixes. Please visit this branch for the latest updates.
+### ⚠️ Old main backup branch.
 
 ---
 
