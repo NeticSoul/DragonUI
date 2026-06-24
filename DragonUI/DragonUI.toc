@@ -7,8 +7,6 @@
 ## OptionalDeps: Blizzard_TimeManager, Blizzard_PartyUI
 ## X-License: MIT for project-authored code; bundled dependencies retain their own licenses
 
-Atlas.lua
-
 # Core libraries (always loaded)
 libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml

@@ -6,8 +6,6 @@
 local addon = select(2, ...);
 local L = addon.L
 
-local atlas = addon.minimap_SetAtlas;
-
 -- ============================================================================
 -- MODULE STATE
 -- ============================================================================
@@ -192,20 +190,6 @@ local function IsQuestMinimapPin(button)
     end
 
     return false
-end
-
--- Verify atlas function availability at startup
-local function GetAtlasFunction()
-    -- Check multiple possible locations of the atlas function
-    if addon.minimap_SetAtlas then
-        return addon.minimap_SetAtlas
-    elseif addon.SetAtlas then
-        return addon.SetAtlas
-    elseif SetAtlasTexture then
-        return SetAtlasTexture
-    else
-        return nil
-    end
 end
 
 local function UpdateMinimapCircleSize()
@@ -468,18 +452,18 @@ local function UpdateCalendarDate()
         return
     end
     normalTexture:SetAllPoints(gameTimeFrame)
-    SetAtlasTexture(normalTexture, 'Minimap-Calendar-' .. day .. '-Normal')
+    normalTexture:set_atlas('Minimap-Calendar-' .. day .. '-Normal', true)
 
     local highlightTexture = gameTimeFrame:GetHighlightTexture()
     if highlightTexture then
         highlightTexture:SetAllPoints(gameTimeFrame)
-        SetAtlasTexture(highlightTexture, 'Minimap-Calendar-' .. day .. '-Highlight')
+        highlightTexture:set_atlas('Minimap-Calendar-' .. day .. '-Highlight', true)
     end
 
     local pushedTexture = gameTimeFrame:GetPushedTexture()
     if pushedTexture then
         pushedTexture:SetAllPoints(gameTimeFrame)
-        SetAtlasTexture(pushedTexture, 'Minimap-Calendar-' .. day .. '-Pushed')
+        pushedTexture:set_atlas('Minimap-Calendar-' .. day .. '-Pushed', true)
     end
 end
 
@@ -532,7 +516,7 @@ local function ReplaceBlizzardFrame(frame)
         local minimapBorderTop = MinimapBorderTop
         minimapBorderTop:ClearAllPoints()
         minimapBorderTop:SetPoint("TOP", 0, 5)
-        SetAtlasTexture(minimapBorderTop, 'Minimap-Border-Top')
+        minimapBorderTop:set_atlas('Minimap-Border-Top', true)
         minimapBorderTop:SetSize(156, 20)
 
         local minimapZoneButton = MinimapZoneTextButton
@@ -687,11 +671,11 @@ local function ReplaceBlizzardFrame(frame)
 
         local minimapMailIconTexture = MiniMapMailIcon
         minimapMailIconTexture:SetAllPoints(minimapMailFrame)
-        SetAtlasTexture(minimapMailIconTexture, 'Minimap-Mail-Normal')
+        minimapMailIconTexture:set_atlas('Minimap-Mail-Normal', true)
 
         local backgroundTexture = _G[minimapTracking:GetName() .. "Background"]
         backgroundTexture:SetAllPoints(minimapTracking)
-        SetAtlasTexture(backgroundTexture, 'Minimap-Tracking-Background')
+        backgroundTexture:set_atlas('Minimap-Tracking-Background', true)
 
         local minimapTrackingButton = _G[minimapTracking:GetName() .. 'Button']
         minimapTrackingButton:ClearAllPoints()
@@ -708,17 +692,17 @@ local function ReplaceBlizzardFrame(frame)
 
         local normalTexture = minimapTrackingButton:GetNormalTexture() or minimapTrackingButton:CreateTexture(nil, "BORDER")
         normalTexture:SetAllPoints(minimapTrackingButton)
-        SetAtlasTexture(normalTexture, 'Minimap-Tracking-Normal')
+        normalTexture:set_atlas('Minimap-Tracking-Normal', true)
 
         minimapTrackingButton:SetNormalTexture(normalTexture)
 
         local highlightTexture = minimapTrackingButton:GetHighlightTexture()
         highlightTexture:SetAllPoints(minimapTrackingButton)
-        SetAtlasTexture(highlightTexture, 'Minimap-Tracking-Highlight')
+        highlightTexture:set_atlas('Minimap-Tracking-Highlight', true)
 
         local pushedTexture = minimapTrackingButton:GetPushedTexture() or minimapTrackingButton:CreateTexture(nil, "BORDER")
         pushedTexture:SetAllPoints(minimapTrackingButton)
-        SetAtlasTexture(pushedTexture, 'Minimap-Tracking-Pushed')
+        pushedTexture:set_atlas('Minimap-Tracking-Pushed', true)
 
         minimapTrackingButton:SetPushedTexture(pushedTexture)
     end
@@ -882,19 +866,19 @@ local function ReplaceBlizzardFrame(frame)
 
         normalTexture = zoomInButton:GetNormalTexture()
         normalTexture:SetAllPoints(zoomInButton)
-        SetAtlasTexture(normalTexture, 'Minimap-ZoomIn-Normal')
+        normalTexture:set_atlas('Minimap-ZoomIn-Normal', true)
 
         highlightTexture = zoomInButton:GetHighlightTexture()
         highlightTexture:SetAllPoints(zoomInButton)
-        SetAtlasTexture(highlightTexture, 'Minimap-ZoomIn-Highlight')
+        highlightTexture:set_atlas('Minimap-ZoomIn-Highlight', true)
 
         pushedTexture = zoomInButton:GetPushedTexture()
         pushedTexture:SetAllPoints(zoomInButton)
-        SetAtlasTexture(pushedTexture, 'Minimap-ZoomIn-Pushed')
+        pushedTexture:set_atlas('Minimap-ZoomIn-Pushed', true)
 
         local disabledTexture = zoomInButton:GetDisabledTexture()
         disabledTexture:SetAllPoints(zoomInButton)
-        SetAtlasTexture(disabledTexture, 'Minimap-ZoomIn-Pushed')
+        disabledTexture:set_atlas('Minimap-ZoomIn-Pushed', true)
 
         local zoomOutButton = MinimapZoomOut
         zoomOutButton:ClearAllPoints()
@@ -905,19 +889,19 @@ local function ReplaceBlizzardFrame(frame)
 
         normalTexture = zoomOutButton:GetNormalTexture()
         normalTexture:SetAllPoints(zoomOutButton)
-        SetAtlasTexture(normalTexture, 'Minimap-ZoomOut-Normal')
+        normalTexture:set_atlas('Minimap-ZoomOut-Normal', true)
 
         highlightTexture = zoomOutButton:GetHighlightTexture()
         highlightTexture:SetAllPoints(zoomOutButton)
-        SetAtlasTexture(highlightTexture, 'Minimap-ZoomOut-Highlight')
+        highlightTexture:set_atlas('Minimap-ZoomOut-Highlight', true)
 
         pushedTexture = zoomOutButton:GetPushedTexture()
         pushedTexture:SetAllPoints(zoomOutButton)
-        SetAtlasTexture(pushedTexture, 'Minimap-ZoomOut-Pushed')
+        pushedTexture:set_atlas('Minimap-ZoomOut-Pushed', true)
 
         disabledTexture = zoomOutButton:GetDisabledTexture()
         disabledTexture:SetAllPoints(zoomOutButton)
-        SetAtlasTexture(disabledTexture, 'Minimap-ZoomOut-Pushed')
+        disabledTexture:set_atlas('Minimap-ZoomOut-Pushed', true)
     end -- not isHybridMode (backdrop, border, circle, zoom buttons)
 
     -- Reposition a single WorldStateCaptureBar to below the minimap
@@ -1811,12 +1795,12 @@ local function StylePVPBattlefieldFrame()
     -- Detect player faction and apply appropriate textures
     local faction = string.lower(UnitFactionGroup('player'))
 
-    -- Apply textures using SetAtlasTexture
+    -- Apply textures using set_atlas
     if MiniMapBattlefieldFrame:GetNormalTexture() then
-        SetAtlasTexture(MiniMapBattlefieldFrame:GetNormalTexture(), 'Minimap-PVP-' .. faction .. '-Normal')
+        MiniMapBattlefieldFrame:GetNormalTexture():set_atlas('Minimap-PVP-' .. faction .. '-Normal', true)
     end
     if MiniMapBattlefieldFrame:GetPushedTexture() then
-        SetAtlasTexture(MiniMapBattlefieldFrame:GetPushedTexture(), 'Minimap-PVP-' .. faction .. '-Pushed')
+        MiniMapBattlefieldFrame:GetPushedTexture():set_atlas('Minimap-PVP-' .. faction .. '-Pushed', true)
     end
 
     -- Configure click script like in minimapa_old.lua
@@ -1968,17 +1952,17 @@ function MinimapModule:UpdateTrackingIcon()
             -- Show the modern button as default "magnifying glass icon"
             local normalTexture = MiniMapTrackingButton:GetNormalTexture()
             if normalTexture then
-                SetAtlasTexture(normalTexture, 'Minimap-Tracking-Normal')
+                normalTexture:set_atlas('Minimap-Tracking-Normal', true)
             end
 
             local pushedTexture = MiniMapTrackingButton:GetPushedTexture()
             if pushedTexture then
-                SetAtlasTexture(pushedTexture, 'Minimap-Tracking-Pushed')
+                pushedTexture:set_atlas('Minimap-Tracking-Pushed', true)
             end
 
             local highlightTexture = MiniMapTrackingButton:GetHighlightTexture()
             if highlightTexture then
-                SetAtlasTexture(highlightTexture, 'Minimap-Tracking-Highlight')
+                highlightTexture:set_atlas('Minimap-Tracking-Highlight', true)
             end
         else
 
@@ -2009,17 +1993,17 @@ function MinimapModule:UpdateTrackingIcon()
         -- Use the RetailUI textures that already work (the ones from ReplaceBlizzardFrame)
         local normalTexture = MiniMapTrackingButton:GetNormalTexture()
         if normalTexture then
-            SetAtlasTexture(normalTexture, 'Minimap-Tracking-Normal')
+            normalTexture:set_atlas('Minimap-Tracking-Normal', true)
         end
 
         local pushedTexture = MiniMapTrackingButton:GetPushedTexture()
         if pushedTexture then
-            SetAtlasTexture(pushedTexture, 'Minimap-Tracking-Pushed')
+            pushedTexture:set_atlas('Minimap-Tracking-Pushed', true)
         end
 
         local highlightTexture = MiniMapTrackingButton:GetHighlightTexture()
         if highlightTexture then
-            SetAtlasTexture(highlightTexture, 'Minimap-Tracking-Highlight')
+            highlightTexture:set_atlas('Minimap-Tracking-Highlight', true)
         end
 
     end

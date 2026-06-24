@@ -1393,7 +1393,7 @@ end
             end
 
             -- Border: MainMenuXPBarTexture0 (noop.lua clears with SetTexture(nil), we re-apply)
-            -- Reference: SetAllPoints first, then override with offset anchors, then SetAtlasTexture
+            -- Reference: SetAllPoints first, then override with offset anchors, then set_atlas
             local borderTex = MainMenuXPBarTexture0
             if borderTex then
                 borderTex:SetAllPoints(MainMenuExpBar)
