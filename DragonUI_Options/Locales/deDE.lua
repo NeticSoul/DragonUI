@@ -1045,7 +1045,9 @@ L["Preset loaded: "] = "Vorlage geladen: "
 L["Preset deleted: "] = "Vorlage gelöscht: "
 L["Preset duplicated: "] = "Vorlage dupliziert: "
 L["Also delete all saved layout presets?"] = "Auch alle gespeicherten Layout-Vorlagen löschen?"
+L["Also delete all saved position presets?"] = "Auch alle gespeicherten Positions-Vorlagen löschen?"
 L["Presets kept."] = "Vorlagen beibehalten."
+L["Position presets kept."] = "Positions-Vorlagen beibehalten."
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = "Vorlage exportieren"

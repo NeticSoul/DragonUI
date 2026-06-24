@@ -962,6 +962,7 @@ function UF.SmallFrame.Create(opts)
             if frames.main and not InCombatLockdown() then
                 local config = GetConfig()
                 if config and config.override and Module.anchorFrame then
+                    Module:ApplyWidgetPosition()
                     frames.main:ClearAllPoints()
                     frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", 0, 0)
                 else
@@ -1054,11 +1055,29 @@ function UF.SmallFrame.Create(opts)
                 Module.anchorFrame:Show() -- Ensure anchor is visible
                 local config = GetConfig()
                 if not config or not config.override then
-                    -- Attached mode: green overlay appears on top of the actual frame
-                    Module.anchorFrame:ClearAllPoints()
-                    Module.anchorFrame:SetPoint("CENTER", frames.main, "CENTER", 0, 0)
+                    -- Ensure we have a valid center before trying to sync overlay.
+                    if frames.main and not InCombatLockdown() then
+                        frames.main:Show()
+                    end
+
+                    -- Attached mode: prefer true anchoring so the editor overlay
+                    -- follows target/focus movement in real time. If that creates
+                    -- a dependency cycle (known edge case), fallback to absolute center.
+                    if frames.main then
+                        Module.anchorFrame:ClearAllPoints()
+                        local linked = pcall(Module.anchorFrame.SetPoint, Module.anchorFrame, "CENTER", frames.main, "CENTER", 0, 0)
+                        if not linked then
+                            local fx, fy = frames.main:GetCenter()
+                            local ux, uy = UIParent:GetCenter()
+                            if fx and fy and ux and uy then
+                                Module.anchorFrame:SetPoint("CENTER", UIParent, "CENTER", fx - ux, fy - uy)
+                            end
+                        end
+                    end
+                else
+                    Module:ApplyWidgetPosition()
+                    Module:UpdateWidgets()
                 end
-                -- Detached mode: anchor stays at its saved widget position
             end
             -- Show the Blizzard frame in editor mode even without a target
             if frames.main and not InCombatLockdown() then

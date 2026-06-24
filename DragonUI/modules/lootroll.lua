@@ -189,14 +189,25 @@ end
 -- APPLY / RESTORE
 -- =============================================================================
 function LootRollModule:ApplySystem()
-    if self.applied then return end
     if not self.initialized then
         self:Initialize()
         return
     end
+
     UpdateAnchorPosition()
     AttachContainer()
     self.applied = true
+end
+
+-- Public refresh helper used by position presets and profile operations.
+function addon.RefreshLootRoll()
+    if not LootRollModule.initialized then
+        LootRollModule:Initialize()
+        return
+    end
+
+    UpdateAnchorPosition()
+    AttachContainer()
 end
 
 function LootRollModule:RestoreSystem()

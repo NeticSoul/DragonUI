@@ -40,7 +40,9 @@ L["Preset loaded: "] = "Préréglage chargé : "
 L["Preset deleted: "] = "Préréglage supprimé : "
 L["Preset duplicated: "] = "Préréglage dupliqué : "
 L["Also delete all saved layout presets?"] = "Supprimer également tous les préréglages de disposition sauvegardés ?"
+L["Also delete all saved position presets?"] = "Supprimer également tous les préréglages de position sauvegardés ?"
 L["Presets kept."] = "Préréglages conservés."
+L["Position presets kept."] = "Préréglages de position conservés."
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = "Exporter le préréglage"

@@ -1041,7 +1041,9 @@ L["Preset loaded: "] = "Шаблон загружен: "
 L["Preset deleted: "] = "Шаблон удалён: "
 L["Preset duplicated: "] = "Шаблон дублирован: "
 L["Also delete all saved layout presets?"] = "Также удалить все сохранённые шаблоны раскладки?"
+L["Also delete all saved position presets?"] = "Также удалить все сохранённые пресеты позиций?"
 L["Presets kept."] = "Шаблоны сохранены."
+L["Position presets kept."] = "Пресеты позиций сохранены."
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = "Экспорт шаблона"

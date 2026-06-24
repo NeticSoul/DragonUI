@@ -2673,6 +2673,12 @@ local function OnEvent(self, event, unit, ...)
     end
 end
 
+function addon.ApplyCastbarWidgetPositions()
+    ApplyWidgetPosition()
+    ApplyCastbarWidgetPosition("target")
+    ApplyCastbarWidgetPosition("focus")
+end
+
 -- Public API
 function addon.RefreshCastbar()
     CastbarModule:RefreshCastbar("player")

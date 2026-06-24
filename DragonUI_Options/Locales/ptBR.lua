@@ -40,7 +40,9 @@ L["Preset loaded: "] = "Predefinição carregada: "
 L["Preset deleted: "] = "Predefinição excluída: "
 L["Preset duplicated: "] = "Predefinição duplicada: "
 L["Also delete all saved layout presets?"] = "Também excluir todas as predefinições de layout salvas?"
+L["Also delete all saved position presets?"] = "Também excluir todas as predefinições de posição salvas?"
 L["Presets kept."] = "Predefinições mantidas."
+L["Position presets kept."] = "Predefinições de posição mantidas."
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = "Exportar Predefinição"

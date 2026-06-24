@@ -98,6 +98,36 @@ L["UI elements have been repositioned. Reload UI to ensure all graphics display 
 L["Reload Now"] = "Jetzt neu laden"
 L["Later"] = "Später"
 
+-- Position presets (edit mode)
+L["Position Presets"] = "Positions-Vorlagen"
+L["Position Preset"] = "Positions-Vorlage"
+L["Save"] = "Speichern"
+L["Import"] = "Importieren"
+L["Cancel"] = "Abbrechen"
+L["Load"] = "Laden"
+L["Delete"] = "Löschen"
+L["Select All"] = "Alles auswählen"
+L["Click to load"] = "Klicken zum Laden"
+L["No position presets saved yet."] = "Noch keine Positions-Vorlagen gespeichert."
+L["Load position preset '%s'? This will overwrite your current element positions."] = "Vorlage '%s' laden? Die aktuellen Elementpositionen werden überschrieben."
+L["Delete position preset '%s'? This cannot be undone."] = "Vorlage '%s' löschen? Dies kann nicht rückgängig gemacht werden."
+L["Enter a name for the imported position preset:"] = "Name für die importierte Positions-Vorlage eingeben:"
+L["Imported Position Preset"] = "Importierte Positions-Vorlage"
+L["Position preset saved: "] = "Positions-Vorlage gespeichert: "
+L["Position preset loaded: "] = "Positions-Vorlage geladen: "
+L["Position preset deleted: "] = "Positions-Vorlage gelöscht: "
+L["Position preset imported: "] = "Positions-Vorlage importiert: "
+L["Export Position Preset"] = "Positions-Vorlage exportieren"
+L["Import Position Preset"] = "Positions-Vorlage importieren"
+L["Invalid position preset string."] = "Ungültige Positions-Vorlage."
+L["Not a valid DragonUI position preset string."] = "Keine gültige DragonUI-Positions-Vorlage."
+L["Failed to export position preset."] = "Export der Positions-Vorlage fehlgeschlagen."
+L["Save New Preset"] = "Neue Vorlage speichern"
+L["Load Preset"] = "Vorlage laden"
+L["Delete Preset"] = "Vorlage löschen"
+L["Export Preset"] = "Vorlage exportieren"
+L["Import Preset"] = "Vorlage importieren"
+
 -- ============================================================================
 -- KEYBINDING MODULE
 -- ============================================================================

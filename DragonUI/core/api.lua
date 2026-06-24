@@ -456,6 +456,37 @@ end
 -- Global function alias for backwards compatibility
 SaveUIFramePosition = addon.SaveUIFramePosition
 
+-- Apply a saved widgets.* position to a frame (position presets / reload helpers)
+function addon.ApplyWidgetPositionFromDB(widgetKey, frame)
+    if not widgetKey or not frame or not addon.db or not addon.db.profile or not addon.db.profile.widgets then
+        return
+    end
+
+    local cfg = addon.db.profile.widgets[widgetKey]
+    if not cfg or (cfg.posX == nil and cfg.posY == nil) then
+        return
+    end
+
+    local anchor = cfg.anchor or "CENTER"
+    local posX = cfg.posX or 0
+    local posY = cfg.posY or 0
+
+    if addon._dualBarOffsetWidgets and addon._dualBarOffsetWidgets[widgetKey]
+       and addon.GetDualBarVerticalOffset and addon.IsWidgetAtDefaultPosition
+       and addon.IsWidgetAtDefaultPosition(widgetKey) then
+        posY = posY + addon.GetDualBarVerticalOffset()
+    end
+
+    if InCombatLockdown() then
+        return
+    end
+
+    frame:ClearAllPoints()
+    frame:SetPoint(anchor, UIParent, anchor, posX, posY)
+end
+
+ApplyWidgetPositionFromDB = addon.ApplyWidgetPositionFromDB
+
 -- Apply frame position from database
 function addon.ApplyUIFramePosition(frame, configPath)
     if not frame or not configPath then

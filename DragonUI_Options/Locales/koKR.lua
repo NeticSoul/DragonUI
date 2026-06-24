@@ -1049,7 +1049,9 @@ L["Preset loaded: "] = "프리셋 불러옴: "
 L["Preset deleted: "] = "프리셋 삭제됨: "
 L["Preset duplicated: "] = "프리셋 복제됨: "
 L["Also delete all saved layout presets?"] = "저장된 레이아웃 프리셋도 모두 삭제할까요?"
+L["Also delete all saved position presets?"] = "저장된 위치 프리셋도 모두 삭제할까요?"
 L["Presets kept."] = "프리셋이 유지되었습니다."
+L["Position presets kept."] = "위치 프리셋이 유지되었습니다."
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = "프리셋 내보내기"

@@ -137,7 +137,7 @@ local BD_EDITOR_BUTTON = {
     insets = { left = 0, right = 0, top = 0, bottom = 0 },
 }
 
-local function styleEditorButton(button)
+function addon.StyleEditorButton(button)
     -- Strip all template textures (Left/Middle/Right sub-textures)
     local name = button:GetName()
     if name then
@@ -191,7 +191,7 @@ local function createExitButton()
     exitEditorButton:SetFrameLevel(1000);
 
     -- Apply modern grey + blue style
-    styleEditorButton(exitEditorButton)
+    addon.StyleEditorButton(exitEditorButton)
 
     exitEditorButton:SetScript("OnClick", function()
         EditorMode:Toggle();
@@ -211,7 +211,7 @@ local function createResetAllButton()
     resetAllButton:SetFrameLevel(1000);
 
     -- Apply modern grey + blue style
-    styleEditorButton(resetAllButton)
+    addon.StyleEditorButton(resetAllButton)
 
     resetAllButton:SetScript("OnClick", function()
         EditorMode:ShowResetConfirmation()
@@ -299,6 +299,37 @@ local function createGridOverlay()
     gridOverlay:Hide()
 end
 
+function EditorMode:FlushPositions()
+    if errorMessagesMover and errorMessagesMover:IsShown() then
+        PersistErrorMessagesMoverPosition()
+    end
+end
+
+local function RaiseEditorStaticPopups()
+    local numDialogs = STATICPOPUP_NUMDIALOGS or 4
+    for i = 1, numDialogs do
+        local popup = _G["StaticPopup" .. i]
+        if popup and popup:IsShown() then
+            popup:SetFrameStrata("FULLSCREEN_DIALOG")
+            popup:SetFrameLevel(900 + i)
+        end
+    end
+end
+
+local function EnsureStaticPopupEditorHook()
+    if addon._editorStaticPopupHook then
+        return
+    end
+
+    addon._editorStaticPopupHook = true
+    hooksecurefunc("StaticPopup_Show", function()
+        if not EditorMode:IsActive() then
+            return
+        end
+        addon:After(0, RaiseEditorStaticPopups)
+    end)
+end
+
 function EditorMode:Show()
     if InCombatLockdown() then
         
@@ -309,6 +340,7 @@ function EditorMode:Show()
     createExitButton()
     createResetAllButton()
     SetupErrorMessagesMover()
+    EnsureStaticPopupEditorHook()
     gridOverlay:Show()
     exitEditorButton:Show()
     resetAllButton:Show()
@@ -327,6 +359,10 @@ function EditorMode:Show()
     if addon.UpdateOverlaySizes then
         addon.UpdateOverlaySizes()
     end
+
+    if addon.PositionPresets then
+        addon.PositionPresets:ShowPanel()
+    end
     
     -- Refresh AceConfig to update button state
     self:RefreshOptionsUI()
@@ -343,6 +379,10 @@ end)
 
 
 function EditorMode:Hide(showReloadPopup)
+    if addon.PositionPresets then
+        addon.PositionPresets:HidePanel()
+    end
+
     if gridOverlay then gridOverlay:Hide() end
     if exitEditorButton then exitEditorButton:Hide() end
     if resetAllButton then resetAllButton:Hide() end
@@ -540,6 +580,12 @@ StaticPopupDialogs["DRAGONUI_RESET_ALL_POSITIONS"] = {
     text = L["Are you sure you want to reset all interface elements to their default positions?"],
     button1 = L["Yes"],
     button2 = L["No"],
+    OnShow = function(self)
+        if EditorMode:IsActive() then
+            self:SetFrameStrata("FULLSCREEN_DIALOG")
+            self:SetFrameLevel(950)
+        end
+    end,
     OnAccept = function()
         EditorMode:ResetAllPositions()
     end,

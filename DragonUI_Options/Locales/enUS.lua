@@ -1080,7 +1080,9 @@ L["Preset loaded: "] = true
 L["Preset deleted: "] = true
 L["Preset duplicated: "] = true
 L["Also delete all saved layout presets?"] = true
+L["Also delete all saved position presets?"] = true
 L["Presets kept."] = true
+L["Position presets kept."] = true
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = true

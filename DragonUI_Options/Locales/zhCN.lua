@@ -1040,7 +1040,9 @@ L["Preset loaded: "] = "预设已加载: "
 L["Preset deleted: "] = "预设已删除: "
 L["Preset duplicated: "] = "预设已复制: "
 L["Also delete all saved layout presets?"] = "是否同时删除所有已保存的布局预设？"
+L["Also delete all saved position presets?"] = "是否同时删除所有已保存的位置预设？"
 L["Presets kept."] = "预设已保留。"
+L["Position presets kept."] = "位置预设已保留。"
 
 -- PRESET IMPORT / EXPORT
 L["Export Preset"] = "导出预设"
