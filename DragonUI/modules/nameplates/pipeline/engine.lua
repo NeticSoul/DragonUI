@@ -291,6 +291,11 @@ local function EngineOnUpdate(_, elapsed)
 
     -- 1. Harvest native alpha, then force plate root to 1 when target exists.
     -- cfg is hoisted out of the per-plate retail-scale path (was 40 GetCfg/frame).
+    -- awesome_wotlk only: never force alpha back to 1. The anti-dim re-assert
+    -- below exists for a stock 3.3.5a quirk (Blizzard dims non-target plates);
+    -- awesome_wotlk manages plate alpha itself, including its own wall/LoS
+    -- occlusion hiding, and forcing it to 1 here was fighting that.
+    local skipAlphaForce = C_NamePlate ~= nil
     local retailCfg = NP.module._retailBehavior and NP.config.GetCfg() or nil
     for _, pd in pairs(NP.module.plates) do
         local pl = pd.plate
@@ -298,7 +303,7 @@ local function EngineOnUpdate(_, elapsed)
         elseif pl.GetAlpha then
             local nativeAlpha = pl:GetAlpha() or 1.0
             pd._tokenNativeAlpha = nativeAlpha
-            if hasTarget and pl.SetAlpha then
+            if hasTarget and pl.SetAlpha and not skipAlphaForce then
                 -- Blizzard dims non-target plates; only re-assert 1 when it
                 -- actually dimmed (skip the no-op SetAlpha on plates already at 1).
                 if nativeAlpha < 0.9999 then
