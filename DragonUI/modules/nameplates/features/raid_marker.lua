@@ -28,9 +28,13 @@ function NP.widgets.ReflowTopOverlays(plateData)
     local native = plateData.raidIcon
     local hp = plateData.minaHp
     if native and hp then
-        -- Reparent to hp for depth ordering with visual stack.
+        -- Reparent to hp for depth ordering with visual stack. In headline mode
+        -- hp itself is hidden (SyncHealth), which would hide the marker too
+        -- since it inherits its parent's visibility — keep it on visualRoot
+        -- instead, which is never hidden, while still anchoring to hp's position.
+        local headline = NP.gather.IsHeadlineActive and NP.gather.IsHeadlineActive(plateData)
         if native.SetParent then
-            native:SetParent(hp)
+            native:SetParent((headline and plateData.visualRoot) or hp)
         end
         local reaction = select(1, NP.native_style.GetPlateReaction(plateData))
         local isFriendly = (reaction == "FRIENDLY")
