@@ -1591,7 +1591,7 @@ local function UpdatePlayerDragonDecoration()
             if PlayerFrameVehicleTexture then
                 PlayerFrameVehicleTexture:ClearAllPoints()
                 PlayerFrameVehicleTexture:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 35, 0)
-                SetAtlasTexture(PlayerFrameVehicleTexture, 'PlayerFrame-TextureFrame-Vehicle')
+                PlayerFrameVehicleTexture:set_atlas('PlayerFrame-TextureFrame-Vehicle', true)
                 PlayerFrameVehicleTexture:SetDrawLayer('BORDER') -- Below flash/status OVERLAY
                 PlayerFrameVehicleTexture:SetBlendMode('BLEND') -- Normal rendering (not ADD)
                 PlayerFrameVehicleTexture:SetVertexColor(1, 1, 1, 1) -- No tint
@@ -1807,7 +1807,7 @@ local function CreatePlayerFrameTextures()
         vehicleCombatFrame:Hide()
 
         local vehicleCombatTexture = vehicleCombatFrame:CreateTexture(nil, "OVERLAY", nil, 7)
-        SetAtlasTexture(vehicleCombatTexture, 'PlayerFrame-TextureFrame-Vehicle')
+        vehicleCombatTexture:set_atlas('PlayerFrame-TextureFrame-Vehicle', true)
         vehicleCombatTexture:ClearAllPoints()
         vehicleCombatTexture:SetPoint('TOPLEFT', vehicleCombatFrame, 'TOPLEFT', 0, 0)
         vehicleCombatTexture:SetBlendMode("ADD")
@@ -1826,7 +1826,7 @@ local function CreatePlayerFrameTextures()
         vehicleStatusFrame:Hide()
 
         local vehicleStatusTexture = vehicleStatusFrame:CreateTexture(nil, "OVERLAY", nil, 7)
-        SetAtlasTexture(vehicleStatusTexture, 'PlayerFrame-TextureFrame-Vehicle')
+        vehicleStatusTexture:set_atlas('PlayerFrame-TextureFrame-Vehicle', true)
         vehicleStatusTexture:ClearAllPoints()
         vehicleStatusTexture:SetPoint('TOPLEFT', vehicleStatusFrame, 'TOPLEFT', 0, 0)
         vehicleStatusTexture:SetBlendMode("ADD")

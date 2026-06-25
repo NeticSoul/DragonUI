@@ -173,13 +173,13 @@ local function ApplyQuestTrackerStyling()
     local background = watchFrame.background
 
     -- Apply atlas texture first
-    local success, err = pcall(SetAtlasTexture, background, 'QuestTracker-Header')
+    local success, err = pcall(background.set_atlas, background, 'QuestTracker-Header', true)
     if not success then
         return
     end
     
     -- Fixed header positioning (RetailUI pattern)
-    -- NOTE: SetSize MUST come AFTER SetAtlasTexture because it overwrites size
+    -- NOTE: SetSize MUST come AFTER set_atlas(name, true) because it overwrites size
     -- Use WatchFrame width to match quest tracker, maintain 8:1 aspect ratio
     local headerWidth = watchFrame:GetWidth() or 230
     local headerHeight = headerWidth / 8  -- Maintain aspect ratio (560/70 = 8)

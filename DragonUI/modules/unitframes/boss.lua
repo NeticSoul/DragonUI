@@ -7,7 +7,7 @@
 
   Architecture:
   - Config: addon.db.profile.unitframe.boss
-  - Atlas: SetAtlasTexture (global from Atlas.lua)
+  - Atlas: texture:set_atlas(name, true) (from utils/atlas.lua)
   - Editor: RegisterEditableFrame for drag positioning
   - Visibility: RegisterUnitWatch(bossFrame) per boss frame — required because
     INSTANCE_ENCOUNTER_ENGAGE_UNIT does NOT exist in 3.3.5a (MCP Ch.25).
@@ -399,7 +399,7 @@ local function ReskinBossFrame(wrapperFrame, bossFrame)
     if highLevelTex and levelText then
         highLevelTex:ClearAllPoints()
         highLevelTex:SetPoint("CENTER", levelText, "CENTER", -9, 6)
-        SetAtlasTexture(highLevelTex, "TargetFrame-HighLevelIcon")
+        highLevelTex:set_atlas("TargetFrame-HighLevelIcon", true)
     end
 
     -- Health text
@@ -488,7 +488,7 @@ local function ReskinBossFrame(wrapperFrame, bossFrame)
     if bossFrame.threatIndicator then
         bossFrame.threatIndicator:ClearAllPoints()
         bossFrame.threatIndicator:SetPoint("BOTTOMLEFT", 0, 0)
-        SetAtlasTexture(bossFrame.threatIndicator, "TargetFrame-Status")
+        bossFrame.threatIndicator:set_atlas("TargetFrame-Status", true)
     end
 
     -- Apply classification-based atlas border

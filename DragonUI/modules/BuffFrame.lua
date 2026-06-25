@@ -107,12 +107,12 @@ local function ReplaceBlizzardFrame(frame)
 
     local normalTexture = toggleButton:GetNormalTexture() or toggleButton:CreateTexture(nil, "BORDER")
     normalTexture:SetAllPoints(toggleButton)
-    SetAtlasTexture(normalTexture, 'CollapseButton-Right')
+    normalTexture:set_atlas('CollapseButton-Right', true)
     toggleButton:SetNormalTexture(normalTexture)
 
     local highlightTexture = toggleButton:GetHighlightTexture() or toggleButton:CreateTexture(nil, "HIGHLIGHT")
     highlightTexture:SetAllPoints(toggleButton)
-    SetAtlasTexture(highlightTexture, 'CollapseButton-Right')
+    highlightTexture:set_atlas('CollapseButton-Right', true)
     toggleButton:SetHighlightTexture(highlightTexture)
 
     toggleButton:SetScript("OnClick", function(self)
@@ -124,9 +124,9 @@ local function ReplaceBlizzardFrame(frame)
                 addon.db.profile.buffs.buffs_hidden = true
             end
             local normalTexture = self:GetNormalTexture()
-            SetAtlasTexture(normalTexture, 'CollapseButton-Left')
+            normalTexture:set_atlas('CollapseButton-Left', true)
             local highlightTexture = toggleButton:GetHighlightTexture()
-            SetAtlasTexture(highlightTexture, 'CollapseButton-Left')
+            highlightTexture:set_atlas('CollapseButton-Left', true)
 
             for index = 1, BUFF_ACTUAL_DISPLAY do
                 local button = _G['BuffButton' .. index]
@@ -141,9 +141,9 @@ local function ReplaceBlizzardFrame(frame)
                 addon.db.profile.buffs.buffs_hidden = false
             end
             local normalTexture = self:GetNormalTexture()
-            SetAtlasTexture(normalTexture, 'CollapseButton-Right')
+            normalTexture:set_atlas('CollapseButton-Right', true)
             local highlightTexture = toggleButton:GetHighlightTexture()
-            SetAtlasTexture(highlightTexture, 'CollapseButton-Right')
+            highlightTexture:set_atlas('CollapseButton-Right', true)
 
             for index = 1, BUFF_ACTUAL_DISPLAY do
                 local button = _G['BuffButton' .. index]
@@ -728,9 +728,9 @@ function BuffFrameModule:Enable()
                     buffsHiddenByToggle = true
                     toggleButton.toggle = false
                     local normalTex = toggleButton:GetNormalTexture()
-                    SetAtlasTexture(normalTex, 'CollapseButton-Left')
+                    normalTex:set_atlas('CollapseButton-Left', true)
                     local highlightTex = toggleButton:GetHighlightTexture()
-                    SetAtlasTexture(highlightTex, 'CollapseButton-Left')
+                    highlightTex:set_atlas('CollapseButton-Left', true)
                     for index = 1, BUFF_ACTUAL_DISPLAY do
                         local button = _G['BuffButton' .. index]
                         if button then button:Hide() end
