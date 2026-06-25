@@ -944,47 +944,56 @@ local function CreateCopyFrame()
     tinsert(UISpecialFrames, "DragonUI_ChatCopyFrame")
 end
 
+-- When CleanerChat / Glass UI is active, the Blizzard ChatFrame is hidden
+-- (alpha=0, disabled mouse) and messages live in Glass's SlidingMessageFrame
+-- as MessageLine frames with their own FontStrings. Returns the joined text,
+-- or nil if Glass isn't active/usable for this tab.
+-- Wrapped in pcall by the caller: Glass's internal state shape isn't part of
+-- its public API and could change, and we want to fall back to reading the
+-- Blizzard ChatFrame instead of erroring out when that happens.
+local function ReadGlassChatText(id)
+    local Glass = _G.LibStub and _G.LibStub("AceAddon-3.0", true)
+    if not Glass then return nil end
+    Glass = Glass:GetAddon("Glass", true)
+    if not Glass then return nil end
+
+    local uiManager = Glass:GetModule("UIManager")
+    if not (uiManager and uiManager.state and uiManager.state.frames[id]) then return nil end
+
+    local smf = uiManager.state.frames[id]
+    -- Combat Log (ChatFrame2) renders natively — skip Glass path
+    if smf.state.isCombatLog then return nil end
+
+    local lines = {}
+    for _, message in ipairs(smf.state.messages or {}) do
+        if message.text and message.text.GetText then
+            local line = message.text:GetText()
+            if line and line ~= "" then
+                lines[#lines + 1] = tostring(line)
+            end
+        end
+    end
+    if #lines == 0 then return nil end
+    return table_concat(lines, "\n", 1, #lines)
+end
+
 local function ChatCopyFunc(frame)
     local id = frame:GetID()
     local cf = _G[format("ChatFrame%d", id)]
     if not cf then return end
 
-    local text
-    local fromGlass = false
-
-    -- When CleanerChat / Glass UI is active, the Blizzard ChatFrame is hidden
-    -- (alpha=0, disabled mouse) and messages live in Glass's SlidingMessageFrame
-    -- as MessageLine frames with their own FontStrings. Try that first.
-    local Glass = _G.LibStub and _G.LibStub("AceAddon-3.0", true)
-    if Glass then
-        Glass = Glass:GetAddon("Glass", true)
-        if Glass then
-            local uiManager = Glass:GetModule("UIManager")
-            if uiManager and uiManager.state and uiManager.state.frames[id] then
-                local smf = uiManager.state.frames[id]
-                -- Combat Log (ChatFrame2) renders natively — skip Glass path
-                if not smf.state.isCombatLog then
-                    local lines = {}
-                    for _, message in ipairs(smf.state.messages or {}) do
-                        if message.text and message.text.GetText then
-                            local line = message.text:GetText()
-                            if line and line ~= "" then
-                                lines[#lines + 1] = tostring(line)
-                            end
-                        end
-                    end
-                    if #lines > 0 then
-                        text = table_concat(lines, "\n", 1, #lines)
-                        fromGlass = true
-                    end
-                end
-            end
-        end
+    local ok, glassText = pcall(ReadGlassChatText, id)
+    if not ok then
+        -- Surface the error (visible with Lua errors on / BugSack) instead of
+        -- failing silently, while still falling back to the Blizzard reader below.
+        geterrorhandler()(glassText)
     end
+    local text = ok and glassText or nil
 
     -- Fallback: read from the Blizzard ChatFrame (original behavior).
-    -- This handles: Glass not installed, combat log, or any other case.
-    if not fromGlass then
+    -- This handles: Glass not installed, combat log, error reading Glass's
+    -- state, or any other case.
+    if not text then
         local _, size = cf:GetFont()
         FCF_SetChatWindowFontSize(cf, cf, 0.01)
 
