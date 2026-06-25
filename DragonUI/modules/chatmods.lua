@@ -945,26 +945,66 @@ local function CreateCopyFrame()
 end
 
 local function ChatCopyFunc(frame)
-    local cf = _G[format("ChatFrame%d", frame:GetID())]
+    local id = frame:GetID()
+    local cf = _G[format("ChatFrame%d", id)]
     if not cf then return end
-    local _, size = cf:GetFont()
-    FCF_SetChatWindowFontSize(cf, cf, 0.01)
 
-    local lines = {}
-    local ct = 1
-    local regionCount = select("#", cf:GetRegions())
-    for i = regionCount, 1, -1 do
-        local region = select(i, cf:GetRegions())
-        if region:GetObjectType() == "FontString" then
-            lines[ct] = tostring(region:GetText())
-            ct = ct + 1
+    local text
+    local fromGlass = false
+
+    -- When CleanerChat / Glass UI is active, the Blizzard ChatFrame is hidden
+    -- (alpha=0, disabled mouse) and messages live in Glass's SlidingMessageFrame
+    -- as MessageLine frames with their own FontStrings. Try that first.
+    local Glass = _G.LibStub and _G.LibStub("AceAddon-3.0", true)
+    if Glass then
+        Glass = Glass:GetAddon("Glass", true)
+        if Glass then
+            local uiManager = Glass:GetModule("UIManager")
+            if uiManager and uiManager.state and uiManager.state.frames[id] then
+                local smf = uiManager.state.frames[id]
+                -- Combat Log (ChatFrame2) renders natively — skip Glass path
+                if not smf.state.isCombatLog then
+                    local lines = {}
+                    for _, message in ipairs(smf.state.messages or {}) do
+                        if message.text and message.text.GetText then
+                            local line = message.text:GetText()
+                            if line and line ~= "" then
+                                lines[#lines + 1] = tostring(line)
+                            end
+                        end
+                    end
+                    if #lines > 0 then
+                        text = table_concat(lines, "\n", 1, #lines)
+                        fromGlass = true
+                    end
+                end
+            end
         end
     end
 
-    local text = table_concat(lines, "\n", 1, ct - 1)
-    FCF_SetChatWindowFontSize(cf, cf, size)
+    -- Fallback: read from the Blizzard ChatFrame (original behavior).
+    -- This handles: Glass not installed, combat log, or any other case.
+    if not fromGlass then
+        local _, size = cf:GetFont()
+        FCF_SetChatWindowFontSize(cf, cf, 0.01)
+
+        local lines = {}
+        local ct = 1
+        local regionCount = select("#", cf:GetRegions())
+        for i = regionCount, 1, -1 do
+            local region = select(i, cf:GetRegions())
+            if region:GetObjectType() == "FontString" then
+                lines[ct] = tostring(region:GetText())
+                ct = ct + 1
+            end
+        end
+
+        text = table_concat(lines, "\n", 1, ct - 1)
+        FCF_SetChatWindowFontSize(cf, cf, size)
+    end
+
     DragonUI_ChatCopyFrame:Show()
-    DragonUI_ChatCopyBox:SetText(text)
+    DragonUI_ChatCopyBox:SetText(text or "")
     DragonUI_ChatCopyBox:HighlightText(0)
 end
 
