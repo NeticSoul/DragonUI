@@ -1012,6 +1012,12 @@ function NP.gather.ProcessReactionDrift()
             if math.abs(r - plateData.barR) > 0.1
                 or math.abs(g - plateData.barG) > 0.1
                 or math.abs(b - plateData.barB) > 0.1 then
+                if addon.debugMode then
+                    print(string.format(
+                        "|cFFFFFF00[DUI nameplate debug]|r ProcessReactionDrift name=%s t=%.3f stored=%.3f,%.3f,%.3f live=%.3f,%.3f,%.3f",
+                        tostring(plateData.plateName), GetTime(),
+                        plateData.barR, plateData.barG, plateData.barB, r, g, b))
+                end
                 NP.gather.RefreshPlateFull(plateData, "reaction_drift")
             end
         end

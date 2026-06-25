@@ -312,4 +312,8 @@ function NP.native_style.CaptureBarColor(plateData)
     local r, g, b = bar:GetStatusBarColor()
     plateData.barR, plateData.barG, plateData.barB = r, g, b
     plateData.classKey = NP.native_style.ClassKeyFromBarColor(r, g, b)
+    if addon.debugMode then
+        print(string.format("|cFFFFFF00[DUI nameplate debug]|r CaptureBarColor name=%s r=%.3f g=%.3f b=%.3f classKey=%s",
+            tostring(plateData.plateName), r, g, b, tostring(plateData.classKey)))
+    end
 end

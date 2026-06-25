@@ -494,12 +494,64 @@ local function EngineOnEvent(_, event, unit, ...)
         E.QueueMass(CB.OnUpdateCastbar)
         return
     end
+    -- awesome_wotlk only. No-op on stock 3.3.5a (C_NamePlate is nil there, so
+    -- neither event is even registered) — the 4 Hz poll remains the only path.
+    --
+    -- NAME_PLATE_CREATED fires for a bare frame that isn't attached to a unit
+    -- yet: the native health bar hasn't been given its real reaction color at
+    -- this point. Styling here (as a first attempt did) captures whatever the
+    -- bar's color defaults to, which matches none of GetPlateReaction's known
+    -- colors and falls through to its "HOSTILE/PLAYER" default — friendly
+    -- units render with a red bar and never get headline mode. So this only
+    -- registers the plate (captures region references) and applies no visuals.
+    if event == "NAME_PLATE_CREATED" and C_NamePlate then
+        local namePlateFrame = unit
+        if namePlateFrame and not FindPlateDataByNameplateFrame(namePlateFrame) then
+            local plateData = NP.lifecycle.RegisterPlate(namePlateFrame)
+            if addon.debugMode then
+                local bar = plateData and plateData.healthBar
+                local r, g, b = bar and bar.GetStatusBarColor and bar:GetStatusBarColor()
+                print(string.format("|cFFFFFF00[DUI nameplate debug]|r NAME_PLATE_CREATED t=%.3f registered=%s barColor=%s,%s,%s",
+                    GetTime(), tostring(plateData ~= nil), tostring(r), tostring(g), tostring(b)))
+            end
+        end
+        return
+    end
+    -- NAME_PLATE_UNIT_ADDED fires once the plate is actually attached to a
+    -- unit, which is when the native reaction color is set — the first safe
+    -- point to style it. This is what replaces waiting for the next poll tick.
     if event == "NAME_PLATE_UNIT_ADDED" and C_NamePlate and unit then
         local nameplate = C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
         if nameplate then
             nameplate.namePlateUnitToken = unit
         end
         local plateData = FindPlateDataByNameplateFrame(nameplate)
+        if not plateData and nameplate then
+            -- Fallback in case NAME_PLATE_CREATED didn't fire for this frame.
+            plateData = NP.lifecycle.RegisterPlate(nameplate)
+        end
+        local isNewSetup = plateData and not plateData.setupDone
+        if addon.debugMode then
+            local bar = plateData and plateData.healthBar
+            local r, g, b
+            if bar and bar.GetStatusBarColor then
+                r, g, b = bar:GetStatusBarColor()
+            end
+            print(string.format("|cFFFFFF00[DUI nameplate debug]|r NAME_PLATE_UNIT_ADDED t=%.3f unit=%s hadPlateData=%s setupDone=%s barColor=%s,%s,%s",
+                GetTime(), tostring(unit), tostring(plateData ~= nil), tostring(plateData and plateData.setupDone),
+                tostring(r), tostring(g), tostring(b)))
+        end
+        if isNewSetup then
+            NP.lifecycle.SetupPlate(plateData)
+            -- We're in a plain event handler here, not inside the plate's own
+            -- OnShow hookscript, so there's no re-entrancy risk in styling it
+            -- right now instead of waiting for the queued OnUpdate tick (that
+            -- 1-frame gap is what was still showing native unstyled chrome,
+            -- including its own default health bar color, for an instant).
+            if plateData.plate and plateData.plate.IsShown and plateData.plate:IsShown() then
+                NP.gather.RefreshPlateFull(plateData, "awesome_wotlk_unit_added")
+            end
+        end
         if plateData then
             plateData.namePlateUnitToken = unit
             if plateData.plate then
@@ -701,6 +753,7 @@ local function RunNameplatesApply()
         f:RegisterEvent("RAID_ROSTER_UPDATE")
         f:RegisterEvent("ARENA_OPPONENT_UPDATE")
         if C_NamePlate then
+            f:RegisterEvent("NAME_PLATE_CREATED")
             f:RegisterEvent("NAME_PLATE_UNIT_ADDED")
         end
         f:SetScript("OnEvent", EngineOnEvent)
