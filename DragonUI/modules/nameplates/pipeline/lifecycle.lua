@@ -50,6 +50,11 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._tokenProbeAt = nil
     plateData.plateLevel = nil
     plateData._plateLevelName = nil
+    plateData._subtitleText = nil
+    plateData._pvpTitleName = nil
+    plateData._headlineClass = nil
+    plateData._friendlyHealthClass = nil
+    plateData._afkState = nil
     plateData.namePlateUnitToken = nil
     plateData.unitToken = nil
     if plateData.plate then

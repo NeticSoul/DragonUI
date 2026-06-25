@@ -98,6 +98,36 @@ L["UI elements have been repositioned. Reload UI to ensure all graphics display 
 L["Reload Now"] = true
 L["Later"] = true
 
+-- Position presets (edit mode)
+L["Position Presets"] = true
+L["Position Preset"] = true
+L["Save"] = true
+L["Import"] = true
+L["Cancel"] = true
+L["Load"] = true
+L["Delete"] = true
+L["Select All"] = true
+L["Click to load"] = true
+L["No position presets saved yet."] = true
+L["Load position preset '%s'? This will overwrite your current element positions."] = true
+L["Delete position preset '%s'? This cannot be undone."] = true
+L["Enter a name for the imported position preset:"] = true
+L["Imported Position Preset"] = true
+L["Position preset saved: "] = true
+L["Position preset loaded: "] = true
+L["Position preset deleted: "] = true
+L["Position preset imported: "] = true
+L["Export Position Preset"] = true
+L["Import Position Preset"] = true
+L["Invalid position preset string."] = true
+L["Not a valid DragonUI position preset string."] = true
+L["Failed to export position preset."] = true
+L["Save New Preset"] = true
+L["Load Preset"] = true
+L["Delete Preset"] = true
+L["Export Preset"] = true
+L["Import Preset"] = true
+
 -- ============================================================================
 -- KEYBINDING MODULE
 -- ============================================================================

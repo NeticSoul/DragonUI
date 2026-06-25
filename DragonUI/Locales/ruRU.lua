@@ -98,6 +98,36 @@ L["UI elements have been repositioned. Reload UI to ensure all graphics display 
 L["Reload Now"] = "Перезагрузить"
 L["Later"] = "Позже"
 
+-- Position presets (edit mode)
+L["Position Presets"] = "Пресеты позиций"
+L["Position Preset"] = "Пресет позиций"
+L["Save"] = "Сохранить"
+L["Import"] = "Импорт"
+L["Cancel"] = "Отмена"
+L["Load"] = "Загрузить"
+L["Delete"] = "Удалить"
+L["Select All"] = "Выделить всё"
+L["Click to load"] = "Нажмите для загрузки"
+L["No position presets saved yet."] = "Пресеты позиций ещё не сохранены."
+L["Load position preset '%s'? This will overwrite your current element positions."] = "Загрузить пресет '%s'? Текущие позиции элементов будут перезаписаны."
+L["Delete position preset '%s'? This cannot be undone."] = "Удалить пресет '%s'? Это действие нельзя отменить."
+L["Enter a name for the imported position preset:"] = "Введите имя для импортированного пресета:"
+L["Imported Position Preset"] = "Импортированный пресет"
+L["Position preset saved: "] = "Пресет позиций сохранён: "
+L["Position preset loaded: "] = "Пресет позиций загружен: "
+L["Position preset deleted: "] = "Пресет позиций удалён: "
+L["Position preset imported: "] = "Пресет позиций импортирован: "
+L["Export Position Preset"] = "Экспорт пресета позиций"
+L["Import Position Preset"] = "Импорт пресета позиций"
+L["Invalid position preset string."] = "Недопустимая строка пресета позиций."
+L["Not a valid DragonUI position preset string."] = "Не является допустимой строкой пресета позиций DragonUI."
+L["Failed to export position preset."] = "Не удалось экспортировать пресет позиций."
+L["Save New Preset"] = "Сохранить новый пресет"
+L["Load Preset"] = "Загрузить пресет"
+L["Delete Preset"] = "Удалить пресет"
+L["Export Preset"] = "Экспорт пресета"
+L["Import Preset"] = "Импорт пресета"
+
 -- ============================================================================
 -- KEYBINDING MODULE
 -- ============================================================================

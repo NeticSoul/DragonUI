@@ -95,6 +95,36 @@ L["UI elements have been repositioned. Reload UI to ensure all graphics display 
 L["Reload Now"] = "立即重载"
 L["Later"] = "稍后"
 
+-- Position presets (edit mode)
+L["Position Presets"] = "位置预设"
+L["Position Preset"] = "位置预设"
+L["Save"] = "保存"
+L["Import"] = "导入"
+L["Cancel"] = "取消"
+L["Load"] = "加载"
+L["Delete"] = "删除"
+L["Select All"] = "全选"
+L["Click to load"] = "点击加载"
+L["No position presets saved yet."] = "尚未保存位置预设。"
+L["Load position preset '%s'? This will overwrite your current element positions."] = "加载预设 '%s'？这将覆盖当前元素位置。"
+L["Delete position preset '%s'? This cannot be undone."] = "删除预设 '%s'？此操作无法撤销。"
+L["Enter a name for the imported position preset:"] = "输入导入预设的名称："
+L["Imported Position Preset"] = "导入的预设"
+L["Position preset saved: "] = "位置预设已保存："
+L["Position preset loaded: "] = "位置预设已加载："
+L["Position preset deleted: "] = "位置预设已删除："
+L["Position preset imported: "] = "位置预设已导入："
+L["Export Position Preset"] = "导出位置预设"
+L["Import Position Preset"] = "导入位置预设"
+L["Invalid position preset string."] = "无效的位置预设字符串。"
+L["Not a valid DragonUI position preset string."] = "不是有效的 DragonUI 位置预设字符串。"
+L["Failed to export position preset."] = "导出位置预设失败。"
+L["Save New Preset"] = "保存新预设"
+L["Load Preset"] = "加载预设"
+L["Delete Preset"] = "删除预设"
+L["Export Preset"] = "导出预设"
+L["Import Preset"] = "导入预设"
+
 -- ============================================================================
 -- 按键绑定模块
 -- ============================================================================

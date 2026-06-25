@@ -287,6 +287,7 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
         end
         KeepNameRowChildOpaque(plateData.minaName)
         KeepNameRowChildOpaque(plateData.minaHpPct)
+        KeepNameRowChildOpaque(plateData.minaSubTitle)
         KeepNameRowChildOpaque(plateData.minaBossSkull)
     end
 
@@ -315,6 +316,7 @@ function NP.layout.HideMinaStack(plateData)
         plateData.minaPo,
         plateData.minaTarget,
         plateData.minaName,
+        plateData.minaSubTitle,
         plateData.minaBossSkull,
         plateData.minaHpPct,
         plateData.minaPoCur,
@@ -640,6 +642,7 @@ function NP.layout.ApplyNameplateFonts(plateData)
 
     applyFont(plateData.minaName, nameSize)
     applyFont(plateData.minaHpPct, nameSize)
+    applyFont(plateData.minaSubTitle, math.max(8, nameSize - 2))
     applyFont(plateData.minaPoCur, powerSize)
     applyFont(plateData.minaPoPct, powerSize)
 
@@ -751,6 +754,20 @@ function NP.layout.EnsureMinaStack(plateData)
     plateData.minaName:SetNonSpaceWrap(false)
     plateData.minaName:SetWordWrap(false)
     plateData.minaName:SetHeight(12)
+
+    -- Headline-mode subtitle (guild / AFK for players, title for NPCs). Lives in
+    -- minaNameRow so it inherits the row's visual alpha.
+    plateData.minaSubTitle = plateData.minaNameRow:CreateFontString(nil, "OVERLAY")
+    SafeSetFont(plateData.minaSubTitle, fontPath, math.max(8, nameSize - 2), "")
+    plateData.minaSubTitle:SetShadowOffset(1, -1)
+    plateData.minaSubTitle:SetShadowColor(0, 0, 0, 1)
+    plateData.minaSubTitle:SetJustifyH("CENTER")
+    plateData.minaSubTitle:SetNonSpaceWrap(false)
+    plateData.minaSubTitle:SetWordWrap(false)
+    plateData.minaSubTitle:SetTextColor(0.8, 0.8, 0.8)
+    plateData.minaSubTitle:SetWidth(select(1, NP.config.GetBarRefSize()) * 2)
+    plateData.minaSubTitle:SetPoint("TOP", plateData.minaName, "BOTTOM", 0, -1)
+    plateData.minaSubTitle:Hide()
 
     plateData.minaHpPct = plateData.minaNameRow:CreateFontString(nil, "OVERLAY")
     SafeSetFont(plateData.minaHpPct, fontPath, nameSize, "")

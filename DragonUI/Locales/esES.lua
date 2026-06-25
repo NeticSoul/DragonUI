@@ -98,6 +98,36 @@ L["UI elements have been repositioned. Reload UI to ensure all graphics display 
 L["Reload Now"] = "Recargar Ahora"
 L["Later"] = "Más Tarde"
 
+-- Position presets (edit mode)
+L["Position Presets"] = "Preajustes de Posición"
+L["Position Preset"] = "Preajuste de Posición"
+L["Save"] = "Guardar"
+L["Import"] = "Importar"
+L["Cancel"] = "Cancelar"
+L["Load"] = "Cargar"
+L["Delete"] = "Eliminar"
+L["Select All"] = "Seleccionar Todo"
+L["Click to load"] = "Clic para cargar"
+L["No position presets saved yet."] = "Aún no hay preajustes de posición guardados."
+L["Load position preset '%s'? This will overwrite your current element positions."] = "¿Cargar preajuste '%s'? Se sobrescribirán las posiciones actuales de los elementos."
+L["Delete position preset '%s'? This cannot be undone."] = "¿Eliminar preajuste '%s'? Esta acción no se puede deshacer."
+L["Enter a name for the imported position preset:"] = "Introduce un nombre para el preajuste importado:"
+L["Imported Position Preset"] = "Preajuste Importado"
+L["Position preset saved: "] = "Preajuste de posición guardado: "
+L["Position preset loaded: "] = "Preajuste de posición cargado: "
+L["Position preset deleted: "] = "Preajuste de posición eliminado: "
+L["Position preset imported: "] = "Preajuste de posición importado: "
+L["Export Position Preset"] = "Exportar Preajuste de Posición"
+L["Import Position Preset"] = "Importar Preajuste de Posición"
+L["Invalid position preset string."] = "Cadena de preajuste de posición no válida."
+L["Not a valid DragonUI position preset string."] = "No es una cadena de preajuste de posición DragonUI válida."
+L["Failed to export position preset."] = "No se pudo exportar el preajuste de posición."
+L["Save New Preset"] = "Guardar Nuevo Preajuste"
+L["Load Preset"] = "Cargar Preajuste"
+L["Delete Preset"] = "Eliminar Preajuste"
+L["Export Preset"] = "Exportar Preajuste"
+L["Import Preset"] = "Importar Preajuste"
+
 -- ============================================================================
 -- KEYBINDING MODULE
 -- ============================================================================

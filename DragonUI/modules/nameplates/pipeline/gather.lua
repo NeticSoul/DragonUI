@@ -105,7 +105,7 @@ end
 function NP.gather.ComputeVisualState(plateData, snapshot, context, reason)
     local npCfg = NP.config.GetCfg()
     -- Headline mode hides power and cast bars (health is hidden in SyncHealth).
-    local nameOnly = NP.gather.IsFriendlyNameOnlyActive(plateData)
+    local nameOnly = NP.gather.IsHeadlineActive(plateData)
     return {
         reason = reason,
         showPower = (not nameOnly) and (npCfg.showPowerBar ~= false),
@@ -246,13 +246,118 @@ function NP.gather.IsFriendlyNameOnlyActive(plateData)
     if not plateData then
         return false
     end
-    if NP.config.GetCfg().friendlyNameOnly ~= true then
+    local cfg = NP.config.GetCfg()
+    if cfg.friendlyNameOnly ~= true then
         return false
     end
-    if NP.native_style.GetPlateReaction(plateData) ~= "FRIENDLY" then
+    local reaction, unitType = NP.native_style.GetPlateReaction(plateData)
+    if reaction ~= "FRIENDLY" or unitType ~= "PLAYER" then
         return false
     end
-    return NP.gather.GetGroupUnitForPlate(plateData) ~= nil
+    -- "All friendly players" is a superset of party/raid and works on stock
+    -- 3.3.5a (reaction comes from the bar color, no unit token needed).
+    if cfg.friendlyNameOnlyAll == true then
+        return true
+    end
+    if cfg.friendlyNameOnlyParty ~= false then
+        return NP.gather.GetGroupUnitForPlate(plateData) ~= nil
+    end
+    return false
+end
+
+-- Headline mode for friendly NPCs: hide bars and show only the name. Works on
+-- stock 3.3.5a; the optional NPC title subtitle needs awesome_wotlk (a tooltip
+-- scan requires a unit token).
+function NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
+    if not plateData then
+        return false
+    end
+    local cfg = NP.config.GetCfg()
+    if cfg.friendlyNameOnly ~= true or cfg.friendlyNPCNameOnly ~= true then
+        return false
+    end
+    local reaction, unitType = NP.native_style.GetPlateReaction(plateData)
+    return reaction == "FRIENDLY" and unitType == "NPC"
+end
+
+-- Combined gate for every bar-suppression site (players + NPCs).
+function NP.gather.IsHeadlineActive(plateData)
+    return NP.gather.IsFriendlyNameOnlyActive(plateData)
+        or NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
+end
+
+-- Hidden tooltip used to read an NPC's title/occupation (e.g. <General Supplies>).
+-- Reading any of guild/title/subname needs a unit token; in stock 3.3.5a that
+-- token exists only for the unit you target/mouseover/focus, so these resolve as
+-- you look at units and are cached persistently. With awesome_wotlk (nameplate
+-- tokens) they resolve for every plate immediately.
+local SubtitleScanTip = CreateFrame("GameTooltip", "DragonUINPSubtitleScan", UIParent, "GameTooltipTemplate")
+SubtitleScanTip:SetOwner(UIParent, "ANCHOR_NONE")
+
+-- Best-effort unit token for a plate, preferring the most stable source.
+local function ResolvePlateToken(plateData)
+    local groupUnit = NP.gather.GetGroupUnitForPlate(plateData)
+    if groupUnit then
+        return groupUnit
+    end
+    local resolved = NP.identity.ResolvePlateUnit(plateData)
+    if resolved and UnitExists(resolved) then
+        return resolved
+    end
+    local native = plateData.namePlateUnitToken or (plateData.plate and plateData.plate.unit)
+    if native and UnitExists(native) then
+        return native
+    end
+    return nil
+end
+
+-- Static subtitle (guild for friendly players, title/occupation for NPCs).
+-- Returns nil when nothing is resolvable yet, so the caller keeps any cached
+-- value and retries on later refreshes (e.g. once the unit is moused over).
+function NP.gather.GetPlateSubtitleText(plateData, unit)
+    local cfg = NP.config.GetCfg()
+    unit = unit or ResolvePlateToken(plateData)
+    if not (unit and UnitExists(unit)) then
+        return nil
+    end
+    if NP.gather.IsFriendlyNameOnlyActive(plateData) then
+        if cfg.friendlyNameOnlyGuild then
+            local guild = GetGuildInfo(unit)
+            if guild and guild ~= "" then
+                return "<" .. guild .. ">"
+            end
+        end
+    elseif NP.gather.IsFriendlyNPCNameOnlyActive(plateData) then
+        if cfg.friendlyNPCNameOnlyTitle then
+            SubtitleScanTip:ClearLines()
+            SubtitleScanTip:SetUnit(unit)
+            if SubtitleScanTip:NumLines() >= 2 then
+                local line2 = _G["DragonUINPSubtitleScanTextLeft2"]
+                local txt = line2 and line2.GetText and line2:GetText()
+                -- Line 2 holds the subname only when it is not the "Level X ..." line.
+                if txt and txt ~= "" and not txt:find("%d") and not txt:find(LEVEL or "Level") then
+                    if not txt:find("^<") then
+                        txt = "<" .. txt .. ">"
+                    end
+                    return txt
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Friendly player name including the current title via UnitPVPName
+-- (e.g. "Arthas Jenkins"). Returns nil when not resolvable yet.
+function NP.gather.GetPlateTitleName(plateData, unit)
+    unit = unit or ResolvePlateToken(plateData)
+    if unit and UnitExists(unit) and UnitIsPlayer(unit) then
+        local pvp = UnitPVPName(unit)
+        if pvp and pvp ~= "" then
+            return NP.native_style.StripRealm(pvp)
+        end
+    end
+    return nil
 end
 
 function NP.gather.IsPlayerPlate(plateData)
@@ -287,6 +392,25 @@ function NP.gather.GetHealthBarColor(plateData)
     if reaction == "FRIENDLY" and unitType == "PLAYER"
         and plateData.barB
         and plateData.barB > 0.5 and (plateData.barR or 0) < 0.3 and (plateData.barG or 0) < 0.3 then
+        -- Class-color any friendly player (not just group). Token resolves from
+        -- group / target / mouseover / nameplate; cached so it persists once known.
+        -- Stock 3.3.5a fills in on hover/target; awesome_wotlk resolves every plate.
+        if cfg.friendlyClassColors then
+            if not plateData._friendlyHealthClass then
+                local token = ResolvePlateToken(plateData)
+                if token and UnitExists(token) and UnitIsPlayer(token) then
+                    local _, class = UnitClass(token)
+                    if class then
+                        plateData._friendlyHealthClass = class
+                    end
+                end
+            end
+            local cc = plateData._friendlyHealthClass and RAID_CLASS_COLORS
+                and RAID_CLASS_COLORS[plateData._friendlyHealthClass]
+            if cc then
+                return cc.r, cc.g, cc.b
+            end
+        end
         if cfg.partyClassColors then
             local partyUnit = GetPartyUnitForPlate(plateData)
             if partyUnit then
@@ -320,8 +444,8 @@ function NP.gather.SyncHealth(plateData, value)
         return
     end
 
-    -- Headline mode (party/raid): no health bar, only the name (see SyncName).
-    if NP.gather.IsFriendlyNameOnlyActive(plateData) then
+    -- Headline mode: no health bar, only the name (see SyncName).
+    if NP.gather.IsHeadlineActive(plateData) then
         bar:Hide()
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
         return
@@ -474,6 +598,7 @@ function NP.gather.SyncName(plateData, unit)
         plateData.minaName:Hide()
         if plateData.minaBossSkull then plateData.minaBossSkull:Hide() end
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
+        if plateData.minaSubTitle then plateData.minaSubTitle:Hide() end
         return
     end
     local bossSkullSize = 14
@@ -481,8 +606,9 @@ function NP.gather.SyncName(plateData, unit)
     local bossSkullNameLeftShift = 0
     unit = unit or NP.identity.ResolvePlateUnit(plateData)
     local cfg = NP.config.GetCfg()
-    local nameOnly = NP.gather.IsFriendlyNameOnlyActive(plateData)
-    local centerOnly = cfg.centerNameOnly == true or nameOnly
+    local nameOnly = NP.gather.IsFriendlyNameOnlyActive(plateData) -- friendly PLAYER headline
+    local headline = NP.gather.IsHeadlineActive(plateData) -- players or NPCs
+    local centerOnly = cfg.centerNameOnly == true or headline
 
     local displayUnit = nil
     if centerOnly then
@@ -545,16 +671,33 @@ function NP.gather.SyncName(plateData, unit)
     elseif isEnemyPlayer and allowEnemyNameClass then
         r, g, b = classColor.r, classColor.g, classColor.b
     end
-    -- Headline mode: optional class color from the party/raid token (the only
-    -- way to know a friendly player's class on 3.3.5a).
+    -- Headline mode base name color (white by default); class color overrides it
+    -- below when enabled and resolved.
+    if headline then
+        local nc = cfg.friendlyNameOnlyColor
+        if nc then
+            r, g, b = nc.r or 1, nc.g or 1, nc.b or 1
+        else
+            r, g, b = 1, 1, 1
+        end
+    end
+    -- Headline mode: optional class color. The class is resolved from whatever
+    -- token is available (group / target / mouseover / nameplate) and cached so it
+    -- persists and does not flicker once known.
     if nameOnly and cfg.friendlyNameOnlyClassColor then
-        local groupUnit = NP.gather.GetGroupUnitForPlate(plateData)
-        if groupUnit then
-            local _, class = UnitClass(groupUnit)
-            local cc = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
-            if cc then
-                r, g, b = cc.r, cc.g, cc.b
+        if not plateData._headlineClass then
+            local token = ResolvePlateToken(plateData)
+            if token and UnitExists(token) and UnitIsPlayer(token) then
+                local _, class = UnitClass(token)
+                if class then
+                    plateData._headlineClass = class
+                end
             end
+        end
+        local cc = plateData._headlineClass and RAID_CLASS_COLORS
+            and RAID_CLASS_COLORS[plateData._headlineClass]
+        if cc then
+            r, g, b = cc.r, cc.g, cc.b
         end
     end
     local displayName
@@ -562,6 +705,19 @@ function NP.gather.SyncName(plateData, unit)
         displayName = NP.discovery.FormatPlateName(plateData, levelUnit, fallbackLevel)
     else
         displayName = plateData.plateName or "?"
+    end
+    -- Headline mode: optionally show the player's title inline (UnitPVPName), e.g.
+    -- "Arthas Jenkins". Resolved lazily from any available token and cached.
+    if nameOnly and cfg.friendlyNameOnlyTitle then
+        if not plateData._pvpTitleName then
+            local titled = NP.gather.GetPlateTitleName(plateData, unit)
+            if titled then
+                plateData._pvpTitleName = titled
+            end
+        end
+        if plateData._pvpTitleName then
+            displayName = plateData._pvpTitleName
+        end
     end
     if plateData.minaBossSkull and plateData.minaBossSkull.SetSize then
         plateData.minaBossSkull:SetSize(bossSkullSize, bossSkullSize)
@@ -595,6 +751,47 @@ function NP.gather.SyncName(plateData, unit)
     plateData.minaName:SetTextColor(r, g, b)
     plateData.minaName:SetText(displayName)
     plateData.minaName:Show()
+
+    if plateData.minaSubTitle then
+        -- Static part (guild for players, title for NPCs): resolved lazily and
+        -- cached persistently, but only shown while its option is enabled.
+        local wantStatic = false
+        if nameOnly then
+            wantStatic = cfg.friendlyNameOnlyGuild == true
+        elseif NP.gather.IsFriendlyNPCNameOnlyActive(plateData) then
+            wantStatic = cfg.friendlyNPCNameOnlyTitle == true
+        end
+        if wantStatic and not plateData._subtitleText then
+            local s = NP.gather.GetPlateSubtitleText(plateData, unit)
+            if s then
+                plateData._subtitleText = s
+            end
+        end
+
+        local parts = {}
+        if wantStatic and plateData._subtitleText then
+            parts[#parts + 1] = plateData._subtitleText
+        end
+        -- AFK: refresh from whatever token is available and cache the last known
+        -- state so it does not vanish when the player is no longer targeted/hovered
+        -- (group members stay live since their token is always available).
+        if nameOnly and cfg.friendlyNameOnlyAFK then
+            local afkUnit = ResolvePlateToken(plateData)
+            if afkUnit and UnitExists(afkUnit) then
+                plateData._afkState = UnitIsAFK(afkUnit) and true or false
+            end
+            if plateData._afkState then
+                parts[#parts + 1] = "<AFK>"
+            end
+        end
+
+        if #parts > 0 then
+            plateData.minaSubTitle:SetText(table.concat(parts, " "))
+            plateData.minaSubTitle:Show()
+        else
+            plateData.minaSubTitle:Hide()
+        end
+    end
 end
 
 function NP.gather.SyncTargetHighlight(plateData, isTargeted)
@@ -603,7 +800,7 @@ function NP.gather.SyncTargetHighlight(plateData, isTargeted)
     local cfg = NP.config.GetCfg()
 
     -- Headline mode shows only the name: no target glow or arrows.
-    if NP.gather.IsFriendlyNameOnlyActive(plateData) then
+    if NP.gather.IsHeadlineActive(plateData) then
         target:Hide()
         if target.arrowL then target.arrowL:Hide() end
         if target.arrowR then target.arrowR:Hide() end
@@ -700,7 +897,7 @@ end
 function NP.gather.RefreshPlateCastbar(plateData, reason)
     local refreshReason = reason or "cast_update"
     -- Headline mode hides the castbar regardless of the cast event path.
-    if NP.gather.IsFriendlyNameOnlyActive(plateData) then
+    if NP.gather.IsHeadlineActive(plateData) then
         NP.castbar.HidePlateCastBar(plateData)
         return
     end
@@ -730,8 +927,9 @@ end
 
 function NP.gather.RefreshPlateTargetState(plateData, reason)
     local refreshReason = reason or "target_changed"
-    local _, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
+    local snapshot, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
     NP.gather.EnsurePlateVisualRoot(plateData, state, context)
+    NP.gather.SyncHealth(plateData, snapshot.healthCur)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
     NP.widgets.SyncList({
@@ -760,8 +958,9 @@ end
 
 function NP.gather.RefreshPlateMouseoverState(plateData, reason)
     local refreshReason = reason or "mouseover_changed"
-    local _, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
+    local snapshot, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
     NP.gather.EnsurePlateVisualRoot(plateData, state, context)
+    NP.gather.SyncHealth(plateData, snapshot.healthCur)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
     NP.widgets.Sync("Debuffs", plateData, context, state)

@@ -98,6 +98,36 @@ L["UI elements have been repositioned. Reload UI to ensure all graphics display 
 L["Reload Now"] = "ì§€ê¸ˆ ìž¬ì„¤ì •"
 L["Later"] = "ë‚˜ì¤‘ì—"
 
+-- Position presets (edit mode)
+L["Position Presets"] = "위치 프리셋"
+L["Position Preset"] = "위치 프리셋"
+L["Save"] = "저장"
+L["Import"] = "가져오기"
+L["Cancel"] = "취소"
+L["Load"] = "불러오기"
+L["Delete"] = "삭제"
+L["Select All"] = "전체 선택"
+L["Click to load"] = "클릭하여 불러오기"
+L["No position presets saved yet."] = "저장된 위치 프리셋이 없습니다."
+L["Load position preset '%s'? This will overwrite your current element positions."] = "'%s' 위치 프리셋을 불러올까요? 현재 요소 위치가 덮어씌워집니다."
+L["Delete position preset '%s'? This cannot be undone."] = "'%s' 위치 프리셋을 삭제할까요? 이 작업은 취소할 수 없습니다."
+L["Enter a name for the imported position preset:"] = "가져온 위치 프리셋의 이름을 입력하세요:"
+L["Imported Position Preset"] = "가져온 위치 프리셋"
+L["Position preset saved: "] = "위치 프리셋 저장됨: "
+L["Position preset loaded: "] = "위치 프리셋 불러옴: "
+L["Position preset deleted: "] = "위치 프리셋 삭제됨: "
+L["Position preset imported: "] = "위치 프리셋 가져옴: "
+L["Export Position Preset"] = "위치 프리셋 내보내기"
+L["Import Position Preset"] = "위치 프리셋 가져오기"
+L["Invalid position preset string."] = "유효하지 않은 위치 프리셋 문자열입니다."
+L["Not a valid DragonUI position preset string."] = "유효한 DragonUI 위치 프리셋 문자열이 아닙니다."
+L["Failed to export position preset."] = "위치 프리셋 내보내기에 실패했습니다."
+L["Save New Preset"] = "새 프리셋 저장"
+L["Load Preset"] = "프리셋 불러오기"
+L["Delete Preset"] = "프리셋 삭제"
+L["Export Preset"] = "프리셋 내보내기"
+L["Import Preset"] = "프리셋 가져오기"
+
 -- ============================================================================
 -- KEYBINDING MODULE
 -- ============================================================================

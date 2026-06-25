@@ -14,6 +14,76 @@ local C = addon.PanelControls
 local Panel = addon.OptionsPanel
 
 local DB = "modules.nameplates"
+local AceGUI = LibStub("AceGUI-3.0")
+
+-- Blizzard nameplate visibility CVars (Interface → Names → Unit Nameplates).
+local function CVarBool(cvar)
+    if not GetCVar then
+        return false
+    end
+    local ok, val = pcall(GetCVar, cvar)
+    return ok and val == "1"
+end
+
+local function SetCVarBool(cvar, on)
+    if SetCVar then
+        SetCVar(cvar, on and "1" or "0")
+    end
+end
+
+-- Prefer the client's localized global; fall back to DragonUI LO.
+local function ClientStr(globalName, loKey)
+    local s = _G[globalName]
+    if type(s) == "string" and s ~= "" then
+        return s
+    end
+    return LO[loKey]
+end
+
+local function AddNameplateCVarToggle(parent, opts)
+    return C:AddToggle(parent, {
+        label = ClientStr(opts.labelGlobal, opts.labelKey),
+        disabled = opts.disabled,
+        getFunc = function()
+            return CVarBool(opts.cvar)
+        end,
+        setFunc = function(val)
+            SetCVarBool(opts.cvar, val)
+            if opts.onChanged then
+                opts.onChanged(val)
+            end
+        end,
+    })
+end
+
+local function AddNameplateCVarColumn(parent, titleKey, masterCvar, subCvars, refreshSubDisabled)
+    local col = AceGUI:Create("SimpleGroup")
+    col:SetLayout("List")
+    col:SetWidth(290)
+    parent:AddChild(col)
+
+    AddNameplateCVarToggle(col, {
+        cvar = masterCvar,
+        labelGlobal = masterCvar == "nameplateShowFriends"
+            and "UNIT_NAMEPLATES_SHOW_FRIENDS" or "UNIT_NAMEPLATES_SHOW_ENEMIES",
+        labelKey = titleKey,
+        onChanged = refreshSubDisabled,
+    })
+
+    for _, sub in ipairs(subCvars) do
+        local w = AddNameplateCVarToggle(col, {
+            cvar = sub.cvar,
+            labelGlobal = sub.labelGlobal,
+            labelKey = sub.labelKey,
+            disabled = function()
+                return not CVarBool(masterCvar)
+            end,
+        })
+        sub._widget = w
+    end
+    refreshSubDisabled()
+    return col
+end
 
 -- ============================================================================
 -- REFRESH
@@ -183,6 +253,66 @@ local function BuildGeneralSubTab(scroll)
             SetCVar("nameplateAllowOverlap", val and "1" or "0")
         end,
     })
+
+    local unitPlates = C:AddSection(scroll, LO["Unit Nameplates"])
+    local unitCols = C:AddRow(unitPlates, { layout = "Flow" })
+
+    local friendlySubCvars = {
+        {
+            cvar = "nameplateShowFriendlyPets",
+            labelGlobal = "UNIT_NAMEPLATES_SHOW_FRIENDLY_PETS",
+            labelKey = "Pets",
+        },
+        {
+            cvar = "nameplateShowFriendlyGuardians",
+            labelGlobal = "UNIT_NAMEPLATES_SHOW_FRIENDLY_GUARDIANS",
+            labelKey = "Guardians",
+        },
+        {
+            cvar = "nameplateShowFriendlyTotems",
+            labelGlobal = "UNIT_NAMEPLATES_SHOW_FRIENDLY_TOTEMS",
+            labelKey = "Totems",
+        },
+    }
+    local enemySubCvars = {
+        {
+            cvar = "nameplateShowEnemyPets",
+            labelGlobal = "UNIT_NAMEPLATES_SHOW_ENEMY_PETS",
+            labelKey = "Pets",
+        },
+        {
+            cvar = "nameplateShowEnemyGuardians",
+            labelGlobal = "UNIT_NAMEPLATES_SHOW_ENEMY_GUARDIANS",
+            labelKey = "Guardians",
+        },
+        {
+            cvar = "nameplateShowEnemyTotems",
+            labelGlobal = "UNIT_NAMEPLATES_SHOW_ENEMY_TOTEMS",
+            labelKey = "Totems",
+        },
+    }
+
+    local function RefreshFriendlySubDisabled()
+        local on = CVarBool("nameplateShowFriends")
+        for _, sub in ipairs(friendlySubCvars) do
+            if sub._widget then
+                sub._widget:SetDisabled(not on)
+            end
+        end
+    end
+    local function RefreshEnemySubDisabled()
+        local on = CVarBool("nameplateShowEnemies")
+        for _, sub in ipairs(enemySubCvars) do
+            if sub._widget then
+                sub._widget:SetDisabled(not on)
+            end
+        end
+    end
+
+    AddNameplateCVarColumn(unitCols, "Friendly Units", "nameplateShowFriends",
+        friendlySubCvars, RefreshFriendlySubDisabled)
+    AddNameplateCVarColumn(unitCols, "Enemy Units", "nameplateShowEnemies",
+        enemySubCvars, RefreshEnemySubDisabled)
 
     local opacity = C:AddSection(scroll, LO["Opacity"])
 
@@ -519,33 +649,107 @@ local function BuildHealthSubTab(scroll)
         end,
     })
 
-    local headline = C:AddSection(scroll, LO["Group Headline Mode"])
+    C:AddToggle(health, {
+        label = LO["Friendly Class Colors"],
+        desc = LO["Class-color every friendly player, not just your group. Party and raid show automatically; others fill in when you target or mouse over them, or instantly with awesome_wotlk."],
+        dbPath = DB .. ".friendlyClassColors",
+        callback = RefreshNameplates,
+    })
+
+    local headline = C:AddSection(scroll, LO["Headline Mode"])
 
     local function IsHeadlineEnabled()
         local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
         return np and np.friendlyNameOnly == true
     end
 
-    local headlineClassColor
+    -- Toggles that depend on the master toggle; refreshed together below.
+    local headlineDeps = {}
+    local function RefreshHeadlineDisabled()
+        local on = IsHeadlineEnabled()
+        for _, w in ipairs(headlineDeps) do
+            if w and w.SetDisabled then w:SetDisabled(not on) end
+        end
+    end
+
+    -- Master toggle
     C:AddToggle(headline, {
-        label = LO["Headline Mode (Party/Raid)"],
-        desc = LO["Hide health, power and cast bars on party and raid member nameplates, showing only the name."],
+        label = LO["Enable Headline Mode"],
+        desc = LO["Hide health, power and cast bars on friendly nameplates, showing only the name."],
         dbPath = DB .. ".friendlyNameOnly",
         callback = function()
             RefreshNameplates()
-            if headlineClassColor and headlineClassColor.SetDisabled then
-                headlineClassColor:SetDisabled(not IsHeadlineEnabled())
-            end
+            RefreshHeadlineDisabled()
         end,
     })
 
-    headlineClassColor = C:AddToggle(headline, {
-        label = LO["Class Color Names"],
-        desc = LO["Color party and raid member names by class while in headline mode."],
+    headlineDeps[#headlineDeps + 1] = C:AddColorPicker(headline, {
+        label = LO["Name Text Color"],
+        dbPath = DB .. ".friendlyNameOnlyColor",
+        callback = RefreshNameplates,
+    })
+
+    C:AddLabel(headline, LO["Friendly Players"])
+    C:AddDescription(headline, LO["Class colors, title, guild and AFK read from the unit: party/raid show automatically; others fill in when you target or mouse over them, or instantly with awesome_wotlk."])
+
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Party / Raid Members"],
+        desc = LO["Apply headline mode to your party and raid members."],
+        dbPath = DB .. ".friendlyNameOnlyParty",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["All Friendly Players"],
+        desc = LO["Apply headline mode to all friendly players, not just your group."],
+        dbPath = DB .. ".friendlyNameOnlyAll",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Show Class Colors"],
+        desc = LO["Show friendly player names in their class color."],
         dbPath = DB .. ".friendlyNameOnlyClassColor",
-        disabled = function()
-            return not IsHeadlineEnabled()
-        end,
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Show Player Title"],
+        desc = LO["Show the player's title with their name (e.g. \"Arthas Jenkins\")."],
+        dbPath = DB .. ".friendlyNameOnlyTitle",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Show Guild Name"],
+        desc = LO["Show the player's guild name below their name."],
+        dbPath = DB .. ".friendlyNameOnlyGuild",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Show AFK Status"],
+        desc = LO["Show an <AFK> tag for away players."],
+        dbPath = DB .. ".friendlyNameOnlyAFK",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+
+    C:AddLabel(headline, LO["Friendly NPCs"])
+    C:AddDescription(headline, LO["NPC titles fill in when you target or mouse over the NPC, or instantly with awesome_wotlk."])
+
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Headline Mode for NPCs"],
+        desc = LO["Apply headline mode to friendly NPCs."],
+        dbPath = DB .. ".friendlyNPCNameOnly",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Show NPC Title"],
+        desc = LO["Show the NPC's title or occupation below its name (e.g. <General Supplies>)."],
+        dbPath = DB .. ".friendlyNPCNameOnlyTitle",
+        disabled = function() return not IsHeadlineEnabled() end,
         callback = RefreshNameplates,
     })
 

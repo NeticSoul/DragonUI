@@ -161,6 +161,13 @@ local defaults = {
                 posX = 0,
                 posY = 160,
                 custom_position = false
+            },
+            positionPresetPanel = {
+                anchor = "TOP",
+                posX = 0,
+                posY = 144,
+                relativePoint = "CENTER",
+                custom_position = false
             }
         },
         -- Quest Tracker
@@ -802,8 +809,17 @@ local defaults = {
                 friendlyPlayerColor = { r = 0, g = 0, b = 1 }, -- default friendly player color (vanilla blue)
                 friendlyNPCColor = { r = 0, g = 1, b = 0 }, -- default friendly NPC color (green)
                 partyClassColors = false, -- use class colors for party members instead of friendlyPlayerColor
-                friendlyNameOnly = false, -- party/raid members: hide health/power/cast bars, show only the name (headline mode)
-                friendlyNameOnlyClassColor = false, -- class-color party/raid member names while in headline mode
+                friendlyClassColors = false, -- class-color ALL friendly players (not just group); hover/target on stock, instant with awesome_wotlk
+                friendlyNameOnly = false, -- MASTER: enable headline mode (hide health/power/cast bars, show only the name)
+                friendlyNameOnlyParty = true, -- headline mode for party/raid members (default on = preserves previous behavior)
+                friendlyNameOnlyAll = false, -- headline mode for ALL friendly players (superset of party/raid)
+                friendlyNameOnlyColor = { r = 1, g = 1, b = 1 }, -- headline name text color when class colors are not applied (default white)
+                friendlyNameOnlyClassColor = false, -- class-color friendly player names while in headline mode (non-group needs awesome_wotlk)
+                friendlyNameOnlyGuild = false, -- show <Guild> subtitle for friendly players in headline mode (resolves via target/mouseover, instant with awesome_wotlk)
+                friendlyNameOnlyTitle = false, -- show the player's title inline via UnitPVPName (e.g. "Arthas Jenkins")
+                friendlyNameOnlyAFK = false, -- show <AFK> for away friendly players in headline mode
+                friendlyNPCNameOnly = false, -- headline mode for friendly NPCs
+                friendlyNPCNameOnlyTitle = false, -- show <Title/Occupation> subtitle for friendly NPCs (awesome_wotlk only)
                 enemyPlayerClassColors = false, -- use class colors for enemy player nameplates (ShowClassColorInNameplate)
                 disableNonTargetFade = false, -- when true, target/non-target use the same full opacity
                 opacityNonTarget = 0.5, -- default non-target opacity
@@ -872,7 +888,10 @@ local defaults = {
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)
-        presets = {}
+        presets = {},
+
+        -- POSITION PRESETS (edit-mode element positions only)
+        positionPresets = {}
     }
 };
 
