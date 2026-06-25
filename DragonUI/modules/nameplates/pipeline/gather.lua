@@ -569,14 +569,17 @@ local function ReadNativeLevelSnapshot(plateData)
         -- Recycled plates may show stale numeric level beside boss skull.
         return "??"
     end
+    -- Already resolved (cached by SuppressNativeChrome, no delay) — use it
+    -- immediately instead of waiting out the settle window below, which only
+    -- exists to protect the raw fallback read on recycled plates.
+    if plateData.plateLevel and plateData._plateLevelName == plateData.plateName then
+        return plateData.plateLevel
+    end
     local now = GetTime and GetTime() or 0
     local shownAt = plateData._shownAt or 0
     local settle = (NP.const and NP.const.LEVEL_TEXT_SETTLE) or 0.15
     if now < shownAt + settle then
         return nil
-    end
-    if plateData.plateLevel and plateData._plateLevelName == plateData.plateName then
-        return plateData.plateLevel
     end
     local lvlText = plateData.levelText
     local raw = nil
