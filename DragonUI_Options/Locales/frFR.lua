@@ -91,6 +91,8 @@ L["Minimum opacity of the text input box when idle. At 0 it fades with tabs; abo
 L["Visual style for the chat frame background."] = "Style visuel du fond du cadre de chat."
 L["Editbox Style"] = "Style de la zone de saisie"
 L["Visual style for the chat input box background."] = "Style visuel du fond de la zone de saisie du chat."
+L["Vanilla Editbox"] = "Zone de saisie vanilla"
+L["Use the default chat input appearance."] = "Utilise l'apparence par défaut de la zone de saisie."
 L["Dark"] = "Sombre"
 L["DragonUI Style"] = "Style DragonUI"
 L["Nocturne"] = "Nocturne"

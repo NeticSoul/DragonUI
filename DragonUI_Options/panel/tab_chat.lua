@@ -103,6 +103,17 @@ local function BuildChatTab(scroll)
         end,
     })
 
+    C:AddToggle(appearanceSection, {
+        label = LO["Vanilla Editbox"],
+        desc  = LO["Use the default chat input appearance."],
+        dbPath = "modules.chatmods.vanillaEditbox",
+        callback = function()
+            if addon.ApplyEditboxStyle then
+                addon.ApplyEditboxStyle()
+            end
+        end,
+    })
+
     C:AddSlider(appearanceSection, {
         label   = LO["Tab & Button Fade"],
         desc    = LO["How visible chat tabs are when not hovered. 0 = fully hidden, 1 = fully visible."],

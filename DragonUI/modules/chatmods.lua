@@ -26,6 +26,55 @@
         frames = {}
     }
 
+    -- Saves the Blizzard-default editbox border textures before we clear them,
+    -- so we can restore them when vanillaEditbox is toggled on at runtime.
+    local function SaveEditboxTextures()
+        if ChatModsModule.originalStates.editboxTextures then return end
+        local saved = {}
+        for i = 1, CHAT_FRAME_LIMIT do
+            saved[i] = {}
+            for _, part in ipairs(CHAT_EDITBOX_PARTS) do
+                local tex = _G["ChatFrame" .. i .. "EditBox" .. part]
+                if tex then
+                    saved[i][part] = tex:GetTexture()
+                end
+                local focus = _G["ChatFrame" .. i .. "EditBoxFocus" .. part]
+                if focus then
+                    saved[i]["Focus" .. part] = {focus:GetTexture(), focus:GetHeight()}
+                end
+            end
+        end
+        ChatModsModule.originalStates.editboxTextures = saved
+    end
+
+    -- Applies or removes the DragonUI transparent editbox border textures.
+    -- vanillaMode=true → restore saved Blizzard originals; false → apply transparent style.
+    local function ApplyEditboxBorderTextures(vanillaMode)
+        local saved = ChatModsModule.originalStates.editboxTextures
+        for i = 1, CHAT_FRAME_LIMIT do
+            for _, part in ipairs(CHAT_EDITBOX_PARTS) do
+                local tex = _G["ChatFrame" .. i .. "EditBox" .. part]
+                local focus = _G["ChatFrame" .. i .. "EditBoxFocus" .. part]
+                if vanillaMode then
+                    local s = saved and saved[i]
+                    if tex and s and s[part] then
+                        tex:SetTexture(s[part])
+                    end
+                    if focus and s and s["Focus" .. part] then
+                        focus:SetTexture(s["Focus" .. part][1])
+                        focus:SetHeight(s["Focus" .. part][2])
+                    end
+                else
+                    if tex then tex:SetTexture(0, 0, 0, 0) end
+                    if focus then
+                        focus:SetTexture(0, 0, 0, 0.8)
+                        focus:SetHeight(18)
+                    end
+                end
+            end
+        end
+    end
+
     -- Register with ModuleRegistry
     if addon.RegisterModule then
         addon:RegisterModule("chatmods", ChatModsModule,
@@ -419,7 +468,12 @@ local function ApplyChatFrameTweaks()
 
     ChatModsModule.frames.chatHoverEntries = ChatModsModule.frames.chatHoverEntries or {}
     wipe(ChatModsModule.frames.chatHoverEntries)
-    local tabIdleAlpha = GetTabIdleAlpha(GetModuleConfig())
+    local cfg = GetModuleConfig()
+    local tabIdleAlpha = GetTabIdleAlpha(cfg)
+    local vanillaEditbox = cfg and cfg.vanillaEditbox
+
+    -- Save original editbox border textures before any style changes.
+    SaveEditboxTextures()
 
     for i = 1, CHAT_FRAME_LIMIT do
         local cf = _G[format("ChatFrame%d", i)]
@@ -441,14 +495,15 @@ local function ApplyChatFrameTweaks()
             cf:SetClampedToScreen(true)
             cf:SetClampRectInsets(0, 0, 0, 0)
 
-            -- Transparent editbox
-            for _, part in ipairs(CHAT_EDITBOX_PARTS) do
-                local tex = _G["ChatFrame" .. i .. "EditBox" .. part]
-                if tex then tex:SetTexture(0, 0, 0, 0) end
-                local focus = _G["ChatFrame" .. i .. "EditBoxFocus" .. part]
-                if focus then
-                    focus:SetTexture(0, 0, 0, 0.8)
-                    focus:SetHeight(18)
+            if not vanillaEditbox then
+                for _, part in ipairs(CHAT_EDITBOX_PARTS) do
+                    local tex = _G["ChatFrame" .. i .. "EditBox" .. part]
+                    if tex then tex:SetTexture(0, 0, 0, 0) end
+                    local focus = _G["ChatFrame" .. i .. "EditBoxFocus" .. part]
+                    if focus then
+                        focus:SetTexture(0, 0, 0, 0.8)
+                        focus:SetHeight(18)
+                    end
                 end
             end
 
@@ -596,20 +651,37 @@ local BD_EDITBOX = {
 
 local function ApplyEditboxStyle()
     local config = GetModuleConfig()
+    local vanillaEditbox = config and config.vanillaEditbox
+
+    if vanillaEditbox then
+        -- Restore Blizzard's default editbox appearance entirely.
+        ApplyEditboxBorderTextures(true)
+        for i = 1, CHAT_FRAME_LIMIT do
+            local eb = _G["ChatFrame" .. i .. "EditBox"]
+            if eb then
+                eb:SetBackdrop(nil)
+                eb:SetAlpha(1)
+            end
+        end
+        RefreshChatFadeState()
+        return
+    end
+
     local style = (config and config.editboxStyle) or "none"
     local def = CHAT_STYLES[style]
     local ebIdleAlpha = GetEditboxIdleAlpha(config)
 
+    -- Re-apply transparent border textures in case vanilla mode was previously active.
+    ApplyEditboxBorderTextures(false)
+
     for i = 1, CHAT_FRAME_LIMIT do
         local eb = _G["ChatFrame" .. i .. "EditBox"]
         if eb then
-            -- Focus textures (Left/Mid/Right) render a solid black input indicator.
-            -- When our custom style is active they overlap it, so we hide them;
-            -- when no custom style is set we keep them hidden to avoid a stale dark line.
-            local focusAlpha = 0
+            -- Focus textures render a solid black input indicator; hide them so
+            -- they don't overlap our custom style (or leave a stale dark line).
             for _, part in ipairs(CHAT_EDITBOX_PARTS) do
                 local focus = _G["ChatFrame" .. i .. "EditBoxFocus" .. part]
-                if focus then focus:SetTexture(0, 0, 0, focusAlpha) end
+                if focus then focus:SetTexture(0, 0, 0, 0) end
             end
 
             if not def then
