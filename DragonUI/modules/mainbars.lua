@@ -693,6 +693,13 @@ end
             end
         end
 
+        -- Resize barFrame to fit the button grid (prevents invisible overhang on orientation change).
+        local effectiveCols = math.min(columns, count)
+        local rows = math.ceil(count / columns)
+        local w = effectiveCols * ACTION_BUTTON_SIZE + (effectiveCols - 1) * spacing
+        local h = rows       * ACTION_BUTTON_SIZE + (rows       - 1) * spacing
+        barFrame:SetSize(w, h)
+
         -- Anchor bar frame to container
         if containerFrame then
             barFrame:ClearAllPoints()
