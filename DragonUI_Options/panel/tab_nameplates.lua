@@ -752,6 +752,13 @@ local function BuildHealthSubTab(scroll)
         disabled = function() return not IsHeadlineEnabled() end,
         callback = RefreshNameplates,
     })
+    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
+        label = LO["Show Full Plate on Target"],
+        desc = LO["When headline mode is active, show health, power and cast bars on your current target."],
+        dbPath = DB .. ".headlineExcludeTarget",
+        disabled = function() return not IsHeadlineEnabled() end,
+        callback = RefreshNameplates,
+    })
 
     local nameLevel = C:AddSection(scroll, LO["Name & Level"])
 

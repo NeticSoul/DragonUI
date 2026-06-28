@@ -280,10 +280,19 @@ function NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
     return reaction == "FRIENDLY" and unitType == "NPC"
 end
 
--- Combined gate for every bar-suppression site (players + NPCs).
+-- Combined gate for every headline-suppression site (players + NPCs).
+-- Returns false for the current target when headlineExcludeTarget is enabled,
+-- so the target plate shows its full plate normally.
 function NP.gather.IsHeadlineActive(plateData)
-    return NP.gather.IsFriendlyNameOnlyActive(plateData)
-        or NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
+    if not (NP.gather.IsFriendlyNameOnlyActive(plateData)
+        or NP.gather.IsFriendlyNPCNameOnlyActive(plateData)) then
+        return false
+    end
+    local cfg = NP.config.GetCfg()
+    if cfg.headlineExcludeTarget and NP.identity.IsTargetPlate(plateData) then
+        return false
+    end
+    return true
 end
 
 -- Hidden tooltip used to read an NPC's title/occupation (e.g. <General Supplies>).
@@ -609,8 +618,11 @@ function NP.gather.SyncName(plateData, unit)
     local bossSkullNameLeftShift = 0
     unit = unit or NP.identity.ResolvePlateUnit(plateData)
     local cfg = NP.config.GetCfg()
-    local nameOnly = NP.gather.IsFriendlyNameOnlyActive(plateData) -- friendly PLAYER headline
-    local headline = NP.gather.IsHeadlineActive(plateData) -- players or NPCs
+    local headline = NP.gather.IsHeadlineActive(plateData) -- players or NPCs (false for excluded target)
+    local nameOnly = headline and NP.gather.IsFriendlyNameOnlyActive(plateData) -- friendly PLAYER headline
+    -- Resolve cached data even when this plate is excluded from headline display (headlineExcludeTarget),
+    -- so guild/class/title/AFK are ready the moment the player un-targets.
+    local nameOnlyResolve = NP.gather.IsFriendlyNameOnlyActive(plateData)
     local centerOnly = cfg.centerNameOnly == true or headline
 
     local displayUnit = nil
@@ -684,24 +696,20 @@ function NP.gather.SyncName(plateData, unit)
             r, g, b = 1, 1, 1
         end
     end
-    -- Headline mode: optional class color. The class is resolved from whatever
-    -- token is available (group / target / mouseover / nameplate) and cached so it
-    -- persists and does not flicker once known.
-    if nameOnly and cfg.friendlyNameOnlyClassColor then
-        if not plateData._headlineClass then
-            local token = ResolvePlateToken(plateData)
-            if token and UnitExists(token) and UnitIsPlayer(token) then
-                local _, class = UnitClass(token)
-                if class then
-                    plateData._headlineClass = class
-                end
-            end
+    -- Headline mode: optional class color. Resolved from whatever token is available
+    -- and cached so it persists. Resolution runs even when the target is excluded from
+    -- headline display so the color is ready when un-targeting.
+    if nameOnlyResolve and cfg.friendlyNameOnlyClassColor and not plateData._headlineClass then
+        local token = ResolvePlateToken(plateData)
+        if token and UnitExists(token) and UnitIsPlayer(token) then
+            local _, class = UnitClass(token)
+            if class then plateData._headlineClass = class end
         end
+    end
+    if nameOnly and cfg.friendlyNameOnlyClassColor then
         local cc = plateData._headlineClass and RAID_CLASS_COLORS
             and RAID_CLASS_COLORS[plateData._headlineClass]
-        if cc then
-            r, g, b = cc.r, cc.g, cc.b
-        end
+        if cc then r, g, b = cc.r, cc.g, cc.b end
     end
     local displayName
     if showLevelPrefix then
@@ -711,16 +719,12 @@ function NP.gather.SyncName(plateData, unit)
     end
     -- Headline mode: optionally show the player's title inline (UnitPVPName), e.g.
     -- "Arthas Jenkins". Resolved lazily from any available token and cached.
-    if nameOnly and cfg.friendlyNameOnlyTitle then
-        if not plateData._pvpTitleName then
-            local titled = NP.gather.GetPlateTitleName(plateData, unit)
-            if titled then
-                plateData._pvpTitleName = titled
-            end
-        end
-        if plateData._pvpTitleName then
-            displayName = plateData._pvpTitleName
-        end
+    if nameOnlyResolve and cfg.friendlyNameOnlyTitle and not plateData._pvpTitleName then
+        local titled = NP.gather.GetPlateTitleName(plateData, unit)
+        if titled then plateData._pvpTitleName = titled end
+    end
+    if nameOnly and cfg.friendlyNameOnlyTitle and plateData._pvpTitleName then
+        displayName = plateData._pvpTitleName
     end
     if plateData.minaBossSkull and plateData.minaBossSkull.SetSize then
         plateData.minaBossSkull:SetSize(bossSkullSize, bossSkullSize)
@@ -758,34 +762,35 @@ function NP.gather.SyncName(plateData, unit)
     if plateData.minaSubTitle then
         -- Static part (guild for players, title for NPCs): resolved lazily and
         -- cached persistently, but only shown while its option is enabled.
-        local wantStatic = false
-        if nameOnly then
-            wantStatic = cfg.friendlyNameOnlyGuild == true
-        elseif NP.gather.IsFriendlyNPCNameOnlyActive(plateData) then
-            wantStatic = cfg.friendlyNPCNameOnlyTitle == true
-        end
-        if wantStatic and not plateData._subtitleText then
+        -- Resolve subtitle text (guild / NPC title) even when target is excluded from
+        -- headline display, so it's cached and ready on un-target.
+        local wantStaticResolve = (nameOnlyResolve and cfg.friendlyNameOnlyGuild == true)
+            or (NP.gather.IsFriendlyNPCNameOnlyActive(plateData) and cfg.friendlyNPCNameOnlyTitle == true)
+        if wantStaticResolve and not plateData._subtitleText then
             local s = NP.gather.GetPlateSubtitleText(plateData, unit)
-            if s then
-                plateData._subtitleText = s
-            end
+            if s then plateData._subtitleText = s end
         end
 
-        local parts = {}
-        if wantStatic and plateData._subtitleText then
-            parts[#parts + 1] = plateData._subtitleText
-        end
-        -- AFK: refresh from whatever token is available and cache the last known
-        -- state so it does not vanish when the player is no longer targeted/hovered
-        -- (group members stay live since their token is always available).
-        if nameOnly and cfg.friendlyNameOnlyAFK then
+        -- Resolve AFK state whenever we have a token; display only when in headline.
+        if nameOnlyResolve and cfg.friendlyNameOnlyAFK then
             local afkUnit = ResolvePlateToken(plateData)
             if afkUnit and UnitExists(afkUnit) then
                 plateData._afkState = UnitIsAFK(afkUnit) and true or false
             end
-            if plateData._afkState then
-                parts[#parts + 1] = "<AFK>"
-            end
+        end
+
+        local wantStatic = false
+        if nameOnly then
+            wantStatic = cfg.friendlyNameOnlyGuild == true
+        elseif headline and NP.gather.IsFriendlyNPCNameOnlyActive(plateData) then
+            wantStatic = cfg.friendlyNPCNameOnlyTitle == true
+        end
+        local parts = {}
+        if wantStatic and plateData._subtitleText then
+            parts[#parts + 1] = plateData._subtitleText
+        end
+        if nameOnly and cfg.friendlyNameOnlyAFK and plateData._afkState then
+            parts[#parts + 1] = "<AFK>"
         end
 
         if #parts > 0 then
