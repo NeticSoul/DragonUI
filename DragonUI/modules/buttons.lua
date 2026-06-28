@@ -319,7 +319,6 @@ local function actionbuttons_hotkey(button)
 
     hotkey:Show()
 
-    local currentHotkeyText = hotkey:GetText()
 
     local function ResolveBindingTextFromCommand(command)
         if not command or command == '' then return nil end
@@ -398,32 +397,46 @@ local function actionbuttons_hotkey(button)
     local text = ResolveButtonHotkeyText()
     local suppressRangeIndicator = GetTime and GetTime() < (ButtonsModule.rangeIndicatorSuppressedUntil or 0)
 
-    if RANGE_INDICATOR
-        and currentHotkeyText == RANGE_INDICATOR
-        and db.hotkey.range
-        and not suppressRangeIndicator
+    -- Check range state for this button (nil = no range component, 0 = out, 1 = in)
+    local inRange = nil
+    if RANGE_INDICATOR and db.hotkey.range and not suppressRangeIndicator
         and ButtonHasActionForRangeIndicator(buttonName, button) then
-			hotkey:SetText(RANGE_INDICATOR)
-        hotkey:SetAlpha(1)
-	else
-        hotkey:SetAlpha(1)
-		
-		-- Use custom formatting system
-		local formattedText = GetKeyText(text)
-		hotkey:SetText(formattedText)
-		
-		if db.hotkey.font then
-			hotkey:SetFont(unpack(db.hotkey.font))
-		end
-		
-		hotkey:SetShadowOffset(-1.3, -1.1)
-		
-		if db.hotkey.shadow then
-			hotkey:SetShadowColor(unpack(db.hotkey.shadow))
-		end
-	end
+        local actionID = type(ActionButton_GetPagedID) == "function"
+            and ActionButton_GetPagedID(button) or button.action
+        if actionID then
+            inRange = IsActionInRange(actionID)
+        end
+    end
+
+    -- Show the range dot only when there's no keybinding but the action has a range component.
+    -- When there IS a binding, vanilla shows the binding text in red (vertex color) instead.
+    local showDot = inRange ~= nil and text == ""
+
+    hotkey:SetAlpha(1)
+    if showDot then
+        hotkey:SetText(RANGE_INDICATOR)
+    else
+        local formattedText = GetKeyText(text)
+        hotkey:SetText(formattedText)
+    end
+
+    if db.hotkey.font then
+        hotkey:SetFont(unpack(db.hotkey.font))
+    end
+    hotkey:SetShadowOffset(-1.3, -1.1)
+    if db.hotkey.shadow then
+        hotkey:SetShadowColor(unpack(db.hotkey.shadow))
+    end
 
     NormalizeAdditionalHotkeyVisual(button, hotkey)
+
+    -- Re-apply range vertex color AFTER all font/text ops (SetFont can clear it).
+    -- Matches vanilla ActionButton_UpdateRangeIndicator behavior.
+    if inRange == 0 then
+        hotkey:SetVertexColor(1.0, 0.1, 0.1)   -- out of range: red
+    elseif inRange ~= nil then
+        hotkey:SetVertexColor(1.0, 1.0, 1.0)   -- in range: restore white
+    end
 end
 
 local function RefreshAdditionalBarHotkeys()
