@@ -140,6 +140,7 @@ function NP.threat.ApplyThreatGlow(plateData)
     local c = ResolveAggroColor(plateData, status)
     if c then
         glow:SetVertexColor(c[1], c[2], c[3], 0.75)
+        glow:SetAlpha(plateData._lastAppliedVisualAlpha or 1.0)
         glow:Show()
     else
         glow:Hide()

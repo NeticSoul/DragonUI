@@ -257,6 +257,7 @@ local VISUAL_ALPHA_FIELDS = {
     "_comboHost",
     "_eliteIcon",
     "_totemIcon",
+    "minaThreatTex",
 }
 
 local function KeepNameRowChildOpaque(fs)
