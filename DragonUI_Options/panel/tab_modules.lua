@@ -107,7 +107,7 @@ local function BuildModulesTab(scroll)
     ModuleToggle(abSection, {
         label = LO["Enable All Action Bar Modules"],
         desc = LO["Master toggle for the complete action bars system."],
-        moduleNames = { "mainbars", "vehicle", "stance", "petbar", "multicast", "buttons", "noop" },
+        moduleNames = { "mainbars", "vehicle", "stance", "petbar", "multicast", "buttons", "noop", "micromenu" },
     })
 
     -- ====================================================================
