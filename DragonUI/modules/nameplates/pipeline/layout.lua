@@ -250,6 +250,9 @@ local VISUAL_ALPHA_FIELDS = {
     "minaHp",
     "minaPo",
     "minaTarget",
+    "minaHpNum",
+    "minaHpBarPct",
+    "minaHpTextRow",
     "minaPoCur",
     "minaPoPct",
     "minaPoTextRow",
@@ -320,6 +323,9 @@ function NP.layout.HideMinaStack(plateData)
         plateData.minaSubTitle,
         plateData.minaBossSkull,
         plateData.minaHpPct,
+        plateData.minaHpNum,
+        plateData.minaHpBarPct,
+        plateData.minaHpTextRow,
         plateData.minaPoCur,
         plateData.minaPoPct,
         plateData.minaPoTextRow,
@@ -641,9 +647,12 @@ function NP.layout.ApplyNameplateFonts(plateData)
         SafeSetFont(fs, fontPath, px, "")
     end
 
+    local hpNumSize = 7 + (NP.config.GetCfg().healthNumberFontSize or 2)
     applyFont(plateData.minaName, nameSize)
     applyFont(plateData.minaHpPct, nameSize)
     applyFont(plateData.minaSubTitle, math.max(8, nameSize - 2))
+    applyFont(plateData.minaHpNum, hpNumSize)
+    applyFont(plateData.minaHpBarPct, hpNumSize)
     applyFont(plateData.minaPoCur, powerSize)
     applyFont(plateData.minaPoPct, powerSize)
 
@@ -778,6 +787,29 @@ function NP.layout.EnsureMinaStack(plateData)
     plateData.minaHpPct:SetNonSpaceWrap(false)
     plateData.minaHpPct:SetWordWrap(false)
     plateData.minaHpPct:SetHeight(12)
+
+    plateData.minaHpNum = visualRoot:CreateFontString(nil, "OVERLAY")
+    SafeSetFont(plateData.minaHpNum, fontPath, 9, "")
+    plateData.minaHpNum:SetShadowOffset(1, -1)
+    plateData.minaHpNum:SetShadowColor(0, 0, 0, 1)
+    plateData.minaHpNum:SetJustifyH("LEFT")
+    plateData.minaHpNum:SetNonSpaceWrap(false)
+    plateData.minaHpNum:SetWordWrap(false)
+    plateData.minaHpNum:Hide()
+
+    plateData.minaHpBarPct = visualRoot:CreateFontString(nil, "OVERLAY")
+    SafeSetFont(plateData.minaHpBarPct, fontPath, 9, "")
+    plateData.minaHpBarPct:SetShadowOffset(1, -1)
+    plateData.minaHpBarPct:SetShadowColor(0, 0, 0, 1)
+    plateData.minaHpBarPct:SetJustifyH("RIGHT")
+    plateData.minaHpBarPct:SetNonSpaceWrap(false)
+    plateData.minaHpBarPct:SetWordWrap(false)
+    plateData.minaHpBarPct:Hide()
+
+    plateData.minaHpTextRow = CreateFrame("Frame", nil, visualRoot)
+    plateData.minaHpTextRow:SetSize(1, 1)
+    plateData.minaHpNum:SetParent(plateData.minaHpTextRow)
+    plateData.minaHpBarPct:SetParent(plateData.minaHpTextRow)
 
     plateData.minaPoCur = visualRoot:CreateFontString(nil, "OVERLAY")
     SafeSetFont(plateData.minaPoCur, fontPath, 9, "")
@@ -916,6 +948,19 @@ function NP.layout.LayoutMinaStack(plateData)
         plateData.minaHpPct:ClearAllPoints()
         plateData.minaHpPct:SetPoint("RIGHT", plateData.minaNameRow, "RIGHT", 0, 0)
         plateData.minaHpPct:SetWidth(visW * 0.32)
+    end
+
+    if plateData.minaHpTextRow then
+        plateData.minaHpTextRow:ClearAllPoints()
+        plateData.minaHpTextRow:SetAllPoints(hp)
+    end
+    if plateData.minaHpNum then
+        plateData.minaHpNum:ClearAllPoints()
+        plateData.minaHpNum:SetPoint("LEFT", hp, "LEFT", 4, 0)
+    end
+    if plateData.minaHpBarPct then
+        plateData.minaHpBarPct:ClearAllPoints()
+        plateData.minaHpBarPct:SetPoint("RIGHT", hp, "RIGHT", -4, 0)
     end
 
     if plateData.minaPoTextRow then

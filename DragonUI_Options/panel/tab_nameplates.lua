@@ -604,7 +604,7 @@ local function BuildHealthSubTab(scroll)
             end
         end
         local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-        SetLevelToggleDisabled(center or (np and np.showLevelAlways == true))
+        SetLevelToggleDisabled(np and np.showLevelAlways == true)
     end
 
     RegisterSimpleNameControl(C:AddToggle(health, {
@@ -613,6 +613,24 @@ local function BuildHealthSubTab(scroll)
         disabled = IsCenterNameMode,
         callback = RefreshNameplates,
     }))
+
+    C:AddToggle(health, {
+        label = LO["Show Health Number"],
+        desc = LO["Shows HP as a number (e.g. 22k) and percent on the health bar."],
+        dbPath = DB .. ".showHealthNumber",
+        callback = RefreshNameplates,
+    })
+
+    C:AddSlider(health, {
+        label = LO["Health Number Font Size"],
+        desc = LO["Health number font scale (1-10)."],
+        dbPath = DB .. ".healthNumberFontSize",
+        min = 1, max = 10, step = 1,
+        width = 200,
+        callback = RefreshNameplates,
+    })
+
+    C:AddSpacer(health)
 
     C:AddColorPicker(health, {
         label = LO["Friendly Player Color"],
@@ -663,108 +681,100 @@ local function BuildHealthSubTab(scroll)
         return np and np.friendlyNameOnly == true
     end
 
-    -- Toggles that depend on the master toggle; refreshed together below.
-    local headlineDeps = {}
-    local function RefreshHeadlineDisabled()
-        local on = IsHeadlineEnabled()
-        for _, w in ipairs(headlineDeps) do
-            if w and w.SetDisabled then w:SetDisabled(not on) end
+    local function RebuildHeadlineSection()
+        RefreshNameplates()
+        if not Panel or not Panel.SelectTab then return end
+        local savedScroll = Panel.scrollWidget and Panel.scrollWidget.scrollbar
+            and Panel.scrollWidget.scrollbar:GetValue() or 0
+        Panel:SelectTab("nameplates")
+        if savedScroll > 0 and Panel.scrollWidget and Panel.scrollWidget.scrollbar then
+            Panel.scrollWidget.scrollbar:SetValue(savedScroll)
+            Panel.scrollWidget:SetScroll(savedScroll)
         end
     end
 
-    -- Master toggle
     C:AddToggle(headline, {
         label = LO["Enable Headline Mode"],
         desc = LO["Hide health, power and cast bars on friendly nameplates, showing only the name."],
         dbPath = DB .. ".friendlyNameOnly",
-        callback = function()
-            RefreshNameplates()
-            RefreshHeadlineDisabled()
-        end,
+        callback = RebuildHeadlineSection,
     })
 
-    headlineDeps[#headlineDeps + 1] = C:AddColorPicker(headline, {
-        label = LO["Name Text Color"],
-        dbPath = DB .. ".friendlyNameOnlyColor",
-        callback = RefreshNameplates,
-    })
+    if IsHeadlineEnabled() then
+        C:AddColorPicker(headline, {
+            label = LO["Name Text Color"],
+            dbPath = DB .. ".friendlyNameOnlyColor",
+            callback = RefreshNameplates,
+        })
 
-    C:AddLabel(headline, LO["Friendly Players"])
-    C:AddDescription(headline, LO["Class colors, title, guild and AFK read from the unit: party/raid show automatically; others fill in when you target or mouse over them, or instantly with awesome_wotlk."])
+        C:AddLabel(headline, LO["Friendly Players"])
+        C:AddDescription(headline, LO["Class colors, title, guild and AFK read from the unit: party/raid show automatically; others fill in when you target or mouse over them, or instantly with awesome_wotlk."])
 
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Party / Raid Members"],
-        desc = LO["Apply headline mode to your party and raid members."],
-        dbPath = DB .. ".friendlyNameOnlyParty",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["All Friendly Players"],
-        desc = LO["Apply headline mode to all friendly players, not just your group."],
-        dbPath = DB .. ".friendlyNameOnlyAll",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Show Class Colors"],
-        desc = LO["Show friendly player names in their class color."],
-        dbPath = DB .. ".friendlyNameOnlyClassColor",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Show Player Title"],
-        desc = LO["Show the player's title with their name (e.g. \"Arthas Jenkins\")."],
-        dbPath = DB .. ".friendlyNameOnlyTitle",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Show Guild Name"],
-        desc = LO["Show the player's guild name below their name."],
-        dbPath = DB .. ".friendlyNameOnlyGuild",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Show AFK Status"],
-        desc = LO["Show an <AFK> tag for away players."],
-        dbPath = DB .. ".friendlyNameOnlyAFK",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
+        C:AddToggle(headline, {
+            label = LO["Party / Raid Members"],
+            desc = LO["Apply headline mode to your party and raid members."],
+            dbPath = DB .. ".friendlyNameOnlyParty",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["All Friendly Players"],
+            desc = LO["Apply headline mode to all friendly players, not just your group."],
+            dbPath = DB .. ".friendlyNameOnlyAll",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["Show Class Colors"],
+            desc = LO["Show friendly player names in their class color."],
+            dbPath = DB .. ".friendlyNameOnlyClassColor",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["Show Player Title"],
+            desc = LO["Show the player's title with their name (e.g. \"Arthas Jenkins\")."],
+            dbPath = DB .. ".friendlyNameOnlyTitle",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["Show Guild Name"],
+            desc = LO["Show the player's guild name below their name."],
+            dbPath = DB .. ".friendlyNameOnlyGuild",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["Show AFK Status"],
+            desc = LO["Show an <AFK> tag for away players."],
+            dbPath = DB .. ".friendlyNameOnlyAFK",
+            callback = RefreshNameplates,
+        })
 
-    C:AddLabel(headline, LO["Friendly NPCs"])
-    C:AddDescription(headline, LO["NPC titles fill in when you target or mouse over the NPC, or instantly with awesome_wotlk."])
+        C:AddLabel(headline, LO["Friendly NPCs"])
+        C:AddDescription(headline, LO["NPC titles fill in when you target or mouse over the NPC, or instantly with awesome_wotlk."])
 
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Headline Mode for NPCs"],
-        desc = LO["Apply headline mode to friendly NPCs."],
-        dbPath = DB .. ".friendlyNPCNameOnly",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Show NPC Title"],
-        desc = LO["Show the NPC's title or occupation below its name (e.g. <General Supplies>)."],
-        dbPath = DB .. ".friendlyNPCNameOnlyTitle",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
-    headlineDeps[#headlineDeps + 1] = C:AddToggle(headline, {
-        label = LO["Show Full Plate on Target"],
-        desc = LO["When headline mode is active, show health, power and cast bars on your current target."],
-        dbPath = DB .. ".headlineExcludeTarget",
-        disabled = function() return not IsHeadlineEnabled() end,
-        callback = RefreshNameplates,
-    })
+        C:AddToggle(headline, {
+            label = LO["Headline Mode for NPCs"],
+            desc = LO["Apply headline mode to friendly NPCs."],
+            dbPath = DB .. ".friendlyNPCNameOnly",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["Show NPC Title"],
+            desc = LO["Show the NPC's title or occupation below its name (e.g. <General Supplies>)."],
+            dbPath = DB .. ".friendlyNPCNameOnlyTitle",
+            callback = RefreshNameplates,
+        })
+        C:AddToggle(headline, {
+            label = LO["Show Full Plate on Target"],
+            desc = LO["When headline mode is active, show health, power and cast bars on your current target."],
+            dbPath = DB .. ".headlineExcludeTarget",
+            callback = RefreshNameplates,
+        })
+    end
 
     local nameLevel = C:AddSection(scroll, LO["Name & Level"])
 
     C:AddToggle(nameLevel, {
         label = LO["Center Name Only"],
-        desc = LO["Hides level text and health percent, and centers the unit name on the nameplate."],
+        desc = LO["Centers the unit name and hides the health percent."],
         dbPath = DB .. ".centerNameOnly",
         callback = function()
             RefreshNameplates()
@@ -823,18 +833,17 @@ local function BuildHealthSubTab(scroll)
         UpdateSimpleNameControls()
     end
 
-    RegisterSimpleNameControl(C:AddToggle(nameLevel, {
+    C:AddToggle(nameLevel, {
         label = LO["Show Level Always"],
         desc = LO["Always show the unit level next to the name."],
         dbPath = DB .. ".showLevelAlways",
-        disabled = IsCenterNameMode,
         callback = function()
             RefreshNameplates()
             UpdateLevelToggleStates()
         end,
-    }))
+    })
 
-    RegisterSimpleNameControl(C:AddDropdown(nameLevel, {
+    C:AddDropdown(nameLevel, {
         label = LO["Level Format"],
         dbPath = DB .. ".levelTextFormat",
         values = {
@@ -843,23 +852,20 @@ local function BuildHealthSubTab(scroll)
             plain = "LVL",
         },
         width = 220,
-        disabled = IsCenterNameMode,
         callback = RefreshNameplates,
-    }))
+    })
 
-    levelToggles[#levelToggles + 1] = RegisterSimpleNameControl(C:AddToggle(nameLevel, {
+    levelToggles[#levelToggles + 1] = C:AddToggle(nameLevel, {
         label = LO["Show Level In Name When Targeted"],
         dbPath = DB .. ".showLevelInName",
-        disabled = IsCenterNameMode,
         callback = RefreshNameplates,
-    }))
+    })
 
-    levelToggles[#levelToggles + 1] = RegisterSimpleNameControl(C:AddToggle(nameLevel, {
+    levelToggles[#levelToggles + 1] = C:AddToggle(nameLevel, {
         label = LO["Show Level on Hover"],
         dbPath = DB .. ".showLevelOnHover",
-        disabled = IsCenterNameMode,
         callback = RefreshNameplates,
-    }))
+    })
 
     C:AddToggle(nameLevel, {
         label = LO["Name Reaction Colors"],

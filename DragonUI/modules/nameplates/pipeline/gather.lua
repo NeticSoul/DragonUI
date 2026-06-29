@@ -470,15 +470,31 @@ function NP.gather.SyncHealth(plateData, value)
     bar:Show()
 
     local cfg = NP.config.GetCfg()
-    if plateData.minaHpPct and cfg.showHealthPercent ~= false and cfg.centerNameOnly ~= true then
-        if maxVal and maxVal > 0 then
-            plateData.minaHpPct:SetText(string.format("%d%%", math.floor(cur / maxVal * 100 + 0.5)))
-            plateData.minaHpPct:Show()
-        else
+    local showHpNum = cfg.showHealthNumber == true
+    if showHpNum and maxVal and maxVal > 0 then
+        if plateData.minaHpPct then plateData.minaHpPct:Hide() end
+        if plateData.minaHpNum then
+            local abbr = addon.TextSystem and addon.TextSystem.AbbreviateLargeNumbers(cur) or tostring(math.floor(cur))
+            plateData.minaHpNum:SetText(abbr)
+            plateData.minaHpNum:Show()
+        end
+        if plateData.minaHpBarPct then
+            plateData.minaHpBarPct:SetText(string.format("%d%%", math.floor(cur / maxVal * 100 + 0.5)))
+            plateData.minaHpBarPct:Show()
+        end
+    else
+        if plateData.minaHpNum then plateData.minaHpNum:Hide() end
+        if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
+        if plateData.minaHpPct and cfg.showHealthPercent ~= false and cfg.centerNameOnly ~= true then
+            if maxVal and maxVal > 0 then
+                plateData.minaHpPct:SetText(string.format("%d%%", math.floor(cur / maxVal * 100 + 0.5)))
+                plateData.minaHpPct:Show()
+            else
+                plateData.minaHpPct:Hide()
+            end
+        elseif plateData.minaHpPct then
             plateData.minaHpPct:Hide()
         end
-    elseif plateData.minaHpPct then
-        plateData.minaHpPct:Hide()
     end
 end
 
@@ -624,9 +640,10 @@ function NP.gather.SyncName(plateData, unit)
     -- so guild/class/title/AFK are ready the moment the player un-targets.
     local nameOnlyResolve = NP.gather.IsFriendlyNameOnlyActive(plateData)
     local centerOnly = cfg.centerNameOnly == true or headline
+    local suppressLevel = headline  -- centerNameOnly alone no longer hides level
 
     local displayUnit = nil
-    if centerOnly then
+    if suppressLevel then
         displayUnit = nil
     elseif cfg.showLevelAlways then
         displayUnit = unit
@@ -641,7 +658,7 @@ function NP.gather.SyncName(plateData, unit)
     if not displayUnit and cfg.showLevelOnHover ~= false and hoverEligible then
         displayUnit = unit
     end
-    local showLevelPrefix = not centerOnly and ((displayUnit ~= nil) or (cfg.showLevelAlways == true))
+    local showLevelPrefix = not suppressLevel and ((displayUnit ~= nil) or (cfg.showLevelAlways == true))
     local levelUnit = nil
     if showLevelPrefix then
         if displayUnit and UnitExists(displayUnit) then
