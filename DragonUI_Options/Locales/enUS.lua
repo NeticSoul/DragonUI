@@ -1403,3 +1403,9 @@ L["Keep hostile boss and world-boss nameplates visible at the top of the screen 
 L["Only apply Retail-like stacking inside party and raid instances. It remains disabled in the open world, battlegrounds, and arenas."] = true
 L["Scales the nameplate clickbox relative to its original size. Changes made during combat are applied when combat ends."] = true
 L["Show icons for recognized shaman totems. DragonUI uses localized spell names and automatically learns your own active totems."] = true
+
+-- Search
+
+L["Search settings..."] = true
+L["Type to find a setting"] = true
+L["No settings match '%s'."] = true

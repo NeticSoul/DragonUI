@@ -1378,3 +1378,9 @@ L["Show remaining debuff time on each debuff icon."] = "Zeigt die verbleibende D
 L["Size of debuff icons on nameplates."] = "Größe der Debuff-Symbole auf Namensplaketten."
 L["Totem Icon Position"] = "Position des Totemsymbols"
 L["Whitelist"] = "Positivliste"
+
+-- Search
+
+L["Search settings..."] = "Einstellungen suchen..."
+L["Type to find a setting"] = "Tippen, um eine Einstellung zu finden"
+L["No settings match '%s'."] = "Keine Einstellungen entsprechen '%s'."

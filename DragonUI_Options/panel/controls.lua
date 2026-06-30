@@ -23,6 +23,77 @@ local Controls = {}
 addon.PanelControls = Controls
 
 -- ============================================================================
+-- SEARCH INDEX STUBS
+-- ============================================================================
+
+local STUB_NOOP = function() end
+local STUB_MT   = { __index = function() return STUB_NOOP end }
+
+-- Keep frame/content nil on stubs; __index would return a truthy noop.
+local STUB_NIL_FIELDS = { content = true, frame = true, titletext = true, label = true }
+
+local function MakeStub(extra)
+    local t = extra or {}
+    for field in pairs(STUB_NIL_FIELDS) do
+        if rawget(t, field) == nil then
+            t[field] = nil
+        end
+    end
+    return setmetatable(t, STUB_MT)
+end
+Controls.MakeStub = MakeStub
+
+local function safestr(v)
+    if type(v) == "string" then return v end
+    if v == nil then return "" end
+    return tostring(v)
+end
+
+local function RecordSearchEntry(opts)
+    local Panel = addon.OptionsPanel
+    if not Panel or not Panel.searchIndex then return end
+    local label    = safestr(opts.label)
+    local desc     = safestr(opts.desc)
+    local dbPath   = safestr(opts.dbPath)
+    local subTab   = safestr(Panel._currentSubTabLabel)
+    local subTabKey = safestr(Panel._currentSubTabKey)
+    local section  = safestr(Panel._currentSection)
+    local tabText  = safestr(Panel._currentTabText)
+    if label == "" and dbPath == "" then return end
+
+    -- Fallback to sub-tab label when the control has no section.
+    local displaySection
+    if section ~= "" then
+        displaySection = section
+    elseif subTab ~= "" then
+        displaySection = subTab
+    end
+
+    -- Include subTab in haystack for controls without a section.
+    local haystack = string.lower(
+        strjoin(" ", tabText, subTab, section, label, desc, dbPath)
+    )
+    Panel.searchIndex[#Panel.searchIndex + 1] = {
+        tab      = Panel._currentIndexTab,
+        tabText  = tabText,
+        section  = displaySection,
+        subTab   = (subTabKey ~= "" and subTabKey) or nil,
+        label    = label,
+        desc     = (desc ~= "" and desc) or nil,
+        dbPath   = (dbPath ~= "" and dbPath) or nil,
+        haystack = haystack,
+    }
+end
+
+-- Stable widget id for search navigation (dbPath or label).
+local function TagSearchId(widget, opts)
+    if not widget or not opts then return end
+    local id = opts.dbPath
+    if not id or id == "" then id = opts.label end
+    widget._dragonId = id
+end
+
+-- ============================================================================
 -- THEME
 -- ============================================================================
 
@@ -179,13 +250,12 @@ local function SkinCheckBox(widget)
 end
 
 local function SkinSlider(widget)
-    -- The slider widget has: slider (frame), editbox, label, lowtext, hightext
-    if widget.slider then
+    -- Skin once; re-applying backdrop/thumb causes a one-frame thumb blink.
+    if widget.slider and not widget.slider._dragonSkinned then
         widget.slider:SetBackdrop(BD_WIDGET)
         widget.slider:SetBackdropColor(0.14, 0.14, 0.16, 1)
         widget.slider:SetBackdropBorderColor(0.22, 0.22, 0.24, 1)
 
-        -- Thumb
         local thumb = widget.slider:GetThumbTexture()
         if thumb then
             thumb:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
@@ -193,11 +263,16 @@ local function SkinSlider(widget)
             thumb:SetWidth(12)
             thumb:SetHeight(12)
         end
+
+        widget.slider._dragonSkinned = true
     end
-    if widget.editbox then
+    if widget.editbox and not widget.editbox._dragonSkinned then
         widget.editbox:SetBackdrop(BD_WIDGET)
         widget.editbox:SetBackdropColor(0.12, 0.12, 0.14, 1)
         widget.editbox:SetBackdropBorderColor(0.22, 0.22, 0.24, 1)
+        widget.editbox._dragonSkinned = true
+    end
+    if widget.editbox then
         SafeSetFont(widget.editbox, 11, "")
     end
     if widget.label then
@@ -426,10 +501,15 @@ local function ReskinWidget(widget)
     elseif t == "Button" then
         SkinButton(widget)
     elseif t == "Label" then
-        SkinLabel(widget)
+        if widget._dragonSearchFont and widget.label then
+            SafeSetFont(widget.label, widget._dragonSearchFont[2], widget._dragonSearchFont[3], widget._dragonSearchFont[1])
+        else
+            SkinLabel(widget)
+        end
     elseif t == "InteractiveLabel" then
-        -- Re-apply sub-tab font instead of SkinLabel (which sets size 11)
-        if widget._dragonSubTabFont and widget.label then
+        if widget._dragonSearchFont and widget.label then
+            SafeSetFont(widget.label, widget._dragonSearchFont[2], widget._dragonSearchFont[3], widget._dragonSearchFont[1])
+        elseif widget._dragonSubTabFont and widget.label then
             SafeSetFont(widget.label, widget._dragonSubTabFont[2], widget._dragonSubTabFont[3], widget._dragonSubTabFont[1])
         end
     elseif t == "Heading" then
@@ -461,6 +541,8 @@ end
 -- ============================================================================
 
 function Controls:AddHeading(parent, text)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     local heading = AceGUI:Create("Heading")
     heading:SetText(text)
     heading:SetFullWidth(true)
@@ -474,6 +556,8 @@ end
 -- ============================================================================
 
 function Controls:AddLabel(parent, text, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     opts = opts or {}
     local label = AceGUI:Create("Label")
     label:SetText(text)
@@ -491,6 +575,8 @@ function Controls:AddDescription(parent, text)
 end
 
 function Controls:AddCopyableText(parent, text)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     local editBox = AceGUI:Create("EditBox")
     editBox:SetText(text)
     editBox:SetFullWidth(true)
@@ -514,6 +600,8 @@ end
 -- ============================================================================
 
 function Controls:AddSpacer(parent)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     local spacer = AceGUI:Create("Label")
     spacer:SetText(" ")
     spacer:SetFullWidth(true)
@@ -526,6 +614,11 @@ end
 -- ============================================================================
 
 function Controls:AddToggle(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
     local cb = AceGUI:Create("CheckBox")
     local label = NormalizeText(opts.label, "Toggle")
     local desc = NormalizeDescription(opts.desc)
@@ -558,6 +651,7 @@ function Controls:AddToggle(parent, opts)
     end)
 
     SkinCheckBox(cb)
+    TagSearchId(cb, opts)
     parent:AddChild(cb)
     return cb
 end
@@ -567,6 +661,11 @@ end
 -- ============================================================================
 
 function Controls:AddSlider(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
     local slider = AceGUI:Create("Slider")
     local label = NormalizeText(opts.label, "Slider")
     local desc = NormalizeDescription(opts.desc)
@@ -611,6 +710,7 @@ function Controls:AddSlider(parent, opts)
     end
 
     SkinSlider(slider)
+    TagSearchId(slider, opts)
     parent:AddChild(slider)
     return slider
 end
@@ -620,6 +720,11 @@ end
 -- ============================================================================
 
 function Controls:AddEditBox(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
     local box = AceGUI:Create("EditBox")
     local label = NormalizeText(opts.label, "")
     local desc = NormalizeDescription(opts.desc)
@@ -662,6 +767,7 @@ function Controls:AddEditBox(parent, opts)
         box:SetCallback("OnLeave", function() GameTooltip:Hide() end)
     end
 
+    TagSearchId(box, opts)
     parent:AddChild(box)
     return box
 end
@@ -671,6 +777,11 @@ end
 -- ============================================================================
 
 function Controls:AddDropdown(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
     local dd = AceGUI:Create("Dropdown")
     dd:SetLabel(NormalizeText(opts.label, "Select"))
     dd:SetList(NormalizeDropdownValues(opts.values))
@@ -702,6 +813,7 @@ function Controls:AddDropdown(parent, opts)
     end)
 
     SkinDropdown(dd)
+    TagSearchId(dd, opts)
     parent:AddChild(dd)
     return dd
 end
@@ -711,6 +823,11 @@ end
 -- ============================================================================
 
 function Controls:AddColorPicker(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
     local cp = AceGUI:Create("ColorPicker")
     cp:SetLabel(opts.label or "Color")
     cp:SetHasAlpha(opts.hasAlpha or false)
@@ -734,6 +851,7 @@ function Controls:AddColorPicker(parent, opts)
         if opts.callback then opts.callback(r, g, b, a) end
     end)
 
+    TagSearchId(cp, opts)
     parent:AddChild(cp)
     return cp
 end
@@ -743,6 +861,11 @@ end
 -- ============================================================================
 
 function Controls:AddButton(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
     local btn = AceGUI:Create("Button")
     local label = NormalizeText(opts.label, "Button")
     local desc = NormalizeDescription(opts.desc)
@@ -769,6 +892,7 @@ function Controls:AddButton(parent, opts)
         btn:SetCallback("OnLeave", function() GameTooltip:Hide() end)
     end
     SkinButton(btn)
+    TagSearchId(btn, opts)
     parent:AddChild(btn)
     return btn
 end
@@ -778,6 +902,12 @@ end
 -- ============================================================================
 
 function Controls:AddSection(parent, title)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        local prefix = _P._currentSubTabLabel
+        _P._currentSection = prefix and (prefix .. " / " .. (title or "")) or title
+        return MakeStub()
+    end
     local group = AceGUI:Create("InlineGroup")
     group:SetTitle(title or "")
     group:SetFullWidth(true)
@@ -792,6 +922,8 @@ end
 -- ============================================================================
 
 function Controls:AddRow(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     opts = opts or {}
     local group = AceGUI:Create("SimpleGroup")
     group:SetFullWidth(true)
@@ -805,6 +937,8 @@ end
 -- ============================================================================
 
 function Controls:AddTexturePreview(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     -- opts: { label, texture, texCoord, width, height }
     -- Uses AceGUI Icon widget
     local icon = AceGUI:Create("Icon")
@@ -834,7 +968,32 @@ end
 -- SUB-TAB BAR (horizontal navigation within a tab)
 -- ============================================================================
 
-function Controls:AddSubTabs(parent, tabs, activeKey, onSelect)
+function Controls:AddSubTabs(parent, tabs, activeKey, onSelect, builders)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        -- Harvest all sub-tabs during index build.
+        if builders then
+            local savedSection   = _P._currentSection
+            local savedSubTab    = _P._currentSubTabLabel
+            local savedSubTabKey = _P._currentSubTabKey
+            for _, tab in ipairs(tabs) do
+                local builder = builders[tab.key]
+                if builder then
+                    _P._currentSubTabLabel = tab.label
+                    _P._currentSubTabKey   = tab.key
+                    _P._currentSection     = nil
+                    local ok, err = pcall(builder, Controls.MakeStub())
+                    if not ok and addon.Debug then
+                        addon:Debug("search sub-tab harvest: " .. tostring(tab.key) .. ": " .. tostring(err))
+                    end
+                end
+            end
+            _P._currentSubTabLabel = savedSubTab
+            _P._currentSubTabKey   = savedSubTabKey
+            _P._currentSection     = savedSection
+        end
+        return MakeStub()
+    end
     -- tabs = { { key="player", label="Player" }, ... }
     -- activeKey = currently selected sub-tab key
     -- onSelect(key) = callback when a sub-tab is clicked
@@ -846,6 +1005,9 @@ function Controls:AddSubTabs(parent, tabs, activeKey, onSelect)
     for _, tab in ipairs(tabs) do
         local btn = AceGUI:Create("InteractiveLabel")
         btn:SetWidth(math.max(#tab.label * 8.5, 70))
+
+        -- Clear pooled search-row hover texture from recycled frames.
+        if btn.frame._searchHover then btn.frame._searchHover:Hide() end
 
         local isActive = (tab.key == activeKey)
         if isActive then
@@ -1152,6 +1314,8 @@ local function ImportSpellFilterText(raw, setFunc)
 end
 
 function Controls:AddSpellFilterList(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then return MakeStub() end
     opts = opts or {}
     local dbPath = opts.dbPath
     local disabledFunc = opts.disabled

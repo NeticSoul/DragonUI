@@ -96,7 +96,7 @@ local function IsCollectorEnabled()
 end
 
 local function SetSectionVisualState(section, enabled)
-    if not section then
+    if not section or Panel.indexing then
         return
     end
 
@@ -128,6 +128,7 @@ local function BuildMinimapTab(scroll)
     local collectorWidgets = {}
 
     local function UpdateCollectorSectionState()
+        if Panel.indexing then return end
         local enabled = IsCollectorEnabled()
         for _, widget in ipairs(collectorWidgets) do
             if widget and widget.SetDisabled then
@@ -291,6 +292,7 @@ local function BuildMinimapTab(scroll)
     end
 
     local function UpdateAnimatedBorderSectionState()
+        if Panel.indexing then return end
         local enabled = IsAnimatedBorderEnabled()
         for _, widget in ipairs(animatedBorderWidgets) do
             if widget and widget.SetDisabled then

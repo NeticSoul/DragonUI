@@ -223,6 +223,10 @@ function addon.SetNameplateSubTab(key)
     activeSubTab = key or "general"
 end
 
+-- Search navigation sub-tab setter.
+Panel.subTabSetters = Panel.subTabSetters or {}
+Panel.subTabSetters["nameplates"] = function(key) activeSubTab = key or "general" end
+
 -- ============================================================================
 -- SUB-TAB BUILDERS
 -- ============================================================================
@@ -1533,11 +1537,11 @@ local function BuildNameplatesTab(scroll)
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)
         activeSubTab = key
         Panel:SelectTab("nameplates")
-    end)
+    end, subTabBuilders)
 
-    local builder = subTabBuilders[activeSubTab]
-    if builder then
-        builder(scroll)
+    if not Panel.indexing then
+        local builder = subTabBuilders[activeSubTab]
+        if builder then builder(scroll) end
     end
 end
 

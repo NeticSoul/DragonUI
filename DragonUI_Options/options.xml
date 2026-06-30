@@ -56,4 +56,5 @@
     <Script file="panel\tab_bags.lua"/>
     <Script file="panel\tab_chat.lua"/>
     <Script file="panel\tab_profiles.lua"/>
+    <Script file="panel\search.lua"/>
 </Ui>

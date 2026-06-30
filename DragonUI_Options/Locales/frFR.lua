@@ -584,3 +584,9 @@ L["Show Debuff Cooldown Text"] = "Afficher la durée des affaiblissements"
 L["Show remaining debuff time on each debuff icon."] = "Affiche la durée restante sur chaque icône d'affaiblissement."
 L["Size of debuff icons on nameplates."] = "Taille des icônes d'affaiblissement sur les barres de nom."
 L["Totem Icon Position"] = "Position de l'icône du totem"
+
+-- Search
+
+L["Search settings..."] = "Rechercher des réglages..."
+L["Type to find a setting"] = "Tapez pour trouver un réglage"
+L["No settings match '%s'."] = "Aucun réglage ne correspond à « %s »."

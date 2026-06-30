@@ -110,6 +110,10 @@ local subTabs = {
     { key = "party",   label = LO["Party"] },
 }
 
+-- Search navigation sub-tab setter.
+Panel.subTabSetters = Panel.subTabSetters or {}
+Panel.subTabSetters["unitframes"] = function(key) activeSubTab = key end
+
 -- ============================================================================
 -- COMMON CONTROLS BUILDER
 -- ============================================================================
@@ -717,11 +721,12 @@ local function BuildUnitframesTab(scroll)
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)
         activeSubTab = key
         Panel:SelectTab("unitframes")
-    end)
+    end, subTabBuilders)
 
-    local builder = subTabBuilders[activeSubTab]
-    if builder then
-        builder(scroll)
+    -- AddSubTabs already harvests all sub-tabs during indexing.
+    if not Panel.indexing then
+        local builder = subTabBuilders[activeSubTab]
+        if builder then builder(scroll) end
     end
 end
 

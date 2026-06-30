@@ -29,6 +29,9 @@ Panel.tabButtons = {}     -- visual tab buttons
 Panel.currentTab = nil
 Panel.scrollWidget = nil  -- current AceGUI ScrollFrame inside content
 
+-- Search navigation sub-tab setters (tabKey -> function(subTabKey)).
+Panel.subTabSetters = Panel.subTabSetters or {}
+
 -- ============================================================================
 -- THEME
 -- ============================================================================
@@ -107,6 +110,7 @@ function Panel:RegisterTab(key, text, builder, order)
     table.sort(self.tabOrder, function(a, b)
         return (self.tabs[a].order or 999) < (self.tabs[b].order or 999)
     end)
+    self.searchIndex = nil  -- mark dirty; rebuilt on next search
 end
 
 -- ============================================================================
@@ -215,6 +219,165 @@ local function CreatePanel()
         keybindBtn:SetBackdropBorderColor(0.0, 0.9, 0.0, 0.7)
         keybindText:SetText("|cff00dd00" .. LO["KeyBind Mode"] .. "|r")
     end)
+
+    -- Search (title bar)
+    local SEARCH_ICON_TEXTURE           = "Interface\\AddOns\\DragonUI_Options\\textures\\search_icon"
+    local SEARCH_ICON_HIGHLIGHT_TEXTURE = "Interface\\AddOns\\DragonUI_Options\\textures\\search_icon_highlight"
+    local SEARCH_ICON_SIZE = 18
+    local SEARCH_ICON_GAP  = 3
+
+    local searchBox = CreateFrame("EditBox", nil, titleBar)
+    searchBox:SetSize(180, 22)
+    searchBox:SetPoint("RIGHT", keybindBtn, "LEFT", -10, 0)
+    searchBox:SetBackdrop(BD_INNER)
+    searchBox:SetBackdropColor(0.10, 0.10, 0.12, 1)
+    searchBox:SetBackdropBorderColor(0.22, 0.22, 0.25, 1)
+    searchBox:SetAutoFocus(false)
+    searchBox:SetMaxLetters(64)
+    searchBox:SetTextInsets(6, 6, 0, 0)
+    searchBox:SetTextColor(0.9, 0.9, 0.9, 1)
+    SetSafeFont(searchBox, 11, "")
+    searchBox:SetFrameLevel(titleBar:GetFrameLevel() + 5)
+
+    local function SearchBoxPulseStrength(t)
+        local peak = 0.75
+        if t < 0.5 then
+            return t / 0.5 * peak
+        elseif t < 1.0 then
+            return (1.0 - t) / 0.5 * peak
+        elseif t < 1.5 then
+            return (t - 1.0) / 0.5 * peak
+        elseif t < 2.0 then
+            return (2.0 - t) / 0.5 * peak
+        end
+        return 0
+    end
+
+    local function ApplySearchBoxPulse(strength)
+        local frac = strength / 0.75
+        local ac = T.accent
+        searchBox:SetBackdropBorderColor(
+            0.22 + (ac[1] - 0.22) * frac,
+            0.22 + (ac[2] - 0.22) * frac,
+            0.25 + (ac[3] - 0.25) * frac,
+            1)
+        searchBox:SetBackdropColor(
+            0.10 + (ac[1] - 0.10) * frac * 0.2,
+            0.10 + (ac[2] - 0.10) * frac * 0.2,
+            0.12 + (ac[3] - 0.12) * frac * 0.2,
+            1)
+    end
+
+    local searchBoxPulse = CreateFrame("Frame", nil, titleBar)
+    searchBoxPulse:Hide()
+    searchBoxPulse:SetScript("OnUpdate", function(self, elapsed)
+        self.elapsed = (self.elapsed or 0) + elapsed
+        local t = self.elapsed
+        if t >= 2.0 then
+            self:Hide()
+            searchBox:SetBackdropBorderColor(0.22, 0.22, 0.25, 1)
+            searchBox:SetBackdropColor(0.10, 0.10, 0.12, 1)
+            return
+        end
+        ApplySearchBoxPulse(SearchBoxPulseStrength(t))
+    end)
+
+    local function StartSearchBoxPulse()
+        searchBoxPulse.elapsed = 0
+        searchBoxPulse:Show()
+    end
+
+    local searchIconBtn = CreateFrame("Button", nil, titleBar)
+    searchIconBtn:SetSize(SEARCH_ICON_SIZE + 4, SEARCH_ICON_SIZE + 4)
+    searchIconBtn:SetPoint("RIGHT", searchBox, "LEFT", -SEARCH_ICON_GAP, 0)
+    searchIconBtn:SetFrameLevel(searchBox:GetFrameLevel())
+
+    local searchIcon = searchIconBtn:CreateTexture(nil, "ARTWORK")
+    searchIcon:SetTexture(SEARCH_ICON_TEXTURE)
+    searchIcon:SetSize(SEARCH_ICON_SIZE, SEARCH_ICON_SIZE)
+    searchIcon:SetPoint("CENTER")
+
+    local searchIconHighlight = searchIconBtn:CreateTexture(nil, "OVERLAY")
+    searchIconHighlight:SetTexture(SEARCH_ICON_HIGHLIGHT_TEXTURE)
+    searchIconHighlight:SetSize(SEARCH_ICON_SIZE, SEARCH_ICON_SIZE)
+    searchIconHighlight:SetPoint("CENTER", searchIcon, "CENTER", 0, 0)
+    searchIconHighlight:Hide()
+
+    searchIconBtn:SetScript("OnClick", function()
+        searchBox:SetFocus()
+        StartSearchBoxPulse()
+    end)
+    searchIconBtn:SetScript("OnEnter", function(self)
+        searchIcon:Hide()
+        searchIconHighlight:Show()
+        GameTooltip:SetOwner(self, "ANCHOR_NONE")
+        GameTooltip:ClearAllPoints()
+        GameTooltip:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 80, 26)
+        GameTooltip:SetText(LO["Type to find a setting"], 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    searchIconBtn:SetScript("OnLeave", function()
+        searchIconHighlight:Hide()
+        searchIcon:Show()
+        GameTooltip:Hide()
+    end)
+
+    local searchPlaceholder = searchBox:CreateFontString(nil, "OVERLAY")
+    SetSafeFont(searchPlaceholder, 11, "ITALIC")
+    searchPlaceholder:SetPoint("LEFT", searchBox, "LEFT", 6, 0)
+    searchPlaceholder:SetText(LO["Search settings..."])
+    searchPlaceholder:SetTextColor(0.35, 0.35, 0.38, 1)
+    searchPlaceholder:Show()
+
+    searchBox:SetScript("OnTextChanged", function(self)
+        if Panel._suppressSearch then return end
+        local text = self:GetText()
+        if text == "" then
+            searchPlaceholder:Show()
+        else
+            searchPlaceholder:Hide()
+        end
+        Panel._pendingQuery = text
+        if Panel.searchDebounce then
+            Panel.searchDebounce.elapsed = 0
+            Panel.searchDebounce:Show()
+        end
+    end)
+
+    searchBox:SetScript("OnEnterPressed", function(self)
+        if Panel._suppressSearch then return end
+        local text = self:GetText()
+        text = string.gsub(text, "^%s+", "")
+        text = string.gsub(text, "%s+$", "")
+        if Panel.searchDebounce then Panel.searchDebounce:Hide() end
+        if text == "" then
+            Panel._lastRenderedQuery = nil
+            if Panel.currentTab then Panel:SelectTab(Panel.currentTab) end
+        else
+            Panel:BuildSearchIndex()
+            Panel:ShowSearchResults(text)
+        end
+    end)
+
+    searchBox:SetScript("OnEscapePressed", function(self)
+        Panel._suppressSearch = true
+        self:SetText("")
+        self:ClearFocus()
+        Panel._suppressSearch = false
+        searchPlaceholder:Show()
+        Panel._pendingQuery = ""
+        Panel._lastRenderedQuery = nil
+        if Panel.searchDebounce then Panel.searchDebounce:Hide() end
+        if Panel.currentTab then
+            Panel:SelectTab(Panel.currentTab)
+        end
+    end)
+
+    f.searchBox         = searchBox
+    f.searchPlaceholder = searchPlaceholder
+    f.searchIcon          = searchIcon
+    f.searchIconHighlight = searchIconHighlight
+    f.searchIconBtn       = searchIconBtn
 
     -- Close button
     local closeBtn = CreateFrame("Button", nil, titleBar)
@@ -417,10 +580,39 @@ end
 -- SELECT TAB
 -- ============================================================================
 
-function Panel:SelectTab(key)
+function Panel:SelectTab(key, highlight)
     if not self.tabs[key] then return end
     self.currentTab = key
     UpdateTabVisuals()
+
+    self._lastRenderedQuery = nil
+
+    if self.CancelHighlight then self:CancelHighlight() end
+
+    if highlight then
+        self._searchNavInProgress = true
+    end
+
+    -- Clear search box when opening a result.
+    if highlight and self.frame and self.frame.searchBox then
+        self._suppressSearch = true
+        self.frame.searchBox:SetText("")
+        self.frame.searchBox:ClearFocus()
+        self._suppressSearch = false
+        self._pendingQuery = nil
+        if self.frame.searchPlaceholder then
+            self.frame.searchPlaceholder:Show()
+        end
+        if self.searchDebounce then
+            self.searchDebounce:Hide()
+            self.searchDebounce.elapsed = 0
+        end
+    end
+
+    -- Activate sub-tab before the tab builder runs.
+    if highlight and highlight.subTab and self.subTabSetters[key] then
+        self.subTabSetters[key](highlight.subTab)
+    end
 
     -- Release old scroll widget if any
     if self.scrollWidget then
@@ -459,10 +651,14 @@ function Panel:SelectTab(key)
         end
     end
 
-    -- Trigger layout
+    -- DoLayout is synchronous; scroll/highlight can run immediately after.
     scroll:DoLayout()
 
-    -- Deferred re-skin pass to fix vanilla texture bleed-through
+    if highlight and self.HighlightSearchTarget then
+        self:HighlightSearchTarget(scroll, highlight)
+    end
+
+    -- Deferred re-skin pass to fix vanilla texture bleed-through.
     -- AceGUI widgets from the pool may have textures reset by OnAcquire/layout;
     -- re-skinning after a short delay ensures our dark theme wins.
     if not Panel.reskinFrame then
@@ -472,6 +668,10 @@ function Panel:SelectTab(key)
             self.elapsed = (self.elapsed or 0) + elapsed
             if self.elapsed >= 0.15 then
                 self:Hide()
+                local skipReskin = Panel._searchNavigationUntil and GetTime() < Panel._searchNavigationUntil
+                if skipReskin then
+                    return
+                end
                 local C = addon.PanelControls
                 if Panel.scrollWidget and C and C.ReskinAll then
                     C:ReskinAll(Panel.scrollWidget)
@@ -509,12 +709,28 @@ end
 
 function Panel:Close()
     if self.frame then
+        if self.CancelHighlight then
+            self:CancelHighlight()
+        end
         -- Release the scroll widget properly
         if self.scrollWidget then
             self.scrollWidget:ReleaseChildren()
             AceGUI:Release(self.scrollWidget)
             self.scrollWidget = nil
         end
+        -- Reset search box on close.
+        if self.frame.searchBox then
+            self._suppressSearch = true
+            self.frame.searchBox:SetText("")
+            self.frame.searchBox:ClearFocus()
+            self._suppressSearch = false
+            if self.frame.searchPlaceholder then
+                self.frame.searchPlaceholder:Show()
+            end
+        end
+        self._pendingQuery       = nil
+        self._lastRenderedQuery  = nil
+        if self.searchDebounce then self.searchDebounce:Hide() end
         self.frame:Hide()
     end
 end

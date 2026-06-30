@@ -1354,3 +1354,9 @@ L["Show Totem Life Timer"] = "Mostrar duración del tótem"
 L["Totems Without Icon"] = "Tótems sin icono"
 L["Use class colors for enemy player nameplates."] = "Usa colores de clase en las placas de jugadores enemigos."
 L["General"] = "Opciones generales"
+
+-- Search
+
+L["Search settings..."] = "Buscar ajustes..."
+L["Type to find a setting"] = "Escribe para encontrar un ajuste"
+L["No settings match '%s'."] = "Ningún ajuste coincide con '%s'."

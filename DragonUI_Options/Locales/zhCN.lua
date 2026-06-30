@@ -1374,3 +1374,9 @@ L["Show Debuff Cooldown Text"] = "显示减益剩余时间"
 L["Show remaining debuff time on each debuff icon."] = "在每个减益图标上显示剩余时间。"
 L["Size of debuff icons on nameplates."] = "姓名板上减益图标的大小。"
 L["Totem Icon Position"] = "图腾图标位置"
+
+-- Search
+
+L["Search settings..."] = "搜索设置..."
+L["Type to find a setting"] = "输入以查找设置"
+L["No settings match '%s'."] = "没有与“%s”匹配的设置。"

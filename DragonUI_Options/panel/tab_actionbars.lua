@@ -31,6 +31,10 @@ local subTabs = {
     { key = "visibility", label = LO["Visibility"] },
 }
 
+-- Search navigation sub-tab setter.
+Panel.subTabSetters = Panel.subTabSetters or {}
+Panel.subTabSetters["actionbars"] = function(key) activeSubTab = key or "general" end
+
 -- ============================================================================
 -- REFRESH HELPER
 -- ============================================================================
@@ -739,11 +743,11 @@ local function BuildActionbarsTab(scroll)
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)
         activeSubTab = key
         Panel:SelectTab("actionbars")
-    end)
+    end, subTabBuilders)
 
-    local builder = subTabBuilders[activeSubTab]
-    if builder then
-        builder(scroll)
+    if not Panel.indexing then
+        local builder = subTabBuilders[activeSubTab]
+        if builder then builder(scroll) end
     end
 end
 

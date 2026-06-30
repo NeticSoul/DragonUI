@@ -579,3 +579,9 @@ L["Show Debuff Cooldown Text"] = "Mostrar duração dos efeitos negativos"
 L["Show remaining debuff time on each debuff icon."] = "Mostra o tempo restante em cada ícone de efeito negativo."
 L["Size of debuff icons on nameplates."] = "Tamanho dos ícones de efeitos negativos nas placas."
 L["Totem Icon Position"] = "Posição do ícone do totem"
+
+-- Search
+
+L["Search settings..."] = "Buscar configurações..."
+L["Type to find a setting"] = "Digite para encontrar uma configuração"
+L["No settings match '%s'."] = "Nenhuma configuração corresponde a '%s'."

@@ -1375,3 +1375,9 @@ L["Show Debuff Cooldown Text"] = "Показывать время отрицат
 L["Show remaining debuff time on each debuff icon."] = "Показывает оставшееся время на каждом значке отрицательного эффекта."
 L["Size of debuff icons on nameplates."] = "Размер значков отрицательных эффектов на индикаторах имён."
 L["Totem Icon Position"] = "Положение значка тотема"
+
+-- Search
+
+L["Search settings..."] = "Поиск настроек..."
+L["Type to find a setting"] = "Введите текст для поиска настройки"
+L["No settings match '%s'."] = "Нет настроек, соответствующих «%s»."

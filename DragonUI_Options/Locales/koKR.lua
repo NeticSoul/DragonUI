@@ -1378,3 +1378,9 @@ L["Show Debuff Cooldown Text"] = "약화 효과 남은 시간 표시"
 L["Show remaining debuff time on each debuff icon."] = "각 약화 효과 아이콘에 남은 시간을 표시합니다."
 L["Size of debuff icons on nameplates."] = "이름표의 약화 효과 아이콘 크기입니다."
 L["Totem Icon Position"] = "토템 아이콘 위치"
+
+-- Search
+
+L["Search settings..."] = "설정 검색..."
+L["Type to find a setting"] = "입력하여 설정 찾기"
+L["No settings match '%s'."] = "'%s'와(과) 일치하는 설정이 없습니다."

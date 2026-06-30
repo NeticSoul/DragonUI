@@ -35,6 +35,10 @@ local subTabs = {
     { key = "focus",  label = LO["Focus"] },
 }
 
+-- Search navigation sub-tab setter.
+Panel.subTabSetters = Panel.subTabSetters or {}
+Panel.subTabSetters["castbars"] = function(key) activeSubTab = key end
+
 -- ============================================================================
 -- COMMON CONTROLS BUILDER
 -- ============================================================================
@@ -292,11 +296,11 @@ local function BuildCastbarsTab(scroll)
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)
         activeSubTab = key
         Panel:SelectTab("castbars")
-    end)
+    end, subTabBuilders)
 
-    local builder = subTabBuilders[activeSubTab]
-    if builder then
-        builder(scroll)
+    if not Panel.indexing then
+        local builder = subTabBuilders[activeSubTab]
+        if builder then builder(scroll) end
     end
 end
 
