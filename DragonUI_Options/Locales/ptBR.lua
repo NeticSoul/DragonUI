@@ -580,6 +580,12 @@ L["Show remaining debuff time on each debuff icon."] = "Mostra o tempo restante 
 L["Size of debuff icons on nameplates."] = "Tamanho dos ícones de efeitos negativos nas placas."
 L["Totem Icon Position"] = "Posição do ícone do totem"
 
+-- Key Press
+L["Key Press"] = "Pressionar tecla"
+L["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."] = "Ativa habilidades da barra de ação no instante em que você pressiona a tecla, em vez de ao soltar, reduzindo a latência de reação. Muito útil para interrupções, dispels e PvP."
+L["Enable Key Press"] = "Ativar pressionar tecla"
+L["Fire abilities on key press instead of key release."] = "Ativa habilidades ao pressionar a tecla, não ao soltar."
+
 -- Search
 
 L["Search settings..."] = "Buscar configurações..."

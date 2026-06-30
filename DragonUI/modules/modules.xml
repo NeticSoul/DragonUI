@@ -18,6 +18,9 @@
     
     <!-- KeyBinding module -->
     <Script file="keybinding.lua"/>
+
+    <!-- Key Press module (fire actions on key down instead of key release) -->
+    <Script file="keypress.lua"/>
     
     <!-- Buffs, Minimap & Quest Tracker modules -->
     <Script file="BuffFrame.lua"/> 

@@ -252,6 +252,12 @@ L["Tints action button icons based on range and usability: red = out of range, b
 L["Enable Range Indicator"] = "啟用距離指示器"
 L["Color action button icons when target is out of range or ability is unusable."] = "當目標超出範圍或技能無法使用時，為動作條圖示著色。"
 
+-- 按鍵觸發
+L["Key Press"] = "按鍵觸發"
+L["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."] = "在按下按鍵時立即觸發動作條技能，而非放開時，減少反應延遲。非常適合打斷、驅散和PvP。"
+L["Enable Key Press"] = "啟用按鍵觸發"
+L["Fire abilities on key press instead of key release."] = "按下按鍵時觸發技能，而非放開時。"
+
 -- 物品品質邊框
 L["Show colored glow borders on action buttons containing items, colored by item quality (green = uncommon, blue = rare, purple = epic, etc.)."] = "在包含物品的動作按鈕上顯示按物品品質著色的發光邊框（綠色=優秀，藍色=精良，紫色=史詩等）。"
 L["Enable Item Quality Borders"] = "啟用物品品質邊框"

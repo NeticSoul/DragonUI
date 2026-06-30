@@ -254,6 +254,12 @@ L["Tints action button icons based on range and usability: red = out of range, b
 L["Enable Range Indicator"] = "Включить индикатор дальности"
 L["Color action button icons when target is out of range or ability is unusable."] = "Окрашивать значки кнопок, когда цель вне зоны досягаемости или способность недоступна."
 
+-- Key Press
+L["Key Press"] = "Нажатие клавиши"
+L["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."] = "Активирует способности на панели действий в момент нажатия клавиши, а не при отпускании, сокращая задержку реакции. Особенно полезно для прерываний, снятия эффектов и PvP."
+L["Enable Key Press"] = "Включить нажатие клавиши"
+L["Fire abilities on key press instead of key release."] = "Активирует способности при нажатии клавиши, а не при отпускании."
+
 -- Item Quality Borders
 L["Show colored glow borders on action buttons containing items, colored by item quality (green = uncommon, blue = rare, purple = epic, etc.)."] = "Показывать цветные рамки на кнопках с предметами по качеству (зелёный = необычный, синий = редкий, фиолетовый = эпический и т.д.)."
 L["Enable Item Quality Borders"] = "Включить рамки качества предметов"

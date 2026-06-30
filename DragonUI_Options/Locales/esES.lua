@@ -249,6 +249,12 @@ L["Tints action button icons based on range and usability: red = out of range, b
 L["Enable Range Indicator"] = "Activar Indicador de Alcance"
 L["Color action button icons when target is out of range or ability is unusable."] = "Colorear iconos de botones de acción cuando el objetivo está fuera de alcance o la habilidad es inutilizable."
 
+-- Key Press
+L["Key Press"] = "Pulsación de tecla"
+L["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."] = "Activa las habilidades de la barra de acción en cuanto pulsas la tecla en lugar de al soltarla, reduciendo la latencia de reacción. Muy útil para interrupciones, disipaciones y JcJ."
+L["Enable Key Press"] = "Activar pulsación de tecla"
+L["Fire abilities on key press instead of key release."] = "Activa habilidades al pulsar la tecla, no al soltarla."
+
 -- Item Quality Borders
 L["Show colored glow borders on action buttons containing items, colored by item quality (green = uncommon, blue = rare, purple = epic, etc.)."] = "Mostrar bordes brillantes de color en botones de acción con objetos, coloreados por calidad (verde = poco común, azul = raro, morado = épico, etc.)."
 L["Enable Item Quality Borders"] = "Activar Bordes de Calidad de Objetos"

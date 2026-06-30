@@ -259,6 +259,12 @@ L["Tints action button icons based on range and usability: red = out of range, b
 L["Enable Range Indicator"] = "거리 표시기 활성화"
 L["Color action button icons when target is out of range or ability is unusable."] = "사거리 밖 또는 기술 사용 불가 시 단축바 아이콘에 색상 적용"
 
+-- Key Press
+L["Key Press"] = "키 입력"
+L["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."] = "키를 뗄 때가 아니라 누르는 순간 단축바 기술을 발동하여 반응 지연을 줄입니다. 차단, 해제, PvP에 특히 유용합니다."
+L["Enable Key Press"] = "키 입력 활성화"
+L["Fire abilities on key press instead of key release."] = "키를 뗄 때가 아니라 누를 때 기술을 발동합니다."
+
 -- Item Quality Borders
 L["Show colored glow borders on action buttons containing items, colored by item quality (green = uncommon, blue = rare, purple = epic, etc.)."] = "아이템이 포함된 액션 버튼에 품질별 색상 테두리를 표시합니다 (녹색 = 고급, 파란색 = 희귀, 보라색 = 영웅 등)."
 L["Enable Item Quality Borders"] = "아이템 품질 테두리 활성화"

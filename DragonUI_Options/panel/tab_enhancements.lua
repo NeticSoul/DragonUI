@@ -135,6 +135,27 @@ local function BuildEnhancementsTab(scroll)
     })
 
     -- ====================================================================
+    -- KEY PRESS (fire abilities on key down)
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local kpSection = C:AddSection(scroll, LO["Key Press"])
+
+    C:AddDescription(kpSection, LO["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."])
+
+    C:AddToggle(kpSection, {
+        label = LO["Enable Key Press"],
+        desc = LO["Fire abilities on key press instead of key release."],
+        getFunc = function() return IsEnabled("keypress") end,
+        setFunc = function(val)
+            EnsureModuleTable("keypress").enabled = val
+        end,
+        callback = function()
+            if addon.RefreshKeyPress then addon.RefreshKeyPress() end
+        end,
+        requiresReload = false,
+    })
+
+    -- ====================================================================
     -- ITEM QUALITY BORDERS
     -- ====================================================================
     C:AddSpacer(scroll)

@@ -740,6 +740,9 @@ local defaults = {
             questtracker = {
                 enabled = true -- Enable DragonUI quest tracker positioning and styling
             },
+            keypress = {
+                enabled = false -- Fire action-bar abilities on key down instead of key release (SnowfallKeyPress-style)
+            },
             darkmode = {
                 enabled = false, -- Apply darker tinted textures to UI chrome
                 intensity_preset = 3, -- 1 = Light, 2 = Medium, 3 = Dark
