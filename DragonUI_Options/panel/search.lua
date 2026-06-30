@@ -24,6 +24,27 @@ Panel._currentSubTabKey  = nil
 Panel._pendingQuery      = nil
 Panel._lastRenderedQuery = nil
 
+local SEARCH_FULL_CHARS  = 3
+local SEARCH_SHORT_LIMIT = 20
+
+function Panel:NormalizeSearchQuery(q)
+    q = q or ""
+    q = string.gsub(q, "^%s+", "")
+    q = string.gsub(q, "%s+$", "")
+    return q
+end
+
+function Panel:RunSearchQuery(q)
+    q = self:NormalizeSearchQuery(q)
+    if q == "" then
+        self._lastRenderedQuery = nil
+        if self.currentTab then self:SelectTab(self.currentTab) end
+        return
+    end
+    self:BuildSearchIndex()
+    self:ShowSearchResults(q)
+end
+
 -- ============================================================================
 -- INDEX HARVEST
 -- ============================================================================
@@ -71,20 +92,13 @@ local function Tokenize(query)
     return tokens
 end
 
-local function Filter(entries, tokens)
-    local out = {}
-    for i = 1, #entries do
-        local e = entries[i]
-        local ok = true
-        for _, tok in ipairs(tokens) do
-            if not e.haystack:find(tok, 1, true) then
-                ok = false
-                break
-            end
+local function EntryMatches(entry, tokens)
+    for _, tok in ipairs(tokens) do
+        if not entry.haystack:find(tok, 1, true) then
+            return false
         end
-        if ok then out[#out + 1] = e end
     end
-    return out
+    return true
 end
 
 local function ScoreEntry(entry, tokens)
@@ -107,6 +121,49 @@ local function ScoreEntry(entry, tokens)
         end
     end
     return score
+end
+
+-- limit nil = all matches; otherwise keep the top N by score in one pass.
+local function FilterAndRank(entries, tokens, limit)
+    if not limit or limit <= 0 then
+        local out = {}
+        for i = 1, #entries do
+            local e = entries[i]
+            if EntryMatches(e, tokens) then
+                out[#out + 1] = e
+            end
+        end
+        table.sort(out, function(a, b)
+            return ScoreEntry(a, tokens) > ScoreEntry(b, tokens)
+        end)
+        return out, false
+    end
+
+    local top = {}
+    local truncated = false
+    for i = 1, #entries do
+        local e = entries[i]
+        if not EntryMatches(e, tokens) then
+        elseif #top < limit then
+            top[#top + 1] = { entry = e, score = ScoreEntry(e, tokens) }
+            if #top == limit then
+                table.sort(top, function(a, b) return a.score > b.score end)
+            end
+        else
+            truncated = true
+            local score = ScoreEntry(e, tokens)
+            if score > top[limit].score then
+                top[limit] = { entry = e, score = score }
+                table.sort(top, function(a, b) return a.score > b.score end)
+            end
+        end
+    end
+    table.sort(top, function(a, b) return a.score > b.score end)
+    local out = {}
+    for j = 1, #top do
+        out[j] = top[j].entry
+    end
+    return out, truncated
 end
 
 local function HighlightTokens(text, tokens)
@@ -442,12 +499,17 @@ function Panel:ShowSearchResults(query)
 
     if scroll.frame then scroll.frame:Show() end
 
-    local tokens  = Tokenize(query)
-    local results = Filter(self.searchIndex, tokens)
+    local tokens = Tokenize(query)
+    local limit  = (#query < SEARCH_FULL_CHARS) and SEARCH_SHORT_LIMIT or nil
+    local results, truncated = FilterAndRank(self.searchIndex, tokens, limit)
 
-    table.sort(results, function(a, b)
-        return ScoreEntry(a, tokens) > ScoreEntry(b, tokens)
-    end)
+    if truncated then
+        local hint = AceGUI:Create("Label")
+        hint:SetFullWidth(true)
+        hint:SetText("|cffFFDD44" .. string.format(LO["Showing top %d results. Type at least 3 characters for the full list."], SEARCH_SHORT_LIMIT) .. "|r")
+        ApplySearchResultFont(hint)
+        scroll:AddChild(hint)
+    end
 
     if #results == 0 then
         local msg = AceGUI:Create("Label")
@@ -554,16 +616,5 @@ Panel.searchDebounce:SetScript("OnUpdate", function(self, elapsed)
     self:Hide()
 
     local q = Panel._pendingQuery or ""
-    q = string.gsub(q, "^%s+", "")
-    q = string.gsub(q, "%s+$", "")
-
-    if q == "" then
-        Panel._lastRenderedQuery = nil
-        if Panel.currentTab then
-            Panel:SelectTab(Panel.currentTab)
-        end
-    else
-        Panel:BuildSearchIndex()
-        Panel:ShowSearchResults(q)
-    end
+    Panel:RunSearchQuery(q)
 end)

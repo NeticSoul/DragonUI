@@ -1409,3 +1409,4 @@ L["Show icons for recognized shaman totems. DragonUI uses localized spell names 
 L["Search settings..."] = true
 L["Type to find a setting"] = true
 L["No settings match '%s'."] = true
+L["Showing top %d results. Type at least 3 characters for the full list."] = true
