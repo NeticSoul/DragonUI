@@ -491,6 +491,7 @@ function Panel:ShowSearchResults(query)
     self._lastRenderedQuery = query
 
     local scroll = self.scrollWidget
+    Controls:ClearSearchFontTags(scroll)
     scroll:ReleaseChildren()
 
     if self.frame and self.frame.content then

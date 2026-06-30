@@ -487,6 +487,16 @@ end
 -- DEFERRED RE-SKIN (fixes vanilla texture bleed-through after reload)
 -- ============================================================================
 
+function Controls:ClearSearchFontTags(container)
+    if not container or not container.children then return end
+    for _, child in ipairs(container.children) do
+        child._dragonSearchFont = nil
+        if child.children then
+            self:ClearSearchFontTags(child)
+        end
+    end
+end
+
 local function ReskinWidget(widget)
     if not widget or not widget.type then return end
     local t = widget.type
@@ -507,10 +517,10 @@ local function ReskinWidget(widget)
             SkinLabel(widget)
         end
     elseif t == "InteractiveLabel" then
-        if widget._dragonSearchFont and widget.label then
-            SafeSetFont(widget.label, widget._dragonSearchFont[2], widget._dragonSearchFont[3], widget._dragonSearchFont[1])
-        elseif widget._dragonSubTabFont and widget.label then
+        if widget._dragonSubTabFont and widget.label then
             SafeSetFont(widget.label, widget._dragonSubTabFont[2], widget._dragonSubTabFont[3], widget._dragonSubTabFont[1])
+        elseif widget._dragonSearchFont and widget.label then
+            SafeSetFont(widget.label, widget._dragonSearchFont[2], widget._dragonSearchFont[3], widget._dragonSearchFont[1])
         end
     elseif t == "Heading" then
         SkinHeading(widget)
@@ -1008,6 +1018,7 @@ function Controls:AddSubTabs(parent, tabs, activeKey, onSelect, builders)
 
         -- Clear pooled search-row hover texture from recycled frames.
         if btn.frame._searchHover then btn.frame._searchHover:Hide() end
+        btn._dragonSearchFont = nil
 
         local isActive = (tab.key == activeKey)
         if isActive then

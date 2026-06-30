@@ -607,6 +607,10 @@ function Panel:SelectTab(key, highlight)
 
     -- Release old scroll widget if any
     if self.scrollWidget then
+        local C = addon.PanelControls
+        if C and C.ClearSearchFontTags then
+            C:ClearSearchFontTags(self.scrollWidget)
+        end
         self.scrollWidget:ReleaseChildren()
         AceGUI:Release(self.scrollWidget)
         self.scrollWidget = nil
@@ -705,6 +709,10 @@ function Panel:Close()
         end
         -- Release the scroll widget properly
         if self.scrollWidget then
+            local C = addon.PanelControls
+            if C and C.ClearSearchFontTags then
+                C:ClearSearchFontTags(self.scrollWidget)
+            end
             self.scrollWidget:ReleaseChildren()
             AceGUI:Release(self.scrollWidget)
             self.scrollWidget = nil
