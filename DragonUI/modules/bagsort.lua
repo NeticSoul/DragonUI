@@ -54,8 +54,7 @@ local function IsBagnonLoaded()
     return bagnonLoadedCache
 end
 
--- True only while a guild bank sort is in progress; personal bag/bank
--- sorting is never affected.
+-- True only during an active guild bank sort; doesn't affect bag/bank sorting.
 local guildBankSortActive = false
 local GUILDBANK_MOVE_THROTTLE = 0.4
 
@@ -280,11 +279,14 @@ end
 
 local GetBagSlotFromButton
 
--- Guild bank item slots carry a `.tab` field instead of a bag id and have
--- no GetBag/GetBagID method. Guild bank slots aren't the player's own
--- bag/bank, so per-slot locking doesn't apply to them.
+-- Guild bank item slots use `.tab` instead of a bag id; not a real bag/bank slot.
 local function IsBagnonGuildBankSlot(widget)
     return widget.tab ~= nil and not (widget.GetBag or widget.GetBagID or widget.bag or widget.bagID or widget.bagId)
+end
+
+-- Bagnon's per-bag toggle icons; GetID() is a bag index, not a slot number.
+local function IsBagnonBagToggleButton(widget)
+    return type(widget.ToggleSlot) == "function" and type(widget.CanToggleSlot) == "function"
 end
 
 -- Lock icon texture, sized 12x12 and anchored to the slot's top-right corner.
@@ -294,8 +296,7 @@ local LOCK_MARKER_OFFSET_X = -1
 local LOCK_MARKER_OFFSET_Y = -1
 local DEFAULT_LOCK_MARKER_COLOR = { 0.15, 0.80, 1.00, 0.95 }
 
--- The icon art is plain white so it can be tinted via the user's configured
--- lock color (Bags > Bag Sort > Lock Icon Color).
+-- Icon art is plain white so it can be tinted (Bags > Bag Sort > Lock Icon Color).
 local function GetLockMarkerColor()
     local cfg = GetModuleConfig()
     local c = cfg and cfg.lock_color
@@ -307,9 +308,7 @@ end
 
 local function EnsureLockMarker(button)
     if not button or button._dragonUISortLockMarker then return end
-    -- CreateTexture's numeric sub-level parameter isn't supported on this
-    -- client, so draw order relies on creation order instead: created last,
-    -- it paints on top of any existing slot overlays within the OVERLAY layer.
+    -- No CreateTexture sub-level param on this client; last-created wins draw order.
     local marker = button:CreateTexture(nil, "OVERLAY")
     marker:SetTexture(LOCK_MARKER_TEXTURE)
     marker:SetSize(LOCK_MARKER_SIZE, LOCK_MARKER_SIZE)
@@ -359,9 +358,8 @@ GetBagSlotFromButton = function(btn)
 
     local bag, slot
 
-    -- Bail out instead of falling through to the generic fallback below,
-    -- which would otherwise misread this as bag 0 (the player's backpack).
-    if IsBagnonGuildBankSlot(btn) then
+    -- Neither is a real slot; falling through would misread it as bag 0.
+    if IsBagnonGuildBankSlot(btn) or IsBagnonBagToggleButton(btn) then
         return nil, nil
     end
 
@@ -421,9 +419,8 @@ local function GetHoveredBagSlot()
 
     local bag, slot
 
-    -- See IsBagnonGuildBankSlot: guild bank slots must not fall through
-    -- to the generic fallback below.
-    if IsBagnonGuildBankSlot(owner) then
+    -- Neither is a real slot; falling through would misread it as bag 0.
+    if IsBagnonGuildBankSlot(owner) or IsBagnonBagToggleButton(owner) then
         return nil, nil
     end
 
@@ -487,18 +484,9 @@ end
 -- ============================================================================
 -- BAGNON COMPATIBILITY: NATIVE SORT INTEGRATION
 -- ============================================================================
--- Bagnon exposes a single shared Sorting module. We hook GetSpaces so
--- DragonUI's locked slots are respected when the player uses Bagnon's own
--- sort button (DragonUI's sort buttons never touch this module).
---
--- Guild bank item frames use a different API (tab/slot instead of bag/slot,
--- no GetVisibleBags) that DragonUI's locking doesn't support, and calling
--- Bagnon's real GetSpaces() on one would error. We detect that case up
--- front and no-op instead of crashing.
+-- Hooks Bagnon's own Sorting.GetSpaces so it respects DragonUI's locked slots.
 
--- Minimum delay between item moves performed by Bagnon's own sort, to avoid
--- firing requests too fast on higher-latency realms. Does not affect
--- DragonUI's own sort buttons, which never go through this code path.
+-- Min delay between moves from Bagnon's own sort (avoids flooding high-latency realms).
 local BAGNON_MOVE_THROTTLE = 0.15
 
 local function GetBagnonFrameKind(itemFrame)
@@ -632,9 +620,7 @@ local function InstallAltClickHooks()
         local function HookBagnonItemFrame(itemFrame)
             if type(itemFrame) ~= "table" then return end
 
-            -- Guild bank item slots can end up here too; they're safe to pass
-            -- through HookSlotButton since GetBagSlotFromButton() already
-            -- refuses to resolve a bag/slot for them.
+            -- Guild bank slots may reach here too; GetBagSlotFromButton() rejects them safely.
             if type(itemFrame.GetAllItemSlots) == "function" then
                 for _, itemSlot in itemFrame:GetAllItemSlots() do
                     if itemSlot then
@@ -697,10 +683,7 @@ local function InstallAltClickHooks()
             end
         end
 
-        -- Bagnon's own sort can fire many moves back-to-back within a single
-        -- pass, so DragonUI's move_interval setting doesn't apply here and
-        -- throttling has to happen in this hook instead. Refusing a move
-        -- just leaves it unsorted; Bagnon retries it shortly after.
+        -- Refusing a move here just leaves it unsorted; Bagnon retries shortly after.
         if not bagnonMoveHooked and bagnon.Sorting and type(bagnon.Sorting.Move) == "function" then
             bagnonMoveHooked = true
             bagnonOriginalMove = bagnon.Sorting.Move
@@ -824,21 +807,15 @@ end
 -- ============================================================================
 -- GUILD BANK COMPATIBILITY: SYNTHETIC BAG IDS
 -- ============================================================================
--- Guild bank tabs are addressed by (tab, slot) via a different API
--- (GetGuildBankItemInfo/PickupGuildBankItem/...) than personal bags. Rather
--- than duplicating the scan/compress/sort/move pipeline, guild bank tab N is
--- treated as a synthetic "bag" id (GUILDBANK_TAB_OFFSET + N) and the handful
--- of real API calls are dispatched based on that id. Tabs are numbered
--- 1..8, so encode_bagslot's packed-integer scheme (bag*100+slot, safe up to
--- bag<=99) never gets close to overflowing.
+-- Guild bank tab N is treated as bag id (GUILDBANK_TAB_OFFSET + N), reusing
+-- the whole scan/compress/sort/move pipeline instead of duplicating it.
 local GUILDBANK_TAB_OFFSET = 50
 
 local function IsGuildBankBag(bag)
     return bag > GUILDBANK_TAB_OFFSET
 end
 
--- Returns 0 (nothing to sort) for tabs the player can't fully
--- view+deposit+withdraw from, instead of attempting a partial/unsafe sort.
+-- Returns 0 for tabs without full view+deposit+withdraw access.
 local function GetGuildBankTabSlotCount(tab)
     if type(GetGuildBankTabInfo) ~= "function" then return 0 end
     local name, _, canView, canDeposit, numWithdrawals = GetGuildBankTabInfo(tab)
@@ -1253,9 +1230,7 @@ moveFrame:SetScript("OnUpdate", function(self, elapsed)
             if CursorHasItem() or isGuildBankMove then
                 BagPickupItem(target_bag, target_slot)
             end
-            -- Guild bank state doesn't update predictively like personal bags,
-            -- so only one guild-bank move is processed per tick; the interval
-            -- throttle paces the rest.
+            -- One guild-bank move per tick: state doesn't update predictively like bags.
             if isGuildBankMove then return end
         end
     end
@@ -1366,12 +1341,7 @@ end
 -- ============================================================================
 -- GUILD BANK SORTING (single tab only, never crosses tabs)
 -- ============================================================================
--- Scoped to whichever tab is currently open: crossing tabs would spend
--- withdrawal allowance on both the source and destination tab just to
--- reorder items, and different tabs can have different officer permissions.
--- Reuses the same sort algorithm as personal bags via the synthetic bag-id
--- dispatch above; only the move-execution pacing differs (see the
--- moveFrame OnUpdate handler and GUILDBANK_MOVE_THROTTLE).
+-- Crossing tabs would spend withdrawal allowance on both ends just to reorder.
 
 local function PerformGuildBankSort()
     if running then
@@ -1642,9 +1612,7 @@ local function AttachBagnonButtons(frame, sortRef, clearRef, sortFunc, sortBtnNa
     clearBtn:SetParent(frame)
     clearBtn:ClearAllPoints()
     clearBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -58, -10)
-    -- Bagnon's title bar keeps re-raising itself above other siblings, so a
-    -- fixed frame level isn't enough to stay on top; using a higher strata
-    -- always wins regardless.
+    -- Bagnon's title bar keeps re-raising itself; a higher strata always wins.
     clearBtn:SetFrameStrata("HIGH")
     clearBtn:SetFrameLevel(frame:GetFrameLevel() + 20)
     clearBtn:Show()
@@ -1680,9 +1648,7 @@ end
 -- ============================================================================
 -- GUILD BANK BUTTON INTEGRATION
 -- ============================================================================
--- Independent of the vanilla/Combuctor/Bagnon switch above, since neither
--- addon replaces the guild bank frame. No "Clear Locks" button here --
--- guild bank slots are never lockable (see IsBagnonGuildBankSlot).
+-- No "Clear Locks" button here -- guild bank slots are never lockable.
 
 local function CreateGuildBankSortButton(name, parent)
     local function BuildTooltipLines()
@@ -1869,13 +1835,10 @@ UpdateButtonVisibility = function()
         if combustorBankClearBtn then combustorBankClearBtn:Hide() end
     end
 
-    -- Guild bank buttons are independent of the vanilla/Combuctor/Bagnon
-    -- switch above; whichever frame is actually visible shows its own.
     CreateVanillaGuildBankSortButton()
     CreateBagnonGuildBankSortButton()
     if vanillaGuildBankSortBtn then
-        -- GuildBankFrame has multiple sub-tabs (bank/log/money log/info)
-        -- sharing the same window; only "bank" mode shows item slots.
+        -- Only "bank" mode shows item slots (vs. log/money log/info sub-tabs).
         if guild_bank_open and _G.GuildBankFrame and _G.GuildBankFrame.mode == "bank" then
             vanillaGuildBankSortBtn:Show()
         else
@@ -1975,9 +1938,7 @@ ApplyBagSortSystem = function()
             bank_open = false
         elseif event == "GUILDBANKFRAME_OPENED" then
             guild_bank_open = true
-            -- The guild bank UI loads on demand, so this function doesn't
-            -- exist yet at startup; hook it here instead, once, the first
-            -- time the guild bank is opened.
+            -- Guild bank UI loads on demand; this function doesn't exist at startup.
             if not guildBankTabHookInstalled and type(GuildBankFrameTab_OnClick) == "function" then
                 guildBankTabHookInstalled = true
                 hooksecurefunc("GuildBankFrameTab_OnClick", function()
@@ -2078,8 +2039,7 @@ local function RestoreBagSortSystem()
         end
     end
 
-    -- Restore Bagnon's Sorting module so a disabled Bag Sort module doesn't
-    -- keep intercepting Bagnon's native sort.
+    -- Undo the Sorting hooks so a disabled module stops intercepting Bagnon's native sort.
     local bagnon = _G.Bagnon
     if bagnon and bagnon.Sorting then
         if bagnonOriginalGetSpaces then
@@ -2150,9 +2110,6 @@ end)
 addon.SortPlayerBags = SortPlayerBags
 addon.SortBankBags = SortBankBags
 addon.SortGuildBankTab = SortGuildBankTab
--- Lets the options panel re-tint already-visible lock icons immediately
--- when the user changes the Lock Icon Color setting, without a UI reload.
+-- Lets the options panel re-tint visible lock icons live when the color changes.
 addon.RefreshBagSortLockMarkers = RefreshAllLockMarkers
--- Single source of truth for the lock-icon default color, so the options
--- panel's color picker doesn't hardcode its own separate copy.
 addon.BagSortDefaultLockColor = DEFAULT_LOCK_MARKER_COLOR
