@@ -311,6 +311,17 @@ L["Slot unlocked (bag %d, slot %d)."] = "格子已解锁（背包 %d，槽位 %d
 L["Could not clear locks (config not ready)."] = "无法清除锁定（配置尚未就绪）。"
 L["Cleared all sort-locked slots."] = "已清除所有整理锁定格子。"
 
+-- Guild Bank Sort
+L["You must be at the guild bank."] = "你必须在公会银行。"
+L["Could not determine the current guild bank tab."] = "无法确定当前的公会银行页签。"
+L["You need full deposit and withdraw access to this tab to sort it."] = "你需要拥有该页签的完整存取权限才能整理它。"
+L["This guild bank tab is already sorted!"] = "该公会银行页签已经整理好了！"
+L["Sort this guild bank tab? Depending on your server, this may be logged and count against your guild's shared withdrawal allowance, the same as moving items by hand."] = "整理这个公会银行页签？根据你的服务器不同，这可能会被记录，并计入你公会共享的提取额度，和手动移动物品一样。"
+L["Sort"] = "整理"
+L["Click to sort items in the currently open guild bank tab."] = "点击整理当前打开的公会银行页签中的物品。"
+L["Never moves items between tabs."] = "永远不会跨页签移动物品。"
+L["Sort Guild Bank Tab"] = "整理公会银行页签"
+
 -- ============================================================================
 -- 微型菜单延迟提示
 -- ============================================================================

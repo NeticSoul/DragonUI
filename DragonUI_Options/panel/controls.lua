@@ -842,6 +842,14 @@ function Controls:AddColorPicker(parent, opts)
     cp:SetLabel(opts.label or "Color")
     cp:SetHasAlpha(opts.hasAlpha or false)
 
+    if opts.disabled then
+        if type(opts.disabled) == "function" then
+            cp:SetDisabled(opts.disabled())
+        else
+            cp:SetDisabled(opts.disabled)
+        end
+    end
+
     local color
     if opts.getFunc then
         color = { opts.getFunc() }

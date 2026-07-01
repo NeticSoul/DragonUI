@@ -322,6 +322,8 @@ L["Enable Bag Sort"] = "Taschen sortieren aktivieren"
 L["Sort buttons for bags and bank. Sorts items by type, rarity, level, and name."] = "Sortier-Buttons für Taschen und Bank. Sortiert Gegenstände nach Typ, Seltenheit, Stufe und Name."
 L["Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands."] = "Fügt Sortier-Buttons zu Taschen- und Bankfenstern hinzu. Aktiviert auch die Befehle /sort und /sortbank."
 L["Sort bags and bank items with buttons"] = "Taschen und Bank mit Buttons sortieren"
+L["Lock Icon Color"] = "Farbe des Schloss-Symbols"
+L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "Farbe für das Schloss-Symbol, das auf gesperrten Taschen-/Bankfächern angezeigt wird."
 
 L["Show 'All' Tab"] = "Registerkarte „Alle“ anzeigen"
 L["Show the 'All' category tab that displays all items without filtering."] = "Zeigt die Registerkarte „Alle“ an, auf der alle Elemente ohne Filterung angezeigt werden."

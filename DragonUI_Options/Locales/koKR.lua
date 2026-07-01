@@ -333,6 +333,8 @@ L["Enable Bag Sort"] = "가방 정렬 활성화"
 L["Sort buttons for bags and bank. Sorts items by type, rarity, level, and name."] = "가방 및 은행 정렬 버튼. 아이템을 유형, 희귀도, 레벨, 이름순으로 정렬"
 L["Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands."] = "가방 및 은행 창에 정렬 버튼 추가. /sort 및 /sortbank 명령어 활성화"
 L["Sort bags and bank items with buttons"] = "가방 및 은행 아이템 일괄 정리"
+L["Lock Icon Color"] = "잠금 아이콘 색상"
+L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "가방/은행의 잠긴 칸에 표시되는 자물쇠 아이콘의 색상입니다."
 
 L["Show 'All' Tab"] = "'전체' 탭 표시"
 L["Show the 'All' category tab that displays all items without filtering."] = "필터링 없이 모든 아이템을 보여주는 '전체' 카테고리 탭 표시"

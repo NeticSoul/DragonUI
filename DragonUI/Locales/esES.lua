@@ -316,6 +316,17 @@ L["Slot unlocked (bag %d, slot %d)."] = "Slot desbloqueado (bolsa %d, slot %d)."
 L["Could not clear locks (config not ready)."] = "No se pudieron limpiar los bloqueos (configuración no lista)."
 L["Cleared all sort-locked slots."] = "Se limpiaron todos los slots bloqueados del ordenado."
 
+-- Guild Bank Sort
+L["You must be at the guild bank."] = "Debes estar en el banco de hermandad."
+L["Could not determine the current guild bank tab."] = "No se pudo determinar la pestaña actual del banco de hermandad."
+L["You need full deposit and withdraw access to this tab to sort it."] = "Necesitas acceso completo de depósito y retiro en esta pestaña para ordenarla."
+L["This guild bank tab is already sorted!"] = "¡Esta pestaña del banco de hermandad ya está ordenada!"
+L["Sort this guild bank tab? Depending on your server, this may be logged and count against your guild's shared withdrawal allowance, the same as moving items by hand."] = "¿Ordenar esta pestaña del banco de hermandad? Dependiendo de tu servidor, esto puede quedar registrado y contar contra el límite de retiro compartido de tu hermandad, igual que si movieras los objetos a mano."
+L["Sort"] = "Ordenar"
+L["Click to sort items in the currently open guild bank tab."] = "Haz clic para ordenar los objetos de la pestaña del banco de hermandad actualmente abierta."
+L["Never moves items between tabs."] = "Nunca mueve objetos entre pestañas."
+L["Sort Guild Bank Tab"] = "Ordenar pestaña del banco de hermandad"
+
 -- Micromenu Latency
 L["Network"] = "Red"
 L["Latency"] = "Latencia"
