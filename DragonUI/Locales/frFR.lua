@@ -95,6 +95,3 @@ L["Load Preset"] = "Charger le préréglage"
 L["Delete Preset"] = "Supprimer le préréglage"
 L["Export Preset"] = "Exporter le préréglage"
 L["Import Preset"] = "Importer le préréglage"
-
-L["Version Check"] = "Vérification de version"
-L["Notifies when other players have a different addon version"] = "Notifie lorsque d'autres joueurs ont une version différente de l'addon"

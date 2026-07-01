@@ -488,6 +488,3 @@ L["Error in SafeCall:"] = "SafeCall 出错："
 L["Double-Click to Copy"] = "双击复制"
 L["Copy Text"] = "复制文本"
 L["URL"] = "URL"
-
-L["Version Check"] = "版本检查"
-L["Notifies when other players have a different addon version"] = "当其他玩家使用不同插件版本时通知"

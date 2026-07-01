@@ -457,6 +457,3 @@ L["Reputation: "] = "Ruf: "
 L["Error in SafeCall:"] = "Fehler in SafeCall:"
 
 L["Copy Text"] = "Text kopieren"
-
-L["Version Check"] = "Versionsprüfung"
-L["Notifies when other players have a different addon version"] = "Benachrichtigt, wenn andere Spieler eine andere Addon-Version haben"

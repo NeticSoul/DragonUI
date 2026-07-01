@@ -1,32 +1,10 @@
 -- ============================================================================
---  VersionCheck Module for DragonUI
+--  VersionCheck — Native DragonUI System
 --  Cross-player version broadcast: detects when other players in group/raid
 --  have a different addon version and notifies you if an update is available.
 -- ============================================================================
 
 local addon = select(2, ...)
-local L = addon.L
-
--- ============================================================================
--- MODULE REGISTRATION
--- ============================================================================
-
-local VersionCheckModule = {
-    applied = false,
-}
-
-if addon.RegisterModule then
-    addon:RegisterModule("versioncheck", VersionCheckModule,
-        (L and L["Version Check"]) or "Version Check",
-        (L and L["Notifies when other players have a different addon version"]) or "Notifies when other players have a different addon version",
-        {
-            lifecycle = {
-                apply   = "ApplyVersionCheckSystem",
-                restore = "RestoreVersionCheckSystem",
-                refresh = "RefreshVersionCheckSystem",
-            },
-        })
-end
 
 -- ============================================================================
 -- CONSTANTS
@@ -146,7 +124,7 @@ local function OnAddonMessage(prefix, message, _channel, _sender)
         hasNotifiedThisSession = true
 
         local msg = string.format(
-            "|cffDFBA69DragonUI|r: Update available! You have |cffFF6666v%s|r, latest seen is |cff66FF66v%s|r",
+            "|cff1785d1DragonUI|r: Update available! You have |cffFF6666v%s|r, latest seen is |cff66FF66v%s|r",
             CURRENT_VERSION,
             highestVersionSeen
         )
@@ -175,6 +153,7 @@ local function SetupEvents()
         if event == "CHAT_MSG_ADDON" then
             OnAddonMessage(...)
         elseif event == "PLAYER_ENTERING_WORLD" then
+            DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: version " .. (CURRENT_VERSION or "?"))
             addon:After(5, BroadcastVersion)
         elseif event == "GROUP_ROSTER_UPDATE"
             or event == "PARTY_MEMBERS_CHANGED"
@@ -189,50 +168,23 @@ local function SetupEvents()
     end)
 end
 
-local function TeardownEvents()
-    if eventFrame then
-        eventFrame:UnregisterAllEvents()
-        eventFrame:SetScript("OnEvent", nil)
-        eventFrame = nil
-    end
-end
-
 -- ============================================================================
--- LIFECYCLE
+-- BOOTSTRAP
 -- ============================================================================
 
-function addon.ApplyVersionCheckSystem()
-    if VersionCheckModule.applied then return end
+do
+    -- Bootstrap on PLAYER_LOGIN: capture the current version and start listening
+    local initFrame = CreateFrame("Frame", "DragonUI_VersionCheck_Init", UIParent)
+    initFrame:RegisterEvent("PLAYER_LOGIN")
+    initFrame:SetScript("OnEvent", function()
+        initFrame:UnregisterEvent("PLAYER_LOGIN")
 
-    -- Grab version from TOC
-    CURRENT_VERSION = GetAddOnMetadata("DragonUI", "Version") or "0.0"
-    highestVersionSeen = CURRENT_VERSION
+        CURRENT_VERSION = GetAddOnMetadata("DragonUI", "Version") or "0.0"
+        highestVersionSeen = CURRENT_VERSION
 
-    SetupEvents()
-    VersionCheckModule.applied = true
-    addon:Debug("VersionCheck: applied, version " .. CURRENT_VERSION)
-end
-
-function addon.RestoreVersionCheckSystem()
-    if not VersionCheckModule.applied then return end
-
-    TeardownEvents()
-    hasNotifiedThisSession = false
-    highestVersionSeen = nil
-    CURRENT_VERSION = nil
-    VersionCheckModule.applied = false
-    addon:Debug("VersionCheck: restored")
-end
-
-function addon.RefreshVersionCheckSystem()
-    local config = addon:GetModuleConfig("versioncheck")
-
-    -- Respect master toggle if the config provides one; default to always on
-    if config and config.enabled == false then
-        addon.RestoreVersionCheckSystem()
-    else
-        addon.ApplyVersionCheckSystem()
-    end
+        SetupEvents()
+        addon:Debug("VersionCheck: native system initialized, version " .. CURRENT_VERSION)
+    end)
 end
 
 -- ============================================================================
