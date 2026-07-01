@@ -489,3 +489,6 @@ L["Error in SafeCall:"] = true
 L["Double-Click to Copy"] = true
 L["Copy Text"] = true
 
+L["Version Check"] = true
+L["Notifies when other players have a different addon version"] = true
+

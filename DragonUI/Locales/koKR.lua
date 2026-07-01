@@ -458,3 +458,6 @@ L["Error in SafeCall:"] = "SafeCall ì˜¤ë¥˜:"
 
 L["Double-Click to Copy"] = "|cff33ff11ë”ë¸” í´ë¦­|rí•˜ì—¬ ë³µì‚¬"
 L["Copy Text"] = "í…ìŠ¤íŠ¸ ë³µì‚¬"
+
+L["Version Check"] = "버전 확인"
+L["Notifies when other players have a different addon version"] = "다른 플레이어가 다른 애드온 버전을 사용할 때 알림"

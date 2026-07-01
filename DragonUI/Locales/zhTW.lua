@@ -95,3 +95,6 @@ L["Load Preset"] = "載入預設"
 L["Delete Preset"] = "刪除預設"
 L["Export Preset"] = "匯出預設"
 L["Import Preset"] = "匯入預設"
+
+L["Version Check"] = "版本檢查"
+L["Notifies when other players have a different addon version"] = "當其他玩家使用不同插件版本時通知"
