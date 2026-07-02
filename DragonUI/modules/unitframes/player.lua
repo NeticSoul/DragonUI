@@ -421,7 +421,10 @@ end
 
 -- Remove unwanted Blizzard frame elements
 local function RemoveBlizzardFrames(isVehicle)
-    local elementsToHide = {"PlayerAttackIcon", "PlayerFrameBackground", "PlayerAttackBackground", "PlayerGuideIcon",
+    -- NOTE: PlayerGuideIcon is intentionally NOT in this list — it's the LFG
+    -- "dungeon leader" flag (shares LeaderIcon's anchor, shown instead of it for
+    -- LFG-formed groups), not decorative clutter. See UpdateLeaderIconPosition().
+    local elementsToHide = {"PlayerAttackIcon", "PlayerFrameBackground", "PlayerAttackBackground",
                             "PlayerFrameGroupIndicatorLeft", "PlayerFrameGroupIndicatorRight"}
 
     for _, name in ipairs(elementsToHide) do
@@ -905,40 +908,44 @@ end
 
 -- Cache leadership and PVP icons
 local PlayerLeaderIcon = _G.PlayerLeaderIcon
+local PlayerGuideIcon = _G.PlayerGuideIcon
 local PlayerMasterIcon = _G.PlayerMasterIcon
 local PlayerPVPIcon = _G.PlayerPVPIcon
 
 -- Update leader icon positioning based on dragon decoration mode
+-- GuideIcon shares LeaderIcon's anchor point (Blizzard shows only one at a time:
+-- GuideIcon for LFG-formed groups, LeaderIcon otherwise), so both need the same treatment.
 local function UpdateLeaderIconPosition()
-    if not PlayerLeaderIcon then
-        return
-    end
-
     local config = GetPlayerConfig()
     local decorationType = config.dragon_decoration or "none"
     local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    local icons = {PlayerLeaderIcon, PlayerGuideIcon}
 
-    PlayerLeaderIcon:ClearAllPoints()
+    for i = 1, 2 do
+        local icon = icons[i]
+        if icon then
+            icon:ClearAllPoints()
 
-    if isEliteMode then
-        -- In elite mode: reparent to EliteIconContainer so the icon renders
-        -- above the dragon decoration textures (strata HIGH, level 1000).
-        -- Same pattern used by UpdateMasterIconPosition.
-        local dragonFrame = _G["DragonUIUnitframeFrame"]
-        if dragonFrame and dragonFrame.EliteIconContainer then
-            PlayerLeaderIcon:SetParent(dragonFrame.EliteIconContainer)
+            if isEliteMode then
+                -- In elite mode: reparent to EliteIconContainer so the icon renders
+                -- above the dragon decoration textures (strata HIGH, level 1000).
+                -- Same pattern used by UpdateMasterIconPosition.
+                if dragonFrame and dragonFrame.EliteIconContainer then
+                    icon:SetParent(dragonFrame.EliteIconContainer)
+                end
+                icon:SetPoint('BOTTOM', PlayerFrame, "TOP", -1, -33)
+            else
+                -- Non-elite mode: STILL use EliteIconContainer so the icon renders
+                -- above the portrait overlay (level +2) and border overlay (level +3).
+                -- If we parented to PlayerFrame directly, the icon (a texture) would
+                -- draw below all child overlay frames and be hidden behind the border.
+                if dragonFrame and dragonFrame.EliteIconContainer then
+                    icon:SetParent(dragonFrame.EliteIconContainer)
+                end
+                icon:SetPoint('BOTTOM', PlayerFrame, "TOP", -70, -25)
+            end
         end
-        PlayerLeaderIcon:SetPoint('BOTTOM', PlayerFrame, "TOP", -1, -33)
-    else
-        -- Non-elite mode: STILL use EliteIconContainer so the icon renders
-        -- above the portrait overlay (level +2) and border overlay (level +3).
-        -- If we parented to PlayerFrame directly, the icon (a texture) would
-        -- draw below all child overlay frames and be hidden behind the border.
-        local dragonFrame = _G["DragonUIUnitframeFrame"]
-        if dragonFrame and dragonFrame.EliteIconContainer then
-            PlayerLeaderIcon:SetParent(dragonFrame.EliteIconContainer)
-        end
-        PlayerLeaderIcon:SetPoint('BOTTOM', PlayerFrame, "TOP", -70, -25)
     end
 end
 
