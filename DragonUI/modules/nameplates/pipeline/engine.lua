@@ -191,13 +191,15 @@ end
 
 -- CVars and config snapshot
 
-function E.EnsureThreatCVar()
-    if NP.module.threatCVarApplied then return end
-    if GetCVar and SetCVar then
+function E.SyncThreatCVar()
+    if not GetCVar or not SetCVar then return end
+    -- Shared with unitframes target/focus threat-% (target_style.lua UpdateThreat) — must
+    -- stay forced on for the whole nameplates session, not just while nameplate glow is on.
+    if not NP.module.threatCVarApplied then
         NP.module.savedThreatWarning = GetCVar("threatWarning")
-        SetCVar("threatWarning", "3")
+        NP.module.threatCVarApplied = true
     end
-    NP.module.threatCVarApplied = true
+    SetCVar("threatWarning", "3")
 end
 
 function E.SyncEnemyClassColorCVar()
@@ -274,6 +276,7 @@ function E.SyncConfigSnapshot()
     E.SyncEnemyClassColorCVar()
     E.SyncRetailStackingCVars()
     E.SyncShowVKeyCastbarCVar()
+    E.SyncThreatCVar()
     if not NP.module._retailBehavior then
         NP.layout.ResetRetailStacking()
     end
@@ -699,7 +702,6 @@ local function RunNameplatesApply()
     end
     if not NP.config.IsModuleEnabled() then return end
 
-    E.EnsureThreatCVar()
     NP.module.playerInCombat = UnitAffectingCombat and UnitAffectingCombat("player") and true or false
     NP.module._cfgRev = (NP.module._cfgRev or 0) + 1
     E.UpdateInstanceContext()

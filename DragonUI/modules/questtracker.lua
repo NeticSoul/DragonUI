@@ -509,6 +509,17 @@ local function InstallQuestTrackerHooks()
         end)
     end
 
+    -- Item consumed/replaced right as OnUpdate fires makes GetItemCooldown return nils, and CooldownFrame_SetTimer errors comparing nil to a number.
+    if WatchFrameItem_UpdateCooldown then
+        local original = WatchFrameItem_UpdateCooldown
+        WatchFrameItem_UpdateCooldown = function(self)
+            local ok = pcall(original, self)
+            if not ok and self and self.Cooldown then
+                self.Cooldown:Hide()
+            end
+        end
+    end
+
     hooksInstalled = true
 end
 

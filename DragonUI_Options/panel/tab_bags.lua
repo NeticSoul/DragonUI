@@ -402,6 +402,28 @@ local function BuildBagsTab(scroll)
 
     C:AddDescription(sortSection, LO["Use /sortlock to lock or unlock the currently hovered slot from chat."] or "Use /sortlock to lock or unlock the currently hovered slot from chat.")
 
+    C:AddColorPicker(sortSection, {
+        label = LO["Lock Icon Color"] or "Lock Icon Color",
+        getFunc = function()
+            local cfg = GetBagSortConfig(false)
+            local c = (cfg and cfg.lock_color) or addon.BagSortDefaultLockColor or { 0.15, 0.80, 1.00, 0.95 }
+            return c[1] or 0.15, c[2] or 0.80, c[3] or 1.00, c[4] or 0.95
+        end,
+        setFunc = function(r, g, b, a)
+            local cfg = GetBagSortConfig(true)
+            if cfg then
+                cfg.lock_color = { r, g, b, a }
+            end
+            if addon.RefreshBagSortLockMarkers then addon.RefreshBagSortLockMarkers() end
+        end,
+        hasAlpha = true,
+        disabled = function()
+            local cfg = GetBagSortConfig(false)
+            return not (cfg and cfg.enabled)
+        end,
+    })
+    C:AddDescription(sortSection, LO["Color used to tint the padlock icon shown on locked bag/bank slots."] or "Color used to tint the padlock icon shown on locked bag/bank slots.")
+
     -- ====================================================================
     -- INVENTORY CATEGORY TABS
     -- ====================================================================

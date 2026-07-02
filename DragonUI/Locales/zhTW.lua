@@ -110,3 +110,4 @@ L["Sort Guild Bank Tab"] = "整理公會銀行頁籤"
 -- Version Check Module
 L["Version Check"] = true
 L["Broadcast and detect addon version updates across group members"] = true
+

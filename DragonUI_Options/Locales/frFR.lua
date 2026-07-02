@@ -595,6 +595,7 @@ L["Fire abilities on key press instead of key release."] = "Active les sorts à 
 L["Lock Icon Color"] = "Couleur de l'icône de verrouillage"
 L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "Couleur utilisée pour teinter l'icône de cadenas affichée sur les emplacements de sacs/banque verrouillés."
 
+
 -- Version Check
 L["Version Check"] = true
 L["Broadcast and detect addon version updates across group members."] = true

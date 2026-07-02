@@ -110,3 +110,4 @@ L["Sort Guild Bank Tab"] = "Trier l'onglet de la banque de guilde"
 -- Version Check Module
 L["Version Check"] = true
 L["Broadcast and detect addon version updates across group members"] = true
+

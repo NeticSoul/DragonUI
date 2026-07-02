@@ -325,6 +325,8 @@ L["Enable Bag Sort"] = "启用背包整理"
 L["Sort buttons for bags and bank. Sorts items by type, rarity, level, and name."] = "背包和银行的整理按钮。按类型、稀有度、等级和名称排序物品。"
 L["Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands."] = "为背包和银行窗口添加整理按钮。同时启用 /sort 和 /sortbank 命令。"
 L["Sort bags and bank items with buttons"] = "通过按钮整理背包和银行物品"
+L["Lock Icon Color"] = "锁定图标颜色"
+L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "用于给背包/银行锁定格子上显示的锁形图标着色的颜色。"
 
 L["Show 'All' Tab"] = "显示“全部”标签页"
 L["Show the 'All' category tab that displays all items without filtering."] = "显示不过滤、展示所有物品的“全部”分类标签页。"

@@ -45,13 +45,25 @@ local function IsCombuctorEnabled()
     return addon:IsModuleEnabled("combuctor")
 end
 
+-- Cached after the first check since addons can't load/unload mid-session.
+local bagnonLoadedCache
 local function IsBagnonLoaded()
-    return (IsAddOnLoaded and IsAddOnLoaded("Bagnon")) or _G.Bagnon ~= nil
+    if bagnonLoadedCache == nil then
+        bagnonLoadedCache = ((IsAddOnLoaded and IsAddOnLoaded("Bagnon")) or _G.Bagnon ~= nil) and true or false
+    end
+    return bagnonLoadedCache
 end
+
+-- True only during an active guild bank sort; doesn't affect bag/bank sorting.
+local guildBankSortActive = false
+local GUILDBANK_MOVE_THROTTLE = 0.4
 
 local function GetSortMoveInterval()
     local cfg = GetModuleConfig()
     local interval = cfg and tonumber(cfg.move_interval) or 0.1
+    if guildBankSortActive and interval < GUILDBANK_MOVE_THROTTLE then
+        interval = GUILDBANK_MOVE_THROTTLE
+    end
     if interval < 0.05 then return 0.05 end
     if interval > 0.5 then return 0.5 end
     return interval
@@ -142,6 +154,8 @@ local function GetBagnonFrame(frameType)
     local names
     if frameType == "bank" then
         names = { "BagnonFramebank", "BagnonBankFrame", "BagnonFrameBank", "BagnonFrame2" }
+    elseif frameType == "guildbank" then
+        names = { "BagnonFrameguildbank", "BagnonGuildBankFrame", "BagnonFrameGuildBank" }
     else
         names = { "BagnonFrameinventory", "BagnonInventoryFrame", "BagnonFrameInventory", "BagnonFrame1" }
     end
@@ -199,6 +213,8 @@ local item_cache = {}  -- keyed by itemID, stores GetItemInfo results
 local moves = {}
 local running = false
 local bank_open = false
+local guild_bank_open = false
+local guildBankTabHookInstalled = false
 local clickHooksInstalled = false
 local hookedSlotButtons = {}
 local lockVisualFrame
@@ -207,6 +223,9 @@ local bagnonSlotScanPasses = 0
 local bagnonIntegrationHooked = false
 local bagnonFrameHooksInstalled = false
 local bagnonSortingHooked = false
+local bagnonMoveHooked = false
+local bagnonOriginalGetSpaces
+local bagnonOriginalMove
 
 -- Forward declarations
 local StopSorting
@@ -260,13 +279,42 @@ end
 
 local GetBagSlotFromButton
 
+-- Guild bank item slots use `.tab` instead of a bag id; not a real bag/bank slot.
+local function IsBagnonGuildBankSlot(widget)
+    return widget.tab ~= nil and not (widget.GetBag or widget.GetBagID or widget.bag or widget.bagID or widget.bagId)
+end
+
+-- Bagnon's per-bag toggle icons; GetID() is a bag index, not a slot number.
+local function IsBagnonBagToggleButton(widget)
+    return type(widget.ToggleSlot) == "function" and type(widget.CanToggleSlot) == "function"
+end
+
+-- Lock icon texture, sized 12x12 and anchored to the slot's top-right corner.
+local LOCK_MARKER_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\UI\\BagSortLock"
+local LOCK_MARKER_SIZE = 12
+local LOCK_MARKER_OFFSET_X = -1
+local LOCK_MARKER_OFFSET_Y = -1
+local DEFAULT_LOCK_MARKER_COLOR = { 0.15, 0.80, 1.00, 0.95 }
+
+-- Icon art is plain white so it can be tinted (Bags > Bag Sort > Lock Icon Color).
+local function GetLockMarkerColor()
+    local cfg = GetModuleConfig()
+    local c = cfg and cfg.lock_color
+    if type(c) == "table" and type(c[1]) == "number" and type(c[2]) == "number" and type(c[3]) == "number" then
+        return c[1], c[2], c[3], type(c[4]) == "number" and c[4] or 1
+    end
+    return DEFAULT_LOCK_MARKER_COLOR[1], DEFAULT_LOCK_MARKER_COLOR[2], DEFAULT_LOCK_MARKER_COLOR[3], DEFAULT_LOCK_MARKER_COLOR[4]
+end
+
 local function EnsureLockMarker(button)
     if not button or button._dragonUISortLockMarker then return end
+    -- No CreateTexture sub-level param on this client; last-created wins draw order.
     local marker = button:CreateTexture(nil, "OVERLAY")
-    marker:SetTexture("Interface\\Buttons\\WHITE8X8")
-    marker:SetSize(7, 7)
-    marker:SetPoint("TOPLEFT", button, "TOPLEFT", 2, -2)
-    marker:SetVertexColor(0.15, 0.80, 1.00, 0.95)
+    marker:SetTexture(LOCK_MARKER_TEXTURE)
+    marker:SetSize(LOCK_MARKER_SIZE, LOCK_MARKER_SIZE)
+    marker:ClearAllPoints()
+    -- Top-right corner keeps it clear of the stack-count text (bottom-right).
+    marker:SetPoint("TOPRIGHT", button, "TOPRIGHT", LOCK_MARKER_OFFSET_X, LOCK_MARKER_OFFSET_Y)
     marker:Hide()
     button._dragonUISortLockMarker = marker
 end
@@ -280,6 +328,7 @@ local function UpdateButtonLockMarker(button)
 
     local bag, slot = GetBagSlotFromButton(button)
     if bag and slot and IsSlotLocked(bag, slot) then
+        marker:SetVertexColor(GetLockMarkerColor())
         marker:Show()
     else
         marker:Hide()
@@ -308,6 +357,11 @@ GetBagSlotFromButton = function(btn)
     if not btn then return nil, nil end
 
     local bag, slot
+
+    -- Neither is a real slot; falling through would misread it as bag 0.
+    if IsBagnonGuildBankSlot(btn) or IsBagnonBagToggleButton(btn) then
+        return nil, nil
+    end
 
     -- Combuctor item buttons expose GetBag/GetID.
     if btn.GetBag and btn.GetID then
@@ -365,6 +419,11 @@ local function GetHoveredBagSlot()
 
     local bag, slot
 
+    -- Neither is a real slot; falling through would misread it as bag 0.
+    if IsBagnonGuildBankSlot(owner) or IsBagnonBagToggleButton(owner) then
+        return nil, nil
+    end
+
     -- Combuctor item buttons expose GetBag/GetID.
     if owner.GetBag and owner.GetID then
         bag = owner:GetBag()
@@ -420,6 +479,63 @@ local function ToggleHoveredSlotLock()
     end
 
     ToggleSlotLockByBagSlot(bag, slot)
+end
+
+-- ============================================================================
+-- BAGNON COMPATIBILITY: NATIVE SORT INTEGRATION
+-- ============================================================================
+-- Hooks Bagnon's own Sorting.GetSpaces so it respects DragonUI's locked slots.
+
+-- Min delay between moves from Bagnon's own sort (avoids flooding high-latency realms).
+local BAGNON_MOVE_THROTTLE = 0.15
+
+local function GetBagnonFrameKind(itemFrame)
+    if type(itemFrame) ~= "table" then return "unknown" end
+    if type(itemFrame.GetVisibleBags) == "function" and type(itemFrame.GetBagSize) == "function" then
+        return "bags" -- inventory or personal bank; both share this API
+    end
+    if type(itemFrame.GetCurrentTab) == "function" then
+        return "guildbank"
+    end
+    return "unknown"
+end
+
+local function GetBagnonSpaces(sortModule, originalGetSpaces, ...)
+    if type(originalGetSpaces) ~= "function" then return {} end
+
+    local itemFrame = sortModule and sortModule.itemFrame
+    if GetBagnonFrameKind(itemFrame) == "guildbank" then
+        -- Not supported: skip the real GetSpaces entirely.
+        return {}
+    end
+
+    local ok, spaces = pcall(originalGetSpaces, sortModule, ...)
+    if not ok then
+        -- Fail gracefully instead of propagating a Lua error to the user.
+        return {}
+    end
+    if type(spaces) ~= "table" then
+        return spaces
+    end
+
+    if not BagSortModule.applied then
+        return spaces
+    end
+
+    local filteredSpaces = {}
+    for _, space in ipairs(spaces) do
+        if not (space and space.bag and space.slot and IsSlotLocked(space.bag, space.slot)) then
+            if space then
+                space.index = #filteredSpaces
+                if space.item then
+                    space.item.space = space
+                end
+                tinsert(filteredSpaces, space)
+            end
+        end
+    end
+
+    return filteredSpaces
 end
 
 local function InstallAltClickHooks()
@@ -502,9 +618,10 @@ local function InstallAltClickHooks()
 
     local function HookBagnonSlotButtons()
         local function HookBagnonItemFrame(itemFrame)
-            if not itemFrame then return end
+            if type(itemFrame) ~= "table" then return end
 
-            if itemFrame.GetAllItemSlots then
+            -- Guild bank slots may reach here too; GetBagSlotFromButton() rejects them safely.
+            if type(itemFrame.GetAllItemSlots) == "function" then
                 for _, itemSlot in itemFrame:GetAllItemSlots() do
                     if itemSlot then
                         HookSlotButton(itemSlot)
@@ -520,8 +637,8 @@ local function InstallAltClickHooks()
         end
 
         local function HookBagnonFrameObject(frame)
-            if not frame then return end
-            if frame.GetItemFrame then
+            if type(frame) ~= "table" then return end
+            if type(frame.GetItemFrame) == "function" then
                 HookBagnonItemFrame(frame:GetItemFrame())
             end
             HookBagnonItemFrame(frame.itemFrame)
@@ -558,29 +675,29 @@ local function InstallAltClickHooks()
         local bagnon = _G.Bagnon
         if not bagnon then return end
 
-        if not bagnonSortingHooked and bagnon.Sorting and bagnon.Sorting.GetSpaces then
+        if not bagnonSortingHooked and bagnon.Sorting and type(bagnon.Sorting.GetSpaces) == "function" then
             bagnonSortingHooked = true
-            local originalGetSpaces = bagnon.Sorting.GetSpaces
+            bagnonOriginalGetSpaces = bagnon.Sorting.GetSpaces
             bagnon.Sorting.GetSpaces = function(sortModule, ...)
-                local spaces = originalGetSpaces(sortModule, ...)
-                if not BagSortModule.applied or type(spaces) ~= "table" then
-                    return spaces
-                end
+                return GetBagnonSpaces(sortModule, bagnonOriginalGetSpaces, ...)
+            end
+        end
 
-                local filteredSpaces = {}
-                for _, space in ipairs(spaces) do
-                    if not (space and space.bag and space.slot and IsSlotLocked(space.bag, space.slot)) then
-                        if space then
-                            space.index = #filteredSpaces
-                            if space.item then
-                                space.item.space = space
-                            end
-                            tinsert(filteredSpaces, space)
-                        end
-                    end
+        -- Refusing a move here just leaves it unsorted; Bagnon retries shortly after.
+        if not bagnonMoveHooked and bagnon.Sorting and type(bagnon.Sorting.Move) == "function" then
+            bagnonMoveHooked = true
+            bagnonOriginalMove = bagnon.Sorting.Move
+            local lastBagnonMoveTime = 0
+            bagnon.Sorting.Move = function(sortModule, ...)
+                if not BagSortModule.applied then
+                    return bagnonOriginalMove(sortModule, ...)
                 end
-
-                return filteredSpaces
+                local now = GetTime and GetTime() or 0
+                if lastBagnonMoveTime > 0 and (now - lastBagnonMoveTime) < BAGNON_MOVE_THROTTLE then
+                    return false
+                end
+                lastBagnonMoveTime = now
+                return bagnonOriginalMove(sortModule, ...)
             end
         end
 
@@ -602,30 +719,30 @@ local function InstallAltClickHooks()
                 end
             end
 
-            if bagnon.ShowFrame then
+            if type(bagnon.ShowFrame) == "function" then
                 hooksecurefunc(bagnon, "ShowFrame", RefreshBagnonIntegration)
             end
-            if bagnon.CreateFrame then
+            if type(bagnon.CreateFrame) == "function" then
                 hooksecurefunc(bagnon, "CreateFrame", RefreshBagnonIntegration)
             end
         end
 
         if not bagnonIntegrationHooked then
-            if bagnon.ItemFrame and bagnon.ItemFrame.AddItemSlot then
+            if type(bagnon.ItemFrame) == "table" and type(bagnon.ItemFrame.AddItemSlot) == "function" then
                 bagnonIntegrationHooked = true
                 hooksecurefunc(bagnon.ItemFrame, "AddItemSlot", function(itemFrame, bag, slot)
-                    if not BagSortModule.applied or not itemFrame or not itemFrame.GetItemSlot then return end
+                    if not BagSortModule.applied or type(itemFrame) ~= "table" or type(itemFrame.GetItemSlot) ~= "function" then return end
                     local itemSlot = itemFrame:GetItemSlot(bag, slot)
                     if itemSlot then
                         HookSlotButton(itemSlot)
                         UpdateButtonLockMarker(itemSlot)
                     end
                 end)
-            elseif bagnon.Frame and bagnon.Frame.CreateItemFrame then
+            elseif type(bagnon.Frame) == "table" and type(bagnon.Frame.CreateItemFrame) == "function" then
                 bagnonIntegrationHooked = true
                 hooksecurefunc(bagnon.Frame, "CreateItemFrame", function(frame)
                     if not BagSortModule.applied then return end
-                    if frame and frame.GetItemFrame then
+                    if type(frame) == "table" and type(frame.GetItemFrame) == "function" then
                         local itemFrame = frame:GetItemFrame()
                         if itemFrame then
                             HookBagnonSlotButtons()
@@ -687,11 +804,61 @@ end
 
 
 
+-- ============================================================================
+-- GUILD BANK COMPATIBILITY: SYNTHETIC BAG IDS
+-- ============================================================================
+-- Guild bank tab N is treated as bag id (GUILDBANK_TAB_OFFSET + N), reusing
+-- the whole scan/compress/sort/move pipeline instead of duplicating it.
+local GUILDBANK_TAB_OFFSET = 50
+
+local function IsGuildBankBag(bag)
+    return bag > GUILDBANK_TAB_OFFSET
+end
+
+-- Returns 0 for tabs without full view+deposit+withdraw access.
+local function GetGuildBankTabSlotCount(tab)
+    if type(GetGuildBankTabInfo) ~= "function" then return 0 end
+    local name, _, canView, canDeposit, numWithdrawals = GetGuildBankTabInfo(tab)
+    -- numWithdrawals is negative when withdrawals are unlimited for this rank.
+    if name and canView and canDeposit and numWithdrawals ~= 0 then
+        return 98 -- MAX_GUILDBANK_SLOTS_PER_TAB; no reliable global constant for this in 3.3.5a
+    end
+    return 0
+end
+
+local function BagGetItemLink(bag, slot)
+    if IsGuildBankBag(bag) then
+        return GetGuildBankItemLink(bag - GUILDBANK_TAB_OFFSET, slot)
+    end
+    return GetContainerItemLink(bag, slot)
+end
+
+local function BagGetItemInfo(bag, slot)
+    if IsGuildBankBag(bag) then
+        return GetGuildBankItemInfo(bag - GUILDBANK_TAB_OFFSET, slot)
+    end
+    return GetContainerItemInfo(bag, slot)
+end
+
+local function BagPickupItem(bag, slot)
+    if IsGuildBankBag(bag) then
+        return PickupGuildBankItem(bag - GUILDBANK_TAB_OFFSET, slot)
+    end
+    return PickupContainerItem(bag, slot)
+end
+
+local function BagSplitItem(bag, slot, amount)
+    if IsGuildBankBag(bag) then
+        return SplitGuildBankItem(bag - GUILDBANK_TAB_OFFSET, slot, amount)
+    end
+    return SplitContainerItem(bag, slot, amount)
+end
+
 -- Bag iteration
 local function IterateBags(baglist)
     local items = {}
     for _, bag in ipairs(baglist) do
-        local numSlots = GetContainerNumSlots(bag)
+        local numSlots = IsGuildBankBag(bag) and GetGuildBankTabSlotCount(bag - GUILDBANK_TAB_OFFSET) or GetContainerNumSlots(bag)
         for slot = 1, numSlots do
             tinsert(items, { bag = bag, slot = slot, bagslot = encode_bagslot(bag, slot) })
         end
@@ -708,11 +875,11 @@ end
 -- Scan all items in given bags into cache
 local function ScanBags(bags)
     for bag, slot, bagslot in IterateBags(bags) do
-        local itemLink = GetContainerItemLink(bag, slot)
+        local itemLink = BagGetItemLink(bag, slot)
         local itemid = link_to_id(itemLink)
         if itemid then
             bag_ids[bagslot] = itemid
-            local _, count = GetContainerItemInfo(bag, slot)
+            local _, count = BagGetItemInfo(bag, slot)
             bag_stacks[bagslot] = count or 0
             -- Cache GetItemInfo by itemID (not bagslot) so it's stable
             if not item_cache[itemid] then
@@ -1021,7 +1188,7 @@ moveFrame:SetScript("OnUpdate", function(self, elapsed)
     end
 
     -- Wait for previous move to complete
-    if current_target and (link_to_id(GetContainerItemLink(decode_bagslot(current_target))) ~= current_id) then
+    if current_target and (link_to_id(BagGetItemLink(decode_bagslot(current_target))) ~= current_id) then
         return
     end
 
@@ -1034,13 +1201,13 @@ moveFrame:SetScript("OnUpdate", function(self, elapsed)
             local source, target = decode_move(moves[i])
             local source_bag, source_slot = decode_bagslot(source)
             local target_bag, target_slot = decode_bagslot(target)
-            local _, source_count, source_locked = GetContainerItemInfo(source_bag, source_slot)
-            local _, target_count, target_locked = GetContainerItemInfo(target_bag, target_slot)
+            local _, source_count, source_locked = BagGetItemInfo(source_bag, source_slot)
+            local _, target_count, target_locked = BagGetItemInfo(target_bag, target_slot)
 
             if source_locked or target_locked then return end
 
             tremove(moves, i)
-            local source_link = GetContainerItemLink(source_bag, source_slot)
+            local source_link = BagGetItemLink(source_bag, source_slot)
             local source_itemid = link_to_id(source_link)
             if not source_itemid then
                 StopSorting("DragonUI: Sort confused, stopping.")
@@ -1051,17 +1218,20 @@ moveFrame:SetScript("OnUpdate", function(self, elapsed)
             current_target = target
             current_id = source_itemid
 
-            local target_link = GetContainerItemLink(target_bag, target_slot)
+            local target_link = BagGetItemLink(target_bag, target_slot)
             local target_itemid = link_to_id(target_link)
 
             if (source_itemid == target_itemid) and target_count and (target_count ~= stack_size) and ((target_count + (source_count or 0)) > stack_size) then
-                SplitContainerItem(source_bag, source_slot, stack_size - target_count)
+                BagSplitItem(source_bag, source_slot, stack_size - target_count)
             else
-                PickupContainerItem(source_bag, source_slot)
+                BagPickupItem(source_bag, source_slot)
             end
-            if CursorHasItem() then
-                PickupContainerItem(target_bag, target_slot)
+            local isGuildBankMove = IsGuildBankBag(source_bag)
+            if CursorHasItem() or isGuildBankMove then
+                BagPickupItem(target_bag, target_slot)
             end
+            -- One guild-bank move per tick: state doesn't update predictively like bags.
+            if isGuildBankMove then return end
         end
     end
 
@@ -1072,6 +1242,7 @@ moveFrame:Hide()
 
 StopSorting = function(message)
     running = false
+    guildBankSortActive = false
     current_id = nil
     current_target = nil
     wipe(moves)
@@ -1165,6 +1336,73 @@ local function SortBankBags()
     if #moves == 0 then
         DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("Bank already sorted!", "Bank already sorted!"), 0.4, 1, 0.4)
     end
+end
+
+-- ============================================================================
+-- GUILD BANK SORTING (single tab only, never crosses tabs)
+-- ============================================================================
+-- Crossing tabs would spend withdrawal allowance on both ends just to reorder.
+
+local function PerformGuildBankSort()
+    if running then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("Sort already in progress.", "Sort already in progress."), 1, 0.8, 0)
+        return
+    end
+    if not guild_bank_open then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("You must be at the guild bank.", "You must be at the guild bank."), 1, 0.4, 0.4)
+        return
+    end
+    if type(GetCurrentGuildBankTab) ~= "function" then
+        return
+    end
+
+    local tab = GetCurrentGuildBankTab()
+    if not tab or tab < 1 then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("Could not determine the current guild bank tab.", "Could not determine the current guild bank tab."), 1, 0.4, 0.4)
+        return
+    end
+
+    if GetGuildBankTabSlotCount(tab) == 0 then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("You need full deposit and withdraw access to this tab to sort it.", "You need full deposit and withdraw access to this tab to sort it."), 1, 0.4, 0.4)
+        return
+    end
+
+    local tabBags = { GUILDBANK_TAB_OFFSET + tab }
+    ScanBags(tabBags)
+    CompressStacks(tabBags)
+    SortItems(tabBags)
+
+    if #moves == 0 then
+        StartSorting() -- still wipes the scratch scan caches
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("This guild bank tab is already sorted!", "This guild bank tab is already sorted!"), 0.4, 1, 0.4)
+        return
+    end
+
+    guildBankSortActive = true
+    StartSorting()
+end
+
+StaticPopupDialogs["DRAGONUI_CONFIRM_GUILDBANK_SORT"] = {
+    text = T("Sort this guild bank tab? Depending on your server, this may be logged and count against your guild's shared withdrawal allowance, the same as moving items by hand.", "Sort this guild bank tab? Depending on your server, this may be logged and count against your guild's shared withdrawal allowance, the same as moving items by hand."),
+    button1 = T("Sort", "Sort"),
+    button2 = CANCEL,
+    OnAccept = PerformGuildBankSort,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+local function SortGuildBankTab()
+    if running then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("Sort already in progress.", "Sort already in progress."), 1, 0.8, 0)
+        return
+    end
+    if not guild_bank_open then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00cc66DragonUI:|r " .. T("You must be at the guild bank.", "You must be at the guild bank."), 1, 0.4, 0.4)
+        return
+    end
+    StaticPopup_Show("DRAGONUI_CONFIRM_GUILDBANK_SORT")
 end
 
 local function HandleSortLockCommand(msg)
@@ -1292,6 +1530,7 @@ local combustorBagSortBtn, combustorBankSortBtn
 local combustorBagClearBtn, combustorBankClearBtn
 local bagnonBagSortBtn, bagnonBankSortBtn
 local bagnonBagClearBtn, bagnonBankClearBtn
+local vanillaGuildBankSortBtn, bagnonGuildBankSortBtn
 
 local function GetCombuctorFrame(index)
     return _G["DragonUI_CombuctorFrame" .. index]
@@ -1367,11 +1606,14 @@ local function AttachBagnonButtons(frame, sortRef, clearRef, sortFunc, sortBtnNa
 
     if sortBtn then
         sortBtn:SetParent(frame)
+        sortBtn:SetFrameStrata("HIGH")
         sortBtn:Hide()
     end
     clearBtn:SetParent(frame)
     clearBtn:ClearAllPoints()
     clearBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -58, -10)
+    -- Bagnon's title bar keeps re-raising itself; a higher strata always wins.
+    clearBtn:SetFrameStrata("HIGH")
     clearBtn:SetFrameLevel(frame:GetFrameLevel() + 20)
     clearBtn:Show()
 
@@ -1401,6 +1643,56 @@ local function CreateBagnonSortButtons()
         BagSortModule.frames.bagnonBankSortBtn = bagnonBankSortBtn
         BagSortModule.frames.bagnonBankClearBtn = bagnonBankClearBtn
     end
+end
+
+-- ============================================================================
+-- GUILD BANK BUTTON INTEGRATION
+-- ============================================================================
+-- No "Clear Locks" button here -- guild bank slots are never lockable.
+
+local function CreateGuildBankSortButton(name, parent)
+    local function BuildTooltipLines()
+        return {
+            T("Click to sort items in the currently open guild bank tab.", "Click to sort items in the currently open guild bank tab."),
+            T("Never moves items between tabs.", "Never moves items between tabs."),
+        }
+    end
+
+    return CreateActionButton(
+        name,
+        parent,
+        SortGuildBankTab,
+        T("Sort Guild Bank Tab", "Sort Guild Bank Tab"),
+        0.61,
+        "Interface\\Icons\\INV_Enchant_EssenceCosmicGreater",
+        BuildTooltipLines
+    )
+end
+
+local function CreateVanillaGuildBankSortButton()
+    if vanillaGuildBankSortBtn then return end
+    local frame = _G.GuildBankFrame
+    if not frame then return end
+
+    vanillaGuildBankSortBtn = CreateGuildBankSortButton("DragonUI_VanillaGuildBankSortBtn", frame)
+    vanillaGuildBankSortBtn:ClearAllPoints()
+    vanillaGuildBankSortBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -212.5, 38)
+    BagSortModule.frames.vanillaGuildBankSortBtn = vanillaGuildBankSortBtn
+end
+
+local function CreateBagnonGuildBankSortButton()
+    if bagnonGuildBankSortBtn then return end
+    local frame = GetBagnonFrame("guildbank")
+    if not frame then return end
+
+    bagnonGuildBankSortBtn = CreateGuildBankSortButton("DragonUI_BagnonGuildBankSortBtn", frame)
+    bagnonGuildBankSortBtn:SetParent(frame)
+    -- See AttachBagnonButtons: needs its own strata to stay reliably clickable.
+    bagnonGuildBankSortBtn:SetFrameStrata("HIGH")
+    bagnonGuildBankSortBtn:ClearAllPoints()
+    bagnonGuildBankSortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -57, -9)
+    bagnonGuildBankSortBtn:SetFrameLevel(frame:GetFrameLevel() + 20)
+    BagSortModule.frames.bagnonGuildBankSortBtn = bagnonGuildBankSortBtn
 end
 
 -- ============================================================================
@@ -1542,6 +1834,20 @@ UpdateButtonVisibility = function()
         if combustorBankSortBtn then combustorBankSortBtn:Hide() end
         if combustorBankClearBtn then combustorBankClearBtn:Hide() end
     end
+
+    CreateVanillaGuildBankSortButton()
+    CreateBagnonGuildBankSortButton()
+    if vanillaGuildBankSortBtn then
+        -- Only "bank" mode shows item slots (vs. log/money log/info sub-tabs).
+        if guild_bank_open and _G.GuildBankFrame and _G.GuildBankFrame.mode == "bank" then
+            vanillaGuildBankSortBtn:Show()
+        else
+            vanillaGuildBankSortBtn:Hide()
+        end
+    end
+    if bagnonGuildBankSortBtn then
+        if guild_bank_open then bagnonGuildBankSortBtn:Show() else bagnonGuildBankSortBtn:Hide() end
+    end
 end
 
 -- Hook into frame show events for lazy/reliable button creation
@@ -1630,12 +1936,30 @@ ApplyBagSortSystem = function()
             UpdateButtonVisibility()
         elseif event == "BANKFRAME_CLOSED" then
             bank_open = false
+        elseif event == "GUILDBANKFRAME_OPENED" then
+            guild_bank_open = true
+            -- Guild bank UI loads on demand; this function doesn't exist at startup.
+            if not guildBankTabHookInstalled and type(GuildBankFrameTab_OnClick) == "function" then
+                guildBankTabHookInstalled = true
+                hooksecurefunc("GuildBankFrameTab_OnClick", function()
+                    if BagSortModule.applied then
+                        UpdateButtonVisibility()
+                    end
+                end)
+            end
+            UpdateButtonVisibility()
+        elseif event == "GUILDBANKFRAME_CLOSED" then
+            guild_bank_open = false
         end
     end)
     eventFrame:RegisterEvent("BANKFRAME_OPENED")
     eventFrame:RegisterEvent("BANKFRAME_CLOSED")
+    eventFrame:RegisterEvent("GUILDBANKFRAME_OPENED")
+    eventFrame:RegisterEvent("GUILDBANKFRAME_CLOSED")
     BagSortModule.registeredEvents["BANKFRAME_OPENED"] = true
     BagSortModule.registeredEvents["BANKFRAME_CLOSED"] = true
+    BagSortModule.registeredEvents["GUILDBANKFRAME_OPENED"] = true
+    BagSortModule.registeredEvents["GUILDBANKFRAME_CLOSED"] = true
 
     -- Register slash commands
     SlashCmdList["DRAGONUI_SORT"] = SortPlayerBags
@@ -1644,6 +1968,9 @@ ApplyBagSortSystem = function()
 
     SlashCmdList["DRAGONUI_SORTBANK"] = SortBankBags
     SLASH_DRAGONUI_SORTBANK1 = "/sortbank"
+
+    SlashCmdList["DRAGONUI_SORTGUILDBANK"] = SortGuildBankTab
+    SLASH_DRAGONUI_SORTGUILDBANK1 = "/sortguildbank"
 
     SlashCmdList["DRAGONUI_SORTLOCK"] = HandleSortLockCommand
     SLASH_DRAGONUI_SORTLOCK1 = "/sortlock"
@@ -1691,10 +2018,13 @@ local function RestoreBagSortSystem()
     if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
     if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
     if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
+    if vanillaGuildBankSortBtn then vanillaGuildBankSortBtn:Hide() end
+    if bagnonGuildBankSortBtn then bagnonGuildBankSortBtn:Hide() end
 
     -- Remove slash commands
     SlashCmdList["DRAGONUI_SORT"] = nil
     SlashCmdList["DRAGONUI_SORTBANK"] = nil
+    SlashCmdList["DRAGONUI_SORTGUILDBANK"] = nil
     SlashCmdList["DRAGONUI_SORTLOCK"] = nil
 
     if lockVisualFrame then
@@ -1708,6 +2038,21 @@ local function RestoreBagSortSystem()
             button._dragonUISortLockMarker:Hide()
         end
     end
+
+    -- Undo the Sorting hooks so a disabled module stops intercepting Bagnon's native sort.
+    local bagnon = _G.Bagnon
+    if bagnon and bagnon.Sorting then
+        if bagnonOriginalGetSpaces then
+            bagnon.Sorting.GetSpaces = bagnonOriginalGetSpaces
+            bagnonOriginalGetSpaces = nil
+        end
+        if bagnonOriginalMove then
+            bagnon.Sorting.Move = bagnonOriginalMove
+            bagnonOriginalMove = nil
+        end
+    end
+    bagnonSortingHooked = false
+    bagnonMoveHooked = false
 
     BagSortModule.applied = false
 end
@@ -1764,3 +2109,7 @@ end)
 -- Expose sort functions for other modules/macros
 addon.SortPlayerBags = SortPlayerBags
 addon.SortBankBags = SortBankBags
+addon.SortGuildBankTab = SortGuildBankTab
+-- Lets the options panel re-tint visible lock icons live when the color changes.
+addon.RefreshBagSortLockMarkers = RefreshAllLockMarkers
+addon.BagSortDefaultLockColor = DEFAULT_LOCK_MARKER_COLOR

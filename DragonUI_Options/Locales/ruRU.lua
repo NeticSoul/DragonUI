@@ -327,6 +327,8 @@ L["Enable Bag Sort"] = "Включить сортировку сумок"
 L["Sort buttons for bags and bank. Sorts items by type, rarity, level, and name."] = "Кнопки сортировки для сумок и банка. Сортирует предметы по типу, редкости, уровню и названию."
 L["Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands."] = "Добавить кнопки сортировки в окна сумок и банка. Также включает команды /sort и /sortbank."
 L["Sort bags and bank items with buttons"] = "Сортировка предметов в сумках и банке кнопками"
+L["Lock Icon Color"] = "Цвет значка блокировки"
+L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "Цвет, используемый для окрашивания значка замка, отображаемого на заблокированных ячейках сумок/банка."
 
 L["Show 'All' Tab"] = "Показать вкладку «Все»"
 L["Show the 'All' category tab that displays all items without filtering."] = "Показать вкладку категории «Все», отображающую все предметы без фильтрации."

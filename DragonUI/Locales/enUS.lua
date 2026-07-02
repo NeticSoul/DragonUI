@@ -321,6 +321,17 @@ L["Slot unlocked (bag %d, slot %d)."] = true
 L["Could not clear locks (config not ready)."] = true
 L["Cleared all sort-locked slots."] = true
 
+-- Guild Bank Sort
+L["You must be at the guild bank."] = true
+L["Could not determine the current guild bank tab."] = true
+L["You need full deposit and withdraw access to this tab to sort it."] = true
+L["This guild bank tab is already sorted!"] = true
+L["Sort this guild bank tab? Depending on your server, this may be logged and count against your guild's shared withdrawal allowance, the same as moving items by hand."] = true
+L["Sort"] = true
+L["Click to sort items in the currently open guild bank tab."] = true
+L["Never moves items between tabs."] = true
+L["Sort Guild Bank Tab"] = true
+
 -- Micromenu Latency
 L["Network"] = true
 L["Latency"] = true
