@@ -1098,6 +1098,15 @@ local function GetActualWorldFrameHeight()
     return height
 end
 
+-- ActionStatus is a WorldFrame child; pin it to UIParent so the clamp's stretch doesn't push it off-screen.
+local function PinActionStatusToScreenCenter()
+    local status = _G.ActionStatus
+    if status and status.ClearAllPoints then
+        status:ClearAllPoints()
+        status:SetAllPoints(UIParent)
+    end
+end
+
 local function CaptureWorldFrameState()
     if NP.module._worldFrameState then
         return NP.module._worldFrameState
@@ -1181,6 +1190,7 @@ function NP.layout.UpdateWorldFrameHeight(shouldExtend)
     WorldFrame.GetHeight = function()
         return nativeHeight
     end
+    PinActionStatusToScreenCenter()
     NP.module._worldFrameExtended = true
 
     NP.module._pendingWorldFrameExtend = nil
