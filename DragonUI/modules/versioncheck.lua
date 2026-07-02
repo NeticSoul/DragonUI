@@ -232,7 +232,6 @@ do
 
             -- Initial broadcast shortly after login
             addon:After(5, BroadcastVersion)
-
             addon:Debug("VersionCheck: native system initialized, version " .. CURRENT_VERSION)
         end
     end)
