@@ -11,11 +11,7 @@ local addon = select(2, ...)
 -- ============================================================================
 
 -- Module state tracking
-local VersionCheckModule = {
-    initialized = false,
-    applied = false,
-    registeredEvents = {},
-}
+local VersionCheckModule = {}
 
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
@@ -27,10 +23,6 @@ end
 -- ============================================================================
 -- CONFIGURATION FUNCTIONS
 -- ============================================================================
-
-local function GetModuleConfig()
-    return addon:GetModuleConfig("versioncheck")
-end
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("versioncheck")
