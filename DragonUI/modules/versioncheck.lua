@@ -93,11 +93,9 @@ end
 
 local function SendVersion(channel)
     if not CURRENT_VERSION then return end
-    -- ChatThrottleLib hooks SendAddonMessage globally via hooksecurefunc
-    -- (embedded in AceComm-3.0 / LibHealComm-4.0), so raw calls are already
-    -- throttled and measured to prevent addon-message-queue disconnects.
-    SendAddonMessage(ADDON_PREFIX, CURRENT_VERSION, channel)
+    ChatThrottleLib:SendAddonMessage("NORMAL", ADDON_PREFIX, CURRENT_VERSION, channel)
 end
+
 
 local function BroadcastVersion()
     local now = GetTime()
