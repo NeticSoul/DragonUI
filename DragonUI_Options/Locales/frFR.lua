@@ -591,6 +591,14 @@ L["Fires action bar abilities the instant you press a key instead of when you re
 L["Enable Key Press"] = "Activer l'appui de touche"
 L["Fire abilities on key press instead of key release."] = "Active les sorts à l'appui de la touche, pas au relâchement."
 
+-- Bag Sort
+L["Lock Icon Color"] = "Couleur de l'icône de verrouillage"
+L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "Couleur utilisée pour teinter l'icône de cadenas affichée sur les emplacements de sacs/banque verrouillés."
+
+-- Version Check
+L["Version Check"] = true
+L["Broadcast and detect addon version updates across group members."] = true
+
 -- Search
 
 L["Search settings..."] = "Rechercher des réglages..."

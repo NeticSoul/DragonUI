@@ -586,6 +586,14 @@ L["Fires action bar abilities the instant you press a key instead of when you re
 L["Enable Key Press"] = "Ativar pressionar tecla"
 L["Fire abilities on key press instead of key release."] = "Ativa habilidades ao pressionar a tecla, não ao soltar."
 
+-- Bag Sort
+L["Lock Icon Color"] = "Cor do ícone de bloqueio"
+L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "Cor usada para tingir o ícone de cadeado exibido nos slots de bolsa/banco bloqueados."
+
+-- Version Check
+L["Version Check"] = true
+L["Broadcast and detect addon version updates across group members."] = true
+
 -- Search
 
 L["Search settings..."] = "Buscar configurações..."

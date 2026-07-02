@@ -1385,6 +1385,10 @@ L["Show remaining debuff time on each debuff icon."] = "각 약화 효과 아이
 L["Size of debuff icons on nameplates."] = "이름표의 약화 효과 아이콘 크기입니다."
 L["Totem Icon Position"] = "토템 아이콘 위치"
 
+-- Version Check
+L["Version Check"] = true
+L["Broadcast and detect addon version updates across group members."] = true
+
 -- Search
 
 L["Search settings..."] = "설정 검색..."

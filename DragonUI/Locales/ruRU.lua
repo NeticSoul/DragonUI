@@ -457,3 +457,13 @@ L["Reputation: "] = "Репутация: "
 L["Error in SafeCall:"] = "Ошибка в SafeCall:"
 
 L["Copy Text"] = "Копировать текст"
+
+-- BNet Toast Module
+L["BNet Toast"] = "BNet Уведомления"
+L["Version Check"] = true
+L["Broadcast and detect addon version updates across group members"] = true
+L["Friend online/offline notifications with Battle.net toasts and chat messages"] = "Уведомления о входе/выходе друзей через Battle.net тосты и чат"
+L["Position & Scale"] = "Позиция и масштаб"
+L["Scale of the BNet toast frame."] = "Масштаб рамки уведомления Battle.net."
+L["Horizontal position of the BNet toast from the screen center. Negative values move left, positive values move right."] = "Горизонтальная позиция уведомления Battle.net от центра экрана. Отрицательные значения сдвигают влево, положительные — вправо."
+L["Vertical offset of the BNet toast frame. Negative values move down, positive values move up."] = "Вертикальное смещение рамки уведомления Battle.net. Отрицательные значения сдвигают вниз, положительные — вверх."

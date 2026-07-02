@@ -7,6 +7,36 @@
 local addon = select(2, ...)
 
 -- ============================================================================
+-- MODULE REGISTRATION
+-- ============================================================================
+
+-- Module state tracking
+local VersionCheckModule = {
+    initialized = false,
+    applied = false,
+    registeredEvents = {},
+}
+
+-- Register with ModuleRegistry (if available)
+if addon.RegisterModule then
+    addon:RegisterModule("versioncheck", VersionCheckModule,
+        (addon.L and addon.L["Version Check"]) or "Version Check",
+        (addon.L and addon.L["Broadcast and detect addon version updates across group members"]) or "Broadcast and detect addon version updates across group members")
+end
+
+-- ============================================================================
+-- CONFIGURATION FUNCTIONS
+-- ============================================================================
+
+local function GetModuleConfig()
+    return addon:GetModuleConfig("versioncheck")
+end
+
+local function IsModuleEnabled()
+    return addon:IsModuleEnabled("versioncheck")
+end
+
+-- ============================================================================
 -- CONSTANTS
 -- ============================================================================
 
@@ -63,6 +93,9 @@ end
 
 local function SendVersion(channel)
     if not CURRENT_VERSION then return end
+    -- ChatThrottleLib hooks SendAddonMessage globally via hooksecurefunc
+    -- (embedded in AceComm-3.0 / LibHealComm-4.0), so raw calls are already
+    -- throttled and measured to prevent addon-message-queue disconnects.
     SendAddonMessage(ADDON_PREFIX, CURRENT_VERSION, channel)
 end
 
@@ -95,18 +128,31 @@ end
 -- INCOMING MESSAGE HANDLER
 -- ============================================================================
 
+-- Validate a version string: must be "major.minor" or "major.minor.patch".
+-- Lua 5.1 does not support quantifiers on parenthesized groups, so we use
+-- two explicit pattern matches instead of one with a capture group + ?.
+local function IsValidVersion(v)
+    if not v or v == "" then return false end
+    -- "major.minor.patch" (e.g. 2.5.1)
+    if string.match(v, "^%d+%.%d+%.%d+$") then
+        return true
+    end
+    -- "major.minor" (e.g. 2.5)
+    if string.match(v, "^%d+%.%d+$") then
+        return true
+    end
+    return false
+end
+
 local function OnAddonMessage(prefix, message, _channel, _sender)
     if prefix ~= ADDON_PREFIX then
         return
     end
-    if not message or message == "" then
-        return
-    end
 
-    local incomingVersion = string.gsub(message, "%s+", "")
+    local incomingVersion = message and string.gsub(message, "%s+", "") or ""
 
     -- Security: only accept "major.minor" or "major.minor.patch" — untrusted input
-    if not string.match(incomingVersion, "^%d+%.%d+(%.%d+)?$") then
+    if not IsValidVersion(incomingVersion) then
         return
     end
 
@@ -143,8 +189,6 @@ local function SetupEvents()
 
     eventFrame = CreateFrame("Frame", "DragonUI_VersionCheck", UIParent)
     eventFrame:RegisterEvent("CHAT_MSG_ADDON")
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
     eventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
     eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
@@ -152,11 +196,7 @@ local function SetupEvents()
     eventFrame:SetScript("OnEvent", function(_frame, event, ...)
         if event == "CHAT_MSG_ADDON" then
             OnAddonMessage(...)
-        elseif event == "PLAYER_ENTERING_WORLD" then
-            DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: version " .. (CURRENT_VERSION or "?"))
-            addon:After(5, BroadcastVersion)
-        elseif event == "GROUP_ROSTER_UPDATE"
-            or event == "PARTY_MEMBERS_CHANGED"
+        elseif event == "PARTY_MEMBERS_CHANGED"
             or event == "RAID_ROSTER_UPDATE"
         then
             BroadcastVersion()
@@ -177,12 +217,19 @@ do
     local initFrame = CreateFrame("Frame", "DragonUI_VersionCheck_Init", UIParent)
     initFrame:RegisterEvent("PLAYER_LOGIN")
     initFrame:SetScript("OnEvent", function()
-        initFrame:UnregisterEvent("PLAYER_LOGIN")
+        initFrame:UnregisterAllEvents()
 
         CURRENT_VERSION = GetAddOnMetadata("DragonUI", "Version") or "0.0"
         highestVersionSeen = CURRENT_VERSION
 
+        -- Print version on login (not on every PLAYER_ENTERING_WORLD)
+        DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: version " .. (CURRENT_VERSION or "?"))
+
         SetupEvents()
+
+        -- Initial broadcast shortly after login
+        addon:After(5, BroadcastVersion)
+
         addon:Debug("VersionCheck: native system initialized, version " .. CURRENT_VERSION)
     end)
 end

@@ -1373,6 +1373,10 @@ L["Totems Without Icon"] = "Tótems sin icono"
 L["Use class colors for enemy player nameplates."] = "Usa colores de clase en las placas de jugadores enemigos."
 L["General"] = "Opciones generales"
 
+-- Version Check
+L["Version Check"] = "Control de Versión"
+L["Broadcast and detect addon version updates across group members."] = "Detecta actualizaciones del addon entre miembros del grupo enviando y recibiendo la versión."
+
 -- Search
 
 L["Search settings..."] = "Buscar ajustes..."

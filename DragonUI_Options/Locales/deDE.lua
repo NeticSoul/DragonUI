@@ -1385,6 +1385,10 @@ L["Size of debuff icons on nameplates."] = "Größe der Debuff-Symbole auf Namen
 L["Totem Icon Position"] = "Position des Totemsymbols"
 L["Whitelist"] = "Positivliste"
 
+-- Version Check
+L["Version Check"] = "Versionsprüfung"
+L["Broadcast and detect addon version updates across group members."] = "Erkennt Addon-Updates zwischen Gruppenmitgliedern durch Senden und Empfangen der Version."
+
 -- Search
 
 L["Search settings..."] = "Einstellungen suchen..."
