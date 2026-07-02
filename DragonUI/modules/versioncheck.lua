@@ -98,6 +98,8 @@ end
 
 
 local function BroadcastVersion()
+    if not IsModuleEnabled() then return end
+
     local now = GetTime()
     if now - lastBroadcastTime < BROADCAST_THROTTLE then
         return
@@ -143,6 +145,8 @@ local function IsValidVersion(v)
 end
 
 local function OnAddonMessage(prefix, message, _channel, _sender)
+    if not IsModuleEnabled() then return end
+
     if prefix ~= ADDON_PREFIX then
         return
     end
@@ -183,6 +187,7 @@ end
 -- ============================================================================
 
 local function SetupEvents()
+    if not IsModuleEnabled() then return end
     if eventFrame then return end
 
     eventFrame = CreateFrame("Frame", "DragonUI_VersionCheck", UIParent)
@@ -220,15 +225,16 @@ do
         CURRENT_VERSION = GetAddOnMetadata("DragonUI", "Version") or "0.0"
         highestVersionSeen = CURRENT_VERSION
 
-        -- Print version on login (not on every PLAYER_ENTERING_WORLD)
-        DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: version " .. (CURRENT_VERSION or "?"))
+        if IsModuleEnabled() then
+            -- Print version on login (not on every PLAYER_ENTERING_WORLD)
+            DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: version " .. (CURRENT_VERSION or "?"))
+            SetupEvents()
 
-        SetupEvents()
+            -- Initial broadcast shortly after login
+            addon:After(5, BroadcastVersion)
 
-        -- Initial broadcast shortly after login
-        addon:After(5, BroadcastVersion)
-
-        addon:Debug("VersionCheck: native system initialized, version " .. CURRENT_VERSION)
+            addon:Debug("VersionCheck: native system initialized, version " .. CURRENT_VERSION)
+        end
     end)
 end
 
