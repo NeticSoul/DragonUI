@@ -69,6 +69,19 @@ local CLASSIFICATION_ATLAS = {
 }
 local DEFAULT_BOSS_ATLAS = "TargetFrame-TextureFrame-Elite"
 
+-- Blizzard can re-anchor TextureFrame back to its default screen position; lock it.
+local function HookTextureFrameSetPoint(textureFrame, bossFrame)
+    if textureFrame.__DragonUI_SetPointHooked then return end
+    hooksecurefunc(textureFrame, "SetPoint", function(self, ...)
+        if self._DragonUI_SettingPoint then return end
+        self._DragonUI_SettingPoint = true
+        self:ClearAllPoints()
+        self:SetPoint("TOPLEFT", bossFrame, "TOPLEFT", 0, 0)
+        self._DragonUI_SettingPoint = nil
+    end)
+    textureFrame.__DragonUI_SetPointHooked = true
+end
+
 -- Re-anchor border (called from hooks after Blizzard resets)
 local function UpdateBossFrameBorder(bossFrame)
     if not bossFrame.DragonUI_FrameBorder or not bossFrame.DragonUI_FrameBG then return end
@@ -87,7 +100,12 @@ local function UpdateBossFrameBorder(bossFrame)
     if frameName then
         local textureFrame = _G[frameName .. "TextureFrame"]
         if textureFrame and borderFrame then
+            textureFrame._DragonUI_SettingPoint = true
+            textureFrame:ClearAllPoints()
+            textureFrame:SetPoint("TOPLEFT", bossFrame, "TOPLEFT", 0, 0)
+            textureFrame._DragonUI_SettingPoint = nil
             textureFrame:SetFrameLevel(borderFrame:GetFrameLevel() + 2)
+            HookTextureFrameSetPoint(textureFrame, bossFrame)
         end
     end
     -- Decoration frame (child of borderFrame) always renders above border
@@ -586,12 +604,25 @@ local function HookClassification()
         local blizzBorder = _G[frameName .. "TextureFrameTexture"]
         if blizzBorder then blizzBorder:SetAlpha(0) end
 
-        -- Re-apply bar sizing
+        -- Re-apply bar size and anchor — Blizzard also re-anchors these here.
+        local portrait = _G[frameName .. "Portrait"]
         local healthBar = _G[frameName .. "HealthBar"]
-        if healthBar then healthBar:SetSize(125, 20) end
+        if healthBar then
+            healthBar:SetSize(125, 20)
+            if portrait then
+                healthBar:ClearAllPoints()
+                healthBar:SetPoint("RIGHT", portrait, "LEFT", -1, 0)
+            end
+        end
 
         local manaBar = _G[frameName .. "ManaBar"]
-        if manaBar then manaBar:SetSize(132, 9) end
+        if manaBar then
+            manaBar:SetSize(132, 9)
+            if portrait then
+                manaBar:ClearAllPoints()
+                manaBar:SetPoint("RIGHT", portrait, "LEFT", 6.5, -16.5)
+            end
+        end
 
         local nameText = _G[frameName .. "TextureFrameName"]
         if nameText then
