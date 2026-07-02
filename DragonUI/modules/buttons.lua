@@ -619,6 +619,7 @@ local function additional_buttons(button)
 	normal:ClearAllPoints()
 	normal:SetPoint('TOPRIGHT', button, 2.2, 2.3)
 	normal:SetPoint('BOTTOMLEFT', button, -2.2, -2.2)
+	normal:SetDrawLayer('OVERLAY')
 
 	-- apply button textures
 	button:GetCheckedTexture():set_atlas('_ui-hud-actionbar-iconborder-checked')
@@ -637,8 +638,7 @@ local function additional_buttons(button)
 	if icon then
 		icon:ClearAllPoints()
 		icon:SetTexCoord(.05, .95, .05, .95)
-		icon:SetPoint('TOPRIGHT', button, 1, 1)
-		icon:SetPoint('BOTTOMLEFT', button, -1, -1)
+		icon:SetAllPoints(button)
 		icon:SetDrawLayer('BORDER')
 	end
 
