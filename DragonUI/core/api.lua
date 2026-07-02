@@ -570,17 +570,28 @@ end
 -- EDITOR CONTROL PANEL (Real-time X/Y + Nudge Buttons)
 -- ============================================================================
 
+-- GetCenter() is in the frame's own scaled local space, not screen pixels, so a raw cx-ux breaks once scale != 1.
+local function GetFrameOffsetFromUIParent(frame)
+    local cx, cy = frame:GetCenter()
+    local ux, uy = UIParent:GetCenter()
+    if not cx or not cy or not ux or not uy then return nil end
+    local frameScale = frame:GetEffectiveScale()
+    local uiScale = UIParent:GetEffectiveScale()
+    local x = (cx * frameScale - ux * uiScale) / frameScale
+    local y = (cy * frameScale - uy * uiScale) / frameScale
+    return x, y
+end
+
 -- Update the coordinate display with current frame position.
 -- Uses GetCenter() for screen-relative coords that always reflect the
 -- actual visual position (GetPoint offsets can be stale during StartMoving).
 -- Skips update while the user is actively typing in an EditBox.
 local function UpdateEditorPanelCoords()
     if not editorPanel or not selectedEditorFrame then return end
-    local cx, cy = selectedEditorFrame:GetCenter()
-    if cx and cy then
-        local ux, uy = UIParent:GetCenter()
-        local xStr = string.format("%.1f", cx - (ux or 0))
-        local yStr = string.format("%.1f", cy - (uy or 0))
+    local x, y = GetFrameOffsetFromUIParent(selectedEditorFrame)
+    if x and y then
+        local xStr = string.format("%.1f", x)
+        local yStr = string.format("%.1f", y)
         -- Only update text if the EditBox is not focused (user may be typing)
         if not editorPanel.xValue:HasFocus() then
             editorPanel.xValue:SetText(xStr)
@@ -626,12 +637,11 @@ end
 local function NudgeSelectedFrame(dx, dy)
     if not selectedEditorFrame then return end
 
-    local cx, cy = selectedEditorFrame:GetCenter()
-    local ux, uy = UIParent:GetCenter()
-    if not cx or not cy or not ux or not uy then return end
+    local relX, relY = GetFrameOffsetFromUIParent(selectedEditorFrame)
+    if not relX or not relY then return end
 
-    local relX = (cx - ux) + dx
-    local relY = (cy - uy) + dy
+    relX = relX + dx
+    relY = relY + dy
 
     selectedEditorFrame:ClearAllPoints()
     selectedEditorFrame:SetPoint("CENTER", UIParent, "CENTER", relX, relY)
