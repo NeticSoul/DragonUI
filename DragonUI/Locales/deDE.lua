@@ -469,12 +469,6 @@ L["Error in SafeCall:"] = "Fehler in SafeCall:"
 
 L["Copy Text"] = "Text kopieren"
 
--- BNet Toast Module
-L["BNet Toast"] = "BNet Benachrichtigung"
+-- Version Check Module
 L["Version Check"] = "Versionsprüfung"
 L["Broadcast and detect addon version updates across group members"] = "Erkennt Addon-Updates zwischen Gruppenmitgliedern durch Senden und Empfangen der Version"
-L["Friend online/offline notifications with Battle.net toasts and chat messages"] = "Freunde Online/Offline Benachrichtigungen über Battle.net Toasts und Chatnachrichten"
-L["Position & Scale"] = "Position & Skalierung"
-L["Scale of the BNet toast frame."] = "Skalierung des Battle.net-Benachrichtigungsrahmens."
-L["Horizontal position of the BNet toast from the screen center. Negative values move left, positive values move right."] = "Horizontale Position der Battle.net-Benachrichtigung ab Bildschirmmitte. Negative Werte bewegen nach links, positive nach rechts."
-L["Vertical offset of the BNet toast frame. Negative values move down, positive values move up."] = "Vertikaler Versatz des Battle.net-Benachrichtigungsrahmens. Negative Werte bewegen nach unten, positive nach oben."

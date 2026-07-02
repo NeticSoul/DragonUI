@@ -468,12 +468,6 @@ L["Error in SafeCall:"] = "SafeCall ì˜¤ë¥˜:"
 L["Double-Click to Copy"] = "|cff33ff11ë”ë¸” í´ë¦­|rí•˜ì—¬ ë³µì‚¬"
 L["Copy Text"] = "í…ìŠ¤íŠ¸ ë³µì‚¬"
 
--- BNet Toast Module
-L["BNet Toast"] = "BNet 알림"
-L["Version Check"] = true
-L["Broadcast and detect addon version updates across group members"] = true
-L["Friend online/offline notifications with Battle.net toasts and chat messages"] = "Battle.net 토스트 및 채팅 메시지로 친구 온라인/오프라인 알림"
-L["Position & Scale"] = "위치 및 크기"
-L["Scale of the BNet toast frame."] = "배틀넷 알림 프레임의 크기 비율입니다."
-L["Horizontal position of the BNet toast from the screen center. Negative values move left, positive values move right."] = "화면 중앙에서 배틀넷 알림의 가로 위치입니다. 음수는 왼쪽, 양수는 오른쪽으로 이동합니다."
-L["Vertical offset of the BNet toast frame. Negative values move down, positive values move up."] = "배틀넷 알림 프레임의 세로 오프셋입니다. 음수는 아래로, 양수는 위로 이동합니다."
+-- Version Check Module
+L["Version Check"] = "버전 확인"
+L["Broadcast and detect addon version updates across group members"] = "그룹원 간 애드온 버전 업데이트를 감지하고 방송합니다"

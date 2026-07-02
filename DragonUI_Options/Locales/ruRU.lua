@@ -1385,8 +1385,8 @@ L["Size of debuff icons on nameplates."] = "Размер значков отри
 L["Totem Icon Position"] = "Положение значка тотема"
 
 -- Version Check
-L["Version Check"] = true
-L["Broadcast and detect addon version updates across group members."] = true
+L["Version Check"] = "Проверка версий"
+L["Broadcast and detect addon version updates across group members."] = "Обнаруживает обновления аддона среди участников группы, отправляя и получая версию."
 
 -- Search
 

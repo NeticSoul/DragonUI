@@ -1384,8 +1384,8 @@ L["Size of debuff icons on nameplates."] = "姓名板上减益图标的大小。
 L["Totem Icon Position"] = "图腾图标位置"
 
 -- Version Check
-L["Version Check"] = true
-L["Broadcast and detect addon version updates across group members."] = true
+L["Version Check"] = "版本检查"
+L["Broadcast and detect addon version updates across group members."] = "检测队伍成员间插件版本更新，通过广播和接收版本信息。"
 
 -- Search
 
