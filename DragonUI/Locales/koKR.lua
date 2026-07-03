@@ -467,3 +467,7 @@ L["Error in SafeCall:"] = "SafeCall ì˜¤ë¥˜:"
 
 L["Double-Click to Copy"] = "|cff33ff11ë”ë¸” í´ë¦­|rí•˜ì—¬ ë³µì‚¬"
 L["Copy Text"] = "í…ìŠ¤íŠ¸ ë³µì‚¬"
+
+-- Version Check Module
+L["Version Check"] = "버전 확인"
+L["Broadcast and detect addon version updates across group members"] = "그룹원 간 애드온 버전 업데이트를 감지하고 방송합니다"

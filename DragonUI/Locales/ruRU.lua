@@ -468,3 +468,7 @@ L["Reputation: "] = "Репутация: "
 L["Error in SafeCall:"] = "Ошибка в SafeCall:"
 
 L["Copy Text"] = "Копировать текст"
+
+
+L["Version Check"] = "Проверка версий"
+L["Broadcast and detect addon version updates across group members"] = "Обнаруживает обновления аддона среди участников группы, отправляя и получая версию"

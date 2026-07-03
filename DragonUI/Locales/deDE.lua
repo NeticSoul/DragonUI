@@ -468,3 +468,7 @@ L["Reputation: "] = "Ruf: "
 L["Error in SafeCall:"] = "Fehler in SafeCall:"
 
 L["Copy Text"] = "Text kopieren"
+
+-- Version Check Module
+L["Version Check"] = "Versionsprüfung"
+L["Broadcast and detect addon version updates across group members"] = "Erkennt Addon-Updates zwischen Gruppenmitgliedern durch Senden und Empfangen der Version"

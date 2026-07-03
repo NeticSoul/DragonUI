@@ -106,3 +106,8 @@ L["Sort"] = "Organizar"
 L["Click to sort items in the currently open guild bank tab."] = "Clique para organizar os itens na aba do banco da guilda atualmente aberta."
 L["Never moves items between tabs."] = "Nunca move itens entre abas."
 L["Sort Guild Bank Tab"] = "Organizar aba do banco da guilda"
+
+-- Version Check Module
+L["Version Check"] = "Verificação de versão"
+L["Broadcast and detect addon version updates across group members"] = "Detecta atualizações de versão do addon entre membros do grupo transmitindo e recebendo a versão"
+

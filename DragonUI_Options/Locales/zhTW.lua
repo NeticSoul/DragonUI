@@ -1384,6 +1384,10 @@ L["Show remaining debuff time on each debuff icon."] = "在每個減益圖示上
 L["Size of debuff icons on nameplates."] = "名牌上減益圖示的大小。"
 L["Totem Icon Position"] = "圖騰圖示位置"
 
+-- Version Check
+L["Version Check"] = "版本檢查"
+L["Broadcast and detect addon version updates across group members."] = "檢測隊伍成員間插件版本更新，通過廣播和接收版本資訊。"
+
 -- Search
 
 L["Search settings..."] = "搜尋設定..."

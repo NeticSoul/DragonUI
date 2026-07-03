@@ -499,3 +499,7 @@ L["Error in SafeCall:"] = "SafeCall 出错："
 L["Double-Click to Copy"] = "双击复制"
 L["Copy Text"] = "复制文本"
 L["URL"] = "URL"
+
+-- Version Check Module
+L["Version Check"] = "版本检查"
+L["Broadcast and detect addon version updates across group members"] = "检测队伍成员间插件版本更新，通过广播和接收版本信息"

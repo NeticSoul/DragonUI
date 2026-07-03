@@ -888,6 +888,9 @@ local defaults = {
                 animated_loss = true, -- Animated red health loss bar on player frame
                 builder_spender = false, -- Mana gain/loss glow feedback (experimental)
                 missing_health = false -- Show missing health deficit text on health bars
+            },
+            versioncheck = {
+                enabled = true, -- Cross-player version broadcast and update detection
             }
         },
 

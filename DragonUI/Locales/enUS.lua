@@ -500,3 +500,6 @@ L["Error in SafeCall:"] = true
 L["Double-Click to Copy"] = true
 L["Copy Text"] = true
 
+-- Version Check Module
+L["Version Check"] = true
+L["Broadcast and detect addon version updates across group members"] = true

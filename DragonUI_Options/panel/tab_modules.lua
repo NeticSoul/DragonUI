@@ -182,6 +182,12 @@ local function BuildModulesTab(scroll)
         moduleName = "keybinding",
     })
 
+    ModuleToggle(uiSection, {
+        label = LO["Version Check"],
+        desc = LO["Broadcast and detect addon version updates across group members."],
+        moduleName = "versioncheck",
+    })
+
     -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================

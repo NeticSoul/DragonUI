@@ -126,6 +126,7 @@ L["Item Quality Borders"] = true
 L["Enable Enhanced Tooltips"] = true
 L["KeyBind Mode"] = true
 L["Quest Tracker"] = true
+L["Version Check"] = true
 
 -- Module toggle descriptions
 L["Enable DragonUI player castbar. When disabled, shows default Blizzard castbar."] = true
@@ -232,6 +233,7 @@ L["Aura icon customization settings reset."] = true
 
 L["DragonUI quest tracker positioning and styling."] = true
 L["LibKeyBound integration for intuitive hover + key press binding."] = true
+L["Broadcast and detect addon version updates across group members."] = true
 
 -- Toggle keybinding mode description
 L["Toggle keybinding mode. Hover over action buttons and press keys to bind them instantly. Press ESC to clear bindings."] = true
