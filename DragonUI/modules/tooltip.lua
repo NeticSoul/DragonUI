@@ -57,10 +57,8 @@ local FACTION_COLORS = {
 -- ============================================================================
 
 local HEALTHBAR_HEIGHT = 6
-local HEALTHBAR_PADDING = -5  -- space between text and bar
+local HEALTHBAR_GAP = 4  -- desired clearance between last text line and bar top
 local HEALTHBAR_BOTTOM_PAD = 8  -- space between bar and tooltip bottom edge
-local HEALTHBAR_TOTAL = HEALTHBAR_HEIGHT + HEALTHBAR_PADDING + HEALTHBAR_BOTTOM_PAD
-local HEALTHBAR_SINGLE_LINE_EXTRA = 4 -- extra gap when tooltip only has a name line
 local TOOLTIP_WIDGET_ANCHOR = "BOTTOMRIGHT"
 local TOOLTIP_WIDGET_POSX = -90
 local TOOLTIP_WIDGET_POSY = 100
@@ -94,9 +92,7 @@ local function StyleHealthBar()
     TooltipModule.healthBarStyled = true
 end
 
--- Extend tooltip height to make room for the health bar inside the border.
--- Uses a one-frame OnUpdate delay so the resize applies AFTER Blizzard's
--- internal layout pass (which can override an immediate SetHeight).
+-- Deferred one frame so the resize applies after Blizzard's own layout pass, which would otherwise override an immediate SetHeight.
 local function AdjustTooltipForHealthBar(tooltip)
     if not tooltip or not GameTooltipStatusBar then return end
     if not GameTooltipStatusBar:IsShown() then return end
@@ -108,13 +104,19 @@ local function AdjustTooltipForHealthBar(tooltip)
         -- Restore original OnUpdate first
         self:SetScript("OnUpdate", orig)
         self.__DragonUI_adjustPending = false
-        -- Now extend height — Blizzard's layout is done at this point
-        local extra = 0
-        if (self:NumLines() or 0) <= 1 then
-            extra = HEALTHBAR_SINGLE_LINE_EXTRA
+
+        -- Grow only by what's actually missing, measured, not guessed per line count.
+        local neededDrop = HEALTHBAR_GAP + HEALTHBAR_HEIGHT + HEALTHBAR_BOTTOM_PAD
+        local delta = neededDrop
+        local lastLine = _G["GameTooltipTextLeft" .. (self:NumLines() or 1)]
+        local lastBottom = lastLine and lastLine:GetBottom()
+        local tooltipBottom = self:GetBottom()
+        if lastBottom and tooltipBottom then
+            delta = neededDrop - (lastBottom - tooltipBottom)
         end
-        local h = self:GetHeight()
-        self:SetHeight(h + HEALTHBAR_TOTAL + extra)
+        if delta > 0 then
+            self:SetHeight(self:GetHeight() + delta)
+        end
     end)
 end
 
@@ -423,6 +425,16 @@ local function ApplyTooltipSystem()
             end
         end)
         TooltipModule.hooks["SetUnit"] = true
+    end
+
+    -- GameObject tooltips (e.g. BG doors) never call SetUnit, so OnTooltipSetUnit never fires for them — hook the bar's own OnShow instead.
+    if not TooltipModule.hooks["BarShow"] then
+        GameTooltipStatusBar:HookScript("OnShow", function(self)
+            if not IsModuleEnabled() then return end
+            StyleHealthBar()
+            AdjustTooltipForHealthBar(GameTooltip)
+        end)
+        TooltipModule.hooks["BarShow"] = true
     end
 
     -- Hook GameTooltipStatusBar OnValueChanged to persist class color through
