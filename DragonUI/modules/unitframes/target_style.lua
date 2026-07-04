@@ -43,6 +43,7 @@ function UF.TargetStyle.Create(opts)
     local NameBackground  = opts.nameBackground
     local namePrefix      = opts.namePrefix
     local DeadText        = opts.deadText or _G[namePrefix .. "FrameTextureFrameDeadText"]
+    local HighLevelTexture = _G[namePrefix .. "FrameTextureFrameHighLevelTexture"]
     local defaultPos      = opts.defaultPos
 
     -- Shared texture / constant tables from uf_core
@@ -385,6 +386,10 @@ function UF.TargetStyle.Create(opts)
         if LevelText then
             LevelText:ClearAllPoints()
             LevelText:SetPoint("BOTTOMRIGHT", HealthBar, "TOPLEFT", 18, 3)
+        end
+        if HighLevelTexture and HealthBar then
+            HighLevelTexture:ClearAllPoints()
+            HighLevelTexture:SetPoint("BOTTOMRIGHT", HealthBar, "TOPLEFT", 18, 0)
         end
         if NameBackground then
             ApplyNameBackgroundLayout()
@@ -875,6 +880,10 @@ function UF.TargetStyle.Create(opts)
                     LevelText:SetFont(font, opts.levelFontSize, flags)
                 end
             end
+        end
+        if HighLevelTexture and HealthBar then
+            HighLevelTexture:ClearAllPoints()
+            HighLevelTexture:SetPoint("BOTTOMRIGHT", HealthBar, "TOPLEFT", 18, 0)
         end
 
         if DeadText then
