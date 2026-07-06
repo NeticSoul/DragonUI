@@ -425,6 +425,13 @@ end
 
 -- Extended unit tokens (nameplate1..40, arena/party)
 
+-- Probe loops ran "nameplate" .. i per token per probe (40 string allocations
+-- per probe per plate); the token names never change.
+local NAMEPLATE_TOKEN_NAMES = {}
+for i = 1, 40 do
+    NAMEPLATE_TOKEN_NAMES[i] = "nameplate" .. i
+end
+
 local MIRROR_IMAGE_MAX_HEALTH_THRESHOLD = 10000
 
 function identity.GetPlateMaxHealth(plateData)
@@ -739,11 +746,26 @@ function identity.UpdatePlateUnitToken(plateData)
     -- Open-world fallback: nameplate1..40 probe.
     local now = GetTime and GetTime() or 0
     if not plateData._tokenProbeAt or now >= plateData._tokenProbeAt then
+        -- Global cap on top of the per-plate 0.2s cooldown: a screen of
+        -- unresolved plates otherwise bursts thousands of unit-API probe steps
+        -- per second. A deferred plate keeps its cooldown unconsumed and
+        -- retries on a later tick.
+        local tick = NP.module._engineFrame
+        if tick then
+            if NP.module._tokenProbeTick ~= tick then
+                NP.module._tokenProbeTick = tick
+                NP.module._tokenProbeBudget = 0
+            end
+            if NP.module._tokenProbeBudget >= (C.TOKEN_PROBE_PLATES_PER_TICK or 3) then
+                return nil
+            end
+            NP.module._tokenProbeBudget = NP.module._tokenProbeBudget + 1
+        end
         plateData._tokenProbeAt = now + 0.2
         local matchedToken = nil
         local matchCount = 0
         for i = 1, 40 do
-            local token = "nameplate" .. i
+            local token = NAMEPLATE_TOKEN_NAMES[i]
             if UnitExists(token)
                 and identity.UnitNameMatchesPlate(token, plateData)
                 and identity.UnitMatchesPlateHealth(token, plateData) then
@@ -948,19 +970,47 @@ function identity.FindPlateForGroupGUID(guid, fallbackName)
     return found
 end
 
+local GROUP_TARGET_TOKENS_PARTY = {}
+for i = 1, 4 do
+    GROUP_TARGET_TOKENS_PARTY[i] = "party" .. i .. "target"
+end
+local GROUP_TARGET_TOKENS_RAID = {}
+for i = 1, 40 do
+    GROUP_TARGET_TOKENS_RAID[i] = "raid" .. i .. "target"
+end
+
 local function ForEachGroupTargetUnit(callback)
     for i = 1, GetNumPartyMembers() do
-        local unit = "party" .. i .. "target"
+        local unit = GROUP_TARGET_TOKENS_PARTY[i] or ("party" .. i .. "target")
         if UnitExists(unit) then
             callback(unit)
         end
     end
     for i = 1, GetNumRaidMembers() do
-        local unit = "raid" .. i .. "target"
+        local unit = GROUP_TARGET_TOKENS_RAID[i] or ("raid" .. i .. "target")
         if UnitExists(unit) then
             callback(unit)
         end
     end
+end
+
+-- Same token order/priority as ForEachGroupTargetUnit (party1..4 then raid1..40,
+-- first match wins), inlined so the per-plate 0.2s probe neither allocates a
+-- closure nor keeps scanning group members after its match is found.
+local function FindGroupTargetUnitForPlate(plateData)
+    for i = 1, GetNumPartyMembers() do
+        local unit = GROUP_TARGET_TOKENS_PARTY[i] or ("party" .. i .. "target")
+        if UnitExists(unit) and identity.FindPlateForUnit(unit) == plateData then
+            return unit
+        end
+    end
+    for i = 1, GetNumRaidMembers() do
+        local unit = GROUP_TARGET_TOKENS_RAID[i] or ("raid" .. i .. "target")
+        if UnitExists(unit) and identity.FindPlateForUnit(unit) == plateData then
+            return unit
+        end
+    end
+    return nil
 end
 
 function identity.FindPlateForUnit(unit, allowFullHealthNPC)
@@ -998,16 +1048,7 @@ function identity.UpdatePlateGroupTargetMatch(plateData, force)
         end
         plateData._nextGroupTargetProbeAt = now + 0.2
     end
-    local match
-    ForEachGroupTargetUnit(function(unit)
-        if match then
-            return
-        end
-        local owner = identity.FindPlateForUnit(unit)
-        if owner == plateData then
-            match = unit
-        end
-    end)
+    local match = FindGroupTargetUnitForPlate(plateData)
     plateData._matchedCastUnit = match
     if match and not NP.state.GetPlateGUID(plateData) then
         local guid = UnitGUID(match)

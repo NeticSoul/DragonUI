@@ -66,6 +66,9 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._lastDirectHover = nil
     plateData._layoutSig = nil
     plateData._lastAppliedVisualAlpha = nil
+    if NP.gather and NP.gather.InvalidatePlateGates then
+        NP.gather.InvalidatePlateGates(plateData)
+    end
 
     -- Fresh native bar color (reaction source).
     NP.native_style.CaptureBarColor(plateData)

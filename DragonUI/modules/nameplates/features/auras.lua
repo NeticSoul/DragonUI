@@ -435,40 +435,69 @@ local CCSpellList = {
     [47528] = 5, -- Mind Freeze
 }
 
+local function DebuffPriorityComparator(a, b)
+    local pa = (a.spellId and CCSpellList[a.spellId]) or 0
+    local pb = (b.spellId and CCSpellList[b.spellId]) or 0
+    if pa ~= pb then
+        return pa > pb
+    end
+    return a.expiration < b.expiration
+end
+
+-- Result array and per-aura slots are reused across calls: callers (SyncDebuffs
+-- render, per-host expiry poll) consume the list synchronously and only copy
+-- scalar fields out of it, and this ran once per aura CLEU event plus every
+-- 0.15s per host — one table + one closure + one table per aura, per call.
+local cachedDebuffPool = {}
+local cachedDebuffResult = {}
+
 function DebuffRuntime.GetCachedDebuffs(guid, maxCount, cfg)
     if not guid or not NP.state.PlateAuraCache[guid] then return nil end
     local now = GetTime()
-    local result = {}
+    local result = cachedDebuffResult
+    for i = #result, 1, -1 do
+        result[i] = nil
+    end
+    local n = 0
     for _, data in pairs(NP.state.PlateAuraCache[guid]) do
         local active = data.expiration and (data.expiration == 0 or data.expiration > now)
         if active and DebuffRuntime.PassesFilters(cfg, data) then
             local _, _, tex = GetSpellInfo(data.spellId)
-            tinsert(result, {
-                texture = data.texture or tex,
-                count = data.count,
-                expiration = data.expiration,
-                debuffType = data.debuffType,
-                spellId = data.spellId,
-            })
+            n = n + 1
+            local slot = cachedDebuffPool[n]
+            if not slot then
+                slot = {}
+                cachedDebuffPool[n] = slot
+            end
+            slot.texture = data.texture or tex
+            slot.count = data.count
+            slot.expiration = data.expiration
+            slot.debuffType = data.debuffType
+            slot.spellId = data.spellId
+            result[n] = slot
         end
     end
-    sort(result, function(a, b)
-        local pa = (a.spellId and CCSpellList[a.spellId]) or 0
-        local pb = (b.spellId and CCSpellList[b.spellId]) or 0
-        if pa ~= pb then
-            return pa > pb
-        end
-        return a.expiration < b.expiration
-    end)
-    if maxCount and #result > maxCount then
-        for i = maxCount + 1, #result do
-            tremove(result)
+    sort(result, DebuffPriorityComparator)
+    if maxCount and n > maxCount then
+        for i = maxCount + 1, n do
+            result[i] = nil
         end
     end
     return result
 end
 
 -- UnitDebuff scan when unitid is available
+
+local knownCastersScratch = {}
+
+local RAID_TARGET_TOKENS = {}
+for i = 1, 40 do
+    RAID_TARGET_TOKENS[i] = "raid" .. i .. "target"
+end
+local PARTY_TARGET_TOKENS = {}
+for i = 1, 4 do
+    PARTY_TARGET_TOKENS[i] = "party" .. i .. "target"
+end
 
 function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     if not unit or not UnitExists(unit) then
@@ -484,7 +513,10 @@ function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     end
 
     -- Preserve known casterGUID across rescans when UnitDebuff returns nil caster.
-    local knownCasters = {}
+    -- Scratch table: consumed synchronously below, and this runs per UNIT_AURA
+    -- and per aura CLEU event.
+    local knownCasters = knownCastersScratch
+    wipe(knownCasters)
     if NP.state.PlateAuraCache[guid] then
         for _, data in pairs(NP.state.PlateAuraCache[guid]) do
             if data.spellId and data.casterGUID then
@@ -535,17 +567,23 @@ function DebuffRuntime.UpdateAuraCacheByLookup(guid)
         return DebuffRuntime.UpdateAuraCacheFromUnit("focus") ~= nil
     end
     -- Group-target lookup (GroupCache model): a party/raid member's target is
-    -- an authoritative unitid for this GUID.
-    for i = 1, GetNumPartyMembers() do
-        local targetUnit = "party" .. i .. "target"
-        if UnitExists(targetUnit) and UnitGUID(targetUnit) == guid then
-            return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit) ~= nil
+    -- an authoritative unitid for this GUID. In a raid the partyN units are a
+    -- subset of raidN, so probing both doubled the unit-API calls per aura
+    -- CLEU event for no additional coverage.
+    local numRaid = GetNumRaidMembers() or 0
+    if numRaid > 0 then
+        for i = 1, numRaid do
+            local targetUnit = RAID_TARGET_TOKENS[i] or ("raid" .. i .. "target")
+            if UnitExists(targetUnit) and UnitGUID(targetUnit) == guid then
+                return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit) ~= nil
+            end
         end
-    end
-    for i = 1, GetNumRaidMembers() do
-        local targetUnit = "raid" .. i .. "target"
-        if UnitExists(targetUnit) and UnitGUID(targetUnit) == guid then
-            return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit) ~= nil
+    else
+        for i = 1, GetNumPartyMembers() do
+            local targetUnit = PARTY_TARGET_TOKENS[i] or ("party" .. i .. "target")
+            if UnitExists(targetUnit) and UnitGUID(targetUnit) == guid then
+                return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit) ~= nil
+            end
         end
     end
     return false
@@ -553,14 +591,38 @@ end
 
 -- Aura widget render and per-icon expiration polling
 
+-- Debuff cooldown text is polled per icon per host tick, but the displayed
+-- value only changes ~once/second (seconds tier) or ~once/minute (minutes
+-- tier); pool the formatted strings instead of re-allocating tostring()..
+-- concat results for values that repeat across many polls. Bounded: the
+-- seconds tier is a fixed 60-entry table, and the minutes tier stops caching
+-- (but still computes/returns correctly) past MINUTES_CACHE_MAX so a stray
+-- huge duration can't grow the cache unbounded.
+local SECONDS_TEXT_CACHE = {}
+for i = 1, 60 do
+    SECONDS_TEXT_CACHE[i] = tostring(i)
+end
+local MINUTES_TEXT_CACHE = {}
+local MINUTES_CACHE_MAX = 180
+
 local function FormatAuraTimeLeft(seconds)
     if not seconds or seconds <= 0 then
         return ""
     end
     if seconds > 60 then
-        return tostring(math.ceil(seconds / 60)) .. "m"
+        local minutes = math.ceil(seconds / 60)
+        local cached = MINUTES_TEXT_CACHE[minutes]
+        if cached then
+            return cached
+        end
+        local text = tostring(minutes) .. "m"
+        if minutes <= MINUTES_CACHE_MAX then
+            MINUTES_TEXT_CACHE[minutes] = text
+        end
+        return text
     end
-    return tostring(math.ceil(seconds))
+    local wholeSeconds = math.ceil(seconds)
+    return SECONDS_TEXT_CACHE[wholeSeconds] or tostring(wholeSeconds)
 end
 
 local function ApplyCooldownTextAnchor(icon, anchor)
@@ -1023,9 +1085,11 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
         icon.expiration = aura.expiration
         ApplyPriorityHighlight(icon, aura, cfg)
         ApplySwipeCooldown(icon, aura, cfg)
-        icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cooldownFontSize, "OUTLINE")
-        -- Keep the poller's SetFont/SetText guards coherent from the first tick.
-        icon._appliedCdFontSize = cooldownFontSize
+        -- SetFont rebuilds the font object; re-apply only on size change.
+        if icon._appliedCdFontSize ~= cooldownFontSize then
+            icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cooldownFontSize, "OUTLINE")
+            icon._appliedCdFontSize = cooldownFontSize
+        end
         ApplyCooldownTextAnchor(icon, cooldownTextAnchor)
         if showCooldown then
             local txt = FormatAuraTimeLeft((aura.expiration or 0) - GetTime())
@@ -1187,6 +1251,8 @@ local AURA_COMBATLOG_EVENTS = {
     SPELL_AURA_BROKEN = true,
     SPELL_AURA_BROKEN_SPELL = true,
 }
+-- Exported so the engine's CLEU dispatch can gate before the handler call.
+NP.auras.AURA_COMBATLOG_EVENTS = AURA_COMBATLOG_EVENTS
 
 function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellId, spellName, spellSchool, ...)
     if not AURA_COMBATLOG_EVENTS[event] then

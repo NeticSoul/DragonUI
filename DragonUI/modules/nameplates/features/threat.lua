@@ -44,19 +44,34 @@ function NP.threat.IsThreatSuppressedContext()
 end
 
 -- With unit token: UnitDetailedThreatSituation; else native glow color buckets.
+-- Health tint, glow sync and the transition scan each resolve the same plate
+-- within one engine tick; the unit resolution behind it is the expensive part,
+-- so the result is memoized per tick.
 function NP.threat.ResolveAggroStatus(plateData)
     if not plateData then
         return 0
     end
+    local tick = NP.module._engineFrame
+    if tick and plateData._aggroStatusTick == tick then
+        return plateData._aggroStatus
+    end
+    local status
     local unit = NP.identity and NP.identity.ResolvePlateCastUnit
         and NP.identity.ResolvePlateCastUnit(plateData)
     if unit and UnitExists(unit) and not UnitIsUnit(unit, "player") and UnitDetailedThreatSituation then
-        local _, status = UnitDetailedThreatSituation("player", unit)
-        if status ~= nil then
-            return status
+        local _, detailed = UnitDetailedThreatSituation("player", unit)
+        if detailed ~= nil then
+            status = detailed
         end
     end
-    return NP.threat.GetAggroStatus(plateData.threat)
+    if status == nil then
+        status = NP.threat.GetAggroStatus(plateData.threat)
+    end
+    if tick then
+        plateData._aggroStatusTick = tick
+        plateData._aggroStatus = status
+    end
+    return status
 end
 
 function NP.threat.IsTankMode()

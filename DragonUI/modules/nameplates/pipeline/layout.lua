@@ -76,6 +76,8 @@ function NP.layout.RestorePlateDepthOrdering(plateData)
         NP.auras.ApplyDebuffIconFrameLevels(plateData.minaDebuffHost)
     end
     plateData._depthOrderingApplied = nil
+    plateData._depthAppliedIndex = nil
+    plateData._depthAppliedCfgRev = nil
 end
 
 local function RestoreDepthFrameLevels()
@@ -200,41 +202,57 @@ function NP.layout.UpdateDepthOrdering(elapsed)
 
     table.sort(ordered, DepthSortComparator)
 
+    local cfgRev = NP.module._cfgRev or 0
     for index = 1, #ordered do
         local plateData = ordered[index]
         local plate = plateData.plate
         local base = index * DEPTH_LEVEL_STEP
-        if cfg.showClickbox == true and plate and plate.SetFrameLevel then
-            SetDepthFrameLevel(plateData, plate, base + 1)
-        elseif plateData._depthOriginalLevels and plateData._depthOriginalLevels[plate] ~= nil then
-            plate:SetFrameLevel(plateData._depthOriginalLevels[plate])
-            plateData._depthOriginalLevels[plate] = nil
-        end
-        if plateData.visualRoot and plateData.visualRoot.SetFrameLevel then
-            SetDepthFrameLevel(plateData, plateData.visualRoot, base)
-        end
-        for key, offset in pairs(LEVEL_OFFSETS) do
-            local frame = plateData[key]
-            if frame and frame.SetFrameLevel then
-                SetDepthFrameLevel(plateData, frame, base + offset)
+        -- A plate whose band index is unchanged already holds these exact levels;
+        -- skip the ~16 guard reads / SetFrameLevel calls. _depthDirty marks late
+        -- widget creation (cast bar, combo host); cfgRev covers option toggles.
+        if plateData._depthAppliedIndex == index
+            and plateData._depthAppliedCfgRev == cfgRev
+            and not plateData._depthDirty then
+            -- BGHframe can attach mid-life from the external addon; keep it synced.
+            if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
+                SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
             end
-        end
-        -- Debuff icons are children of minaDebuffHost created after this point;
-        -- re-level them so the cooldown swipe stays in the plate's band.
-        if plateData.minaDebuffHost and NP.auras and NP.auras.ApplyDebuffIconFrameLevels then
-            NP.auras.ApplyDebuffIconFrameLevels(plateData.minaDebuffHost)
-        end
-        if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
-            SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
-        end
-        if plateData.minaCastSpark and plateData.minaCastSpark.SetFrameLevel and plateData.minaCast then
-            SetDepthFrameLevel(plateData, plateData.minaCastSpark,
-                (plateData.minaCast:GetFrameLevel() or (base + 2)) + 3)
-        end
-        if plateData.minaCast and plateData.minaCast.minaCastShield
-            and plateData.minaCast.minaCastShield.SetFrameLevel then
-            SetDepthFrameLevel(plateData, plateData.minaCast.minaCastShield,
-                (plateData.minaCast:GetFrameLevel() or (base + 2)) - 1)
+        else
+            plateData._depthAppliedIndex = index
+            plateData._depthAppliedCfgRev = cfgRev
+            plateData._depthDirty = nil
+            if cfg.showClickbox == true and plate and plate.SetFrameLevel then
+                SetDepthFrameLevel(plateData, plate, base + 1)
+            elseif plateData._depthOriginalLevels and plateData._depthOriginalLevels[plate] ~= nil then
+                plate:SetFrameLevel(plateData._depthOriginalLevels[plate])
+                plateData._depthOriginalLevels[plate] = nil
+            end
+            if plateData.visualRoot and plateData.visualRoot.SetFrameLevel then
+                SetDepthFrameLevel(plateData, plateData.visualRoot, base)
+            end
+            for key, offset in pairs(LEVEL_OFFSETS) do
+                local frame = plateData[key]
+                if frame and frame.SetFrameLevel then
+                    SetDepthFrameLevel(plateData, frame, base + offset)
+                end
+            end
+            -- Debuff icons are children of minaDebuffHost created after this point;
+            -- re-level them so the cooldown swipe stays in the plate's band.
+            if plateData.minaDebuffHost and NP.auras and NP.auras.ApplyDebuffIconFrameLevels then
+                NP.auras.ApplyDebuffIconFrameLevels(plateData.minaDebuffHost)
+            end
+            if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
+                SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
+            end
+            if plateData.minaCastSpark and plateData.minaCastSpark.SetFrameLevel and plateData.minaCast then
+                SetDepthFrameLevel(plateData, plateData.minaCastSpark,
+                    (plateData.minaCast:GetFrameLevel() or (base + 2)) + 3)
+            end
+            if plateData.minaCast and plateData.minaCast.minaCastShield
+                and plateData.minaCast.minaCastShield.SetFrameLevel then
+                SetDepthFrameLevel(plateData, plateData.minaCast.minaCastShield,
+                    (plateData.minaCast:GetFrameLevel() or (base + 2)) - 1)
+            end
         end
         NP.module._depthOrderingApplied = true
     end
@@ -349,12 +367,13 @@ end
 
 -- Retail plate scale
 
-function NP.layout.ApplyRetailPlateScale(plateData, context, cfg)
+-- isTarget is a plain boolean; this runs per plate per frame in retail mode,
+-- so no context table.
+function NP.layout.ApplyRetailPlateScale(plateData, isTarget, cfg)
     cfg = cfg or NP.config.GetCfg()
     local scale = 1
     local targetScale = cfg.retailTargetScale or 1
     local friendlyScale = cfg.retailFriendlyScale or 1
-    local isTarget = context and context.isTarget
     local reaction = NP.native_style.GetPlateReaction(plateData)
     local isFriendly = reaction == "FRIENDLY"
 
@@ -430,6 +449,23 @@ local function PlateWantsClamp(plateData)
     return false
 end
 
+-- Clamp state is recomputed every frame but the values only change while the
+-- plate actually moves; SetClampedToScreen/SetClampRectInsets invalidate frame
+-- layout, so skip the write when nothing changed. Values are recomputed from
+-- the same inputs, so exact float equality is the correct static test.
+local function SetPlateClamp(plateData, plate, clamped, l, r, t, b)
+    if plateData._clampAppliedState == clamped
+        and plateData._clampAppliedL == l and plateData._clampAppliedR == r
+        and plateData._clampAppliedT == t and plateData._clampAppliedB == b then
+        return
+    end
+    plateData._clampAppliedState = clamped
+    plateData._clampAppliedL, plateData._clampAppliedR = l, r
+    plateData._clampAppliedT, plateData._clampAppliedB = t, b
+    plate:SetClampedToScreen(clamped)
+    plate:SetClampRectInsets(l, r, t, b)
+end
+
 -- Simple clamp (no retail stacking).
 -- Reapply every frame: recycled frames do not preserve clamp state.
 -- Bottom inset is anchor-relative, not screen pixels (plates sit in extended WorldFrame).
@@ -444,11 +480,10 @@ local function ApplySimpleClamp(plateData)
         local width, height = plate:GetSize()
         local _, _, _, _, y = plate:GetPoint(1)
         y = y or 0
-        plate:SetClampedToScreen(true)
-        plate:SetClampRectInsets(0.5 * width, -0.5 * width, NP.module._clampTopInset or 0, height - y)
+        SetPlateClamp(plateData, plate, true,
+            0.5 * width, -0.5 * width, NP.module._clampTopInset or 0, height - y)
     else
-        plate:SetClampedToScreen(false)
-        plate:SetClampRectInsets(0, 0, 0, 0)
+        SetPlateClamp(plateData, plate, false, 0, 0, 0, 0)
     end
 end
 
@@ -463,8 +498,7 @@ local function ClearRetailStackingForPlate(plateData, data)
     end
     local plate = plateData.plate
     if plate and plate.SetClampRectInsets and plate.SetClampedToScreen then
-        plate:SetClampedToScreen(false)
-        plate:SetClampRectInsets(0, 0, 0, 0)
+        SetPlateClamp(plateData, plate, false, 0, 0, 0, 0)
         plateData._clamped = nil
         plateData._retailStackingApplied = nil
     end
@@ -491,6 +525,10 @@ function NP.layout.ShouldRunRetailStacking()
     return true
 end
 
+-- Reused across per-frame stacking passes; consumed synchronously.
+local stackableScratch = {}
+local activeStackableScratch = {}
+
 local function UpdateRetailStacking()
     local cfg = NP.config.GetCfg()
     local baseScale = cfg.globalScale or 1
@@ -498,8 +536,10 @@ local function UpdateRetailStacking()
     local yspace = (cfg.retailStackingYSpace or 24) * baseScale
     local originY = cfg.retailStackingOriginY or 0
     local freezeMouseover = cfg.retailStackingFreezeMouseover == true
-    local stackable = {}
-    local activeStackable = {}
+    local stackable = stackableScratch
+    local activeStackable = activeStackableScratch
+    wipe(stackable)
+    wipe(activeStackable)
 
     for _, plateData in pairs(NP.module.plates) do
         local plate = plateData and plateData.plate
@@ -552,8 +592,8 @@ local function UpdateRetailStacking()
                 local worldW = NP.module._worldFrameWidth or WorldFrame:GetWidth()
                 local worldH = NP.module._worldFrameNativeHeight
                     or (UIParent and UIParent.GetHeight and UIParent:GetHeight()) or 768
-                plate1:SetClampedToScreen(true)
-                plate1:SetClampRectInsets(-2 * worldW, worldW - cx - width * 0.5,
+                SetPlateClamp(plateData1, plate1, true,
+                    -2 * worldW, worldW - cx - width * 0.5,
                     worldH - cy - height * 0.5, -2 * worldH)
                 plateData1._retailStackingApplied = true
             end
@@ -591,12 +631,13 @@ local function UpdateRetailStacking()
             end
 
             state1.position = newPos
-            plate1:SetClampedToScreen(true)
             -- Clamp target/boss merged into stacking insets.
             if PlateWantsClamp(plateData1) then
-                plate1:SetClampRectInsets(0.5 * width, -0.5 * width, NP.module._clampTopInset or 0, -state1.ypos - newPos - originY + height)
+                SetPlateClamp(plateData1, plate1, true, 0.5 * width, -0.5 * width,
+                    NP.module._clampTopInset or 0, -state1.ypos - newPos - originY + height)
             else
-                plate1:SetClampRectInsets(0.5 * width, -0.5 * width, -height, -state1.ypos - newPos - originY + height)
+                SetPlateClamp(plateData1, plate1, true, 0.5 * width, -0.5 * width,
+                    -height, -state1.ypos - newPos - originY + height)
             end
             plateData1._retailStackingApplied = true
         end
@@ -717,10 +758,13 @@ function NP.layout.EnsureMinaStack(plateData)
     if not plateData.minaCast then
         plateData.minaCast = NP.castbar.CreateCastMinaBar(visualRoot, plateData)
         plateData.minaCast:Hide()
+        -- New level-managed frames; force the next depth pass to re-level this plate.
+        plateData._depthDirty = true
     end
 
     if not plateData.minaPartyCast then
         plateData.minaPartyCast = NP.castbar.CreatePartyCastBar(visualRoot, plateData)
+        plateData._depthDirty = true
     end
 
     if plateData.minaHp then
@@ -838,6 +882,7 @@ function NP.layout.EnsureMinaStack(plateData)
     plateData.minaDebuffHost.icons = {}
 
     ApplyCreationFrameLevels(plateData)
+    plateData._depthDirty = true
 end
 
 -- Elite icon Y: name row above bar, or overlay offset when name sits on bar.

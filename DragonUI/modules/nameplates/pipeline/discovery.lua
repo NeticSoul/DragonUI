@@ -107,19 +107,28 @@ function NP.discovery.EnumerateBlizzardNameplates()
     -- scan tick and every child-count change.
     wipe(scratchChildren)
     local count = FillVararg(scratchChildren, NP.WorldGetChildren(WorldFrame))
+    local registered = NP.module.plates
     for i = 1, count do
         local child = scratchChildren[i]
         if child and not rejected[child] then
-            local frameName = child:GetName()
-            if frameName and C.EXCLUDED_FRAME_NAMES[frameName] then
-                rejected[child] = true
-            elseif NP.discovery.IsBlizzardNameplate(child) then
-                local parts = NP.discovery.ExtractBlizzardPlateParts(child)
-                if parts and parts.plate and parts.healthBar and parts.border then
-                    out[parts.plate] = parts
-                end
+            -- Registered plates skip region matching and parts extraction (the
+            -- parts table is ignored by RegisterPlate for known keys anyway);
+            -- this scan runs at 4 Hz plus every WorldFrame child-count change.
+            local known = registered[child.RealPlate or child]
+            if known and known.plate then
+                out[known.plate] = known
             else
-                rejected[child] = true
+                local frameName = child:GetName()
+                if frameName and C.EXCLUDED_FRAME_NAMES[frameName] then
+                    rejected[child] = true
+                elseif NP.discovery.IsBlizzardNameplate(child) then
+                    local parts = NP.discovery.ExtractBlizzardPlateParts(child)
+                    if parts and parts.plate and parts.healthBar and parts.border then
+                        out[parts.plate] = parts
+                    end
+                else
+                    rejected[child] = true
+                end
             end
         end
     end

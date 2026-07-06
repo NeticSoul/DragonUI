@@ -3,7 +3,8 @@ local NP = addon.Nameplates
 local C = NP.const
 
 -- Nameplates engine: OnUpdate driver, queues, events.
--- One WorldFrame OnUpdate drains weak-key queues (reset > fn > mass > per-plate).
+-- One WorldFrame OnUpdate drains weak-key queues
+-- (reset > fn > mass > budgeted full-refresh > per-plate).
 -- Identity uses fresh alpha each frame. Plate root alpha harvested then forced to 1;
 -- visual alpha and frame levels have single owners (engine / layout).
 
@@ -20,6 +21,10 @@ local weakKey = { __mode = "k" }
 E.massQueue = E.massQueue or setmetatable({}, weakKey)
 E.functionQueue = E.functionQueue or setmetatable({}, weakKey)
 E.targetQueue = E.targetQueue or setmetatable({}, weakKey)
+-- Plates awaiting a full BuildPlateState refresh, drained a few per tick
+-- (see E.ProcessQueues) instead of all at once. Weak-keyed like the queues
+-- above: a plate that stops being tracked simply drops out.
+E.pendingFullRefresh = E.pendingFullRefresh or setmetatable({}, weakKey)
 
 local function ForEachVisiblePlate(func)
     for _, plateData in pairs(NP.module.plates) do
@@ -28,6 +33,10 @@ local function ForEachVisiblePlate(func)
             func(plateData)
         end
     end
+end
+
+local function MarkPendingFullRefresh(plateData)
+    E.pendingFullRefresh[plateData] = true
 end
 
 function E.ResetQueues()
@@ -39,6 +48,9 @@ function E.ResetQueues()
     end
     for plate in pairs(E.targetQueue) do
         E.targetQueue[plate] = nil
+    end
+    for plate in pairs(E.pendingFullRefresh) do
+        E.pendingFullRefresh[plate] = nil
     end
 end
 
@@ -99,7 +111,7 @@ function CB.OnUpdatePower(plateData)
     NP.gather.RefreshPlatePower(plateData, "queue_power")
 end
 
--- Drain: reset > functions > mass-full > mass-partial > per-plate.
+-- Drain: reset > functions > mass-full (budgeted) > mass-partial > per-plate.
 function E.ProcessQueues()
     if E.massQueue[CB.OnResetNameplate] then
         ForEachVisiblePlate(CB.OnResetNameplate)
@@ -116,11 +128,36 @@ function E.ProcessQueues()
         for queuedFunction in pairs(E.massQueue) do
             E.massQueue[queuedFunction] = nil
         end
-        ForEachVisiblePlate(CB.OnUpdateNameplate)
+        -- Full refresh (BuildPlateState) is the heavy path; queue every visible
+        -- plate for the budgeted drain below instead of running it on all of
+        -- them in this same tick.
+        ForEachVisiblePlate(MarkPendingFullRefresh)
     else
         for queuedFunction in pairs(E.massQueue) do
             E.massQueue[queuedFunction] = nil
             ForEachVisiblePlate(queuedFunction)
+        end
+    end
+
+    -- Global heavy-update budget: mass full-refresh events (config change,
+    -- zone transition, PLAYER_TOTEM_UPDATE in a large raid) can mark every
+    -- visible plate at once. Draining all of them through BuildPlateState in a
+    -- single tick is the one-frame spike FruitPlates avoids with a fixed
+    -- per-frame heavy-work cap; spreading the drain across ticks costs nothing
+    -- visible (styling that already happened stays), and light refreshes
+    -- (health/power/castbar/auras, handled above and via targetQueue below)
+    -- are untouched by this budget.
+    if next(E.pendingFullRefresh) then
+        local budget = C.FULL_REFRESH_PLATES_PER_TICK or 8
+        for plateData in pairs(E.pendingFullRefresh) do
+            E.pendingFullRefresh[plateData] = nil
+            if plateData and plateData.plate and plateData.plate.IsShown and plateData.plate:IsShown() then
+                CB.OnUpdateNameplate(plateData)
+            end
+            budget = budget - 1
+            if budget <= 0 then
+                break
+            end
         end
     end
 
@@ -199,7 +236,10 @@ function E.SyncThreatCVar()
         NP.module.savedThreatWarning = GetCVar("threatWarning")
         NP.module.threatCVarApplied = true
     end
-    SetCVar("threatWarning", "3")
+    -- Runs on every scan tick; skip the redundant write when already forced.
+    if GetCVar("threatWarning") ~= "3" then
+        SetCVar("threatWarning", "3")
+    end
 end
 
 function E.SyncEnemyClassColorCVar()
@@ -209,7 +249,10 @@ function E.SyncEnemyClassColorCVar()
         NP.module.savedShowClassColorInNameplate = GetCVar("ShowClassColorInNameplate")
         NP.module.classColorCVarApplied = true
     end
-    SetCVar("ShowClassColorInNameplate", (cfg.enemyPlayerClassColors ~= false) and "1" or "0")
+    local want = (cfg.enemyPlayerClassColors ~= false) and "1" or "0"
+    if GetCVar("ShowClassColorInNameplate") ~= want then
+        SetCVar("ShowClassColorInNameplate", want)
+    end
 end
 
 function E.SyncRetailStackingCVars()
@@ -246,7 +289,9 @@ function E.SyncShowVKeyCastbarCVar()
     if shouldForceOn then
         EnsureSaved()
         NP.module.showVKeyCVarManaged = true
-        SetCVar(cvar, "1")
+        if GetCVar(cvar) ~= "1" then
+            SetCVar(cvar, "1")
+        end
         return
     end
 
@@ -261,6 +306,11 @@ end
 function E.SyncConfigSnapshot()
     local cfg = NP.config.GetCfg()
     NP.castbar.SyncOffTargetMonitorFromConfig(cfg)
+    -- CLEU dispatch flags: read per combat log event, so snapshot instead of
+    -- resolving cfg + monitor mode hundreds of times per second in raids.
+    NP.module._cleuCastbarEnabled = (cfg.showCastBar ~= false)
+    NP.module._cleuCastMonitorActive = NP.module._cleuCastbarEnabled
+        and NP.config.IsOffTargetCastMonitorActive(cfg) or false
     NP.module._opacityEnabled = (cfg.disableNonTargetFade ~= true)
     NP.module._opacityValue = cfg.opacityNonTarget or 0.5
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
@@ -287,6 +337,9 @@ end
 local function EngineOnUpdate(_, elapsed)
     if not NP.config.IsModuleEnabled() or not NP.module.applied then return end
 
+    -- Tick counter for per-frame memoization (threat status resolution).
+    NP.module._engineFrame = (NP.module._engineFrame or 0) + 1
+
     -- 0. Castbar progress on active plates.
     NP.castbar.TickAllPlateCastBars()
 
@@ -299,7 +352,11 @@ local function EngineOnUpdate(_, elapsed)
     -- awesome_wotlk manages plate alpha itself, including its own wall/LoS
     -- occlusion hiding, and forcing it to 1 here was fighting that.
     local skipAlphaForce = C_NamePlate ~= nil
-    local retailCfg = NP.module._retailBehavior and NP.config.GetCfg() or nil
+    local retailBehavior = NP.module._retailBehavior
+    local retailCfg = retailBehavior and NP.config.GetCfg() or nil
+    local levelSettleNow = GetTime and GetTime() or 0
+    -- Single roster pass: alpha harvest, retail scale and level settle were
+    -- three separate pairs() sweeps before; the work per plate is unchanged.
     for _, pd in pairs(NP.module.plates) do
         local pl = pd.plate
         if not pl or not pl.IsShown or not pl:IsShown() then
@@ -317,25 +374,19 @@ local function EngineOnUpdate(_, elapsed)
                 pd._nativeAlpha = nativeAlpha
             end
         end
-        if NP.module._retailBehavior then
-            NP.layout.ApplyRetailPlateScale(pd, {
-                isTarget = NP.identity.PlateHasTargetAlpha(pd),
-            }, retailCfg)
+        if retailBehavior then
+            NP.layout.ApplyRetailPlateScale(pd, NP.identity.PlateHasTargetAlpha(pd), retailCfg)
         elseif pd._retailScale or pd._pendingRetailScale then
             NP.layout.SetRetailPlateScale(pd, 1)
         end
-    end
-
-    -- 2. Deferred queues.
-    E.ProcessQueues()
-
-    local levelSettleNow = GetTime and GetTime() or 0
-    for _, pd in pairs(NP.module.plates) do
         if pd._levelSettleAt and levelSettleNow >= pd._levelSettleAt then
             pd._levelSettleAt = nil
             NP.gather.RefreshPlateName(pd, "level_settle")
         end
     end
+
+    -- 2. Deferred queues.
+    E.ProcessQueues()
 
     if NP.module._deferredTargetResolveFrames and NP.module._deferredTargetResolveFrames > 0 then
         NP.module._deferredTargetResolveFrames = NP.module._deferredTargetResolveFrames - 1
@@ -381,19 +432,26 @@ local function EngineOnUpdate(_, elapsed)
     -- 6. Depth sort (50ms throttle).
     NP.layout.UpdateDepthOrdering(elapsed)
 
-    -- 7. Visual alpha on the stack only.
+    -- 7. Visual alpha on the stack only. Hidden plates are skipped: PrepareNameplate
+    -- clears _lastAppliedVisualAlpha on show, so they re-apply on their first tick.
     if NP.module._opacityEnabled then
         for _, pd in pairs(NP.module.plates) do
-            local visualAlpha = NP.module._opacityValue
-            if NP.identity.IsTargetPlateVisual(pd, hasTarget)
-                or ((not hasTarget) and NP.module._opacityFullNoTarget) then
-                visualAlpha = 1.0
+            local pl = pd.plate
+            if pl and pl.IsShown and pl:IsShown() then
+                local visualAlpha = NP.module._opacityValue
+                if NP.identity.IsTargetPlateVisual(pd, hasTarget)
+                    or ((not hasTarget) and NP.module._opacityFullNoTarget) then
+                    visualAlpha = 1.0
+                end
+                NP.layout.SetPlateVisualAlpha(pd, visualAlpha)
             end
-            NP.layout.SetPlateVisualAlpha(pd, visualAlpha)
         end
     else
         for _, pd in pairs(NP.module.plates) do
-            NP.layout.SetPlateVisualAlpha(pd, 1.0)
+            local pl = pd.plate
+            if pl and pl.IsShown and pl:IsShown() then
+                NP.layout.SetPlateVisualAlpha(pd, 1.0)
+            end
         end
     end
 
@@ -596,12 +654,22 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
         -- CLEU: `unit` is timestamp; forward `...` intact (dose stacks are extra args).
+        -- Subevent gating happens here, once, against the handlers' exported
+        -- event sets; the enabled flags come from the config snapshot, so
+        -- non-matching traffic costs two table lookups instead of three
+        -- handler calls plus per-event GetCfg/mode resolution.
         local timestamp = unit
-        NP.auras.HandleCombatLog(timestamp, ...)
-        local cfg = NP.config.GetCfg()
-        if cfg.showCastBar ~= false then
-            NP.castbar.HandleCombatLogCastBreak(timestamp, ...)
-            if NP.config.IsOffTargetCastMonitorActive(cfg) then
+        local subevent = ...
+        if NP.auras.AURA_COMBATLOG_EVENTS[subevent] then
+            NP.auras.HandleCombatLog(timestamp, ...)
+        end
+        if NP.module._cleuCastbarEnabled then
+            if NP.castbar.CAST_BREAK_EVENTS[subevent] then
+                NP.castbar.HandleCombatLogCastBreak(timestamp, ...)
+            end
+            if NP.module._cleuCastMonitorActive
+                and (NP.castbar.CAST_MONITOR_CLEU_EVENTS[subevent]
+                    or NP.castbar.CLEU_WARMUP_EVENTS[subevent]) then
                 NP.castbar.CastMonitorOnCombatLog(timestamp, ...)
             end
         end

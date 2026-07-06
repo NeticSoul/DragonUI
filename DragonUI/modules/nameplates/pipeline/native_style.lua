@@ -310,6 +310,11 @@ function NP.native_style.CaptureBarColor(plateData)
         return
     end
     local r, g, b = bar:GetStatusBarColor()
+    -- Reaction-derived gate memos (headline/totem) key off this color.
+    if (r ~= plateData.barR or g ~= plateData.barG or b ~= plateData.barB)
+        and NP.gather and NP.gather.InvalidatePlateGates then
+        NP.gather.InvalidatePlateGates(plateData)
+    end
     plateData.barR, plateData.barG, plateData.barB = r, g, b
     plateData.classKey = NP.native_style.ClassKeyFromBarColor(r, g, b)
     if addon.debugMode then

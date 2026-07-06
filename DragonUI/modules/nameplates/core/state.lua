@@ -39,21 +39,22 @@ local function ResolveGUIDMeta(meta)
     return source, confidence
 end
 
+local STRONG_GUID_SOURCES = {
+    TOKEN_TARGET = true,
+    TOKEN_MOUSEOVER = true,
+    TOKEN_FOCUS = true,
+    NAMEPLATE_TOKEN = true,
+    ARENA_TOKEN = true,
+    GROUP_TARGET = true,
+    RAID_ICON = true,
+}
+
 local function NotifyCastbarPlateGUIDBound(plateData, guid, source, confidence)
     if not NP.castbar or not NP.castbar.OnPlateGUIDBound then
         return
     end
     local groupConf = (NP.const and NP.const.GUID_CONFIDENCE and NP.const.GUID_CONFIDENCE.GROUP_TARGET) or 70
-    local strongSources = {
-        TOKEN_TARGET = true,
-        TOKEN_MOUSEOVER = true,
-        TOKEN_FOCUS = true,
-        NAMEPLATE_TOKEN = true,
-        ARENA_TOKEN = true,
-        GROUP_TARGET = true,
-        RAID_ICON = true,
-    }
-    if strongSources[source] or confidence >= groupConf then
+    if STRONG_GUID_SOURCES[source] or confidence >= groupConf then
         NP.castbar.OnPlateGUIDBound(plateData, guid)
     end
 end

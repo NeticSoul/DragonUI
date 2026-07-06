@@ -986,6 +986,8 @@ local CLEU_WARMUP_EVENTS = {
     SPELL_ENERGIZE = true,
     SPELL_PERIODIC_ENERGIZE = true,
 }
+-- Exported so the engine's CLEU dispatch can gate before the handler call.
+NP.castbar.CLEU_WARMUP_EVENTS = CLEU_WARMUP_EVENTS
 local CLEU_GUID_WARMUP_AT = {}
 
 local function IsOffTargetMonitorEnabled(cfg)
@@ -2221,6 +2223,8 @@ local CAST_BREAK_EVENTS = {
     SPELL_AURA_APPLIED = true,
     SPELL_AURA_REFRESH = true,
 }
+-- Exported so the engine's CLEU dispatch can gate before the handler call.
+NP.castbar.CAST_BREAK_EVENTS = CAST_BREAK_EVENTS
 
 function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourceName, sourceFlags, ...)
     if not CAST_BREAK_EVENTS[event] then
@@ -2254,11 +2258,28 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
     end
 end
 
+-- Cast start/stop events the monitor acts on directly; everything else only
+-- matters when it is also a warmup event, so gate before parsing suffix args.
+local CAST_MONITOR_CLEU_EVENTS = {
+    SPELL_CAST_START = true,
+    SPELL_CHANNEL_START = true,
+    SPELL_CAST_SUCCESS = true,
+    SPELL_CAST_FAILED = true,
+    SPELL_CAST_FAILED_QUIET = true,
+    SPELL_CAST_INTERRUPTED = true,
+    SPELL_CHANNEL_STOP = true,
+}
+-- Exported so the engine's CLEU dispatch can gate before the handler call.
+NP.castbar.CAST_MONITOR_CLEU_EVENTS = CAST_MONITOR_CLEU_EVENTS
+
 function NP.castbar.CastMonitorOnCombatLog(timestamp, event, sourceGUID, sourceName, sourceFlags, ...)
-    local destGUID, destName, destFlags, spellId, combatSpellName = ParseCombatLogSpellEvent(...)
+    if not CAST_MONITOR_CLEU_EVENTS[event] and not CLEU_WARMUP_EVENTS[event] then
+        return
+    end
     local cfg = NP.config.GetCfg()
     if not IsOffTargetMonitorEnabled(cfg) then return end
     if not sourceGUID then return end
+    local destGUID, destName, destFlags, spellId, combatSpellName = ParseCombatLogSpellEvent(...)
     if event == "SPELL_CAST_START" or event == "SPELL_CHANNEL_START" then
         -- Hybrid: route this source's casts through aggressive (player) or safe (NPC).
         CurrentCastSourceIsPlayer = IsPlayerUnitFlags(sourceFlags)

@@ -47,6 +47,8 @@ end
 
 -- Identity invalidation and fresh bar color capture.
 function NP.gather.PreparePlateForRefresh(plateData, snapshot)
+    -- Name/color/config may change below; per-tick gate memos must not outlive that.
+    NP.gather.InvalidatePlateGates(plateData)
     local freshName = snapshot.plateName
     NP.native_style.ResetPlateEliteIfIdentityChanged(plateData, freshName)
     NP.castbar.ResetPlateCastIfIdentityChanged(plateData, freshName)
@@ -130,9 +132,7 @@ local function BuildLayoutSignature(plateData)
     return tostring(NP.module._cfgRev or 0) .. ":" .. isPlayer
 end
 
--- Totem icon-only: hide bar/name/cast; shared gate for all refresh paths.
-function NP.gather.IsTotemIconOnlyActive(plateData)
-    if not plateData then return false end
+local function ComputeTotemIconOnlyActive(plateData)
     local cfg = NP.config.GetCfg()
     if cfg.totemIconOnly ~= true or cfg.showTotemIcons == false then
         return false
@@ -151,6 +151,31 @@ function NP.gather.IsTotemIconOnlyActive(plateData)
     return NP.widgets.ResolveTotemTexturePath(plateName) ~= nil
 end
 
+-- Totem icon-only: hide bar/name/cast; shared gate for all refresh paths.
+-- Evaluated once per widget sync (7+ per full refresh), so the result is
+-- memoized per engine tick; InvalidatePlateGates busts it wherever the inputs
+-- (plateName, bar color, config) change mid-tick.
+function NP.gather.IsTotemIconOnlyActive(plateData)
+    if not plateData then return false end
+    local tick = NP.module._engineFrame
+    if tick and plateData._totemOnlyTick == tick then
+        return plateData._totemOnlyVal
+    end
+    local result = ComputeTotemIconOnlyActive(plateData) and true or false
+    if tick then
+        plateData._totemOnlyTick = tick
+        plateData._totemOnlyVal = result
+    end
+    return result
+end
+
+function NP.gather.InvalidatePlateGates(plateData)
+    if plateData then
+        plateData._totemOnlyTick = nil
+        plateData._headlineTick = nil
+    end
+end
+
 function NP.gather.EnsurePlateVisualRoot(plateData, state, context)
     -- Reapply chrome suppression on every full refresh; subsequent calls are idempotent.
     NP.discovery.SuppressNativeChrome(plateData)
@@ -162,21 +187,31 @@ function NP.gather.EnsurePlateVisualRoot(plateData, state, context)
     end
 end
 
+-- Hoisted sync lists: allocated per refresh before, which added steady GC churn.
+local FULL_SYNC_WIDGETS = {
+    "Debuffs",
+    "ThreatGlow",
+    "RaidMarker",
+    "Elite",
+    "Combo",
+    "Totem",
+    "TargetHighlight",
+}
+local TARGET_SYNC_WIDGETS = {
+    "Debuffs",
+    "ThreatGlow",
+    "Elite",
+    "Combo",
+    "TargetHighlight",
+}
+
 function NP.gather.ApplyVisualState(plateData, snapshot, context, state, reason)
     NP.gather.EnsurePlateVisualRoot(plateData, state, context)
 
     NP.gather.SyncHealth(plateData, snapshot.healthCur)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
-    NP.widgets.SyncList({
-        "Debuffs",
-        "ThreatGlow",
-        "RaidMarker",
-        "Elite",
-        "Combo",
-        "Totem",
-        "TargetHighlight",
-    }, plateData, context, state)
+    NP.widgets.SyncList(FULL_SYNC_WIDGETS, plateData, context, state)
     if state.showCastbar and NP.castbar.ShouldSkipCastSync(plateData) then
         NP.castbar.HideNativeCastVisual(plateData)
         NP.layout.LayoutCastBarStack(plateData)
@@ -280,10 +315,7 @@ function NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
     return reaction == "FRIENDLY" and unitType == "NPC"
 end
 
--- Combined gate for every headline-suppression site (players + NPCs).
--- Returns false for the current target when headlineExcludeTarget is enabled,
--- so the target plate shows its full plate normally.
-function NP.gather.IsHeadlineActive(plateData)
+local function ComputeHeadlineActive(plateData)
     if not (NP.gather.IsFriendlyNameOnlyActive(plateData)
         or NP.gather.IsFriendlyNPCNameOnlyActive(plateData)) then
         return false
@@ -293,6 +325,25 @@ function NP.gather.IsHeadlineActive(plateData)
         return false
     end
     return true
+end
+
+-- Combined gate for every headline-suppression site (players + NPCs).
+-- Returns false for the current target when headlineExcludeTarget is enabled,
+-- so the target plate shows its full plate normally.
+-- Memoized per engine tick (see IsTotemIconOnlyActive); target transitions run
+-- a full refresh whose PreparePlateForRefresh busts the memo on both plates.
+function NP.gather.IsHeadlineActive(plateData)
+    if not plateData then return false end
+    local tick = NP.module._engineFrame
+    if tick and plateData._headlineTick == tick then
+        return plateData._headlineVal
+    end
+    local result = ComputeHeadlineActive(plateData) and true or false
+    if tick then
+        plateData._headlineTick = tick
+        plateData._headlineVal = result
+    end
+    return result
 end
 
 -- Hidden tooltip used to read an NPC's title/occupation (e.g. <General Supplies>).
@@ -471,15 +522,24 @@ function NP.gather.SyncHealth(plateData, value)
 
     local cfg = NP.config.GetCfg()
     local showHpNum = cfg.showHealthNumber == true
+    -- SetText re-shapes the font string even for identical strings; health
+    -- ticks mostly repeat the same rounded value, so guard on the raw number.
     if showHpNum and maxVal and maxVal > 0 then
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
         if plateData.minaHpNum then
-            local abbr = addon.TextSystem and addon.TextSystem.AbbreviateLargeNumbers(cur) or tostring(math.floor(cur))
-            plateData.minaHpNum:SetText(abbr)
+            if plateData._lastHpNumValue ~= cur then
+                plateData._lastHpNumValue = cur
+                local abbr = addon.TextSystem and addon.TextSystem.AbbreviateLargeNumbers(cur) or tostring(math.floor(cur))
+                plateData.minaHpNum:SetText(abbr)
+            end
             plateData.minaHpNum:Show()
         end
         if plateData.minaHpBarPct then
-            plateData.minaHpBarPct:SetText(string.format("%d%%", math.floor(cur / maxVal * 100 + 0.5)))
+            local pct = math.floor(cur / maxVal * 100 + 0.5)
+            if plateData._lastHpBarPct ~= pct then
+                plateData._lastHpBarPct = pct
+                plateData.minaHpBarPct:SetText(pct .. "%")
+            end
             plateData.minaHpBarPct:Show()
         end
     else
@@ -487,7 +547,11 @@ function NP.gather.SyncHealth(plateData, value)
         if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
         if plateData.minaHpPct and cfg.showHealthPercent ~= false and cfg.centerNameOnly ~= true then
             if maxVal and maxVal > 0 then
-                plateData.minaHpPct:SetText(string.format("%d%%", math.floor(cur / maxVal * 100 + 0.5)))
+                local pct = math.floor(cur / maxVal * 100 + 0.5)
+                if plateData._lastHpPct ~= pct then
+                    plateData._lastHpPct = pct
+                    plateData.minaHpPct:SetText(pct .. "%")
+                end
                 plateData.minaHpPct:Show()
             else
                 plateData.minaHpPct:Hide()
@@ -568,18 +632,27 @@ function NP.gather.SyncPower(plateData, unit)
 
     if plateData.minaPoCur then
         if cfg.showPowerBarText ~= false then
-            plateData.minaPoCur:SetText(tostring(cur))
+            if plateData._lastPoCurValue ~= cur then
+                plateData._lastPoCurValue = cur
+                plateData.minaPoCur:SetText(tostring(cur))
+            end
             plateData.minaPoCur:Show()
         else
+            plateData._lastPoCurValue = nil
             plateData.minaPoCur:SetText("")
             plateData.minaPoCur:Hide()
         end
     end
     if plateData.minaPoPct then
         if cfg.showPowerBarText ~= false then
-            plateData.minaPoPct:SetText(string.format("%d%%", math.floor(cur / maxVal * 100 + 0.5)))
+            local pct = math.floor(cur / maxVal * 100 + 0.5)
+            if plateData._lastPoPct ~= pct then
+                plateData._lastPoPct = pct
+                plateData.minaPoPct:SetText(pct .. "%")
+            end
             plateData.minaPoPct:Show()
         else
+            plateData._lastPoPct = nil
             plateData.minaPoPct:SetText("")
             plateData.minaPoPct:Hide()
         end
@@ -887,36 +960,70 @@ function NP.gather.RefreshPlateFull(plateData, reason, hpValue)
     NP.gather.ApplyVisualState(plateData, snapshot, context, state, reason)
 end
 
+-- High-frequency refresh paths (UNIT_HEALTH/UNIT_MANA/UNIT_AURA, level settle)
+-- skip the full state rebuild once the plate is styled: BuildPlateState re-runs
+-- identity resolution, token probes and chrome suppression, which the healthBar
+-- OnValueChanged hook path already proves unnecessary for pure value updates.
+-- Unstyled plates still take the full path so first paint is unchanged.
+
+-- All identity work (FindUniquePlateForUnit, GetUnitForPlate, GUID binding) is
+-- gated on plateName, and native name text can settle or change after OnShow
+-- without a hide/show cycle. The full path resynced it on every refresh; light
+-- paths must escalate on drift or a plate that raced the name settle stays
+-- unresolvable forever (stock-client hover reveal breaks).
+local function PlateIdentityDrifted(plateData)
+    return NP.discovery.GetPlateName(plateData) ~= plateData.plateName
+end
+
 function NP.gather.RefreshPlateHealth(plateData, value, reason)
-    local refreshReason = reason or "health_update"
-    local snapshot, context, state = NP.gather.BuildPlateState(plateData, refreshReason, value)
-    NP.gather.EnsurePlateVisualRoot(plateData, state, context)
-    NP.gather.SyncHealth(plateData, snapshot.healthCur)
-    NP.widgets.Sync("ThreatGlow", plateData, context, state)
-    NP.gather.SyncName(plateData, context.resolvedUnit)
+    if not plateData.minaHp or PlateIdentityDrifted(plateData) then
+        local snapshot, context, state = NP.gather.BuildPlateState(plateData, reason or "health_update", value)
+        NP.gather.EnsurePlateVisualRoot(plateData, state, context)
+        NP.gather.SyncHealth(plateData, snapshot.healthCur)
+        NP.widgets.Sync("ThreatGlow", plateData, context, state)
+        NP.gather.SyncName(plateData, context.resolvedUnit)
+        return
+    end
+    NP.native_style.CaptureBarColor(plateData)
+    NP.gather.SyncHealth(plateData, value)
+    NP.widgets.Sync("ThreatGlow", plateData)
+    NP.gather.SyncName(plateData)
 end
 
 function NP.gather.RefreshPlatePower(plateData, reason)
-    local refreshReason = reason or "power_update"
-    local _, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
-    NP.gather.EnsurePlateVisualRoot(plateData, state, context)
-    NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
+    if not plateData.minaPo or PlateIdentityDrifted(plateData) then
+        local _, context, state = NP.gather.BuildPlateState(plateData, reason or "power_update")
+        NP.gather.EnsurePlateVisualRoot(plateData, state, context)
+        NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
+        return
+    end
+    local cfg = NP.config.GetCfg()
+    local showPower = (not NP.gather.IsHeadlineActive(plateData)) and (cfg.showPowerBar ~= false)
+    NP.gather.SyncPower(plateData, showPower and NP.identity.ResolvePlateUnit(plateData) or nil)
 end
 
 function NP.gather.RefreshPlateName(plateData, reason)
-    local refreshReason = reason or "name_update"
-    local _, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
-    NP.gather.EnsurePlateVisualRoot(plateData, state, context)
-    NP.gather.SyncName(plateData, context.resolvedUnit)
+    if not plateData.minaName or PlateIdentityDrifted(plateData) then
+        local _, context, state = NP.gather.BuildPlateState(plateData, reason or "name_update")
+        NP.gather.EnsurePlateVisualRoot(plateData, state, context)
+        NP.gather.SyncName(plateData, context.resolvedUnit)
+        return
+    end
+    NP.gather.SyncName(plateData)
 end
 
+local scratchAuraContext = {}
+
 function NP.gather.RefreshPlateAuras(plateData, hintedUnit, reason)
-    local refreshReason = reason or "unit_aura"
-    local _, context, state = NP.gather.BuildPlateState(plateData, refreshReason)
-    NP.gather.EnsurePlateVisualRoot(plateData, state, context)
-    NP.widgets.Sync("Debuffs", plateData, {
-        resolvedUnit = hintedUnit or context.resolvedUnit,
-    }, state)
+    if not plateData.minaDebuffHost or PlateIdentityDrifted(plateData) then
+        local _, context, state = NP.gather.BuildPlateState(plateData, reason or "unit_aura")
+        NP.gather.EnsurePlateVisualRoot(plateData, state, context)
+        scratchAuraContext.resolvedUnit = hintedUnit or context.resolvedUnit
+        NP.widgets.Sync("Debuffs", plateData, scratchAuraContext, state)
+        return
+    end
+    scratchAuraContext.resolvedUnit = hintedUnit or NP.identity.ResolvePlateUnit(plateData)
+    NP.widgets.Sync("Debuffs", plateData, scratchAuraContext)
 end
 
 function NP.gather.RefreshPlateCastbar(plateData, reason)
@@ -957,13 +1064,7 @@ function NP.gather.RefreshPlateTargetState(plateData, reason)
     NP.gather.SyncHealth(plateData, snapshot.healthCur)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
-    NP.widgets.SyncList({
-        "Debuffs",
-        "ThreatGlow",
-        "Elite",
-        "Combo",
-        "TargetHighlight",
-    }, plateData, context, state)
+    NP.widgets.SyncList(TARGET_SYNC_WIDGETS, plateData, context, state)
     local ownershipValid = NP.identity.ValidatePlateGUIDOwnership(plateData)
     if not ownershipValid and not NP.castbar.PlateStillCasting(plateData) then
         NP.castbar.HidePlateCastBar(plateData)

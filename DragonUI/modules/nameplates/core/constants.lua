@@ -95,6 +95,13 @@ NP.const = {
     TEX_COORD_EPS = 0.025,
     -- Stagger token-based threat checks across buckets; target/focus stay full-rate.
     THREAT_BUDGET_BUCKETS = 4,
+    -- Max plates that may run the nameplate1..40 token probe in one engine tick.
+    TOKEN_PROBE_PLATES_PER_TICK = 3,
+    -- Max plates that may run a full BuildPlateState refresh in one engine tick.
+    -- Mass-refresh events (config change, zone transition, totem update in a
+    -- large raid) queue every visible plate at once; this caps the single-frame
+    -- spike the same way FruitPlates bounds its heavy-update pass.
+    FULL_REFRESH_PLATES_PER_TICK = 8,
 }
 
 local C = NP.const
