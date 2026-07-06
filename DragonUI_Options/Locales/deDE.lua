@@ -1304,6 +1304,7 @@ L["Allow plates to overlap instead of stacking."] = "Erlaubt Überlappung statt 
 L["May increase CPU use with many visible nameplates."] = "Kann CPU-Nutzung bei vielen sichtbaren Plaketten erhöhen."
 L["Depth Ordering"] = "Tiefensortierung"
 L["Order overlapping nameplates by depth."] = "Sortiert überlappende Namensplaketten nach Tiefe."
+L["(Requires Allow Nameplate Overlap.)"] = "(Erfordert Namensplaketten-Überlappung erlauben.)"
 L["Retail-like Stacking"] = "Retail-ähnliches Stapeln"
 L["Simulates Retail's nameplate stacking for enemies."] = "Simuliert das Retail-Namensplaketten-Stapeln für Feinde."
 L["Collider Width"] = "Kollisionsbreite"

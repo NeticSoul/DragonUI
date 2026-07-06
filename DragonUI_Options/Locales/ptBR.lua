@@ -499,6 +499,7 @@ L["Allow plates to overlap instead of stacking."] = "Permite que as placas se so
 L["May increase CPU use with many visible nameplates."] = "Pode aumentar o uso de CPU com muitas placas visíveis."
 L["Depth Ordering"] = "Ordenacao por profundidade"
 L["Order overlapping nameplates by depth."] = "Ordena placas sobrepostas por profundidade."
+L["(Requires Allow Nameplate Overlap.)"] = "(Requer Permitir sobreposição de placas.)"
 L["Retail-like Stacking"] = "Empilhamento estilo Retail"
 L["Simulates Retail's nameplate stacking for enemies."] = "Simula o empilhamento de placas Retail para inimigos."
 L["Collider Width"] = "Largura do colisor"

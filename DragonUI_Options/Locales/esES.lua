@@ -1308,6 +1308,7 @@ L["Simulates Retail's nameplate stacking for enemies."] = "Simula el apilado de 
 L["May increase CPU use with many visible nameplates."] = "Puede aumentar el uso de CPU con muchas placas visibles."
 L["Depth Ordering"] = "Orden por profundidad"
 L["Order overlapping nameplates by depth."] = "Ordena las placas superpuestas por profundidad."
+L["(Requires Allow Nameplate Overlap.)"] = "(Requiere Permitir superposición de placas.)"
 L["Collider Width"] = "Ancho del colisionador"
 L["Collider Height"] = "Alto del colisionador"
 L["Sets the width of the virtual collider centered on each nameplate used to detect overlaps."] = "Define el ancho del colisionador virtual centrado en cada placa para detectar solapamientos."

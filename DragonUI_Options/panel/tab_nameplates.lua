@@ -359,7 +359,8 @@ local function BuildBehaviorSubTab(scroll)
 
     C:AddToggle(behavior, {
         label = LO["Depth Ordering"],
-        desc = LO["Order overlapping nameplates by depth."],
+        desc = LO["Order overlapping nameplates by depth."]
+            .. " " .. (LO["(Requires Allow Nameplate Overlap.)"] or ""),
         dbPath = DB .. ".depthSortingEnabled",
         callback = RefreshNameplates,
     })

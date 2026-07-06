@@ -1304,6 +1304,7 @@ L["Allow plates to overlap instead of stacking."] = "允许姓名板重叠而不
 L["May increase CPU use with many visible nameplates."] = "可见姓名板较多时可能增加 CPU 占用。"
 L["Depth Ordering"] = "深度排序"
 L["Order overlapping nameplates by depth."] = "按深度排序重叠的姓名板。"
+L["(Requires Allow Nameplate Overlap.)"] = "（需要开启“允许姓名板重叠”）"
 L["Retail-like Stacking"] = "Retail 式堆叠"
 L["Simulates Retail's nameplate stacking for enemies."] = "模拟 Retail 敌人姓名板堆叠。"
 L["Collider Width"] = "碰撞体宽度"

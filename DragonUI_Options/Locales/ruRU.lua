@@ -1305,6 +1305,7 @@ L["Allow plates to overlap instead of stacking."] = "Разрешает нало
 L["May increase CPU use with many visible nameplates."] = "Может повысить нагрузку на CPU при большом числе индикаторов."
 L["Depth Ordering"] = "Сортировка по глубине"
 L["Order overlapping nameplates by depth."] = "Сортирует перекрывающиеся индикаторы по глубине."
+L["(Requires Allow Nameplate Overlap.)"] = "(Требуется «Разрешить наложение индикаторов».)"
 L["Retail-like Stacking"] = "Стекинг как в Retail"
 L["Simulates Retail's nameplate stacking for enemies."] = "Имитирует стекинг индикаторов Retail для врагов."
 L["Collider Width"] = "Ширина коллайдера"

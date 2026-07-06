@@ -1364,6 +1364,7 @@ L["Simulates Retail's nameplate stacking for enemies."] = true
 L["May increase CPU use with many visible nameplates."] = true
 L["Depth Ordering"] = true
 L["Order overlapping nameplates by depth."] = true
+L["(Requires Allow Nameplate Overlap.)"] = true
 L["Collider Width"] = true
 L["Collider Height"] = true
 L["Sets the width of the virtual collider centered on each nameplate used to detect overlaps."] = true

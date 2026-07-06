@@ -1308,6 +1308,7 @@ L["Allow plates to overlap instead of stacking."] = "이름표를 쌓는 대신 
 L["May increase CPU use with many visible nameplates."] = "많은 이름표가 보이면 CPU 사용이 증가할 수 있습니다."
 L["Depth Ordering"] = "깊이 정렬"
 L["Order overlapping nameplates by depth."] = "겹치는 이름표를 깊이 기준으로 정렬합니다."
+L["(Requires Allow Nameplate Overlap.)"] = "(이름표 겹침 허용 필요)"
 L["Retail-like Stacking"] = "Retail 스타일 겹침"
 L["Simulates Retail's nameplate stacking for enemies."] = "Retail 적 이름표 겹침을 시뮬레이션합니다."
 L["Collider Width"] = "충돌체 너비"
