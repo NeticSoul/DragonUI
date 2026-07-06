@@ -255,9 +255,30 @@ function E.SyncEnemyClassColorCVar()
     end
 end
 
+-- Force off a native plate-stacking engine (some servers have one) while DragonUI clamps/stacks itself; no-op on stock 3.3.5a.
 function E.SyncRetailStackingCVars()
     local cfg = NP.config.GetCfg()
     if not GetCVar or not SetCVar then return end
+
+    -- SetCVar errors on a name the client doesn't recognize (unlike GetCVar,
+    -- which just returns nil); only touch it if it already resolved to something.
+    local currentSmoothStacking = GetCVar("nameplateSmoothStacking")
+    if currentSmoothStacking ~= nil then
+        local wantExclusive = NP.module._clampTargetEnabled or NP.module._clampBossEnabled
+            or NP.layout.ShouldRunRetailStacking()
+        if wantExclusive then
+            if NP.module.savedNameplateSmoothStacking == nil then
+                NP.module.savedNameplateSmoothStacking = currentSmoothStacking
+            end
+            if currentSmoothStacking ~= "0" then
+                SetCVar("nameplateSmoothStacking", "0")
+            end
+        elseif NP.module.savedNameplateSmoothStacking ~= nil then
+            SetCVar("nameplateSmoothStacking", NP.module.savedNameplateSmoothStacking)
+            NP.module.savedNameplateSmoothStacking = nil
+        end
+    end
+
     if NP.config.IsRetailBehavior() and cfg.retailStackingEnabled == true then
         if NP.module.savedNameplateAllowOverlap == nil then
             NP.module.savedNameplateAllowOverlap = GetCVar("nameplateAllowOverlap")
@@ -303,7 +324,8 @@ function E.SyncShowVKeyCastbarCVar()
     end
 end
 
-function E.SyncConfigSnapshot()
+-- skipStackingCVar: true from the periodic scan tick, since only config-apply and zone-load need to re-run it.
+function E.SyncConfigSnapshot(skipStackingCVar)
     local cfg = NP.config.GetCfg()
     NP.castbar.SyncOffTargetMonitorFromConfig(cfg)
     -- CLEU dispatch flags: read per combat log event, so snapshot instead of
@@ -324,7 +346,9 @@ function E.SyncConfigSnapshot()
     NP.layout.UpdateWorldFrameHeight(wantExtended)
 
     E.SyncEnemyClassColorCVar()
-    E.SyncRetailStackingCVars()
+    if not skipStackingCVar then
+        E.SyncRetailStackingCVars()
+    end
     E.SyncShowVKeyCastbarCVar()
     E.SyncThreatCVar()
     if not NP.module._retailBehavior then
@@ -467,7 +491,7 @@ local function EngineOnUpdate(_, elapsed)
     if NP.module.scanElapsed >= C.SCAN_INTERVAL then
         NP.module.scanElapsed = 0
         E.UpdateInstanceContext()
-        E.SyncConfigSnapshot()
+        E.SyncConfigSnapshot(true)
         local expiredGUIDs = NP.auras.CleanExpiredAuras()
         E.QueueFunction(NP.lifecycle.ScanNameplates)
         NP.gather.RefreshExpiredAuraPlates(expiredGUIDs, "scan_interval")
@@ -531,6 +555,7 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
         E.UpdateInstanceContext()
+        E.SyncRetailStackingCVars()
         E.UpdatePartyArenaTokenMaps()
         NP.widgets.RefreshAllOwnTotems()
         if NP.module.inArena and NP.identity.UpdateArenaCastBindings then
@@ -880,6 +905,9 @@ local function RunNameplatesRestore()
     if NP.module.savedNameplateAllowOverlap ~= nil and SetCVar then
         SetCVar("nameplateAllowOverlap", NP.module.savedNameplateAllowOverlap)
     end
+    if NP.module.savedNameplateSmoothStacking ~= nil and SetCVar then
+        SetCVar("nameplateSmoothStacking", NP.module.savedNameplateSmoothStacking)
+    end
     NP.module.threatCVarApplied = nil
     NP.module.savedThreatWarning = nil
     NP.module.classColorCVarApplied = nil
@@ -887,6 +915,7 @@ local function RunNameplatesRestore()
     NP.module.showVKeyCVarManaged = nil
     NP.module.savedShowVKeyCastbar = nil
     NP.module.savedNameplateAllowOverlap = nil
+    NP.module.savedNameplateSmoothStacking = nil
 
     NP.layout.UpdateWorldFrameHeight(false)
     NP.layout.ResetRetailStacking()
