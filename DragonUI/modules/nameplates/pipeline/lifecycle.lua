@@ -66,6 +66,16 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._lastDirectHover = nil
     plateData._layoutSig = nil
     plateData._lastAppliedVisualAlpha = nil
+    -- Reset rendering-guard caches so a recycled plate doesn't inherit stale values.
+    plateData._styledChromeCfgRev = nil
+    plateData._styledChromeCombo = nil
+    plateData._styledChromeHeadline = nil
+    plateData._styledChromeReaction = nil
+    plateData._nameCenteredWidth = nil
+    plateData._nameTextLast = nil
+    plateData._nameTextR = nil
+    plateData._nameTextG = nil
+    plateData._nameTextB = nil
     if NP.gather and NP.gather.InvalidatePlateGates then
         NP.gather.InvalidatePlateGates(plateData)
     end

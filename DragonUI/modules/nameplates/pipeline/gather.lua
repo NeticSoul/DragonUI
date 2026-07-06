@@ -803,11 +803,16 @@ function NP.gather.SyncName(plateData, unit)
         if centerOnly then
             local visW = select(1, NP.config.GetBarRefSize())
             plateData._nameBossShift = nil
-            plateData.minaName:SetJustifyH("CENTER")
-            plateData.minaName:ClearAllPoints()
-            plateData.minaName:SetPoint("CENTER", plateData.minaNameRow, "CENTER", 0, 0)
-            plateData.minaName:SetWidth(visW)
+            -- Skip re-anchor when already centered at this width.
+            if plateData._nameCenteredWidth ~= visW then
+                plateData._nameCenteredWidth = visW
+                plateData.minaName:SetJustifyH("CENTER")
+                plateData.minaName:ClearAllPoints()
+                plateData.minaName:SetPoint("CENTER", plateData.minaNameRow, "CENTER", 0, 0)
+                plateData.minaName:SetWidth(visW)
+            end
         else
+            plateData._nameCenteredWidth = nil
             plateData.minaName:SetJustifyH("LEFT")
             local desiredOffset = 0
             if showsBossSkull then
@@ -820,8 +825,15 @@ function NP.gather.SyncName(plateData, unit)
             end
         end
     end
-    plateData.minaName:SetTextColor(r, g, b)
-    plateData.minaName:SetText(displayName)
+    -- Skip SetTextColor/SetText when unchanged; both re-shape the font string.
+    if plateData._nameTextR ~= r or plateData._nameTextG ~= g or plateData._nameTextB ~= b then
+        plateData._nameTextR, plateData._nameTextG, plateData._nameTextB = r, g, b
+        plateData.minaName:SetTextColor(r, g, b)
+    end
+    if plateData._nameTextLast ~= displayName then
+        plateData._nameTextLast = displayName
+        plateData.minaName:SetText(displayName)
+    end
     plateData.minaName:Show()
 
     if plateData.minaSubTitle then

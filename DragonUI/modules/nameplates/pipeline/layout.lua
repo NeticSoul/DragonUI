@@ -718,6 +718,28 @@ local function ApplyCreationFrameLevels(plateData)
     plateData._levelsApplied = true
 end
 
+-- Skips redundant font/raid-marker re-apply; signature covers every input ReflowTopOverlays reads.
+local function StyledChromeUnchanged(plateData)
+    local cfgRev = NP.module._cfgRev or 0
+    local comboVisible = (plateData._comboHost and plateData._comboHost.IsShown
+        and plateData._comboHost:IsShown()) and true or false
+    local headline = (NP.gather.IsHeadlineActive and NP.gather.IsHeadlineActive(plateData)) and true or false
+    local reaction = NP.native_style.GetPlateReaction(plateData) or false
+
+    if plateData._styledChromeCfgRev == cfgRev
+        and plateData._styledChromeCombo == comboVisible
+        and plateData._styledChromeHeadline == headline
+        and plateData._styledChromeReaction == reaction then
+        return true
+    end
+
+    plateData._styledChromeCfgRev = cfgRev
+    plateData._styledChromeCombo = comboVisible
+    plateData._styledChromeHeadline = headline
+    plateData._styledChromeReaction = reaction
+    return false
+end
+
 local function EnsureBossSkullTexture(plateData)
     if not plateData or not plateData.minaNameRow or plateData.minaBossSkull then
         return
@@ -761,8 +783,10 @@ function NP.layout.EnsureMinaStack(plateData)
 
     if plateData.minaHp then
         ApplyCreationFrameLevels(plateData)
-        NP.widgets.LayoutRaidMarker(plateData)
-        NP.layout.ApplyNameplateFonts(plateData)
+        if not StyledChromeUnchanged(plateData) then
+            NP.widgets.LayoutRaidMarker(plateData)
+            NP.layout.ApplyNameplateFonts(plateData)
+        end
         return
     end
 
@@ -957,6 +981,8 @@ function NP.layout.LayoutMinaStack(plateData)
             plateData.minaName:SetParent(plateData.minaNameRow)
         end
         plateData.minaName:ClearAllPoints()
+        -- Invalidate SyncName's center-anchor guard; this pass re-anchors it.
+        plateData._nameCenteredWidth = nil
         if cfg.centerNameOnly then
             plateData.minaName:SetJustifyH("CENTER")
             plateData.minaName:SetPoint("CENTER", plateData.minaNameRow, "CENTER", 0, 0)
