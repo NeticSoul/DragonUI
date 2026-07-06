@@ -138,8 +138,16 @@ local function NativeCastLooksInterrupted(plateData, bar)
     return (maxV - peak) >= 0.05
 end
 
+-- Native cast bar Hide/Show can fire spuriously (plate rebuilds, duel state) unrelated to the actual cast.
+local function IsCastAuthoritativelyBound(bar)
+    return bar ~= nil and bar._castSourceGUID ~= nil and not bar._fromCombatLog
+end
+
 local function ShouldShowNativeInterrupt(plateData, bar)
     bar = bar or (plateData and plateData.minaCast)
+    if IsCastAuthoritativelyBound(bar) then
+        return false
+    end
     if NP.castbar.ShouldInterruptOnCastLoss(plateData, bar) then
         return true
     end
@@ -2715,6 +2723,10 @@ function NP.castbar.HidePlateCastBar(plateData, force)
 
     if canSuccessFade then
         bar._castSourceGUID = nil
+        -- Reset so the next cast doesn't inherit this one's shield/interrupt state.
+        bar._notInterruptible = false
+        bar._nativeCastShield = nil
+        bar._recentStopAt = nil
         StartSuccessFade(bar)
         NP.castbar.RegisterCastTick(plateData)
         return
