@@ -444,10 +444,7 @@ local function DebuffPriorityComparator(a, b)
     return a.expiration < b.expiration
 end
 
--- Result array and per-aura slots are reused across calls: callers (SyncDebuffs
--- render, per-host expiry poll) consume the list synchronously and only copy
--- scalar fields out of it, and this ran once per aura CLEU event plus every
--- 0.15s per host — one table + one closure + one table per aura, per call.
+-- Pooled debuff list; callers consume synchronously and copy scalars only.
 local cachedDebuffPool = {}
 local cachedDebuffResult = {}
 
@@ -513,8 +510,7 @@ function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     end
 
     -- Preserve known casterGUID across rescans when UnitDebuff returns nil caster.
-    -- Scratch table: consumed synchronously below, and this runs per UNIT_AURA
-    -- and per aura CLEU event.
+    -- Scratch table; wiped per UNIT_AURA and aura CLEU event.
     local knownCasters = knownCastersScratch
     wipe(knownCasters)
     if NP.state.PlateAuraCache[guid] then
@@ -566,10 +562,7 @@ function DebuffRuntime.UpdateAuraCacheByLookup(guid)
     if guid == UnitGUID("focus") then
         return DebuffRuntime.UpdateAuraCacheFromUnit("focus") ~= nil
     end
-    -- Group-target lookup (GroupCache model): a party/raid member's target is
-    -- an authoritative unitid for this GUID. In a raid the partyN units are a
-    -- subset of raidN, so probing both doubled the unit-API calls per aura
-    -- CLEU event for no additional coverage.
+    -- Group-target lookup: in raids prefer raidN (partyN ⊆ raidN; probing both doubles API calls).
     local numRaid = GetNumRaidMembers() or 0
     if numRaid > 0 then
         for i = 1, numRaid do
@@ -591,13 +584,7 @@ end
 
 -- Aura widget render and per-icon expiration polling
 
--- Debuff cooldown text is polled per icon per host tick, but the displayed
--- value only changes ~once/second (seconds tier) or ~once/minute (minutes
--- tier); pool the formatted strings instead of re-allocating tostring()..
--- concat results for values that repeat across many polls. Bounded: the
--- seconds tier is a fixed 60-entry table, and the minutes tier stops caching
--- (but still computes/returns correctly) past MINUTES_CACHE_MAX so a stray
--- huge duration can't grow the cache unbounded.
+-- Cache formatted cooldown text (~1/s or ~1/min updates); minutes capped at MINUTES_CACHE_MAX.
 local SECONDS_TEXT_CACHE = {}
 for i = 1, 60 do
     SECONDS_TEXT_CACHE[i] = tostring(i)
@@ -643,9 +630,7 @@ local function ApplyCooldownTextAnchor(icon, anchor)
     end
 end
 
--- Forward declarations; defined alongside the cooldown-swipe implementation
--- below. Hoisted so the per-host pollers can resolve the swipe style once per
--- sweep instead of once per icon.
+-- Forward declarations for swipe helpers; hoisted so pollers resolve style once per sweep.
 local UpdateSwipeProgress
 local UpdateSwipeProgressStyled
 local GetSwipeStyle
@@ -795,9 +780,7 @@ local function HidePriorityHighlight(icon)
     if icon and icon.priorityBorder then icon.priorityBorder:Hide() end
 end
 
--- Cooldown "swipe" providers. These are plain textures updated on the poll
--- tick, immune to the native Cooldown widget's tendency to go stale on a
--- moving nameplate.
+-- Plain-texture swipe; native Cooldown goes stale on moving plates.
 local SWIPE_MIN = 0.00001
 local floor = math.floor
 local min = NP.min
@@ -1002,15 +985,11 @@ local function HideSwipeCooldown(icon)
     icon._swipeDuration = nil
 end
 
--- Keep the debuff icon sub-hierarchy in lockstep with the host frame level.
--- The depth sort re-levels minaDebuffHost on every pass (and on camera move),
--- but the dynamically created icon children do not follow on their own.
--- Re-derive the icon < text order from the host's current level.
+-- Re-level debuff icon children with minaDebuffHost after depth sort.
 function NP.auras.ApplyDebuffIconFrameLevels(host)
     if not host or not host.icons then return end
     local base = (host.GetFrameLevel and host:GetFrameLevel()) or 0
-    -- Guard each SetFrameLevel: it re-layers the strata frame list, so skip when
-    -- the icon already sits at its target level (this runs every depth tick).
+    -- Guard SetFrameLevel when icon already at target level (runs every depth tick).
     for _, icon in ipairs(host.icons) do
         if icon.SetFrameLevel then
             if not icon.GetFrameLevel or icon:GetFrameLevel() ~= base + 1 then
@@ -1085,7 +1064,7 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
         icon.expiration = aura.expiration
         ApplyPriorityHighlight(icon, aura, cfg)
         ApplySwipeCooldown(icon, aura, cfg)
-        -- SetFont rebuilds the font object; re-apply only on size change.
+        -- Re-apply SetFont only on size change.
         if icon._appliedCdFontSize ~= cooldownFontSize then
             icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cooldownFontSize, "OUTLINE")
             icon._appliedCdFontSize = cooldownFontSize
@@ -1238,10 +1217,7 @@ end
 
 -- Combat log path
 
--- Only aura sub-events touch the debuff cache. Gate here so non-aura traffic
--- (SPELL_DAMAGE, SPELL_PERIODIC_DAMAGE, SPELL_HEAL, ...) returns before flag
--- parsing, GUID lookup and the up-to-40 UnitDebuff rescan in
--- UpdateAuraCacheByLookup. These fire many times per second on the target.
+-- Gate aura CLEU to debuff sub-events; avoids UnitDebuff rescan on damage/heal traffic.
 local AURA_COMBATLOG_EVENTS = {
     SPELL_AURA_APPLIED = true,
     SPELL_AURA_REFRESH = true,
@@ -1251,16 +1227,14 @@ local AURA_COMBATLOG_EVENTS = {
     SPELL_AURA_BROKEN = true,
     SPELL_AURA_BROKEN_SPELL = true,
 }
--- Exported so the engine's CLEU dispatch can gate before the handler call.
+-- Exported for engine CLEU subevent gating.
 NP.auras.AURA_COMBATLOG_EVENTS = AURA_COMBATLOG_EVENTS
 
 function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellId, spellName, spellSchool, ...)
     if not AURA_COMBATLOG_EVENTS[event] then
         return
     end
-    -- SPELL_AURA_BROKEN_SPELL has an irregular suffix (extraSpellID first, so
-    -- select(1, ...) is a number there); the string guard intentionally lets it
-    -- through to the removal path below.
+    -- SPELL_AURA_BROKEN_SPELL: irregular suffix; string guard lets it reach removal path.
     local auraType = select(1, ...)
     if type(auraType) == "string" and auraType ~= "DEBUFF" then
         return

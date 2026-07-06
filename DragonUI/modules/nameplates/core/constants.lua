@@ -95,12 +95,9 @@ NP.const = {
     TEX_COORD_EPS = 0.025,
     -- Stagger token-based threat checks across buckets; target/focus stay full-rate.
     THREAT_BUDGET_BUCKETS = 4,
-    -- Max plates that may run the nameplate1..40 token probe in one engine tick.
+    -- Max nameplate token probes per engine tick.
     TOKEN_PROBE_PLATES_PER_TICK = 3,
-    -- Max plates that may run a full BuildPlateState refresh in one engine tick.
-    -- Mass-refresh events (config change, zone transition, totem update in a
-    -- large raid) queue every visible plate at once; this caps the single-frame
-    -- spike the same way FruitPlates bounds its heavy-update pass.
+    -- Max BuildPlateState refreshes per tick; caps mass-refresh spikes (FruitPlates pattern).
     FULL_REFRESH_PLATES_PER_TICK = 8,
 }
 
@@ -284,12 +281,7 @@ C.TOTEM_SUBSTRING = {
     { "centinela", "Sentry Totem" },
 }
 
--- Pet/guardian/clone summons whose cast cannot be resolved by unit token on HD
--- clients (creature/guardian GUIDs, not 0xF14). Tied to the Hide Pet Castbar
--- option. Name-based blacklist like RefinedBlizzPlates; enUS + esES/esMX names.
--- Names sourced from RefinedBlizzPlates' per-locale blacklists (extracted from
--- real clients); ptBR was not a 3.3.5 locale and falls back to enUS. The npcID
--- table below is the language-independent layer when a GUID is available.
+-- Pet/clone cast blacklist (Hide Pet Castbar); per-locale names, npcID table when GUID available.
 C.HIDE_PET_CAST_NAMES = {
     -- enUS (also serves ptBR)
     ["Shadowfiend"] = true,
@@ -381,10 +373,7 @@ C.HIDE_PET_CAST_NAMES = {
     ["霜翼幼龍"] = true,
 }
 
--- Language-independent layer for the same summons, matched by creature entry id
--- (ParseNpcCreatureId from the plate GUID). Used when a GUID is available
--- (HD off-target / target / CLEU); the name table above covers the no-GUID case.
--- Standard Blizzard WotLK entries -- on heavily custom servers these may differ.
+-- npcID layer for same summons when GUID is available (name table covers no-GUID case).
 C.HIDE_PET_CAST_NPCIDS = {
     [31216] = true, -- Mirror Image (mage)
     [510]   = true, -- Water Elemental (mage)

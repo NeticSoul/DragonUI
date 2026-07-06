@@ -83,13 +83,11 @@ end
 NP.discovery.RejectedWorldChildren = NP.discovery.RejectedWorldChildren
     or setmetatable({}, { __mode = "k" })
 
--- Reused across scans (periodic + child-count) to avoid per-scan GC churn at
--- 4 Hz. Both are consumed synchronously by ScanNameplates and never retained.
+-- Reused scan scratch tables (4 Hz); consumed synchronously, never retained.
 local scratchChildren = {}
 local scratchOut = {}
 
--- Copy GetChildren's varargs into a reused table with a single GetChildren call,
--- so select(i, ...) indexes the captured args instead of re-fetching the list.
+-- Copy GetChildren varargs into reused table (one fetch, no re-query per index).
 local function FillVararg(t, ...)
     local n = select("#", ...)
     for i = 1, n do
@@ -102,18 +100,14 @@ function NP.discovery.EnumerateBlizzardNameplates()
     local out = scratchOut
     wipe(out)
     local rejected = NP.discovery.RejectedWorldChildren
-    -- Capture children once (see FillVararg): re-fetching WorldFrame's full
-    -- (large) child list per iteration would be O(n^2), and this runs on every
-    -- scan tick and every child-count change.
+    -- Capture WorldFrame children once (O(n²) if re-fetched per iteration at 4 Hz).
     wipe(scratchChildren)
     local count = FillVararg(scratchChildren, NP.WorldGetChildren(WorldFrame))
     local registered = NP.module.plates
     for i = 1, count do
         local child = scratchChildren[i]
         if child and not rejected[child] then
-            -- Registered plates skip region matching and parts extraction (the
-            -- parts table is ignored by RegisterPlate for known keys anyway);
-            -- this scan runs at 4 Hz plus every WorldFrame child-count change.
+            -- Known plates skip parts extraction (4 Hz scan + child-count changes).
             local known = registered[child.RealPlate or child]
             if known and known.plate then
                 out[known.plate] = known

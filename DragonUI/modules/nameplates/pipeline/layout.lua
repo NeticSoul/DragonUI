@@ -207,13 +207,11 @@ function NP.layout.UpdateDepthOrdering(elapsed)
         local plateData = ordered[index]
         local plate = plateData.plate
         local base = index * DEPTH_LEVEL_STEP
-        -- A plate whose band index is unchanged already holds these exact levels;
-        -- skip the ~16 guard reads / SetFrameLevel calls. _depthDirty marks late
-        -- widget creation (cast bar, combo host); cfgRev covers option toggles.
+        -- Skip SetFrameLevel when depth band unchanged; _depthDirty/cfgRev force reapply.
         if plateData._depthAppliedIndex == index
             and plateData._depthAppliedCfgRev == cfgRev
             and not plateData._depthDirty then
-            -- BGHframe can attach mid-life from the external addon; keep it synced.
+            -- Sync BGHframe when attached mid-life.
             if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
                 SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
             end
@@ -260,9 +258,7 @@ end
 
 -- Visual alpha (engine-owned)
 
--- Name row children inherit row alpha; do not multiply on child and parent.
--- Hoisted to module scope to avoid per-call table/closure allocation in the
--- engine's per-frame visual-alpha pass.
+-- Hoisted for engine visual-alpha pass; row children inherit row alpha.
 local VISUAL_ALPHA_FIELDS = {
     "minaNameRow",
     "minaHp",
@@ -367,8 +363,7 @@ end
 
 -- Retail plate scale
 
--- isTarget is a plain boolean; this runs per plate per frame in retail mode,
--- so no context table.
+-- isTarget bool avoids per-frame context table allocation.
 function NP.layout.ApplyRetailPlateScale(plateData, isTarget, cfg)
     cfg = cfg or NP.config.GetCfg()
     local scale = 1
@@ -449,10 +444,7 @@ local function PlateWantsClamp(plateData)
     return false
 end
 
--- Clamp state is recomputed every frame but the values only change while the
--- plate actually moves; SetClampedToScreen/SetClampRectInsets invalidate frame
--- layout, so skip the write when nothing changed. Values are recomputed from
--- the same inputs, so exact float equality is the correct static test.
+-- Skip clamp writes when unchanged (SetClampRectInsets invalidates layout).
 local function SetPlateClamp(plateData, plate, clamped, l, r, t, b)
     if plateData._clampAppliedState == clamped
         and plateData._clampAppliedL == l and plateData._clampAppliedR == r
@@ -525,7 +517,7 @@ function NP.layout.ShouldRunRetailStacking()
     return true
 end
 
--- Reused across per-frame stacking passes; consumed synchronously.
+-- Scratch tables for per-frame stacking passes.
 local stackableScratch = {}
 local activeStackableScratch = {}
 
@@ -758,7 +750,7 @@ function NP.layout.EnsureMinaStack(plateData)
     if not plateData.minaCast then
         plateData.minaCast = NP.castbar.CreateCastMinaBar(visualRoot, plateData)
         plateData.minaCast:Hide()
-        -- New level-managed frames; force the next depth pass to re-level this plate.
+        -- New frame; mark depth dirty for next pass.
         plateData._depthDirty = true
     end
 

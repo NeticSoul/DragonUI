@@ -986,7 +986,7 @@ local CLEU_WARMUP_EVENTS = {
     SPELL_ENERGIZE = true,
     SPELL_PERIODIC_ENERGIZE = true,
 }
--- Exported so the engine's CLEU dispatch can gate before the handler call.
+-- Exported for engine CLEU subevent gating.
 NP.castbar.CLEU_WARMUP_EVENTS = CLEU_WARMUP_EVENTS
 local CLEU_GUID_WARMUP_AT = {}
 
@@ -1330,9 +1330,7 @@ local function GetAuthoritativeCastUnit(plateData)
             end
             return unit
         end
-        -- Group-target tokens (partyNtarget/raidNtarget) are live and update
-        -- instantly on cancel; trust them once GUID-verified against the
-        -- plate's bound cast owner, so early-end detection can use them too.
+        -- Trust group-target tokens for early-end once GUID-verified against cast owner.
         if ownerGUID and unitGUID and ownerGUID == unitGUID then
             return unit
         end
@@ -2050,9 +2048,7 @@ local function MonitorStopCast(plateData, interrupted)
         bar._recentStopAt = nil
         NP.castbar.ShowInterruptedState(bar, plateData, false)
     else
-        -- For CLEU monitor ownership, stop immediately. HidePlateCastBar keeps
-        -- timed casts alive during destarget, which is correct for unit-driven
-        -- bars but can leave stale monitor bars after early cancel/stop.
+        -- Monitor casts stop immediately; unit-driven bars may survive destarget by design.
         bar._recentStopAt = GetTime()
         bar._monitorGUID = nil
         bar._monitorConfidence = nil
@@ -2214,16 +2210,13 @@ local function ParseCombatLogSpellEvent(arg1, arg2, arg3, arg4, arg5, arg6, arg7
     return destGUID, destName, destFlags, spellId, combatSpellName
 end
 
--- Combat-log crowd-control and interrupt handling for unit-driven and
--- retained cast bars; the off-target monitor is not required.
--- Events this handler acts on; gate before parsing so the rest of the combat
--- log (damage/heal/energize) returns without unpacking suffix args or GetCfg.
+-- CC/interrupt handler for unit-driven bars; gate before parsing suffix args.
 local CAST_BREAK_EVENTS = {
     SPELL_INTERRUPT = true,
     SPELL_AURA_APPLIED = true,
     SPELL_AURA_REFRESH = true,
 }
--- Exported so the engine's CLEU dispatch can gate before the handler call.
+-- Exported for engine CLEU subevent gating.
 NP.castbar.CAST_BREAK_EVENTS = CAST_BREAK_EVENTS
 
 function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourceName, sourceFlags, ...)
@@ -2258,8 +2251,7 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
     end
 end
 
--- Cast start/stop events the monitor acts on directly; everything else only
--- matters when it is also a warmup event, so gate before parsing suffix args.
+-- Monitor cast events; gate other traffic unless also a warmup event.
 local CAST_MONITOR_CLEU_EVENTS = {
     SPELL_CAST_START = true,
     SPELL_CHANNEL_START = true,
@@ -2269,7 +2261,7 @@ local CAST_MONITOR_CLEU_EVENTS = {
     SPELL_CAST_INTERRUPTED = true,
     SPELL_CHANNEL_STOP = true,
 }
--- Exported so the engine's CLEU dispatch can gate before the handler call.
+-- Exported for engine CLEU subevent gating.
 NP.castbar.CAST_MONITOR_CLEU_EVENTS = CAST_MONITOR_CLEU_EVENTS
 
 function NP.castbar.CastMonitorOnCombatLog(timestamp, event, sourceGUID, sourceName, sourceFlags, ...)

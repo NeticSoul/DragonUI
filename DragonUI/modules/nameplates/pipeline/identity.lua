@@ -153,15 +153,8 @@ end
 
 -- Target / mouseover / focus context
 
--- Disambiguate the target when several plates read full alpha at once (Blizzard
--- has not applied target dimming yet, e.g. right after a zone transition): the
--- unique shown plate that is both at target alpha and matches the target's
--- name+health fingerprint.
---
--- The alpha gate is required for correctness: an off-screen target has a hidden
--- plate and its same-name bystanders are dimmed, so none qualify and nothing is
--- bound — a plain fingerprint match would instead leak the target's GUID onto a
--- same-name plate while the real target is out of view.
+-- Target disambiguation when alpha is ambiguous (pre-dim): name+health at target alpha.
+-- Alpha gate prevents GUID leak to same-name plates when the real target is off-screen.
 local function FindTargetByAlphaFingerprint()
     local found, count = nil, 0
     for _, pd in pairs(NP.module.plates) do
@@ -189,9 +182,7 @@ function identity.UpdateTargetContext()
 
     local targetGUID = NP.module.targetGUID
 
-    -- Fast path: the cached target plate is still shown and still bound to this
-    -- GUID, so it remains the answer without rescanning every plate's alpha.
-    -- Any mismatch (hidden, GUID moved, unbound) falls through to full resolution.
+    -- Fast path: cached target plate still shown and GUID-bound.
     local cachedTarget = NP.module.targetPlate
     if cachedTarget and targetGUID
         and NP.state.GetPlateGUID(cachedTarget) == targetGUID
@@ -240,9 +231,7 @@ function identity.UpdateMouseoverContext()
 
     local mouseoverGUID = NP.module.mouseoverGUID
 
-    -- Fast path: cached mouseover plate still shown, bound to this GUID, and name
-    -- still matches. The name check mirrors the guard the normal bind path below
-    -- applies before trusting mouseoverGUID, so we keep the same guarantee.
+    -- Fast path: cached mouseover plate shown, GUID-bound, name still matches.
     local cachedMouseover = NP.module.mouseoverPlate
     if cachedMouseover and mouseoverGUID
         and NP.state.GetPlateGUID(cachedMouseover) == mouseoverGUID
@@ -425,8 +414,7 @@ end
 
 -- Extended unit tokens (nameplate1..40, arena/party)
 
--- Probe loops ran "nameplate" .. i per token per probe (40 string allocations
--- per probe per plate); the token names never change.
+-- Precomputed nameplateN tokens (avoid per-probe string concat).
 local NAMEPLATE_TOKEN_NAMES = {}
 for i = 1, 40 do
     NAMEPLATE_TOKEN_NAMES[i] = "nameplate" .. i
@@ -746,10 +734,7 @@ function identity.UpdatePlateUnitToken(plateData)
     -- Open-world fallback: nameplate1..40 probe.
     local now = GetTime and GetTime() or 0
     if not plateData._tokenProbeAt or now >= plateData._tokenProbeAt then
-        -- Global cap on top of the per-plate 0.2s cooldown: a screen of
-        -- unresolved plates otherwise bursts thousands of unit-API probe steps
-        -- per second. A deferred plate keeps its cooldown unconsumed and
-        -- retries on a later tick.
+        -- Global per-tick probe budget atop 0.2s cooldown; deferred plates retry without consuming it.
         local tick = NP.module._engineFrame
         if tick then
             if NP.module._tokenProbeTick ~= tick then
@@ -994,9 +979,7 @@ local function ForEachGroupTargetUnit(callback)
     end
 end
 
--- Same token order/priority as ForEachGroupTargetUnit (party1..4 then raid1..40,
--- first match wins), inlined so the per-plate 0.2s probe neither allocates a
--- closure nor keeps scanning group members after its match is found.
+-- Inlined group-target scan with early exit (matches ForEachGroupTargetUnit order).
 local function FindGroupTargetUnitForPlate(plateData)
     for i = 1, GetNumPartyMembers() do
         local unit = GROUP_TARGET_TOKENS_PARTY[i] or ("party" .. i .. "target")

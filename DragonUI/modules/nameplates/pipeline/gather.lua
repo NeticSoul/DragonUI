@@ -47,7 +47,7 @@ end
 
 -- Identity invalidation and fresh bar color capture.
 function NP.gather.PreparePlateForRefresh(plateData, snapshot)
-    -- Name/color/config may change below; per-tick gate memos must not outlive that.
+    -- Invalidate gate memos before identity/color/config may change.
     NP.gather.InvalidatePlateGates(plateData)
     local freshName = snapshot.plateName
     NP.native_style.ResetPlateEliteIfIdentityChanged(plateData, freshName)
@@ -151,10 +151,7 @@ local function ComputeTotemIconOnlyActive(plateData)
     return NP.widgets.ResolveTotemTexturePath(plateName) ~= nil
 end
 
--- Totem icon-only: hide bar/name/cast; shared gate for all refresh paths.
--- Evaluated once per widget sync (7+ per full refresh), so the result is
--- memoized per engine tick; InvalidatePlateGates busts it wherever the inputs
--- (plateName, bar color, config) change mid-tick.
+-- Totem icon-only (hide bar/name/cast); memoized per tick, busted on input change.
 function NP.gather.IsTotemIconOnlyActive(plateData)
     if not plateData then return false end
     local tick = NP.module._engineFrame
@@ -187,7 +184,7 @@ function NP.gather.EnsurePlateVisualRoot(plateData, state, context)
     end
 end
 
--- Hoisted sync lists: allocated per refresh before, which added steady GC churn.
+-- Module-scoped sync lists to avoid per-refresh allocation.
 local FULL_SYNC_WIDGETS = {
     "Debuffs",
     "ThreatGlow",
@@ -238,8 +235,7 @@ local function GetPartyUnitForPlate(plateData)
     return nil
 end
 
--- Resolve a plate to its party/raid unit token by name (cached ~0.3s). Player
--- names are unique on a realm, so a name match is a reliable group identifier.
+-- Resolve group unit by name (~0.3s cache); realm-unique player names are reliable identifiers.
 function NP.gather.GetGroupUnitForPlate(plateData)
     local name = plateData and plateData.plateName
     if not name then
@@ -274,9 +270,7 @@ function NP.gather.GetGroupUnitForPlate(plateData)
     return nil
 end
 
--- Headline mode: party/raid member plates show only the name (no health/power/
--- cast bars). Reaction is checked first so enemy plates short-circuit before the
--- group lookup. Group membership is what restricts this to party/raid.
+-- Headline mode for party/raid: name only; reaction checked before group lookup.
 function NP.gather.IsFriendlyNameOnlyActive(plateData)
     if not plateData then
         return false
@@ -300,9 +294,7 @@ function NP.gather.IsFriendlyNameOnlyActive(plateData)
     return false
 end
 
--- Headline mode for friendly NPCs: hide bars and show only the name. Works on
--- stock 3.3.5a; the optional NPC title subtitle needs awesome_wotlk (a tooltip
--- scan requires a unit token).
+-- Headline mode for friendly NPCs; title subtitle needs awesome_wotlk (tooltip scan needs token).
 function NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
     if not plateData then
         return false
@@ -327,11 +319,8 @@ local function ComputeHeadlineActive(plateData)
     return true
 end
 
--- Combined gate for every headline-suppression site (players + NPCs).
--- Returns false for the current target when headlineExcludeTarget is enabled,
--- so the target plate shows its full plate normally.
--- Memoized per engine tick (see IsTotemIconOnlyActive); target transitions run
--- a full refresh whose PreparePlateForRefresh busts the memo on both plates.
+-- Headline suppression gate (players + NPCs); excludes target when configured.
+-- Memoized per tick; PreparePlateForRefresh busts on target transition.
 function NP.gather.IsHeadlineActive(plateData)
     if not plateData then return false end
     local tick = NP.module._engineFrame
@@ -346,11 +335,7 @@ function NP.gather.IsHeadlineActive(plateData)
     return result
 end
 
--- Hidden tooltip used to read an NPC's title/occupation (e.g. <General Supplies>).
--- Reading any of guild/title/subname needs a unit token; in stock 3.3.5a that
--- token exists only for the unit you target/mouseover/focus, so these resolve as
--- you look at units and are cached persistently. With awesome_wotlk (nameplate
--- tokens) they resolve for every plate immediately.
+-- Subtitle tooltip; stock resolves on target/mouseover only, awesome_wotlk resolves all plates.
 local SubtitleScanTip = CreateFrame("GameTooltip", "DragonUINPSubtitleScan", UIParent, "GameTooltipTemplate")
 SubtitleScanTip:SetOwner(UIParent, "ANCHOR_NONE")
 
@@ -371,9 +356,7 @@ local function ResolvePlateToken(plateData)
     return nil
 end
 
--- Static subtitle (guild for friendly players, title/occupation for NPCs).
--- Returns nil when nothing is resolvable yet, so the caller keeps any cached
--- value and retries on later refreshes (e.g. once the unit is moused over).
+-- Static subtitle (guild/title); nil until resolvable, then cached.
 function NP.gather.GetPlateSubtitleText(plateData, unit)
     local cfg = NP.config.GetCfg()
     unit = unit or ResolvePlateToken(plateData)
@@ -452,9 +435,7 @@ function NP.gather.GetHealthBarColor(plateData)
     if reaction == "FRIENDLY" and unitType == "PLAYER"
         and plateData.barB
         and plateData.barB > 0.5 and (plateData.barR or 0) < 0.3 and (plateData.barG or 0) < 0.3 then
-        -- Class-color any friendly player (not just group). Token resolves from
-        -- group / target / mouseover / nameplate; cached so it persists once known.
-        -- Stock 3.3.5a fills in on hover/target; awesome_wotlk resolves every plate.
+        -- Friendly class color from any resolved token; cached, fills in on hover/target in stock.
         if cfg.friendlyClassColors then
             if not plateData._friendlyHealthClass then
                 local token = ResolvePlateToken(plateData)
@@ -522,8 +503,7 @@ function NP.gather.SyncHealth(plateData, value)
 
     local cfg = NP.config.GetCfg()
     local showHpNum = cfg.showHealthNumber == true
-    -- SetText re-shapes the font string even for identical strings; health
-    -- ticks mostly repeat the same rounded value, so guard on the raw number.
+    -- Guard SetText on unchanged health values.
     if showHpNum and maxVal and maxVal > 0 then
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
         if plateData.minaHpNum then
@@ -667,9 +647,7 @@ local function ReadNativeLevelSnapshot(plateData)
         -- Recycled plates may show stale numeric level beside boss skull.
         return "??"
     end
-    -- Already resolved (cached by SuppressNativeChrome, no delay) — use it
-    -- immediately instead of waiting out the settle window below, which only
-    -- exists to protect the raw fallback read on recycled plates.
+    -- Use cached level when available; settle window protects recycled-plate fallback read.
     if plateData.plateLevel and plateData._plateLevelName == plateData.plateName then
         return plateData.plateLevel
     end
@@ -709,8 +687,7 @@ function NP.gather.SyncName(plateData, unit)
     local cfg = NP.config.GetCfg()
     local headline = NP.gather.IsHeadlineActive(plateData) -- players or NPCs (false for excluded target)
     local nameOnly = headline and NP.gather.IsFriendlyNameOnlyActive(plateData) -- friendly PLAYER headline
-    -- Resolve cached data even when this plate is excluded from headline display (headlineExcludeTarget),
-    -- so guild/class/title/AFK are ready the moment the player un-targets.
+    -- Resolve headline data even when headlineExcludeTarget; ready on un-target.
     local nameOnlyResolve = NP.gather.IsFriendlyNameOnlyActive(plateData)
     local centerOnly = cfg.centerNameOnly == true or headline
     local suppressLevel = headline  -- centerNameOnly alone no longer hides level
@@ -786,9 +763,7 @@ function NP.gather.SyncName(plateData, unit)
             r, g, b = 1, 1, 1
         end
     end
-    -- Headline mode: optional class color. Resolved from whatever token is available
-    -- and cached so it persists. Resolution runs even when the target is excluded from
-    -- headline display so the color is ready when un-targeting.
+    -- Resolve headline class color even when headlineExcludeTarget; ready on un-target.
     if nameOnlyResolve and cfg.friendlyNameOnlyClassColor and not plateData._headlineClass then
         local token = ResolvePlateToken(plateData)
         if token and UnitExists(token) and UnitIsPlayer(token) then
@@ -850,10 +825,7 @@ function NP.gather.SyncName(plateData, unit)
     plateData.minaName:Show()
 
     if plateData.minaSubTitle then
-        -- Static part (guild for players, title for NPCs): resolved lazily and
-        -- cached persistently, but only shown while its option is enabled.
-        -- Resolve subtitle text (guild / NPC title) even when target is excluded from
-        -- headline display, so it's cached and ready on un-target.
+        -- Cache subtitle even when headlineExcludeTarget; ready on un-target.
         local wantStaticResolve = (nameOnlyResolve and cfg.friendlyNameOnlyGuild == true)
             or (NP.gather.IsFriendlyNPCNameOnlyActive(plateData) and cfg.friendlyNPCNameOnlyTitle == true)
         if wantStaticResolve and not plateData._subtitleText then
@@ -960,17 +932,9 @@ function NP.gather.RefreshPlateFull(plateData, reason, hpValue)
     NP.gather.ApplyVisualState(plateData, snapshot, context, state, reason)
 end
 
--- High-frequency refresh paths (UNIT_HEALTH/UNIT_MANA/UNIT_AURA, level settle)
--- skip the full state rebuild once the plate is styled: BuildPlateState re-runs
--- identity resolution, token probes and chrome suppression, which the healthBar
--- OnValueChanged hook path already proves unnecessary for pure value updates.
--- Unstyled plates still take the full path so first paint is unchanged.
+-- Light refresh skips BuildPlateState once styled; unstyled plates use full path.
 
--- All identity work (FindUniquePlateForUnit, GetUnitForPlate, GUID binding) is
--- gated on plateName, and native name text can settle or change after OnShow
--- without a hide/show cycle. The full path resynced it on every refresh; light
--- paths must escalate on drift or a plate that raced the name settle stays
--- unresolvable forever (stock-client hover reveal breaks).
+-- Escalate to full refresh on plateName drift (native name may settle after OnShow).
 local function PlateIdentityDrifted(plateData)
     return NP.discovery.GetPlateName(plateData) ~= plateData.plateName
 end
@@ -1095,20 +1059,13 @@ end
 -- Threat transitions (engine): sync glow and health tint when status changes.
 function NP.gather.ProcessThreatTransitions()
     local inCombat = NP.module.playerInCombat and true or false
-    -- Threat glow and aggro tint are combat-only (see GetAggroBarTint /
-    -- ApplyThreatGlow). Out of combat this loop only ever resolves to status 0
-    -- with no visual effect, while still paying ResolveAggroStatus (unit token
-    -- resolution) per plate every frame. Skip it entirely out of combat, except
-    -- for a single flush pass right after combat ends that reverts glow and
-    -- health tint to their non-combat state.
+    -- Skip out of combat except one post-combat flush (reverts glow/tint without per-frame resolution).
     if not inCombat and not NP.module._threatNeedsFlush then
         return
     end
     local currentBucket = NP.module._budgetFrame or 0
     for _, plateData in pairs(NP.module.plates) do
-        -- Target/focus full-rate; others staggered across threat budget buckets.
-        -- The post-combat flush pass (not inCombat) bypasses staggering so every
-        -- plate reverts in that single frame instead of over several.
+        -- Target/focus full-rate; post-combat flush bypasses bucket stagger.
         local isPriority = NP.identity.IsTargetPlate(plateData) or NP.identity.IsFocusPlate(plateData)
         if isPriority or not inCombat or (plateData._budgetBucket or 0) == currentBucket then
             local status = NP.threat.ResolveAggroStatus(plateData)

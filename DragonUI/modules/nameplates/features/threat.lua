@@ -44,9 +44,7 @@ function NP.threat.IsThreatSuppressedContext()
 end
 
 -- With unit token: UnitDetailedThreatSituation; else native glow color buckets.
--- Health tint, glow sync and the transition scan each resolve the same plate
--- within one engine tick; the unit resolution behind it is the expensive part,
--- so the result is memoized per tick.
+-- Memoize per tick; threat tint/glow/scan share unit resolution.
 function NP.threat.ResolveAggroStatus(plateData)
     if not plateData then
         return 0
@@ -78,9 +76,7 @@ function NP.threat.IsTankMode()
     return NP.config.GetCfg().tankMode == true
 end
 
--- Damage-role perspective: any aggro signal is a warning, with status 3 as the
--- highest risk. Tank perspective is inverted: status 3 is safe, while losing
--- aggro on an engaged hostile unit is the warning condition.
+-- Damage role: any aggro is warning; tank role inverts (status 3 safe, lost aggro warns).
 local function ResolveAggroColor(plateData, status)
     if status <= 0 then
         if not NP.threat.IsTankMode() then

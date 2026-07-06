@@ -3,8 +3,7 @@ local NP = addon.Nameplates
 local C = NP.const
 
 -- Nameplates engine: OnUpdate driver, queues, events.
--- One WorldFrame OnUpdate drains weak-key queues
--- (reset > fn > mass > budgeted full-refresh > per-plate).
+-- OnUpdate queue order: reset > fn > mass > budgeted full-refresh > per-plate.
 -- Identity uses fresh alpha each frame. Plate root alpha harvested then forced to 1;
 -- visual alpha and frame levels have single owners (engine / layout).
 
@@ -21,9 +20,7 @@ local weakKey = { __mode = "k" }
 E.massQueue = E.massQueue or setmetatable({}, weakKey)
 E.functionQueue = E.functionQueue or setmetatable({}, weakKey)
 E.targetQueue = E.targetQueue or setmetatable({}, weakKey)
--- Plates awaiting a full BuildPlateState refresh, drained a few per tick
--- (see E.ProcessQueues) instead of all at once. Weak-keyed like the queues
--- above: a plate that stops being tracked simply drops out.
+-- Pending full refreshes; weak-keyed, budgeted in ProcessQueues.
 E.pendingFullRefresh = E.pendingFullRefresh or setmetatable({}, weakKey)
 
 local function ForEachVisiblePlate(func)
@@ -128,9 +125,7 @@ function E.ProcessQueues()
         for queuedFunction in pairs(E.massQueue) do
             E.massQueue[queuedFunction] = nil
         end
-        -- Full refresh (BuildPlateState) is the heavy path; queue every visible
-        -- plate for the budgeted drain below instead of running it on all of
-        -- them in this same tick.
+        -- Defer full refresh to budgeted pendingFullRefresh drain.
         ForEachVisiblePlate(MarkPendingFullRefresh)
     else
         for queuedFunction in pairs(E.massQueue) do
@@ -139,14 +134,7 @@ function E.ProcessQueues()
         end
     end
 
-    -- Global heavy-update budget: mass full-refresh events (config change,
-    -- zone transition, PLAYER_TOTEM_UPDATE in a large raid) can mark every
-    -- visible plate at once. Draining all of them through BuildPlateState in a
-    -- single tick is the one-frame spike FruitPlates avoids with a fixed
-    -- per-frame heavy-work cap; spreading the drain across ticks costs nothing
-    -- visible (styling that already happened stays), and light refreshes
-    -- (health/power/castbar/auras, handled above and via targetQueue below)
-    -- are untouched by this budget.
+    -- Budget full refreshes per tick to avoid mass-event spikes; light refreshes unaffected.
     if next(E.pendingFullRefresh) then
         local budget = C.FULL_REFRESH_PLATES_PER_TICK or 8
         for plateData in pairs(E.pendingFullRefresh) do
@@ -230,13 +218,12 @@ end
 
 function E.SyncThreatCVar()
     if not GetCVar or not SetCVar then return end
-    -- Shared with unitframes target/focus threat-% (target_style.lua UpdateThreat) — must
-    -- stay forced on for the whole nameplates session, not just while nameplate glow is on.
+    -- Shared with unitframes threat-%; forced for whole session, not just nameplate glow.
     if not NP.module.threatCVarApplied then
         NP.module.savedThreatWarning = GetCVar("threatWarning")
         NP.module.threatCVarApplied = true
     end
-    -- Runs on every scan tick; skip the redundant write when already forced.
+    -- Skip SetCVar when already at target value.
     if GetCVar("threatWarning") ~= "3" then
         SetCVar("threatWarning", "3")
     end
@@ -260,8 +247,7 @@ function E.SyncRetailStackingCVars()
     local cfg = NP.config.GetCfg()
     if not GetCVar or not SetCVar then return end
 
-    -- SetCVar errors on a name the client doesn't recognize (unlike GetCVar,
-    -- which just returns nil); only touch it if it already resolved to something.
+    -- Only SetCVar if the name already resolves (unrecognized names error unlike GetCVar).
     local currentSmoothStacking = GetCVar("nameplateSmoothStacking")
     if currentSmoothStacking ~= nil then
         local wantExclusive = NP.module._clampTargetEnabled or NP.module._clampBossEnabled
@@ -328,8 +314,7 @@ end
 function E.SyncConfigSnapshot(skipStackingCVar)
     local cfg = NP.config.GetCfg()
     NP.castbar.SyncOffTargetMonitorFromConfig(cfg)
-    -- CLEU dispatch flags: read per combat log event, so snapshot instead of
-    -- resolving cfg + monitor mode hundreds of times per second in raids.
+    -- Snapshot CLEU flags; avoid per-event cfg resolution.
     NP.module._cleuCastbarEnabled = (cfg.showCastBar ~= false)
     NP.module._cleuCastMonitorActive = NP.module._cleuCastbarEnabled
         and NP.config.IsOffTargetCastMonitorActive(cfg) or false
@@ -361,7 +346,7 @@ end
 local function EngineOnUpdate(_, elapsed)
     if not NP.config.IsModuleEnabled() or not NP.module.applied then return end
 
-    -- Tick counter for per-frame memoization (threat status resolution).
+    -- Engine tick counter for per-frame memoization.
     NP.module._engineFrame = (NP.module._engineFrame or 0) + 1
 
     -- 0. Castbar progress on active plates.
@@ -370,17 +355,13 @@ local function EngineOnUpdate(_, elapsed)
     local hasTarget = UnitExists("target") == 1
 
     -- 1. Harvest native alpha, then force plate root to 1 when target exists.
-    -- cfg is hoisted out of the per-plate retail-scale path (was 40 GetCfg/frame).
-    -- awesome_wotlk only: never force alpha back to 1. The anti-dim re-assert
-    -- below exists for a stock 3.3.5a quirk (Blizzard dims non-target plates);
-    -- awesome_wotlk manages plate alpha itself, including its own wall/LoS
-    -- occlusion hiding, and forcing it to 1 here was fighting that.
+    -- retailCfg hoisted out of per-plate path (was 40 GetCfg/frame).
+    -- awesome_wotlk only: skip forcing alpha to 1 (stock dims non-target plates; awesome manages alpha/LoS).
     local skipAlphaForce = C_NamePlate ~= nil
     local retailBehavior = NP.module._retailBehavior
     local retailCfg = retailBehavior and NP.config.GetCfg() or nil
     local levelSettleNow = GetTime and GetTime() or 0
-    -- Single roster pass: alpha harvest, retail scale and level settle were
-    -- three separate pairs() sweeps before; the work per plate is unchanged.
+    -- Single roster pass (was three pairs() sweeps).
     for _, pd in pairs(NP.module.plates) do
         local pl = pd.plate
         if not pl or not pl.IsShown or not pl:IsShown() then
@@ -456,8 +437,7 @@ local function EngineOnUpdate(_, elapsed)
     -- 6. Depth sort (50ms throttle).
     NP.layout.UpdateDepthOrdering(elapsed)
 
-    -- 7. Visual alpha on the stack only. Hidden plates are skipped: PrepareNameplate
-    -- clears _lastAppliedVisualAlpha on show, so they re-apply on their first tick.
+    -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
     if NP.module._opacityEnabled then
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
@@ -585,16 +565,8 @@ local function EngineOnEvent(_, event, unit, ...)
         E.QueueMass(CB.OnUpdateCastbar)
         return
     end
-    -- awesome_wotlk only. No-op on stock 3.3.5a (C_NamePlate is nil there, so
-    -- neither event is even registered) — the 4 Hz poll remains the only path.
-    --
-    -- NAME_PLATE_CREATED fires for a bare frame that isn't attached to a unit
-    -- yet: the native health bar hasn't been given its real reaction color at
-    -- this point. Styling here (as a first attempt did) captures whatever the
-    -- bar's color defaults to, which matches none of GetPlateReaction's known
-    -- colors and falls through to its "HOSTILE/PLAYER" default — friendly
-    -- units render with a red bar and never get headline mode. So this only
-    -- registers the plate (captures region references) and applies no visuals.
+    -- awesome_wotlk only; no-op on stock 3.3.5a (4 Hz poll remains).
+    -- NAME_PLATE_CREATED: unitless frame with wrong bar color — register only, do not style.
     if event == "NAME_PLATE_CREATED" and C_NamePlate then
         local namePlateFrame = unit
         if namePlateFrame and not FindPlateDataByNameplateFrame(namePlateFrame) then
@@ -608,9 +580,7 @@ local function EngineOnEvent(_, event, unit, ...)
         end
         return
     end
-    -- NAME_PLATE_UNIT_ADDED fires once the plate is actually attached to a
-    -- unit, which is when the native reaction color is set — the first safe
-    -- point to style it. This is what replaces waiting for the next poll tick.
+    -- NAME_PLATE_UNIT_ADDED: valid reaction color; style here instead of next poll.
     if event == "NAME_PLATE_UNIT_ADDED" and C_NamePlate and unit then
         local nameplate = C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
         if nameplate then
@@ -634,11 +604,7 @@ local function EngineOnEvent(_, event, unit, ...)
         end
         if isNewSetup then
             NP.lifecycle.SetupPlate(plateData)
-            -- We're in a plain event handler here, not inside the plate's own
-            -- OnShow hookscript, so there's no re-entrancy risk in styling it
-            -- right now instead of waiting for the queued OnUpdate tick (that
-            -- 1-frame gap is what was still showing native unstyled chrome,
-            -- including its own default health bar color, for an instant).
+            -- Style immediately (no OnShow re-entrancy); avoids 1-frame native chrome flash.
             if plateData.plate and plateData.plate.IsShown and plateData.plate:IsShown() then
                 NP.gather.RefreshPlateFull(plateData, "awesome_wotlk_unit_added")
             end
@@ -679,10 +645,7 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
         -- CLEU: `unit` is timestamp; forward `...` intact (dose stacks are extra args).
-        -- Subevent gating happens here, once, against the handlers' exported
-        -- event sets; the enabled flags come from the config snapshot, so
-        -- non-matching traffic costs two table lookups instead of three
-        -- handler calls plus per-event GetCfg/mode resolution.
+        -- Gate CLEU once via exported event sets and config snapshot.
         local timestamp = unit
         local subevent = ...
         if NP.auras.AURA_COMBATLOG_EVENTS[subevent] then
@@ -750,8 +713,7 @@ local function EngineOnEvent(_, event, unit, ...)
     if event == "UNIT_HEALTH" or event == "UNIT_MANA" or event == "UNIT_MAXMANA" then
         local unitGUID = UnitGUID(unit)
         local plateData = unitGUID and NP.state.GUIDToPlate[unitGUID]
-        -- ResolvePlateUnit can only discover these three tokens. Avoid an O(n)
-        -- scan for party/raid and other unit events that cannot match a plate.
+        -- ResolvePlateUnit only covers target/focus/mouseover; skip O(n) scan for other units.
         if not plateData and (unit == "target" or unit == "focus" or unit == "mouseover") then
             for _, candidate in pairs(NP.module.plates) do
                 if NP.identity.ResolvePlateUnit(candidate) == unit then
@@ -876,9 +838,7 @@ local function RunNameplatesApply()
 end
 
 local function RunNameplatesRestore()
-    -- Disable hook dispatch before native frames are shown again. HookScript
-    -- callbacks are permanent and would otherwise enqueue stale plateData while
-    -- restoration is still in progress.
+    -- Disable hook dispatch before restore (HookScript callbacks are permanent).
     NP.module.applied = false
     if NP.module.scannerFrame then
         NP.module.scannerFrame:SetScript("OnUpdate", nil)
