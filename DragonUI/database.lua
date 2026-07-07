@@ -182,7 +182,7 @@ local defaults = {
         lootroll = {
             anchor = "BOTTOM",
             x = 0,
-            y = 200,
+            y = 220,
         },
         -- ACTIONBAR SETTINGS
         mainbars = {
