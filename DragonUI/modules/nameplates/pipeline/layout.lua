@@ -992,7 +992,9 @@ function NP.layout.LayoutMinaStack(plateData)
             plateData.minaName:SetJustifyH("LEFT")
             plateData.minaName:SetPoint("LEFT", plateData.minaNameRow, "LEFT", 0, 0)
             plateData._nameBossShift = nil
-            local nameWidth = cfg.showHealthPercent ~= false and visW * 0.68 or visW
+            -- showHealthNumber moves the percent text into the bar, hiding minaHpPct here.
+            local reserveForPct = cfg.showHealthPercent ~= false and cfg.showHealthNumber ~= true
+            local nameWidth = reserveForPct and visW * 0.68 or visW
             plateData.minaName:SetWidth(nameWidth)
         end
     end
