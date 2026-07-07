@@ -2575,6 +2575,18 @@ local function InitializePlayerFrame()
         end)
     end
 
+    -- Blizzard re-Shows this bar on its own (e.g. UnitFrameManaBar_UpdateType), undoing "hide mana bar".
+    if PlayerFrameManaBar then
+        hooksecurefunc(PlayerFrameManaBar, "Show", function(self)
+            if IsFatHealthbarActive() then
+                local _, _, hidden = GetFatManaConfig()
+                if hidden then
+                    self:Hide()
+                end
+            end
+        end)
+    end
+
     -- Protect against Blizzard's UnitFrameManaBar_UpdateType resetting our texture
     if not Module._manaTypeHooked and _G.UnitFrameManaBar_UpdateType then
         hooksecurefunc("UnitFrameManaBar_UpdateType", function(manaBar)
