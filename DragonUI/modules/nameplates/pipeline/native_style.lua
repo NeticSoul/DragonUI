@@ -141,10 +141,8 @@ local function LookupRareClassification(plateData)
             if RareEntryCache[entry] or NpcRareRanks:IsRareEntry(entry) then
                 return "rare"
             end
-            -- Known creature entry, confirmed not in the rare table: trust the
-            -- ID over the localized name. Two unrelated NPCs can share an exact
-            -- client name (e.g. a Blizzard translation collision), and the
-            -- entry id is authoritative where the display name is not.
+            -- Entry confirmed not rare: trust the id over the name, since
+            -- two unrelated NPCs can share a localized display string.
             return nil
         end
     end
@@ -155,9 +153,8 @@ local function LookupRareClassification(plateData)
     if not name then
         return nil
     end
-    -- Level is readable from the plate before ever targeting the unit
-    -- (unlike its GUID), so a handful of known cross-locale name collisions
-    -- (see NameLevelHints in npc_rare_ranks.lua) get disambiguated by it.
+    -- Level is readable pre-target (unlike GUID), so it disambiguates the
+    -- known name collisions in NameLevelHints (npc_rare_ranks.lua).
     local level
     local levelText = plateData.levelText
     if levelText and levelText.GetText then
@@ -278,13 +275,8 @@ function NP.native_style.ResolvePlateClassification(plateData, unit)
     if native == "rare" then
         return "rare"
     end
-    -- Neither the live unit (if any) nor the plate's native icon already
-    -- confirmed "rare". Many dungeon/world rares only ever report as
-    -- "elite" (or plain normal) through the game's own classification —
-    -- it never exposes their true rare status — so this is the only path
-    -- that can upgrade them, and it must work with just the plate's name
-    -- since a GUID (for id-based lookup) is only available after the
-    -- player has targeted the unit at least once this session.
+    -- Not yet confirmed rare: consult the database, since many dungeon/world
+    -- rares are only ever reported as "elite" by the game's own API.
     if LookupRareClassification(plateData) == "rare" then
         return "rare"
     end

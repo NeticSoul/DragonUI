@@ -5135,27 +5135,8 @@ local function ParseCSVEntries(csv)
     return set
 end
 
--- Client strings where Blizzard's localizers reused the exact same display
--- name for two unrelated creature templates, one rare/rare-elite and one a
--- normal/elite/worldboss spawn (e.g. esES "Acechador nocturno" = both
--- Duskstalker (rare, entry 14430, level 9) and Nightstalker (normal trash,
--- entry 17203, level 9)). Verified against NotPlater's full (unfiltered)
--- creature/locale export, cross-referencing every rare-ranked name against
--- every other name in the same locale.
---
--- The nameplate's level text is readable before ever targeting the unit
--- (unlike its GUID/entry id, which 3.3.5a only exposes once you target it),
--- and in most of these pairs the rare and the impostor are different levels.
--- So instead of blacklisting the name outright, map it to the rare variant's
--- expected level: IsRareName only confirms "rare" if the plate's level
--- matches. A `false` value marks the rare handful of pairs that are also
--- level-identical (a true coin flip with no pre-target signal at all) -
--- those still can't be resolved by name and stay name-blocked until the
--- player targets the unit and the id-based check in native_style.lua takes
--- over. "Time-Lost Proto Drake"/"Time-Lost Proto-Drake" also collides in
--- most locales, but the elite-ranked entry (32153, level 1, 1 HP) is a
--- non-spawning placeholder, not a real encounterable mob, so it's left out
--- entirely to avoid blinding the (very real, very hunted) rare on sight.
+-- Localized names Blizzard reused for both a rare and an unrelated NPC (verified
+-- against NotPlater). Maps to the rare's level; `false` = same-level, unresolvable.
 local NameLevelHints = {
     ["Glutschwinge"] = 46, -- deDE: Greater Firebird (rare, 46) / Smolderwing (normal, 41)
     ["벤"] = 1, -- koKR: Ben (rare, 1) / Ven (normal, 30)
