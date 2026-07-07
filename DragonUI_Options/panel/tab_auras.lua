@@ -641,15 +641,8 @@ local function BuildAurasTab(scroll)
         label = LO["Reset Buff Frame Position"],
         width = 220,
         callback = function()
-            if addon.db.profile.widgets and addon.db.profile.widgets.buffs then
-                local w = addon.db.profile.widgets.buffs
-                w.anchor = "TOPRIGHT"
-                w.posX = -270
-                w.posY = -15
-                w.custom_position = false
-            end
             if addon.BuffFrameModule then
-                addon.BuffFrameModule:UpdatePosition()
+                addon.BuffFrameModule:ResetBuffFramePosition()
             end
             print("|cFF00FF00[DragonUI]|r " .. LO["Buff frame position reset."])
         end,
@@ -670,6 +663,30 @@ local function BuildAurasTab(scroll)
                 addon.BuffFrameModule:UpdateWeaponEnchantPosition()
             end
             print("|cFF00FF00[DragonUI]|r " .. LO["Weapon enchant position reset."])
+        end,
+    })
+
+    C:AddSpacer(resetSection)
+
+    local isDebuffDetached = C:GetDBValue("widgets.debuffs.custom_position")
+    if isDebuffDetached then
+        C:AddDescription(resetSection, "|cff1784d1- " .. LO["Debuffs detached - positioned freely via Editor Mode"] .. "|r")
+    else
+        C:AddDescription(resetSection, "|cffaaaaaa- " .. LO["Debuffs attached - follow buff row"] .. "|r")
+    end
+
+    C:AddButton(resetSection, {
+        label = LO["Reset Debuff Position"],
+        width = 220,
+        disabled = function()
+            return not C:GetDBValue("widgets.debuffs.custom_position")
+        end,
+        callback = function()
+            if addon.BuffFrameModule then
+                addon.BuffFrameModule:ResetDebuffPosition()
+            end
+            print("|cFF00FF00[DragonUI]|r " .. LO["Debuff position reset."])
+            Panel:SelectTab("auras")
         end,
     })
 end

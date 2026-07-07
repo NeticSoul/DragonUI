@@ -54,6 +54,12 @@ local defaults = {
                 posY = -15,
                 custom_position = false
             },
+            debuffs = {
+                anchor = "TOPRIGHT",
+                posX = -270,
+                posY = -75,
+                custom_position = false
+            },
             pet = {
                 anchor = "TOPLEFT",
                 posX = 63,

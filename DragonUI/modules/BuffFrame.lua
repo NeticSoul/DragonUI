@@ -21,6 +21,7 @@ local buffFrame = nil
 local toggleButton = nil
 local dragonUIBuffFrame = nil
 local dragonUIWeaponBuffFrame = nil
+local dragonUIDebuffFrame = nil
 local buffsHiddenByToggle = false
 local weaponEnchantsAreSeparated = false
 
@@ -95,6 +96,14 @@ end
 local WEAPON_DEFAULT_ANCHOR = "TOPRIGHT"
 local WEAPON_DEFAULT_POSX = -270
 local WEAPON_DEFAULT_POSY = -170
+
+-- Debuffs have no fixed default screen position (it's dynamic, below the live
+-- buff row), so custom_position is the sole source of truth for detach state.
+local function IsDebuffFrameDetached()
+    return addon.db and addon.db.profile and addon.db.profile.widgets
+        and addon.db.profile.widgets.debuffs
+        and addon.db.profile.widgets.debuffs.custom_position == true
+end
 
 -- Create the collapse/expand toggle button
 local function ReplaceBlizzardFrame(frame)
@@ -219,6 +228,18 @@ function BuffFrameModule:UpdatePosition()
     end
 end
 
+-- Reset the buff frame back to its default screen position
+function BuffFrameModule:ResetBuffFramePosition()
+    if addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.buffs then
+        local w = addon.db.profile.widgets.buffs
+        w.anchor = BUFF_DEFAULT_ANCHOR
+        w.posX = BUFF_DEFAULT_POSX
+        w.posY = BUFF_DEFAULT_POSY
+        w.custom_position = false
+    end
+    self:UpdatePosition()
+end
+
 -- ============================================================================
 -- WEAPON ENCHANT SEPARATION SYSTEM
 -- Creates an independent moveable frame for TempEnchant1/2/3 (weapon poisons,
@@ -325,6 +346,16 @@ function BuffFrameModule:ToggleWeaponEnchantSeparation(enabled)
     end
 end
 
+-- Reset the debuff mover back to following the buff row (attached/default)
+function BuffFrameModule:ResetDebuffPosition()
+    if addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.debuffs then
+        addon.db.profile.widgets.debuffs.custom_position = false
+    end
+    if self._FixDebuffPositions then
+        self._FixDebuffPositions()
+    end
+end
+
 -- Toggle module on/off
 function BuffFrameModule:Toggle(enabled)
     if not addon.db or not addon.db.profile then return end
@@ -346,7 +377,7 @@ function BuffFrameModule:Enable()
     if not addon.db.profile.buffs.enabled then return end
     
     -- Create auxiliary frame for editor mode
-    dragonUIBuffFrame = addon.CreateUIFrame(BuffFrame:GetWidth(), BuffFrame:GetHeight(), "Auras")
+    dragonUIBuffFrame = addon.CreateUIFrame(BuffFrame:GetWidth(), BuffFrame:GetHeight(), "Buff")
     
     -- Register with editor system
     addon:RegisterEditableFrame({
@@ -355,17 +386,85 @@ function BuffFrameModule:Enable()
         blizzardFrame = BuffFrame,
         configPath = {"widgets", "buffs"},
         onHide = function()
-            -- After editor saves position, check if it matches the default
+            -- Compare against the ticket-shifted Y when a ticket/GM panel is open,
+            -- else editor open/close while one is up wrongly marks it as custom.
             local w = addon.db.profile.widgets.buffs
+            local ticketOpen = (TicketStatusFrame and TicketStatusFrame:IsShown())
+                            or (GMChatStatusFrame and GMChatStatusFrame:IsShown())
+            local expectedPosY = ticketOpen and BUFF_TICKET_POSY or BUFF_DEFAULT_POSY
             local isDefault = w.anchor == BUFF_DEFAULT_ANCHOR
                 and math.abs(w.posX - BUFF_DEFAULT_POSX) <= 5
-                and math.abs(w.posY - BUFF_DEFAULT_POSY) <= 5
+                and math.abs(w.posY - expectedPosY) <= 5
             w.custom_position = not isDefault
             self:UpdatePosition()
         end,
         module = self
     })
-    
+
+    -- Flip to custom position immediately on drag (not deferred to onHide) so
+    -- the editor panel's "Click to reset" button appears right away.
+    do
+        local originalBuffDragStart = dragonUIBuffFrame:GetScript("OnDragStart")
+        dragonUIBuffFrame:SetScript("OnDragStart", function(movFrame, button)
+            if originalBuffDragStart then
+                originalBuffDragStart(movFrame, button)
+            end
+            local w = addon.db.profile.widgets.buffs
+            if w and not w.custom_position then
+                w.custom_position = true
+            end
+        end)
+    end
+
+    -- Real body assigned further down (needs GetBuffLayoutInfo); forward
+    -- declared here so the Debuffs mover's editor hooks can call it via upvalue.
+    local FixDebuffPositions
+
+    -- ========================================================================
+    -- DEBUFF INDEPENDENT POSITIONING (Editor Mode)
+    -- Debuffs follow the buff row by default (unchanged). Dragging this mover
+    -- detaches it immediately; Reset re-anchors it to the default offset.
+    -- ========================================================================
+    do
+        dragonUIDebuffFrame = addon.CreateUIFrame(BuffFrame:GetWidth(), BuffFrame:GetHeight(), "Debuffs")
+
+        addon:RegisterEditableFrame({
+            name = "Debuffs",
+            frame = dragonUIDebuffFrame,
+            blizzardFrame = _G["DebuffButton1"],
+            configPath = {"widgets", "debuffs"},
+            onHide = function()
+                if FixDebuffPositions then FixDebuffPositions() end
+            end,
+            module = self
+        })
+
+        local originalDebuffDragStart = dragonUIDebuffFrame:GetScript("OnDragStart")
+        dragonUIDebuffFrame:SetScript("OnDragStart", function(movFrame, button)
+            if not IsDebuffFrameDetached() then
+                -- Attached anchor is relative to a transient buff button, not
+                -- UIParent — snap to a UIParent-relative point before the drag.
+                local cx, cy = dragonUIDebuffFrame:GetCenter()
+                local ux, uy = UIParent:GetCenter()
+                if cx and cy and ux and uy then
+                    dragonUIDebuffFrame:ClearAllPoints()
+                    dragonUIDebuffFrame:SetPoint("CENTER", UIParent, "CENTER", cx - ux, cy - uy)
+                end
+            end
+            if originalDebuffDragStart then
+                originalDebuffDragStart(movFrame, button)
+            end
+            local w = addon.db.profile.widgets.debuffs
+            if w and not w.custom_position then
+                w.custom_position = true
+            end
+        end)
+
+        dragonUIDebuffFrame:HookScript("OnDragStop", function()
+            if FixDebuffPositions then FixDebuffPositions() end
+        end)
+    end
+
     -- ========================================================================
     -- WEAPON ENCHANT SEPARATION (FEATURE)
     -- When enabled, weapon enchant icons (TempEnchant1/2/3) are detached from
@@ -481,22 +580,34 @@ function BuffFrameModule:Enable()
     end
 
     -- ========================================================================
-    -- HELPER: Fix debuff positioning (first debuff below last buff row)
+    -- HELPER: Position the debuff mover (attached: dynamic below the last buff
+    -- row; detached: from saved profile coords), then anchor the real debuff
+    -- icon to the mover so it always follows whichever mode is active.
     -- ========================================================================
-    local function FixDebuffPositions()
-        if not buffFramePositionLocked then return end
-        local firstBuff, lastRowStart, numVisible = GetBuffLayoutInfo()
-        local anchor = lastRowStart or firstBuff
-        -- First debuff: anchor below the last buff row, right-aligned
+    FixDebuffPositions = function()
+        if not buffFramePositionLocked or not dragonUIDebuffFrame then return end
+
+        if IsDebuffFrameDetached() then
+            local w = addon.db.profile.widgets.debuffs
+            dragonUIDebuffFrame:ClearAllPoints()
+            dragonUIDebuffFrame:SetPoint(w.anchor or "TOPRIGHT", UIParent, w.anchor or "TOPRIGHT",
+                w.posX or -270, w.posY or -75)
+        else
+            local firstBuff, lastRowStart = GetBuffLayoutInfo()
+            local anchor = lastRowStart or firstBuff
+            dragonUIDebuffFrame:ClearAllPoints()
+            if anchor then
+                dragonUIDebuffFrame:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -60)
+            else
+                -- No buffs visible — anchor directly below the buff frame
+                dragonUIDebuffFrame:SetPoint("TOPRIGHT", dragonUIBuffFrame, "BOTTOMRIGHT", 0, -60)
+            end
+        end
+
         local firstDebuff = _G["DebuffButton1"]
         if firstDebuff then
             firstDebuff:ClearAllPoints()
-            if anchor then
-                firstDebuff:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -60)
-            elseif dragonUIBuffFrame then
-                -- No buffs visible — anchor directly below the buff frame
-                firstDebuff:SetPoint("TOPRIGHT", dragonUIBuffFrame, "BOTTOMRIGHT", 0, -60)
-            end
+            firstDebuff:SetPoint("TOPRIGHT", dragonUIDebuffFrame, "TOPRIGHT", 0, 0)
 
             local debuffGap = GetDebuffHorizontalGap()
             if debuffGap > 0 then
@@ -512,6 +623,7 @@ function BuffFrameModule:Enable()
             end
         end
     end
+    BuffFrameModule._FixDebuffPositions = FixDebuffPositions
 
     local function ReanchorBuffButtons()
         local buffGap = GetBuffHorizontalGap()
@@ -794,6 +906,11 @@ function BuffFrameModule:Disable()
     if dragonUIBuffFrame then
         dragonUIBuffFrame:Hide()
         dragonUIBuffFrame = nil
+    end
+
+    if dragonUIDebuffFrame then
+        dragonUIDebuffFrame:Hide()
+        dragonUIDebuffFrame = nil
     end
 end
 

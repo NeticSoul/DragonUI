@@ -747,6 +747,20 @@ local function GetDetachedResetActionForSelection()
                 end
             end, frameData
         end
+    elseif frameName == "Debuffs" then
+        local cfg = addon.db.profile.widgets and addon.db.profile.widgets.debuffs
+        if cfg and cfg.custom_position and addon.BuffFrameModule and addon.BuffFrameModule.ResetDebuffPosition then
+            return function()
+                addon.BuffFrameModule:ResetDebuffPosition()
+            end, frameData
+        end
+    elseif frameName == "buffs" then
+        local cfg = addon.db.profile.widgets and addon.db.profile.widgets.buffs
+        if cfg and cfg.custom_position and addon.BuffFrameModule and addon.BuffFrameModule.ResetBuffFramePosition then
+            return function()
+                addon.BuffFrameModule:ResetBuffFramePosition()
+            end, frameData
+        end
     end
 
     return nil, frameData
