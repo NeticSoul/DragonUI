@@ -202,6 +202,7 @@ L["Quest Tracker"] = "í€˜ìŠ¤íŠ¸ ì¶”ì ê¸°"
 -- Mover tooltip strings
 L["Drag to move"] = "ë“œëž˜ê·¸ ì´ë™"
 L["Animated minimap border effects for DragonUI."] = "DragonUIìš© ì• ë‹ˆë©”ì´ì…˜ ë¯¸ë‹ˆë§µ í…Œë‘ë¦¬ íš¨ê³¼."
+L["Click to reset"] = "클릭으로 초기화"
 L["Right-click to reset"] = "ìš°í´ë¦­ìœ¼ë¡œ ì´ˆê¸°í™”"
 L["Status Tooltip:"] = "ìƒíƒœ íˆ´íŒ:"
 L["Top"] = "ìœ„"

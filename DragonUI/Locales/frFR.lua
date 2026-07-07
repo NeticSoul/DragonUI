@@ -56,6 +56,7 @@ L["Animated minimap border effects for DragonUI."] = "Effets de bordure animée 
 L["TargetCastbar"] = "Barre d'incantation de la cible"
 L["FocusCastbar"] = "Barre d'incantation du focus"
 L["Right-click to reset"] = "Clic droit pour réinitialiser"
+L["Click to reset"] = "Clic pour réinitialiser"
 L["Status Tooltip:"] = "Info-bulle d'etat :"
 L["Top"] = "Haut"
 L["Bottom"] = "Bas"

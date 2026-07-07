@@ -199,6 +199,7 @@ L["Quest Tracker"] = "任务追踪"
 
 L["Drag to move"] = "拖动以移动"
 L["Animated minimap border effects for DragonUI."] = "DragonUI 的小地图动画边框效果。"
+L["Click to reset"] = "点击重置"
 L["Right-click to reset"] = "右键重置"
 L["Status Tooltip:"] = "状态提示："
 L["Top"] = "上"

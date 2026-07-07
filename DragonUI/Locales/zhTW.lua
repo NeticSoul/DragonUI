@@ -55,6 +55,7 @@ L["Animated minimap border effects for DragonUI."] = "DragonUI 的小地圖動�
 -- 編輯模式標籤
 L["TargetCastbar"] = "目標施法條"
 L["FocusCastbar"] = "焦點施法條"
+L["Click to reset"] = "點擊重設"
 L["Right-click to reset"] = "右鍵重設"
 L["Status Tooltip:"] = "狀態提示："
 L["Top"] = "上"

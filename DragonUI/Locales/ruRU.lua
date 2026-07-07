@@ -202,6 +202,7 @@ L["Quest Tracker"] = "Трекер заданий"
 -- Mover tooltip strings
 L["Drag to move"] = "Перетащите для перемещения"
 L["Animated minimap border effects for DragonUI."] = "Анимированные эффекты рамки миникарты для DragonUI."
+L["Click to reset"] = "Клик для сброса"
 L["Right-click to reset"] = "ПКМ для сброса"
 L["Status Tooltip:"] = "Подсказка статуса:"
 L["Top"] = "Сверху"

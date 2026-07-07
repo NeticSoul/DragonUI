@@ -27,6 +27,8 @@ local ATLAS_TEXTURE = PET_TEX.ATLAS_TEXTURE
 local TOT_BASE = PET_TEX.TOT_BASE
 local POWER_TEXTURES = PET_TEX.POWER_TEXTURES
 local COMBAT_TEX_COORDS = PET_TEX.COMBAT_TEX_COORDS
+local DEFAULT_ATTACH_X = 18
+local DEFAULT_ATTACH_Y = -80
 
 -- ===============================================================
 -- COMBAT PULSE ANIMATIONS
@@ -116,30 +118,16 @@ end
 local function ApplyFramePositioning()
     local config = addon.db and addon.db.profile.unitframe.pet
     if not config or not PetFrame then return end
-    
+
     PetFrame:SetScale(config.scale or 1.0)
-    
-    --  PRIORITY: Use anchor frame if it exists (centralized system)
-    if PetFrameModule.anchor then
-        PetFrame:ClearAllPoints()
+    PetFrame:ClearAllPoints()
+
+    if config.override and PetFrameModule.anchor then
+        -- Detached: follow the free-floating anchor frame (widgets.pet).
         PetFrame:SetPoint("CENTER", PetFrameModule.anchor, "CENTER", 0, 0)
-        
-    elseif config.override then
-        --  FALLBACK: Legacy manual configuration system
-        PetFrame:ClearAllPoints()
-        local anchor = config.anchorFrame and _G[config.anchorFrame] or UIParent
-        PetFrame:SetPoint(
-            config.anchor or "TOPRIGHT",
-            anchor,
-            config.anchorParent or "BOTTOMRIGHT",
-            config.x or 0,
-            config.y or 0
-        )
-        PetFrame:SetMovable(true)
-        PetFrame:EnableMouse(true)
-        
     else
-        
+        -- Attached (default): anchored directly to the player frame.
+        PetFrame:SetPoint("CENTER", _G.PlayerFrame, "CENTER", config.x or DEFAULT_ATTACH_X, config.y or DEFAULT_ATTACH_Y)
     end
 end
 
@@ -515,9 +503,9 @@ end
 -- REFRESH FUNCTION FOR OPTIONS
 -- ===============================================================
 function addon.RefreshPetFrame()
+    PetFrameModule:UpdateWidgets()
     if UnitExists("pet") then
         OnPetFrameUpdate()
-        
     end
 end
 
@@ -571,32 +559,48 @@ local function CreatePetAnchorFrame()
     return PetFrameModule.anchor
 end
 
--- Apply saved widget position to the anchor frame
+-- Detached mode: position the anchor frame from its saved UIParent-relative offset.
 local function ApplyWidgetPosition()
-    if not PetFrameModule.anchor then
-        
-        return
-    end
+    if not PetFrameModule.anchor then return end
+    if not addon.db or not addon.db.profile or not addon.db.profile.widgets then return end
 
-    -- Ensure configuration exists
-    if not addon.db or not addon.db.profile or not addon.db.profile.widgets then
-        
-        return
-    end
-    
     local widgetConfig = addon.db.profile.widgets.pet
-    
+    PetFrameModule.anchor:ClearAllPoints()
     if widgetConfig and widgetConfig.posX and widgetConfig.posY then
         local anchor = widgetConfig.anchor or "TOPRIGHT"
-        PetFrameModule.anchor:ClearAllPoints()
         PetFrameModule.anchor:SetPoint(anchor, UIParent, anchor, widgetConfig.posX, widgetConfig.posY)
-        
     else
-        -- Default position (upper right corner)
-        PetFrameModule.anchor:ClearAllPoints()
         PetFrameModule.anchor:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -50, -150)
-        
     end
+end
+
+-- Keep the draggable overlay tracking the real frame while attached.
+local function SyncPetOverlayToRealFrame()
+    if not PetFrameModule.anchor then return end
+    local config = addon.db and addon.db.profile and addon.db.profile.unitframe and addon.db.profile.unitframe.pet
+    PetFrameModule.anchor:ClearAllPoints()
+    if config and config.override then
+        ApplyWidgetPosition()
+    elseif not (PetFrame and pcall(PetFrameModule.anchor.SetPoint, PetFrameModule.anchor, "CENTER", PetFrame, "CENTER", 0, 0)) then
+        ApplyWidgetPosition()
+    end
+end
+
+-- Save the anchor frame's current screen position (mirrors ToT/FoT).
+local function PersistDetachedPetPosition()
+    if not PetFrameModule.anchor then return false end
+    if not (addon.db and addon.db.profile) then return false end
+
+    local cx, cy = PetFrameModule.anchor:GetCenter()
+    local ux, uy = UIParent:GetCenter()
+    if not (cx and cy and ux and uy) then return false end
+
+    addon.db.profile.widgets = addon.db.profile.widgets or {}
+    addon.db.profile.widgets.pet = addon.db.profile.widgets.pet or {}
+    addon.db.profile.widgets.pet.anchor = "CENTER"
+    addon.db.profile.widgets.pet.posX = math.floor((cx - ux) + 0.5)
+    addon.db.profile.widgets.pet.posY = math.floor((cy - uy) + 0.5)
+    return true
 end
 
 -- Centralized system interface
@@ -628,11 +632,14 @@ end
 
 function PetFrameModule:UpdateWidgets()
     ApplyWidgetPosition()
-    -- Reposition the pet frame relative to the updated anchor
-    if not InCombatLockdown() then
-        -- The pet frame should follow the anchor
-        ApplyFramePositioning()
+    if InCombatLockdown() then
+        if addon and addon.CombatQueue then
+            addon.CombatQueue:Add("petframe_widgets", function() PetFrameModule:UpdateWidgets() end)
+        end
+        return
     end
+    ApplyFramePositioning()
+    SyncPetOverlayToRealFrame()
 end
 
 -- Always visible in editor mode, not filtered by class
@@ -668,6 +675,8 @@ local function ShowPetFrameTest()
             PetFrameManaBar:SetValue(50)
             PetFrameManaBar:Show()
         end
+
+        SyncPetOverlayToRealFrame()
     end
 end
 
@@ -702,11 +711,27 @@ local function HidePetFrameTest()
     end
 end
 
+-- Detach and persist when the user drags/nudges/types a new position (mirrors ToT/FoT).
+local function DetachPetFrame()
+    local config = addon.db and addon.db.profile and addon.db.profile.unitframe and addon.db.profile.unitframe.pet
+    if config then
+        config.override = true
+    end
+    PersistDetachedPetPosition()
+    PetFrameModule:UpdateWidgets()
+end
+
 -- Initialize pet frame for the editor system
 local function InitializePetFrameForEditor()
     -- Create the anchor frame
     CreatePetAnchorFrame()
-    
+
+    -- Detach immediately on drag stop, like ToT/FoT's small_frame.lua.
+    PetFrameModule.anchor:HookScript("OnDragStop", function(self)
+        self.DragonUI_WasDragged = true
+        DetachPetFrame()
+    end)
+
     -- Register with editor system (full interface like party.lua and castbar.lua)
     addon:RegisterEditableFrame({
         name = "PetFrame",
@@ -715,13 +740,22 @@ local function InitializePetFrameForEditor()
         hasTarget = ShouldPetFrameBeVisible,
         showTest = ShowPetFrameTest,
         hideTest = HidePetFrameTest,
-        onHide = function() PetFrameModule:UpdateWidgets() end,
+        onHide = function()
+            -- Nudge/typed-coordinate edits also count as a manual detach.
+            if PetFrameModule.anchor.DragonUI_WasDragged or PetFrameModule.anchor.DragonUI_WasAdjustedByEditor then
+                DetachPetFrame()
+                PetFrameModule.anchor.DragonUI_WasDragged = nil
+                PetFrameModule.anchor.DragonUI_WasAdjustedByEditor = nil
+            else
+                PetFrameModule:UpdateWidgets()
+            end
+        end,
         LoadDefaultSettings = function() PetFrameModule:LoadDefaultSettings() end,
         UpdateWidgets = function() PetFrameModule:UpdateWidgets() end
     })
-    
+
     PetFrameModule.initialized = true
-    
+
 end
 
 -- Initialization

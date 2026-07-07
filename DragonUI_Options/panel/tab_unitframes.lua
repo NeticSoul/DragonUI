@@ -473,34 +473,50 @@ local function BuildPetSection(scroll)
 
     C:AddHeading(s, LO["Position"])
 
+    local positionWidgets = {}
+    local function RegisterPositionWidget(widget, disabledFunc)
+        table.insert(positionWidgets, { widget = widget, disabledFunc = disabledFunc })
+        return widget
+    end
+    local function RefreshPositionControlStates()
+        for _, entry in ipairs(positionWidgets) do
+            if entry.widget and entry.widget.SetDisabled and entry.disabledFunc then
+                entry.widget:SetDisabled(entry.disabledFunc())
+            end
+        end
+    end
+    -- Only used while attached; detached position comes from Editor Mode.
+    local IsPetAttached = function()
+        return C:GetDBValue("unitframe.pet.override")
+    end
+
     C:AddToggle(s, {
         label = LO["Override Position"],
         desc = LO["Move the pet frame independently from the player frame."],
         dbPath = "unitframe.pet.override",
-        callback = refreshPet,
+        callback = function()
+            refreshPet()
+            RefreshPositionControlStates()
+        end,
     })
 
-    C:AddSlider(s, {
+    RegisterPositionWidget(C:AddSlider(s, {
         label = LO["X Position"],
         dbPath = "unitframe.pet.x",
         min = -2500, max = 2500, step = 1,
         width = 200,
-        disabled = function()
-            return not C:GetDBValue("unitframe.pet.override")
-        end,
+        disabled = IsPetAttached,
         callback = refreshPet,
-    })
+    }), IsPetAttached)
 
-    C:AddSlider(s, {
+    RegisterPositionWidget(C:AddSlider(s, {
         label = LO["Y Position"],
         dbPath = "unitframe.pet.y",
         min = -2500, max = 2500, step = 1,
         width = 200,
-        disabled = function()
-            return not C:GetDBValue("unitframe.pet.override")
-        end,
+        disabled = IsPetAttached,
         callback = refreshPet,
-    })
+    }), IsPetAttached)
 end
 
 local function BuildToTSection(scroll)

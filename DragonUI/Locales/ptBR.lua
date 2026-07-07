@@ -56,6 +56,7 @@ L["Animated minimap border effects for DragonUI."] = "Efeitos animados de borda 
 L["TargetCastbar"] = "Barra de lançamento do Alvo"
 L["FocusCastbar"] = "Barra de lançamento do Foco"
 L["Right-click to reset"] = "Clique com o botão direito para redefinir"
+L["Click to reset"] = "Clique para redefinir"
 L["Status Tooltip:"] = "Tooltip de status:"
 L["Top"] = "Topo"
 L["Bottom"] = "Baixo"

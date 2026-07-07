@@ -206,6 +206,7 @@ L["Quest Tracker"] = true
 L["Drag to move"] = true
 L["Animated minimap border effects for DragonUI."] = true
 L["Right-click to reset"] = true
+L["Click to reset"] = true
 L["Status Tooltip:"] = true
 L["Top"] = true
 L["Bottom"] = true

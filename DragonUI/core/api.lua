@@ -738,6 +738,15 @@ local function GetDetachedResetActionForSelection()
                 end
             end, frameData
         end
+    elseif frameName == "PetFrame" then
+        local cfg = addon.db.profile.unitframe and addon.db.profile.unitframe.pet
+        if cfg and cfg.override and addon.RefreshPetFrame then
+            return function()
+                if ResetDetachedUnitframeToProfileDefaults("pet") then
+                    addon.RefreshPetFrame()
+                end
+            end, frameData
+        end
     end
 
     return nil, frameData
@@ -1096,7 +1105,7 @@ local function CreateEditorControlPanel()
     local resetSelectedButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     resetSelectedButton:SetSize(160, 20)
     resetSelectedButton:SetPoint("BOTTOM", panel, "BOTTOM", 0, 6)
-    resetSelectedButton:SetText((addon.L and addon.L["Right-click to reset"]) or "Reset")
+    resetSelectedButton:SetText((addon.L and addon.L["Click to reset"]) or "Reset")
     resetSelectedButton:SetFrameLevel(panel:GetFrameLevel() + 5)
     StyleEditorPanelButton(resetSelectedButton)
     resetSelectedButton:SetScript("OnClick", function(self)
