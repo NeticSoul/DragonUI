@@ -1046,7 +1046,8 @@ function NP.layout.LayoutMinaStack(plateData)
     if plateData.minaDebuffHost then
         plateData.minaDebuffHost:ClearAllPoints()
         plateData.minaDebuffHost:SetSize(visW, 16)
-        plateData.minaDebuffHost:SetPoint("BOTTOMLEFT", plateData.minaNameRow or plateData.minaName, "TOPLEFT", 0, 4)
+        plateData.minaDebuffHost:SetPoint("BOTTOMLEFT", plateData.minaNameRow or plateData.minaName, "TOPLEFT",
+            cfg.debuffOffsetX or 0, (C.DEBUFF_HOST_OFFSET_Y or 2) + (cfg.debuffOffsetY or 0))
     end
 
     NP.widgets.LayoutRaidMarker(plateData)

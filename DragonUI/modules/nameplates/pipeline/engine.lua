@@ -426,6 +426,9 @@ local function EngineOnUpdate(_, elapsed)
     if NP.clickbox and NP.clickbox.TickPreview then
         NP.clickbox.TickPreview()
     end
+    if NP.auras and NP.auras.TickPreview then
+        NP.auras.TickPreview()
+    end
 
     if NP.module._layoutPending and not InCombatLockdown() then
         NP.layout.FlushPendingPlateLayout()

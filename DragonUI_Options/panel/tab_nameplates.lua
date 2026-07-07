@@ -1432,6 +1432,50 @@ local function BuildDebuffsSubTab(scroll)
 
     C:AddSpacer(scroll)
 
+    local positionSection = C:AddSection(scroll, LO["Position"])
+
+    local function OnDebuffPositionSliderChanged()
+        RefreshNameplates()
+        if addon.Nameplates and addon.Nameplates.auras then
+            addon.Nameplates.auras.EnablePreview(10)
+        end
+    end
+
+    C:AddSlider(positionSection, {
+        label = LO["Debuff Horizontal Offset"],
+        desc = LO["Shifts the debuff icon row left or right relative to its default position."],
+        dbPath = DB .. ".debuffOffsetX",
+        min = -240, max = 240, step = 1,
+        width = 200,
+        disabled = IsDebuffsDisabled,
+        callback = OnDebuffPositionSliderChanged,
+    })
+
+    C:AddSlider(positionSection, {
+        label = LO["Debuff Vertical Offset"],
+        desc = LO["Shifts the debuff icon row up or down relative to its default position."],
+        dbPath = DB .. ".debuffOffsetY",
+        min = -240, max = 240, step = 1,
+        width = 200,
+        disabled = IsDebuffsDisabled,
+        callback = OnDebuffPositionSliderChanged,
+    })
+
+    C:AddToggle(positionSection, {
+        label = LO["Show Debuff Position Debug Box"],
+        desc = LO["Displays a box showing where the debuff icon row starts and ends, even when no debuffs are active."],
+        dbPath = DB .. ".showDebuffPositionDebug",
+        disabled = IsDebuffsDisabled,
+        callback = function()
+            if addon.Nameplates and addon.Nameplates.auras then
+                addon.Nameplates.module._debuffPreviewUntil = nil
+                addon.Nameplates.auras.RefreshAllPreviewOverlays()
+            end
+        end,
+    })
+
+    C:AddSpacer(scroll)
+
     local filterSection = C:AddSection(scroll, LO["Filtering"])
 
     C:AddToggle(filterSection, {

@@ -22,7 +22,8 @@ function NP.widgets.ReflowTopOverlays(plateData)
             debuffY = C.DEBUFF_HOST_OFFSET_Y_WITH_COMBO or 15
         end
         debuffHost:ClearAllPoints()
-        debuffHost:SetPoint("BOTTOMLEFT", plateData.minaNameRow, "TOPLEFT", 0, debuffY)
+        debuffHost:SetPoint("BOTTOMLEFT", plateData.minaNameRow, "TOPLEFT",
+            cfg.debuffOffsetX or 0, debuffY + (cfg.debuffOffsetY or 0))
     end
 
     local native = plateData.raidIcon

@@ -1158,6 +1158,7 @@ function NP.auras.SyncDebuffs(plateData, hintedUnit)
         if NP.widgets and NP.widgets.ReflowTopOverlays then
             NP.widgets.ReflowTopOverlays(plateData)
         end
+        NP.auras.SyncPreviewOverlay(plateData)
         return
     end
 
@@ -1167,6 +1168,7 @@ function NP.auras.SyncDebuffs(plateData, hintedUnit)
         if NP.widgets and NP.widgets.ReflowTopOverlays then
             NP.widgets.ReflowTopOverlays(plateData)
         end
+        NP.auras.SyncPreviewOverlay(plateData)
         return
     end
 
@@ -1212,6 +1214,98 @@ function NP.auras.SyncDebuffs(plateData, hintedUnit)
     end
     if NP.widgets and NP.widgets.ReflowTopOverlays then
         NP.widgets.ReflowTopOverlays(plateData)
+    end
+    NP.auras.SyncPreviewOverlay(plateData)
+end
+
+-- Debug overlay: independent of minaDebuffHost since it's hidden/zero-size with no active debuffs.
+
+local DEBUFF_PREVIEW_SECONDS = 10
+
+function NP.auras.EnsurePreviewOverlay(plateData)
+    if plateData.debuffPreviewOverlay then
+        return plateData.debuffPreviewOverlay
+    end
+    local plate = plateData.plate
+    if not plate or not plate.CreateTexture then
+        return nil
+    end
+    local tex = plate:CreateTexture(nil, "OVERLAY")
+    tex:SetTexture(0.1, 0.6, 0.9, 0.35)
+    if tex.SetDrawLayer then
+        tex:SetDrawLayer("OVERLAY", 7)
+    end
+    tex:Hide()
+    plateData.debuffPreviewOverlay = tex
+    return tex
+end
+
+function NP.auras.ShouldShowPreview()
+    local cfg = NP.config.GetCfg()
+    if cfg.showDebuffs == false then
+        return false
+    end
+    if cfg.showDebuffPositionDebug == true then
+        return true
+    end
+    local untilTime = NP.module._debuffPreviewUntil
+    return untilTime and GetTime() < untilTime or false
+end
+
+function NP.auras.ApplyPreviewGeometry(plateData, cfg)
+    local overlay = plateData.debuffPreviewOverlay
+    local relativeFrame = plateData.minaNameRow or plateData.minaName
+    if not overlay or not relativeFrame then
+        return
+    end
+    cfg = cfg or NP.config.GetCfg()
+    local iconSize = cfg.debuffIconSize or 24
+    local maxIcons = cfg.maxDebuffs or 5
+    local spacing = 2
+    local width = (iconSize * maxIcons) + (spacing * max(0, maxIcons - 1))
+
+    overlay:ClearAllPoints()
+    overlay:SetSize(width, iconSize)
+    overlay:SetPoint("BOTTOMLEFT", relativeFrame, "TOPLEFT",
+        cfg.debuffOffsetX or 0, (C.DEBUFF_HOST_OFFSET_Y or 2) + (cfg.debuffOffsetY or 0))
+end
+
+function NP.auras.SyncPreviewOverlay(plateData)
+    if not plateData then
+        return
+    end
+    local overlay = NP.auras.EnsurePreviewOverlay(plateData)
+    if not overlay then
+        return
+    end
+    if NP.auras.ShouldShowPreview() then
+        NP.auras.ApplyPreviewGeometry(plateData)
+        overlay:Show()
+    else
+        overlay:Hide()
+    end
+end
+
+function NP.auras.RefreshAllPreviewOverlays()
+    for _, plateData in pairs(NP.module.plates) do
+        NP.auras.SyncPreviewOverlay(plateData)
+    end
+end
+
+function NP.auras.EnablePreview(seconds)
+    NP.module._debuffPreviewUntil = GetTime() + (seconds or DEBUFF_PREVIEW_SECONDS)
+    NP.auras.RefreshAllPreviewOverlays()
+end
+
+function NP.auras.TickPreview()
+    if not NP.module._debuffPreviewUntil then
+        return
+    end
+    if GetTime() >= NP.module._debuffPreviewUntil then
+        NP.module._debuffPreviewUntil = nil
+        if not NP.config.GetCfg().showDebuffPositionDebug then
+            NP.auras.RefreshAllPreviewOverlays()
+        end
     end
 end
 
