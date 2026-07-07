@@ -137,15 +137,33 @@ local function LookupRareClassification(plateData)
     local guid = NP.state.GetPlateGUID(plateData)
     if guid then
         local entry = ParseNpcCreatureId(guid)
-        if entry and (RareEntryCache[entry] or NpcRareRanks:IsRareEntry(entry)) then
-            return "rare"
+        if entry then
+            if RareEntryCache[entry] or NpcRareRanks:IsRareEntry(entry) then
+                return "rare"
+            end
+            -- Known creature entry, confirmed not in the rare table: trust the
+            -- ID over the localized name. Two unrelated NPCs can share an exact
+            -- client name (e.g. a Blizzard translation collision), and the
+            -- entry id is authoritative where the display name is not.
+            return nil
         end
     end
     local name = plateData.plateName
     if not name and plateData.ogNameText and plateData.ogNameText.GetText then
         name = plateData.ogNameText:GetText()
     end
-    if name and NpcRareRanks:IsRareName(name) then
+    if not name then
+        return nil
+    end
+    -- Level is readable from the plate before ever targeting the unit
+    -- (unlike its GUID), so a handful of known cross-locale name collisions
+    -- (see NameLevelHints in npc_rare_ranks.lua) get disambiguated by it.
+    local level
+    local levelText = plateData.levelText
+    if levelText and levelText.GetText then
+        level = tonumber(levelText:GetText())
+    end
+    if NpcRareRanks:IsRareName(name, level) then
         return "rare"
     end
     return nil
@@ -248,18 +266,29 @@ local function ClassificationFromUnit(unit)
 end
 
 function NP.native_style.ResolvePlateClassification(plateData, unit)
+    local fromUnit
     if unit and UnitExists(unit) then
-        local fromUnit = ClassificationFromUnit(unit)
+        fromUnit = ClassificationFromUnit(unit)
         if fromUnit == "rare" then
             RememberRareEntry(unit)
+            return "rare"
         end
-        return fromUnit
     end
     local native = plateData._plateClassification
-    if native == "elite" or native == "rare" then
-        return native
+    if native == "rare" then
+        return "rare"
     end
-    return LookupRareClassification(plateData)
+    -- Neither the live unit (if any) nor the plate's native icon already
+    -- confirmed "rare". Many dungeon/world rares only ever report as
+    -- "elite" (or plain normal) through the game's own classification —
+    -- it never exposes their true rare status — so this is the only path
+    -- that can upgrade them, and it must work with just the plate's name
+    -- since a GUID (for id-based lookup) is only available after the
+    -- player has targeted the unit at least once this session.
+    if LookupRareClassification(plateData) == "rare" then
+        return "rare"
+    end
+    return fromUnit or native
 end
 
 function NP.native_style.ClassKeyFromBarColor(r, g, b)

@@ -5135,6 +5135,55 @@ local function ParseCSVEntries(csv)
     return set
 end
 
+-- Client strings where Blizzard's localizers reused the exact same display
+-- name for two unrelated creature templates, one rare/rare-elite and one a
+-- normal/elite/worldboss spawn (e.g. esES "Acechador nocturno" = both
+-- Duskstalker (rare, entry 14430, level 9) and Nightstalker (normal trash,
+-- entry 17203, level 9)). Verified against NotPlater's full (unfiltered)
+-- creature/locale export, cross-referencing every rare-ranked name against
+-- every other name in the same locale.
+--
+-- The nameplate's level text is readable before ever targeting the unit
+-- (unlike its GUID/entry id, which 3.3.5a only exposes once you target it),
+-- and in most of these pairs the rare and the impostor are different levels.
+-- So instead of blacklisting the name outright, map it to the rare variant's
+-- expected level: IsRareName only confirms "rare" if the plate's level
+-- matches. A `false` value marks the rare handful of pairs that are also
+-- level-identical (a true coin flip with no pre-target signal at all) -
+-- those still can't be resolved by name and stay name-blocked until the
+-- player targets the unit and the id-based check in native_style.lua takes
+-- over. "Time-Lost Proto Drake"/"Time-Lost Proto-Drake" also collides in
+-- most locales, but the elite-ranked entry (32153, level 1, 1 HP) is a
+-- non-spawning placeholder, not a real encounterable mob, so it's left out
+-- entirely to avoid blinding the (very real, very hunted) rare on sight.
+local NameLevelHints = {
+    ["Glutschwinge"] = 46, -- deDE: Greater Firebird (rare, 46) / Smolderwing (normal, 41)
+    ["벤"] = 1, -- koKR: Ben (rare, 1) / Ven (normal, 30)
+    ["검은아귀"] = 11, -- koKR: Grimmaw (rare, 11) / Blackmaw (normal, 79)
+    ["해골 마녀"] = 61, -- koKR/zhTW: Bone Witch (rare, 61) / The Bone Witch (elite, 80)
+    ["타락한 용사"] = 33, -- koKR: Fallen Champion (rare, 33) / Corrupted Champion (normal, 80)
+    ["꿀꿀이"] = 50, -- koKR: Grunter (rare, 50) / Mr. Wiggles (normal, 1)
+    ["리즐 스프리스프로켓"] = 1, -- koKR: Lizzle Sprysprocket (rare, 1) / Rizzle Sprysprocket (normal, 70)
+    ["붉은십자군 심문관"] = false, -- koKR: Scarlet Interrogator (rare) / Scarlet Inquisitor (elite) - both level 61
+    ["고통받는 영혼"] = 9, -- koKR: Tormented Spirit (rare, 9) / Tormented Soul (normal, 68)
+    ["Болотный скрытень"] = 63, -- ruRU: Bog Lurker (rare, 63) / Marsh Lurker (normal, 62)
+    ["Хрустик"] = 32, -- ruRU: Crusty (rare, 32) / Crunchy (normal, 5)
+    ["Гилмориан"] = 43, -- ruRU: Gilmorian (rare, 43) / Gargoth (normal, 65)
+    ["Полководец из клана Черной Вершины"] = false, -- ruRU: Spirestone Battle Lord (rare) / Spirestone Warlord (elite) - both level 58
+    ["Волхан"] = 60, -- ruRU: Volchan (rare, 60) / Volkhan (elite, 82)
+    ["Acechador nocturno"] = false, -- esES/esMX: Duskstalker (rare) / Nightstalker (normal) - both level 9
+    ["Devastazione"] = 51, -- itIT/zhCN "毁灭": Ravage (rare, 51) / Devastation (elite, 70)
+    ["卡斯克"] = 40, -- zhCN: Kaskk (rare, 40) / Cask (elite, 1)
+    ["毁灭"] = 51, -- zhCN: Ravage (rare, 51) / Devastation (elite, 70)
+    ["赫玛图斯"] = 60, -- zhCN: Hematos (rare, 60) / Hematus (normal, 50)
+    ["库尔莫克"] = 42, -- zhCN: Kurmokk (rare, 42) / Kormok (elite, 60)
+    ["笨拙的憎恶"] = 1, -- zhCN: Lumbering Horror (rare, 1) / Lumbering Abomination (elite, 80)
+    ["腐烂者"] = 43, -- zhCN/zhTW "腐爛者": The Rot (rare, 43) / Rotted One (normal, 26)
+    ["下水道鳄鱼"] = 50, -- zhCN: Sewer Beast (rare, 50) / Sewer Crocolisk (normal, 1)
+    ["骸骨女巫"] = 61, -- zhTW: Bone Witch (rare, 61) / The Bone Witch (elite, 80)
+    ["腐爛者"] = 43, -- zhTW: The Rot (rare, 43) / Rotted One (normal, 26)
+}
+
 local function IsShippableRareName(name)
     if not name or name == "" then
         return false
@@ -5189,11 +5238,21 @@ function M:IsRareEntry(entry)
     return entry and self:EnsureEntrySet()[entry] == true
 end
 
-function M:IsRareName(name)
+function M:IsRareName(name, level)
     if not name then
         return false
     end
-    return self:EnsureNameSet()[name] == true
+    if not self:EnsureNameSet()[name] then
+        return false
+    end
+    local hint = NameLevelHints[name]
+    if hint == nil then
+        return true
+    end
+    if hint == false then
+        return false
+    end
+    return level ~= nil and level == hint
 end
 
 addon.NpcRareRanks = M
