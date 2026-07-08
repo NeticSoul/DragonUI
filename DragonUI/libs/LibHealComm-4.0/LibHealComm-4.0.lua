@@ -1626,6 +1626,7 @@ end
 
 local alreadyAdded = {}
 function HealComm:UNIT_AURA(unit)
+	if( not unit ) then return end -- 3.3.5a a veces dispara UNIT_AURA con arg1 nil
 	local guid = UnitGUID(unit)
 	if( not guidToUnit[guid] ) then return end
 	local increase, decrease, playerIncrease, playerDecrease = 1, 1, 1, 1
