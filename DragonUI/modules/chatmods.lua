@@ -281,15 +281,10 @@ end
             end
 
             if eb then
-                if eb:GetBackdrop() then
-                    local ebAlpha = eb:HasFocus() and 1 or ebIdleAlpha
-                    if IsAlphaChanged(eb:GetAlpha(), ebAlpha) then
-                        eb:SetAlpha(ebAlpha)
-                    end
-                else
-                    if IsAlphaChanged(eb:GetAlpha(), 1) then
-                        eb:SetAlpha(1)
-                    end
+                -- Fade applies the same whether or not a custom backdrop (vanilla editbox included).
+                local ebAlpha = eb:HasFocus() and 1 or ebIdleAlpha
+                if IsAlphaChanged(eb:GetAlpha(), ebAlpha) then
+                    eb:SetAlpha(ebAlpha)
                 end
             end
         end
@@ -412,9 +407,9 @@ local function EnsureChatButtonsHoverUpdater()
                 entry.lastBgAlpha = nil
             end
 
-            -- Sync editbox style backdrop: independent from hover.
+            -- Sync editbox alpha: same fade whether or not a custom backdrop (vanilla editbox included).
             local eb = entry.eb
-            if eb and eb:GetBackdrop() then
+            if eb then
                 local ebAlpha = eb:HasFocus() and 1 or ebIdleAlpha
                 if forceUpdate or entry.lastEditboxAlpha == nil or IsAlphaChanged(entry.lastEditboxAlpha, ebAlpha) then
                     eb:SetAlpha(ebAlpha)
@@ -654,13 +649,12 @@ local function ApplyEditboxStyle()
     local vanillaEditbox = config and config.vanillaEditbox
 
     if vanillaEditbox then
-        -- Restore Blizzard's default editbox appearance entirely.
+        -- Restore Blizzard's default editbox textures; opacity still follows editboxIdleAlpha, applied below.
         ApplyEditboxBorderTextures(true)
         for i = 1, CHAT_FRAME_LIMIT do
             local eb = _G["ChatFrame" .. i .. "EditBox"]
             if eb then
                 eb:SetBackdrop(nil)
-                eb:SetAlpha(1)
             end
         end
         RefreshChatFadeState()
@@ -686,7 +680,6 @@ local function ApplyEditboxStyle()
 
             if not def then
                 eb:SetBackdrop(nil)
-                eb:SetAlpha(1)
             else
                 eb:SetBackdrop(BD_EDITBOX)
                 local r, g, b, a = unpack(def.bg)
@@ -1419,12 +1412,13 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
     elseif event == "PLAYER_ENTERING_WORLD" then
         if not IsModuleEnabled() then return end
         ApplyChatModsSystem()
-        -- Re-apply tab noMouseAlpha after a short delay so it isn't overwritten
-        -- by Blizzard's FCFManager_UpdateChatFrameListAlpha which fires after PEW.
-        addon:After(1, function()
-            if not ChatModsModule.applied then return end
-            RefreshChatFadeState()
-        end)
+        -- Blizzard re-selects the default tab (forcing alpha to 1) at a variable point after PEW; retry a few times to catch it.
+        for _, delay in ipairs({0.5, 1.5, 3}) do
+            addon:After(delay, function()
+                if not ChatModsModule.applied then return end
+                RefreshChatFadeState()
+            end)
+        end
     end
 end)
 
