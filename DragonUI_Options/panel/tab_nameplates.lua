@@ -998,6 +998,45 @@ local function BuildBarsSubTab(scroll)
     })
 
     C:AddToggle(castSection, {
+        label = LO["Show Spell Name"],
+        desc = LO["Show the spell name text on the cast bar."],
+        dbPath = DB .. ".showCastBarSpellName",
+        disabled = IsCastBarDisabled,
+        callback = RefreshAndRebuildNameplates,
+    })
+
+    local function IsSpellNameDisabled()
+        return IsCastBarDisabled() or not C:GetDBValue(DB .. ".showCastBarSpellName")
+    end
+
+    C:AddSlider(castSection, {
+        label = LO["Spell Name Font Size"],
+        dbPath = DB .. ".castBarSpellNameFontSize",
+        min = 6, max = 16, step = 1,
+        width = 200,
+        disabled = IsSpellNameDisabled,
+        callback = RefreshNameplates,
+    })
+
+    C:AddSlider(castSection, {
+        label = LO["Spell Name Offset X"],
+        dbPath = DB .. ".castBarSpellNameOffsetX",
+        min = -50, max = 50, step = 1,
+        width = 200,
+        disabled = IsSpellNameDisabled,
+        callback = RefreshNameplates,
+    })
+
+    C:AddSlider(castSection, {
+        label = LO["Spell Name Offset Y"],
+        dbPath = DB .. ".castBarSpellNameOffsetY",
+        min = -20, max = 20, step = 1,
+        width = 200,
+        disabled = IsSpellNameDisabled,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(castSection, {
         label = LO["Show Party/Raid Cast Bars"],
         desc = LO["Also show cast bars on party and raid allies, even when you are not targeting them."],
         dbPath = DB .. ".showPartyRaidCastBars",

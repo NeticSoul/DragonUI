@@ -566,6 +566,13 @@ function NP.castbar.CreateCastMinaBar(parent, plateData)
     bar._successFlash:SetBlendMode("ADD")
     bar._successFlash:Hide()
 
+    bar.minaCastSpellName = bar:CreateFontString(nil, "OVERLAY")
+    bar.minaCastSpellName:SetPoint("LEFT", bar, "LEFT", 4, 0)
+    bar.minaCastSpellName:SetPoint("RIGHT", bar, "RIGHT", -4, 0)
+    bar.minaCastSpellName:SetJustifyH("CENTER")
+    bar.minaCastSpellName:SetWordWrap(false)
+    bar.minaCastSpellName:Hide()
+
     return bar
 end
 
@@ -626,6 +633,7 @@ local function HardResetCastBar(bar)
     HideSuccessFlashVisual(bar)
     if bar.minaCastIcon then bar.minaCastIcon:Hide() end
     if bar.minaCastShield then bar.minaCastShield:Hide() end
+    if bar.minaCastSpellName then bar.minaCastSpellName:Hide() end
     if bar.minaIcon then bar.minaIcon:Hide() end
     if bar.minaShield then bar.minaShield:Hide() end
     if bar.minaSpark then bar.minaSpark:Hide() end
@@ -2739,6 +2747,7 @@ function NP.castbar.HidePlateCastBar(plateData, force)
     HideSuccessFlashVisual(bar)
     if bar.minaCastIcon then bar.minaCastIcon:Hide() end
     if bar.minaCastShield then bar.minaCastShield:Hide() end
+    if bar.minaCastSpellName then bar.minaCastSpellName:Hide() end
     if wasInterrupted and bar._intBg then
         bar._castSourceGUID = nil
         NP.castbar.ShowInterruptedState(bar, plateData, false)

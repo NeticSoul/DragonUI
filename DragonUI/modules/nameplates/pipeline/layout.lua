@@ -680,7 +680,8 @@ function NP.layout.ApplyNameplateFonts(plateData)
         SafeSetFont(fs, fontPath, px, "")
     end
 
-    local hpNumSize = 7 + (NP.config.GetCfg().healthNumberFontSize or 2)
+    local cfg = NP.config.GetCfg()
+    local hpNumSize = 7 + (cfg.healthNumberFontSize or 2)
     applyFont(plateData.minaName, nameSize)
     applyFont(plateData.minaHpPct, nameSize)
     applyFont(plateData.minaSubTitle, math.max(8, nameSize - 2))
@@ -688,6 +689,16 @@ function NP.layout.ApplyNameplateFonts(plateData)
     applyFont(plateData.minaHpBarPct, hpNumSize)
     applyFont(plateData.minaPoCur, powerSize)
     applyFont(plateData.minaPoPct, powerSize)
+    local cast = plateData.minaCast
+    if cast and cast.minaCastSpellName then
+        local fs = cast.minaCastSpellName
+        SafeSetFont(fs, fontPath, cfg.castBarSpellNameFontSize or 9, "OUTLINE")
+        local offX = cfg.castBarSpellNameOffsetX or 0
+        local offY = cfg.castBarSpellNameOffsetY or 0
+        fs:ClearAllPoints()
+        fs:SetPoint("LEFT", cast, "LEFT", 4 + offX, offY)
+        fs:SetPoint("RIGHT", cast, "RIGHT", -4 + offX, offY)
+    end
 
     local rowH = math.max(10, nameSize + 1)
     if plateData.minaName then
@@ -1113,6 +1124,15 @@ function NP.layout.LayoutCastBarStack(plateData)
 
         if bar.minaCastShield and bar.minaCastIcon and bar._notInterruptible then
             NP.castbar.LayoutCastIconShield(bar.minaCastShield, bar.minaCastIcon, iconSize, bar)
+        end
+
+        if bar.minaCastSpellName then
+            if cfg.showCastBarSpellName ~= false and bar.spellName then
+                bar.minaCastSpellName:SetText(bar.spellName)
+                bar.minaCastSpellName:Show()
+            else
+                bar.minaCastSpellName:Hide()
+            end
         end
     end
 

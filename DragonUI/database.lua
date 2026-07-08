@@ -781,6 +781,10 @@ local defaults = {
                 showPartyRaidCastBars = false, -- show cast bars on party/raid member nameplates
                 castBarHeight = 9, -- height of the cast bar in pixels
                 castBarGap = 3, -- vertical gap between health, power, and cast bars
+                showCastBarSpellName = false, -- show the spell name text on the cast bar
+                castBarSpellNameFontSize = 9, -- font size for the cast bar spell name text
+                castBarSpellNameOffsetX = 0, -- horizontal offset for the cast bar spell name text
+                castBarSpellNameOffsetY = 0, -- vertical offset for the cast bar spell name text
                 threatGlow = true, -- show threat glow indicator (colored border)
                 tankMode = false, -- invert threat colors for a tank perspective (holding aggro = green)
                 raidMarkHealthColor = false, -- tint health bar by raid marker, allies and enemies alike
