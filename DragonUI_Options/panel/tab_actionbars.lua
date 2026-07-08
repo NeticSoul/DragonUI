@@ -162,6 +162,7 @@ local function BuildGeneralTab(scroll)
         desc = LO["Show range indicator dot on buttons."],
         dbPath = "buttons.hotkey.range",
         callback = RefreshButtons,
+        requiresReload = true,
     })
 
     C:AddToggle(textVis, {

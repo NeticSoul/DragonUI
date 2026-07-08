@@ -5,7 +5,6 @@ local unpack = unpack;
 local select = select;
 local format = string.format;
 local match = string.match;
-local GetTime = GetTime;
 local NUM_PET_ACTION_SLOTS = NUM_PET_ACTION_SLOTS;
 local NUM_SHAPESHIFT_SLOTS = NUM_SHAPESHIFT_SLOTS;
 local NUM_POSSESS_SLOTS = NUM_POSSESS_SLOTS;
@@ -32,7 +31,6 @@ local ButtonsModule = {
     originalValues = {},  -- Store original button states for restoration
     hooked = false,
     pendingRefresh = false,  -- Flag to indicate pending refresh after combat
-    rangeIndicatorSuppressedUntil = 0
 }
 
 -- Register with ModuleRegistry (if available)
@@ -144,44 +142,6 @@ local function NormalizeAdditionalHotkeyVisual(button, hotkey)
         local buttonScale = GetSafeEffectiveScale(button, referenceScale)
         hotkey:SetFont(font, size * (referenceScale / buttonScale), flags)
     end
-end
-
-local function ButtonHasActionForRangeIndicator(buttonName, button)
-    if not buttonName or not button then
-        return false
-    end
-
-    if buttonName:match('^ActionButton%d+$')
-        or buttonName:match('^MultiBarBottomLeftButton%d+$')
-        or buttonName:match('^MultiBarBottomRightButton%d+$')
-        or buttonName:match('^MultiBarRightButton%d+$')
-        or buttonName:match('^MultiBarLeftButton%d+$')
-        or buttonName:match('^BonusActionButton%d+$')
-        or buttonName:match('^VehicleMenuBarActionButton%d+$') then
-        return button.action and HasAction and HasAction(button.action)
-    end
-
-    local buttonIndex = (button.GetID and button:GetID()) or tonumber(buttonName:match('(%d+)$'))
-    if not buttonIndex then
-        return false
-    end
-
-    if buttonName:match('^ShapeshiftButton%d+$') and GetShapeshiftFormInfo then
-        local _, formName = GetShapeshiftFormInfo(buttonIndex)
-        return formName ~= nil
-    end
-
-    if buttonName:match('^PetActionButton%d+$') and GetPetActionInfo then
-        local name, _, texture = GetPetActionInfo(buttonIndex)
-        return name ~= nil or texture ~= nil
-    end
-
-    if buttonName:match('^PossessButton%d+$') and GetPossessInfo then
-        local texture, name = GetPossessInfo(buttonIndex)
-        return texture ~= nil or name ~= nil
-    end
-
-    return false
 end
 
 addon.buttons_iterator = function()
@@ -394,27 +354,15 @@ local function actionbuttons_hotkey(button)
         return ''
     end
 
+    -- Trust Blizzard's own hotkey text for the range dot; toggling this option requires a
+    -- reload (see requiresReload in the options panel) so this reads a fresh native value.
+    local nativeText = hotkey:GetText()
+    local isNativeRangeDot = RANGE_INDICATOR and nativeText == RANGE_INDICATOR
     local text = ResolveButtonHotkeyText()
-    local suppressRangeIndicator = GetTime and GetTime() < (ButtonsModule.rangeIndicatorSuppressedUntil or 0)
-
-    -- Check range state for this button (nil = no range component, 0 = out, 1 = in)
-    local inRange = nil
-    if RANGE_INDICATOR and db.hotkey.range and not suppressRangeIndicator
-        and ButtonHasActionForRangeIndicator(buttonName, button) then
-        local actionID = type(ActionButton_GetPagedID) == "function"
-            and ActionButton_GetPagedID(button) or button.action
-        if actionID then
-            inRange = IsActionInRange(actionID)
-        end
-    end
-
-    -- Show the range dot only when there's no keybinding but the action has a range component.
-    -- When there IS a binding, vanilla shows the binding text in red (vertex color) instead.
-    local showDot = inRange ~= nil and text == ""
 
     hotkey:SetAlpha(1)
-    if showDot then
-        hotkey:SetText(RANGE_INDICATOR)
+    if isNativeRangeDot then
+        hotkey:SetText(db.hotkey.range and RANGE_INDICATOR or '')
     else
         local formattedText = GetKeyText(text)
         hotkey:SetText(formattedText)
@@ -429,14 +377,6 @@ local function actionbuttons_hotkey(button)
     end
 
     NormalizeAdditionalHotkeyVisual(button, hotkey)
-
-    -- Re-apply range vertex color AFTER all font/text ops (SetFont can clear it).
-    -- Matches vanilla ActionButton_UpdateRangeIndicator behavior.
-    if inRange == 0 then
-        hotkey:SetVertexColor(1.0, 0.1, 0.1)   -- out of range: red
-    elseif inRange ~= nil then
-        hotkey:SetVertexColor(1.0, 1.0, 1.0)   -- in range: restore white
-    end
 end
 
 local function RefreshAdditionalBarHotkeys()
@@ -888,12 +828,8 @@ function addon.vehiclebuttons_template(skipCombatGuard)
     RefreshAdditionalBarHotkeys()
 end
 
-function addon.RefreshAllHotkeys(suppressRangeIndicator)
+function addon.RefreshAllHotkeys()
     if not IsModuleEnabled() then return end
-
-    if suppressRangeIndicator and GetTime then
-        ButtonsModule.rangeIndicatorSuppressedUntil = GetTime() + 0.35
-    end
 
     for button in addon.buttons_iterator() do
         if button then
@@ -1132,7 +1068,7 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     elseif event == "UPDATE_BINDINGS" then
         -- ORIGINAL PATTERN: Update hotkeys when bindings change
         if IsModuleEnabled() then
-            addon.RefreshAllHotkeys(true)
+            addon.RefreshAllHotkeys()
         end
     end
 end)
