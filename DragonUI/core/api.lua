@@ -556,6 +556,7 @@ function addon:RegisterEditableFrame(frameInfo)
         configPath = frameInfo.configPath,        -- {"widgets", "player"} or {"unitframe", "target"}
         onShow = frameInfo.onShow,                -- Optional function when showing editor
         onHide = frameInfo.onHide,                -- Optional function when hiding editor
+        onNudge = frameInfo.onNudge,               -- Optional function after arrow-key/typed coordinate edits
         showTest = frameInfo.showTest,            -- Function to show with fake data
         hideTest = frameInfo.hideTest,            -- Function to hide fake frame
         hasTarget = frameInfo.hasTarget,          -- Function to check if should be visible
@@ -624,6 +625,9 @@ local function ApplyTypedCoordinates()
                 else
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1])
                 end
+                if frameData.onNudge then
+                    frameData.onNudge()
+                end
                 break
             end
         end
@@ -655,6 +659,9 @@ local function NudgeSelectedFrame(dx, dy)
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1], frameData.configPath[2])
                 else
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1])
+                end
+                if frameData.onNudge then
+                    frameData.onNudge()
                 end
                 break
             end

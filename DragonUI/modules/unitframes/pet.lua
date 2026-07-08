@@ -740,6 +740,7 @@ local function InitializePetFrameForEditor()
         hasTarget = ShouldPetFrameBeVisible,
         showTest = ShowPetFrameTest,
         hideTest = HidePetFrameTest,
+        onNudge = DetachPetFrame,
         onHide = function()
             -- Nudge/typed-coordinate edits also count as a manual detach.
             if PetFrameModule.anchor.DragonUI_WasDragged or PetFrameModule.anchor.DragonUI_WasAdjustedByEditor then
