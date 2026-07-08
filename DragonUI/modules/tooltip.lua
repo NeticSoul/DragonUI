@@ -57,8 +57,7 @@ local FACTION_COLORS = {
 -- ============================================================================
 
 local HEALTHBAR_HEIGHT = 6
-local HEALTHBAR_GAP = 4  -- desired clearance between last text line and bar top
-local HEALTHBAR_BOTTOM_PAD = 8  -- space between bar and tooltip bottom edge
+local HEALTHBAR_BOTTOM_PAD = 10  -- space between bar and tooltip bottom edge
 local TOOLTIP_WIDGET_ANCHOR = "BOTTOMRIGHT"
 local TOOLTIP_WIDGET_POSX = -90
 local TOOLTIP_WIDGET_POSY = 100
@@ -92,36 +91,23 @@ local function StyleHealthBar()
     TooltipModule.healthBarStyled = true
 end
 
--- Deferred one frame so the resize applies after Blizzard's own layout pass, which would otherwise override an immediate SetHeight.
-local function AdjustTooltipForHealthBar(tooltip)
-    if not tooltip or not GameTooltipStatusBar then return end
-    if not GameTooltipStatusBar:IsShown() then return end
-    if tooltip.__DragonUI_adjustPending then return end
+-- Same trick Blizzard's own GameTooltip_ShowStatusBar uses: a real blank AddLine, so native auto-height covers it.
+local function ReserveHealthBarLine()
+    if not GameTooltipStatusBar or not GameTooltipStatusBar:IsShown() then return end
+    GameTooltip:AddLine(" ")
+    GameTooltip:Show()
+end
 
-    tooltip.__DragonUI_adjustPending = true
-    local orig = tooltip:GetScript("OnUpdate")
-    tooltip:SetScript("OnUpdate", function(self, elapsed)
-        -- Restore original OnUpdate first
-        self:SetScript("OnUpdate", orig)
-        self.__DragonUI_adjustPending = false
+-- Deferred one frame so it runs after every other addon's OnTooltipSetUnit hook (e.g. idWoW) has added its lines.
+local reserveRunner = CreateFrame("Frame")
+reserveRunner:Hide()
+reserveRunner:SetScript("OnUpdate", function(self)
+    self:Hide()
+    ReserveHealthBarLine()
+end)
 
-        -- Grow only by what's actually missing, measured, not guessed per line count.
-        local neededDrop = HEALTHBAR_GAP + HEALTHBAR_HEIGHT + HEALTHBAR_BOTTOM_PAD
-        local lastLine = _G["GameTooltipTextLeft" .. (self:NumLines() or 1)]
-        local lastBottom = lastLine and lastLine:GetBottom()
-        local tooltipBottom = self:GetBottom()
-        local delta
-        if lastBottom and tooltipBottom then
-            delta = neededDrop - (lastBottom - tooltipBottom)
-        elseif not self.__DragonUI_barAdjusted then
-            -- Can't measure yet (first pass, geometry not settled) — safe to assume no prior gap.
-            delta = neededDrop
-        end
-        if delta and delta > 0 then
-            self:SetHeight(self:GetHeight() + delta)
-        end
-        self.__DragonUI_barAdjusted = true
-    end)
+local function AdjustTooltipForHealthBar()
+    reserveRunner:Show()
 end
 
 -- ============================================================================
@@ -425,7 +411,7 @@ local function ApplyTooltipSystem()
                 -- Color name AFTER Show() — calling Show() can reset text colors
                 ColorTooltipName(unit)
                 -- Extend tooltip to fit health bar inside the border
-                AdjustTooltipForHealthBar(self)
+                AdjustTooltipForHealthBar()
             end
         end)
         TooltipModule.hooks["SetUnit"] = true
@@ -436,7 +422,7 @@ local function ApplyTooltipSystem()
         GameTooltipStatusBar:HookScript("OnShow", function(self)
             if not IsModuleEnabled() then return end
             StyleHealthBar()
-            AdjustTooltipForHealthBar(GameTooltip)
+            AdjustTooltipForHealthBar()
         end)
         TooltipModule.hooks["BarShow"] = true
     end
@@ -461,7 +447,6 @@ local function ApplyTooltipSystem()
             self:SetBackdropBorderColor(1, 1, 1)
             -- Clear cached bar color so OnValueChanged stops overriding
             currentTooltipBarColor = nil
-            self.__DragonUI_barAdjusted = false
             -- Reset health bar color to default green
             if GameTooltipStatusBar then
                 GameTooltipStatusBar:SetStatusBarColor(0.2, 0.8, 0.2)
