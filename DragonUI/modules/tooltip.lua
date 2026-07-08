@@ -107,16 +107,20 @@ local function AdjustTooltipForHealthBar(tooltip)
 
         -- Grow only by what's actually missing, measured, not guessed per line count.
         local neededDrop = HEALTHBAR_GAP + HEALTHBAR_HEIGHT + HEALTHBAR_BOTTOM_PAD
-        local delta = neededDrop
         local lastLine = _G["GameTooltipTextLeft" .. (self:NumLines() or 1)]
         local lastBottom = lastLine and lastLine:GetBottom()
         local tooltipBottom = self:GetBottom()
+        local delta
         if lastBottom and tooltipBottom then
             delta = neededDrop - (lastBottom - tooltipBottom)
+        elseif not self.__DragonUI_barAdjusted then
+            -- Can't measure yet (first pass, geometry not settled) — safe to assume no prior gap.
+            delta = neededDrop
         end
-        if delta > 0 then
+        if delta and delta > 0 then
             self:SetHeight(self:GetHeight() + delta)
         end
+        self.__DragonUI_barAdjusted = true
     end)
 end
 
@@ -457,6 +461,7 @@ local function ApplyTooltipSystem()
             self:SetBackdropBorderColor(1, 1, 1)
             -- Clear cached bar color so OnValueChanged stops overriding
             currentTooltipBarColor = nil
+            self.__DragonUI_barAdjusted = false
             -- Reset health bar color to default green
             if GameTooltipStatusBar then
                 GameTooltipStatusBar:SetStatusBarColor(0.2, 0.8, 0.2)
