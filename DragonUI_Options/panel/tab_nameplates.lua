@@ -343,6 +343,13 @@ local function BuildGeneralSubTab(scroll)
         callback = RefreshNameplates,
     })
 
+    C:AddToggle(opacity, {
+        label = LO["Party/Raid: Full Opacity"],
+        desc = LO["Always show party and raid member nameplates at full opacity, regardless of target or fade settings. Does not affect pets or NPCs."],
+        dbPath = DB .. ".opacityFullParty",
+        callback = RefreshNameplates,
+    })
+
 end
 
 local function BuildBehaviorSubTab(scroll)

@@ -321,6 +321,7 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityEnabled = (cfg.disableNonTargetFade ~= true)
     NP.module._opacityValue = cfg.opacityNonTarget or 0.5
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
+    NP.module._opacityFullParty = (cfg.opacityFullParty == true)
     NP.module._retailBehavior = NP.config.IsRetailBehavior()
     NP.module._clampTargetEnabled = cfg.clampTarget == true
     NP.module._clampBossEnabled = cfg.clampBoss == true
@@ -442,12 +443,14 @@ local function EngineOnUpdate(_, elapsed)
 
     -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
     if NP.module._opacityEnabled then
+        local fullParty = NP.module._opacityFullParty
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
             if pl and pl.IsShown and pl:IsShown() then
                 local visualAlpha = NP.module._opacityValue
                 if NP.identity.IsTargetPlateVisual(pd, hasTarget)
-                    or ((not hasTarget) and NP.module._opacityFullNoTarget) then
+                    or ((not hasTarget) and NP.module._opacityFullNoTarget)
+                    or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
                     visualAlpha = 1.0
                 end
                 NP.layout.SetPlateVisualAlpha(pd, visualAlpha)

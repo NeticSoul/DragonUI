@@ -270,6 +270,18 @@ function NP.gather.GetGroupUnitForPlate(plateData)
     return nil
 end
 
+-- True for friendly player plates matched to a party/raid unit; excludes pets and NPCs.
+function NP.gather.IsGroupMemberPlate(plateData)
+    if not plateData then
+        return false
+    end
+    local reaction, unitType = NP.native_style.GetPlateReaction(plateData)
+    if reaction ~= "FRIENDLY" or unitType ~= "PLAYER" then
+        return false
+    end
+    return NP.gather.GetGroupUnitForPlate(plateData) ~= nil
+end
+
 -- Headline mode for party/raid: name only; reaction checked before group lookup.
 function NP.gather.IsFriendlyNameOnlyActive(plateData)
     if not plateData then
