@@ -128,7 +128,12 @@ local function ReplaceBlizzardFrame(frame)
         end
 
         ScheduleTimer(0.1, function()
-            watchFrame:SetAlpha(1)
+            -- A bare SetAlpha(1) here stomped the fade set at Initialize(), flashing the tracker on reload.
+            if QuestTrackerModule.SyncHoverVisibility then
+                QuestTrackerModule:SyncHoverVisibility()
+            else
+                watchFrame:SetAlpha(1)
+            end
         end)
         watchFrameAttached = true
     else
@@ -346,6 +351,87 @@ function QuestTrackerModule:Initialize()
 
     -- Apply font immediately so WoW's first render already uses our size
     ApplyQuestTrackerFonts()
+
+    if addon.VisibilityFade and WatchFrame then
+        -- enableMouse=false: only SyncHoverVisibility() may enable WatchFrame's mouse, and only for hover mode.
+        addon.VisibilityFade.Register("questtracker", WatchFrame, {
+            dbTable = function()
+                if not IsModuleEnabled() then return nil end
+                return addon.db and addon.db.profile and addon.db.profile.questtracker
+            end,
+            hoverFrames = { WatchFrame, WatchFrameHeader, WatchFrameCollapseExpandButton },
+            enableMouse = false,
+        })
+    end
+
+    self:SyncHoverVisibility()
+end
+
+-- These buttons sit on top of WatchFrame, so hovering them steals its OnEnter/OnLeave unless hooked too.
+local function SyncQuestLineHoverButtons()
+    if not (addon.VisibilityFade and WatchFrame) then return end
+    local found = {}
+    for i = 1, 40 do
+        local link = _G["WatchFrameLinkButton" .. i]
+        if link then table.insert(found, link) end
+        local item = _G["WatchFrameItem" .. i]
+        if item then table.insert(found, item) end
+    end
+    if #found > 0 then
+        addon.VisibilityFade.AddHoverFrames("questtracker", found)
+    end
+end
+
+-- WatchFrame's height is padded to QUESTTRACKER_MAX_HEIGHT, so shrink the hit rect to the visible content.
+local function SyncQuestTrackerHitRect()
+    if not WatchFrame then return end
+    local top = WatchFrame:GetTop()
+    if not top then return end
+
+    local contentBottom = WatchFrameHeader and WatchFrameHeader:GetBottom()
+    local function considerLines(lineSet)
+        if not lineSet then return end
+        for _, line in pairs(lineSet) do
+            if line and line.IsShown and line:IsShown() then
+                local b = line:GetBottom()
+                if b and (not contentBottom or b < contentBottom) then
+                    contentBottom = b
+                end
+            end
+        end
+    end
+    considerLines(WATCHFRAME_QUESTLINES)
+    considerLines(WATCHFRAME_ACHIEVEMENTLINES)
+    for i = 1, 40 do
+        local item = _G["WatchFrameItem" .. i]
+        if item and item:IsShown() then
+            local b = item:GetBottom()
+            if b and (not contentBottom or b < contentBottom) then
+                contentBottom = b
+            end
+        end
+    end
+
+    local frameBottom = WatchFrame:GetBottom()
+    if not (contentBottom and frameBottom) then
+        WatchFrame:SetHitRectInsets(0, 0, 0, 0)
+        return
+    end
+
+    local bottomInset = math.max(0, (contentBottom - frameBottom) - 4)
+    WatchFrame:SetHitRectInsets(0, 0, 0, bottomInset)
+end
+
+-- Only enable WatchFrame's mouse for hover mode — otherwise its background stays click-through.
+function QuestTrackerModule:SyncHoverVisibility()
+    if not WatchFrame then return end
+    local cfg = addon.db and addon.db.profile and addon.db.profile.questtracker
+    if not InCombatLockdown() then
+        WatchFrame:EnableMouse(cfg and cfg.show_on_hover and true or false)
+    end
+    if addon.VisibilityFade then
+        addon.VisibilityFade.Update("questtracker")
+    end
 end
 
 -- =============================================================================
@@ -364,8 +450,10 @@ function QuestTrackerModule:ApplySystem()
         UpdateQuestTrackerPosition()
         ForceUpdateQuestTracker()
     end
-    
+
     self.applied = true
+
+    self:SyncHoverVisibility()
 end
 
 function QuestTrackerModule:RestoreSystem()
@@ -380,7 +468,12 @@ function QuestTrackerModule:RestoreSystem()
         WatchFrame:EnableMouse(true)
         WatchFrame:SetUserPlaced(false)
     end
-    
+
+    if addon.VisibilityFade then
+        addon.VisibilityFade.Reset("questtracker")
+    end
+
+
     -- Hide our frame's background
     if WatchFrame and WatchFrame.background then
         WatchFrame.background:Hide()
@@ -437,6 +530,9 @@ local function InstallQuestTrackerHooks()
 
             -- Apply background styling after layout.
             pcall(ApplyQuestTrackerStyling)
+
+            SyncQuestLineHoverButtons()
+            SyncQuestTrackerHitRect()
 
             watchFrameHookActive = false
         end)

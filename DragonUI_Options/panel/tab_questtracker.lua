@@ -47,6 +47,18 @@ local function BuildQuesttrackerTab(scroll)
         width = 200,
         callback = RefreshQT,
     })
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "questtracker",
+        hoverDesc = LO["Fade the quest tracker until you hover over it."],
+        combatDesc = LO["Fade the quest tracker until you enter combat."],
+        callback = function()
+            if addon.QuestTrackerModule and addon.QuestTrackerModule.SyncHoverVisibility then
+                addon.QuestTrackerModule:SyncHoverVisibility()
+            end
+        end,
+    })
 end
 
 -- Register the tab

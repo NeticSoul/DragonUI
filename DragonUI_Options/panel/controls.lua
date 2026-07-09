@@ -829,6 +829,41 @@ function Controls:AddDropdown(parent, opts)
 end
 
 -- ============================================================================
+-- VISIBILITY FADE TOGGLES (Show on Hover / Show in Combat / AND-OR logic)
+-- ============================================================================
+-- dbPrefix must resolve to a profile subtable used by addon.VisibilityFade (core/visibility_fade.lua).
+
+function Controls:AddVisibilityFadeToggles(parent, opts)
+    local dbPrefix = opts.dbPrefix
+    local callback = opts.callback
+
+    self:AddToggle(parent, {
+        label = LO["Show on Hover Only"],
+        desc = opts.hoverDesc,
+        dbPath = dbPrefix .. ".show_on_hover",
+        callback = callback,
+    })
+
+    self:AddToggle(parent, {
+        label = LO["Show in Combat Only"],
+        desc = opts.combatDesc,
+        dbPath = dbPrefix .. ".show_in_combat",
+        callback = callback,
+    })
+
+    self:AddDropdown(parent, {
+        label = LO["Hover/Combat Logic"],
+        desc = LO["When both hover and combat are enabled, choose whether both are required (AND) or either condition is enough (OR)."],
+        dbPath = dbPrefix .. ".visibility_logic",
+        values = {
+            ["and"] = LO["AND (both required)"],
+            ["or"] = LO["OR (either condition)"],
+        },
+        callback = callback,
+    })
+end
+
+-- ============================================================================
 -- COLOR PICKER
 -- ============================================================================
 

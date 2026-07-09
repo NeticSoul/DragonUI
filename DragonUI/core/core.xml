@@ -9,6 +9,7 @@
     <Script file="movers.lua"/>
     <Script file="position_presets.lua"/>
     <Script file="commands.lua"/>
+    <Script file="visibility_fade.lua"/>
     <!-- module_base.lua removed — centralized helpers now in api.lua -->
     
 </Ui>
