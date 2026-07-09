@@ -26,25 +26,32 @@ end
 
 local function EvaluateShouldShow(cfg, state)
     local showOnHover = cfg.show_on_hover
-    local showInCombat = cfg.show_in_combat
+    -- hide_in_combat is show_in_combat with inverted polarity — same slot, opposite condition.
+    local combatActive = cfg.show_in_combat or cfg.hide_in_combat
+    local combatShow
+    if cfg.hide_in_combat then
+        combatShow = not state.inCombat
+    else
+        combatShow = state.inCombat
+    end
 
-    if not showOnHover and not showInCombat then
+    if not showOnHover and not combatActive then
         return true
     end
 
-    if showOnHover and showInCombat then
+    if showOnHover and combatActive then
         local mode = cfg.visibility_logic == "or" and "or" or "and"
         if mode == "or" then
-            return state.hovered or state.inCombat
+            return state.hovered or combatShow
         end
-        return state.hovered and state.inCombat
+        return state.hovered and combatShow
     end
 
     if showOnHover then
         return state.hovered
     end
 
-    return state.inCombat
+    return combatShow
 end
 
 local function GetFadeConfig(cfg)
@@ -65,7 +72,9 @@ local function ApplyAlpha(entry, alpha)
     end
 end
 
-local function FadeToAlpha(entry, targetAlpha, duration)
+-- onComplete (optional) fires once the target alpha is actually reached — lets callers defer a
+-- visual change (e.g. a texture swap) until it can't be seen happening mid-fade.
+local function FadeToAlpha(entry, targetAlpha, duration, onComplete)
     targetAlpha = Clamp01(targetAlpha)
     duration = math.max(0, tonumber(duration) or 0)
 
@@ -74,6 +83,7 @@ local function FadeToAlpha(entry, targetAlpha, duration)
     if math.abs(currentAlpha - targetAlpha) <= 0.01 or duration <= 0 then
         if entry.driver then entry.driver:SetScript("OnUpdate", nil) end
         ApplyAlpha(entry, targetAlpha)
+        if onComplete then onComplete() end
         return
     end
 
@@ -89,19 +99,21 @@ local function FadeToAlpha(entry, targetAlpha, duration)
         if progress >= 1 then
             self:SetScript("OnUpdate", nil)
             ApplyAlpha(entry, entry.toAlpha)
+            if onComplete then onComplete() end
             return
         end
         ApplyAlpha(entry, entry.fromAlpha + ((entry.toAlpha - entry.fromAlpha) * progress))
     end)
 end
 
--- EnableMouse() on these secure action buttons is a PROTECTED call (confirmed via ADDON_ACTION_BLOCKED),
--- but the direct synchronous write from the PLAYER_REGEN_DISABLED handler below is NOT blocked — only
--- writes from an async context already deep in combat (e.g. a hover-debounce timer firing mid-fight) are.
--- So the mouse state can safely mirror the real shouldShow; it just won't react to hover changes mid-combat.
+-- EnableMouse() on secure action buttons (action/pet/totem/stance bars) is a PROTECTED call
+-- (confirmed via ADDON_ACTION_BLOCKED) that can't be written while InCombatLockdown() is true,
+-- except for the direct synchronous write from the PLAYER_REGEN_DISABLED handler below. Frames that
+-- aren't secure (e.g. the minimap) don't have this restriction — pass mouseSafeInCombat to react
+-- live to hover/combat changes mid-fight instead of only at the combat transition.
 local function ApplyMouseState(entry, cfg, shouldShow)
     if not entry.clickThrough or not entry.hoverFrames then return end
-    if InCombatLockdown() then return end
+    if InCombatLockdown() and not entry.mouseSafeInCombat then return end
     for _, frame in ipairs(entry.hoverFrames) do
         if frame and frame.EnableMouse then frame:EnableMouse(shouldShow) end
     end
@@ -114,10 +126,12 @@ function VF.Update(key)
     local cfg = GetConfig(entry)
     if not cfg then return end
 
-    if not cfg.show_on_hover and not cfg.show_in_combat then
+    if not cfg.show_on_hover and not cfg.show_in_combat and not cfg.hide_in_combat then
         local _, _, fadeInDuration = GetFadeConfig(cfg)
         FadeToAlpha(entry, 1, fadeInDuration)
         ApplyMouseState(entry, cfg, true)
+        if entry.onVisibilityChange then entry.onVisibilityChange(true) end
+        if entry.onFadeComplete then entry.onFadeComplete(true) end
         return
     end
 
@@ -125,8 +139,20 @@ function VF.Update(key)
     local shownAlpha, hiddenAlpha, fadeInDuration, fadeOutDuration = GetFadeConfig(cfg)
     local targetAlpha = shouldShow and shownAlpha or hiddenAlpha
     local duration = shouldShow and fadeInDuration or fadeOutDuration
-    FadeToAlpha(entry, targetAlpha, duration)
     ApplyMouseState(entry, cfg, shouldShow)
+    if shouldShow then
+        -- Reveal is safe to apply up front — alpha is still near 0 when this fires, so it's not visible.
+        if entry.onVisibilityChange then entry.onVisibilityChange(true) end
+        FadeToAlpha(entry, targetAlpha, duration, function()
+            if entry.onFadeComplete then entry.onFadeComplete(true) end
+        end)
+    else
+        -- Deferred to fade-out completion — applying it immediately would be a visible pop while still opaque.
+        FadeToAlpha(entry, targetAlpha, duration, function()
+            if entry.onVisibilityChange then entry.onVisibilityChange(false) end
+            if entry.onFadeComplete then entry.onFadeComplete(false) end
+        end)
+    end
 end
 
 local function OnHoverEnter(key)
@@ -221,17 +247,27 @@ function VF.Register(key, frame, opts)
     end
     entry.dbTable = opts.dbTable
     entry.clickThrough = opts.clickThrough
+    entry.pollHover = opts.pollHover
+    entry.mouseSafeInCombat = opts.mouseSafeInCombat
+    entry.onVisibilityChange = opts.onVisibilityChange
+    entry.onFadeComplete = opts.onFadeComplete
 
+    -- Merge (not replace) so frames added later via AddHoverFrames survive a re-Register — once a
+    -- frame is marked tracked it never gets re-inserted, so overwriting the array here would
+    -- silently drop it forever the next time this key is re-registered (e.g. on a settings change).
     local hoverFrames = opts.hoverFrames or { frame }
-    entry.hoverFrames = hoverFrames
+    entry.hoverFrames = entry.hoverFrames or {}
     local enableMouse = opts.enableMouse
     if enableMouse == nil then enableMouse = true end
     for _, hoverFrame in ipairs(hoverFrames) do
-        if hoverFrame then hoverFrame.__DragonUI_VFTracked = true end
         HookHoverFrame(key, hoverFrame, enableMouse)
+        if hoverFrame and not hoverFrame.__DragonUI_VFTracked then
+            table.insert(entry.hoverFrames, hoverFrame)
+            hoverFrame.__DragonUI_VFTracked = true
+        end
     end
 
-    if entry.clickThrough then
+    if entry.clickThrough or entry.pollHover then
         StartHoverPoller(key, entry)
     end
 end
@@ -257,7 +293,7 @@ function VF.Reset(key, alpha)
     if not entry then return end
     if entry.driver then entry.driver:SetScript("OnUpdate", nil) end
     ApplyAlpha(entry, alpha or 1)
-    if entry.clickThrough and entry.hoverFrames and not InCombatLockdown() then
+    if entry.clickThrough and entry.hoverFrames and (entry.mouseSafeInCombat or not InCombatLockdown()) then
         for _, frame in ipairs(entry.hoverFrames) do
             if frame and frame.EnableMouse then frame:EnableMouse(true) end
         end

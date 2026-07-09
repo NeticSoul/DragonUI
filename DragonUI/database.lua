@@ -456,7 +456,11 @@ local defaults = {
             animated_border_opacity = 1,
             animated_border_hide_dragonui_border = false,
             addon_button_skin = true,
-            addon_button_fade = false
+            addon_button_fade = false,
+            show_on_hover = false,
+            show_in_combat = false,
+            hide_in_combat = false,
+            visibility_logic = "and",
         },
 
         --  BUFFS SETTINGS (NEW)
