@@ -346,6 +346,10 @@ local defaults = {
             always_show_text = false,
             show_xp_percent = false,
             show_rep_text_on_hover = true,
+            -- Hover/combat visibility (shared by both bars, see core/visibility_fade.lua)
+            show_on_hover = false,
+            show_in_combat = false,
+            visibility_logic = "and",
         },
 
         style = {

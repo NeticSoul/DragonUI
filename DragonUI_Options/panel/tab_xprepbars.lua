@@ -131,6 +131,17 @@ local function BuildXpRepTab(scroll)
         dbPath = "xprepbar.show_xp_percent",
         callback = RefreshBars,
     })
+
+    -- ====================================================================
+    -- VISIBILITY
+    -- ====================================================================
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "xprepbar",
+        hoverDesc = LO["Fade the XP and Reputation bars until you hover over them."],
+        combatDesc = LO["Fade the XP and Reputation bars until you enter combat."],
+        callback = RefreshBars,
+    })
 end
 
 -- Register the tab (order 5 = after Additional Bars)

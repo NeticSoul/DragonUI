@@ -1768,6 +1768,29 @@ end
         end
     end
 
+    -- ========== HOVER/COMBAT VISIBILITY (core/visibility_fade.lua) ==========
+
+    -- Never hover-trigger on the containers: their higher frame level would steal OnEnter from
+    -- these already-mouse-enabled bar widgets, breaking the bars' own hover-to-show-text.
+    local function GetXpRepHoverFrames()
+        local frames = {}
+        if MainMenuExpBar then table.insert(frames, MainMenuExpBar) end
+        if ReputationWatchStatusBar then table.insert(frames, ReputationWatchStatusBar) end
+        if dfXpBar and dfXpBar.Bar then table.insert(frames, dfXpBar.Bar) end
+        if dfRepBar and dfRepBar.Bar then table.insert(frames, dfRepBar.Bar) end
+        return frames
+    end
+
+    local function RegisterXpRepVisibility()
+        if not (addon.VisibilityFade and addon.ActionBarFrames.xpbar and addon.ActionBarFrames.repbar) then return end
+        addon.VisibilityFade.Register("xprepbar", addon.ActionBarFrames.xpbar, {
+            frames = { addon.ActionBarFrames.repbar },
+            dbTable = GetXpRepConfig,
+            hoverFrames = GetXpRepHoverFrames(),
+            enableMouse = false,
+        })
+    end
+
     -- ========== EXPORTED REFRESH / CALLBACK FUNCTIONS ==========
     -- These are called from options.lua and tab_xprepbars.lua
 
@@ -1782,6 +1805,10 @@ end
             ApplyRetailUIExpRepBarStyling()
         end
         UpdateBarPositions()
+        RegisterXpRepVisibility()
+        if addon.VisibilityFade then
+            addon.VisibilityFade.Update("xprepbar")
+        end
     end
 
     -- Export functions for options callbacks
