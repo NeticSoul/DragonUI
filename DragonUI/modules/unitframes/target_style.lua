@@ -1254,6 +1254,46 @@ function UF.TargetStyle.Create(opts)
     -- PUBLIC API: Refresh / Reset
     -- ================================================================
 
+    -- Wrap the container so castbar.lua's own Show/Hide/alpha fades never fight our visibility state.
+    local castbarWrapper
+
+    -- Target/Focus share one visibility toggle with their ToT/ToF and cast bar, anchored or not.
+    local function SyncVisibilityFade()
+        if not addon.VisibilityFade then return end
+
+        local extraFrames, hoverFrames = {}, { BlizzFrame }
+        if configKey == "target" then
+            if _G.TargetFrameToT then table.insert(extraFrames, _G.TargetFrameToT); table.insert(hoverFrames, _G.TargetFrameToT) end
+            if _G.TargetFrameSpellBar then table.insert(extraFrames, _G.TargetFrameSpellBar); table.insert(hoverFrames, _G.TargetFrameSpellBar) end
+        elseif configKey == "focus" then
+            if _G.FocusFrameToT then table.insert(extraFrames, _G.FocusFrameToT); table.insert(hoverFrames, _G.FocusFrameToT) end
+            if _G.FocusFrameSpellBar then table.insert(extraFrames, _G.FocusFrameSpellBar); table.insert(hoverFrames, _G.FocusFrameSpellBar) end
+        end
+        if BlizzFrame.DragonUIHealthHover then table.insert(hoverFrames, BlizzFrame.DragonUIHealthHover) end
+        if BlizzFrame.DragonUIManaHover then table.insert(hoverFrames, BlizzFrame.DragonUIManaHover) end
+
+        local castbarFrames = addon.CastbarModule and addon.CastbarModule.frames
+        local castbarContainer = castbarFrames and castbarFrames[configKey] and castbarFrames[configKey].container
+        if castbarContainer then
+            if not castbarWrapper then
+                castbarWrapper = CreateFrame("Frame", nil, UIParent)
+            end
+            if castbarContainer:GetParent() ~= castbarWrapper then
+                castbarContainer:SetParent(castbarWrapper)
+            end
+            table.insert(extraFrames, castbarWrapper)
+            table.insert(hoverFrames, castbarContainer)
+        end
+
+        addon.VisibilityFade.Register(configKey, BlizzFrame, {
+            frames = extraFrames,
+            dbTable = GetConfig,
+            hoverFrames = hoverFrames,
+            clickThrough = true,
+        })
+        addon.VisibilityFade.Update(configKey)
+    end
+
     local function RefreshFrame()
         if not Module.configured then
             InitializeFrame()
@@ -1281,6 +1321,8 @@ function UF.TargetStyle.Create(opts)
             ForceUpdatePowerBar()
             if Module.textSystem then Module.textSystem.update() end
         end
+
+        SyncVisibilityFade()
     end
 
     local function ResetFrame()

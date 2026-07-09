@@ -946,6 +946,14 @@ local function InitializeBossFrames()
             -- DragonflightUI Bossframe.mixin.lua uses the same pattern.
             RegisterUnitWatch(bossFrame)
 
+            -- Alpha-only fade layered on top of RegisterUnitWatch's own Show/Hide.
+            if addon.VisibilityFade then
+                addon.VisibilityFade.Register("boss" .. i, bossFrame, {
+                    dbTable = function() return addon.UF.GetConfig("boss") end,
+                    clickThrough = true,
+                })
+            end
+
             -- Hook SetPoint to block ALL Blizzard repositioning
             HookBossFrameSetPoint(bossFrame, i)
 
@@ -955,6 +963,7 @@ local function InitializeBossFrames()
             -- Hook OnShow to refresh visuals when boss appears
             if not bossFrame.__DragonUI_OnShowHooked then
                 bossFrame:HookScript("OnShow", function(self)
+                    if addon.VisibilityFade then addon.VisibilityFade.Update("boss" .. i) end
                     -- Re-hide Blizzard elements
                     local fn = self:GetName()
                     local bg = _G[fn .. "Background"]

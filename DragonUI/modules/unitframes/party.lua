@@ -1881,6 +1881,18 @@ function PartyFrames:UpdateSettings()
             -- Re-apply disconnected state AFTER styling (gray name, hidden texts, etc.)
             -- StylePartyFrames resets name color to yellow, so this must come last
             UpdateDisconnectedState(frame)
+
+            if addon.VisibilityFade then
+                local hoverFrames = { frame }
+                if frame.DragonUI_HealthHover then table.insert(hoverFrames, frame.DragonUI_HealthHover) end
+                if frame.DragonUI_ManaHover then table.insert(hoverFrames, frame.DragonUI_ManaHover) end
+                addon.VisibilityFade.Register("party" .. i, frame, {
+                    dbTable = function() return addon.UF.GetConfig("party") end,
+                    hoverFrames = hoverFrames,
+                    clickThrough = true,
+                })
+                addon.VisibilityFade.Update("party" .. i)
+            end
         end
     end
 

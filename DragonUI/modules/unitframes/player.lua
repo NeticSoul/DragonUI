@@ -2372,9 +2372,20 @@ local function RefreshPlayerFrame()
     if Module.textSystem then
         Module.textSystem.update()
     end
-    
+
     --  Alternate mana bar text visibility is configured once in ApplyPlayerConfig()
 
+    -- Fade PlayerFrame and its detached decoration frame together (see uf_core.lua UF.GetConfig)
+    if addon.VisibilityFade then
+        local dragonFrame = _G["DragonUIUnitframeFrame"]
+        addon.VisibilityFade.Register("player", PlayerFrame, {
+            frames = { dragonFrame },
+            dbTable = function() return addon.UF.GetConfig("player") end,
+            hoverFrames = { PlayerFrame, PlayerFrameHealthBar, PlayerFrameManaBar },
+            clickThrough = true,
+        })
+        addon.VisibilityFade.Update("player")
+    end
 end
 
 -- ============================================================================

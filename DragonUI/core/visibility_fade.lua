@@ -95,6 +95,16 @@ local function FadeToAlpha(entry, targetAlpha, duration)
     end)
 end
 
+-- Lets the mouse pass through hidden frames in combat-only mode; skipped for hover mode,
+-- which needs the mouse enabled at all times to detect the hover that reveals the frame.
+local function ApplyMouseState(entry, cfg, shouldShow)
+    if not entry.clickThrough or not entry.hoverFrames then return end
+    if cfg.show_on_hover or InCombatLockdown() then return end
+    for _, frame in ipairs(entry.hoverFrames) do
+        if frame and frame.EnableMouse then frame:EnableMouse(shouldShow) end
+    end
+end
+
 function VF.Update(key)
     local entry = registry[key]
     if not entry then return end
@@ -105,6 +115,7 @@ function VF.Update(key)
     if not cfg.show_on_hover and not cfg.show_in_combat then
         local _, _, fadeInDuration = GetFadeConfig(cfg)
         FadeToAlpha(entry, 1, fadeInDuration)
+        ApplyMouseState(entry, cfg, true)
         return
     end
 
@@ -113,6 +124,7 @@ function VF.Update(key)
     local targetAlpha = shouldShow and shownAlpha or hiddenAlpha
     local duration = shouldShow and fadeInDuration or fadeOutDuration
     FadeToAlpha(entry, targetAlpha, duration)
+    ApplyMouseState(entry, cfg, shouldShow)
 end
 
 local function OnHoverEnter(key)
@@ -153,6 +165,7 @@ local function HookHoverFrame(key, frame, enableMouse)
 end
 
 -- hoverFrames defaults to {frame}; enableMouse defaults true (pass false for secure/native-hover frames).
+-- clickThrough=true lets the mouse pass through these hoverFrames while hidden in combat-only mode.
 function VF.Register(key, frame, opts)
     if not frame or not opts or not opts.dbTable then return end
 
@@ -167,8 +180,10 @@ function VF.Register(key, frame, opts)
         for _, extra in ipairs(opts.frames) do table.insert(entry.frames, extra) end
     end
     entry.dbTable = opts.dbTable
+    entry.clickThrough = opts.clickThrough
 
     local hoverFrames = opts.hoverFrames or { frame }
+    entry.hoverFrames = hoverFrames
     local enableMouse = opts.enableMouse
     if enableMouse == nil then enableMouse = true end
     for _, hoverFrame in ipairs(hoverFrames) do
@@ -190,6 +205,11 @@ function VF.Reset(key, alpha)
     if not entry then return end
     if entry.driver then entry.driver:SetScript("OnUpdate", nil) end
     ApplyAlpha(entry, alpha or 1)
+    if entry.clickThrough and entry.hoverFrames and not InCombatLockdown() then
+        for _, frame in ipairs(entry.hoverFrames) do
+            if frame and frame.EnableMouse then frame:EnableMouse(true) end
+        end
+    end
 end
 
 function VF.RefreshAll()

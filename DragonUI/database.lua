@@ -571,6 +571,9 @@ local defaults = {
                     RUNES        = { r = 0.50, g = 0.50, b = 0.50 },
                     RUNIC_POWER  = { r = 0.00, g = 0.82, b = 1.00 },
                 },
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             target = {
                 classcolor = false,
@@ -583,7 +586,11 @@ local defaults = {
                 enableNumericThreat = true,
                 enableThreatGlow = true,
                 show_name_background = true,
-                scale = 1.0
+                scale = 1.0,
+                -- Also fades Target of Target and the target cast bar (see target_style.lua)
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             focus = {
                 classcolor = false,
@@ -595,7 +602,11 @@ local defaults = {
                 showManaTextAlways = false,
                 show_buff_debuff = true,
                 show_name_background = true,
-                scale = 0.9
+                scale = 0.9,
+                -- Also fades Target of Focus and the focus cast bar (see target_style.lua)
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             pet = {
                 breakUpLargeNumbers = true,
@@ -606,7 +617,10 @@ local defaults = {
                 scale = 1.0,
                 override = false,
                 x = 18,
-                y = -80
+                y = -80,
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             party = {
                 enabled = true,
@@ -623,7 +637,10 @@ local defaults = {
                 anchor = 'TOPLEFT',
                 anchorParent = 'TOPLEFT',
                 x = 10,
-                y = -200
+                y = -200,
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             tot = {
                 classcolor = false,
@@ -665,7 +682,10 @@ local defaults = {
                 anchor = 'TOPRIGHT',
                 anchorParent = 'TOPRIGHT',
                 x = -85,
-                y = -350
+                y = -350,
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             }
         },
 

@@ -108,6 +108,7 @@ local subTabs = {
     { key = "pet",     label = LO["Pet"] },
     { key = "tot",     label = LO["ToT / ToF"] },
     { key = "party",   label = LO["Party"] },
+    { key = "boss",    label = LO["Boss"] },
 }
 
 -- Search navigation sub-tab setter.
@@ -378,6 +379,14 @@ local function BuildPlayerSection(scroll)
             end,
         })
     end
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "unitframe.player",
+        hoverDesc = LO["Fade the player frame until you hover over it."],
+        combatDesc = LO["Fade the player frame until you enter combat."],
+        callback = refreshPlayer,
+    })
 end
 
 local function BuildTargetSection(scroll)
@@ -396,6 +405,15 @@ local function BuildTargetSection(scroll)
         label = LO["Show Name Background"],
         desc = LO["Show the colored name background behind the target name."],
         dbPath = "unitframe.target.show_name_background",
+        callback = refreshTarget,
+    })
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddDescription(visSection, LO["Also fades the Target of Target and target cast bar, attached or not."])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "unitframe.target",
+        hoverDesc = LO["Fade the target frame group until you hover over it."],
+        combatDesc = LO["Fade the target frame group until you enter combat."],
         callback = refreshTarget,
     })
 end
@@ -421,6 +439,15 @@ local function BuildFocusSection(scroll)
         label = LO["Show Buff/Debuff on Focus"],
         desc = LO["Uses the native large focus frame mode to show buffs and debuffs on the focus frame."],
         dbPath = "unitframe.focus.show_buff_debuff",
+        callback = refreshFocus,
+    })
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddDescription(visSection, LO["Also fades the Target of Focus and focus cast bar, attached or not."])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "unitframe.focus",
+        hoverDesc = LO["Fade the focus frame group until you hover over it."],
+        combatDesc = LO["Fade the focus frame group until you enter combat."],
         callback = refreshFocus,
     })
 end
@@ -517,6 +544,14 @@ local function BuildPetSection(scroll)
         disabled = IsPetAttached,
         callback = refreshPet,
     }), IsPetAttached)
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "unitframe.pet",
+        hoverDesc = LO["Fade the pet frame until you hover over it."],
+        combatDesc = LO["Fade the pet frame until you enter combat."],
+        callback = refreshPet,
+    })
 end
 
 local function BuildToTSection(scroll)
@@ -714,6 +749,38 @@ local function BuildPartySection(scroll)
         width = 200,
         callback = refreshParty,
     })
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "unitframe.party",
+        hoverDesc = LO["Fade party frames until you hover over them."],
+        combatDesc = LO["Fade party frames until you enter combat."],
+        callback = refreshParty,
+    })
+end
+
+local function BuildBossSection(scroll)
+    local refreshBoss = function()
+        if addon.RefreshBossFrames then addon.RefreshBossFrames() end
+    end
+
+    local s = C:AddSection(scroll, LO["Boss Frames"])
+
+    C:AddSlider(s, {
+        label = LO["Scale"],
+        dbPath = "unitframe.boss.scale",
+        min = 0.5, max = 2.0, step = 0.01,
+        width = 200,
+        callback = refreshBoss,
+    })
+
+    local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddVisibilityFadeToggles(visSection, {
+        dbPrefix = "unitframe.boss",
+        hoverDesc = LO["Fade boss frames until you hover over them."],
+        combatDesc = LO["Fade boss frames until you enter combat."],
+        callback = refreshBoss,
+    })
 end
 
 -- ============================================================================
@@ -727,6 +794,7 @@ local subTabBuilders = {
     pet    = BuildPetSection,
     tot    = BuildToTSection,
     party  = BuildPartySection,
+    boss   = BuildBossSection,
 }
 
 -- ============================================================================
