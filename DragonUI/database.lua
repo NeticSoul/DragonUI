@@ -401,12 +401,18 @@ local defaults = {
                 y_offset = -58, -- Additional Y offset for fine-tuning position
                 button_size = 31, -- Size of stance buttons (native Blizzard size)
                 button_spacing = 6, -- Spacing between stance buttons
-                show_hotkey = false
+                show_hotkey = false,
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             pet = {
                 scale = 1.0,
                 grid = false, -- Disable grid by default (matches original Dragonflight port)
-                show_hotkey = false
+                show_hotkey = false,
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             },
             vehicle = {
                 x_position = -40,
@@ -419,7 +425,10 @@ local defaults = {
                 button_size = 34, -- Size of totem buttons (native Blizzard size)
                 button_spacing = 4, -- Spacing between totem buttons
                 manual_position = false, -- When true, uses x_position/y_offset; when false, auto-anchors to action bars
-                show_hotkey = false
+                show_hotkey = false,
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
             }
         },
 

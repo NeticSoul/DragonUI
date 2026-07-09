@@ -48,8 +48,8 @@ local function BuildQuesttrackerTab(scroll)
         callback = RefreshQT,
     })
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(section, LO["Visibility"])
+    C:AddVisibilityFadeToggles(section, {
         dbPrefix = "questtracker",
         hoverDesc = LO["Fade the quest tracker until you hover over it."],
         combatDesc = LO["Fade the quest tracker until you enter combat."],

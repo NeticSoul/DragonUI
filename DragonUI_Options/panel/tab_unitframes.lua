@@ -380,8 +380,8 @@ local function BuildPlayerSection(scroll)
         })
     end
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(s, LO["Visibility"])
+    C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.player",
         hoverDesc = LO["Fade the player frame until you hover over it."],
         combatDesc = LO["Fade the player frame until you enter combat."],
@@ -408,9 +408,9 @@ local function BuildTargetSection(scroll)
         callback = refreshTarget,
     })
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddDescription(visSection, LO["Also fades the Target of Target and target cast bar, attached or not."])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(s, LO["Visibility"])
+    C:AddDescription(s, LO["Also fades the Target of Target and target cast bar, attached or not."])
+    C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.target",
         hoverDesc = LO["Fade the target frame group until you hover over it."],
         combatDesc = LO["Fade the target frame group until you enter combat."],
@@ -442,9 +442,9 @@ local function BuildFocusSection(scroll)
         callback = refreshFocus,
     })
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddDescription(visSection, LO["Also fades the Target of Focus and focus cast bar, attached or not."])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(s, LO["Visibility"])
+    C:AddDescription(s, LO["Also fades the Target of Focus and focus cast bar, attached or not."])
+    C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.focus",
         hoverDesc = LO["Fade the focus frame group until you hover over it."],
         combatDesc = LO["Fade the focus frame group until you enter combat."],
@@ -545,8 +545,8 @@ local function BuildPetSection(scroll)
         callback = refreshPet,
     }), IsPetAttached)
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(s, LO["Visibility"])
+    C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.pet",
         hoverDesc = LO["Fade the pet frame until you hover over it."],
         combatDesc = LO["Fade the pet frame until you enter combat."],
@@ -750,8 +750,8 @@ local function BuildPartySection(scroll)
         callback = refreshParty,
     })
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(s, LO["Visibility"])
+    C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.party",
         hoverDesc = LO["Fade party frames until you hover over them."],
         combatDesc = LO["Fade party frames until you enter combat."],
@@ -774,8 +774,8 @@ local function BuildBossSection(scroll)
         callback = refreshBoss,
     })
 
-    local visSection = C:AddSection(scroll, LO["Visibility"])
-    C:AddVisibilityFadeToggles(visSection, {
+    C:AddHeading(s, LO["Visibility"])
+    C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.boss",
         hoverDesc = LO["Fade boss frames until you hover over them."],
         combatDesc = LO["Fade boss frames until you enter combat."],

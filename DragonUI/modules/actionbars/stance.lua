@@ -357,6 +357,21 @@ local function stancebutton_position()
 	    StanceModule.stateDrivers.visibility = {frame = stancebar, state = 'visibility', condition = stance[class] or 'hide'}
 	    RegisterStateDriver(stancebar, 'visibility', stance[class] or 'hide')
 	end
+
+	-- Hover/combat fade layered on top of the state driver above (alpha-only, never Show/Hide).
+	if addon.VisibilityFade then
+	    local hoverFrames = { stancebar }
+	    for i = 1, NUM_SHAPESHIFT_SLOTS do
+	        local btn = _G['ShapeshiftButton' .. i]
+	        if btn then table.insert(hoverFrames, btn) end
+	    end
+	    addon.VisibilityFade.Register("stancebar", stancebar, {
+	        dbTable = function() return addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.stance end,
+	        hoverFrames = hoverFrames,
+	        clickThrough = true,
+	    })
+	    addon.VisibilityFade.Update("stancebar")
+	end
 end
 
 local function stancebutton_updatestate()
@@ -693,6 +708,10 @@ function addon.RefreshStance()
 	
 	-- Update position
 	stancebar_update()
+
+	if addon.VisibilityFade then
+		addon.VisibilityFade.Update("stancebar")
+	end
 end
 
 -- Debug function for troubleshooting stance bar issues

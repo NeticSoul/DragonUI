@@ -116,8 +116,8 @@ local function CreateAnchorFrame()
     local petbarWidth = (btnsize * numButtons) + (space * (numButtons - 1))
     local petbarHeight = btnsize
     
-    -- Always create using DragonUI widgets system for proper editor mode support
-    local anchor = addon.CreateUIFrame(petbarWidth, petbarHeight, "petbar")
+    -- Reuse the named global if it exists — recreating via CreateFrame resets alpha to 1.
+    local anchor = _G.DragonUI_petbar or addon.CreateUIFrame(petbarWidth, petbarHeight, "petbar")
     PetbarModule.anchor = anchor
     
     -- Apply petbar scale
@@ -207,11 +207,12 @@ local function CreatePetbarFrame()
     if not anchor then return end
     
     local config = GetDynamicConfig()
-    local petbar = CreateFrame('Frame', 'DragonUI_PetBar', UIParent, 'SecureHandlerStateTemplate')
+    -- Reuse the named global if it exists — recreating via CreateFrame resets alpha to 1.
+    local petbar = _G.DragonUI_PetBar or CreateFrame('Frame', 'DragonUI_PetBar', UIParent, 'SecureHandlerStateTemplate')
     petbar:SetAllPoints(anchor)
     petbar:SetScale(config.scale or 1.0)
     PetbarModule.petbar = petbar
-    
+
     return petbar
 end
 
@@ -291,6 +292,12 @@ local function petbutton_updatestate(self, event)
             end
         end
     end
+
+    -- The SetAlpha(1) calls above reset individual buttons whenever pet data syncs (e.g. a
+    -- few seconds after login/reload) — reassert our own alpha right after so it can't flash.
+    if addon.VisibilityFade then
+        addon.VisibilityFade.Update("petbar")
+    end
 end
 
 -- Position pet buttons (legacy approach - this is what makes it work!)
@@ -331,7 +338,28 @@ local function petbutton_position()
         RegisterStateDriver(petbar, 'visibility', '[pet,novehicleui,nobonusbar:5] show; hide')
         PetbarModule.stateDrivers.visibility = petbar
     end
-    
+
+    -- Hover/combat fade layered on top of the state driver above (alpha-only, never Show/Hide).
+    -- Anchor is deliberately excluded: CreateUIFrame gives it frame level 100, so enabling its
+    -- mouse would sit above the real action buttons and steal every click meant for them.
+    if addon.VisibilityFade then
+        local buttons = {}
+        for i = 1, 10 do
+            local btn = _G['PetActionButton' .. i]
+            if btn then table.insert(buttons, btn) end
+        end
+        local hoverFrames = { petbar }
+        for _, btn in ipairs(buttons) do table.insert(hoverFrames, btn) end
+        addon.VisibilityFade.Register("petbar", petbar, {
+            -- Buttons are direct alpha targets too: petbutton_updatestate() resets their own alpha.
+            frames = buttons,
+            dbTable = function() return addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.pet end,
+            hoverFrames = hoverFrames,
+            clickThrough = true,
+        })
+        addon.VisibilityFade.Update("petbar")
+    end
+
     -- Hook for pet action updates
     hooksecurefunc('PetActionBar_Update', petbutton_updatestate)
     PetbarModule.hooks.PetActionBar_Update = true

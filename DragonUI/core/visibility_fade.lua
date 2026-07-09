@@ -5,7 +5,7 @@ local addon = select(2, ...);
 -- ============================================================================
 -- SHARED VISIBILITY FADE ENGINE (hover/combat show-on-hover, show-in-combat)
 -- ============================================================================
--- Alpha-only by design: never touches Show/Hide/EnableMouse, so it's safe on secure frames too.
+-- Never touches Show/Hide (safe on secure frames); EnableMouse only changes when clickThrough is set.
 
 addon.VisibilityFade = addon.VisibilityFade or {}
 local VF = addon.VisibilityFade
@@ -95,11 +95,13 @@ local function FadeToAlpha(entry, targetAlpha, duration)
     end)
 end
 
--- Lets the mouse pass through hidden frames in combat-only mode; skipped for hover mode,
--- which needs the mouse enabled at all times to detect the hover that reveals the frame.
+-- EnableMouse() on these secure action buttons is a PROTECTED call (confirmed via ADDON_ACTION_BLOCKED),
+-- but the direct synchronous write from the PLAYER_REGEN_DISABLED handler below is NOT blocked — only
+-- writes from an async context already deep in combat (e.g. a hover-debounce timer firing mid-fight) are.
+-- So the mouse state can safely mirror the real shouldShow; it just won't react to hover changes mid-combat.
 local function ApplyMouseState(entry, cfg, shouldShow)
     if not entry.clickThrough or not entry.hoverFrames then return end
-    if cfg.show_on_hover or InCombatLockdown() then return end
+    if InCombatLockdown() then return end
     for _, frame in ipairs(entry.hoverFrames) do
         if frame and frame.EnableMouse then frame:EnableMouse(shouldShow) end
     end
@@ -164,6 +166,44 @@ local function HookHoverFrame(key, frame, enableMouse)
     frame.__DragonUI_VFHoverHooked = true
 end
 
+local POLL_INTERVAL = 0.15
+
+-- IsMouseOver() works regardless of EnableMouse, so clickThrough entries poll for hover
+-- instead of relying on OnEnter/OnLeave — those stop firing the moment the mouse is disabled.
+local function EvaluatePollHover(key, entry)
+    local cfg = GetConfig(entry)
+    if not cfg or not cfg.show_on_hover then return end
+
+    local isOver = false
+    for _, frame in ipairs(entry.hoverFrames) do
+        if frame and frame.IsMouseOver and frame:IsVisible() and frame:IsMouseOver() then
+            isOver = true
+            break
+        end
+    end
+
+    if isOver then
+        -- Also re-enter mid-debounce, or a blip's pending hide timer never gets cancelled.
+        if not entry.state.hovered or hoverTimers[key] then
+            OnHoverEnter(key)
+        end
+    elseif entry.state.hovered and not hoverTimers[key] then
+        OnHoverLeave(key)
+    end
+end
+
+local function StartHoverPoller(key, entry)
+    if entry.poller then return end
+    entry.poller = CreateFrame("Frame")
+    entry.pollElapsed = 0
+    entry.poller:SetScript("OnUpdate", function(self, elapsed)
+        entry.pollElapsed = entry.pollElapsed + elapsed
+        if entry.pollElapsed < POLL_INTERVAL then return end
+        entry.pollElapsed = 0
+        EvaluatePollHover(key, entry)
+    end)
+end
+
 -- hoverFrames defaults to {frame}; enableMouse defaults true (pass false for secure/native-hover frames).
 -- clickThrough=true lets the mouse pass through these hoverFrames while hidden in combat-only mode.
 function VF.Register(key, frame, opts)
@@ -187,15 +227,27 @@ function VF.Register(key, frame, opts)
     local enableMouse = opts.enableMouse
     if enableMouse == nil then enableMouse = true end
     for _, hoverFrame in ipairs(hoverFrames) do
+        if hoverFrame then hoverFrame.__DragonUI_VFTracked = true end
         HookHoverFrame(key, hoverFrame, enableMouse)
+    end
+
+    if entry.clickThrough then
+        StartHoverPoller(key, entry)
     end
 end
 
--- Adds more hover-trigger frames to an already-registered key; never touches EnableMouse.
+-- Adds more hover-trigger frames to an already-registered key; never forces EnableMouse(true),
+-- but still tracks them so click-through management (ApplyMouseState) covers them too.
 function VF.AddHoverFrames(key, frames)
-    if not registry[key] then return end
+    local entry = registry[key]
+    if not entry then return end
+    entry.hoverFrames = entry.hoverFrames or {}
     for _, f in ipairs(frames) do
         HookHoverFrame(key, f, false)
+        if f and not f.__DragonUI_VFTracked then
+            table.insert(entry.hoverFrames, f)
+            f.__DragonUI_VFTracked = true
+        end
     end
 end
 
@@ -227,8 +279,18 @@ combatFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 combatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 combatFrame:SetScript("OnEvent", function(self, event)
     local inCombat = event == "PLAYER_REGEN_DISABLED"
-    for key in pairs(registry) do
-        registry[key].state.inCombat = inCombat
+    for key, entry in pairs(registry) do
+        entry.state.inCombat = inCombat
         VF.Update(key)
+        -- A later hover change can't safely toggle EnableMouse mid-combat (protected on secure action
+        -- buttons), so pre-arm it enabled for the whole fight right here, at the one safe write point.
+        if inCombat and entry.clickThrough and entry.hoverFrames then
+            local cfg = GetConfig(entry)
+            if cfg and cfg.show_in_combat then
+                for _, frame in ipairs(entry.hoverFrames) do
+                    if frame and frame.EnableMouse then frame:EnableMouse(true) end
+                end
+            end
+        end
     end
 end)
