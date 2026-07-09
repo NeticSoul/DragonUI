@@ -399,13 +399,7 @@ end
 
 -- Behavior: CompactRaidFrame taint mitigation
 behaviors.CompactRaidFrameFix = function(addonName, addonInfo)
-    
-    -- Simple state tracking
-    local inCombat = false
-    local needsRefresh = false
-    local lastPartySize = GetNumPartyMembers()
-    local partySizeWhenCombatStarted = 0
-    
+
     -- Simple cleanup system for party frames
     local function CleanPartyFrames()
         -- Non-destructive cleanup: only reconcile visibility and request refresh.
@@ -456,62 +450,52 @@ behaviors.CompactRaidFrameFix = function(addonName, addonInfo)
         
         StaticPopup_Show("DRAGONUI_PARTY_RELOAD")
     end
-    
 
-    
-    -- Polling frame that ONLY runs while in combat (auto-disables otherwise)
-    local pollingFrame = CreateFrame("Frame")
-    local checkInterval = 0
-    
-    local function StartPolling()
-        checkInterval = 0
-        pollingFrame:SetScript("OnUpdate", function(self, elapsed)
-            checkInterval = checkInterval + elapsed
-            if checkInterval < 0.5 then return end
-            checkInterval = 0
-            
-            local currentPartySize = GetNumPartyMembers()
-            if currentPartySize ~= lastPartySize then
-                needsRefresh = true
-            end
-        end)
-    end
-    
-    local function StopPolling()
-        pollingFrame:SetScript("OnUpdate", nil)
-        
-        if needsRefresh then
-            local currentPartySize = GetNumPartyMembers()
-            if currentPartySize == 0 and partySizeWhenCombatStarted > 0 then
-                CleanPartyFrames()
-            elseif currentPartySize > 0 and partySizeWhenCombatStarted > 0 then
-                CleanPartyFrames()
-            elseif currentPartySize > 0 and partySizeWhenCombatStarted == 0 then
-                ShowPartyReloadDialog()
-            end
-            needsRefresh = false
-        end
-        
-        lastPartySize = GetNumPartyMembers()
-        partySizeWhenCombatStarted = 0
-        inCombat = false
-    end
-    
-    -- Use events to toggle polling on/off (much cheaper than always polling)
-    pollingFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-    pollingFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-    pollingFrame:SetScript("OnEvent", function(self, event)
-        if event == "PLAYER_REGEN_DISABLED" then
-            inCombat = true
-            partySizeWhenCombatStarted = GetNumPartyMembers()
-            lastPartySize = partySizeWhenCombatStarted
-            StartPolling()
-        elseif event == "PLAYER_REGEN_ENABLED" then
-            StopPolling()
-        end
-    end)
-    
+    -- Highest concurrent party size seen this session. CompactRaidFrame-style addons
+    -- pool/reuse unit frames, so a new one is only ever forced into existence past this peak.
+    local sessionMaxPartySize = GetNumPartyMembers()
+    local lastKnownPartySize = sessionMaxPartySize
+    local needsReload = false
+    local needsClean = false
 
+    local QUEUE_ID = "compatibility_compactraidframe_partyfix"
+
+    local function ApplyPendingFix()
+        if needsReload then
+            ShowPartyReloadDialog()
+        elseif needsClean then
+            CleanPartyFrames()
+        end
+        needsReload = false
+        needsClean = false
+    end
+
+    -- Event-driven (no polling): reacts to roster changes, comparing against the
+    -- session peak instead of "was I solo when this fight started".
+    local function OnPartyRosterChanged()
+        local currentPartySize = GetNumPartyMembers()
+        if currentPartySize == lastKnownPartySize then
+            return
+        end
+
+        if currentPartySize > sessionMaxPartySize then
+            if InCombatLockdown() then
+                needsReload = true
+            end
+            sessionMaxPartySize = currentPartySize
+        elseif InCombatLockdown() and (currentPartySize > 0 or lastKnownPartySize > 0) then
+            needsClean = true
+        end
+
+        lastKnownPartySize = currentPartySize
+
+        if InCombatLockdown() and (needsReload or needsClean) then
+            addon.CombatQueue:Add(QUEUE_ID, ApplyPendingFix)
+        end
+    end
+
+    compatibility.raidUpdateHandlers = compatibility.raidUpdateHandlers or {}
+    compatibility.raidUpdateHandlers[addonName] = OnPartyRosterChanged
 end
 
 
@@ -1192,13 +1176,8 @@ local function RegisterEventsForAddon(addonName, addonInfo)
     
     local eventFrame = CreateFrame("Frame", "DragonUI_Events_" .. addonName)
     eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-    eventFrame:RegisterEvent("PARTY_CONVERTED_TO_RAID")
     eventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
-    eventFrame:RegisterEvent("PARTY_LEADER_CHANGED")
-    eventFrame:RegisterEvent("GROUP_FORMED")
-    eventFrame:RegisterEvent("GROUP_JOINED")
-    eventFrame:RegisterEvent("GROUP_LEFT")
-    
+
     eventFrame:SetScript("OnEvent", function(self, event)
         if compatibility.raidUpdateHandlers and compatibility.raidUpdateHandlers[addonName] then
             compatibility.raidUpdateHandlers[addonName]()
