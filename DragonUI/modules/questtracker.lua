@@ -267,8 +267,31 @@ function addon.RefreshQuestTracker()
     ScheduleTimer(0.05, ForceUpdateQuestTracker)
 end
 
+-- Cached each SyncQuestTrackerHitRect pass; used by watchFrameContentHoverProxy below since
+-- IsMouseOver() ignores SetHitRectInsets and would otherwise poll-hover the full padded frame.
+local lastContentBottom = nil
+
+-- Stands in for WatchFrame in hoverFrames — real IsMouseOver() ignores SetHitRectInsets, so hover
+-- polling would trigger across the whole padded frame instead of just the quest content.
+local watchFrameContentHoverProxy = {
+    IsVisible = function() return WatchFrame and WatchFrame:IsVisible() end,
+    IsMouseOver = function()
+        if not WatchFrame then return false end
+        local top, left, right = WatchFrame:GetTop(), WatchFrame:GetLeft(), WatchFrame:GetRight()
+        local bottom = lastContentBottom or WatchFrame:GetBottom()
+        if not (top and left and right and bottom) then return false end
+        -- UIParent's scale, not WatchFrame's — GetLeft/Right/Top/Bottom() report in that space.
+        local scale = UIParent:GetEffectiveScale()
+        local x, y = GetCursorPosition()
+        x, y = x / scale, y / scale
+        return x >= left and x <= right and y <= top and y >= bottom
+    end,
+    HookScript = function(_, ...) return WatchFrame:HookScript(...) end,
+    EnableMouse = function(_, ...) return WatchFrame:EnableMouse(...) end,
+}
+
 -- =============================================================================
--- INITIALIZATION 
+-- INITIALIZATION
 -- =============================================================================
 function QuestTrackerModule:Initialize()
     if self.initialized then return end
@@ -353,14 +376,17 @@ function QuestTrackerModule:Initialize()
     ApplyQuestTrackerFonts()
 
     if addon.VisibilityFade and WatchFrame then
-        -- enableMouse=false: only SyncHoverVisibility() may enable WatchFrame's mouse, and only for hover mode.
+        -- clickThrough lets the shared engine manage EnableMouse for show_on_hover/show_in_combat/
+        -- hide_in_combat generically — WatchFrame isn't secure, so it can react live in combat too.
         addon.VisibilityFade.Register("questtracker", WatchFrame, {
             dbTable = function()
                 if not IsModuleEnabled() then return nil end
                 return addon.db and addon.db.profile and addon.db.profile.questtracker
             end,
-            hoverFrames = { WatchFrame, WatchFrameHeader, WatchFrameCollapseExpandButton },
+            hoverFrames = { watchFrameContentHoverProxy, WatchFrameHeader, WatchFrameCollapseExpandButton },
             enableMouse = false,
+            clickThrough = true,
+            mouseSafeInCombat = true,
         })
     end
 
@@ -415,20 +441,19 @@ local function SyncQuestTrackerHitRect()
     local frameBottom = WatchFrame:GetBottom()
     if not (contentBottom and frameBottom) then
         WatchFrame:SetHitRectInsets(0, 0, 0, 0)
+        lastContentBottom = nil
         return
     end
 
     local bottomInset = math.max(0, (contentBottom - frameBottom) - 4)
     WatchFrame:SetHitRectInsets(0, 0, 0, bottomInset)
+    lastContentBottom = contentBottom
 end
 
--- Only enable WatchFrame's mouse for hover mode — otherwise its background stays click-through.
 function QuestTrackerModule:SyncHoverVisibility()
     if not WatchFrame then return end
-    local cfg = addon.db and addon.db.profile and addon.db.profile.questtracker
-    if not InCombatLockdown() then
-        WatchFrame:EnableMouse(cfg and cfg.show_on_hover and true or false)
-    end
+    -- EnableMouse is now handled by addon.VisibilityFade's clickThrough (covers show_in_combat and
+    -- hide_in_combat too, not just show_on_hover like this used to before it was migrated).
     if addon.VisibilityFade then
         addon.VisibilityFade.Update("questtracker")
     end

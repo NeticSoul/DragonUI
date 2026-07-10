@@ -615,6 +615,45 @@ local function BuildVisibilityTab(scroll)
         })
     end
 
+    -- Show in Combat / Hide in Combat are mutually exclusive — enabling one clears the other.
+    local function AddCombatToggle(section, barKey, dbSuffix, otherSuffix, label, desc)
+        C:AddToggle(section, {
+            label = label,
+            desc = desc,
+            dbPath = "actionbars." .. barKey .. "_" .. dbSuffix,
+            callback = function()
+                local conflicted = C:GetDBValue("actionbars." .. barKey .. "_" .. dbSuffix)
+                    and C:GetDBValue("actionbars." .. barKey .. "_" .. otherSuffix)
+                if conflicted then
+                    C:SetDBValue("actionbars." .. barKey .. "_" .. otherSuffix, false)
+                end
+                RefreshVisibility()
+                if conflicted and Panel.currentTab then Panel:SelectTab(Panel.currentTab) end
+            end,
+        })
+    end
+
+    -- Builds the standard 4-control Show on Hover / Show in Combat / Hide in Combat / AND-OR block
+    -- used by every bar migrated to the shared addon.VisibilityFade engine (everything but Main Bar).
+    local function BuildMigratedBarVisibilitySection(barKey, title, hoverDesc, combatDesc)
+        local section = C:AddSection(scroll, title)
+
+        C:AddToggle(section, {
+            label = LO["Show on Hover Only"],
+            desc = hoverDesc,
+            dbPath = "actionbars." .. barKey .. "_show_on_hover",
+            callback = RefreshVisibility,
+        })
+
+        AddCombatToggle(section, barKey, "show_in_combat", "hide_in_combat",
+            LO["Show in Combat Only"], combatDesc)
+        AddCombatToggle(section, barKey, "hide_in_combat", "show_in_combat",
+            LO["Hide in Combat"], nil)
+
+        AddVisibilityModeOptions(section, barKey)
+        return section
+    end
+
     -- Enable/disable secondary bars
     local enableSection = C:AddSection(scroll, LO["Enable / Disable Bars"])
 
@@ -652,78 +691,19 @@ local function BuildVisibilityTab(scroll)
         callback = RefreshVisibility,
     })
 
-    C:AddToggle(mainVis, {
-        label = LO["Show in Combat Only"],
-        desc = LO["Hide the main bar until you enter combat."],
-        dbPath = "actionbars.main_show_in_combat",
-        callback = RefreshVisibility,
-    })
+    AddCombatToggle(mainVis, "main", "show_in_combat", "hide_in_combat",
+        LO["Show in Combat Only"], LO["Hide the main bar until you enter combat."])
+    AddCombatToggle(mainVis, "main", "hide_in_combat", "show_in_combat",
+        LO["Hide in Combat"], LO["Hide the main bar while in combat."])
     AddVisibilityModeOptions(mainVis, "main")
 
-    -- Bottom left hover/combat
-    local blVis = C:AddSection(scroll, LO["Bottom Left Bar"])
-
-    C:AddToggle(blVis, {
-        label = LO["Show on Hover Only"],
-        dbPath = "actionbars.bottom_left_show_on_hover",
-        callback = RefreshVisibility,
-    })
-
-    C:AddToggle(blVis, {
-        label = LO["Show in Combat Only"],
-        dbPath = "actionbars.bottom_left_show_in_combat",
-        callback = RefreshVisibility,
-    })
-    AddVisibilityModeOptions(blVis, "bottom_left")
-
-    -- Bottom right hover/combat
-    local brVis = C:AddSection(scroll, LO["Bottom Right Bar"])
-
-    C:AddToggle(brVis, {
-        label = LO["Show on Hover Only"],
-        dbPath = "actionbars.bottom_right_show_on_hover",
-        callback = RefreshVisibility,
-    })
-
-    C:AddToggle(brVis, {
-        label = LO["Show in Combat Only"],
-        dbPath = "actionbars.bottom_right_show_in_combat",
-        callback = RefreshVisibility,
-    })
-    AddVisibilityModeOptions(brVis, "bottom_right")
-
-    -- Right bar hover/combat
-    local rightVis = C:AddSection(scroll, LO["Right Bar"])
-
-    C:AddToggle(rightVis, {
-        label = LO["Show on Hover Only"],
-        dbPath = "actionbars.right_show_on_hover",
-        callback = RefreshVisibility,
-    })
-
-    C:AddToggle(rightVis, {
-        label = LO["Show in Combat Only"],
-        dbPath = "actionbars.right_show_in_combat",
-        callback = RefreshVisibility,
-    })
-    AddVisibilityModeOptions(rightVis, "right")
-
-    -- Left bar hover/combat
-    local leftVis = C:AddSection(scroll, LO["Left Bar"])
-
-    C:AddToggle(leftVis, {
-        label = LO["Show on Hover Only"],
-        dbPath = "actionbars.left_show_on_hover",
-        callback = RefreshVisibility,
-    })
-
-    C:AddToggle(leftVis, {
-        label = LO["Show in Combat Only"],
-        dbPath = "actionbars.left_show_in_combat",
-        callback = RefreshVisibility,
-    })
-    AddVisibilityModeOptions(leftVis, "left")
-
+    -- All secondary bars get the full Show on Hover / Show in Combat / Hide in Combat / AND-OR block.
+    BuildMigratedBarVisibilitySection("bottom_left", LO["Bottom Left Bar"])
+    BuildMigratedBarVisibilitySection("bottom_right", LO["Bottom Right Bar"])
+    BuildMigratedBarVisibilitySection("right", LO["Right Bar"])
+    BuildMigratedBarVisibilitySection("left", LO["Left Bar"])
+    BuildMigratedBarVisibilitySection("micro", LO["Micro Menu"])
+    BuildMigratedBarVisibilitySection("bag", LO["Bag Bar"])
 end
 
 -- ============================================================================

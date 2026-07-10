@@ -53,6 +53,8 @@ local function BuildQuesttrackerTab(scroll)
         dbPrefix = "questtracker",
         hoverDesc = LO["Fade the quest tracker until you hover over it."],
         combatDesc = LO["Fade the quest tracker until you enter combat."],
+        hideInCombat = true,
+        hideInCombatDesc = LO["Hide the quest tracker while in combat."],
         callback = function()
             if addon.QuestTrackerModule and addon.QuestTrackerModule.SyncHoverVisibility then
                 addon.QuestTrackerModule:SyncHoverVisibility()

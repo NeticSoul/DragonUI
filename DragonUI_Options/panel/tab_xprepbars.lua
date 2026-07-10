@@ -140,6 +140,8 @@ local function BuildXpRepTab(scroll)
         dbPrefix = "xprepbar",
         hoverDesc = LO["Fade the XP and Reputation bars until you hover over them."],
         combatDesc = LO["Fade the XP and Reputation bars until you enter combat."],
+        hideInCombat = true,
+        hideInCombatDesc = LO["Hide the XP and Reputation bars while in combat."],
         callback = RefreshBars,
     })
 end

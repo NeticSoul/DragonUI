@@ -185,6 +185,7 @@ local defaults = {
             font_size = 12,      -- Point size for quest tracker text (WoW default: 11)
             show_on_hover = false,
             show_in_combat = false,
+            hide_in_combat = false,
             visibility_logic = "and",
         },
         -- Loot Roll
@@ -268,27 +269,34 @@ local defaults = {
             -- Hover/combat visibility per bar
             main_show_on_hover = false,
             main_show_in_combat = false,
+            main_hide_in_combat = false,
             main_visibility_logic = "and",
             bottom_left_show_on_hover = false,
             bottom_left_show_in_combat = false,
+            bottom_left_hide_in_combat = false,
             bottom_left_visibility_logic = "and",
             bottom_right_show_on_hover = false,
             bottom_right_show_in_combat = false,
+            bottom_right_hide_in_combat = false,
             bottom_right_visibility_logic = "and",
             right_show_on_hover = false,
             right_show_in_combat = false,
+            right_hide_in_combat = false,
             right_visibility_logic = "and",
             left_show_on_hover = false,
             left_show_in_combat = false,
+            left_hide_in_combat = false,
             left_visibility_logic = "and",
-            
+
 
             -- Micro menu and bag bar visibility
             micro_show_on_hover = false,
             micro_show_in_combat = false,
+            micro_hide_in_combat = false,
             micro_visibility_logic = "and",
             bag_show_on_hover = false,
             bag_show_in_combat = false,
+            bag_hide_in_combat = false,
             bag_visibility_logic = "and"
         },
 
@@ -349,6 +357,7 @@ local defaults = {
             -- Hover/combat visibility (shared by both bars, see core/visibility_fade.lua)
             show_on_hover = false,
             show_in_combat = false,
+            hide_in_combat = false,
             visibility_logic = "and",
         },
 

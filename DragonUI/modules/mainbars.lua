@@ -560,61 +560,13 @@ end
         UpdateGryphonStyle()
     end
 
+    -- Delegates to the fade system instead of setting alpha directly — doing it here used to stomp
+    -- the hover/combat hidden state whenever this ran, popping the background back in after a reload.
     function MainMenuBarMixin:update_main_bar_background()
-    local alpha = (addon.db and addon.db.profile and addon.db.profile.buttons and
-                      addon.db.profile.buttons.hide_main_bar_background) and 0 or 1
-
-    -- This option is for the main bar frame art, not the per-button slot/shadow art.
-    -- Button background handling is controlled separately by buttons.only_actionbackground.
-    if addon.pUiMainBarArt then addon.pUiMainBarArt:SetAlpha(alpha) end
-    if MainMenuBarArtFrame then MainMenuBarArtFrame:SetAlpha(alpha) end
-    if MainMenuBarLeftEndCap then MainMenuBarLeftEndCap:SetAlpha(alpha) end
-    if MainMenuBarRightEndCap then MainMenuBarRightEndCap:SetAlpha(alpha) end
-    if ActionBarUpButton then ActionBarUpButton:SetAlpha(alpha) end
-    if ActionBarDownButton then ActionBarDownButton:SetAlpha(alpha) end
-    if MainMenuBarPageNumber then MainMenuBarPageNumber:SetAlpha(alpha) end
-    if addon.pUiMainBar then
-        if addon.pUiMainBar.BorderArt then addon.pUiMainBar.BorderArt:SetAlpha(alpha) end
-        if addon.pUiMainBar.Background then addon.pUiMainBar.Background:SetAlpha(alpha) end
-    end
-
-    if pUiMainBar then
-        -- hide loose textures within pUiMainBar (skip bar-size managed dividers)
-        for i = 1, pUiMainBar:GetNumRegions() do
-            local region = select(i, pUiMainBar:GetRegions())
-            if region and region:GetObjectType() == "Texture" and not region._isDragonUIDivider then
-                local texPath = region:GetTexture()
-                if texPath and not string.find(texPath, "ICON") then
-                    region:SetAlpha(alpha)
-                end
-            end
-        end
-
-        -- hide child frame textures with protection for UI elements
-        for i = 1, pUiMainBar:GetNumChildren() do
-            local child = select(i, pUiMainBar:GetChildren())
-            local name = child and child:GetName()
-
-            -- protect important UI elements from being hidden
-            if child and name ~= "pUiMainBarArt" and not string.find(name or "", "ActionButton") and name ~=
-                "MultiBarBottomLeft" and name ~= "MultiBarBottomRight" and name ~= "MicroButtonAndBagsBar" and
-                not string.find(name or "", "MicroButton") and not string.find(name or "", "Bag") and name ~=
-                "CharacterMicroButton" and name ~= "SpellbookMicroButton" and name ~= "TalentMicroButton" and name ~=
-                "AchievementMicroButton" and name ~= "bagsFrame" and name ~= "MainMenuBarBackpackButton" and name ~=
-                "QuestLogMicroButton" and name ~= "SocialsMicroButton" and name ~= "PVPMicroButton" and name ~=
-                "LFGMicroButton" and name ~= "MainMenuMicroButton" and name ~= "HelpMicroButton" and name ~=
-                "MainMenuExpBar" and name ~= "ReputationWatchBar" and name ~= "KeyRingButton" then
-
-                for j = 1, child:GetNumRegions() do
-                    local region = select(j, child:GetRegions())
-                    if region and region:GetObjectType() == "Texture" then
-                        region:SetAlpha(alpha)
-                    end
-                end
-            end
+        if addon.RefreshActionBarVisibility then
+            addon.RefreshActionBarVisibility()
         end
     end
-end
 
     function MainMenuBarMixin:actionbar_setup()
         ActionButton1:SetParent(pUiMainBar)
@@ -1788,6 +1740,9 @@ end
             dbTable = GetXpRepConfig,
             hoverFrames = GetXpRepHoverFrames(),
             enableMouse = false,
+            -- Plain StatusBars, not secure action buttons — EnableMouse can react live in combat.
+            clickThrough = true,
+            mouseSafeInCombat = true,
         })
     end
 
@@ -2736,10 +2691,12 @@ function addon.SyncBarCVarsFromProfile()
         local rEnabled  = IsSecondaryBarEnabled(config, "right")
         local lEnabled  = IsSecondaryBarEnabled(config, "left")
 
-        local bl = blEnabled and 1 or nil
-        local br = brEnabled and 1 or nil
-        local r  = rEnabled  and 1 or nil
-        local l  = lEnabled  and 1 or nil
+        -- 1/0, not 1/nil — Blizzard's Interface Options checkboxes never reflected the disabled
+        -- state because nil likely means "leave this bar's toggle unchanged", not "hide it".
+        local bl = blEnabled and 1 or 0
+        local br = brEnabled and 1 or 0
+        local r  = rEnabled  and 1 or 0
+        local l  = lEnabled  and 1 or 0
 
         -- SetActionBarToggles persists into Blizzard saved variables AND
         -- sets the SHOW_MULTI_ACTIONBAR_* globals AND calls MultiActionBar_Update.
@@ -2747,8 +2704,8 @@ function addon.SyncBarCVarsFromProfile()
             SetActionBarToggles(bl, br, r, l)
         end
 
-        -- Keep enabled bars visible immediately, while disabled bars are hidden
-        -- and click-through so they cannot block other addons.
+        -- Alpha isn't forced to 1 on enable — the trailing RefreshActionBarVisibility() call below
+        -- applies the fade-correct value; forcing 1 here raced with it and flashed bars visible.
         if not InCombatLockdown() then
             local barMap = {
                 { name = "bottom_left",  frame = MultiBarBottomLeft,  enabled = blEnabled },
@@ -2762,7 +2719,6 @@ function addon.SyncBarCVarsFromProfile()
                 if bar.frame then
                     if bar.enabled then
                         bar.frame:Show()
-                        bar.frame:SetAlpha(1)
                         if bar.frame.EnableMouse then
                             bar.frame:EnableMouse(true)
                         end
@@ -2812,6 +2768,13 @@ local function SyncBarGlobalsToProfile()
             addon.RefreshActionBarVisibility()
         end
     end
+
+    -- Rebuild DragonUI's own options panel if it's open on this tab, so a change made via WoW's
+    -- native Interface Options shows up immediately instead of only after reopening the panel.
+    local Panel = addon.OptionsPanel
+    if Panel and Panel.frame and Panel.frame:IsShown() and Panel.currentTab == "actionbars" then
+        Panel:SelectTab(Panel.currentTab)
+    end
 end
 
 -- Hook Blizzard's MultiActionBar_Update to capture changes from Interface Options
@@ -2822,30 +2785,7 @@ end
 -- ============================================================================
 -- ACTION BAR VISIBILITY SYSTEM (hover/combat show/hide)
 -- ============================================================================
--- Ported from old contributor. Uses alpha-based visibility for the main bar
--- (to keep XP/stance bars visible) and frame-level show/hide for secondary bars.
--- Each bar tracks hovered + inCombat state independently with debounced hover.
-
--- Visibility state tracking (file scope, survives reloads)
-addon.visibilityStates = addon.visibilityStates or {
-    main         = { hovered = false, inCombat = false },
-    bottom_left  = { hovered = false, inCombat = false },
-    bottom_right = { hovered = false, inCombat = false },
-    right        = { hovered = false, inCombat = false },
-    left         = { hovered = false, inCombat = false },
-    micro        = { hovered = false, inCombat = false },
-    bag          = { hovered = false, inCombat = false },
-}
-
-local VISIBILITY_BAR_ORDER = {
-    "main",
-    "bottom_left",
-    "bottom_right",
-    "right",
-    "left",
-    "micro",
-    "bag",
-}
+-- All bars (main + secondary) run on the shared addon.VisibilityFade engine below.
 
 local MICROMENU_BUTTON_NAMES = {
     "CharacterMicroButton",
@@ -2870,345 +2810,292 @@ local BAG_BUTTON_NAMES = {
     "CharacterBag2Slot",
     "CharacterBag3Slot",
     "KeyRingButton",
+    "pUiArrowManager", -- collapse/expand arrow for the small bags + keyring; hover on it must also reveal them
 }
 
-local function GetVisibilityBarFrameMap()
-    local pUiMainBar = addon.pUiMainBar
+-- MainMenuBarArtFrame is always reparented onto pUiMainBarArt, so we only ever fade the parent's
+-- alpha (never MainMenuBarArtFrame's own) — WoW's cascade keeps it hidden no matter what else touches it.
+local function GetMainBarVisibilityDBTable()
+    local ab = addon.db and addon.db.profile and addon.db.profile.actionbars
+    if not ab then return nil end
     return {
-        main         = pUiMainBar,
-        bottom_left  = MultiBarBottomLeft,
-        bottom_right = MultiBarBottomRight,
-        right        = MultiBarRight,
-        left         = MultiBarLeft,
-        micro        = _G.pUiMicroMenu,
-        bag          = _G.pUiBagsBar,
+        show_on_hover = ab.main_show_on_hover,
+        show_in_combat = ab.main_show_in_combat,
+        hide_in_combat = ab.main_hide_in_combat,
+        visibility_logic = ab.main_visibility_logic,
+        visibility_shown_alpha = ab.visibility_shown_alpha,
+        visibility_hidden_alpha = ab.visibility_hidden_alpha,
+        visibility_fade_in_duration = ab.visibility_fade_in_duration,
+        visibility_fade_out_duration = ab.visibility_fade_out_duration,
+        visibility_fade_out_delay = ab.visibility_fade_out_delay,
     }
 end
 
-local function GetVisibilityLogic(config, barName)
-    local mode = config and config[barName .. "_visibility_logic"]
-    return mode == "or" and "or" or "and"
-end
-
-local function EvaluateShouldShowByConditions(config, barName, state)
-    local showOnHover = config and config[barName .. "_show_on_hover"]
-    local showInCombat = config and config[barName .. "_show_in_combat"]
-
-    if not showOnHover and not showInCombat then
-        return true
-    end
-
-    if showOnHover and showInCombat then
-        local mode = GetVisibilityLogic(config, barName)
-        if mode == "or" then
-            return state.hovered or state.inCombat
-        end
-        return state.hovered and state.inCombat
-    end
-
-    if showOnHover then
-        return state.hovered
-    end
-
-    return state.inCombat
-end
-
--- Returns true if a bar has any visibility behavior enabled
-local function ShouldUseVisibility(barName)
-    local db = addon.db and addon.db.profile and addon.db.profile.actionbars
-    if not db then return false end
-    return db[barName .. "_show_on_hover"] or db[barName .. "_show_in_combat"]
-end
-
-local visibilityAnimations = {}
-
-local function Clamp01(value)
-    value = tonumber(value) or 0
-    if value < 0 then return 0 end
-    if value > 1 then return 1 end
-    return value
-end
-
-local function GetVisibilityFadeConfigPrefix(barName)
-    if barName == "micro" then
-        return "micro_visibility_"
-    end
-    if barName == "bag" then
-        return "bag_visibility_"
-    end
-    return "visibility_"
-end
-
-local function GetVisibilityFadeConfig(barName)
-    local db = addon.db and addon.db.profile and addon.db.profile.actionbars
-    if not db then
-        return 1, 0, 0.15, 0.2
-    end
-
-    local prefix = GetVisibilityFadeConfigPrefix(barName)
-
-    local shownAlpha = db[prefix .. "shown_alpha"]
-    if shownAlpha == nil then
-        shownAlpha = db.visibility_shown_alpha
-    end
-    shownAlpha = Clamp01(shownAlpha == nil and 1 or shownAlpha)
-
-    local hiddenAlpha = db[prefix .. "hidden_alpha"]
-    if hiddenAlpha == nil then
-        hiddenAlpha = db.visibility_hidden_alpha
-    end
-    hiddenAlpha = Clamp01(hiddenAlpha == nil and 0 or hiddenAlpha)
-
-    local fadeInDuration = db[prefix .. "fade_in_duration"]
-    if fadeInDuration == nil then
-        fadeInDuration = db.visibility_fade_in_duration
-    end
-    fadeInDuration = math.max(0, tonumber(fadeInDuration) or 0.15)
-
-    local fadeOutDuration = db[prefix .. "fade_out_duration"]
-    if fadeOutDuration == nil then
-        fadeOutDuration = db.visibility_fade_out_duration
-    end
-    fadeOutDuration = math.max(0, tonumber(fadeOutDuration) or 0.2)
-
-    return shownAlpha, hiddenAlpha, fadeInDuration, fadeOutDuration
-end
-
-local function GetVisibilityFadeOutDelay(barName)
-    local db = addon.db and addon.db.profile and addon.db.profile.actionbars
-    if not db then return 0.2 end
-
-    local prefix = GetVisibilityFadeConfigPrefix(barName)
-    local fadeOutDelay = db[prefix .. "fade_out_delay"]
-    if fadeOutDelay == nil then
-        fadeOutDelay = db.visibility_fade_out_delay
-    end
-
-    return math.max(0, tonumber(fadeOutDelay) or 0.2)
-end
-
-local function GetMainBarCurrentAlpha()
-    local btn = _G["ActionButton1"]
-    if btn and btn.GetAlpha then
-        return Clamp01(btn:GetAlpha())
-    end
-    return 1
-end
-
-local SetMainBarArtAlphaDeep
-
-local function ApplyMainBarVisualAlpha(alpha)
-    alpha = Clamp01(alpha)
-
+-- Blizzard hides empty action slots on its own (ActionButton_Update); DragonUI always shows all 12.
+local function ReassertMainBarShown()
+    if InCombatLockdown() then return end
+    if addon.pUiMainBar then addon.pUiMainBar:Show() end
     for i = 1, 12 do
         local btn = _G["ActionButton" .. i]
-        if btn then
-            btn:SetAlpha(alpha)
-            if not InCombatLockdown() then
-                btn:Show()
+        if btn then btn:Show() end
+    end
+end
+
+-- Names update_main_bar_background() also protects from being faded — functional bars/buttons that
+-- happen to be parented under pUiMainBar, not decorative art.
+local MAINBAR_PROTECTED_CHILD_NAMES = {
+    pUiMainBarArt = true,
+    MultiBarBottomLeft = true,
+    MultiBarBottomRight = true,
+    MicroButtonAndBagsBar = true,
+    CharacterMicroButton = true,
+    SpellbookMicroButton = true,
+    TalentMicroButton = true,
+    AchievementMicroButton = true,
+    bagsFrame = true,
+    MainMenuBarBackpackButton = true,
+    QuestLogMicroButton = true,
+    SocialsMicroButton = true,
+    PVPMicroButton = true,
+    LFGMicroButton = true,
+    MainMenuMicroButton = true,
+    HelpMicroButton = true,
+    MainMenuExpBar = true,
+    ReputationWatchBar = true,
+    KeyRingButton = true,
+}
+
+local function IsMainBarProtectedChild(name)
+    if not name then return false end
+    if MAINBAR_PROTECTED_CHILD_NAMES[name] then return true end
+    if string.find(name, "ActionButton") or string.find(name, "MicroButton") or string.find(name, "Bag") then
+        return true
+    end
+    return false
+end
+
+-- Border/background art also lives as loose regions on pUiMainBar and on unnamed child frames
+-- (shows up in /fstack only as "table: 0x..."), so walk both — same as update_main_bar_background().
+local function CollectMainBarLooseArtRegions(pUiMainBar)
+    local regions = {}
+    for i = 1, pUiMainBar:GetNumRegions() do
+        local region = select(i, pUiMainBar:GetRegions())
+        if region and region:GetObjectType() == "Texture" and not region._isDragonUIDivider then
+            local texPath = region:GetTexture()
+            if texPath and not string.find(texPath, "ICON") then
+                table.insert(regions, region)
             end
         end
+    end
+    for i = 1, pUiMainBar:GetNumChildren() do
+        local child = select(i, pUiMainBar:GetChildren())
+        local name = child and child:GetName()
+        if child and not IsMainBarProtectedChild(name) then
+            for j = 1, child:GetNumRegions() do
+                local region = select(j, child:GetRegions())
+                if region and region:GetObjectType() == "Texture" then
+                    table.insert(regions, region)
+                end
+            end
+        end
+    end
+    return regions
+end
+
+local function SyncMainBarVisibility()
+    local pUiMainBar = addon.pUiMainBar
+    local mainAlphaAnchor = ActionButton1
+    if not pUiMainBar or not mainAlphaAnchor or not addon.VisibilityFade then return end
+
+    -- Buttons always fade with hover/combat state, regardless of the background toggle.
+    local alphaFrames = {}
+    for i = 2, 12 do
+        local btn = _G["ActionButton" .. i]
+        if btn then table.insert(alphaFrames, btn) end
+    end
+
+    -- Decorative background art (gryphons, NineSlice border, loose textures) — Hide Main Bar
+    -- Background pins all of it to 0 and skips the fade; otherwise it fades with the rest of the bar.
+    local backgroundFrames = {}
+    if addon.pUiMainBarArt then table.insert(backgroundFrames, addon.pUiMainBarArt) end
+    if MainMenuBarLeftEndCap then table.insert(backgroundFrames, MainMenuBarLeftEndCap) end
+    if MainMenuBarRightEndCap then table.insert(backgroundFrames, MainMenuBarRightEndCap) end
+    for _, region in ipairs(CollectMainBarLooseArtRegions(pUiMainBar)) do
+        table.insert(backgroundFrames, region)
     end
 
     local buttonsCfg = addon.db and addon.db.profile and addon.db.profile.buttons
-    local baseArtAlpha = (buttonsCfg and buttonsCfg.hide_main_bar_background) and 0 or 1
-    local artAlpha = alpha * baseArtAlpha
-    if addon.pUiMainBarArt then addon.pUiMainBarArt:SetAlpha(artAlpha) end
-    if MainMenuBarArtFrame then MainMenuBarArtFrame:SetAlpha(artAlpha) end
-    if MainMenuBarLeftEndCap then MainMenuBarLeftEndCap:SetAlpha(alpha) end
-    if MainMenuBarRightEndCap then MainMenuBarRightEndCap:SetAlpha(alpha) end
-    if ActionBarUpButton then ActionBarUpButton:SetAlpha(artAlpha) end
-    if ActionBarDownButton then ActionBarDownButton:SetAlpha(artAlpha) end
-    if MainMenuBarPageNumber then MainMenuBarPageNumber:SetAlpha(artAlpha) end
-    if addon.pUiMainBar then
-        if addon.pUiMainBar.BorderArt then addon.pUiMainBar.BorderArt:SetAlpha(artAlpha) end
-        if addon.pUiMainBar.Background then addon.pUiMainBar.Background:SetAlpha(artAlpha) end
+    if buttonsCfg and buttonsCfg.hide_main_bar_background then
+        -- requiresReload=true on this setting in the options panel, so a plain snap is enough here.
+        for _, f in ipairs(backgroundFrames) do f:SetAlpha(0) end
+    else
+        for _, f in ipairs(backgroundFrames) do table.insert(alphaFrames, f) end
     end
-    SetMainBarArtAlphaDeep(artAlpha)
+
+    -- Page-turn arrows/page number: only exist when buttons.pages.show is on, independent of the
+    -- background toggle above — when shown, they fade with hover/combat like everything else.
+    if ActionBarUpButton and ActionBarUpButton:IsShown() then table.insert(alphaFrames, ActionBarUpButton) end
+    if ActionBarDownButton and ActionBarDownButton:IsShown() then table.insert(alphaFrames, ActionBarDownButton) end
+    if MainMenuBarPageNumber and MainMenuBarPageNumber:IsShown() then table.insert(alphaFrames, MainMenuBarPageNumber) end
+
+    -- Dividers live on pUiMainBar, not pUiMainBarArt, so they don't inherit its cascade — fade them
+    -- explicitly or they're left behind, fully opaque, between buttons that have already faded out.
+    if addon.MainBarDividers then
+        for _, div in pairs(addon.MainBarDividers) do
+            if div.top then table.insert(alphaFrames, div.top) end
+            if div.mid then table.insert(alphaFrames, div.mid) end
+            if div.bottom then table.insert(alphaFrames, div.bottom) end
+        end
+    end
+
+    local hoverFrames = { pUiMainBar }
+    for i = 1, 12 do
+        local btn = _G["ActionButton" .. i]
+        if btn then table.insert(hoverFrames, btn) end
+    end
+    -- Page-turn buttons aren't part of ActionButton1-12 — without this they'd stay clickable
+    -- while faded out and invisible.
+    if ActionBarUpButton and ActionBarUpButton:IsShown() then table.insert(hoverFrames, ActionBarUpButton) end
+    if ActionBarDownButton and ActionBarDownButton:IsShown() then table.insert(hoverFrames, ActionBarDownButton) end
+
+    addon.VisibilityFade.Register("main", mainAlphaAnchor, {
+        frames = alphaFrames,
+        hoverFrames = hoverFrames,
+        clickThrough = true,
+        onVisibilityChange = ReassertMainBarShown,
+        dbTable = GetMainBarVisibilityDBTable,
+    })
+    addon.VisibilityFade.Update("main")
 end
 
-local function ApplyBarVisibilityAlpha(barName, frame, alpha)
-    alpha = Clamp01(alpha)
-    if barName == "main" then
-        ApplyMainBarVisualAlpha(alpha)
-        if frame and not InCombatLockdown() then
-            frame:Show()
-        end
-        return
-    end
+-- ============================================================================
+-- SHARED VISIBILITY ENGINE — bottom_left, bottom_right, right, left, micro, bag
+-- ============================================================================
+-- All secondary bars, following the same addon.VisibilityFade pattern as the main bar above.
 
-    if barName == "bag" then
-        if MainMenuBarBackpackButton then
-            MainMenuBarBackpackButton:SetAlpha(alpha)
-        end
-    end
-
-    if frame then
-        frame:SetAlpha(alpha)
-        if ShouldUseVisibility(barName) and not InCombatLockdown() then
-            frame:Show()
-        end
-    end
-end
-
-local function FadeBarToAlpha(barName, frame, targetAlpha, duration)
-    if not frame then return end
-
-    targetAlpha = Clamp01(targetAlpha)
-    duration = math.max(0, tonumber(duration) or 0)
-
-    local currentAlpha = (barName == "main") and GetMainBarCurrentAlpha() or Clamp01(frame:GetAlpha() or 1)
-
-    if math.abs(currentAlpha - targetAlpha) <= 0.01 or duration <= 0 then
-        ApplyBarVisibilityAlpha(barName, frame, targetAlpha)
-        if visibilityAnimations[barName] and visibilityAnimations[barName].driver then
-            visibilityAnimations[barName].driver:SetScript("OnUpdate", nil)
-        end
-        visibilityAnimations[barName] = nil
-        return
-    end
-
-    local animation = visibilityAnimations[barName]
-    if not animation then
-        animation = { driver = CreateFrame("Frame") }
-        visibilityAnimations[barName] = animation
-    end
-
-    animation.frame = frame
-    animation.fromAlpha = currentAlpha
-    animation.toAlpha = targetAlpha
-    animation.duration = duration
-    animation.elapsed = 0
-
-    animation.driver:SetScript("OnUpdate", function(_, elapsed)
-        local data = visibilityAnimations[barName]
-        if not data then
-            return
-        end
-
-        data.elapsed = data.elapsed + elapsed
-        local progress = data.elapsed / data.duration
-        if progress >= 1 then
-            ApplyBarVisibilityAlpha(barName, data.frame, data.toAlpha)
-            data.driver:SetScript("OnUpdate", nil)
-            visibilityAnimations[barName] = nil
-            return
-        end
-
-        local alpha = data.fromAlpha + ((data.toAlpha - data.fromAlpha) * progress)
-        ApplyBarVisibilityAlpha(barName, data.frame, alpha)
-    end)
-end
-
--- Deep alpha pass on main bar art textures  (skip functional bars/buttons)
-SetMainBarArtAlphaDeep = function(alpha)
-    local pUiMainBar    = addon.pUiMainBar
-    local pUiMainBarArt = addon.pUiMainBarArt
-    if not pUiMainBar then return end
-
-    local function shouldSkip(f)
-        if not f then return true end
-        if f == MainMenuExpBar or f == ReputationWatchStatusBar
-            or f == StanceBarFrame or f == ShapeshiftBarFrame then
-            return true
-        end
-        local n = f.GetName and f:GetName() or ""
-        if n and (n:find("ActionButton") or n:find("MultiBar")
-            or n:find("BonusActionButton") or n:find("PetActionButton")) then
-            return true
-        end
-        return false
-    end
-
-    local function applyToRegions(f)
-        if not f or shouldSkip(f) then return end
-        for i = 1, (f.GetNumRegions and f:GetNumRegions() or 0) do
-            local region = select(i, f:GetRegions())
-            if region and region.GetObjectType and region:GetObjectType() == "Texture" then
-                region:SetAlpha(alpha)
+local MIGRATED_VISIBILITY_BARS = {
+    -- bottom_left/right/right/left buttons are SecureActionButtonTemplate (protected EnableMouse,
+    -- confirmed via ADDON_ACTION_BLOCKED elsewhere) — mouseSafeInCombat stays unset for those.
+    { key = "bottom_left",  frame = function() return MultiBarBottomLeft end,  buttonPrefix = "MultiBarBottomLeftButton",  secondary = true },
+    { key = "bottom_right", frame = function() return MultiBarBottomRight end, buttonPrefix = "MultiBarBottomRightButton", secondary = true },
+    { key = "right",        frame = function() return MultiBarRight end,       buttonPrefix = "MultiBarRightButton",       secondary = true },
+    { key = "left",         frame = function() return MultiBarLeft end,        buttonPrefix = "MultiBarLeftButton",        secondary = true },
+    -- Micro menu and bag buttons just open panels — not secure, so EnableMouse can react live in combat.
+    { key = "micro", frame = function() return _G.pUiMicroMenu end, buttonNames = MICROMENU_BUTTON_NAMES, mouseSafeInCombat = true },
+    -- MainMenuBarBackpackButton and KeyRingButton aren't children of pUiBagsBar, so their alpha
+    -- doesn't cascade from it — fade them explicitly or only the small bag slots ever fade.
+    {
+        key = "bag", frame = function() return _G.pUiBagsBar end, buttonNames = BAG_BUTTON_NAMES,
+        mouseSafeInCombat = true,
+        extraAlphaFrames = function()
+            local frames = {}
+            if MainMenuBarBackpackButton then table.insert(frames, MainMenuBarBackpackButton) end
+            if KeyRingButton then table.insert(frames, KeyRingButton) end
+            if _G.pUiArrowManager then table.insert(frames, _G.pUiArrowManager) end
+            return frames
+        end,
+        -- Collapsed bag slots sit stacked under the main backpack button — fading both at once
+        -- made it translucent enough mid-fade to reveal them, so snap instead of animating.
+        onVisibilityChange = function(shouldShow)
+            if addon.RefreshCollapsedSecondaryBagsVisibility then
+                addon.RefreshCollapsedSecondaryBagsVisibility(shouldShow)
             end
-        end
-    end
+        end,
+        -- Snap the secondary slots invisible at the same moment the main button starts fading,
+        -- not after — otherwise they'd stay fully opaque underneath while main fades over them.
+        immediateHideCallback = true,
+    },
+}
 
-    for _, container in ipairs({ pUiMainBar, pUiMainBarArt, MainMenuBarArtFrame }) do
-        applyToRegions(container)
-        if container and container.GetNumChildren then
-            for i = 1, container:GetNumChildren() do
-                local child = select(i, container:GetChildren())
-                applyToRegions(child)
-            end
+local function GetMigratedBarFadePrefix(barKey)
+    if barKey == "micro" then return "micro_visibility_" end
+    if barKey == "bag" then return "bag_visibility_" end
+    return "visibility_"
+end
+
+-- Proxies actionbars.<key>_<field> into the field names addon.VisibilityFade expects. Returns nil
+-- while a secondary bar is disabled, so VF.Update no-ops and leaves it exactly as already hidden.
+local function GetMigratedBarDBTable(barKey, isSecondary)
+    return function()
+        local ab = addon.db and addon.db.profile and addon.db.profile.actionbars
+        if not ab then return nil end
+        if isSecondary and not IsSecondaryBarEnabled(ab, barKey) then
+            return nil
         end
+        local fadePrefix = GetMigratedBarFadePrefix(barKey)
+        return {
+            show_on_hover = ab[barKey .. "_show_on_hover"],
+            show_in_combat = ab[barKey .. "_show_in_combat"],
+            hide_in_combat = ab[barKey .. "_hide_in_combat"],
+            visibility_logic = ab[barKey .. "_visibility_logic"],
+            visibility_shown_alpha = ab[fadePrefix .. "shown_alpha"],
+            visibility_hidden_alpha = ab[fadePrefix .. "hidden_alpha"],
+            visibility_fade_in_duration = ab[fadePrefix .. "fade_in_duration"],
+            visibility_fade_out_duration = ab[fadePrefix .. "fade_out_duration"],
+            visibility_fade_out_delay = ab[fadePrefix .. "fade_out_delay"],
+        }
     end
 end
 
--- Core visibility resolver — called every time hover/combat state changes
-function addon.UpdateActionBarVisibility(barName, frame)
-    if not frame or not addon.db or not addon.db.profile or not addon.db.profile.actionbars then
-        return
-    end
+local function SyncMigratedBarVisibility(bar)
+    local frame = bar.frame()
+    if not frame or not addon.VisibilityFade then return end
 
-    -- Skip during vehicle — vehicle module handles bar visibility
-    if UnitHasVehicleUI and UnitHasVehicleUI("player") then return end
-
-    local config = addon.db.profile.actionbars
-    local state  = addon.visibilityStates and addon.visibilityStates[barName]
-    if not state then return end
-
-    -- Check if bar is disabled (secondary bars only)
-    if barName ~= "main" and barName ~= "micro" and barName ~= "bag" then
-        local enabled = IsSecondaryBarEnabled(config, barName)
-
-        SetSecondaryBarContainerVisibility(barName, enabled)
-        SetSecondaryBarButtonsMouseEnabled(barName, enabled)
-
-        if not enabled then
-            if visibilityAnimations[barName] and visibilityAnimations[barName].driver then
-                visibilityAnimations[barName].driver:SetScript("OnUpdate", nil)
-                visibilityAnimations[barName] = nil
-            end
-            if not InCombatLockdown() then
-                if frame.EnableMouse then
-                    frame:EnableMouse(false)
+    if bar.secondary then
+        local config = addon.db and addon.db.profile and addon.db.profile.actionbars
+        if config then
+            local enabled = IsSecondaryBarEnabled(config, bar.key)
+            -- Only touch these when enabled/disabled actually flips — SetSecondaryBarContainerVisibility
+            -- forces alpha to 1 first, which flashed every bar visible for a moment on any settings change.
+            if enabled ~= bar.lastEnabled then
+                SetSecondaryBarContainerVisibility(bar.key, enabled)
+                SetSecondaryBarButtonsMouseEnabled(bar.key, enabled)
+                -- SetSecondaryBarContainerVisibility only touches the DragonUI wrapper, not the raw
+                -- Blizzard frame — without this it never hides/shows via WoW's native Interface Options.
+                if not InCombatLockdown() then
+                    if enabled then
+                        frame:Show()
+                        if frame.EnableMouse then frame:EnableMouse(true) end
+                    else
+                        if frame.EnableMouse then frame:EnableMouse(false) end
+                        frame:SetAlpha(0)
+                        frame:Hide()
+                    end
                 end
-                frame:Hide()
-            end
-            frame:SetAlpha(0)
-            return
-        end
-        if not InCombatLockdown() and frame.EnableMouse then
-            frame:EnableMouse(true)
-        end
-    end
-
-    local shownAlpha, hiddenAlpha, fadeInDuration, fadeOutDuration = GetVisibilityFadeConfig(barName)
-
-    -- If neither option enabled, bar is always visible
-    if not config[barName .. "_show_on_hover"] and not config[barName .. "_show_in_combat"] then
-        if barName == "bag" and addon.RefreshCollapsedSecondaryBagsVisibility then
-            addon.RefreshCollapsedSecondaryBagsVisibility(true)
-        end
-        if barName ~= "main" then
-            if not InCombatLockdown() then
-                frame:Show()  -- counteract any Blizzard :Hide()
+                bar.lastEnabled = enabled
             end
         end
-        FadeBarToAlpha(barName, frame, 1, fadeInDuration)
-        return
     end
 
-    local shouldShow = EvaluateShouldShowByConditions(config, barName, state)
-
-    if barName == "bag" and addon.RefreshCollapsedSecondaryBagsVisibility then
-        addon.RefreshCollapsedSecondaryBagsVisibility(shouldShow)
+    local hoverFrames = { frame }
+    if bar.buttonPrefix then
+        for i = 1, 12 do
+            local btn = _G[bar.buttonPrefix .. i]
+            if btn then table.insert(hoverFrames, btn) end
+        end
+    elseif bar.buttonNames then
+        for _, name in ipairs(bar.buttonNames) do
+            local btn = _G[name]
+            if btn then table.insert(hoverFrames, btn) end
+        end
     end
 
-    if barName ~= "main" and ShouldUseVisibility(barName) and not InCombatLockdown() then
-        frame:Show()
-    end
+    addon.VisibilityFade.Register(bar.key, frame, {
+        hoverFrames = hoverFrames,
+        frames = bar.extraAlphaFrames and bar.extraAlphaFrames(),
+        clickThrough = true,
+        mouseSafeInCombat = bar.mouseSafeInCombat,
+        onVisibilityChange = bar.onVisibilityChange,
+        immediateHideCallback = bar.immediateHideCallback,
+        dbTable = GetMigratedBarDBTable(bar.key, bar.secondary),
+    })
+    addon.VisibilityFade.Update(bar.key)
+end
 
-    local targetAlpha = shouldShow and shownAlpha or hiddenAlpha
-    local duration = shouldShow and fadeInDuration or fadeOutDuration
-    FadeBarToAlpha(barName, frame, targetAlpha, duration)
+local function InitializeMigratedActionBarVisibility()
+    for _, bar in ipairs(MIGRATED_VISIBILITY_BARS) do
+        SyncMigratedBarVisibility(bar)
+    end
 end
 
 -- Refresh all bars (called from options or after profile change)
@@ -3217,198 +3104,18 @@ function addon.RefreshActionBarVisibility()
     -- Skip during vehicle — vehicle module handles bar visibility
     if UnitHasVehicleUI and UnitHasVehicleUI("player") then return end
 
-    local barFrames = GetVisibilityBarFrameMap()
+    SyncMainBarVisibility()
 
-    -- Normalise hover state from mouse position
-    for barName, frame in pairs(barFrames) do
-        local st = addon.visibilityStates[barName]
-        if st and frame and frame.IsMouseOver then
-            st.hovered = frame:IsMouseOver()
-        end
-    end
-
-    for barName, frame in pairs(barFrames) do
-        if frame then
-            addon.UpdateActionBarVisibility(barName, frame)
-        end
+    for _, bar in ipairs(MIGRATED_VISIBILITY_BARS) do
+        SyncMigratedBarVisibility(bar)
     end
 end
 
--- Hover detection with 0.25s debounce (uses AceTimer for 3.3.5a compat)
-local hoverTimers = {}
-
-local function SetupActionBarHoverDetection(barName, frame)
-    if not frame then return end
-    if frame.EnableMouse then frame:EnableMouse(true) end
-
-    -- Button prefix for gap-stabilisation hooks
-    local buttonPrefix
-    if barName == "main"         then buttonPrefix = "ActionButton"
-    elseif barName == "bottom_left"  then buttonPrefix = "MultiBarBottomLeftButton"
-    elseif barName == "bottom_right" then buttonPrefix = "MultiBarBottomRightButton"
-    elseif barName == "right"    then buttonPrefix = "MultiBarRightButton"
-    elseif barName == "left"     then buttonPrefix = "MultiBarLeftButton"
-    end
-
-    -- Frame enter/leave
-    frame:HookScript("OnEnter", function()
-        if hoverTimers[barName] and addon.core and addon.core.CancelTimer then
-            addon.core:CancelTimer(hoverTimers[barName], true)
-            hoverTimers[barName] = nil
-        end
-        if addon.visibilityStates[barName] then
-            addon.visibilityStates[barName].hovered = true
-            addon.UpdateActionBarVisibility(barName, frame)
-        end
-    end)
-
-    frame:HookScript("OnLeave", function()
-        if hoverTimers[barName] and addon.core and addon.core.CancelTimer then
-            addon.core:CancelTimer(hoverTimers[barName], true)
-        end
-        if addon.core and addon.core.ScheduleTimer then
-            hoverTimers[barName] = addon.core:ScheduleTimer(function()
-                if addon.visibilityStates[barName] then
-                    addon.visibilityStates[barName].hovered = false
-                    addon.UpdateActionBarVisibility(barName, frame)
-                end
-                hoverTimers[barName] = nil
-            end, GetVisibilityFadeOutDelay(barName))
-        end
-    end)
-
-    -- Button-level hooks stabilise hover across gaps between buttons
-    if buttonPrefix then
-        for i = 1, 12 do
-            local btn = _G[buttonPrefix .. i]
-            if btn and not btn.__DragonUI_HoverHooked then
-                btn:HookScript("OnEnter", function()
-                    if hoverTimers[barName] and addon.core and addon.core.CancelTimer then
-                        addon.core:CancelTimer(hoverTimers[barName], true)
-                        hoverTimers[barName] = nil
-                    end
-                    if addon.visibilityStates[barName] then
-                        addon.visibilityStates[barName].hovered = true
-                        addon.UpdateActionBarVisibility(barName, frame)
-                    end
-                end)
-                btn:HookScript("OnLeave", function()
-                    if hoverTimers[barName] and addon.core and addon.core.CancelTimer then
-                        addon.core:CancelTimer(hoverTimers[barName], true)
-                    end
-                    if addon.core and addon.core.ScheduleTimer then
-                        hoverTimers[barName] = addon.core:ScheduleTimer(function()
-                            if addon.visibilityStates[barName] then
-                                addon.visibilityStates[barName].hovered = false
-                                addon.UpdateActionBarVisibility(barName, frame)
-                            end
-                            hoverTimers[barName] = nil
-                        end, GetVisibilityFadeOutDelay(barName))
-                    end
-                end)
-                btn.__DragonUI_HoverHooked = true
-            end
-        end
-    end
-
-    local extraButtons = nil
-    if barName == "micro" then
-        extraButtons = {}
-        for _, buttonName in ipairs(MICROMENU_BUTTON_NAMES) do
-            local btn = _G[buttonName]
-            if btn then
-                table.insert(extraButtons, btn)
-            end
-        end
-    elseif barName == "bag" then
-        extraButtons = {}
-        for _, buttonName in ipairs(BAG_BUTTON_NAMES) do
-            local btn = _G[buttonName]
-            if btn then
-                table.insert(extraButtons, btn)
-            end
-        end
-    end
-
-    if extraButtons then
-        for _, btn in ipairs(extraButtons) do
-            if btn and not btn.__DragonUI_HoverHooked then
-                btn:HookScript("OnEnter", function()
-                    if hoverTimers[barName] and addon.core and addon.core.CancelTimer then
-                        addon.core:CancelTimer(hoverTimers[barName], true)
-                        hoverTimers[barName] = nil
-                    end
-                    if addon.visibilityStates[barName] then
-                        addon.visibilityStates[barName].hovered = true
-                        addon.UpdateActionBarVisibility(barName, frame)
-                    end
-                end)
-                btn:HookScript("OnLeave", function()
-                    if hoverTimers[barName] and addon.core and addon.core.CancelTimer then
-                        addon.core:CancelTimer(hoverTimers[barName], true)
-                    end
-                    if addon.core and addon.core.ScheduleTimer then
-                        hoverTimers[barName] = addon.core:ScheduleTimer(function()
-                            if addon.visibilityStates[barName] then
-                                addon.visibilityStates[barName].hovered = false
-                                addon.UpdateActionBarVisibility(barName, frame)
-                            end
-                            hoverTimers[barName] = nil
-                        end, GetVisibilityFadeOutDelay(barName))
-                    end
-                end)
-                btn.__DragonUI_HoverHooked = true
-            end
-        end
-    end
-end
-
--- Combat state handler
-local function OnCombatStateChanged(inCombat)
-    local barFrameMap = GetVisibilityBarFrameMap()
-    for barName, state in pairs(addon.visibilityStates or {}) do
-        state.inCombat = inCombat
-        local frame = barFrameMap[barName]
-        if frame then
-            addon.UpdateActionBarVisibility(barName, frame)
-        end
-    end
-end
-
--- Initialize the full visibility system (called once after all bars exist)
+-- Initialize the main bar's visibility system (called once after all bars exist)
 local function InitializeActionBarVisibility()
-    local barFrames = GetVisibilityBarFrameMap()
-    if not barFrames.main then return end
+    if not addon.pUiMainBar then return end
 
-    for barName, frame in pairs(barFrames) do
-        if frame and not frame.__DragonUI_VisibilityHooked then
-            SetupActionBarHoverDetection(barName, frame)
-            frame.__DragonUI_VisibilityHooked = true
-        end
-    end
-
-    if addon.core and addon.core.ScheduleTimer then
-        addon.core:ScheduleTimer(function()
-            local delayedFrames = GetVisibilityBarFrameMap()
-            for barName, frame in pairs(delayedFrames) do
-                if frame and not frame.__DragonUI_VisibilityHooked then
-                    SetupActionBarHoverDetection(barName, frame)
-                    frame.__DragonUI_VisibilityHooked = true
-                end
-            end
-            if addon.RefreshActionBarVisibility then
-                addon.RefreshActionBarVisibility()
-            end
-        end, 2)
-    end
-
-    -- Combat events
-    local combatFrame = CreateFrame("Frame")
-    combatFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-    combatFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-    combatFrame:SetScript("OnEvent", function(self, event)
-        OnCombatStateChanged(event == "PLAYER_REGEN_DISABLED")
-    end)
+    SyncMainBarVisibility()
 
     -- Hook Blizzard MultiActionBar_Update to restore our visibility after it re-shows bars
     -- BUT skip during vehicle UI — the vehicle module handles visibility in that case.
@@ -3453,6 +3160,7 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         InitializeMainbars()
         -- Initialize visibility system after all bars are created
         InitializeActionBarVisibility()
+        InitializeMigratedActionBarVisibility()
         self:UnregisterEvent("PLAYER_LOGIN")
     end
 end)

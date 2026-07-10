@@ -136,10 +136,11 @@ function VF.Update(key)
     end
 
     local shouldShow = EvaluateShouldShow(cfg, entry.state)
+    ApplyMouseState(entry, cfg, shouldShow)
+
     local shownAlpha, hiddenAlpha, fadeInDuration, fadeOutDuration = GetFadeConfig(cfg)
     local targetAlpha = shouldShow and shownAlpha or hiddenAlpha
     local duration = shouldShow and fadeInDuration or fadeOutDuration
-    ApplyMouseState(entry, cfg, shouldShow)
     if shouldShow then
         -- Reveal is safe to apply up front — alpha is still near 0 when this fires, so it's not visible.
         if entry.onVisibilityChange then entry.onVisibilityChange(true) end
@@ -147,9 +148,15 @@ function VF.Update(key)
             if entry.onFadeComplete then entry.onFadeComplete(true) end
         end)
     else
-        -- Deferred to fade-out completion — applying it immediately would be a visible pop while still opaque.
+        -- Deferred to fade-out completion by default (immediate would pop while still opaque);
+        -- immediateHideCallback opts out for callers that need the opposite timing.
+        if entry.immediateHideCallback and entry.onVisibilityChange then
+            entry.onVisibilityChange(false)
+        end
         FadeToAlpha(entry, targetAlpha, duration, function()
-            if entry.onVisibilityChange then entry.onVisibilityChange(false) end
+            if not entry.immediateHideCallback and entry.onVisibilityChange then
+                entry.onVisibilityChange(false)
+            end
             if entry.onFadeComplete then entry.onFadeComplete(false) end
         end)
     end
@@ -251,6 +258,7 @@ function VF.Register(key, frame, opts)
     entry.mouseSafeInCombat = opts.mouseSafeInCombat
     entry.onVisibilityChange = opts.onVisibilityChange
     entry.onFadeComplete = opts.onFadeComplete
+    entry.immediateHideCallback = opts.immediateHideCallback
 
     -- Merge (not replace) so frames added later via AddHoverFrames survive a re-Register — once a
     -- frame is marked tracked it never gets re-inserted, so overwriting the array here would

@@ -844,12 +844,43 @@ function Controls:AddVisibilityFadeToggles(parent, opts)
         callback = callback,
     })
 
-    self:AddToggle(parent, {
-        label = LO["Show in Combat Only"],
-        desc = opts.combatDesc,
-        dbPath = dbPrefix .. ".show_in_combat",
-        callback = callback,
-    })
+    if opts.hideInCombat then
+        -- Show in Combat / Hide in Combat are mutually exclusive — enabling one clears the other.
+        self:AddToggle(parent, {
+            label = LO["Show in Combat Only"],
+            desc = opts.combatDesc,
+            dbPath = dbPrefix .. ".show_in_combat",
+            callback = function()
+                local conflicted = self:GetDBValue(dbPrefix .. ".show_in_combat")
+                    and self:GetDBValue(dbPrefix .. ".hide_in_combat")
+                if conflicted then self:SetDBValue(dbPrefix .. ".hide_in_combat", false) end
+                if callback then callback() end
+                local _P = addon.OptionsPanel
+                if conflicted and _P and _P.currentTab then _P:SelectTab(_P.currentTab) end
+            end,
+        })
+
+        self:AddToggle(parent, {
+            label = LO["Hide in Combat"],
+            desc = opts.hideInCombatDesc,
+            dbPath = dbPrefix .. ".hide_in_combat",
+            callback = function()
+                local conflicted = self:GetDBValue(dbPrefix .. ".hide_in_combat")
+                    and self:GetDBValue(dbPrefix .. ".show_in_combat")
+                if conflicted then self:SetDBValue(dbPrefix .. ".show_in_combat", false) end
+                if callback then callback() end
+                local _P = addon.OptionsPanel
+                if conflicted and _P and _P.currentTab then _P:SelectTab(_P.currentTab) end
+            end,
+        })
+    else
+        self:AddToggle(parent, {
+            label = LO["Show in Combat Only"],
+            desc = opts.combatDesc,
+            dbPath = dbPrefix .. ".show_in_combat",
+            callback = callback,
+        })
+    end
 
     self:AddDropdown(parent, {
         label = LO["Hover/Combat Logic"],
