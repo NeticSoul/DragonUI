@@ -61,6 +61,9 @@
     
     <!-- Combuctor bag replacement module -->
     <Include file="combuctor\combuctor.xml"/>
+
+    <!-- Blizzard bag window skin -->
+    <Script file="bags_skin.lua"/>
     
     <!-- Bag Sort module (sort buttons for bags and bank) -->
     <Script file="bagsort.lua"/>

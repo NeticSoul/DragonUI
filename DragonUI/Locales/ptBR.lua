@@ -108,6 +108,9 @@ L["Click to sort items in the currently open guild bank tab."] = "Clique para or
 L["Never moves items between tabs."] = "Nunca move itens entre abas."
 L["Sort Guild Bank Tab"] = "Organizar aba do banco da guilda"
 
+L["Bag Skin"] = "Visual das bolsas"
+L["Retail-style skin for Blizzard bag windows"] = "Visual estilo Retail para as janelas de bolsas da Blizzard"
+
 -- Version Check Module
 L["Version Check"] = "Verificação de versão"
 L["Broadcast and detect addon version updates across group members"] = "Detecta atualizações de versão do addon entre membros do grupo transmitindo e recebendo a versão"

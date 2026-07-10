@@ -939,6 +939,9 @@ local defaults = {
             combuctor = {
                 enabled = false -- All-in-one bag replacement with filtering and search
             },
+            bags_skin = {
+                enabled = true -- Experimental retail-style bag window skin
+            },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons
                 lockedSlots = {}, -- Slots excluded from sorting (key format: "bag:slot")

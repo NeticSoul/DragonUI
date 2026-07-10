@@ -1710,9 +1710,9 @@ local function CreateVanillaBagSortButton()
         UIParent,
         SortPlayerBags,
         T("Sort Bags", "Sort Bags"),
-        0.53
+        0.63
     )
-    vanillaBagClearBtn = CreateClearLocksButton("DragonUI_VanillaBagClearBtn", UIParent, 0.53)
+    vanillaBagClearBtn = CreateClearLocksButton("DragonUI_VanillaBagClearBtn", UIParent, 0.63)
     vanillaBagSortBtn:Hide()
     vanillaBagClearBtn:Hide()
     BagSortModule.frames.vanillaBagSortBtn = vanillaBagSortBtn
@@ -1737,13 +1737,15 @@ local function UpdateVanillaBagSortButton()
         vanillaBagClearBtn:SetParent(backpack)
         vanillaBagSortBtn:ClearAllPoints()
         vanillaBagClearBtn:ClearAllPoints()
-        local titleText = _G[backpack:GetName() .. "Name"]
-        if titleText then
-            vanillaBagSortBtn:SetPoint("TOP", titleText, "BOTTOM", 70, -8)
-        else
-            vanillaBagSortBtn:SetPoint("TOP", backpack, "TOP", 0, -28)
+        local titleAnchor = _G[backpack:GetName() .. "Name"]
+        local skinChrome = backpack._dragonuiBagChrome
+        if addon:IsModuleEnabled("bags_skin")
+            and skinChrome and skinChrome.title and skinChrome.title:IsShown()
+        then
+            titleAnchor = skinChrome.title
         end
-        vanillaBagClearBtn:SetPoint("RIGHT", vanillaBagSortBtn, "LEFT", -2, 0)
+        vanillaBagSortBtn:SetPoint("TOP", titleAnchor, "BOTTOM", 70.5, -6.5)
+        vanillaBagClearBtn:SetPoint("RIGHT", vanillaBagSortBtn, "LEFT", -3, 0)
         vanillaBagSortBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
         vanillaBagClearBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
         vanillaBagSortBtn:Show()

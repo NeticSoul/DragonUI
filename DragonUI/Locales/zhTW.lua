@@ -108,6 +108,9 @@ L["Click to sort items in the currently open guild bank tab."] = "點擊整理�
 L["Never moves items between tabs."] = "永遠不會跨頁籤移動物品。"
 L["Sort Guild Bank Tab"] = "整理公會銀行頁籤"
 
+L["Bag Skin"] = "背包外觀"
+L["Retail-style skin for Blizzard bag windows"] = "暴雪背包視窗的正式服風格外觀"
+
 -- Version Check Module
 L["Version Check"] = "版本檢查"
 L["Broadcast and detect addon version updates across group members"] = "檢測隊伍成員間插件版本更新，通過廣播和接收版本資訊"

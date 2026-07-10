@@ -15,6 +15,12 @@ Because GPL-2.0 is not compatible with MIT for a combined work, this library is 
 `DragonUI/libs/LibDeflate/LibDeflate.lua` is licensed under the zlib License.
 Copyright (C) 2018-2020 Haoqian He. See the embedded license header in the source file.
 
+## MIT License — DragonflightUI bag textures
+
+The retail-style bag window textures under `DragonUI/assets/` are derived from
+DragonflightUI. Copyright (c) 2022 Karl-HeinzSchneider. The full license is
+included in `LICENSES/MIT-DragonflightUI.txt`.
+
 ## Bundled Fonts
 
 | Font | Path | License | License File |
