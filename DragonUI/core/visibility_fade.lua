@@ -123,6 +123,12 @@ function VF.Update(key)
     local entry = registry[key]
     if not entry then return end
 
+    if entry.shouldManage and not entry.shouldManage() then
+        if entry.driver then entry.driver:SetScript("OnUpdate", nil) end
+        entry.state.hovered = false
+        return
+    end
+
     local cfg = GetConfig(entry)
     if not cfg then return end
 
@@ -256,6 +262,7 @@ function VF.Register(key, frame, opts)
     entry.clickThrough = opts.clickThrough
     entry.pollHover = opts.pollHover
     entry.mouseSafeInCombat = opts.mouseSafeInCombat
+    entry.shouldManage = opts.shouldManage
     entry.onVisibilityChange = opts.onVisibilityChange
     entry.onFadeComplete = opts.onFadeComplete
     entry.immediateHideCallback = opts.immediateHideCallback

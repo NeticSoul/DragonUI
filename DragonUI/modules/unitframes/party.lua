@@ -267,10 +267,6 @@ local function IsCompactPartyFramesEnabled()
 end
 
 local function IsHidePartyInRaidEnabled()
-    if CUF_CVar and CUF_CVar.GetCVarBool then
-        return CUF_CVar:GetCVarBool("hidePartyInRaid") and true or false
-    end
-
     if GetCVarBool then
         return GetCVarBool("hidePartyInRaid") and true or false
     end
@@ -1571,6 +1567,10 @@ local function RefreshSinglePartyFrameVisibility(index)
     else
         frame:Hide()
     end
+
+    if addon.VisibilityFade then
+        addon.VisibilityFade.Update("party" .. index)
+    end
 end
 
 local function RefreshAllPartyFrameVisibility()
@@ -1890,6 +1890,7 @@ function PartyFrames:UpdateSettings()
                     dbTable = function() return addon.UF.GetConfig("party") end,
                     hoverFrames = hoverFrames,
                     clickThrough = true,
+                    shouldManage = ShouldPartyFramesBeVisible,
                 })
                 addon.VisibilityFade.Update("party" .. i)
             end
@@ -2007,6 +2008,7 @@ end)
 
 local recoveryFrame = CreateFrame("Frame")
 recoveryFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")   -- Party composition changes (join/leave/role swap)
+recoveryFrame:RegisterEvent("RAID_ROSTER_UPDATE")
 recoveryFrame:RegisterEvent("PLAYER_ENTERING_WORLD")   -- Recovery after reload/zone transitions
 recoveryFrame:RegisterEvent("PLAYER_ALIVE")             -- Player resurrects (accept rez or spirit healer)
 recoveryFrame:RegisterEvent("PLAYER_UNGHOST")           -- Player returns from ghost form
@@ -2034,9 +2036,8 @@ recoveryFrame:SetScript("OnEvent", function(self, event, unit)
         return
     end
 
-    -- For PARTY_MEMBERS_CHANGED, refresh frame visibility for all party slots.
-    -- Uses CombatQueue to defer in combat (Show/Hide on secure frames causes taint).
-    if event == "PARTY_MEMBERS_CHANGED" then
+    -- Roster transitions can change protected visibility, so defer reconciliation in combat.
+    if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
         -- Skip refresh while editor mode is active (test frames are intentionally shown)
         if addon.EditorMode and addon.EditorMode:IsActive() then
             return

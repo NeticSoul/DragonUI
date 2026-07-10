@@ -400,24 +400,7 @@ end
 -- Behavior: CompactRaidFrame taint mitigation
 behaviors.CompactRaidFrameFix = function(addonName, addonInfo)
 
-    -- Simple cleanup system for party frames
     local function CleanPartyFrames()
-        -- Non-destructive cleanup: only reconcile visibility and request refresh.
-        for i = 1, 4 do
-            local frameName = 'PartyMemberFrame' .. i
-            local frame = _G[frameName]
-            
-            if frame then
-                local unit = "party" .. i
-                if UnitExists(unit) then
-                    frame:Show()
-                else
-                    frame:Hide()
-                end
-            end
-        end
-        
-        -- Simple refresh of party system
         DelayedCall(function()
             if _G.PartyMemberFrame_UpdateParty then
                 _G.PartyMemberFrame_UpdateParty()
