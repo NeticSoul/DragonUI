@@ -312,6 +312,10 @@ L["Clear Locked Slots"] = "Gesperrte Slots löschen"
 L["Click to clear all locked bag slots."] = "Klicken, um alle gesperrten Taschenslots zu löschen."
 L["Alt+LeftClick any bag slot (item or empty) to lock or unlock it."] = "Alt+Linksklick auf einen Taschenslot (mit Gegenstand oder leer), um ihn zu sperren oder zu entsperren."
 L["Click the lock-clear button to remove all locked slots."] = "Klicke auf die Sperren-Löschen-Schaltfläche, um alle gesperrten Slots zu entfernen."
+
+-- Bag Skin
+L["Bag Skin"] = true
+L["Retail-style textures for bags"] = true
 L["Hover an item or slot, then type /sortlock."] = "Bewege die Maus über einen Gegenstand oder Slot und tippe dann /sortlock."
 L["Slot locked (bag %d, slot %d)."] = "Slot gesperrt (Tasche %d, Slot %d)."
 L["Slot unlocked (bag %d, slot %d)."] = "Slot entsperrt (Tasche %d, Slot %d)."

@@ -312,6 +312,10 @@ L["Clear Locked Slots"] = "Limpiar Slots Bloqueados"
 L["Click to clear all locked bag slots."] = "Clic para limpiar todos los slots bloqueados de bolsas."
 L["Alt+LeftClick any bag slot (item or empty) to lock or unlock it."] = "Alt+Clic izquierdo en cualquier slot de bolsa (con objeto o vacío) para bloquearlo o desbloquearlo."
 L["Click the lock-clear button to remove all locked slots."] = "Haz clic en el botón de limpiar bloqueos para quitar todos los slots bloqueados."
+
+-- Bag Skin
+L["Bag Skin"] = true
+L["Retail-style textures for bags"] = true
 L["Hover an item or slot, then type /sortlock."] = "Pasa el cursor sobre un objeto o slot y luego escribe /sortlock."
 L["Slot locked (bag %d, slot %d)."] = "Slot bloqueado (bolsa %d, slot %d)."
 L["Slot unlocked (bag %d, slot %d)."] = "Slot desbloqueado (bolsa %d, slot %d)."

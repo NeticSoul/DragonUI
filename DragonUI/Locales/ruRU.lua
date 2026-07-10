@@ -312,6 +312,10 @@ L["Clear Locked Slots"] = "Очистить заблокированные яч�
 L["Click to clear all locked bag slots."] = "Нажмите для очистки всех заблокированных ячеек сумок."
 L["Alt+LeftClick any bag slot (item or empty) to lock or unlock it."] = "Alt+ЛКМ по любой ячейке сумки (с предметом или пустой) для блокировки/разблокировки."
 L["Click the lock-clear button to remove all locked slots."] = "Нажмите кнопку очистки блокировок для снятия всех блокировок."
+
+-- Bag Skin
+L["Bag Skin"] = true
+L["Retail-style textures for bags"] = true
 L["Hover an item or slot, then type /sortlock."] = "Наведите курсор на предмет или ячейку, затем введите /sortlock."
 L["Slot locked (bag %d, slot %d)."] = "Ячейка заблокирована (сумка %d, ячейка %d)."
 L["Slot unlocked (bag %d, slot %d)."] = "Ячейка разблокирована (сумка %d, ячейка %d)."

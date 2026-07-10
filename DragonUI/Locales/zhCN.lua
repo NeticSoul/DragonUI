@@ -307,6 +307,10 @@ L["Clear Locked Slots"] = "清除锁定格子"
 L["Click to clear all locked bag slots."] = "点击清除所有已锁定的背包格子。"
 L["Alt+LeftClick any bag slot (item or empty) to lock or unlock it."] = "对任意背包格子（有物品或空格）按 Alt+左键 可锁定或解锁。"
 L["Click the lock-clear button to remove all locked slots."] = "点击清锁按钮以移除所有锁定格子。"
+
+-- Bag Skin
+L["Bag Skin"] = true
+L["Retail-style textures for bags"] = true
 L["Hover an item or slot, then type /sortlock."] = "将鼠标悬停在物品或格子上，然后输入 /sortlock。"
 L["Slot locked (bag %d, slot %d)."] = "格子已锁定（背包 %d，槽位 %d）。"
 L["Slot unlocked (bag %d, slot %d)."] = "格子已解锁（背包 %d，槽位 %d）。"

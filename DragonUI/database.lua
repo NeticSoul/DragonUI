@@ -954,6 +954,9 @@ local defaults = {
             },
             versioncheck = {
                 enabled = true, -- Cross-player version broadcast and update detection
+            },
+            bags_skin = {
+                enabled = true, -- Retail-style textures for bags
             }
         },
 

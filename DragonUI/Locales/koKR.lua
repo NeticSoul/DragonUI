@@ -312,6 +312,10 @@ L["Clear Locked Slots"] = "ìž ê¸´ ìŠ¬ë¡¯ ëª¨ë‘ í•´ì œ
 L["Click to clear all locked bag slots."] = "ìž ê¸´ ê°€ë°© ìŠ¬ë¡¯ì„ ëª¨ë‘ í•´ì œí•˜ë ¤ë©´ í´ë¦­í•˜ì„¸ìš”."
 L["Alt+LeftClick any bag slot (item or empty) to lock or unlock it."] = "ê°€ë°© ìŠ¬ë¡¯(ì•„ì´í…œ ìžˆìŒ/ì—†ìŒ ë¬´ê´€)ì„ Alt+ì™¼ìª½ í´ë¦­í•˜ì—¬ ìž ê¸ˆ/ìž ê¸ˆ í•´ì œí•˜ì„¸ìš”."
 L["Click the lock-clear button to remove all locked slots."] = "ìž ê¸ˆ í•´ì œ ë²„íŠ¼ì„ í´ë¦­í•˜ë©´ ìž ê¸´ ìŠ¬ë¡¯ì´ ëª¨ë‘ í•´ì œë©ë‹ˆë‹¤."
+
+-- Bag Skin
+L["Bag Skin"] = true
+L["Retail-style textures for bags"] = true
 L["Hover an item or slot, then type /sortlock."] = "ì•„ì´í…œ ë˜ëŠ” ìŠ¬ë¡¯ì— ë§ˆìš°ìŠ¤ë¥¼ ì˜¬ë¦° ë’¤ /sortlock ì„ ìž…ë ¥í•˜ì„¸ìš”."
 L["Slot locked (bag %d, slot %d)."] = "ìŠ¬ë¡¯ ìž ê¸ˆë¨ (ê°€ë°© %d, ìŠ¬ë¡¯ %d)."
 L["Slot unlocked (bag %d, slot %d)."] = "ìŠ¬ë¡¯ ìž ê¸ˆ í•´ì œë¨ (ê°€ë°© %d, ìŠ¬ë¡¯ %d)."

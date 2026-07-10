@@ -317,6 +317,10 @@ L["Clear Locked Slots"] = true
 L["Click to clear all locked bag slots."] = true
 L["Alt+LeftClick any bag slot (item or empty) to lock or unlock it."] = true
 L["Click the lock-clear button to remove all locked slots."] = true
+
+-- Bag Skin
+L["Bag Skin"] = true
+L["Retail-style textures for bags"] = true
 L["Hover an item or slot, then type /sortlock."] = true
 L["Slot locked (bag %d, slot %d)."] = true
 L["Slot unlocked (bag %d, slot %d)."] = true
