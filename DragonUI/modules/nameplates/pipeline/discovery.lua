@@ -298,7 +298,8 @@ function NP.discovery.SuppressNativeChrome(plateData)
     local lvlText = plateData.levelText
     if lvlText then
         local lvlCfg = NP.config.GetCfg()
-        if lvlCfg.showLevelAlways and lvlCfg.centerNameOnly ~= true then
+        -- Instant native-level snapshot applies in every mode, including centered names.
+        if lvlCfg.showLevelAlways then
             plateData.plateLevel = nil
             plateData._plateLevelName = nil
             if lvlText.GetText then
