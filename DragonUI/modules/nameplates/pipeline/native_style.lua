@@ -9,11 +9,16 @@ NP.native_style = NP.native_style or {}
 
 local RareEntryCache = {}
 
+-- A real realm suffix has one hyphen; multi-hyphen names (French "Bat-le-désert") stay intact.
 function NP.native_style.StripRealm(name)
     if not name or name == "" then
         return nil
     end
-    return name:match("^([^%-]+)") or name
+    local base, realm = name:match("^([^%-]+)%-([^%-]+)$")
+    if base and realm then
+        return base
+    end
+    return name
 end
 
 -- Boss level marker: numeric -1, or the "??"/"-1" text shown on boss plates.
