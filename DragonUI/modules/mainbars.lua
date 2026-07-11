@@ -2834,6 +2834,8 @@ end
 -- Blizzard hides empty action slots on its own (ActionButton_Update); DragonUI always shows all 12.
 local function ReassertMainBarShown()
     if InCombatLockdown() then return end
+    -- The fade engine's own triggers (combat, hover) can fire mid-vehicle; never undo its Hide().
+    if UnitHasVehicleUI and UnitHasVehicleUI("player") then return end
     if addon.pUiMainBar then addon.pUiMainBar:Show() end
     for i = 1, 12 do
         local btn = _G["ActionButton" .. i]
