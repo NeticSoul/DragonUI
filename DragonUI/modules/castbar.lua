@@ -722,13 +722,14 @@ end
 -- SHIELD SYSTEM
 -- ============================================================================
 
-local function CreateShield(parent, icon, frameName, iconSize)
-    if not parent or not icon then
+-- Sibling of castbar so the shield can render behind the icon.
+local function CreateShield(container, castbar, icon, frameName, iconSize)
+    if not container or not castbar or not icon then
         return nil
     end
-    
-    local shield = CreateFrame("Frame", frameName .. "Shield", parent)
-    shield:SetFrameLevel(parent:GetFrameLevel() - 1)
+
+    local shield = CreateFrame("Frame", frameName .. "Shield", container)
+    shield:SetFrameLevel(max(0, castbar:GetFrameLevel() - 1))
     shield:SetSize(iconSize * 1.8, iconSize * 2.0)
     
     local texture = shield:CreateTexture(nil, "ARTWORK", nil, 3)
@@ -1096,7 +1097,7 @@ local function CreateCastbar(unitType)
     
     -- Shield (for target/focus only — player casts are always interruptible in 3.3.5a)
     if unitType ~= "player" then
-        frames.shield = CreateShield(frames.castbar, frames.icon, frameName, 20)
+        frames.shield = CreateShield(frames.container, frames.castbar, frames.icon, frameName, 20)
     end
     
     -- Apply texture clipping system

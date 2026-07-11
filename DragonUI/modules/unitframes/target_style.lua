@@ -1261,13 +1261,12 @@ function UF.TargetStyle.Create(opts)
     local function SyncVisibilityFade()
         if not addon.VisibilityFade then return end
 
+        -- Skip native spellbar: castbar.lua already hides it, fading it here undid that.
         local extraFrames, hoverFrames = {}, { BlizzFrame }
         if configKey == "target" then
             if _G.TargetFrameToT then table.insert(extraFrames, _G.TargetFrameToT); table.insert(hoverFrames, _G.TargetFrameToT) end
-            if _G.TargetFrameSpellBar then table.insert(extraFrames, _G.TargetFrameSpellBar); table.insert(hoverFrames, _G.TargetFrameSpellBar) end
         elseif configKey == "focus" then
             if _G.FocusFrameToT then table.insert(extraFrames, _G.FocusFrameToT); table.insert(hoverFrames, _G.FocusFrameToT) end
-            if _G.FocusFrameSpellBar then table.insert(extraFrames, _G.FocusFrameSpellBar); table.insert(hoverFrames, _G.FocusFrameSpellBar) end
         end
         if BlizzFrame.DragonUIHealthHover then table.insert(hoverFrames, BlizzFrame.DragonUIHealthHover) end
         if BlizzFrame.DragonUIManaHover then table.insert(hoverFrames, BlizzFrame.DragonUIManaHover) end
