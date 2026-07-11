@@ -26,6 +26,10 @@ local textures = {
     highlight = assets .. "buttonhilight-square",
     slotBorder = assets .. "ui-quickslot2",
     coinbox = assets .. "commoncoinbox",
+    currencybox = assets .. "commoncurrencybox",
+    coinGold = assets .. "coingold",
+    coinSilver = assets .. "coinsilver",
+    coinCopper = assets .. "coincopper",
     -- pre-masked (round alpha baked in offline, no runtime mask API exists in 3.3.5a)
     backpackIcon = assets .. "INV_Misc_Bag_08_round",
 }
@@ -435,6 +439,34 @@ local function PrepareContainerFrame(frame)
     end)
 end
 
+local BOTTOM_PILL_HEIGHT = 17
+local BOTTOM_PILL_GAP = 3
+
+local function ApplyPillChrome(bar, texturePath)
+    if bar._dragonuiPill then
+        return
+    end
+    bar._dragonuiPill = true
+
+    local left = bar:CreateTexture(nil, "BACKGROUND")
+    left:SetSize(8, 17)
+    left:SetPoint("LEFT", bar, "LEFT")
+    left:SetTexture(texturePath)
+    left:SetTexCoord(0.03125, 0.53125, 0.289062, 0.554688)
+
+    local right = bar:CreateTexture(nil, "BACKGROUND")
+    right:SetSize(8, 17)
+    right:SetPoint("RIGHT", bar, "RIGHT")
+    right:SetTexture(texturePath)
+    right:SetTexCoord(0.03125, 0.53125, 0.570312, 0.835938)
+
+    local middle = bar:CreateTexture(nil, "BACKGROUND")
+    middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
+    middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+    middle:SetTexture(texturePath)
+    middle:SetTexCoord(0, 0.5, 0.0078125, 0.273438)
+end
+
 local function SkinMoneyFrame(frame)
     local moneyFrame = _G[frame:GetName() .. "MoneyFrame"]
     if not moneyFrame or moneyFrame._dragonuiSkinned then
@@ -442,28 +474,113 @@ local function SkinMoneyFrame(frame)
     end
     moneyFrame._dragonuiSkinned = true
 
+    moneyFrame:SetHeight(BOTTOM_PILL_HEIGHT)
+    ApplyPillChrome(moneyFrame, textures.coinbox)
+end
+
+-- MoneyFrameTemplate rebuilds each coin's NormalTexture on every RefreshMoneyFrame, so a one-time
+-- swap gets clobbered; the hook below (MoneyFrame_Update) re-applies it after every native update.
+-- BLP requires power-of-two dimensions, so each 20x20 icon sits padded on a 32x32 canvas;
+-- these texcoords crop back to just the icon instead of stretching the whole padded square.
+local COIN_ICON_TEXCOORD = { 0.1875, 0.8125, 0.1875, 0.8125 }
+local COIN_ICONS = {
+    { key = "GoldButton", texture = textures.coinGold },
+    { key = "SilverButton", texture = textures.coinSilver },
+    { key = "CopperButton", texture = textures.coinCopper },
+}
+
+local function ModernizeCoinIcons(frame)
+    if not IsActive() then
+        return
+    end
+    if type(frame) ~= "table" then
+        frame = frame and _G[frame]
+    end
+    if not frame then
+        return
+    end
+
+    local frameName = frame:GetName()
+    for _, coin in ipairs(COIN_ICONS) do
+        local button = _G[frameName .. coin.key]
+        local tex = button and button.GetNormalTexture and button:GetNormalTexture()
+        if tex then
+            tex:SetTexture(coin.texture)
+            tex:SetTexCoord(unpack(COIN_ICON_TEXCOORD))
+        end
+    end
+end
+
+-- Blizzard_TokenUI is load-on-demand; force it so tracked currencies show without opening the Character panel first.
+local function EnsureTokenUILoaded()
+    if ManageBackpackTokenFrame then
+        return true
+    end
+    if not IsAddOnLoaded("Blizzard_TokenUI") then
+        LoadAddOn("Blizzard_TokenUI")
+    end
+    return ManageBackpackTokenFrame ~= nil
+end
+
+local function SkinTokenFrame()
+    local frame = BackpackTokenFrame
+    if not frame or frame._dragonuiSkinned then
+        return
+    end
+    frame._dragonuiSkinned = true
+
+    -- Native XML ships one unnamed BACKGROUND texture (UI-Backpack-TokenFrame); strip it for our pill.
+    for _, region in ipairs({ frame:GetRegions() }) do
+        if region.GetObjectType and region:GetObjectType() == "Texture" then
+            region:Hide()
+            region:SetTexture(nil)
+        end
+    end
+
+    frame:SetHeight(BOTTOM_PILL_HEIGHT)
+    ApplyPillChrome(frame, textures.currencybox)
+end
+
+local function RepositionBackpackBottomWidgets(frame)
+    local moneyFrame = _G[frame:GetName() .. "MoneyFrame"]
+    if not moneyFrame or not moneyFrame._dragonuiSkinned then
+        return
+    end
+
+    local tokenShown = BackpackTokenFrame_IsShown and BackpackTokenFrame_IsShown()
+
     moneyFrame:ClearAllPoints()
-    moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
-    moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
-    moneyFrame:SetHeight(17)
+    if tokenShown then
+        BackpackTokenFrame:ClearAllPoints()
+        BackpackTokenFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
+        BackpackTokenFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+        moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8 + BOTTOM_PILL_HEIGHT + BOTTOM_PILL_GAP)
+        moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8 + BOTTOM_PILL_HEIGHT + BOTTOM_PILL_GAP)
+    else
+        moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
+        moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+    end
+end
 
-    local left = moneyFrame:CreateTexture(nil, "BACKGROUND")
-    left:SetSize(8, 17)
-    left:SetPoint("LEFT", moneyFrame, "LEFT")
-    left:SetTexture(textures.coinbox)
-    left:SetTexCoord(0.03125, 0.53125, 0.289062, 0.554688)
+local tokenHookInstalled = false
+local function OnManageBackpackTokenFrame(backpack)
+    if not IsActive() then
+        return
+    end
+    backpack = backpack or (GetBackpackFrame and GetBackpackFrame())
+    if not backpack or not backpack.GetID or backpack:GetID() ~= BACKPACK_CONTAINER then
+        return
+    end
+    SkinTokenFrame()
+    RepositionBackpackBottomWidgets(backpack)
+end
 
-    local right = moneyFrame:CreateTexture(nil, "BACKGROUND")
-    right:SetSize(8, 17)
-    right:SetPoint("RIGHT", moneyFrame, "RIGHT")
-    right:SetTexture(textures.coinbox)
-    right:SetTexCoord(0.03125, 0.53125, 0.570312, 0.835938)
-
-    local middle = moneyFrame:CreateTexture(nil, "BACKGROUND")
-    middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
-    middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
-    middle:SetTexture(textures.coinbox)
-    middle:SetTexCoord(0, 0.5, 0.0078125, 0.273438)
+local function InstallTokenHook()
+    if tokenHookInstalled or not ManageBackpackTokenFrame then
+        return
+    end
+    tokenHookInstalled = true
+    hooksecurefunc("ManageBackpackTokenFrame", OnManageBackpackTokenFrame)
 end
 
 local function AdjustItemGridPosition(frame)
@@ -504,6 +621,13 @@ function BagSkinModule:RefreshContainerFrame(frame)
 
     if bagID == BACKPACK_CONTAINER then
         SkinMoneyFrame(frame)
+        if EnsureTokenUILoaded() then
+            InstallTokenHook()
+            SkinTokenFrame()
+            BackpackTokenFrame_Update()
+            ManageBackpackTokenFrame(frame)
+        end
+        RepositionBackpackBottomWidgets(frame)
     end
 
     for i = 1, MAX_CONTAINER_ITEMS do
@@ -543,6 +667,10 @@ local function InstallHooks()
     end
 
     BagSkinModule.hooksInstalled = true
+
+    if MoneyFrame_Update then
+        hooksecurefunc("MoneyFrame_Update", ModernizeCoinIcons)
+    end
 
     hooksecurefunc("ContainerFrame_GenerateFrame", function(frame)
         if IsActive() then
