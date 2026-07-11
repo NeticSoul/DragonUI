@@ -381,7 +381,7 @@ local function EngineOnUpdate(_, elapsed)
             end
         end
         if retailBehavior then
-            NP.layout.ApplyRetailPlateScale(pd, NP.identity.PlateHasTargetAlpha(pd), retailCfg)
+            NP.layout.ApplyRetailPlateScale(pd, NP.identity.IsTargetPlateVisual(pd, hasTarget), retailCfg)
         elseif pd._retailScale or pd._pendingRetailScale then
             NP.layout.SetRetailPlateScale(pd, 1)
         end

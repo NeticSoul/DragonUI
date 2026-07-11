@@ -40,7 +40,15 @@ end
 
 function NP.lifecycle.PrepareNameplate(plateData)
     -- Recycled frames must not inherit prior occupant state.
-    plateData.plateName = NP.discovery.GetPlateName(plateData)
+    local freshName = NP.discovery.GetPlateName(plateData)
+    -- A recycled frame can silently get a new occupant; drop the stale GUID first.
+    if freshName and plateData._lastKnownOccupantName and freshName ~= plateData._lastKnownOccupantName then
+        NP.state.ClearPlateGUID(plateData)
+    end
+    if freshName then
+        plateData._lastKnownOccupantName = freshName
+    end
+    plateData.plateName = freshName
     plateData._petCloneSnapshot = nil
     NP.castbar.NotePlateNameForPetSnapshot(plateData, plateData.plateName)
     plateData._castIdentityName = nil

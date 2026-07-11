@@ -95,6 +95,7 @@ end
 -- Per-frame visual target from harvested alpha (opacity/highlight; not cast/GUID).
 -- hasTarget: optional precomputed UnitExists("target") result, so per-frame
 -- callers iterating every plate don't re-query the target each plate.
+-- Alpha can go stale for a tick; veto with the GUID already refreshed this frame.
 function identity.IsTargetPlateVisual(plateData, hasTarget)
     if hasTarget == nil then
         hasTarget = UnitExists("target") == 1
@@ -102,7 +103,12 @@ function identity.IsTargetPlateVisual(plateData, hasTarget)
     if not hasTarget then
         return false
     end
-    return identity.PlateHasTargetAlpha(plateData)
+    if not identity.PlateHasTargetAlpha(plateData) then
+        return false
+    end
+    local plateGuid = NP.state.GetPlateGUID(plateData)
+    local targetGuid = NP.module.targetGUID
+    return not (plateGuid and targetGuid and plateGuid ~= targetGuid)
 end
 
 local function PlateIsMouseoverToken(plateData)
@@ -114,9 +120,11 @@ local function PlateIsMouseoverToken(plateData)
     return plate and plate.IsMouseOver and plate:IsMouseOver() or false
 end
 
+-- Alpha alone goes stale on self-target (no plate); also require a fingerprint match.
 function identity.PlatePassesUnitTokenGate(plateData, unit)
     if unit == "target" then
         return identity.PlateHasTargetAlpha(plateData)
+            and identity.PlateMatchesUnitFingerprint(plateData, unit, true)
     elseif unit == "mouseover" then
         return PlateIsMouseoverToken(plateData)
     end
@@ -182,11 +190,12 @@ function identity.UpdateTargetContext()
 
     local targetGUID = NP.module.targetGUID
 
-    -- Fast path: cached target plate still shown and GUID-bound.
+    -- Fast path: cached target plate still shown, GUID-bound, name still matches.
     local cachedTarget = NP.module.targetPlate
     if cachedTarget and targetGUID
         and NP.state.GetPlateGUID(cachedTarget) == targetGUID
-        and cachedTarget.plate and cachedTarget.plate.IsShown and cachedTarget.plate:IsShown() then
+        and cachedTarget.plate and cachedTarget.plate.IsShown and cachedTarget.plate:IsShown()
+        and identity.UnitNameMatchesPlate("target", cachedTarget) then
         return cachedTarget
     end
 
