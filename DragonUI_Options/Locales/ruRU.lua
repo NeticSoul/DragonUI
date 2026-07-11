@@ -46,7 +46,7 @@ L["Heal prediction, absorb shields and animated health loss."] = "Предска
 L["Change columns, rows, and buttons shown per action bar."] = "Изменить количество столбцов, строк и кнопок на панели действий."
 L["Switch micro menu icons between colored and grayscale style."] = "Переключить значки микроменю между цветным и серым стилем."
 L["About"] = "О программе"
-L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = "Внешний вид розничного WoW для 3.3.5a, вдохновлённый Dragonflight UI."
+L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = "Вдохновлённый Dragonflight UI внешний вид актуального WoW, перенесённый в 3.3.5a."
 L["Created and maintained by Neticsoul, with community contributions."] = "Создано и поддерживается Neticsoul при участии сообщества."
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "Команды: /dragonui, /dui, /pi — /dragonui edit (редактор) — /dragonui help"
