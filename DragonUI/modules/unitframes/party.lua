@@ -530,6 +530,48 @@ end
 -- DYNAMIC CLIPPING SYSTEM
 -- ===============================================================
 
+-- Clip/color logic for a party health bar. Named (not inline) so it can also be
+-- called directly elsewhere to force a refresh without going through :SetValue() —
+-- calling :SetValue() from our own code re-taints Blizzard's OnValueChanged/:Show() cascade.
+local function ApplyHealthBarClipping(self, value)
+    local frame = self:GetParent()
+    if not frame then
+        return
+    end
+    local frameIndex = frame:GetID()
+    local unit = "party" .. frameIndex
+    -- NOTE: Do NOT early return on !UnitExists — during ghost/spirit release
+    -- UnitExists can briefly return false, leaving texture stuck invisible
+
+    local texture = self:GetStatusBarTexture()
+    if not texture then
+        return
+    end
+
+    -- If disconnected, show full bar in gray (Blizzard native behavior)
+    if frame.DragonUI_Disconnected then
+        texture:SetTexCoord(0, 1, 0, 1)
+        self:SetStatusBarColor(0.5, 0.5, 0.5, 1)
+        return
+    end
+
+    -- Apply class color first (safe if unit doesn't exist — checks internally)
+    UpdatePartyHealthBarColor(frameIndex)
+
+    -- Dynamic clipping: Only show the filled part of the texture
+    local min, max = self:GetMinMaxValues()
+    local current = value or self:GetValue()
+
+    if max > 0 and current then
+        -- Clamp to [0.001, 1] — max=1 can happen during BG loading/phasing
+        -- while current holds the real health value, producing TexCoord out of range
+        local percentage = math.min(math.max(current / max, 0.001), 1)
+        texture:SetTexCoord(0, percentage, 0, 1)
+    else
+        texture:SetTexCoord(0, 1, 0, 1)
+    end
+end
+
 -- Setup dynamic texture clipping for health bars
 local function SetupHealthBarClipping(frame)
     if not frame then
@@ -542,42 +584,47 @@ local function SetupHealthBarClipping(frame)
     end
 
     -- Hook SetValue for dynamic clipping and class color
-    hooksecurefunc(healthbar, "SetValue", function(self, value)
-        local frameIndex = frame:GetID()
-        local unit = "party" .. frameIndex
-        -- NOTE: Do NOT early return on !UnitExists — during ghost/spirit release
-        -- UnitExists can briefly return false, leaving texture stuck invisible
-
-        local texture = self:GetStatusBarTexture()
-        if not texture then
-            return
-        end
-
-        -- If disconnected, show full bar in gray (Blizzard native behavior)
-        if frame.DragonUI_Disconnected then
-            texture:SetTexCoord(0, 1, 0, 1)
-            self:SetStatusBarColor(0.5, 0.5, 0.5, 1)
-            return
-        end
-
-        -- Apply class color first (safe if unit doesn't exist — checks internally)
-        UpdatePartyHealthBarColor(frameIndex)
-
-        -- Dynamic clipping: Only show the filled part of the texture
-        local min, max = self:GetMinMaxValues()
-        local current = value or self:GetValue()
-
-        if max > 0 and current then
-            -- Clamp to [0.001, 1] — max=1 can happen during BG loading/phasing
-            -- while current holds the real health value, producing TexCoord out of range
-            local percentage = math.min(math.max(current / max, 0.001), 1)
-            texture:SetTexCoord(0, percentage, 0, 1)
-        else
-            texture:SetTexCoord(0, 1, 0, 1)
-        end
-    end)
+    hooksecurefunc(healthbar, "SetValue", ApplyHealthBarClipping)
 
     healthbar.DragonUI_ClippingSetup = true
+end
+
+-- Clip/texture logic for a party mana bar. Named for the same reason as
+-- ApplyHealthBarClipping above — lets callers refresh without :SetValue().
+local function ApplyManaBarClipping(self, value)
+    local frame = self:GetParent()
+    if not frame then
+        return
+    end
+    local unit = "party" .. frame:GetID()
+    -- NOTE: Do NOT early return on !UnitExists — see health bar comment
+
+    local texture = self:GetStatusBarTexture()
+    if not texture then
+        return
+    end
+
+    -- If disconnected, mana bar is hidden (alpha=0), skip all processing
+    if frame.DragonUI_Disconnected then
+        return
+    end
+
+    local min, max = self:GetMinMaxValues()
+    local current = value or self:GetValue()
+
+    if max > 0 and current then
+        -- Clamp to [0.001, 1] — max=1 can happen during BG loading/phasing
+        -- while current holds the real mana value, producing TexCoord out of range
+        local percentage = math.min(math.max(current / max, 0.001), 1)
+        texture:SetTexCoord(0, percentage, 0, 1)
+    else
+        texture:SetTexCoord(0, 1, 0, 1)
+    end
+
+    -- Update texture based on power type
+    local powerTexture = GetPowerBarTexture(unit)
+    texture:SetTexture(powerTexture)
+    texture:SetVertexColor(1, 1, 1, 1)
 end
 
 -- Setup dynamic texture clipping for mana bars
@@ -592,37 +639,7 @@ local function SetupManaBarClipping(frame)
     end
 
     -- Hook SetValue for dynamic clipping
-    hooksecurefunc(manabar, "SetValue", function(self, value)
-        local unit = "party" .. frame:GetID()
-        -- NOTE: Do NOT early return on !UnitExists — see health bar comment
-
-        local texture = self:GetStatusBarTexture()
-        if not texture then
-            return
-        end
-
-        -- If disconnected, mana bar is hidden (alpha=0), skip all processing
-        if frame.DragonUI_Disconnected then
-            return
-        end
-
-        local min, max = self:GetMinMaxValues()
-        local current = value or self:GetValue()
-
-        if max > 0 and current then
-            -- Clamp to [0.001, 1] — max=1 can happen during BG loading/phasing
-            -- while current holds the real mana value, producing TexCoord out of range
-            local percentage = math.min(math.max(current / max, 0.001), 1)
-            texture:SetTexCoord(0, percentage, 0, 1)
-        else
-            texture:SetTexCoord(0, 1, 0, 1)
-        end
-
-        -- Update texture based on power type
-        local powerTexture = GetPowerBarTexture(unit)
-        texture:SetTexture(powerTexture)
-        texture:SetVertexColor(1, 1, 1, 1)
-    end)
+    hooksecurefunc(manabar, "SetValue", ApplyManaBarClipping)
 
     manabar.DragonUI_ClippingSetup = true
 end
@@ -1816,17 +1833,15 @@ local function SetupPartyHooks()
         -- SetValue/UnitFrameHealthBar_Update hooks have already executed,
         -- ensuring the gray visuals stick.
         UpdateDisconnectedState(frame)
-        
-        -- Force bars to re-run their SetValue hooks with the flag now set
+
+        -- Re-run clip logic directly, not via :SetValue() — that cascade taints Show() calls mid-combat.
         local healthbar = _G[frame:GetName() .. 'HealthBar']
         local manabar = _G[frame:GetName() .. 'ManaBar']
         if healthbar then
-            local val = healthbar:GetValue()
-            healthbar:SetValue(val)
+            ApplyHealthBarClipping(healthbar, healthbar:GetValue())
         end
         if manabar then
-            local val = manabar:GetValue()
-            manabar:SetValue(val)
+            ApplyManaBarClipping(manabar, manabar:GetValue())
         end
     end)
 end
@@ -1984,16 +1999,14 @@ connectionFrame:SetScript("OnEvent", function(self, event)
         if frame then
             -- Set the flag FIRST so hooks respect it
             UpdateDisconnectedState(frame)
-            -- Force bars to re-run their SetValue hooks with the new flag
+            -- Re-run clip logic directly, not via :SetValue() — that cascade taints Show() calls mid-combat.
             local healthbar = _G[frame:GetName() .. 'HealthBar']
             local manabar = _G[frame:GetName() .. 'ManaBar']
             if healthbar then
-                local val = healthbar:GetValue()
-                healthbar:SetValue(val)
+                ApplyHealthBarClipping(healthbar, healthbar:GetValue())
             end
             if manabar then
-                local val = manabar:GetValue()
-                manabar:SetValue(val)
+                ApplyManaBarClipping(manabar, manabar:GetValue())
             end
         end
     end
