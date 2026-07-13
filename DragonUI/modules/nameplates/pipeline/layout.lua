@@ -106,6 +106,71 @@ local function GetBGHIconAnchor(key)
     return BGH_ICON_ANCHORS[anchorKey] or BGH_ICON_ANCHORS.top
 end
 
+-- BGH 1.6.0 made SetBGHmark local, so the test preview drives the plate's own icon directly.
+local BGH_TEST_TEXTURES = {
+    Blizzlike = {
+        Blue = "Interface\\AddOns\\BattleGroundHealers\\Artwork\\BlizzBlueIcon.tga",
+        Red = "Interface\\AddOns\\BattleGroundHealers\\Artwork\\BlizzRedIcon.tga",
+    },
+    Minimalist = {
+        Blue = "Interface\\AddOns\\BattleGroundHealers\\Artwork\\MiniBlueIcon.tga",
+        Red = "Interface\\AddOns\\BattleGroundHealers\\Artwork\\MiniRedIcon.tga",
+    },
+}
+
+local function GetBGHTestTexture(reaction)
+    local settings = _G.BGHsettings
+    local set = BGH_TEST_TEXTURES[settings and settings.iconStyle] or BGH_TEST_TEXTURES.Blizzlike
+    local invert = settings and settings.iconInvertColor == 1
+    if reaction == "ENEMY" then
+        return invert and set.Blue or set.Red
+    end
+    return invert and set.Red or set.Blue
+end
+
+local function HideBGHTestIcon(bghFrame)
+    if bghFrame and bghFrame.icon then
+        bghFrame.icon:SetTexture(nil)
+        bghFrame.icon:Hide()
+    end
+end
+
+function NP.layout.SetBGHTestMark(name, reaction)
+    if not name or name == "" then
+        return
+    end
+    NP.module.bghTestMarks = NP.module.bghTestMarks or {}
+    NP.module.bghTestMarks[name] = reaction
+    for _, plateData in pairs(NP.module.plates) do
+        local plate = plateData and plateData.plate
+        local bghFrame = plate and plate.BGHframe
+        if bghFrame and bghFrame.activeName == name then
+            if reaction then
+                NP.layout.ApplyBattleGroundHealersCompat(plateData)
+            else
+                HideBGHTestIcon(bghFrame)
+            end
+        end
+    end
+end
+
+function NP.layout.ClearBGHTestMarks()
+    local marks = NP.module.bghTestMarks
+    if not marks then
+        return
+    end
+    for _, plateData in pairs(NP.module.plates) do
+        local plate = plateData and plateData.plate
+        local bghFrame = plate and plate.BGHframe
+        if bghFrame and bghFrame.activeName and marks[bghFrame.activeName] then
+            HideBGHTestIcon(bghFrame)
+        end
+    end
+    for name in pairs(marks) do
+        marks[name] = nil
+    end
+end
+
 function NP.layout.ApplyBattleGroundHealersCompat(plateData)
     if not plateData or not plateData.plate then
         return
@@ -160,6 +225,15 @@ function NP.layout.ApplyBattleGroundHealersCompat(plateData)
     end
 
     plateData._bghCompatApplied = true
+
+    if cfg.bghTestMode and bghFrame and bghFrame.icon and bghFrame.activeName then
+        local marks = NP.module.bghTestMarks
+        local reaction = marks and marks[bghFrame.activeName]
+        if reaction then
+            bghFrame.icon:SetTexture(GetBGHTestTexture(reaction))
+            bghFrame.icon:Show()
+        end
+    end
 end
 
 -- Depth sort (owns cross-plate frame-level bands)

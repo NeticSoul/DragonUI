@@ -130,32 +130,22 @@ end
 
 local bghTestMarkedNames = {}
 
+local function GetBGHTestLayout()
+    local np = addon.Nameplates
+    return np and np.layout
+end
+
 local function ClearBGHTestMarks()
-    if type(_G.SetBGHmark) ~= "function" then
-        bghTestMarkedNames = {}
-        return
-    end
-    for i = 1, #bghTestMarkedNames do
-        _G.SetBGHmark(bghTestMarkedNames[i], nil)
+    local layout = GetBGHTestLayout()
+    if layout and layout.ClearBGHTestMarks then
+        layout.ClearBGHTestMarks()
     end
     bghTestMarkedNames = {}
 end
 
-local function GetBGHTestTextureForTarget()
-    local settings = _G.BGHsettings
-    local style = settings and settings.iconStyle or "Blizzlike"
-    local invert = settings and settings.iconInvertColor == 1 or false
-    local isFriendly = not UnitCanAttack("player", "target")
-    local useRed = (invert == isFriendly)
-
-    if style == "Minimalist" then
-        return useRed and "minired" or "miniblue"
-    end
-    return useRed and "red" or "blue"
-end
-
 local function ToggleBGHTestMarkTarget()
-    if type(_G.SetBGHmark) ~= "function" then
+    local layout = GetBGHTestLayout()
+    if not (layout and layout.SetBGHTestMark) then
         return
     end
     local name = UnitName("target")
@@ -172,12 +162,12 @@ local function ToggleBGHTestMarkTarget()
     end
 
     if index then
-        _G.SetBGHmark(name, nil)
+        layout.SetBGHTestMark(name, nil)
         table.remove(bghTestMarkedNames, index)
         return
     end
 
-    _G.SetBGHmark(name, GetBGHTestTextureForTarget())
+    layout.SetBGHTestMark(name, UnitCanAttack("player", "target") and "ENEMY" or "FRIEND")
     bghTestMarkedNames[#bghTestMarkedNames + 1] = name
 end
 
@@ -1301,7 +1291,10 @@ local function BuildIconsSubTab(scroll)
         disabled = function()
             return not IsBattleGroundHealersLoaded()
         end,
-        callback = function()
+        callback = function(val)
+            if not val then
+                ClearBGHTestMarks()
+            end
             RefreshNameplates()
             if Panel and Panel.SelectTab then
                 Panel:SelectTab("nameplates")
@@ -1354,9 +1347,7 @@ local function BuildIconsSubTab(scroll)
         label = LO["Enable Test Mode"],
         desc = LO["Enable manual marking for BattleGroundHealers compatibility checks."],
         dbPath = DB .. ".bghTestMode",
-        disabled = function()
-            return not IsBattleGroundHealersLoaded()
-        end,
+        disabled = IsBGHCompatConfigDisabled,
         callback = function(val)
             if not val then
                 ClearBGHTestMarks()
@@ -1372,7 +1363,7 @@ local function BuildIconsSubTab(scroll)
         desc = LO["Toggle BattleGroundHealers mark on your current target while test mode is enabled."],
         disabled = function()
             local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-            if not IsBattleGroundHealersLoaded() then
+            if IsBGHCompatConfigDisabled() then
                 return true
             end
             return not (np and np.bghTestMode == true)
