@@ -667,6 +667,47 @@ local function DarkenAddonButtonBorders(tint)
 end
 
 -- -----------------------------------------------------------------------
+-- COMPACT RAID FRAME MANAGER (addon): manager shell + toggle button chrome
+-- -----------------------------------------------------------------------
+local COMPACT_RAIDFRAME_ADDONS = {
+    CompactRaidFrame = true,
+    CompactRaidFrames = true,
+    Blizzard_CompactRaidFrames = true,
+}
+
+local function DarkenFrameRootTextures(frame, tint, skipNormalTexture)
+    if not frame or not frame.GetRegions then return end
+    local normalTex = skipNormalTexture and frame.GetNormalTexture and frame:GetNormalTexture()
+    for _, region in ipairs({ frame:GetRegions() }) do
+        if region and region.GetObjectType and region:GetObjectType() == "Texture" and region ~= normalTex then
+            DarkenTexture(region, tint)
+        end
+    end
+end
+
+local function DarkenCompactRaidFrameManager(tint)
+    local manager = _G["CompactRaidFrameManager"]
+    if manager then
+        DarkenFrameRootTextures(manager, tint)
+    end
+
+    local toggle = _G["CompactRaidFrameManagerToggleButton"]
+        or (manager and manager.toggleButton)
+    if toggle then
+        DarkenFrameRootTextures(toggle, tint, true)
+        local normal = toggle.GetNormalTexture and toggle:GetNormalTexture()
+        if normal then
+            DarkenTexture(normal, tint)
+        end
+    end
+
+    local borderFrame = _G["CompactRaidFrameContainerBorderFrame"]
+    if borderFrame then
+        DarkenFrameRootTextures(borderFrame, tint)
+    end
+end
+
+-- -----------------------------------------------------------------------
 -- CASTBAR: darken border only
 local function DarkenCastbarBorders(tint)
     -- Blizzard CastingBarFrame
@@ -793,6 +834,7 @@ local function ApplyDarkMode()
     DarkenCastbarBorders(tint)
     DarkenBackpackCutout(tint)
     DarkenAddonButtonBorders(tint)
+    DarkenCompactRaidFrameManager(tint)
 
     DarkModeModule.applied = true
 
@@ -1021,6 +1063,13 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
             end
         end)
 
+    elseif event == "ADDON_LOADED" and COMPACT_RAIDFRAME_ADDONS[arg1] then
+        if not DarkModeModule.applied then return end
+        addon:After(0.1, function()
+            if not DarkModeModule.applied then return end
+            DarkenCompactRaidFrameManager(GetTintValues())
+        end)
+
     elseif event == "PLAYER_ENTERING_WORLD" then
         if not IsModuleEnabled() then return end
 
@@ -1147,6 +1196,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
             DarkenCastbarBorders(tint)
             -- Also catch addon buttons that may have loaded late
             DarkenAddonButtonBorders(tint)
+            DarkenCompactRaidFrameManager(tint)
         end)
 
     elseif event == "UPDATE_SHAPESHIFT_FORM" or event == "UPDATE_BONUS_ACTIONBAR"
