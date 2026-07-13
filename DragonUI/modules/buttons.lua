@@ -596,6 +596,14 @@ local function additional_buttons(button)
 		hooksecurefunc(button, "SetNormalTexture", fix_texture)
 	end
 	button.background = setup_background(button, normal, false)
+
+	-- Apply the toggle now — waiting for the next RefreshButtons() pass flashes it visible first.
+	if button.background then
+		local db = GetButtonsConfig()
+		if db and db.only_actionbackground then
+			button.background:Hide()
+		end
+	end
 end
 
 -- ============================================================================
@@ -798,6 +806,25 @@ function addon.RefreshButtons()
                 end
 
                 ActionButton_Update(button)
+            end
+        end
+    end
+
+    -- buttons_iterator() only walks main/multi bars, so pet/stance/possess need their own toggle pass.
+    local additionalBars = {
+        { prefix = 'PetActionButton', count = NUM_PET_ACTION_SLOTS },
+        { prefix = 'ShapeshiftButton', count = NUM_SHAPESHIFT_SLOTS },
+        { prefix = 'PossessButton', count = NUM_POSSESS_SLOTS },
+    }
+    for _, bar in ipairs(additionalBars) do
+        for index = 1, bar.count do
+            local button = _G[bar.prefix .. index]
+            if button and button.background then
+                if db.only_actionbackground then
+                    button.background:Hide()
+                else
+                    button.background:Show()
+                end
             end
         end
     end
