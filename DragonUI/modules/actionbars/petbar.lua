@@ -266,14 +266,12 @@ local function petbutton_updatestate(self, event)
             else
                 AutoCastShine_AutoCastStop(petAutoCastShine)
             end
-            if name then
-                if not config.grid then
-                    petActionButton:SetAlpha(1)
-                end
+            -- Always set explicitly (not just when hiding) so toggling "grid" live re-shows
+            -- slots that a previous pass already faded to 0 — otherwise it needs a /reload.
+            if config.grid or name then
+                petActionButton:SetAlpha(1)
             else
-                if not config.grid then
-                    petActionButton:SetAlpha(0)
-                end
+                petActionButton:SetAlpha(0)
             end
             if texture then
                 if GetPetActionSlotUsable(index) then
@@ -637,6 +635,12 @@ function addon.RefreshPetbarSystem()
     elseif IsModuleEnabled() then
         ApplyPetbarSystem()
     end
+end
+
+-- Re-runs the per-slot alpha logic after the "Show Empty Slots" (grid) toggle changes.
+function addon.RefreshPetbarGrid()
+    if not IsModuleEnabled() then return end
+    petbutton_updatestate()
 end
 
 -- Refresh function for size and position updates
