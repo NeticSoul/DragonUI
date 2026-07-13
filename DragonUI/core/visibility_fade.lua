@@ -134,10 +134,12 @@ function VF.Update(key)
 
     if not cfg.show_on_hover and not cfg.show_in_combat and not cfg.hide_in_combat then
         local _, _, fadeInDuration = GetFadeConfig(cfg)
-        FadeToAlpha(entry, 1, fadeInDuration)
         ApplyMouseState(entry, cfg, true)
         if entry.onVisibilityChange then entry.onVisibilityChange(true) end
-        if entry.onFadeComplete then entry.onFadeComplete(true) end
+        -- Fire onFadeComplete at full alpha, not now: minimap terrain refresh only takes once actually visible.
+        FadeToAlpha(entry, 1, fadeInDuration, function()
+            if entry.onFadeComplete then entry.onFadeComplete(true) end
+        end)
         return
     end
 

@@ -156,13 +156,8 @@ local function IsQuestMinimapPin(button)
         end
     end
 
-    -- pfQuest/Questie/TomTom minimap pins are nameless Buttons parented
-    -- directly to Minimap, so name/parent/child checks all miss them.
-    -- Detect by inspecting region textures: pins use textures shipped from
-    -- their own AddOn folder (e.g. "Interface\\AddOns\\pfQuest\\...",
-    -- "Interface\\AddOns\\Questie\\...", "Interface\\AddOns\\TomTom\\...").
-    -- This is a non-destructive read-only check that runs once per button
-    -- during the skin scan.
+    -- pfQuest/Questie/TomTom pins and TotemRadius rings are nameless Buttons on Minimap that name checks miss;
+    -- detect them (read-only) by their own AddOn folder in a region texture path so the skin leaves them alone.
     if button.GetNumRegions then
         for i = 1, button:GetNumRegions() do
             local region = select(i, button:GetRegions())
@@ -174,6 +169,7 @@ local function IsQuestMinimapPin(button)
                        or lower:find("pfmap", 1, true)
                        or lower:find("pfminimap", 1, true)
                        or lower:find("questie", 1, true)
+                       or lower:find("totemradius", 1, true)
                        or lower:find("\\tomtom\\", 1, true) then
                         button.DragonUI_IsQuestPin = true
                         return true
@@ -1461,7 +1457,8 @@ end
 local function CollectMinimapClickThroughFrames()
     local frames = {}
     for name in pairs(BLIZZARD_MINIMAP_BUTTONS) do
-        local namedFrame = _G[name]
+        -- MinimapBackdrop excluded: mouse-off overlay over the circle; enabling it eats native blip tooltips.
+        local namedFrame = name ~= 'MinimapBackdrop' and _G[name]
         if namedFrame then table.insert(frames, namedFrame) end
     end
     for _, btn in ipairs(GetAllMinimapButtons()) do
@@ -2431,12 +2428,9 @@ local function SyncMinimapVisibility()
     if MinimapModule.borderFrame then table.insert(extraFrames, MinimapModule.borderFrame) end
     local iconCollector = MinimapModule.frames and MinimapModule.frames.iconCollector
     if iconCollector then table.insert(extraFrames, iconCollector) end
-    -- Minimap and MinimapBackdrop sit at a higher frame level than MinimapCluster within the same
-    -- strata, so they win hit-testing over most of the visible circle — hover must be hooked on them
-    -- too, or OnEnter/OnLeave only ever fires in the thin margin MinimapCluster alone still owns.
+    -- MinimapBackdrop excluded on purpose: mouse-off overlay over the circle; enabling it eats native blip tooltips.
     local hoverFrames = { MinimapCluster }
     if Minimap then table.insert(hoverFrames, Minimap) end
-    if MinimapBackdrop then table.insert(hoverFrames, MinimapBackdrop) end
     if iconCollector then table.insert(hoverFrames, iconCollector) end
     addon.VisibilityFade.Register("minimap", MinimapCluster, {
         frames = extraFrames,
