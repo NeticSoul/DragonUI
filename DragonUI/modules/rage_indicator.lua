@@ -30,8 +30,18 @@ local eventFrame
 local hooksInstalled = false
 local IsSystemActive
 
+local DEFAULT_OOR_COLOR = { r = 0.8, g = 0.2, b = 0.2 }
+local DEFAULT_OOM_COLOR = { r = 0.5, g = 0.5, b = 1.0 }
+
 local function GetModuleConfig()
     return addon:GetModuleConfig("rage_indicator")
+end
+
+local function GetIconColor(key, fallback)
+    local cfg = GetModuleConfig()
+    local c = cfg and cfg[key]
+    if c and c.r then return c.r, c.g, c.b end
+    return fallback.r, fallback.g, fallback.b
 end
 
 local function IsModuleEnabled()
@@ -87,7 +97,7 @@ local function UpdateButtonColor(button)
 
     -- Out-of-mana has priority over range (prevents red/blue flicker).
     if notEnoughMana then
-        icon:SetVertexColor(0.5, 0.5, 1.0)
+        icon:SetVertexColor(GetIconColor("oom_color", DEFAULT_OOM_COLOR))
         return
     end
 
@@ -99,7 +109,7 @@ local function UpdateButtonColor(button)
 
     -- Red only applies to usable actions that are out of range.
     if IsActionInRange(actionID) == 0 then
-        icon:SetVertexColor(0.8, 0.2, 0.2)
+        icon:SetVertexColor(GetIconColor("oor_color", DEFAULT_OOR_COLOR))
     else
         icon:SetVertexColor(1.0, 1.0, 1.0)
     end

@@ -766,7 +766,9 @@ local defaults = {
                 }
             },
             rage_indicator = {
-                enabled = true -- Tint action button icons by range and usability
+                enabled = true, -- Tint action button icons by range and usability
+                oor_color = { r = 0.8, g = 0.2, b = 0.2 }, -- out of range
+                oom_color = { r = 0.5, g = 0.5, b = 1.0 } -- not enough mana
             },
             buttons = {
                 enabled = true -- Apply DragonUI button styling and enhancements
@@ -797,6 +799,11 @@ local defaults = {
             },
             buffs = {
                 enabled = true -- Enable DragonUI buff frame with custom styling, positioning, and toggle button functionality
+            },
+            auraborders = {
+                enabled = true, -- Modern DF-style borders on buff/debuff icons (player/target/focus)
+                buff_color = { r = 0.2, g = 0.2, b = 0.2 }, -- grayish neutral for buff borders; debuffs use dispel-type color
+                custom_border = true -- border style: true = rounded (custom texture overlay), false = square (solid lines)
             },
             keybinding = {
                 enabled = true, -- Enable LibKeyBound integration for intuitive keybinding (hover + key press)

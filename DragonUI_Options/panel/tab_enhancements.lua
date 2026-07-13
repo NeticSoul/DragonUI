@@ -134,6 +134,28 @@ local function BuildEnhancementsTab(scroll)
         requiresReload = false,
     })
 
+    local function AddRangeColor(field, label, def)
+        C:AddColorPicker(rangeSection, {
+            label = label,
+            getFunc = function()
+                local c = GetModuleField("rage_indicator", field)
+                if c and c.r then return c.r, c.g, c.b end
+                return def.r, def.g, def.b
+            end,
+            setFunc = function(r, g, b)
+                EnsureModuleTable("rage_indicator")[field] = { r = r, g = g, b = b }
+            end,
+            callback = function()
+                if addon.RefreshRageIndicatorSystem then addon.RefreshRageIndicatorSystem() end
+            end,
+            disabled = function() return not IsEnabled("rage_indicator") end,
+            hasAlpha = false,
+        })
+    end
+
+    AddRangeColor("oor_color", LO["Out of Range Color"], { r = 0.8, g = 0.2, b = 0.2 })
+    AddRangeColor("oom_color", LO["Not Enough Mana Color"], { r = 0.5, g = 0.5, b = 1.0 })
+
     -- ====================================================================
     -- KEY PRESS (fire abilities on key down)
     -- ====================================================================

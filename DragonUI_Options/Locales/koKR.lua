@@ -1419,3 +1419,12 @@ L["Search settings..."] = "설정 검색..."
 L["Type to find a setting"] = "입력하여 설정 찾기"
 L["No settings match '%s'."] = "'%s'와(과) 일치하는 설정이 없습니다."
 L["Showing top %d results. Type at least 3 characters for the full list."] = "상위 %d개 결과만 표시됩니다. 전체 목록은 3자 이상 입력하세요."
+
+-- Aura Borders: border style dropdown
+L["Border Style"] = "테두리 스타일"
+L["Rounded"] = "둥근 모서리"
+L["Square"] = "각진 모서리"
+
+-- Range Indicator colors
+L["Out of Range Color"] = "사거리 초과 색상"
+L["Not Enough Mana Color"] = "마나 부족 색상"

@@ -1415,3 +1415,12 @@ L["Search settings..."] = "搜索设置..."
 L["Type to find a setting"] = "输入以查找设置"
 L["No settings match '%s'."] = "没有与“%s”匹配的设置。"
 L["Showing top %d results. Type at least 3 characters for the full list."] = "仅显示前 %d 条结果。输入至少 3 个字符可查看完整列表。"
+
+-- Aura Borders: border style dropdown
+L["Border Style"] = "边框样式"
+L["Rounded"] = "圆角"
+L["Square"] = "方形"
+
+-- Range Indicator colors
+L["Out of Range Color"] = "超出范围颜色"
+L["Not Enough Mana Color"] = "法力不足颜色"

@@ -631,3 +631,12 @@ L["Search settings..."] = "Rechercher des réglages..."
 L["Type to find a setting"] = "Tapez pour trouver un réglage"
 L["No settings match '%s'."] = "Aucun réglage ne correspond à « %s »."
 L["Showing top %d results. Type at least 3 characters for the full list."] = "Affichage des %d meilleurs résultats. Saisissez au moins 3 caractères pour la liste complète."
+
+-- Aura Borders: border style dropdown
+L["Border Style"] = "Style de bordure"
+L["Rounded"] = "Arrondi"
+L["Square"] = "Carré"
+
+-- Range Indicator colors
+L["Out of Range Color"] = "Couleur hors de portée"
+L["Not Enough Mana Color"] = "Couleur mana insuffisant"

@@ -23,7 +23,8 @@
     <Script file="keypress.lua"/>
     
     <!-- Buffs, Minimap & Quest Tracker modules -->
-    <Script file="BuffFrame.lua"/> 
+    <Script file="BuffFrame.lua"/>
+    <Script file="auraborders.lua"/>
     <Script file="minimap_collector.lua"/>
     <Script file="minimap.lua"/>
     <Script file="MinimapDecorations.lua"/>

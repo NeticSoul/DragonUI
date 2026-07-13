@@ -175,7 +175,76 @@ end
 -- AURAS TAB BUILDER
 -- ============================================================================
 
+local function GetAuraBordersField(field)
+    local m = addon.db.profile.modules
+    return m and m.auraborders and m.auraborders[field]
+end
+
+local function IsAuraBordersEnabled()
+    return GetAuraBordersField("enabled") == true
+end
+
+local function RefreshAuraBorders()
+    if addon.RefreshAuraBordersSystem then
+        addon.RefreshAuraBordersSystem()
+    end
+end
+
 local function BuildAurasTab(scroll)
+    -- ====================================================================
+    -- AURA BORDERS
+    -- ====================================================================
+    local borderSection = C:AddSection(scroll, LO["Aura Borders"])
+
+    C:AddToggle(borderSection, {
+        label = LO["Enable Aura Borders"],
+        desc = LO["Show modern borders around buff and debuff icons."],
+        getFunc = function() return IsAuraBordersEnabled() end,
+        setFunc = function(val)
+            C:EnsureModuleTable("auraborders").enabled = val
+        end,
+        callback = function()
+            RefreshAuraBorders()
+            -- Rebuild so the style dropdown / color enable-state refresh at once.
+            Panel:SelectTab("auras")
+        end,
+        requiresReload = false,
+    })
+
+    C:AddDropdown(borderSection, {
+        label = LO["Border Style"],
+        values = {
+            [1] = LO["Rounded"],
+            [2] = LO["Square"],
+        },
+        getFunc = function()
+            return GetAuraBordersField("custom_border") and 1 or 2
+        end,
+        setFunc = function(val)
+            C:EnsureModuleTable("auraborders").custom_border = (val == 1)
+        end,
+        callback = RefreshAuraBorders,
+        disabled = function() return not IsAuraBordersEnabled() end,
+        width = 200,
+    })
+
+    C:AddColorPicker(borderSection, {
+        label = LO["Buff Border Color"],
+        getFunc = function()
+            local c = GetAuraBordersField("buff_color")
+            if c and c.r then return c.r, c.g, c.b end
+            return 0.6, 0.6, 0.6
+        end,
+        setFunc = function(r, g, b)
+            C:EnsureModuleTable("auraborders").buff_color = { r = r, g = g, b = b }
+        end,
+        callback = RefreshAuraBorders,
+        disabled = function() return not IsAuraBordersEnabled() end,
+        hasAlpha = false,
+    })
+
+    C:AddSpacer(scroll)
+
     -- ====================================================================
     -- WEAPON ENCHANTS
     -- ====================================================================

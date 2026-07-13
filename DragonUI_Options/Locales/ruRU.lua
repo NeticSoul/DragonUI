@@ -1416,3 +1416,12 @@ L["Search settings..."] = "Поиск настроек..."
 L["Type to find a setting"] = "Введите текст для поиска настройки"
 L["No settings match '%s'."] = "Нет настроек, соответствующих «%s»."
 L["Showing top %d results. Type at least 3 characters for the full list."] = "Показаны лучшие %d результатов. Введите не менее 3 символов для полного списка."
+
+-- Aura Borders: border style dropdown
+L["Border Style"] = "Стиль рамки"
+L["Rounded"] = "Скруглённый"
+L["Square"] = "Прямоугольный"
+
+-- Range Indicator colors
+L["Out of Range Color"] = "Цвет вне досягаемости"
+L["Not Enough Mana Color"] = "Цвет при нехватке маны"

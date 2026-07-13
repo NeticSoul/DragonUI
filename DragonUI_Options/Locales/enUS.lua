@@ -155,6 +155,13 @@ L["Show Toggle Button"] = true
 L["Show a collapse/expand button next to the buff icons."] = true
 L["Weapon Enchants"] = true
 L["Weapon enchant icons include rogue poisons, sharpening stones, wizard oils, and similar temporary weapon enhancements."] = true
+L["Aura Borders"] = true
+L["Enable Aura Borders"] = true
+L["Show modern borders around buff and debuff icons."] = true
+L["Buff Border Color"] = true
+L["Border Style"] = true
+L["Rounded"] = true
+L["Square"] = true
 L["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can drag to any position on screen."] = true
 L["Positions"] = true
 L["Player Aura Spacing"] = true
@@ -274,6 +281,8 @@ L["Tint action button icons when target is out of range (red), not enough mana (
 L["Tints action button icons based on range and usability: red = out of range, blue = not enough mana, gray = unusable."] = true
 L["Enable Range Indicator"] = true
 L["Color action button icons when target is out of range or ability is unusable."] = true
+L["Out of Range Color"] = true
+L["Not Enough Mana Color"] = true
 
 -- Key Press
 L["Key Press"] = true
