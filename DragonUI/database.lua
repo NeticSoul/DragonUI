@@ -200,29 +200,39 @@ local defaults = {
             player = {
                 rows = 1,
                 columns = 12,
-                buttons_shown = 12
+                buttons_shown = 12,
+                change_button_order = false,
+                button_order = "top_left"
             },
             left = {
                 horizontal = false,
                 rows = 12,
                 columns = 1,
-                buttons_shown = 12
+                buttons_shown = 12,
+                change_button_order = false,
+                button_order = "top_left"
             },
             right = {
                 horizontal = false,
                 rows = 12,
                 columns = 1,
-                buttons_shown = 12
+                buttons_shown = 12,
+                change_button_order = false,
+                button_order = "top_left"
             },
             bottom_left = {
                 rows = 1,
                 columns = 12,
-                buttons_shown = 12
+                buttons_shown = 12,
+                change_button_order = false,
+                button_order = "top_left"
             },
             bottom_right = {
                 rows = 1,
                 columns = 12,
-                buttons_shown = 12
+                buttons_shown = 12,
+                change_button_order = false,
+                button_order = "top_left"
             },
 
             -- Global button spacing (gap between buttons in pixels)

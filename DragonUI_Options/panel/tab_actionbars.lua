@@ -43,6 +43,50 @@ local function RefreshBars()
     if addon.RefreshMainbars then addon.RefreshMainbars() end
 end
 
+local buttonOrderValues = {
+    top_left     = LO["Top Left"],
+    bottom_left  = LO["Bottom Left"],
+    top_right    = LO["Top Right"],
+    bottom_right = LO["Bottom Right"],
+}
+
+local function RebuildLayoutTab()
+    local savedScroll = Panel.scrollWidget and Panel.scrollWidget.scrollbar
+        and Panel.scrollWidget.scrollbar:GetValue() or 0
+    activeSubTab = "layout"
+    Panel:SelectTab("actionbars")
+    if savedScroll > 0 and Panel.scrollWidget and Panel.scrollWidget.scrollbar then
+        Panel.scrollWidget.scrollbar:SetValue(savedScroll)
+        Panel.scrollWidget:SetScroll(savedScroll)
+    end
+end
+
+local function AddBarOrderControls(section, barKey)
+    local dbPrefix = "mainbars." .. barKey
+
+    C:AddToggle(section, {
+        label = LO["Change Button Order"],
+        dbPath = dbPrefix .. ".change_button_order",
+        callback = function(value)
+            if value and not C:GetDBValue(dbPrefix .. ".button_order") then
+                C:SetDBValue(dbPrefix .. ".button_order", "top_left")
+            end
+            RefreshBars()
+            RebuildLayoutTab()
+        end,
+    })
+
+    if C:GetDBValue(dbPrefix .. ".change_button_order") then
+        C:AddDropdown(section, {
+            label = LO["Button Order"],
+            dbPath = dbPrefix .. ".button_order",
+            values = buttonOrderValues,
+            width = 200,
+            callback = RefreshBars,
+        })
+    end
+end
+
 local function RefreshButtons()
     if addon.RefreshButtons then addon.RefreshButtons() end
 end
@@ -360,6 +404,8 @@ local function BuildLayoutTab(scroll)
         callback = RefreshBars,
     })
 
+    AddBarOrderControls(mainSection, "player")
+
     local mainPresetRow = C:AddRow(mainSection)
 
     C:AddButton(mainPresetRow, {
@@ -425,6 +471,8 @@ local function BuildLayoutTab(scroll)
         callback = RefreshBars,
     })
 
+    AddBarOrderControls(blSection, "bottom_left")
+
     -- ---- Bottom Right Bar ----
     local brSection = C:AddSection(scroll, LO["Bottom Right Bar Layout"])
 
@@ -443,6 +491,8 @@ local function BuildLayoutTab(scroll)
         width = 200,
         callback = RefreshBars,
     })
+
+    AddBarOrderControls(brSection, "bottom_right")
 
     -- ---- Right Bar ----
     local rightSection = C:AddSection(scroll, LO["Right Bar Layout"])
@@ -463,6 +513,8 @@ local function BuildLayoutTab(scroll)
         callback = RefreshBars,
     })
 
+    AddBarOrderControls(rightSection, "right")
+
     -- ---- Left Bar (Blizzard: MultiBarLeft = "Right 2") ----
     local leftSection = C:AddSection(scroll, LO["Left Bar Layout"])
 
@@ -481,6 +533,8 @@ local function BuildLayoutTab(scroll)
         width = 200,
         callback = RefreshBars,
     })
+
+    AddBarOrderControls(leftSection, "left")
 
     -- ---- Quick Presets ----
     local presetSection = C:AddSection(scroll, LO["Quick Presets"])
@@ -521,14 +575,22 @@ local function BuildLayoutTab(scroll)
         callback = function()
             C:SetDBValue("mainbars.player.columns", 12)
             C:SetDBValue("mainbars.player.buttons_shown", 12)
+            C:SetDBValue("mainbars.player.change_button_order", false)
+            C:SetDBValue("mainbars.player.button_order", "top_left")
             for _, key in ipairs({"bottom_left", "bottom_right"}) do
                 C:SetDBValue("mainbars." .. key .. ".columns", 12)
                 C:SetDBValue("mainbars." .. key .. ".buttons_shown", 12)
+                C:SetDBValue("mainbars." .. key .. ".change_button_order", false)
+                C:SetDBValue("mainbars." .. key .. ".button_order", "top_left")
             end
             C:SetDBValue("mainbars.right.columns", 1)
             C:SetDBValue("mainbars.right.buttons_shown", 12)
+            C:SetDBValue("mainbars.right.change_button_order", false)
+            C:SetDBValue("mainbars.right.button_order", "top_left")
             C:SetDBValue("mainbars.left.columns", 1)
             C:SetDBValue("mainbars.left.buttons_shown", 12)
+            C:SetDBValue("mainbars.left.change_button_order", false)
+            C:SetDBValue("mainbars.left.button_order", "top_left")
             RefreshBars()
             Panel:SelectTab("actionbars")
             print("|cFF00FF00[DragonUI]|r " .. LO["All bar layouts reset to defaults."])

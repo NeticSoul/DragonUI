@@ -62,6 +62,158 @@ local function CalculateFrameSize(rows, columns, widthPadding, heightPadding, sp
     return width, height
 end
 
+local VALID_BUTTON_ORDERS = {
+    top_left = true,
+    bottom_left = true,
+    top_right = true,
+    bottom_right = true,
+}
+
+local function NormalizeOrderForSingleRow(order, defaultOrder)
+    if order == "top_left" or order == "bottom_left" then
+        if defaultOrder == "top_left" or defaultOrder == "bottom_left" then
+            return defaultOrder
+        end
+    elseif order == "top_right" or order == "bottom_right" then
+        if defaultOrder == "bottom_left" or defaultOrder == "bottom_right" then
+            return "bottom_right"
+        end
+        return "top_right"
+    end
+    return order
+end
+
+local function ResolveBarButtonOrder(barCfg, defaultOrder, rows)
+    defaultOrder = defaultOrder or "bottom_left"
+    if type(barCfg) ~= "table" then
+        return defaultOrder
+    end
+
+    local order = defaultOrder
+    if barCfg.change_button_order then
+        local picked = barCfg.button_order
+        if VALID_BUTTON_ORDERS[picked] then
+            order = picked
+        else
+            order = "top_left"
+        end
+    elseif barCfg.invert_button_order then
+        if defaultOrder == "top_left" then
+            order = "bottom_left"
+        else
+            order = "top_left"
+        end
+    end
+
+    -- Single row: only horizontal direction matters; vertical anchor swap shifts the bar for no gain.
+    if rows and rows <= 1 then
+        order = NormalizeOrderForSingleRow(order, defaultOrder)
+    end
+    return order
+end
+
+local function SetBarGridButtonPoint(button, anchorFrame, row, col, order, hPad, edgePad, step)
+    local sidePad = math.floor((hPad or 0) / 2)
+    edgePad = edgePad or 0
+    local x = sidePad + (col * step)
+    local y = edgePad + (row * step)
+
+    button:ClearAllPoints()
+    if order == "top_left" then
+        button:SetPoint("TOPLEFT", anchorFrame, "TOPLEFT", x, -y)
+    elseif order == "bottom_left" then
+        button:SetPoint("BOTTOMLEFT", anchorFrame, "BOTTOMLEFT", x, y)
+    elseif order == "top_right" then
+        button:SetPoint("TOPRIGHT", anchorFrame, "TOPRIGHT", -x, -y)
+    else
+        button:SetPoint("BOTTOMRIGHT", anchorFrame, "BOTTOMRIGHT", -x, y)
+    end
+end
+
+local function GetSlotAtVisualColumn(row, colFromLeft, columns, slotsInRow, buttonsShown, buttonOrder)
+    local gridCol = colFromLeft
+    if buttonOrder == "top_right" or buttonOrder == "bottom_right" then
+        gridCol = slotsInRow - 1 - colFromLeft
+    end
+    local slot = row * columns + gridCol + 1
+    if slot < 1 or slot > buttonsShown then
+        return nil
+    end
+    return slot
+end
+
+local function AnchorMainBarDividerOnButton(div, button)
+    if not button or not div then
+        return
+    end
+    if div.top then
+        div.top:ClearAllPoints()
+        div.top:SetPoint("TOPLEFT", button, "BOTTOMRIGHT", -3, 39)
+    end
+    if div.bottom then
+        div.bottom:ClearAllPoints()
+        div.bottom:SetPoint("TOPLEFT", button, "BOTTOMRIGHT", -3, 9)
+    end
+    if div.mid and div.top and div.bottom then
+        div.mid:ClearAllPoints()
+        div.mid:SetPoint("CENTER", div.top, 0, -15)
+        div.mid:SetPoint("CENTER", div.bottom, 0, 15)
+    end
+end
+
+-- Dividers sit on visual column boundaries (left-to-right), not slot index order.
+local function UpdateMainBarColumnDividers(columns, rows, buttonsShown, buttonOrder)
+    if not addon.MainBarDividers then
+        return
+    end
+
+    if columns <= 1 then
+        for i = 1, 11 do
+            local div = addon.MainBarDividers[i]
+            if div then
+                if div.top then div.top:Hide() end
+                if div.mid then div.mid:Hide() end
+                if div.bottom then div.bottom:Hide() end
+            end
+        end
+        return
+    end
+
+    local dividerIndex = 0
+    for i = 1, 11 do
+        local div = addon.MainBarDividers[i]
+        if div then
+            if div.top then div.top:Hide() end
+            if div.mid then div.mid:Hide() end
+            if div.bottom then div.bottom:Hide() end
+        end
+    end
+
+    for row = 0, rows - 1 do
+        local slotsInRow = math.min(columns, buttonsShown - row * columns)
+        if slotsInRow > 1 then
+            for colFromLeft = 0, slotsInRow - 2 do
+                dividerIndex = dividerIndex + 1
+                if dividerIndex > 11 then
+                    break
+                end
+                local div = addon.MainBarDividers[dividerIndex]
+                local leftSlot = GetSlotAtVisualColumn(row, colFromLeft, columns, slotsInRow, buttonsShown, buttonOrder)
+                local button = leftSlot and _G["ActionButton" .. leftSlot]
+                if div and button then
+                    AnchorMainBarDividerOnButton(div, button)
+                    if div.top then div.top:Show() end
+                    if div.mid then div.mid:Show() end
+                    if div.bottom then div.bottom:Show() end
+                end
+            end
+        end
+        if dividerIndex > 11 then
+            break
+        end
+    end
+end
+
 -- Arrange action bar buttons in a grid layout
 -- buttonPrefix: e.g. "ActionButton", "MultiBarBottomLeftButton"
 -- parentFrame: frame to resize (optional)
@@ -70,7 +222,7 @@ end
 -- buttonsShown: number of buttons to display (1-12)
 -- widthPadding: total horizontal padding, split equally left/right (default 4 = 2px each side)
 -- heightPadding: total vertical padding, split equally top/bottom
-function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, rows, columns, buttonsShown, widthPadding, heightPadding, spacing)
+function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, rows, columns, buttonsShown, widthPadding, heightPadding, spacing, buttonOrder)
     if InCombatLockdown() then return end
 
     buttonsShown = math.max(1, math.min(12, buttonsShown or 12))
@@ -79,11 +231,14 @@ function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, r
     widthPadding = widthPadding or DEFAULT_PADDING
     heightPadding = heightPadding or DEFAULT_HEIGHT_PADDING
     spacing = spacing or ACTION_BUTTON_SPACING
+    if not VALID_BUTTON_ORDERS[buttonOrder] then
+        buttonOrder = "bottom_left"
+    end
 
     -- Horizontal: symmetric (2px each side)
     -- Vertical: asymmetric — 2px bottom, rest on top (compensates NineSlice border overshoot)
-    local leftPad = math.floor(widthPadding / 2)
-    local bottomPad = 2
+    local edgePad = 2
+    local step = ACTION_BUTTON_SIZE + spacing
 
     -- Is this the MAIN bar?  Main bar buttons always show (Dragonflight look).
     -- Multibar buttons must NOT be forced visible — Blizzard’s
@@ -94,16 +249,11 @@ function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, r
         local button = _G[buttonPrefix .. index]
         if button then
             if index <= buttonsShown then
-                -- Calculate grid position (0-based)
                 local gridIndex = index - 1
                 local row = math.floor(gridIndex / columns)
                 local col = gridIndex % columns
 
-                local x = leftPad + (col * (ACTION_BUTTON_SIZE + spacing))
-                local y = bottomPad + (row * (ACTION_BUTTON_SIZE + spacing))
-
-                button:ClearAllPoints()
-                button:SetPoint('BOTTOMLEFT', anchorFrame, 'BOTTOMLEFT', x, y)
+                SetBarGridButtonPoint(button, anchorFrame, row, col, buttonOrder, widthPadding, edgePad, step)
                 if isMainBar then
                     button:Show()  -- Main bar: always visible
                 end
@@ -610,18 +760,20 @@ end
         'UPDATE_SHAPESHIFT_FORM'
     );
 
-    -- Helper: position buttons for a left/right bar using chain anchoring.
-    -- Position side bar (left/right) buttons in a grid layout using columns.
-    -- Uses TOPLEFT origin so button 1 is at top-left (natural reading order).
-    -- Columns controls layout: 1 = vertical, 12 = horizontal, anything between = grid.
-    local function PositionSideBarButtons(barPrefix, barFrame, containerFrame, count, columns, spacing)
+    -- Helper: position side bar (left/right) buttons in a grid layout using columns.
+    -- buttonOrder sets which corner slot 1 grows from (see SetBarGridButtonPoint).
+    local function PositionSideBarButtons(barPrefix, barFrame, containerFrame, count, columns, spacing, buttonOrder)
         if not barFrame then return end
 
         count   = math.max(1, math.min(12, count or 12))
         columns = math.max(1, math.min(12, columns or 1))
         spacing = spacing or ACTION_BUTTON_SPACING
+        if not VALID_BUTTON_ORDERS[buttonOrder] then
+            buttonOrder = "top_left"
+        end
+        local step = ACTION_BUTTON_SIZE + spacing
 
-        -- Position visible buttons in a TOPLEFT grid
+        -- Position visible buttons in a grid
         -- Side bars are always multibars — do NOT call :Show() on their
         -- buttons.  Blizzard’s ActionButton_Update handles visibility via
         -- the showgrid attribute and the "Always Show Action Bars" CVar.
@@ -632,10 +784,7 @@ end
                     local gridIndex = index - 1
                     local row = math.floor(gridIndex / columns)
                     local col = gridIndex % columns
-                    local x =  col * (ACTION_BUTTON_SIZE + spacing)
-                    local y = -(row * (ACTION_BUTTON_SIZE + spacing))
-                    button:ClearAllPoints()
-                    button:SetPoint('TOPLEFT', barFrame, 'TOPLEFT', x, y)
+                    SetBarGridButtonPoint(button, barFrame, row, col, buttonOrder, 0, 0, step)
                     -- NOT calling button:Show() — let ActionButton_Update decide
                 else
                     button:ClearAllPoints()
@@ -700,16 +849,24 @@ end
         if MultiBarRight then
             local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.rightbar
             local rightCfg = db.right or {}
+            local rightCount = rightCfg.buttons_shown or 12
+            local rightCols = rightCfg.columns or 1
+            local rightRows = math.ceil(rightCount / rightCols)
             PositionSideBarButtons("MultiBarRightButton", MultiBarRight, containerFrame,
-                rightCfg.buttons_shown or 12, rightCfg.columns or 1, btnSpacing)
+                rightCount, rightCols, btnSpacing,
+                ResolveBarButtonOrder(rightCfg, "top_left", rightRows))
         end
 
         -- Left bar: grid layout using columns
         if MultiBarLeft then
             local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.leftbar
             local leftCfg = db.left or {}
+            local leftCount = leftCfg.buttons_shown or 12
+            local leftCols = leftCfg.columns or 1
+            local leftRows = math.ceil(leftCount / leftCols)
             PositionSideBarButtons("MultiBarLeftButton", MultiBarLeft, containerFrame,
-                leftCfg.buttons_shown or 12, leftCfg.columns or 1, btnSpacing)
+                leftCount, leftCols, btnSpacing,
+                ResolveBarButtonOrder(leftCfg, "top_left", leftRows))
         end
     end
 
@@ -1889,8 +2046,7 @@ end
     end
 
     -- Position action bars to their container frames (initialization only - safe during addon load)
-    -- Side bars and bottom bars use BOTTOMLEFT so buttons positioned from BOTTOMLEFT
-    -- or TOPLEFT align exactly with the container edge.
+    -- Side bar containers use TOPLEFT; bottom bars use CENTER inside their overlays.
     local function PositionActionBarsToContainers_Initial()
         -- Position main bar - anchor pUiMainBar to its container (CENTER - has padding/NineSlice)
         if pUiMainBar and addon.ActionBarFrames.mainbar then
@@ -3232,39 +3388,23 @@ function addon.ApplyAllBarButtonCounts()
     -- Auto-compute rows from columns and buttons shown
     local mainRows = math.ceil(mainCount / mainColumns)
 
+    local mainOrder = ResolveBarButtonOrder(playerCfg, "bottom_left", mainRows)
+
     -- Main bar uses ArrangeActionBarButtons for grid layout
     addon.ArrangeActionBarButtons("ActionButton",
         addon.pUiMainBar, addon.pUiMainBar,
         mainRows, mainColumns, mainCount,
-        nil, nil, btnSpacing)
+        nil, nil, btnSpacing, mainOrder)
 
     -- Also apply same layout to BonusActionButtons (vehicle/shapeshift override bar)
     addon.ArrangeActionBarButtons("BonusActionButton",
         nil, addon.pUiMainBar,
         mainRows, mainColumns, mainCount,
-        nil, nil, btnSpacing)
+        nil, nil, btnSpacing, mainOrder)
     EnsureBonusButtonsClickThrough()
 
-    -- Show/hide ThreeSlice dividers between buttons
-    -- Only show dividers in single-row mode (multi-row would look odd)
-    if addon.MainBarDividers then
-        for i = 1, 11 do
-            local div = addon.MainBarDividers[i]
-            if div then
-                if mainRows == 1 and i < mainCount then
-                    -- Single row: show divider between two visible buttons
-                    if div.top then div.top:Show() end
-                    if div.mid then div.mid:Show() end
-                    if div.bottom then div.bottom:Show() end
-                else
-                    -- Multi-row or beyond last button: hide
-                    if div.top then div.top:Hide() end
-                    if div.mid then div.mid:Hide() end
-                    if div.bottom then div.bottom:Hide() end
-                end
-            end
-        end
-    end
+    -- Dividers on visual column boundaries (unchanged when button order changes).
+    UpdateMainBarColumnDividers(mainColumns, mainRows, mainCount, mainOrder)
 
     -- Reposition gryphons to hug the resized main bar
     addon.UpdateGryphonStyle()
@@ -3281,11 +3421,12 @@ function addon.ApplyAllBarButtonCounts()
     local blCols = blCfg.columns or 12
     local blCount = blCfg.buttons_shown or 12
     local blRows = math.ceil(blCount / blCols)
+    local blOrder = ResolveBarButtonOrder(blCfg, "bottom_left", blRows)
     if not MultiBarBottomLeft or MultiBarBottomLeft:IsShown() then
         addon.ArrangeActionBarButtons("MultiBarBottomLeftButton",
             MultiBarBottomLeft, MultiBarBottomLeft,
             blRows, blCols, blCount,
-            0, 0, btnSpacing)
+            0, 0, btnSpacing, blOrder)
     end
 
     -- Bottom Right bar — use grid layout (no padding)
@@ -3293,15 +3434,15 @@ function addon.ApplyAllBarButtonCounts()
     local brCols = brCfg.columns or 12
     local brCount = brCfg.buttons_shown or 12
     local brRows = math.ceil(brCount / brCols)
+    local brOrder = ResolveBarButtonOrder(brCfg, "bottom_left", brRows)
     if not MultiBarBottomRight or MultiBarBottomRight:IsShown() then
         addon.ArrangeActionBarButtons("MultiBarBottomRightButton",
             MultiBarBottomRight, MultiBarBottomRight,
             brRows, brCols, brCount,
-            0, 0, btnSpacing)
+            0, 0, btnSpacing, brOrder)
     end
 
-    -- Left/Right bars: uses TOPLEFT grid layout via PositionSideBarButtons
-    -- which respects columns setting (1=vertical, 12=horizontal, etc.)
+    -- Left/Right bars: grid layout via PositionSideBarButtons (respects columns + button order)
     if addon.PositionActionBars then
         addon.PositionActionBars()
     elseif addon.PositionActionBarsToContainers then

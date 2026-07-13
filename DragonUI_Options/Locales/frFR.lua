@@ -600,6 +600,14 @@ L["Show remaining debuff time on each debuff icon."] = "Affiche la durée restan
 L["Size of debuff icons on nameplates."] = "Taille des icônes d'affaiblissement sur les barres de nom."
 L["Totem Icon Position"] = "Position de l'icône du totem"
 
+-- Layout
+L["Change Button Order"] = "Modifier l'ordre des boutons"
+L["Button Order"] = "Ordre des boutons"
+L["Top Left"] = "Haut gauche"
+L["Bottom Left"] = "Bas gauche"
+L["Top Right"] = "Haut droite"
+L["Bottom Right"] = "Bas droite"
+
 -- Key Press
 L["Key Press"] = "Appui de touche"
 L["Fires action bar abilities the instant you press a key instead of when you release it, shaving reaction-time latency. Most useful for interrupts, dispels, and PvP."] = "Active les sorts de la barre d'actions dès l'appui de la touche, et non au relâchement, réduisant la latence de réaction. Très utile pour les interruptions, dispels et JcJ."
