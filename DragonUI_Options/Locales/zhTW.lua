@@ -381,6 +381,9 @@ L["Choose which category tabs appear on the bag frame. Changes require closing a
 L["Choose which category tabs appear on the inventory bag frame."] = "選擇在揹包視窗上顯示哪些分類標籤頁。"
 L["Choose which category tabs appear on the bank frame."] = "選擇在銀行視窗上顯示哪些分類標籤頁。"
 L["Display"] = "顯示"
+L["Gold Display"] = "金幣顯示"
+L["Text Only"] = "僅文字"
+L["Gold Icons"] = "金幣圖標"
 
 -- 高階模組 - 備用顯示名稱
 L["Main Bars"] = "主動作條"

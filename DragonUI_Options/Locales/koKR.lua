@@ -388,6 +388,9 @@ L["Choose which category tabs appear on the bag frame. Changes require closing a
 L["Choose which category tabs appear on the inventory bag frame."] = "소지품 가방 프레임에 표시할 카테고리 탭 선택"
 L["Choose which category tabs appear on the bank frame."] = "은행 프레임에 표시할 카테고리 탭 선택"
 L["Display"] = "표시"
+L["Gold Display"] = "골드 표시"
+L["Text Only"] = "텍스트만"
+L["Gold Icons"] = "골드 아이콘"
 
 -- Advanced modules - Fallback display names
 L["Main Bars"] = "주 단축바"

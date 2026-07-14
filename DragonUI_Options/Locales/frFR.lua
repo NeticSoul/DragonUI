@@ -640,6 +640,9 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "Af
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "Style de bordure"
+L["Gold Display"] = "Affichage Or"
+L["Text Only"] = "Texte seul"
+L["Gold Icons"] = "Icônes d'Or"
 L["Rounded"] = "Arrondi"
 L["Square"] = "Carré"
 

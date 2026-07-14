@@ -380,6 +380,9 @@ L["Choose which category tabs appear on the bag frame. Changes require closing a
 L["Choose which category tabs appear on the inventory bag frame."] = "Выбрать, какие вкладки категорий отображаются в окне инвентаря."
 L["Choose which category tabs appear on the bank frame."] = "Выбрать, какие вкладки категорий отображаются в окне банка."
 L["Display"] = "Отображение"
+L["Gold Display"] = "Отображение золота"
+L["Text Only"] = "Только текст"
+L["Gold Icons"] = "Значки золота"
 
 -- Advanced modules - Fallback display names
 L["Main Bars"] = "Основные панели"

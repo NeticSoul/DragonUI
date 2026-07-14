@@ -330,7 +330,11 @@ L["Click to sort items in the currently open guild bank tab."] = "현재 열려 
 L["Never moves items between tabs."] = "탭 간에는 절대 아이템을 이동하지 않습니다."
 L["Sort Guild Bank Tab"] = "길드 은행 탭 정렬"
 L["Could not clear locks (config not ready)."] = "ìž ê¸ˆì„ í•´ì œí•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤ (ì„¤ì •ì´ ì•„ì§ ì¤€ë¹„ë˜ì§€ ì•ŠìŒ)."
-L["Cleared all sort-locked slots."] = "ì •ë ¬ ìž ê¸ˆ ìŠ¬ë¡¯ì„ ëª¨ë‘ í•´ì œí–ˆìŠµë‹ˆë‹¤."
+L["Cleared all sort-locked slots."] = "ì •ë ¬ ìž ê¸ˆ ìŠ¬ë¡¯ì „ ëª¨ë' ì§€í•´ì œí–ˆìŠµë‹ˆë‹¤."
+
+-- Sell Scrap
+L["Sell Scrap"] = "ê³*ì²* íŒë§¤"
+L["Open a merchant window first to sell scrap items."] = "ê³*ì²*ì „ íŒë§¤í•˜ë ¤ë©´ ë¨¼ì €€ ìƒì ¸ ì°½ì „ ì—¬ì„¸ìš”."
 
 -- Micromenu Latency
 L["Network"] = "ë„¤íŠ¸ì›Œí¬"

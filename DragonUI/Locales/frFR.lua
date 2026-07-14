@@ -97,6 +97,10 @@ L["Delete Preset"] = "Supprimer le préréglage"
 L["Export Preset"] = "Exporter le préréglage"
 L["Import Preset"] = "Importer le préréglage"
 
+-- Bag Sort (Sell Scrap)
+L["Sell Scrap"] = "Vendre ferraille"
+L["Open a merchant window first to sell scrap items."] = "Ouvrez d'abord une fenêtre de marchand pour vendre la ferraille."
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = "Vous devez être à la banque de guilde."
 L["Could not determine the current guild bank tab."] = "Impossible de déterminer l'onglet actuel de la banque de guilde."

@@ -323,6 +323,10 @@ L["Slot unlocked (bag %d, slot %d)."] = "Ячейка разблокирован
 L["Could not clear locks (config not ready)."] = "Не удалось очистить блокировки (конфигурация не готова)."
 L["Cleared all sort-locked slots."] = "Все заблокированные ячейки очищены."
 
+-- Sell Scrap
+L["Sell Scrap"] = "Продать хлам"
+L["Open a merchant window first to sell scrap items."] = "Сначала откройте окно торговца, чтобы продать хлам."
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = "Вы должны находиться в гильдейском банке."
 L["Could not determine the current guild bank tab."] = "Не удалось определить текущую вкладку гильдейского банка."

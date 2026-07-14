@@ -323,6 +323,10 @@ L["Slot unlocked (bag %d, slot %d)."] = "Slot entsperrt (Tasche %d, Slot %d)."
 L["Could not clear locks (config not ready)."] = "Sperren konnten nicht gelöscht werden (Konfiguration nicht bereit)."
 L["Cleared all sort-locked slots."] = "Alle für das Sortieren gesperrten Slots wurden gelöscht."
 
+-- Sell Scrap
+L["Sell Scrap"] = "Schrott verkaufen"
+L["Open a merchant window first to sell scrap items."] = "Öffne zuerst ein Händlerfenster, um Schrott zu verkaufen."
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = "Du musst dich an der Gildenbank befinden."
 L["Could not determine the current guild bank tab."] = "Die aktuelle Gildenbank-Registerkarte konnte nicht ermittelt werden."

@@ -375,6 +375,9 @@ L["Choose which category tabs appear on the bag frame. Changes require closing a
 L["Choose which category tabs appear on the inventory bag frame."] = "Wähle aus, welche Kategorie-Registerkarten auf dem Inventartaschenrahmen angezeigt werden sollen."
 L["Choose which category tabs appear on the bank frame."] = "Wähle aus, welche Kategorie-Registerkarten im Bankrahmen angezeigt werden sollen."
 L["Display"] = "Bildschirm"
+L["Gold Display"] = "Gold-Anzeige"
+L["Text Only"] = "Nur Text"
+L["Gold Icons"] = "Gold-Icons"
 
 -- Advanced modules - Fallback display names
 L["Main Bars"] = "Hauptleisten"

@@ -97,6 +97,10 @@ L["Delete Preset"] = "刪除預設"
 L["Export Preset"] = "匯出預設"
 L["Import Preset"] = "匯入預設"
 
+-- Bag Sort (Sell Scrap)
+L["Sell Scrap"] = "出售垃圾"
+L["Open a merchant window first to sell scrap items."] = "請先開啟商人視窗再出售垃圾物品。"
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = "你必須在公會銀行。"
 L["Could not determine the current guild bank tab."] = "無法確定目前的公會銀行頁籤。"

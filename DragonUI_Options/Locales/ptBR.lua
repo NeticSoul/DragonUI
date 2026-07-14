@@ -634,6 +634,9 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "Mo
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "Estilo da borda"
+L["Gold Display"] = "Exibição de Ouro"
+L["Text Only"] = "Apenas Texto"
+L["Gold Icons"] = "Ícones de Ouro"
 L["Rounded"] = "Arredondado"
 L["Square"] = "Quadrado"
 

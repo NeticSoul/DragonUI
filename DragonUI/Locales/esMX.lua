@@ -323,6 +323,14 @@ L["Slot unlocked (bag %d, slot %d)."] = "Slot desbloqueado (bolsa %d, slot %d)."
 L["Could not clear locks (config not ready)."] = "No se pudieron limpiar los bloqueos (configuración no lista)."
 L["Cleared all sort-locked slots."] = "Se limpiaron todos los slots bloqueados del ordenado."
 
+-- Sell Scrap
+L["Sell Scrap"] = "Vender Chatarra"
+L["Click to sell all gray (poor) items to vendor."] = "Clic para vender todos los objetos grises (pobres) al vendedor."
+L["A merchant window must be open."] = "Debe estar abierta una ventana de comerciante."
+L["Open a merchant window first to sell scrap items."] = "Abre primero una ventana de comerciante para vender chatarra."
+L["Sold %d scrap item(s) for %s."] = "Vendido(s) %d objeto(s) de chatarra por %s."
+L["No scrap items to sell."] = "No hay objetos de chatarra para vender."
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = "Debes estar en el banco de hermandad."
 L["Could not determine the current guild bank tab."] = "No se pudo determinar la pestaña actual del banco de hermandad."

@@ -380,6 +380,9 @@ L["Choose which category tabs appear on the bag frame. Changes require closing a
 L["Choose which category tabs appear on the inventory bag frame."] = "选择在背包窗口上显示哪些分类标签页。"
 L["Choose which category tabs appear on the bank frame."] = "选择在银行窗口上显示哪些分类标签页。"
 L["Display"] = "显示"
+L["Gold Display"] = "金币显示"
+L["Text Only"] = "仅文字"
+L["Gold Icons"] = "金币图标"
 
 -- 高级模块 - 备用显示名称
 L["Main Bars"] = "主动作条"
