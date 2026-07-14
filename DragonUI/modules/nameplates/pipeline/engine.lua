@@ -405,6 +405,15 @@ local function EngineOnUpdate(_, elapsed)
 
     -- 3. Identity transitions (target / mouseover / focus / threat).
     NP.identity.ProcessContextTransitions()
+
+    -- Client re-reveals native chrome on hover/target continuously; reassert every frame here.
+    if NP.module.targetPlate then
+        NP.discovery.ReassertHotChrome(NP.module.targetPlate)
+    end
+    if NP.module.mouseoverPlate and NP.module.mouseoverPlate ~= NP.module.targetPlate then
+        NP.discovery.ReassertHotChrome(NP.module.mouseoverPlate)
+    end
+
     local threatBuckets = (C and C.THREAT_BUDGET_BUCKETS) or 4
     NP.module._budgetFrame = ((NP.module._budgetFrame or 0) + 1) % threatBuckets
     NP.gather.ProcessThreatTransitions()

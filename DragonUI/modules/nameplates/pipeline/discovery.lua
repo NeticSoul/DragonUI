@@ -273,6 +273,8 @@ function NP.discovery.SuppressNativeChrome(plateData)
     -- etc.) identify nameplates by the native border texture path and gate on IsShown().
     local alphaOnlyChrome = (NP.config.IsBattleGroundHealersLoaded and NP.config.IsBattleGroundHealersLoaded())
         or (NP.config.IsPlateAlphaCompatEnabled and NP.config.IsPlateAlphaCompatEnabled())
+    -- Cached for ReassertHotChrome, which re-suppresses every frame without recomputing cfg/IsAddOnLoaded.
+    plateData._alphaOnlyChrome = alphaOnlyChrome
     if alphaOnlyChrome then
         if plateData.border and plateData.border.SetAlpha then
             plateData.border:SetAlpha(0)
@@ -345,6 +347,12 @@ function NP.discovery.SuppressNativeChrome(plateData)
         end
     end
     NP.native_style.HideRegion(plateData.castBarBorder)
+end
+
+-- Client keeps re-showing native name/bar on hover/target on its own; stomp it every frame here.
+function NP.discovery.ReassertHotChrome(plateData)
+    SuppressNativeFontString(plateData.ogNameText, plateData._alphaOnlyChrome)
+    NP.native_style.NeutralizeStatusBarVisual(plateData.healthBar)
 end
 
 function NP.discovery.RestoreNativeChrome(plateData)
