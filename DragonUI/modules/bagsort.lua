@@ -1053,6 +1053,62 @@ local function AddMove(source, destination)
     tinsert(moves, 1, encode_move(source, destination))
 end
 
+-- Fill partial stacks in target_bags using items from source_bags
+-- (BankStack's core.Stack from stack.lua, ported -- this is what powers BankStack's
+-- /stack command, e.g. topping off bank stacks using items from your bags).
+-- Unlike CompressStacks, the source slot doesn't need to itself be partial:
+-- a full stack in source_bags can still top off a partial stack in target_bags.
+local function StackBagsAcross(source_bags, target_bags)
+    local target_items = {}
+    local target_slots = {}
+    local source_used = {}
+
+    -- Model target_bags: any partial stack is a place items can land.
+    for bag, slot, bagslot in IterateBags(target_bags) do
+        if not IsSlotLocked(bag, slot) then
+            local itemid = bag_ids[bagslot]
+            if itemid and bag_stacks[bagslot] and bag_maxstacks[bagslot] and (bag_stacks[bagslot] ~= bag_maxstacks[bagslot]) then
+                target_items[itemid] = (target_items[itemid] or 0) + 1
+                tinsert(target_slots, bagslot)
+            end
+        end
+    end
+
+    -- Go through source_bags in reverse (matching BankStack), looking for matches.
+    local source_slots = {}
+    for bag, slot, bagslot in IterateBags(source_bags) do
+        if not IsSlotLocked(bag, slot) then
+            tinsert(source_slots, bagslot)
+        end
+    end
+    for si = #source_slots, 1, -1 do
+        local source_slot = source_slots[si]
+        local itemid = bag_ids[source_slot]
+        if itemid and target_items[itemid] then
+            for ti = #target_slots, 1, -1 do
+                local target_slot = target_slots[ti]
+                if bag_ids[source_slot]
+                    and bag_ids[target_slot] == itemid
+                    and target_slot ~= source_slot
+                    and not (bag_stacks[target_slot] == bag_maxstacks[target_slot])
+                    and not source_used[target_slot]
+                then
+                    AddMove(source_slot, target_slot)
+                    source_used[source_slot] = true
+                    if bag_stacks[target_slot] == bag_maxstacks[target_slot] then
+                        target_items[itemid] = (target_items[itemid] > 1) and (target_items[itemid] - 1) or nil
+                    end
+                    if bag_stacks[source_slot] == 0 then
+                        target_items[itemid] = (target_items[itemid] > 1) and (target_items[itemid] - 1) or nil
+                        break
+                    end
+                    if not target_items[itemid] then break end
+                end
+            end
+        end
+    end
+end
+
 -- Compress partial stacks (BankStack's Stack with is_partial filter)
 local function CompressStacks(bags)
     local target_items = {}
@@ -1317,6 +1373,10 @@ local function SortBankBags()
         end
     end
 
+    -- Top off partial bank stacks using matching items from your bags first
+    -- (this is the BankStack /stack behavior -- items from both inventories
+    -- get consolidated into the bank before the bank itself gets sorted).
+    StackBagsAcross(PLAYER_BAGS, BANK_BAGS)
     CompressStacks(BANK_BAGS)
     SortItems(BANK_BAGS)
 
