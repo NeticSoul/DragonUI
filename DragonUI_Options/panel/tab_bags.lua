@@ -365,6 +365,28 @@ local function BuildBagsTab(scroll)
         requiresReload = true,
     })
 
+    C:AddToggle(sortSection, {
+        label = LO["Fill Bank Stacks from Bags"] or "Fill Bank Stacks from Bags",
+        desc = LO["Pull matching items from your bags into partial bank stacks when sorting the bank."] or "Pull matching items from your bags into partial bank stacks when sorting the bank.",
+        getFunc = function()
+            local cfg = GetBagSortConfig(false)
+            if not cfg or cfg.bank_fill_from_bags == nil then
+                return true
+            end
+            return cfg.bank_fill_from_bags
+        end,
+        setFunc = function(val)
+            local cfg = GetBagSortConfig(true)
+            if cfg then
+                cfg.bank_fill_from_bags = val
+            end
+        end,
+        disabled = function()
+            local cfg = GetBagSortConfig(false)
+            return not (cfg and cfg.enabled)
+        end,
+    })
+
     local hotkeyValues = {
         ALT_LEFT = LO["Alt + Left Click"] or "Alt + Left Click",
         CTRL_LEFT = LO["Ctrl + Left Click"] or "Ctrl + Left Click",

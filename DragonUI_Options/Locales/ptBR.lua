@@ -612,6 +612,8 @@ L["Enable Key Press"] = "Ativar pressionar tecla"
 L["Fire abilities on key press instead of key release."] = "Ativa habilidades ao pressionar a tecla, não ao soltar."
 
 -- Bag Sort
+L["Fill Bank Stacks from Bags"] = "Completar pilhas do banco com a bolsa"
+L["Pull matching items from your bags into partial bank stacks when sorting the bank."] = "Ao ordenar o banco, move itens correspondentes da bolsa para pilhas parciais no banco."
 L["Lock Icon Color"] = "Cor do ícone de bloqueio"
 L["Color used to tint the padlock icon shown on locked bag/bank slots."] = "Cor usada para tingir o ícone de cadeado exibido nos slots de bolsa/banco bloqueados."
 

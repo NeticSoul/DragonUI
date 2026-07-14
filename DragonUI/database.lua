@@ -961,6 +961,7 @@ local defaults = {
             },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons
+                bank_fill_from_bags = true, -- Sort bank: top off partial bank stacks from bags first
                 lockedSlots = {}, -- Slots excluded from sorting (key format: "bag:slot")
                 move_interval = 0.1, -- Delay between item move attempts while sorting
                 lock_hotkey = "ALT_LEFT", -- Modifier + mouse button used to lock or unlock a slot
