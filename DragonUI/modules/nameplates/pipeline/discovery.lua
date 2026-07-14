@@ -271,9 +271,6 @@ function NP.discovery.SuppressNativeChrome(plateData)
         if plateData.border and plateData.border.SetAlpha then
             plateData.border:SetAlpha(0)
         end
-        if plateData.border and plateData.border.Hide then
-            plateData.border:Hide()
-        end
     else
         NP.native_style.HideRegion(plateData.border)
     end

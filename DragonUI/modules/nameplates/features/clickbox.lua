@@ -143,15 +143,19 @@ function NP.clickbox.EnsureOverlay(plateData)
     if not plate or not plate.CreateTexture then
         return nil
     end
-    local tex = plate:CreateTexture(nil, "OVERLAY")
+    -- Host on a child frame, not a plate region: GetRegions() order on the native
+    -- plate is read positionally by external plate addons (and our own discovery.lua).
+    local host = CreateFrame("Frame", nil, plate)
+    host:SetAllPoints(plate)
+    local tex = host:CreateTexture(nil, "OVERLAY")
     tex:SetTexture(0.8, 0.1, 0.1, 0.45)
-    tex:SetAllPoints(plate)
+    tex:SetAllPoints(host)
     if tex.SetDrawLayer then
         tex:SetDrawLayer("OVERLAY", 7)
     end
-    tex:Hide()
-    plateData.clickboxOverlay = tex
-    return tex
+    host:Hide()
+    plateData.clickboxOverlay = host
+    return host
 end
 
 function NP.clickbox.SyncOverlay(plateData)
