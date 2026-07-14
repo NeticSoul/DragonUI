@@ -357,8 +357,9 @@ local function EngineOnUpdate(_, elapsed)
 
     -- 1. Harvest native alpha, then force plate root to 1 when target exists.
     -- retailCfg hoisted out of per-plate path (was 40 GetCfg/frame).
-    -- awesome_wotlk only: skip forcing alpha to 1 (stock dims non-target plates; awesome manages alpha/LoS).
-    local skipAlphaForce = C_NamePlate ~= nil
+    -- awesome_wotlk: skip forcing alpha to 1 (stock dims non-target plates; awesome manages alpha/LoS).
+    -- nameplateAlphaCompat: same skip, opt-in for external plate addons that read native alpha as identity (PlateBuffs, Icicle, ...).
+    local skipAlphaForce = C_NamePlate ~= nil or NP.config.IsPlateAlphaCompatEnabled()
     local retailBehavior = NP.module._retailBehavior
     local retailCfg = retailBehavior and NP.config.GetCfg() or nil
     local levelSettleNow = GetTime and GetTime() or 0

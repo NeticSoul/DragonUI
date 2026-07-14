@@ -115,3 +115,8 @@ L["Retail-style skin for Blizzard bag windows"] = "Apparence Retail pour les fen
 L["Version Check"] = "Vérification de version"
 L["Broadcast and detect addon version updates across group members"] = "Détecte les mises à jour de l'addon entre les membres du groupe en envoyant et recevant la version"
 
+-- Nameplate addon compatibility popup
+L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "Utilise la transparence native de la plaque pour identifier la plaque de la cible ; entre en conflit avec le comportement anti-assombrissement par défaut de DragonUI."
+L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works correctly?"] = "|cFFFFFF00%s|r détecté. Activer la compatibilité des addons de plaques de nom pour qu'il fonctionne correctement ?"
+L["Enable"] = "Activer"
+

@@ -115,3 +115,8 @@ L["Retail-style skin for Blizzard bag windows"] = "暴雪背包視窗的正式�
 L["Version Check"] = "版本檢查"
 L["Broadcast and detect addon version updates across group members"] = "檢測隊伍成員間插件版本更新，通過廣播和接收版本資訊"
 
+-- Nameplate addon compatibility popup
+L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "透過名牌的原生透明度來識別目標名牌，與 DragonUI 預設的防變暗行為衝突。"
+L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works correctly?"] = "偵測到 |cFFFFFF00%s|r。是否啟用名牌外掛相容性以使其正常運作？"
+L["Enable"] = "啟用"
+

@@ -248,6 +248,15 @@ local function BuildGeneralSubTab(scroll)
         end,
     })
 
+    local addonCompat = C:AddSection(scroll, LO["Addon Compatibility"])
+    C:AddDescription(addonCompat, LO["Enable this if you use an external nameplate addon (PlateBuffs, Icicle, ...) that isn't detecting DragonUI's nameplates correctly."])
+    C:AddToggle(addonCompat, {
+        label = LO["Nameplate Addon Compatibility"],
+        desc = LO["Stops overriding the nameplate's native transparency/visibility, which some external addons rely on to find their target. Non-target nameplates will dim like vanilla."],
+        dbPath = DB .. ".nameplateAlphaCompat",
+        requiresReload = true,
+    })
+
     local unitPlates = C:AddSection(scroll, LO["Unit Nameplates"])
     local unitCols = C:AddRow(unitPlates, { layout = "Flow" })
 

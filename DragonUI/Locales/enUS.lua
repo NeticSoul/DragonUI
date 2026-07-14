@@ -258,6 +258,11 @@ L["Conflicts with DragonUI's custom unit frame textures and power bar system."] 
 L["Known taint issues when manipulating party frames during combat. DragonUI provides automatic fixes."] = true
 L["Resets minimap mask and blip textures. DragonUI re-applies its custom textures automatically."] = true
 L["SexyMap modifies the minimap borders, shape, and zone text which conflicts with DragonUI's minimap module."] = true
+L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = true
+
+-- Nameplate addon compatibility popup
+L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works correctly?"] = true
+L["Enable"] = true
 
 -- SexyMap compatibility popup
 L["DragonUI - SexyMap Detected"] = true

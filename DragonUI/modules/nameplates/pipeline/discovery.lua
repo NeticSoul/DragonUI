@@ -229,7 +229,7 @@ end
 
 -- Native chrome suppression
 
-local function SuppressNativeFontString(fs)
+local function SuppressNativeFontString(fs, alphaOnly)
     if not fs then
         return
     end
@@ -237,7 +237,10 @@ local function SuppressNativeFontString(fs)
     if fs.SetAlpha then
         fs:SetAlpha(0)
     end
-    fs:Hide()
+    -- alphaOnly (nameplateAlphaCompat): some external addons gate on IsShown(), not just alpha.
+    if not alphaOnly then
+        fs:Hide()
+    end
 end
 
 local function RestoreNativeFontString(fs)
@@ -266,8 +269,11 @@ end
 
 function NP.discovery.SuppressNativeChrome(plateData)
     NP.native_style.NoteNativePlateClassification(plateData)
-    -- BattleGroundHealers identifies nameplates by the native border texture path.
-    if NP.config.IsBattleGroundHealersLoaded and NP.config.IsBattleGroundHealersLoaded() then
+    -- Some external addons (BattleGroundHealers, or nameplateAlphaCompat's PlateBuffs/Icicle
+    -- etc.) identify nameplates by the native border texture path and gate on IsShown().
+    local alphaOnlyChrome = (NP.config.IsBattleGroundHealersLoaded and NP.config.IsBattleGroundHealersLoaded())
+        or (NP.config.IsPlateAlphaCompatEnabled and NP.config.IsPlateAlphaCompatEnabled())
+    if alphaOnlyChrome then
         if plateData.border and plateData.border.SetAlpha then
             plateData.border:SetAlpha(0)
         end
@@ -290,7 +296,7 @@ function NP.discovery.SuppressNativeChrome(plateData)
     -- Custom castbar replaces native cast visuals while active.
     NP.discovery.HideCastChrome(plateData)
 
-    SuppressNativeFontString(plateData.ogNameText)
+    SuppressNativeFontString(plateData.ogNameText, alphaOnlyChrome)
 
     local lvlText = plateData.levelText
     if lvlText then
@@ -319,7 +325,9 @@ function NP.discovery.SuppressNativeChrome(plateData)
         if lvlText.SetAlpha then
             lvlText:SetAlpha(0)
         end
-        lvlText:Hide()
+        if not alphaOnlyChrome then
+            lvlText:Hide()
+        end
     end
 
     local highlight = plateData.highlight
