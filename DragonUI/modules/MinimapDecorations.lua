@@ -158,6 +158,14 @@ local function IsModuleEnabled()
     return true
 end
 
+local function IsMinimapSystemEnabled()
+    local cfg = addon.db and addon.db.profile and addon.db.profile.modules and addon.db.profile.modules.minimap
+    if not cfg or cfg.enabled == nil then
+        return true
+    end
+    return cfg.enabled == true
+end
+
 local function IsHybridModeActive()
     local moduleConfig = addon.db and addon.db.profile and addon.db.profile.modules and addon.db.profile.modules.minimap
     local mode = moduleConfig and moduleConfig.sexymap_mode
@@ -340,7 +348,7 @@ end
 
 local function RefreshMinimapMaskState()
     local minimapModule = addon.MinimapModule
-    if minimapModule and minimapModule.UpdateRotation then
+    if minimapModule and minimapModule.applied and minimapModule.UpdateRotation then
         minimapModule.UpdateRotation()
     end
 end
@@ -716,7 +724,10 @@ function MinimapDecorationsModule:Refresh()
         self:Apply()
     else
         self:Restore()
-        if IsModuleEnabled() then
+        if IsModuleEnabled()
+            and IsMinimapSystemEnabled()
+            and addon.MinimapModule
+            and addon.MinimapModule.applied then
             UpdateDragonUIBorderVisibility()
             RefreshMinimapMaskState()
         end

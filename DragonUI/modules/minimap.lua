@@ -47,6 +47,10 @@ local function IsMinimapSystemActive()
     return IsModuleEnabled() and MinimapModule.applied
 end
 
+local function IsDragonUIMinimapControlling()
+    return MinimapModule.applied or MinimapModule._initializingMinimapSystem
+end
+
 local DEFAULT_MINIMAP_WIDTH = Minimap:GetWidth() * 1.36
 local DEFAULT_MINIMAP_HEIGHT = Minimap:GetHeight() * 1.36
 local blipScale = 1.12
@@ -208,7 +212,7 @@ local function IsSexyMapHybridModeValue(mode)
 end
 
 local function UpdateMinimapMaskForRotation()
-    if not Minimap then return end
+    if not Minimap or not IsDragonUIMinimapControlling() then return end
 
     local isHybridMode = MinimapModule.sexyMapHybridMode
         or MinimapModule._allowExternalMask
@@ -285,7 +289,7 @@ local function ApplyRotateCVar(value)
 end
 
 local function UpdateIndoorRotationPolicy()
-    if not Minimap then return end
+    if not Minimap or not IsDragonUIMinimapControlling() then return end
     if MinimapModule._rotationPolicyUpdating then return end
 
     -- In SexyMap hybrid mode, DragonUI must not control rotateMinimap.
@@ -1048,6 +1052,8 @@ local function CreateMinimapBorderFrame(width, height)
     minimapBorderFrame._duiLastRotateEnabled = nil
     minimapBorderFrame._duiLastAppliedAngle = nil
     minimapBorderFrame:SetScript("OnUpdate", function(self, elapsed)
+        if not IsDragonUIMinimapControlling() then return end
+
         local rotateEnabled = GetCVar("rotateMinimap") == "1"
         local rotationInterval = rotateEnabled and 0.016 or 0.05
 
@@ -1885,6 +1891,8 @@ end
 -- Stored on module table so the hooksecurefunc post-hook can reference it
 -- without calling the global (which would cause infinite recursion)
 MinimapModule.UpdateRotation = function()
+    if not IsDragonUIMinimapControlling() then return end
+
     UpdateIndoorRotationPolicy()
 
     -- In hybrid mode, let SexyMap control the border visibility
@@ -2087,6 +2095,41 @@ end
 -- MODULE ENABLE/DISABLE SYSTEM
 -- =================================================================
 
+local function RestoreVanillaMinimapChrome()
+    if Minimap_UpdateRotationSetting then
+        Minimap_UpdateRotationSetting()
+    end
+    if MinimapBorder then
+        MinimapBorder:Show()
+    end
+    if MinimapBackdrop and MinimapCluster then
+        MinimapBackdrop:ClearAllPoints()
+        MinimapBackdrop:SetPoint("CENTER", MinimapCluster, "CENTER", 0, -20)
+        MinimapModule.backdropYOffset = nil
+    end
+    if MinimapBorderTop then
+        MinimapBorderTop:ClearAllPoints()
+        MinimapBorderTop:SetPoint("TOPRIGHT")
+        MinimapBorderTop:SetTexture("Interface\\Minimap\\UI-Minimap-Border")
+        MinimapBorderTop:SetTexCoord(0.25, 1.0, 0.0, 0.125)
+        MinimapBorderTop:SetSize(192, 32)
+        MinimapBorderTop:SetAlpha(1)
+        MinimapBorderTop:Show()
+    end
+    if Minimap and MinimapModule.activeMinimapScale then
+        Minimap:SetScale(1)
+        MinimapModule.activeMinimapScale = nil
+    end
+    local blizzFrames = {
+        MiniMapTrackingIcon, MiniMapTrackingIconOverlay, MiniMapMailBorder, MiniMapTrackingButtonBorder,
+    }
+    for _, frame in pairs(blizzFrames) do
+        if frame then
+            frame:SetAlpha(1)
+        end
+    end
+end
+
 function MinimapModule:StoreOriginalSettings()
     -- Store original Blizzard minimap settings
     if MinimapCluster then
@@ -2223,9 +2266,10 @@ function MinimapModule:ApplyMinimapSystem()
     HideIntegratedAddonMinimapButtons()
     
     -- Initialize the DragonUI minimap system
+    self._initializingMinimapSystem = true
     self:InitializeMinimapSystem()
-    
     self.applied = true
+    self._initializingMinimapSystem = nil
     self.isEnabled = true -- Legacy compatibility
     
 
@@ -2268,6 +2312,7 @@ function MinimapModule:RestoreMinimapSystem()
         self.frames.minimapFrame = nil
     end
     if self.borderFrame then
+        self.borderFrame:SetScript("OnUpdate", nil)
         self.borderFrame:Hide()
         self.frames.borderFrame = nil
     end
@@ -2321,9 +2366,6 @@ function MinimapModule:RestoreMinimapSystem()
     if MiniMapWorldMapButton then
         MiniMapWorldMapButton:Show()
     end
-    if MinimapBorder then
-        MinimapBorder:Show()
-    end
     if Minimap.Circle then
         Minimap.Circle:Hide()
     end
@@ -2358,13 +2400,17 @@ function MinimapModule:RestoreMinimapSystem()
     -- Cleanup hooks (tracked for debugging)
     CleanupSecureHooks()
 
+    -- Stop DragonUI control before decoration teardown re-syncs rotation/mask state.
+    self.applied = false
+    self._initializingMinimapSystem = nil
+    self.isEnabled = false -- Legacy compatibility
+
     if addon.MinimapDecorations and addon.MinimapDecorations.Restore then
         addon.MinimapDecorations:Restore()
     end
 
-    self.applied = false
-    self.isEnabled = false -- Legacy compatibility
-    
+    RestoreVanillaMinimapChrome()
+
     addon:Print(L["Minimap module restored to Blizzard defaults"])
 end
 
@@ -2556,7 +2602,7 @@ function MinimapModule:Initialize()
     
     -- Check if minimap module is enabled
     if not IsModuleEnabled() then
-        -- Don't apply any DragonUI modifications when disabled
+        RestoreVanillaMinimapChrome()
         return
     end
 
