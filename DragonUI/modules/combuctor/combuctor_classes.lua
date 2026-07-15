@@ -1485,23 +1485,54 @@ do
     local SIZE = 20
     local IsModifierKeyDown = IsModifierKeyDown
 
+    local GEM_ATLAS = [[Interface\AddOns\DragonUI\Textures\RarityGemAtlas]]
+    local GEM_COORDS = {
+        border    = { 0.015625, 0.234375, 0.015625, 0.234375 },
+        highlight = { 0.515625, 0.734375, 0.015625, 0.234375 },
+        flash     = { 0.765625, 0.984375, 0.015625, 0.234375 },
+        [0] = { 0.765625, 0.984375, 0.515625, 0.734375 }, -- poor
+        [1] = { 0.015625, 0.234375, 0.515625, 0.734375 }, -- common
+        [2] = { 0.015625, 0.234375, 0.265625, 0.484375 }, -- uncommon
+        [3] = { 0.265625, 0.484375, 0.265625, 0.484375 }, -- rare
+        [4] = { 0.515625, 0.734375, 0.265625, 0.484375 }, -- epic
+        [5] = { 0.765625, 0.984375, 0.265625, 0.484375 }, -- legendary (covers the artifact flag too)
+        [7] = { 0.265625, 0.484375, 0.515625, 0.734375 }, -- heirloom (atlas slot "gem6")
+    }
+
     function FilterButton:Create(parent, quality, qualityFlag)
-        local button = self:Bind(CreateFrame("CheckButton", nil, parent, "UIRadioButtonTemplate"))
-        button:SetWidth(SIZE)
-        button:SetHeight(SIZE)
+        local button = self:Bind(CreateFrame("CheckButton", nil, parent))
+        button:SetSize(SIZE, SIZE)
         button:SetScript("OnClick", self.OnClick)
         button:SetScript("OnEnter", self.OnEnter)
         button:SetScript("OnLeave", self.OnLeave)
 
-        local bg = button:CreateTexture(nil, "BACKGROUND")
-        bg:SetSize(SIZE / 3, SIZE / 3)
-        bg:SetPoint("CENTER")
+        local border = button:CreateTexture(nil, "BACKGROUND")
+        border:SetAllPoints(button)
+        border:SetTexture(GEM_ATLAS)
+        border:SetTexCoord(unpack(GEM_COORDS.border))
 
+        local gem = button:CreateTexture(nil, "ARTWORK")
+        gem:SetAllPoints(button)
+        gem:SetTexture(GEM_ATLAS)
+        gem:SetTexCoord(unpack(GEM_COORDS[quality] or GEM_COORDS[1]))
+        button.gem = gem
+
+        -- Flash tinted with the rarity color, both on hover and while selected
         local r, g, b = GetItemQualityColor(quality)
-        bg:SetTexture(r * 1.25, g * 1.25, b * 1.25, 0.75)
 
-        button:SetCheckedTexture(bg)
-        button:GetNormalTexture():SetVertexColor(r, g, b)
+        button:SetHighlightTexture(GEM_ATLAS)
+        local hl = button:GetHighlightTexture()
+        hl:SetAllPoints(button)
+        hl:SetTexCoord(unpack(GEM_COORDS.flash))
+        hl:SetBlendMode("ADD")
+        hl:SetVertexColor(r, g, b)
+
+        button:SetCheckedTexture(GEM_ATLAS)
+        local ct = button:GetCheckedTexture()
+        ct:SetAllPoints(button)
+        ct:SetTexCoord(unpack(GEM_COORDS.flash))
+        ct:SetBlendMode("ADD")
+        ct:SetVertexColor(r, g, b)
 
         button.quality = quality
         button.qualityFlag = qualityFlag
@@ -1539,8 +1570,11 @@ do
         GameTooltip:Hide()
     end
 
+    -- Inactive gems dim so the active filter reads at a glance
     function FilterButton:UpdateHighlight(quality)
-        self:SetChecked(bit.band(quality, self.qualityFlag) > 0)
+        local active = bit.band(quality, self.qualityFlag) > 0
+        self:SetChecked(active)
+        self.gem:SetAlpha(active and 1 or 0.4)
     end
 
     local QualityFilter = mod:NewClass("Frame")
@@ -1557,7 +1591,8 @@ do
         f:AddQualityButton(5, mod.QualityFlags[5] + mod.QualityFlags[6])
         f:AddQualityButton(7)
 
-        f:SetWidth(SIZE * 6)
+        -- 7 buttons, 1px apart: real width keeps the row properly centered
+        f:SetWidth(SIZE * 7 + 6)
         f:SetHeight(SIZE)
         f:UpdateHighlight()
 
