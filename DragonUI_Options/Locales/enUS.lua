@@ -369,6 +369,8 @@ L["Choose the modifier + mouse button used to lock or unlock a bag slot while ho
 L["Use /sortlock to lock or unlock the currently hovered slot from chat."] = true
 L["Lock Icon Color"] = true
 L["Color used to tint the padlock icon shown on locked bag/bank slots."] = true
+L["Reverse Stack Order"] = true
+L["Stack sorted items from the end of each bag so empty slots stay at the top."] = true
 L["Alt + Left Click"] = true
 L["Ctrl + Left Click"] = true
 L["Shift + Left Click"] = true
@@ -423,6 +425,21 @@ L["Choose which category tabs appear on the bag frame. Changes require closing a
 L["Choose which category tabs appear on the inventory bag frame."] = true
 L["Choose which category tabs appear on the bank frame."] = true
 L["Display"] = true
+L["Gold Display"] = true
+L["Text Only"] = true
+L["Gold Icons"] = true
+L["Item Scale"] = true
+L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = true
+L["Item Spacing"] = true
+L["Gap between item slots in the grid."] = true
+L["Quality Glow"] = true
+L["Show a colored ring on uncommon and better items."] = true
+L["Quest Item Glow"] = true
+L["Highlight quest items with a golden border."] = true
+L["Glow Intensity"] = true
+L["Opacity of the quality ring on item slots."] = true
+L["Quality Filter Row"] = true
+L["Show the rarity filter dots at the bottom of the bag frame."] = true
 
 -- Advanced modules - Fallback display names
 L["Main Bars"] = true

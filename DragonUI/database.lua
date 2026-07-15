@@ -955,7 +955,14 @@ local defaults = {
                 editboxStyle = "dark", -- Editbox background style: "none", "dark", "dragon", "nocturne"
             },
             combuctor = {
-                enabled = false -- All-in-one bag replacement with filtering and search
+                enabled = false, -- All-in-one bag replacement with filtering and search
+                money_display = "icons", -- Coin display: "icons" (g/s/c icons) or "text"
+                item_scale = 1, -- Maximum item slot scale in the grid
+                item_spacing = 2, -- Gap in pixels between item slots
+                glow_quality = true, -- Colored ring on uncommon and better items
+                glow_quest = true, -- Golden border on quest items
+                glow_alpha = 1, -- Quality ring opacity
+                show_quality_filter = true, -- Rarity filter dots centered on the bottom band
             },
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin
@@ -966,7 +973,8 @@ local defaults = {
                 lockedSlots = {}, -- Slots excluded from sorting (key format: "bag:slot")
                 move_interval = 0.1, -- Delay between item move attempts while sorting
                 lock_hotkey = "ALT_LEFT", -- Modifier + mouse button used to lock or unlock a slot
-                lock_color = { 0.15, 0.80, 1.00, 0.95 } -- Tint applied to the locked-slot padlock icon
+                lock_color = { 0.15, 0.80, 1.00, 0.95 }, -- Tint applied to the locked-slot padlock icon
+                reverse_stack = false, -- Stack items from the end so new loot appears at the top
             },
             unitframe_layers = {
                 enabled = false, -- Heal prediction, absorb shields, animated health loss overlays on unit frames

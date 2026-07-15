@@ -328,6 +328,14 @@ L["Slot unlocked (bag %d, slot %d)."] = true
 L["Could not clear locks (config not ready)."] = true
 L["Cleared all sort-locked slots."] = true
 
+-- Sell Scrap
+L["Sell Scrap"] = true
+L["Click to sell all gray (poor) items to vendor."] = true
+L["A merchant window must be open."] = true
+L["Open a merchant window first to sell scrap items."] = true
+L["Sold %d scrap item(s) for %s."] = true
+L["No scrap items to sell."] = true
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = true
 L["Could not determine the current guild bank tab."] = true

@@ -335,11 +335,10 @@ combatFrame:SetScript("OnEvent", function(self, event)
     for key, entry in pairs(registry) do
         entry.state.inCombat = inCombat
         VF.Update(key)
-        -- A later hover change can't safely toggle EnableMouse mid-combat (protected on secure action
-        -- buttons), so pre-arm it enabled for the whole fight right here, at the one safe write point.
+        -- EnableMouse is protected mid-combat on secure buttons; arm once for hover/combat-show bars.
         if inCombat and entry.clickThrough and entry.hoverFrames then
             local cfg = GetConfig(entry)
-            if cfg and cfg.show_in_combat then
+            if cfg and (cfg.show_in_combat or cfg.show_on_hover) then
                 for _, frame in ipairs(entry.hoverFrames) do
                     if frame and frame.EnableMouse then frame:EnableMouse(true) end
                 end

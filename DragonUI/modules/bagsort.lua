@@ -9,7 +9,6 @@ end
 -- BAG SORT MODULE FOR DRAGONUI
 -- Sorts items in bags and bank by type, rarity, level, name.
 -- Adds sort buttons to both Combustor frames and vanilla bag/bank frames.
--- Inspired by BankStack sorting algorithm adapted for DragonUI.
 -- ============================================================================
 
 -- Module state tracking
@@ -1061,7 +1060,7 @@ local function AddMove(source, destination)
     tinsert(moves, 1, encode_move(source, destination))
 end
 
--- BankStack Stack: fill partial target stacks from source_bags (reverse iteration).
+-- Fill partial target stacks from source_bags (reverse iteration).
 -- require_partial_source: same-bag compress skips full sources; cross-bag allows them.
 local function StackBags(source_bags, target_bags, require_partial_source)
     local target_items = {}
@@ -1124,7 +1123,7 @@ local function StackBagsAcross(source_bags, target_bags)
     StackBags(source_bags, target_bags, false)
 end
 
--- Check if a move actually needs to happen (exact BankStack logic)
+-- Check if a move actually needs to happen
 local function ShouldActuallyMove(source, destination)
     if destination == source then return end
     if not bag_ids[source] then return end
@@ -1135,7 +1134,7 @@ local function ShouldActuallyMove(source, destination)
     return true
 end
 
--- Update sorted array after scheduling a move (exact BankStack logic)
+-- Update sorted array after scheduling a move
 local function UpdateSorted(sorted, source, destination)
     for i, bs in pairs(sorted) do
         if bs == source then
@@ -1146,7 +1145,7 @@ local function UpdateSorted(sorted, source, destination)
     end
 end
 
--- Sort items in the given bags (exact BankStack core.Sort logic)
+-- Sort items in the given bags
 local function SortItems(bags)
     if not item_types then BuildSortOrder() end
 
@@ -1161,6 +1160,18 @@ local function SortItems(bags)
     end
 
     table.sort(sources, DefaultSorter)
+
+    -- When reverse_stack is enabled, items are placed at the end of each bag
+    -- instead of the front. This leaves empty slots at the top of Combuctor
+    -- so new loot is immediately visible without scrolling.
+    local cfg = GetModuleConfig()
+    if cfg and cfg.reverse_stack then
+        local reversed = {}
+        for i = #destinations, 1, -1 do
+            tinsert(reversed, destinations[i])
+        end
+        destinations = reversed
+    end
 
     local bag_locked = {}
     local another_pass = true
@@ -1464,6 +1475,7 @@ local function CreateActionButton(name, parent, onClick, tooltipTitle, scale, ic
     highlight:SetAllPoints()
     highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
     highlight:SetBlendMode("ADD")
+    btn.highlight = highlight
 
     -- Pushed feedback
     btn:SetScript("OnMouseDown", function(self)
@@ -1542,11 +1554,79 @@ local function CreateClearLocksButton(name, parent, scale)
 end
 
 -- ============================================================================
+-- SELL SCRAP
+-- ============================================================================
+
+local function FormatMoney(copper)
+    local gold = math.floor(copper / 10000)
+    local silver = math.floor((copper % 10000) / 100)
+    local copperRem = copper % 100
+    if gold > 0 then
+        return string.format("|cffffd700%dg|r |cffc0c0c0%ds|r |cffeda55f%dc|r", gold, silver, copperRem)
+    elseif silver > 0 then
+        return string.format("|cffc0c0c0%ds|r |cffeda55f%dc|r", silver, copperRem)
+    else
+        return string.format("|cffeda55f%dc|r", copperRem)
+    end
+end
+
+local function SellScrapItems()
+    if not MerchantFrame or not MerchantFrame:IsShown() then
+        print("|cffff9900DragonUI|r: " .. T("Open a merchant window first to sell scrap items.", "Open a merchant window first to sell scrap items."))
+        return
+    end
+
+    local soldCount = 0
+    local totalValue = 0
+
+    for bag = 0, 4 do
+        for slot = 1, GetContainerNumSlots(bag) do
+            local itemID = GetContainerItemID(bag, slot)
+            if itemID then
+                local _, _, quality, _, iType, _, _, _, _, _, sellPrice = GetItemInfo(itemID)
+                if quality == 0 and iType and iType ~= "Quest" and sellPrice and sellPrice > 0 then
+                    local stackCount = select(2, GetContainerItemInfo(bag, slot)) or 1
+                    UseContainerItem(bag, slot)
+                    soldCount = soldCount + 1
+                    totalValue = totalValue + (sellPrice * stackCount)
+                end
+            end
+        end
+    end
+
+    if soldCount > 0 then
+        print("|cffff9900DragonUI|r: " .. string.format(T("Sold %d scrap item(s) for %s.", "Sold %d scrap item(s) for %s."), soldCount, FormatMoney(totalValue)))
+    else
+        print("|cffff9900DragonUI|r: " .. T("No scrap items to sell.", "No scrap items to sell."))
+    end
+end
+
+local function CreateSellScrapButton(name, parent, scale)
+    local function BuildTooltipLines()
+        return {
+            T("Click to sell all gray (poor) items to vendor.", "Click to sell all gray (poor) items to vendor."),
+            T("A merchant window must be open.", "A merchant window must be open.")
+        }
+    end
+
+    return CreateActionButton(
+        name,
+        parent,
+        SellScrapItems,
+        T("Sell Scrap", "Sell Scrap"),
+        scale,
+        "Interface\\Icons\\INV_Misc_Coin_01",
+        BuildTooltipLines
+    )
+end
+
+-- ============================================================================
 -- COMBUSTOR BUTTON INTEGRATION
 -- ============================================================================
 
 local combustorBagSortBtn, combustorBankSortBtn
 local combustorBagClearBtn, combustorBankClearBtn
+local combustorBagSellScrapBtn, combustorBankSellScrapBtn
 local bagnonBagSortBtn, bagnonBankSortBtn
 local bagnonBagClearBtn, bagnonBankClearBtn
 local vanillaGuildBankSortBtn, bagnonGuildBankSortBtn
@@ -1555,62 +1635,98 @@ local function GetCombuctorFrame(index)
     return _G["DragonUI_CombuctorFrame" .. index]
 end
 
-local function AttachCombuctorButtons(frame, sortRef, clearRef, sortFunc, sortBtnName, clearBtnName, tooltipText)
-    if sortRef and clearRef then return sortRef, clearRef end
+local function AttachCombuctorButtons(frame, sortRef, clearRef, sellScrapRef, sortFunc, sortBtnName, clearBtnName, sellScrapBtnName, tooltipText)
+    if sortRef and clearRef and (not sellScrapBtnName or sellScrapRef) then
+        return sortRef, clearRef, sellScrapRef
+    end
 
     local frameName = frame:GetName()
     local searchBox = _G[frameName .. "Search"]
-    local resetBtn = _G[frameName .. "Reset"]
     local bagToggle = _G[frameName .. "BagToggle"]
+    local resetBtn = _G[frameName .. "Reset"]
 
-    -- Shrink the search bar to make room for the sort button
-    if searchBox then
-        searchBox:ClearAllPoints()
-        searchBox:SetPoint("TOPLEFT", frame, "TOPLEFT", 84, -44)
-        -- Reserve extra room for sort + clear-locks buttons.
-        searchBox:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -176, -44)
+    local sortBtn = sortRef or CreateSortButton(sortBtnName, frame, sortFunc, tooltipText, 0.55)
+    local clearBtn = clearRef or CreateClearLocksButton(clearBtnName, frame, 0.55)
+    local sellScrapBtn = sellScrapRef
+    if sellScrapBtnName and not sellScrapRef then
+        sellScrapBtn = CreateSellScrapButton(sellScrapBtnName, frame, 0.55)
     end
 
-    local sortBtn = sortRef or CreateSortButton(sortBtnName, frame, sortFunc, tooltipText, 0.70)
-    local clearBtn = clearRef or CreateClearLocksButton(clearBtnName, frame, 0.70)
-
-    -- Insert between Reset and BagToggle in the anchor chain
-    if resetBtn then
-        sortBtn:SetPoint("LEFT", resetBtn, "RIGHT", -6, 2)
-        clearBtn:SetPoint("RIGHT", sortBtn, "LEFT", -2, 0)
-    else
-        sortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -36, -42)
-        clearBtn:SetPoint("RIGHT", sortBtn, "LEFT", -2, 0)
+    -- Dragonflight action-button chrome for the header buttons (same recipe as buttons.lua)
+    local function StyleHeaderButton(b)
+        if not b or b._combuctorStyled then return end
+        b._combuctorStyled = true
+        b:SetSize(22, 22)
+        b.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+        b.border:SetTexture(addon._dir .. "uiactionbariconframe")
+        b.border:ClearAllPoints()
+        b.border:SetPoint("TOPRIGHT", b, "TOPRIGHT", 2.2, 2.3)
+        b.border:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -2.2, -2.2)
+        if b.highlight then
+            b.highlight:SetTexture(addon._dir .. "uiactionbariconframehighlight")
+            b.highlight:ClearAllPoints()
+            b.highlight:SetAllPoints(b.border)
+        end
+        b:SetScript("OnMouseDown", function(self)
+            self.icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+        end)
+        b:SetScript("OnMouseUp", function(self)
+            self.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+        end)
     end
+    StyleHeaderButton(sortBtn)
+    StyleHeaderButton(clearBtn)
+    StyleHeaderButton(sellScrapBtn)
 
-    -- Re-anchor BagToggle to the right of our sort button
+    -- Single header row: [ searchBox ][ sellScrap ][ clearBtn ][ sortBtn ][ bagToggle ]
     if bagToggle then
         bagToggle:ClearAllPoints()
-        bagToggle:SetPoint("LEFT", sortBtn, "RIGHT", 0, 0)
+        bagToggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -30)
     end
+
+    sortBtn:ClearAllPoints()
+    if bagToggle then
+        sortBtn:SetPoint("RIGHT", bagToggle, "LEFT", -6, 0)
+    else
+        sortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -44, -32)
+    end
+
+    clearBtn:ClearAllPoints()
+    clearBtn:SetPoint("RIGHT", sortBtn, "LEFT", -4, 0)
+
+    if sellScrapBtn then
+        sellScrapBtn:ClearAllPoints()
+        sellScrapBtn:SetPoint("RIGHT", clearBtn, "LEFT", -4, 0)
+    end
+
+    -- Search box is fixed-width on the left; nothing to shrink anymore
 
     sortBtn:Show()
     clearBtn:Show()
-    return sortBtn, clearBtn
+    if sellScrapBtn then sellScrapBtn:Show() end
+    return sortBtn, clearBtn, sellScrapBtn
 end
 
 local function CreateCombuctorSortButtons()
     local inventoryFrame = GetCombuctorFrame(1)
     local bankFrame = GetCombuctorFrame(2)
 
-    if inventoryFrame and (not combustorBagSortBtn or not combustorBagClearBtn) then
-        combustorBagSortBtn, combustorBagClearBtn = AttachCombuctorButtons(
-            inventoryFrame, combustorBagSortBtn, combustorBagClearBtn,
-            SortPlayerBags, "DragonUI_CombuctorBagSortBtn", "DragonUI_CombuctorBagClearBtn", T("Sort Bags", "Sort Bags")
+    if inventoryFrame and (not combustorBagSortBtn or not combustorBagClearBtn or not combustorBagSellScrapBtn) then
+        combustorBagSortBtn, combustorBagClearBtn, combustorBagSellScrapBtn = AttachCombuctorButtons(
+            inventoryFrame, combustorBagSortBtn, combustorBagClearBtn, combustorBagSellScrapBtn,
+            SortPlayerBags, "DragonUI_CombuctorBagSortBtn", "DragonUI_CombuctorBagClearBtn", "DragonUI_CombuctorBagSellScrapBtn",
+            T("Sort Bags", "Sort Bags")
         )
         BagSortModule.frames.combustorBagSortBtn = combustorBagSortBtn
         BagSortModule.frames.combustorBagClearBtn = combustorBagClearBtn
+        BagSortModule.frames.combustorBagSellScrapBtn = combustorBagSellScrapBtn
     end
 
     if bankFrame and (not combustorBankSortBtn or not combustorBankClearBtn) then
         combustorBankSortBtn, combustorBankClearBtn = AttachCombuctorButtons(
-            bankFrame, combustorBankSortBtn, combustorBankClearBtn,
-            SortBankBags, "DragonUI_CombuctorBankSortBtn", "DragonUI_CombuctorBankClearBtn", T("Sort Bank", "Sort Bank")
+            bankFrame, combustorBankSortBtn, combustorBankClearBtn, nil,
+            SortBankBags, "DragonUI_CombuctorBankSortBtn", "DragonUI_CombuctorBankClearBtn", nil,
+            T("Sort Bank", "Sort Bank")
         )
         BagSortModule.frames.combustorBankSortBtn = combustorBankSortBtn
         BagSortModule.frames.combustorBankClearBtn = combustorBankClearBtn
@@ -1699,6 +1815,30 @@ local function CreateVanillaGuildBankSortButton()
     BagSortModule.frames.vanillaGuildBankSortBtn = vanillaGuildBankSortBtn
 end
 
+local combuctorGuildSortBtn
+local function CreateCombuctorGuildBankSortButton()
+    if combuctorGuildSortBtn then return end
+    local frame = _G["DragonUI_CombuctorFrame3"]
+    if not frame or not frame.itemFrame then return end
+
+    -- Parented to the item grid so it auto-hides on the Log/Money/Info mode tabs
+    combuctorGuildSortBtn = CreateGuildBankSortButton("DragonUI_CombuctorGuildSortBtn", frame.itemFrame)
+    combuctorGuildSortBtn:SetSize(22, 22)
+    combuctorGuildSortBtn.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    combuctorGuildSortBtn.border:SetTexture(addon._dir .. "uiactionbariconframe")
+    combuctorGuildSortBtn.border:ClearAllPoints()
+    combuctorGuildSortBtn.border:SetPoint("TOPRIGHT", combuctorGuildSortBtn, "TOPRIGHT", 2.2, 2.3)
+    combuctorGuildSortBtn.border:SetPoint("BOTTOMLEFT", combuctorGuildSortBtn, "BOTTOMLEFT", -2.2, -2.2)
+    if combuctorGuildSortBtn.highlight then
+        combuctorGuildSortBtn.highlight:SetTexture(addon._dir .. "uiactionbariconframehighlight")
+        combuctorGuildSortBtn.highlight:ClearAllPoints()
+        combuctorGuildSortBtn.highlight:SetAllPoints(combuctorGuildSortBtn.border)
+    end
+    combuctorGuildSortBtn:ClearAllPoints()
+    combuctorGuildSortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -31)
+    BagSortModule.frames.combuctorGuildSortBtn = combuctorGuildSortBtn
+end
+
 local function CreateBagnonGuildBankSortButton()
     if bagnonGuildBankSortBtn then return end
     local frame = GetBagnonFrame("guildbank")
@@ -1720,6 +1860,7 @@ end
 
 local vanillaBagSortBtn, vanillaBankSortBtn
 local vanillaBagClearBtn, vanillaBankClearBtn
+local vanillaBagSellScrapBtn
 
 local function CreateVanillaBagSortButton()
     if vanillaBagSortBtn then return end
@@ -1732,10 +1873,13 @@ local function CreateVanillaBagSortButton()
         0.63
     )
     vanillaBagClearBtn = CreateClearLocksButton("DragonUI_VanillaBagClearBtn", UIParent, 0.63)
+    vanillaBagSellScrapBtn = CreateSellScrapButton("DragonUI_VanillaBagSellScrapBtn", UIParent, 0.63)
     vanillaBagSortBtn:Hide()
     vanillaBagClearBtn:Hide()
+    vanillaBagSellScrapBtn:Hide()
     BagSortModule.frames.vanillaBagSortBtn = vanillaBagSortBtn
     BagSortModule.frames.vanillaBagClearBtn = vanillaBagClearBtn
+    BagSortModule.frames.vanillaBagSellScrapBtn = vanillaBagSellScrapBtn
 end
 
 -- Find which ContainerFrame is currently showing bag 0 (backpack)
@@ -1754,8 +1898,10 @@ local function UpdateVanillaBagSortButton()
     if backpack then
         vanillaBagSortBtn:SetParent(backpack)
         vanillaBagClearBtn:SetParent(backpack)
+        vanillaBagSellScrapBtn:SetParent(backpack)
         vanillaBagSortBtn:ClearAllPoints()
         vanillaBagClearBtn:ClearAllPoints()
+        vanillaBagSellScrapBtn:ClearAllPoints()
         local titleAnchor = _G[backpack:GetName() .. "Name"]
         local skinChrome = backpack._dragonuiBagChrome
         if addon:IsModuleEnabled("bags_skin")
@@ -1765,13 +1911,17 @@ local function UpdateVanillaBagSortButton()
         end
         vanillaBagSortBtn:SetPoint("TOP", titleAnchor, "BOTTOM", 70.5, -6.5)
         vanillaBagClearBtn:SetPoint("RIGHT", vanillaBagSortBtn, "LEFT", -3, 0)
+        vanillaBagSellScrapBtn:SetPoint("RIGHT", vanillaBagClearBtn, "LEFT", -3, 0)
         vanillaBagSortBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
         vanillaBagClearBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
+        vanillaBagSellScrapBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
         vanillaBagSortBtn:Show()
         vanillaBagClearBtn:Show()
+        vanillaBagSellScrapBtn:Show()
     else
         vanillaBagSortBtn:Hide()
         vanillaBagClearBtn:Hide()
+        vanillaBagSellScrapBtn:Hide()
     end
 end
 
@@ -1816,6 +1966,7 @@ UpdateButtonVisibility = function()
         CreateCombuctorSortButtons()
         if combustorBagSortBtn then combustorBagSortBtn:Show() end
         if combustorBagClearBtn then combustorBagClearBtn:Show() end
+        if combustorBagSellScrapBtn then combustorBagSellScrapBtn:Show() end
         if combustorBankSortBtn then combustorBankSortBtn:Show() end
         if combustorBankClearBtn then combustorBankClearBtn:Show() end
         if bagnonBagSortBtn then bagnonBagSortBtn:Hide() end
@@ -1824,6 +1975,7 @@ UpdateButtonVisibility = function()
         if bagnonBankClearBtn then bagnonBankClearBtn:Hide() end
         if vanillaBagSortBtn then vanillaBagSortBtn:Hide() end
         if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
+        if vanillaBagSellScrapBtn then vanillaBagSellScrapBtn:Hide() end
         if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
         if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
     elseif IsBagnonLoaded() then
@@ -1834,10 +1986,12 @@ UpdateButtonVisibility = function()
         if bagnonBankClearBtn then bagnonBankClearBtn:Show() end
         if vanillaBagSortBtn then vanillaBagSortBtn:Hide() end
         if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
+        if vanillaBagSellScrapBtn then vanillaBagSellScrapBtn:Hide() end
         if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
         if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
         if combustorBagSortBtn then combustorBagSortBtn:Hide() end
         if combustorBagClearBtn then combustorBagClearBtn:Hide() end
+        if combustorBagSellScrapBtn then combustorBagSellScrapBtn:Hide() end
         if combustorBankSortBtn then combustorBankSortBtn:Hide() end
         if combustorBankClearBtn then combustorBankClearBtn:Hide() end
     else
@@ -1852,12 +2006,21 @@ UpdateButtonVisibility = function()
         if bagnonBankClearBtn then bagnonBankClearBtn:Hide() end
         if combustorBagSortBtn then combustorBagSortBtn:Hide() end
         if combustorBagClearBtn then combustorBagClearBtn:Hide() end
+        if combustorBagSellScrapBtn then combustorBagSellScrapBtn:Hide() end
         if combustorBankSortBtn then combustorBankSortBtn:Hide() end
         if combustorBankClearBtn then combustorBankClearBtn:Hide() end
     end
 
     CreateVanillaGuildBankSortButton()
     CreateBagnonGuildBankSortButton()
+    CreateCombuctorGuildBankSortButton()
+    if combuctorGuildSortBtn then
+        if guild_bank_open and IsCombuctorEnabled() then
+            combuctorGuildSortBtn:Show()
+        else
+            combuctorGuildSortBtn:Hide()
+        end
+    end
     if vanillaGuildBankSortBtn then
         -- Only "bank" mode shows item slots (vs. log/money log/info sub-tabs).
         if guild_bank_open and _G.GuildBankFrame and _G.GuildBankFrame.mode == "bank" then
@@ -1969,6 +2132,12 @@ ApplyBagSortSystem = function()
                 end)
             end
             UpdateButtonVisibility()
+            -- Second pass: the Combuctor guild frame may be created lazily by this same event
+            addon:After(0.3, function()
+                if BagSortModule.applied and guild_bank_open then
+                    UpdateButtonVisibility()
+                end
+            end)
         elseif event == "GUILDBANKFRAME_CLOSED" then
             guild_bank_open = false
         end
@@ -2037,10 +2206,12 @@ local function RestoreBagSortSystem()
     if bagnonBankClearBtn then bagnonBankClearBtn:Hide() end
     if vanillaBagSortBtn then vanillaBagSortBtn:Hide() end
     if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
+    if vanillaBagSellScrapBtn then vanillaBagSellScrapBtn:Hide() end
     if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
     if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
     if vanillaGuildBankSortBtn then vanillaGuildBankSortBtn:Hide() end
     if bagnonGuildBankSortBtn then bagnonGuildBankSortBtn:Hide() end
+    if combuctorGuildSortBtn then combuctorGuildSortBtn:Hide() end
 
     -- Remove slash commands
     SlashCmdList["DRAGONUI_SORT"] = nil

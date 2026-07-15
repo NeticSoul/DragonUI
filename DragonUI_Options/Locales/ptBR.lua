@@ -634,6 +634,21 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "Mo
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "Estilo da borda"
+L["Gold Display"] = "Exibição de Ouro"
+L["Text Only"] = "Apenas Texto"
+L["Gold Icons"] = "Ícones de Ouro"
+L["Item Scale"] = "Escala dos Itens"
+L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = "Tamanho máximo dos espaços de item. A grade os reduz para caber na janela."
+L["Item Spacing"] = "Espaçamento dos Itens"
+L["Gap between item slots in the grid."] = "Espaço entre os espaços de item na grade."
+L["Quality Glow"] = "Brilho de Qualidade"
+L["Show a colored ring on uncommon and better items."] = "Mostra um anel colorido em itens de qualidade incomum ou superior."
+L["Quest Item Glow"] = "Brilho de Itens de Missão"
+L["Highlight quest items with a golden border."] = "Destaca itens de missão com uma borda dourada."
+L["Glow Intensity"] = "Intensidade do Brilho"
+L["Opacity of the quality ring on item slots."] = "Opacidade do anel de qualidade nos espaços de item."
+L["Quality Filter Row"] = "Linha de Filtro de Qualidade"
+L["Show the rarity filter dots at the bottom of the bag frame."] = "Mostra os pontos de filtro de raridade na parte inferior da janela das bolsas."
 L["Rounded"] = "Arredondado"
 L["Square"] = "Quadrado"
 

@@ -97,6 +97,14 @@ L["Delete Preset"] = "Excluir Predefinicao"
 L["Export Preset"] = "Exportar Predefinicao"
 L["Import Preset"] = "Importar Predefinicao"
 
+-- Bag Sort (Sell Scrap)
+L["Sell Scrap"] = "Vender Sucata"
+L["Click to sell all gray (poor) items to vendor."] = "Clique para vender todos os itens cinzas (ruins) ao vendedor."
+L["A merchant window must be open."] = "Uma janela de vendedor deve estar aberta."
+L["Open a merchant window first to sell scrap items."] = "Abra uma janela de vendedor primeiro para vender sucata."
+L["Sold %d scrap item(s) for %s."] = "Vendido(s) %d item(ns) de sucata por %s."
+L["No scrap items to sell."] = "Nenhum item de sucata para vender."
+
 -- Guild Bank Sort
 L["You must be at the guild bank."] = "Você precisa estar no banco da guilda."
 L["Could not determine the current guild bank tab."] = "Não foi possível determinar a aba atual do banco da guilda."
