@@ -292,7 +292,8 @@ do
         else
             tab:SetPoint("TOPLEFT", f, "TOPRIGHT", 1, -60)
         end
-        tab:SetScript("OnClick", function(self)
+        tab:RegisterForClicks("anyUp")
+        tab:SetScript("OnClick", function(self, button)
             if self.buyTab then
                 StaticPopup_Show("DRAGONUI_BUY_GUILDBANK_TAB")
                 f:UpdateTabChecks()
@@ -304,6 +305,10 @@ do
             f:UpdateTabChecks()
             if f.mode ~= "bank" then
                 f:RefreshMode()
+            end
+            -- Vanilla behavior: right-click opens the tab icon/name editor
+            if button == "RightButton" and CanEditGuildTabInfo(self:GetID()) then
+                f:ShowTabEditPopup(self:GetID())
             end
         end)
         tab:SetScript("OnEnter", function(self)
@@ -609,6 +614,145 @@ do
         self.itemFrame:SetSearch(text)
     end
 
+    -- Own tiny icon/name editor: same public APIs as the stock popup, zero dependency
+    -- on the suppressed vault addon (loading it lets UIParent resurrect the stock frame)
+    local EDIT_COLS, EDIT_ROWS = 5, 4
+    local EDIT_PER_PAGE = EDIT_COLS * EDIT_ROWS
+
+    local function CreateTabEditor(f)
+        local ed = CreateFrame("Frame", f:GetName() .. "TabEditor", f)
+        ed:SetSize(EDIT_COLS * 38 + 26, 288)
+        ed:SetPoint("TOPLEFT", f, "TOPRIGHT", 42, 0)
+        ed:SetFrameStrata("DIALOG")
+        ed:EnableMouse(true)
+        ed:SetBackdrop({
+            bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            edgeSize = 12,
+            insets = { left = 3, right = 3, top = 3, bottom = 3 },
+        })
+        ed:SetBackdropColor(0, 0, 0, 0.85)
+        ed:SetBackdropBorderColor(0.4, 0.4, 0.4, 0.9)
+        tinsert(UISpecialFrames, ed:GetName())
+
+        local nameBox = CreateFrame("EditBox", ed:GetName() .. "Name", ed, "InputBoxTemplate")
+        nameBox:SetSize(EDIT_COLS * 38 - 12, 20)
+        nameBox:SetPoint("TOP", 4, -14)
+        nameBox:SetAutoFocus(false)
+        nameBox:SetMaxLetters(15)
+        nameBox:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
+        nameBox:SetScript("OnEnterPressed", function(s) s:ClearFocus() end)
+        ed.nameBox = nameBox
+
+        ed.icons = {}
+        for i = 1, EDIT_PER_PAGE do
+            local b = CreateFrame("CheckButton", nil, ed)
+            b:SetSize(36, 36)
+            local col, row = (i - 1) % EDIT_COLS, floor((i - 1) / EDIT_COLS)
+            b:SetPoint("TOPLEFT", ed, "TOPLEFT", 14 + col * 38, -42 - row * 38)
+            b.icon = b:CreateTexture(nil, "ARTWORK")
+            b.icon:SetAllPoints(b)
+            b.icon:SetTexCoord(0.06, 0.94, 0.06, 0.94)
+            b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
+            b:GetHighlightTexture():SetBlendMode("ADD")
+            b:SetCheckedTexture("Interface\\Buttons\\CheckButtonHilight")
+            b:GetCheckedTexture():SetBlendMode("ADD")
+            b:SetScript("OnClick", function(self)
+                ed.selectedIcon = self.iconIndex
+                ed:Refresh()
+            end)
+            ed.icons[i] = b
+        end
+
+        ed:EnableMouseWheel(true)
+        ed:SetScript("OnMouseWheel", function(self, delta)
+            self.page = max(0, min(self.maxPage or 0, (self.page or 0) - delta))
+            self:Refresh()
+        end)
+
+        local prev = CreateFrame("Button", nil, ed, "UIPanelButtonTemplate")
+        prev:SetSize(24, 20)
+        prev:SetPoint("BOTTOMLEFT", 10, 36)
+        prev:SetText("<")
+        prev:SetScript("OnClick", function()
+            ed.page = max(0, (ed.page or 0) - 1)
+            ed:Refresh()
+        end)
+
+        local nxt = CreateFrame("Button", nil, ed, "UIPanelButtonTemplate")
+        nxt:SetSize(24, 20)
+        nxt:SetPoint("BOTTOMRIGHT", -10, 36)
+        nxt:SetText(">")
+        nxt:SetScript("OnClick", function()
+            ed.page = min(ed.maxPage or 0, (ed.page or 0) + 1)
+            ed:Refresh()
+        end)
+
+        ed.pageText = ed:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        ed.pageText:SetPoint("BOTTOM", 0, 40)
+
+        local okay = CreateFrame("Button", nil, ed, "UIPanelButtonTemplate")
+        okay:SetSize(70, 20)
+        okay:SetPoint("BOTTOMLEFT", 10, 10)
+        okay:SetText(OKAY)
+        okay:SetScript("OnClick", function()
+            local name = ed.nameBox:GetText()
+            if not name or name == "" then
+                name = format(GUILDBANK_TAB_NUMBER or "Tab %d", ed.tabID)
+            end
+            SetGuildBankTabInfo(ed.tabID, name, ed.selectedIcon)
+            ed:Hide()
+        end)
+
+        local cancel = CreateFrame("Button", nil, ed, "UIPanelButtonTemplate")
+        cancel:SetSize(70, 20)
+        cancel:SetPoint("BOTTOMRIGHT", -10, 10)
+        cancel:SetText(CANCEL)
+        cancel:SetScript("OnClick", function() ed:Hide() end)
+
+        function ed:Refresh()
+            local total = GetNumMacroItemIcons()
+            self.maxPage = max(0, ceil(total / EDIT_PER_PAGE) - 1)
+            for i, b in ipairs(self.icons) do
+                local index = (self.page or 0) * EDIT_PER_PAGE + i
+                if index <= total then
+                    b.iconIndex = index
+                    b.icon:SetTexture(GetMacroItemIconInfo(index))
+                    b:SetChecked(index == self.selectedIcon)
+                    b:Show()
+                else
+                    b:Hide()
+                end
+            end
+            self.pageText:SetFormattedText("%d / %d", (self.page or 0) + 1, self.maxPage + 1)
+        end
+
+        ed:Hide()
+        return ed
+    end
+
+    function GuildFrame:ShowTabEditPopup(tabID)
+        if not self.tabEditor then
+            self.tabEditor = CreateTabEditor(self)
+        end
+        local ed = self.tabEditor
+        local name, icon = GetGuildBankTabInfo(tabID)
+        ed.tabID = tabID
+        ed.page = 0
+        ed.selectedIcon = nil
+        -- Preselect the tab's current icon and jump to its page
+        for i = 1, GetNumMacroItemIcons() do
+            if GetMacroItemIconInfo(i) == icon then
+                ed.selectedIcon = i
+                ed.page = floor((i - 1) / EDIT_PER_PAGE)
+                break
+            end
+        end
+        ed.nameBox:SetText(name or "")
+        ed:Refresh()
+        ed:Show()
+    end
+
     function GuildFrame:OnTitleEnter(title)
         GameTooltip:SetOwner(title, "ANCHOR_LEFT")
         GameTooltip:SetText(GUILD_BANK, 1, 1, 1)
@@ -858,6 +1002,9 @@ do
         self:UnregisterAllEvents()
         StaticPopup_Hide("GUILDBANK_DEPOSIT")
         StaticPopup_Hide("GUILDBANK_WITHDRAW")
+        if self.tabEditor then
+            self.tabEditor:Hide()
+        end
         CloseGuildBankFrame()
     end
 end
