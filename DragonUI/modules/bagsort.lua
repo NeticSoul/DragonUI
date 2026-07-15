@@ -1476,6 +1476,7 @@ local function CreateActionButton(name, parent, onClick, tooltipTitle, scale, ic
     highlight:SetAllPoints()
     highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
     highlight:SetBlendMode("ADD")
+    btn.highlight = highlight
 
     -- Pushed feedback
     btn:SetScript("OnMouseDown", function(self)
@@ -1652,41 +1653,54 @@ local function AttachCombuctorButtons(frame, sortRef, clearRef, sellScrapRef, so
         sellScrapBtn = CreateSellScrapButton(sellScrapBtnName, frame, 0.55)
     end
 
-    -- Anchor elements independently to the frame to avoid circular
-    -- dependencies with the new Combuctor (resetBtn is now anchored to
-    -- bagToggle, so chaining through resetBtn → bagToggle → sortBtn fails).
-    --
-    -- Layout: [ searchBox ][ resetBtn ] ... [ sellScrap ][ clearBtn ][ sortBtn ][ bagToggle ] RIGHT
+    -- Dragonflight action-button chrome for the header buttons (same recipe as buttons.lua)
+    local function StyleHeaderButton(b)
+        if not b or b._combuctorStyled then return end
+        b._combuctorStyled = true
+        b:SetSize(22, 22)
+        b.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+        b.border:SetTexture(addon._dir .. "uiactionbariconframe")
+        b.border:ClearAllPoints()
+        b.border:SetPoint("TOPRIGHT", b, "TOPRIGHT", 2.2, 2.3)
+        b.border:SetPoint("BOTTOMLEFT", b, "BOTTOMLEFT", -2.2, -2.2)
+        if b.highlight then
+            b.highlight:SetTexture(addon._dir .. "uiactionbariconframehighlight")
+            b.highlight:ClearAllPoints()
+            b.highlight:SetAllPoints(b.border)
+        end
+        b:SetScript("OnMouseDown", function(self)
+            self.icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+        end)
+        b:SetScript("OnMouseUp", function(self)
+            self.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+        end)
+    end
+    StyleHeaderButton(sortBtn)
+    StyleHeaderButton(clearBtn)
+    StyleHeaderButton(sellScrapBtn)
 
-    -- Right-side action buttons
+    -- Single header row: [ searchBox ][ sellScrap ][ clearBtn ][ sortBtn ][ bagToggle ]
     if bagToggle then
         bagToggle:ClearAllPoints()
-        bagToggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -38)
+        bagToggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -30)
     end
 
     sortBtn:ClearAllPoints()
-    sortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -46, -45)
+    if bagToggle then
+        sortBtn:SetPoint("RIGHT", bagToggle, "LEFT", -6, 0)
+    else
+        sortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -44, -32)
+    end
 
     clearBtn:ClearAllPoints()
-    clearBtn:SetPoint("TOPRIGHT", sortBtn, "TOPLEFT", -2, 0)
+    clearBtn:SetPoint("RIGHT", sortBtn, "LEFT", -4, 0)
 
     if sellScrapBtn then
         sellScrapBtn:ClearAllPoints()
-        sellScrapBtn:SetPoint("TOPRIGHT", clearBtn, "TOPLEFT", -2, 0)
+        sellScrapBtn:SetPoint("RIGHT", clearBtn, "LEFT", -4, 0)
     end
 
-    -- Search bar and reset button (left side of header)
-    if searchBox then
-        searchBox:ClearAllPoints()
-        searchBox:SetPoint("TOPLEFT",  frame, "TOPLEFT",  14, -44)
-        searchBox:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -176, -44)
-    end
-
-    -- Reset button to the right of the search bar
-    if resetBtn then
-        resetBtn:ClearAllPoints()
-        resetBtn:SetPoint("TOPLEFT", searchBox or frame, "TOPRIGHT", 2, 0)
-    end
+    -- Search box is fixed-width on the left; nothing to shrink anymore
 
     sortBtn:Show()
     clearBtn:Show()
@@ -1823,6 +1837,7 @@ end
 
 local vanillaBagSortBtn, vanillaBankSortBtn
 local vanillaBagClearBtn, vanillaBankClearBtn
+local vanillaBagSellScrapBtn
 
 local function CreateVanillaBagSortButton()
     if vanillaBagSortBtn then return end
@@ -1835,10 +1850,13 @@ local function CreateVanillaBagSortButton()
         0.63
     )
     vanillaBagClearBtn = CreateClearLocksButton("DragonUI_VanillaBagClearBtn", UIParent, 0.63)
+    vanillaBagSellScrapBtn = CreateSellScrapButton("DragonUI_VanillaBagSellScrapBtn", UIParent, 0.63)
     vanillaBagSortBtn:Hide()
     vanillaBagClearBtn:Hide()
+    vanillaBagSellScrapBtn:Hide()
     BagSortModule.frames.vanillaBagSortBtn = vanillaBagSortBtn
     BagSortModule.frames.vanillaBagClearBtn = vanillaBagClearBtn
+    BagSortModule.frames.vanillaBagSellScrapBtn = vanillaBagSellScrapBtn
 end
 
 -- Find which ContainerFrame is currently showing bag 0 (backpack)
@@ -1857,8 +1875,10 @@ local function UpdateVanillaBagSortButton()
     if backpack then
         vanillaBagSortBtn:SetParent(backpack)
         vanillaBagClearBtn:SetParent(backpack)
+        vanillaBagSellScrapBtn:SetParent(backpack)
         vanillaBagSortBtn:ClearAllPoints()
         vanillaBagClearBtn:ClearAllPoints()
+        vanillaBagSellScrapBtn:ClearAllPoints()
         local titleAnchor = _G[backpack:GetName() .. "Name"]
         local skinChrome = backpack._dragonuiBagChrome
         if addon:IsModuleEnabled("bags_skin")
@@ -1868,13 +1888,17 @@ local function UpdateVanillaBagSortButton()
         end
         vanillaBagSortBtn:SetPoint("TOP", titleAnchor, "BOTTOM", 70.5, -6.5)
         vanillaBagClearBtn:SetPoint("RIGHT", vanillaBagSortBtn, "LEFT", -3, 0)
+        vanillaBagSellScrapBtn:SetPoint("RIGHT", vanillaBagClearBtn, "LEFT", -3, 0)
         vanillaBagSortBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
         vanillaBagClearBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
+        vanillaBagSellScrapBtn:SetFrameLevel(backpack:GetFrameLevel() + 10)
         vanillaBagSortBtn:Show()
         vanillaBagClearBtn:Show()
+        vanillaBagSellScrapBtn:Show()
     else
         vanillaBagSortBtn:Hide()
         vanillaBagClearBtn:Hide()
+        vanillaBagSellScrapBtn:Hide()
     end
 end
 
@@ -1928,6 +1952,7 @@ UpdateButtonVisibility = function()
         if bagnonBankClearBtn then bagnonBankClearBtn:Hide() end
         if vanillaBagSortBtn then vanillaBagSortBtn:Hide() end
         if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
+        if vanillaBagSellScrapBtn then vanillaBagSellScrapBtn:Hide() end
         if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
         if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
     elseif IsBagnonLoaded() then
@@ -1938,6 +1963,7 @@ UpdateButtonVisibility = function()
         if bagnonBankClearBtn then bagnonBankClearBtn:Show() end
         if vanillaBagSortBtn then vanillaBagSortBtn:Hide() end
         if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
+        if vanillaBagSellScrapBtn then vanillaBagSellScrapBtn:Hide() end
         if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
         if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
         if combustorBagSortBtn then combustorBagSortBtn:Hide() end
@@ -2143,6 +2169,7 @@ local function RestoreBagSortSystem()
     if bagnonBankClearBtn then bagnonBankClearBtn:Hide() end
     if vanillaBagSortBtn then vanillaBagSortBtn:Hide() end
     if vanillaBagClearBtn then vanillaBagClearBtn:Hide() end
+    if vanillaBagSellScrapBtn then vanillaBagSellScrapBtn:Hide() end
     if vanillaBankSortBtn then vanillaBankSortBtn:Hide() end
     if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
     if vanillaGuildBankSortBtn then vanillaGuildBankSortBtn:Hide() end

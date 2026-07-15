@@ -9,32 +9,26 @@ local floor, ceil, min, max, sqrt = math.floor, math.ceil, math.min, math.max, m
 -- TEMPLATE HELPERS (moved from core: used by SideTab and BottomTab)
 -- ============================================================================
 
--- DragonUI_CombuctorSideTabButtonTemplate
+-- Modern retail spellbook side-tab art (drop-in replacement for SpellBook-SkillLineTab)
 local function SetupSideTabButton(btn)
     btn:SetSize(32, 32)
     btn:Hide()
 
-    -- $parentBorder: SpellBook-SkillLineTab
     local border = btn:CreateTexture(nil, "BACKGROUND")
-    border:SetTexture("Interface\\SpellBook\\SpellBook-SkillLineTab")
+    border:SetTexture(mod.CT.sidetab)
     border:SetSize(64, 64)
     border:SetPoint("TOPLEFT", btn, "TOPLEFT", -3, 11)
     btn._BagSkin_SideBorder = border
 
-    -- NormalTexture (blank so GetNormalTexture() works)
+    -- Blank so GetNormalTexture() works before Set() assigns the category icon
     btn:SetNormalTexture("")
 
-    -- HighlightTexture
-    local ht = btn:CreateTexture(nil, "HIGHLIGHT")
-    ht:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
-    ht:SetBlendMode("ADD")
-    btn:SetHighlightTexture(ht)
+    -- Managed state textures: passing texture objects leaves them unanchored (zero size)
+    btn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
+    btn:GetHighlightTexture():SetBlendMode("ADD")
 
-    -- CheckedTexture
-    local ct = btn:CreateTexture(nil, "HIGHLIGHT")
-    ct:SetTexture("Interface\\Buttons\\CheckButtonHilight")
-    ct:SetBlendMode("ADD")
-    btn:SetCheckedTexture(ct)
+    btn:SetCheckedTexture("Interface\\Buttons\\CheckButtonHilight")
+    btn:GetCheckedTexture():SetBlendMode("ADD")
 
     btn:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -43,9 +37,59 @@ local function SetupSideTabButton(btn)
     btn:SetScript("OnLeave", GameTooltip_Hide)
 end
 
--- DragonUI_CombuctorFrameTabButtonTemplate
+-- Retail tab art layered over the stock tab template
+-- No SetScale here: fractional scaling breaks the seams between the three art pieces
 local function SetupBottomTabButton(btn)
     btn:SetFrameLevel(btn:GetFrameLevel() + 4)
+    btn:SetNormalFontObject(GameFontNormal)
+    btn:SetHighlightFontObject(GameFontHighlight)
+    local name = btn:GetName()
+    local tex = mod.CT.tabs
+
+    local left = _G[name .. 'Left']
+    left:ClearAllPoints()
+    left:SetSize(35, 36)
+    left:SetTexture(tex)
+    left:SetTexCoord(0.015625, 0.5625, 0.816406, 0.957031)
+    left:SetPoint('TOPLEFT', -3, 0)
+
+    local right = _G[name .. 'Right']
+    right:ClearAllPoints()
+    right:SetSize(37, 36)
+    right:SetTexture(tex)
+    right:SetTexCoord(0.015625, 0.59375, 0.667969, 0.808594)
+    right:SetPoint('TOPRIGHT', 7, 0)
+
+    -- Retail atlas tiles this 1px strip; 3.3.5 has no SetHorizTile, stretching looks identical
+    local middle = _G[name .. 'Middle']
+    middle:ClearAllPoints()
+    middle:SetSize(1, 36)
+    middle:SetTexture(tex)
+    middle:SetTexCoord(0, 0.015625, 0.175781, 0.316406)
+    middle:SetPoint('TOPLEFT', left, 'TOPRIGHT')
+    middle:SetPoint('TOPRIGHT', right, 'TOPLEFT')
+
+    local leftD = _G[name .. 'LeftDisabled']
+    leftD:ClearAllPoints()
+    leftD:SetSize(35, 42)
+    leftD:SetTexture(tex)
+    leftD:SetTexCoord(0.015625, 0.5625, 0.496094, 0.660156)
+    leftD:SetPoint('TOPLEFT', -1, 0)
+
+    local rightD = _G[name .. 'RightDisabled']
+    rightD:ClearAllPoints()
+    rightD:SetSize(37, 42)
+    rightD:SetTexture(tex)
+    rightD:SetTexCoord(0.015625, 0.59375, 0.324219, 0.488281)
+    rightD:SetPoint('TOPRIGHT', 8, 0)
+
+    local middleD = _G[name .. 'MiddleDisabled']
+    middleD:ClearAllPoints()
+    middleD:SetSize(1, 42)
+    middleD:SetTexture(tex)
+    middleD:SetTexCoord(0, 0.015625, 0.00390625, 0.167969)
+    middleD:SetPoint('TOPLEFT', leftD, 'TOPRIGHT')
+    middleD:SetPoint('TOPRIGHT', rightD, 'TOPLEFT')
 end
 
 -- ============================================================================
@@ -301,7 +345,7 @@ do
         return (link and mod.ItemSearch:Find(link, search)) and true or false
     end
 
-    -- Bagnonium-style search: non-matching slots dim in place, the grid never reshuffles
+    -- Search dims non-matching slots in place; the grid never reshuffles
     function ItemSlot:UpdateSearch()
         self:SetAlpha(self:MatchesSearch() and 1 or 0.3)
         self:SetLocked(self:IsLocked())
@@ -805,7 +849,7 @@ do
         local size = 36 + spacing * 2
         local maxScale = (cfg and cfg.item_scale) or 1
 
-        -- Bagnonium best-fit: estimate columns from the frame's aspect ratio, cap by item scale
+        -- Best-fit grid: estimate columns from the frame's aspect ratio, cap by item scale
         local rows = ceil(sqrt(count * height / width))
         local cols = max(1, ceil(rows * width / height))
         rows = ceil(count / cols)
@@ -875,7 +919,6 @@ do
     mod.Bag = Bag
 
     local SIZE = 30
-    local NORMAL_TEXTURE_SIZE = 64 * (SIZE / 36)
     local BagSlotInfo = mod.BagSlotInfo
     local unused = {}
     local bagId = 1
@@ -884,37 +927,46 @@ do
         local bag = self:Bind(CreateFrame("Button", format("DragonUI_CombuctorBag%d", bagId)))
         local name = bag:GetName()
         bag:SetSize(SIZE, SIZE)
+        bag:SetHitRectInsets(-2, -2, -2, -2)
 
-        -- Expand hit rect to match the visual NormalTexture size
-        local inset = (SIZE - NORMAL_TEXTURE_SIZE) / 2
-        bag:SetHitRectInsets(inset, inset, inset, inset)
+        -- Micromenu bag-slot treatment: dark socket, inset round icon, ring border
+        local background = bag:CreateTexture(nil, "BACKGROUND")
+        background:SetSize(36, 36)
+        background:SetPoint("CENTER")
+        background:SetTexture(mod.CT.bagslot)
+        background:SetTexCoord(295 / 512, 356 / 512, 64 / 128, 125 / 128)
 
         local icon = bag:CreateTexture(name .. "IconTexture", "BORDER")
-        icon:SetAllPoints(bag)
+        icon:SetPoint("TOPRIGHT", bag, "TOPRIGHT", -5, -2.9)
+        icon:SetPoint("BOTTOMLEFT", bag, "BOTTOMLEFT", 2.9, 5)
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+        local ringBorder = bag:CreateTexture(nil, "OVERLAY")
+        ringBorder:SetSize(36, 36)
+        ringBorder:SetPoint("CENTER")
+        ringBorder:SetTexture(mod.CT.bagslot)
+        ringBorder:SetTexCoord(295 / 512, 356 / 512, 1 / 128, 62 / 128)
 
         local count = bag:CreateFontString(name .. "Count", "OVERLAY")
         count:SetFontObject("NumberFontNormalSmall")
         count:SetJustifyH("RIGHT")
         count:SetPoint("BOTTOMRIGHT", -2, 2)
 
-        -- Blank state textures: only the bag icon shows; CombuctorSkinBagSlots adds the ring later
+        -- Blank normal so SetItemButton* APIs don't restore a default backdrop
         local nt = bag:CreateTexture(name .. "NormalTexture")
         nt:SetTexture(nil)
         nt:SetAlpha(0)
         nt:Hide()
         bag:SetNormalTexture(nt)
 
-        local pt = bag:CreateTexture()
-        pt:SetTexture(nil)
-        pt:SetAlpha(0)
-        pt:Hide()
-        bag:SetPushedTexture(pt)
-
-        local ht = bag:CreateTexture()
-        ht:SetTexture(nil)
-        ht:SetAlpha(0)
-        ht:Hide()
-        bag:SetHighlightTexture(ht)
+        -- Inner edge glow: managed highlight filling the button
+        bag:SetHighlightTexture("")
+        local ht = bag:GetHighlightTexture()
+        ht:SetAllPoints()
+        ht:SetBlendMode("ADD")
+        ht:SetAlpha(0.4)
+        ht:SetTexture(mod.CT.bagslot)
+        ht:SetTexCoord(358 / 512, 419 / 512, 1 / 128, 62 / 128)
 
         bag:RegisterForClicks("anyUp")
         bag:RegisterForDrag("LeftButton")
@@ -962,6 +1014,7 @@ do
     end
 
     function Bag:Release()
+        self:SetAlpha(1)
         self:Hide()
         self:SetParent(nil)
         self:UnregisterAllEvents()
@@ -1151,39 +1204,80 @@ do
         f.iconCopper = f:CreateTexture(nil, "OVERLAY")
         f.iconCopper:SetTexture(mod.CT.coinCopper)
         f.iconCopper:SetTexCoord(unpack(COIN_TEXCOORD))
-        f.iconCopper:SetSize(13, 13)
+        f.iconCopper:SetSize(15, 15)
         f.iconCopper:SetPoint("RIGHT", f, "RIGHT", 0, 0)
-        f.amtCopper = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.amtCopper = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.amtCopper:SetPoint("RIGHT", f.iconCopper, "LEFT", -2, 0)
 
         -- Silver
         f.iconSilver = f:CreateTexture(nil, "OVERLAY")
         f.iconSilver:SetTexture(mod.CT.coinSilver)
         f.iconSilver:SetTexCoord(unpack(COIN_TEXCOORD))
-        f.iconSilver:SetSize(13, 13)
+        f.iconSilver:SetSize(15, 15)
         f.iconSilver:SetPoint("RIGHT", f.amtCopper, "LEFT", -4, 0)
-        f.amtSilver = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.amtSilver = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.amtSilver:SetPoint("RIGHT", f.iconSilver, "LEFT", -2, 0)
 
         -- Gold
         f.iconGold = f:CreateTexture(nil, "OVERLAY")
         f.iconGold:SetTexture(mod.CT.coinGold)
         f.iconGold:SetTexCoord(unpack(COIN_TEXCOORD))
-        f.iconGold:SetSize(13, 13)
+        f.iconGold:SetSize(15, 15)
         f.iconGold:SetPoint("RIGHT", f.amtSilver, "LEFT", -4, 0)
-        f.amtGold = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.amtGold = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.amtGold:SetPoint("RIGHT", f.iconGold, "LEFT", -2, 0)
 
-        local txt = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local txt = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         txt:SetAllPoints(f)
         txt:SetJustifyH("RIGHT")
         txt:SetJustifyV("MIDDLE")
         txt:Hide()
         f.textFull = txt
 
+        -- Vanilla coin split: moneyType="PLAYER" is the contract CoinPickupFrame expects
+        local function OnCoinClick(self)
+            if f:GetParent():GetPlayer() ~= mod.playerName then return end
+            if GetCursorMoney() > 0 then
+                DropCursorMoney()
+                return
+            end
+            if self.hasPickup == 1 then
+                CoinPickupFrame:Hide()
+                return
+            end
+            OpenCoinPickupFrame(self.multiplier, GetMoney(), self)
+            self.hasPickup = 1
+        end
+
+        local function CoinButton(amount, coinIcon, multiplier)
+            local b = CreateFrame("Button", nil, f)
+            b.moneyType = "PLAYER"
+            b.multiplier = multiplier
+            b:SetPoint("TOPLEFT", amount, "TOPLEFT", -2, 2)
+            b:SetPoint("BOTTOMRIGHT", coinIcon, "BOTTOMRIGHT", 2, -2)
+            b:SetScript("OnClick", OnCoinClick)
+            return b
+        end
+        f.btnGold = CoinButton(f.amtGold, f.iconGold, COPPER_PER_GOLD)
+        f.btnSilver = CoinButton(f.amtSilver, f.iconSilver, COPPER_PER_SILVER)
+        f.btnCopper = CoinButton(f.amtCopper, f.iconCopper, 1)
+
+        f.btnText = CreateFrame("Button", nil, f)
+        f.btnText.moneyType = "PLAYER"
+        f.btnText.multiplier = COPPER_PER_GOLD
+        f.btnText:SetAllPoints(f)
+        f.btnText:SetScript("OnClick", OnCoinClick)
+        f.btnText:Hide()
+
         moneyId = moneyId + 1
         f:Update()
         return f
+    end
+
+    local function FormatThousands(n)
+        local s = tostring(n):reverse():gsub("(%d%d%d)", "%1,")
+        s = s:reverse():gsub("^,", "")
+        return s
     end
 
     function MoneyFrame:Update()
@@ -1195,34 +1289,36 @@ do
         local copper = money % 100
 
         if mode == "text" then
-            self.iconGold:Hide();  self.amtGold:Hide()
-            self.iconSilver:Hide(); self.amtSilver:Hide()
-            self.iconCopper:Hide(); self.amtCopper:Hide()
+            self.iconGold:Hide();  self.amtGold:Hide(); self.btnGold:Hide()
+            self.iconSilver:Hide(); self.amtSilver:Hide(); self.btnSilver:Hide()
+            self.iconCopper:Hide(); self.amtCopper:Hide(); self.btnCopper:Hide()
 
-            self.textFull:SetText(format("|cffffd700%d %s |r|cffc7c7cf%d %s |r|cffeda55f%d %s|r",
-                gold, "g", silver, "s", copper, "c"))
+            self.textFull:SetText(format("|cffffd700%s %s |r|cffc7c7cf%d %s |r|cffeda55f%d %s|r",
+                FormatThousands(gold), "g", silver, "s", copper, "c"))
             self.textFull:Show()
+            self.btnText:Show()
         else
             self.textFull:Hide()
+            self.btnText:Hide()
 
             -- Gold: solo se muestra si hay > 0
             if gold > 0 then
-                self.iconGold:Show(); self.amtGold:Show()
-                self.amtGold:SetText(gold)
+                self.iconGold:Show(); self.amtGold:Show(); self.btnGold:Show()
+                self.amtGold:SetText(FormatThousands(gold))
             else
-                self.iconGold:Hide(); self.amtGold:Hide()
+                self.iconGold:Hide(); self.amtGold:Hide(); self.btnGold:Hide()
             end
 
             -- Silver: se muestra si hay gold O si hay silver
             if gold > 0 or silver > 0 then
-                self.iconSilver:Show(); self.amtSilver:Show()
+                self.iconSilver:Show(); self.amtSilver:Show(); self.btnSilver:Show()
                 self.amtSilver:SetText(silver)
             else
-                self.iconSilver:Hide(); self.amtSilver:Hide()
+                self.iconSilver:Hide(); self.amtSilver:Hide(); self.btnSilver:Hide()
             end
 
             -- Copper: siempre se muestra
-            self.iconCopper:Show(); self.amtCopper:Show()
+            self.iconCopper:Show(); self.amtCopper:Show(); self.btnCopper:Show()
             self.amtCopper:SetText(copper)
         end
     end
@@ -1239,40 +1335,15 @@ do
     local MAX_WATCHED_TOKENS = MAX_WATCHED_TOKENS or 20
 
     local TOKENBAR_HEIGHT = 19
-    local TOKEN_ICON_SIZE = 14
+    local TOKEN_ICON_SIZE = 16
     local TOKEN_GAP = 6
 
-    -- Build the three-piece chrome pill background (same as bags_skin.lua ApplyPillChrome)
-    local function ApplyPillChrome(bar)
-        if bar._dragonuiPill then return end
-        bar._dragonuiPill = true
-
-        local left = bar:CreateTexture(nil, "BACKGROUND")
-        left:SetSize(8, TOKENBAR_HEIGHT)
-        left:SetPoint("LEFT", bar, "LEFT")
-        left:SetTexture(mod.CT.currencybox)
-        left:SetTexCoord(0.03125, 0.53125, 0.289062, 0.554688)
-
-        local right = bar:CreateTexture(nil, "BACKGROUND")
-        right:SetSize(8, TOKENBAR_HEIGHT)
-        right:SetPoint("RIGHT", bar, "RIGHT")
-        right:SetTexture(mod.CT.currencybox)
-        right:SetTexCoord(0.03125, 0.53125, 0.570312, 0.835938)
-
-        local middle = bar:CreateTexture(nil, "BACKGROUND")
-        middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
-        middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
-        middle:SetTexture(mod.CT.currencybox)
-        middle:SetTexCoord(0, 0.5, 0.0078125, 0.273438)
-    end
-
+    -- The parent box (nineslice) provides the chrome; this bar only lays out token buttons
     function TokenBar:New(parent)
         local bar = self:Bind(CreateFrame("Frame", nil, parent))
         bar:SetHeight(TOKENBAR_HEIGHT)
         bar.tokenButtons = {}
         bar._tokenCount = 0
-
-        ApplyPillChrome(bar)
 
         bar:SetScript("OnEvent", function(self, event)
             if event == "CURRENCY_DISPLAY_UPDATE" then
@@ -1292,7 +1363,7 @@ do
     function TokenBar:Refresh()
         local numTokens = 0
         for i = 1, MAX_WATCHED_TOKENS do
-            local name, count, extraCurrencyType, icon = GetBackpackCurrencyInfo(i)
+            local name, count, extraCurrencyType, icon, itemID = GetBackpackCurrencyInfo(i)
             if name then
                 numTokens = numTokens + 1
                 local btn = self.tokenButtons[i]
@@ -1300,6 +1371,8 @@ do
                     btn = self:_CreateTokenButton(i)
                     self.tokenButtons[i] = btn
                 end
+                btn.extraCurrencyType = extraCurrencyType
+                btn.itemID = itemID
 
                 -- Icon selection (matches Blizzard BackpackTokenFrame logic)
                 if extraCurrencyType == 1 then
@@ -1323,6 +1396,7 @@ do
                 else
                     btn.count:SetText("*")
                 end
+                btn:SetWidth(TOKEN_ICON_SIZE + 3 + btn.count:GetStringWidth() + 2)
                 btn:Show()
             else
                 local btn = self.tokenButtons[i]
@@ -1332,19 +1406,18 @@ do
             end
         end
 
-        -- Layout visible buttons right-to-left (bar is right-anchored)
-        local wasShown = self:IsShown()
+        -- Bare tokens laid left-to-right on the bottom band
         if numTokens > 0 then
             self._tokenCount = numTokens
-            local previous = nil
+            local previous
             for i = 1, MAX_WATCHED_TOKENS do
                 local btn = self.tokenButtons[i]
                 if btn and btn:IsShown() then
                     btn:ClearAllPoints()
                     if previous then
-                        btn:SetPoint("RIGHT", previous, "LEFT", -TOKEN_GAP, 0)
+                        btn:SetPoint("LEFT", previous, "RIGHT", TOKEN_GAP, 0)
                     else
-                        btn:SetPoint("RIGHT", self, "RIGHT", -10, 1)
+                        btn:SetPoint("LEFT", self, "LEFT", 0, 1)
                     end
                     previous = btn
                 end
@@ -1354,49 +1427,43 @@ do
             self._tokenCount = 0
             self:Hide()
         end
-        -- Notify parent to relayout if visibility changed
-        if wasShown ~= self:IsShown() then
-            local parent = self:GetParent()
-            if parent and parent.UpdateItemFrameSize then
-                parent:UpdateItemFrameSize()
-                parent:UpdateClampInsets()
-            end
-        end
     end
 
     function TokenBar:_CreateTokenButton(index)
         local btn = CreateFrame("Button", nil, self)
         btn:SetHeight(TOKENBAR_HEIGHT - 2)
 
-        -- Count text on the right
-        btn.count = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        btn.count:SetPoint("RIGHT", btn, "RIGHT", 0, 0)
-        btn.count:SetJustifyH("RIGHT")
-
-        -- Icon to the left of count
+        -- Count then icon, like retail's backpack token row
         btn.icon = btn:CreateTexture(nil, "OVERLAY")
         btn.icon:SetSize(TOKEN_ICON_SIZE, TOKEN_ICON_SIZE)
-        btn.icon:SetPoint("RIGHT", btn.count, "LEFT", -3, 0)
+        btn.icon:SetPoint("RIGHT", btn, "RIGHT", 0, 0)
+
+        btn.count = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        btn.count:SetPoint("RIGHT", btn.icon, "LEFT", -3, 0)
+        btn.count:SetJustifyH("RIGHT")
 
         -- Set button width based on count text width
         btn.count:SetText("99999")
         btn:SetWidth(TOKEN_ICON_SIZE + 3 + btn.count:GetStringWidth() + 2)
 
-        -- Tooltip on enter (show currency name)
+        -- Vanilla tooltip, same as Blizzard's BackpackTokenTemplate
         btn:SetScript("OnEnter", function(self)
-            local id = self._tokenIndex
-            if not id then return end
-            local name = GetBackpackCurrencyInfo(id)
-            if name then
-                GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                GameTooltip:SetText(name, 1, 1, 1)
+            GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+            if self.extraCurrencyType == 1 then
+                GameTooltip:SetText(ARENA_POINTS, 1, 1, 1)
+                GameTooltip:AddLine(TOOLTIP_ARENA_POINTS, nil, nil, nil, 1)
                 GameTooltip:Show()
+            elseif self.extraCurrencyType == 2 then
+                GameTooltip:SetText(HONOR_POINTS, 1, 1, 1)
+                GameTooltip:AddLine(TOOLTIP_HONOR_POINTS, nil, nil, nil, 1)
+                GameTooltip:Show()
+            elseif self.itemID then
+                GameTooltip:SetHyperlink("item:" .. self.itemID)
             end
         end)
         btn:SetScript("OnLeave", function()
             GameTooltip:Hide()
         end)
-        btn._tokenIndex = index
 
         return btn
     end
@@ -1522,10 +1589,14 @@ do
         self.tooltip = mod.GetSetDisplayName(set.name)
         if set.icon then
             self:SetNormalTexture(set.icon)
-            self:GetNormalTexture():SetTexCoord(0.06, 0.94, 0.06, 0.94)
+            local nt = self:GetNormalTexture()
+            nt:SetTexCoord(0.06, 0.94, 0.06, 0.94)
+            nt:ClearAllPoints()
+            nt:SetAllPoints(self)
         end
     end
 
+    -- The tab wing points outward, so flip the border when docked on the left side
     function SideTab:SetReversed(reversed)
         self.reversed = reversed and true or nil
         if self.border then
@@ -1587,7 +1658,6 @@ do
                 self.buttons[1]:SetPoint("TOPLEFT", parent, "TOPRIGHT", -1, -60)
             end
         end
-        -- Update border flip and icon offset for all visible buttons
         for _, button in pairs(self.buttons) do
             if button:IsShown() and button.SetReversed then
                 button:SetReversed(self.reversed)
@@ -1653,22 +1723,29 @@ do
         self.set = set
         local displayName = mod.GetSetDisplayName(set.name)
         if set.icon then
-            self:SetFormattedText("|T%s:%d|t %s", set.icon, 16, displayName)
+            self:SetFormattedText("|T%s:%d|t %s", set.icon, 14, displayName)
         else
             self:SetText(displayName)
         end
-        PanelTemplates_TabResize(self, 0)
-        self:GetHighlightTexture():SetWidth(self:GetTextWidth() + 30)
+        -- Width follows the localized text, so long translations never overflow
+        local width = self:GetTextWidth() + 24
+        if width < 64 then
+            width = 64
+        end
+        self:SetWidth(width)
+        self:GetHighlightTexture():SetWidth(width)
     end
 
     function BottomTab:UpdateHighlight(setName)
         local active = self.set.name == setName
         if active then
             PanelTemplates_SelectTab(self)
+            -- SelectTab forces GameFontHighlightSmall; we want the bigger font
+            self:SetDisabledFontObject(GameFontHighlight)
         else
             PanelTemplates_DeselectTab(self)
         end
-        -- Bagnonium look: the active tab mutes its own hover highlight
+        -- Active tab mutes its own hover highlight
         self:GetHighlightTexture():SetAlpha(active and 0 or 1)
     end
 
@@ -1680,10 +1757,10 @@ do
         f.buttons = setmetatable({}, { __index = function(t, k)
             local tab = BottomTab:New(f, k)
             if k > 1 then
-                tab:SetPoint("LEFT", f.buttons[k - 1], "RIGHT", -10, 0)
+                tab:SetPoint("LEFT", f.buttons[k - 1], "RIGHT", 8, 0)
             else
-                -- Bagnonium hangs the tab row just under the frame's bottom edge
-                tab:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", 11, 2)
+                -- Tab row hangs just under the frame's bottom edge
+                tab:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", 13, 2)
             end
             t[k] = tab
             return tab

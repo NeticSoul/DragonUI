@@ -179,14 +179,17 @@ local function RefreshCombuctorFrames()
             frame:UpdateClampInsets()
         end
 
-        -- Re-skin items and bag slots (local functions guard via _BagSkin_Applied)
+        -- Re-skin items (guarded per-slot via _BagSkin_Applied)
         if frame then
             local name = frame:GetName()
             local gframe = _G[name]
             if gframe then
                 mod.CombuctorSkinItems(gframe)
-                mod.CombuctorSkinBagSlots(gframe)
             end
+        end
+
+        if frame and frame.UpdateBottomLayout then
+            frame:UpdateBottomLayout()
         end
 
         -- Re-apply borders and layout so glow/scale/spacing option changes show live

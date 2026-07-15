@@ -2,7 +2,6 @@ local addon = select(2, ...)
 
 -- ============================================================================
 -- COMBUCTOR MODULE FOR DRAGONUI
--- Ported from KPack Combuctor by bkader
 -- All-in-one bag replacement with item filtering, search, bank integration.
 -- ============================================================================
 
@@ -87,8 +86,8 @@ local CT = {
     bagslot           = CombuctorAssets .. 'bagslots2x',
     bag_border        = CombuctorAssets .. 'bagborder2',
     slot_border       = CombuctorAssets .. 'ui-quickslot2',
-    coinbox           = CombuctorAssets .. 'commoncoinbox',
-    currencybox       = CombuctorAssets .. 'commoncurrencybox',
+    tabs              = CombuctorAssets .. 'uiframetabs',
+    sidetab           = CombuctorAssets .. 'sidetab',
     coinGold          = CombuctorAssets .. 'coingold',
     coinSilver        = CombuctorAssets .. 'coinsilver',
     coinCopper        = CombuctorAssets .. 'coincopper',
@@ -112,7 +111,7 @@ local function CombuctorAddNineSlice(frame)
     ns.RightEdge         = frame:CreateTexture(nil, 'OVERLAY')
 
     local bg = CreateFrame('Frame', nil, frame)
-    bg:SetPoint('TOPLEFT', frame, 'TOPLEFT', 3, -18)
+    bg:SetPoint('TOPLEFT', frame, 'TOPLEFT', 2, -18)
     bg:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -3, 3)
     bg:SetFrameLevel(0)
     ns.Bg = bg
@@ -123,11 +122,12 @@ local function CombuctorAddNineSlice(frame)
     bgTex:SetAlpha(0.8)
     ns.BgTex = bgTex
 
+    -- Corner variant with the big portrait circle baked in (bags_skin "large")
     local tlc = ns.TopLeftCorner
     tlc:SetTexture(CT.frame_metal)
-    tlc:SetTexCoord(0.00195312, 0.294922, 0.00195312, 0.294922)
+    tlc:SetTexCoord(0.00195312, 0.294922, 0.298828, 0.591797)
     tlc:SetSize(75, 75)
-    tlc:SetPoint('TOPLEFT', -12, 16)
+    tlc:SetPoint('TOPLEFT', -13, 16)
 
     local trc = ns.TopRightCorner
     trc:SetTexture(CT.frame_metal)
@@ -135,11 +135,12 @@ local function CombuctorAddNineSlice(frame)
     trc:SetSize(75, 75)
     trc:SetPoint('TOPRIGHT', 4, 16)
 
+    -- Same -13 as the top-left corner or the LeftEdge connects two misaligned corners
     local blc = ns.BottomLeftCorner
     blc:SetTexture(CT.frame_metal)
     blc:SetTexCoord(0.298828, 0.423828, 0.298828, 0.423828)
     blc:SetSize(32, 32)
-    blc:SetPoint('BOTTOMLEFT', -12, -3)
+    blc:SetPoint('BOTTOMLEFT', -13, -3)
 
     local brc = ns.BottomRightCorner
     brc:SetTexture(CT.frame_metal)
@@ -258,61 +259,6 @@ local function CombuctorRetailItemSlot(btn)
     end
 end
 
--- Retail-style bag slot restyle for Combuctor bag toggle buttons
-local function CombuctorRetailBagSlot(btn)
-    if btn._BagSkin_Applied then return end
-    btn._BagSkin_Applied = true
-
-    for _, region in ipairs({ btn:GetRegions() }) do
-        if region:GetObjectType() == 'Texture' then
-            local tex = region:GetTexture() or ''
-            local rname = (region.GetName and region:GetName()) or ''
-            if not rname:find('IconTexture') then
-                if tex:find('UI%-Quickslot') or tex:find('ButtonHilight') then
-                    region:SetTexture(nil)
-                    region:SetAlpha(0)
-                    region:Hide()
-                end
-            end
-        end
-    end
-
-    local size = 30.5
-
-    local nt = btn:GetNormalTexture()
-    if nt then
-        nt:SetTexture(CT.bagslot)
-        nt:SetTexCoord(0.576172, 0.695312, 0.5, 0.976562)
-        nt:SetSize(size, size)
-        nt:ClearAllPoints()
-        nt:SetPoint('CENTER', 2, -1)
-        nt:SetDrawLayer('BORDER', 0)
-        nt:SetAlpha(1)
-        nt:Show()
-    end
-
-    local ht = btn:GetHighlightTexture()
-    if ht then
-        ht:SetTexture(CT.bagslot)
-        ht:SetTexCoord(0.699219, 0.818359, 0.0078125, 0.484375)
-        ht:SetSize(size, size)
-        ht:ClearAllPoints()
-        ht:SetPoint('CENTER', 2, -1)
-        ht:SetAlpha(1)
-        ht:Show()
-    end
-
-    local pt = btn:GetPushedTexture()
-    if pt then
-        pt:SetTexture(CT.bagslot)
-        pt:SetTexCoord(0.699219, 0.818359, 0.0078125, 0.484375)
-        pt:SetSize(size, size)
-        pt:ClearAllPoints()
-        pt:SetPoint('CENTER', 2, -1)
-        pt:SetAlpha(1)
-        pt:Show()
-    end
-end
 
 local function GetModuleConfig()
     return addon:GetModuleConfig("combuctor")
@@ -323,7 +269,7 @@ local function IsModuleEnabled()
 end
 
 -- ============================================================================
--- MODULE INTERNALS (replaces KPack core:NewClass / core:NewModule)
+-- MODULE INTERNALS (minimal class factory and module registry)
 -- ============================================================================
 
 local mod = {}
@@ -572,7 +518,6 @@ mod.SetupDatabase = SetupDatabase
 mod.CombuctorModule = CombuctorModule
 mod.CombuctorAddNineSlice = CombuctorAddNineSlice
 mod.CombuctorRetailItemSlot = CombuctorRetailItemSlot
-mod.CombuctorRetailBagSlot = CombuctorRetailBagSlot
 mod.GetSetDisplayName = GetSetDisplayName
 mod.TEXTURE_ITEM_QUEST_BORDER = TEXTURE_ITEM_QUEST_BORDER
 mod.TEXTURE_ITEM_QUEST_BANG = TEXTURE_ITEM_QUEST_BANG

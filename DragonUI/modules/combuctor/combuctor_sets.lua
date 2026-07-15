@@ -67,7 +67,7 @@ do
     mod.L.Normal = SET_NORMAL
     mod.L.Trade = SET_TRADE
 
-    -- Register default item sets (matching KPack Combuctor structure)
+    -- Register default item sets
 
     -- ALL: parent set
     CombuctorSet:Register(SET_ALL, [[Interface\Icons\INV_Misc_EngGizmos_17]], function() return true end)

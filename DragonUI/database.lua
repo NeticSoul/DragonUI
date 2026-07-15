@@ -962,6 +962,7 @@ local defaults = {
                 glow_quality = true, -- Colored ring on uncommon and better items
                 glow_quest = true, -- Golden border on quest items
                 glow_alpha = 1, -- Quality ring opacity
+                show_quality_filter = true, -- Rarity filter dots centered on the bottom band
             },
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin

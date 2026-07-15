@@ -438,6 +438,8 @@ L["Quest Item Glow"] = true
 L["Highlight quest items with a golden border."] = true
 L["Glow Intensity"] = true
 L["Opacity of the quality ring on item slots."] = true
+L["Quality Filter Row"] = true
+L["Show the rarity filter dots at the bottom of the bag frame."] = true
 
 -- Advanced modules - Fallback display names
 L["Main Bars"] = true

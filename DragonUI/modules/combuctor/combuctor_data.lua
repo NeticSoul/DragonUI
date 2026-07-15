@@ -316,7 +316,7 @@ do
     eventFrame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
     eventFrame:RegisterEvent("PLAYERBANKBAGSLOTS_CHANGED")
 
-    -- Bank detection (Show/Hide pattern, matching KPack reference)
+    -- Bank detection (Show/Hide pattern)
     local bankWatcher = CreateFrame("Frame")
     bankWatcher:Hide()
 

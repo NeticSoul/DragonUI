@@ -327,23 +327,6 @@ local function BuildBagsTab(scroll)
     })
 
     -- ====================================================================
-    -- COMBUCTOR ENABLE
-    -- ====================================================================
-    local mainSection = C:AddSection(scroll, LO["Combuctor"])
-
-    C:AddToggle(mainSection, {
-        label = LO["Enable Combuctor"],
-        desc = LO["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."],
-        getFunc = function() return IsCombuctorEnabled() end,
-        setFunc = function(val)
-            if not addon.db.profile.modules then addon.db.profile.modules = {} end
-            if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
-            addon.db.profile.modules.combuctor.enabled = val
-        end,
-        requiresReload = true,
-    })
-
-    -- ====================================================================
     -- BAG SORT
     -- ====================================================================
     local sortSection = C:AddSection(scroll, LO["Bag Sort"] or "Bag Sort")
@@ -462,6 +445,28 @@ local function BuildBagsTab(scroll)
             return not (cfg and cfg.enabled)
         end,
     })
+
+    -- ====================================================================
+    -- COMBUCTOR ENABLE
+    -- ====================================================================
+    local mainSection = C:AddSection(scroll, LO["Combuctor"])
+
+    C:AddToggle(mainSection, {
+        label = LO["Enable Combuctor"],
+        desc = LO["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."],
+        getFunc = function() return IsCombuctorEnabled() end,
+        setFunc = function(val)
+            if not addon.db.profile.modules then addon.db.profile.modules = {} end
+            if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
+            addon.db.profile.modules.combuctor.enabled = val
+        end,
+        requiresReload = true,
+    })
+
+    -- Everything below is Combuctor-only; the enable toggle reloads, so the panel rebuilds right
+    if not IsCombuctorEnabled() then
+        return
+    end
 
     -- ====================================================================
     -- INVENTORY CATEGORY TABS
@@ -761,6 +766,17 @@ local function BuildBagsTab(scroll)
             return (mc and mc.item_spacing) or 2
         end,
         setFunc = function(val) SetCombuctorOption("item_spacing", val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(displaySection, {
+        label = LO["Quality Filter Row"] or "Quality Filter Row",
+        desc = LO["Show the rarity filter dots at the bottom of the bag frame."] or "Show the rarity filter dots at the bottom of the bag frame.",
+        getFunc = function()
+            local mc = GetCombuctorConfig(false)
+            return not mc or mc.show_quality_filter ~= false
+        end,
+        setFunc = function(val) SetCombuctorOption("show_quality_filter", val) end,
         disabled = function() return not IsCombuctorEnabled() end,
     })
 
