@@ -5,6 +5,7 @@
     <Script file="combuctor_sets.lua"/>
     <Script file="combuctor_classes.lua"/>
     <Script file="combuctor_frame.lua"/>
+    <Script file="combuctor_guild.lua"/>
     <Script file="combuctor_system.lua"/>
 
 </Ui>

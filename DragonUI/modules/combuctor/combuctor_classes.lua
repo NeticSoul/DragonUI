@@ -92,6 +92,9 @@ local function SetupBottomTabButton(btn)
     middleD:SetPoint('TOPRIGHT', rightD, 'TOPLEFT')
 end
 
+mod.SetupSideTabButton = SetupSideTabButton
+mod.SetupBottomTabButton = SetupBottomTabButton
+
 -- ============================================================================
 -- QUALITY FLAGS
 -- ============================================================================
@@ -1280,8 +1283,13 @@ do
         return s
     end
 
+    -- Overridable per instance: the guild frame feeds guild funds through the same display
+    function MoneyFrame:GetMoneyValue()
+        return mod("PlayerInfo"):GetMoney(self:GetParent():GetPlayer())
+    end
+
     function MoneyFrame:Update()
-        local money = mod("PlayerInfo"):GetMoney(self:GetParent():GetPlayer())
+        local money = self:GetMoneyValue()
         local mode = self:GetDisplayMode()
 
         local gold   = floor(money / 10000)
@@ -1655,7 +1663,7 @@ do
         else
             if self.buttons[1] then
                 self.buttons[1]:ClearAllPoints()
-                self.buttons[1]:SetPoint("TOPLEFT", parent, "TOPRIGHT", -1, -60)
+                self.buttons[1]:SetPoint("TOPLEFT", parent, "TOPRIGHT", 1, -60)
             end
         end
         for _, button in pairs(self.buttons) do

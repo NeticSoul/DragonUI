@@ -1816,6 +1816,30 @@ local function CreateVanillaGuildBankSortButton()
     BagSortModule.frames.vanillaGuildBankSortBtn = vanillaGuildBankSortBtn
 end
 
+local combuctorGuildSortBtn
+local function CreateCombuctorGuildBankSortButton()
+    if combuctorGuildSortBtn then return end
+    local frame = _G["DragonUI_CombuctorFrame3"]
+    if not frame or not frame.itemFrame then return end
+
+    -- Parented to the item grid so it auto-hides on the Log/Money/Info mode tabs
+    combuctorGuildSortBtn = CreateGuildBankSortButton("DragonUI_CombuctorGuildSortBtn", frame.itemFrame)
+    combuctorGuildSortBtn:SetSize(22, 22)
+    combuctorGuildSortBtn.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    combuctorGuildSortBtn.border:SetTexture(addon._dir .. "uiactionbariconframe")
+    combuctorGuildSortBtn.border:ClearAllPoints()
+    combuctorGuildSortBtn.border:SetPoint("TOPRIGHT", combuctorGuildSortBtn, "TOPRIGHT", 2.2, 2.3)
+    combuctorGuildSortBtn.border:SetPoint("BOTTOMLEFT", combuctorGuildSortBtn, "BOTTOMLEFT", -2.2, -2.2)
+    if combuctorGuildSortBtn.highlight then
+        combuctorGuildSortBtn.highlight:SetTexture(addon._dir .. "uiactionbariconframehighlight")
+        combuctorGuildSortBtn.highlight:ClearAllPoints()
+        combuctorGuildSortBtn.highlight:SetAllPoints(combuctorGuildSortBtn.border)
+    end
+    combuctorGuildSortBtn:ClearAllPoints()
+    combuctorGuildSortBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -31)
+    BagSortModule.frames.combuctorGuildSortBtn = combuctorGuildSortBtn
+end
+
 local function CreateBagnonGuildBankSortButton()
     if bagnonGuildBankSortBtn then return end
     local frame = GetBagnonFrame("guildbank")
@@ -1990,6 +2014,14 @@ UpdateButtonVisibility = function()
 
     CreateVanillaGuildBankSortButton()
     CreateBagnonGuildBankSortButton()
+    CreateCombuctorGuildBankSortButton()
+    if combuctorGuildSortBtn then
+        if guild_bank_open and IsCombuctorEnabled() then
+            combuctorGuildSortBtn:Show()
+        else
+            combuctorGuildSortBtn:Hide()
+        end
+    end
     if vanillaGuildBankSortBtn then
         -- Only "bank" mode shows item slots (vs. log/money log/info sub-tabs).
         if guild_bank_open and _G.GuildBankFrame and _G.GuildBankFrame.mode == "bank" then
@@ -2101,6 +2133,12 @@ ApplyBagSortSystem = function()
                 end)
             end
             UpdateButtonVisibility()
+            -- Second pass: the Combuctor guild frame may be created lazily by this same event
+            addon:After(0.3, function()
+                if BagSortModule.applied and guild_bank_open then
+                    UpdateButtonVisibility()
+                end
+            end)
         elseif event == "GUILDBANKFRAME_CLOSED" then
             guild_bank_open = false
         end
@@ -2174,6 +2212,7 @@ local function RestoreBagSortSystem()
     if vanillaBankClearBtn then vanillaBankClearBtn:Hide() end
     if vanillaGuildBankSortBtn then vanillaGuildBankSortBtn:Hide() end
     if bagnonGuildBankSortBtn then bagnonGuildBankSortBtn:Hide() end
+    if combuctorGuildSortBtn then combuctorGuildSortBtn:Hide() end
 
     -- Remove slash commands
     SlashCmdList["DRAGONUI_SORT"] = nil

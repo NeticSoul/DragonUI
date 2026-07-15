@@ -347,6 +347,11 @@ local defaults = {
         h = 512,
         sets = {},
         exclude = {}
+    },
+    guild = {
+        position = { "LEFT", nil, "LEFT", 24, 0 },
+        w = 512,
+        h = 512
     }
 }
 
@@ -413,6 +418,17 @@ local function SetupDatabase()
                 for kk, vv in pairs(v) do DB.bank[k][kk] = vv end
             else
                 DB.bank[k] = v
+            end
+        end
+    end
+    if not DB.guild then
+        DB.guild = {}
+        for k, v in pairs(defaults.guild) do
+            if type(v) == "table" then
+                DB.guild[k] = {}
+                for kk, vv in pairs(v) do DB.guild[k][kk] = vv end
+            else
+                DB.guild[k] = v
             end
         end
     end

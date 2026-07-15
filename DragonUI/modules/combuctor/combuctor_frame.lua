@@ -959,3 +959,7 @@ end
 mod.CombuctorSkinFrame = CombuctorSkinFrame
 mod.CombuctorSkinItems = CombuctorSkinItems
 mod.CombuctorApplySkin = CombuctorApplySkin
+mod.SetupIconButton = SetupIconButton
+mod.SetupDragFrame = SetupDragFrame
+mod.SetupSearchBox = SetupSearchBox
+mod.SetupResetButton = SetupResetButton

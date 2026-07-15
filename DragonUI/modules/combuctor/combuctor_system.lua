@@ -72,6 +72,16 @@ local function ApplyCombuctorSystem()
     BankFrame:UnregisterAllEvents()
     BankFrame:Hide()
 
+    -- The stock guild vault is load-on-demand; blanking its loader keeps it from ever existing
+    if mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI == nil then
+        mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI = _G.GuildBankFrame_LoadUI
+    end
+    _G.GuildBankFrame_LoadUI = function() end
+    if _G.GuildBankFrame then
+        GuildBankFrame:UnregisterAllEvents()
+        GuildBankFrame:Hide()
+    end
+
     if not mod.CombuctorModule.hooks.inventoryEvents then
         mod("InventoryEvents"):Register(mod, "BANK_OPENED", function()
             mod:Show(BANK_CONTAINER, true)
@@ -128,6 +138,13 @@ local function RestoreCombuctorSystem()
     -- Apply did BankFrame:UnregisterAllEvents(); without these the native bank never opens again
     BankFrame:RegisterEvent("BANKFRAME_OPENED")
     BankFrame:RegisterEvent("BANKFRAME_CLOSED")
+
+    if mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI then
+        _G.GuildBankFrame_LoadUI = mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI
+    end
+    if mod.HideGuildFrame then
+        mod.HideGuildFrame()
+    end
 
     if mod.CombuctorModule.frames.autoEventFrame then
         mod.CombuctorModule.frames.autoEventFrame:UnregisterAllEvents()
@@ -202,6 +219,17 @@ local function RefreshCombuctorFrames()
 
         if frame and frame.moneyFrame and frame.moneyFrame.RefreshDisplay then
             frame.moneyFrame:RefreshDisplay()
+        end
+    end
+
+    -- Guild frame lives outside mod.frames
+    if mod.guildFrame and mod.guildFrame.itemFrame then
+        for _, item in pairs(mod.guildFrame.itemFrame.items) do
+            item:UpdateBorder()
+        end
+        mod.guildFrame.itemFrame:RequestLayout()
+        if mod.guildFrame.moneyFrame then
+            mod.guildFrame.moneyFrame:RefreshDisplay()
         end
     end
 end
