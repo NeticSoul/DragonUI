@@ -29,22 +29,6 @@ local ContainerIDToInventoryID = ContainerIDToInventoryID
 local BankButtonIDToInvSlotID = BankButtonIDToInvSlotID
 local ContainerFrame_UpdateCooldown = ContainerFrame_UpdateCooldown
 local CooldownFrame_SetTimer = CooldownFrame_SetTimer
-local _OrigSetItemButtonTexture = SetItemButtonTexture
-local function SetItemButtonTexture(button, texture)
-    _OrigSetItemButtonTexture(button, texture)
-    local name = button:GetName()
-    if name then
-        local icon = _G[name .. 'IconTexture']
-        if icon then
-            icon:SetDrawLayer('BORDER')
-            icon:Show()
-        end
-        local count = _G[name .. 'Count']
-        if count then
-            count:SetDrawLayer('BORDER')
-        end
-    end
-end
 local SetItemButtonCount = SetItemButtonCount
 local SetItemButtonDesaturated, SetItemButtonTextureVertexColor = SetItemButtonDesaturated, SetItemButtonTextureVertexColor
 local CursorHasItem, PickupContainerItem = CursorHasItem, PickupContainerItem
@@ -86,9 +70,7 @@ end
 
 
 -- ============================================================================
--- COMBUCTOR SELF-CONTAINED RETAIL SKINNING
--- Combuctor manages its own textures and skinning functions.
--- Zero dependency on bags_skin module.
+-- SELF-CONTAINED RETAIL SKINNING (no dependency on bags_skin)
 -- ============================================================================
 
 local CombuctorAssets = addon._dir
@@ -102,10 +84,7 @@ local CT = {
     frame_metal_v     = CombuctorAssets .. 'uiframemetalvertical2x',
     frame_bg          = CombuctorAssets .. 'ui-background-rock',
     close_btn         = CombuctorAssets .. 'redbutton2x',
-    bigbag            = CombuctorAssets .. 'bigbag',
-    bigbag_highlight  = CombuctorAssets .. 'bigbagHighlight',
     bagslot           = CombuctorAssets .. 'bagslots2x',
-    bagslot_cutout    = CombuctorAssets .. 'bagslotCutout',
     bag_border        = CombuctorAssets .. 'bagborder2',
     slot_border       = CombuctorAssets .. 'ui-quickslot2',
     coinbox           = CombuctorAssets .. 'commoncoinbox',
@@ -335,31 +314,6 @@ local function CombuctorRetailBagSlot(btn)
     end
 end
 
--- Retail-style backpack button restyle
-local function CombuctorRetailBackpackButton()
-    local btn = MainMenuBarBackpackButton
-    if not btn or btn._BagSkin_Backpack then return end
-    btn._BagSkin_Backpack = true
-
-    SetItemButtonTexture(btn, CT.bigbag)
-    btn:SetHighlightTexture(CT.bigbag_highlight)
-    btn:SetPushedTexture(CT.bigbag_highlight)
-    btn:SetCheckedTexture(CT.bigbag_highlight)
-
-    if MainMenuBarBackpackButtonNormalTexture then
-        MainMenuBarBackpackButtonNormalTexture:Hide()
-        MainMenuBarBackpackButtonNormalTexture:SetTexture()
-    end
-
-    if not btn._BagSkin_Border then
-        local border = btn:CreateTexture(nil, 'OVERLAY')
-        border:SetTexture(CT.bagslot_cutout)
-        border:SetPoint('TOPLEFT', btn, 'TOPLEFT', 0, 0)
-        border:SetPoint('BOTTOMRIGHT', btn, 'BOTTOMRIGHT', 0, 0)
-        btn._BagSkin_Border = border
-    end
-end
-
 local function GetModuleConfig()
     return addon:GetModuleConfig("combuctor")
 end
@@ -413,11 +367,7 @@ setmetatable(mod, {
     end
 })
 
--- Expose the mod table so the split files (combuctor_data.lua,
--- combuctor_sets.lua, combuctor_classes.lua, combuctor_frame.lua,
--- combuctor_system.lua) can fetch it as `addon.CombuctorModule`.
--- (mod.CombuctorModule remains the metadata table for the module
--- registry — different namespace, intentionally.)
+-- mod.CombuctorModule stays the registry metadata table; addon.CombuctorModule is the split-file namespace.
 addon.CombuctorModule = mod
 
 -- ============================================================================
@@ -615,10 +565,7 @@ function mod:Toggle(bag)
 end
 
 -- ============================================================================
--- SHARED LOCALS → mod.X PROMOTIONS
--- Promotes file-local upvalues to mod fields so downstream split files can
--- access them via mod.X after extraction (PR #2). The locals remain valid
--- as upvalues within this file; behaviors are unchanged.
+-- SHARED LOCALS EXPORTED FOR THE SPLIT FILES
 -- ============================================================================
 
 mod.CT = CT
@@ -634,7 +581,6 @@ mod.CombuctorModule = CombuctorModule
 mod.CombuctorAddNineSlice = CombuctorAddNineSlice
 mod.CombuctorRetailItemSlot = CombuctorRetailItemSlot
 mod.CombuctorRetailBagSlot = CombuctorRetailBagSlot
-mod.CombuctorRetailBackpackButton = CombuctorRetailBackpackButton
 mod.GetSetDisplayName = GetSetDisplayName
 mod.TEXTURE_ITEM_QUEST_BORDER = TEXTURE_ITEM_QUEST_BORDER
 mod.TEXTURE_ITEM_QUEST_BANG = TEXTURE_ITEM_QUEST_BANG

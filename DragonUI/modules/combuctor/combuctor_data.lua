@@ -1,14 +1,6 @@
+-- Event bus (Envoy), inventory event tracking, bank cache, player/bag/item slot info.
 local addon = select(2, ...)
 local mod = addon.CombuctorModule
--- ============================================================================
--- COMBUCTOR DATA MODULE
--- Provides the event bus (Envoy), inventory event tracking (InventoryEvents),
--- bank cache, player info, bag slot info, and item slot info modules.
---
--- Load order: combuctor.lua → combuctor_data.lua → combuctor_sets.lua →
---             combuctor_classes.lua → combuctor_frame.lua → combuctor_system.lua
--- ============================================================================
-
 
 -- ============================================================================
 -- ENVOY (EVENT BUS)

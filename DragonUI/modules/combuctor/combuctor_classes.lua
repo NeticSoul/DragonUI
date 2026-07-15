@@ -1,14 +1,6 @@
+-- UI classes: ItemSlot, ItemFrame, Bag, MoneyFrame, TokenBar, quality/side/bottom filters.
 local addon = select(2, ...)
 local mod = addon.CombuctorModule
--- ============================================================================
--- COMBUCTOR CLASSES MODULE
--- Contains all UI class definitions: ItemSlot, ItemFrame, Bag, MoneyFrame,
--- TokenBar, FilterButton/QualityFilter, SideTab/SideFilter, BottomTab/BottomFilter.
---
--- Load order: combuctor.lua -> combuctor_data.lua -> combuctor_sets.lua ->
---             combuctor_classes.lua -> combuctor_frame.lua -> combuctor_system.lua
--- ============================================================================
-
 
 local format = string.format
 
@@ -74,23 +66,6 @@ do
 
     local unused = {}
     local id = 1
-
-    local function DebugItemSlot(btn)
-        local name = btn:GetName() or "?"
-        print("=== " .. name .. " ===")
-        print("NormalTexture:", btn:GetNormalTexture() and btn:GetNormalTexture():GetTexture() or "nil")
-        local i = 0
-        for _, region in ipairs({ btn:GetRegions() }) do
-            i = i + 1
-            if region:GetObjectType() == 'Texture' then
-                local layer, sublayer = region:GetDrawLayer()
-                print(string.format("  Region %d: layer=%s sublayer=%d tex=%s alpha=%.2f",
-                    i, layer, sublayer or 0,
-                    tostring(region:GetTexture()):sub(1, 40),
-                    region:GetAlpha()))
-            end
-        end
-    end
 
     function ItemSlot:GetNextItemSlotID()
         local nextID = id
@@ -167,10 +142,7 @@ do
         self:SetID(slot)
         self:Update()
 
-        -- Apply retail skin from bags_skin module (if available).
-        -- The _BagSkin_Applied guard prevents duplicate work.
-        -- This is necessary because ItemSlots are created dynamically
-        -- and mod.CombuctorSkinItems() may run before the slot exists.
+        -- Slots spawn on demand, so CombuctorSkinItems may have run before this one existed
         if not self._BagSkin_Applied then
             mod.CombuctorRetailItemSlot(self)
         end
@@ -196,7 +168,7 @@ do
             dummySlot:Hide()
             self._lastShiftState = nil  -- reset so OnUpdate detects shift on first hover
             if self:IsBank() then
-                -- BANK_CONTAINER slots: use SetInventoryItem (bank-specific API)
+                -- BANK_CONTAINER slots need the bank-specific tooltip API
                 if self:GetItem() then
                     self:AnchorTooltip()
                     GameTooltip:SetInventoryItem("player", BankButtonIDToInvSlotID(self:GetID()))
@@ -208,20 +180,16 @@ do
                     self.UpdateTooltip = self.OnEnter
                 end
             else
-                -- Inventory/bank-bag slots: native Blizzard handler correctly shows
-                -- Soulbound, durability, and handles initial shift+compare
+                -- Native handler shows Soulbound/durability and initial shift+compare
                 ContainerFrameItemButton_OnEnter(self)
-                -- Keep tooltip content in sync while the hovered slot updates
-                -- (for example, right-click equip swaps the hovered item).
+                -- Keeps tooltip in sync when the hovered item changes (e.g. right-click equip)
                 self.UpdateTooltip = ContainerFrameItemButton_OnEnter
             end
         end
     end
 
+    -- Toggles the compare tooltip on shift without rebuilding GameTooltip (would corrupt Soulbound text)
     function ItemSlot:OnUpdate()
-        -- Detect shift key state change WHILE hovering and show/hide the comparison
-        -- tooltip WITHOUT rebuilding the main GameTooltip (which would corrupt
-        -- Soulbound/durability text).
         if not self:IsMouseOver() or self:IsCached() then
             self._lastShiftState = nil
             return
@@ -231,10 +199,8 @@ do
         if self._lastShiftState == shiftDown then return end
         self._lastShiftState = shiftDown
         if shiftDown then
-            -- Shift just pressed: show comparison side-tooltip (does NOT touch main GameTooltip)
             GameTooltip_ShowCompareItem()
         else
-            -- Shift released: hide comparison side-tooltips
             if GameTooltip.shoppingTooltips then
                 for _, tt in ipairs(GameTooltip.shoppingTooltips) do
                     tt:Hide()
@@ -372,8 +338,7 @@ do
         self:SetBorderQuality(quality)
     end
 
-    -- UpdateTooltip is set to nil per-instance in Create() to prevent
-    -- Update() from re-triggering OnEnter and clearing bank tooltips.
+    -- nil per-instance so Update() can't re-trigger OnEnter and clear bank tooltips
     ItemSlot.UpdateTooltip = nil
 
     function ItemSlot:AnchorTooltip()
@@ -896,9 +861,7 @@ do
         count:SetJustifyH("RIGHT")
         count:SetPoint("BOTTOMRIGHT", -2, 2)
 
-        -- Bag toggle buttons get NO NormalTexture/PushedTexture/HighlightTexture.
-        -- Only the IconTexture (bag icon) is shown — clean, no background frame.
-        -- Retail skinning is handled independently by bags_skin.lua if enabled.
+        -- Blank state textures: only the bag icon shows; CombuctorSkinBagSlots adds the ring later
         local nt = bag:CreateTexture(name .. "NormalTexture")
         nt:SetTexture(nil)
         nt:SetAlpha(0)
@@ -959,10 +922,6 @@ do
                 self:RegisterEvent("BANKFRAME_CLOSED")
                 self:RegisterEvent("PLAYERBANKBAGSLOTS_CHANGED")
             end
-
-            -- NOTE: Bag toggle dropdown buttons (DragonUI_CombuctorBag1-5)
-            -- have blank NormalTexture by default (only icon visible).
-            -- CharacterBag0-3Slot skinning is handled by bags_skin.lua.
         end
     end
 
@@ -1667,9 +1626,14 @@ do
     end
 
     function BottomTab:UpdateHighlight(setName)
-        if self.set.name == setName then
-            PanelTemplates_SetTab(self:GetParent(), self:GetID())
+        local active = self.set.name == setName
+        if active then
+            PanelTemplates_SelectTab(self)
+        else
+            PanelTemplates_DeselectTab(self)
         end
+        -- Bagnonium look: the active tab mutes its own hover highlight
+        self:GetHighlightTexture():SetAlpha(active and 0 or 1)
     end
 
     local BottomFilter = mod:NewClass("Frame")
@@ -1680,13 +1644,11 @@ do
         f.buttons = setmetatable({}, { __index = function(t, k)
             local tab = BottomTab:New(f, k)
             if k > 1 then
-                -- Horizontal chain only — Y comes from separate BOTTOM anchor
-                tab:SetPoint("LEFT", f.buttons[k - 1], "RIGHT", -16, 0)
+                tab:SetPoint("LEFT", f.buttons[k - 1], "RIGHT", -10, 0)
             else
-                tab:SetPoint("LEFT", parent, "BOTTOMLEFT", 60, 0)
+                -- Bagnonium hangs the tab row just under the frame's bottom edge
+                tab:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", 11, 2)
             end
-            -- Shared vertical baseline; active tab overrides in UpdateHighlight
-            tab:SetPoint("BOTTOM", parent, "BOTTOMLEFT", 0, -26)
             t[k] = tab
             return tab
         end })
@@ -1708,11 +1670,9 @@ do
         if numFilters > 1 then
             for i = 1, numFilters do self.buttons[i]:Show() end
             for i = numFilters + 1, #self.buttons do self.buttons[i]:Hide() end
-            PanelTemplates_SetNumTabs(self, numFilters)
             self:UpdateHighlight()
             self:Show()
         else
-            PanelTemplates_SetNumTabs(self, 0)
             self:Hide()
         end
         self:GetParent():UpdateClampInsets()
@@ -1723,9 +1683,6 @@ do
         for _, button in pairs(self.buttons) do
             if button:IsShown() then
                 button:UpdateHighlight(category)
-                -- Only Y moves — LEFT/RIGHT chain is untouched
-                local isActive = (button.set and button.set.name == category)
-                button:SetPoint("BOTTOM", self:GetParent(), "BOTTOMLEFT", 0, isActive and -31 or -26)
             end
         end
     end

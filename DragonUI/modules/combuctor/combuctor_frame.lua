@@ -1,15 +1,4 @@
-local addon = select(2, ...)
-local mod = addon.CombuctorModule
--- ============================================================================
--- COMBUCTOR FRAME MODULE
--- Contains the FrameEvents relay, InventoryFrame class, template helpers
--- used by InventoryFrame (SetupIconButton, SetupDragFrame, SetupSearchBox,
--- SetupResetButton, SetupBagToggle, CreateInventoryFrame), and the retail-style
--- skinning functions (CombuctorSkinFrame, CombuctorSkinItems,
--- CombuctorSkinBagSlots, CombuctorApplySkin).
---
--- Load order: combuctor.lua -> combuctor_data.lua -> combuctor_sets.lua ->
-
+-- FrameEvents relay, InventoryFrame class, template helpers and frame skinning.
 local addon = select(2, ...)
 local mod = addon.CombuctorModule
 
@@ -250,10 +239,7 @@ local function CreateInventoryFrame(name, parent)
     -- bagToggle (32x32) anchored top-right
     bagToggleBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -14, -38)
 
-    -- resetBtn (32x32): anchor to bag toggle, shift down 6px so visual
-    -- center aligns with the 20px search bar (search top=-44, height=20).
-    -- ClearAllPoints is REQUIRED — without it, SetPoint ADDS a second
-    -- anchor and the button appears stuck because two points fight.
+    -- ClearAllPoints required: SetPoint alone adds a second anchor that fights the first
     resetBtn:ClearAllPoints()
     resetBtn:SetPoint("TOPRIGHT", bagToggleBtn, "TOPLEFT", 3, -11)
 
@@ -275,10 +261,9 @@ local function CreateInventoryFrame(name, parent)
     resizeHt:SetAllPoints(resizeBtn)
     resizeBtn:SetHighlightTexture(resizeHt)
 
-    resizeBtn:SetScript("OnLoad", function(self)
-        self:SetFrameLevel(self:GetFrameLevel() + 4)
-        self:GetNormalTexture():SetVertexColor(1, 0.82, 0)
-    end)
+    -- OnLoad never fires on frames built via CreateFrame; apply directly
+    resizeBtn:SetFrameLevel(resizeBtn:GetFrameLevel() + 4)
+    resizeBtn:GetNormalTexture():SetVertexColor(1, 0.82, 0)
     resizeBtn:SetScript("OnMouseDown", function(self)
         self:GetParent():StartSizing()
     end)
@@ -912,25 +897,14 @@ local function CombuctorSkinBagSlots(frame)
     end
 end
 
+-- Action-bar bag buttons (backpack, CharacterBag0-3) belong to micromenu — never skin them here.
 local function CombuctorApplySkin()
-    -- Skin all existing Combuctor frames
     for i = 1, 2 do
         local frame = _G['DragonUI_CombuctorFrame' .. i]
         if frame then
             mod.CombuctorSkinFrame(frame)
             mod.CombuctorSkinItems(frame)
             mod.CombuctorSkinBagSlots(frame)
-        end
-    end
-
-    -- Backpack button on main bar
-    mod.CombuctorRetailBackpackButton()
-
-    -- Character bag slots on action bar
-    for i = 0, 3 do
-        local slot = _G['CharacterBag' .. i .. 'Slot']
-        if slot then
-            mod.CombuctorRetailBagSlot(slot)
         end
     end
 end

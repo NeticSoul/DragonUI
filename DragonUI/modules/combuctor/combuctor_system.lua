@@ -1,14 +1,5 @@
+-- Apply/restore lifecycle, profile-change handling, init events, slash commands, addon.* exports.
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
--- ============================================================================
--- COMBUCTOR SYSTEM MODULE
--- Owns the apply/restore lifecycle, the profile-change handler, the
--- ADDON_LOADED / PLAYER_ENTERING_WORLD init frame, the /cbt /combuctor
--- slash commands, and the addon.* exports used by the rest of DragonUI.
---
--- Load order: combuctor.lua -> combuctor_data.lua -> combuctor_sets.lua ->
---             combuctor_classes.lua -> combuctor_frame.lua -> combuctor_system.lua
--- ============================================================================
 local mod = addon.CombuctorModule
 
 -- ============================================================================
@@ -133,6 +124,10 @@ end
 
 local function RestoreCombuctorSystem()
     if not mod.CombuctorModule.applied then return end
+
+    -- Apply did BankFrame:UnregisterAllEvents(); without these the native bank never opens again
+    BankFrame:RegisterEvent("BANKFRAME_OPENED")
+    BankFrame:RegisterEvent("BANKFRAME_CLOSED")
 
     if mod.CombuctorModule.frames.autoEventFrame then
         mod.CombuctorModule.frames.autoEventFrame:UnregisterAllEvents()
