@@ -442,9 +442,9 @@ local function SetupDatabase()
     if not addon.db.profile.modules then addon.db.profile.modules = {} end
     if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
 
+    -- Option defaults live in database.lua (modules.combuctor); only the frame layout db is lazy
     local mc = addon.db.profile.modules.combuctor
     if not mc.db then mc.db = {} end
-    if mc.money_display == nil then mc.money_display = "icons" end
 
     DB = mc.db
     mod.DB = DB
@@ -517,14 +517,6 @@ end
 
 function mod:GetProfile()
     return DB
-end
-
-function mod:SetMaxItemScale(scale)
-    if DB then DB.maxScale = scale or 1 end
-end
-
-function mod:GetMaxItemScale()
-    return (DB and DB.maxScale) or 1
 end
 
 -- ============================================================================

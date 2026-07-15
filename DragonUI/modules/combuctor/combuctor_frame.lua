@@ -100,15 +100,16 @@ local function SetupSearchBox(eb, parentFrame)
         end
     end)
     eb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    -- ClearFocus first: SetText while focused would fire OnTextChanged and search for "Search"
     eb:SetScript("OnEscapePressed", function(self)
-        self:SetText(SEARCH)
         self:ClearFocus()
-        self:GetParent():SetFilter('name', nil, true)
+        self:SetText(SEARCH)
+        self:GetParent():SetSearch(nil)
     end)
     eb:SetScript("OnTextChanged", function(self)
         if self:HasFocus() then
             local text = self:GetText()
-            self:GetParent():SetFilter('name', (text ~= '' and text:lower()) or nil, true)
+            self:GetParent():SetSearch((text ~= '' and text:lower()) or nil)
         end
     end)
     eb:SetScript("OnEditFocusLost", function(self)
@@ -231,9 +232,9 @@ local function CreateInventoryFrame(name, parent)
     local resetBtn = CreateFrame("Button", name .. "Reset", f)
     SetupResetButton(resetBtn)
     resetBtn:SetScript("OnClick", function()
-        searchEb:SetText(SEARCH)
         searchEb:ClearFocus()
-        f:SetFilter('name', nil, true)
+        searchEb:SetText(SEARCH)
+        f:SetSearch(nil)
     end)
 
     -- bagToggle (32x32) anchored top-right
@@ -509,6 +510,11 @@ do
 
     function InventoryFrame:GetFilter(key)
         return self.filter[key]
+    end
+
+    -- Search dims non-matching slots instead of filtering them out, so the grid never reshuffles
+    function InventoryFrame:SetSearch(text)
+        self.itemFrame:SetSearch(text)
     end
 
     function InventoryFrame:SetPlayer(player)

@@ -725,6 +725,78 @@ local function BuildBagsTab(scroll)
         disabled = function() return not IsCombuctorEnabled() end,
         width = 180,
     })
+
+    local function GetCombuctorConfig(create)
+        if create then
+            if not addon.db.profile.modules then addon.db.profile.modules = {} end
+            if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
+        end
+        return addon.db.profile.modules and addon.db.profile.modules.combuctor
+    end
+
+    local function SetCombuctorOption(key, val)
+        local mc = GetCombuctorConfig(true)
+        mc[key] = val
+        if addon.RefreshCombuctorFrames then addon.RefreshCombuctorFrames() end
+    end
+
+    C:AddSlider(displaySection, {
+        label = LO["Item Scale"] or "Item Scale",
+        desc = LO["Maximum size of item slots. The grid still shrinks them to fit the frame."] or "Maximum size of item slots. The grid still shrinks them to fit the frame.",
+        min = 0.5, max = 1.5, step = 0.05, isPercent = true,
+        getFunc = function()
+            local mc = GetCombuctorConfig(false)
+            return (mc and mc.item_scale) or 1
+        end,
+        setFunc = function(val) SetCombuctorOption("item_scale", val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddSlider(displaySection, {
+        label = LO["Item Spacing"] or "Item Spacing",
+        desc = LO["Gap between item slots in the grid."] or "Gap between item slots in the grid.",
+        min = 0, max = 8, step = 1,
+        getFunc = function()
+            local mc = GetCombuctorConfig(false)
+            return (mc and mc.item_spacing) or 2
+        end,
+        setFunc = function(val) SetCombuctorOption("item_spacing", val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(displaySection, {
+        label = LO["Quality Glow"] or "Quality Glow",
+        desc = LO["Show a colored ring on uncommon and better items."] or "Show a colored ring on uncommon and better items.",
+        getFunc = function()
+            local mc = GetCombuctorConfig(false)
+            return not mc or mc.glow_quality ~= false
+        end,
+        setFunc = function(val) SetCombuctorOption("glow_quality", val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(displaySection, {
+        label = LO["Quest Item Glow"] or "Quest Item Glow",
+        desc = LO["Highlight quest items with a golden border."] or "Highlight quest items with a golden border.",
+        getFunc = function()
+            local mc = GetCombuctorConfig(false)
+            return not mc or mc.glow_quest ~= false
+        end,
+        setFunc = function(val) SetCombuctorOption("glow_quest", val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddSlider(displaySection, {
+        label = LO["Glow Intensity"] or "Glow Intensity",
+        desc = LO["Opacity of the quality ring on item slots."] or "Opacity of the quality ring on item slots.",
+        min = 0.1, max = 1, step = 0.05, isPercent = true,
+        getFunc = function()
+            local mc = GetCombuctorConfig(false)
+            return (mc and mc.glow_alpha) or 1
+        end,
+        setFunc = function(val) SetCombuctorOption("glow_alpha", val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
 end
 
 -- Register the tab

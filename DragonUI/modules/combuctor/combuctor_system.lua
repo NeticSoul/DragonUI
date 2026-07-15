@@ -189,6 +189,14 @@ local function RefreshCombuctorFrames()
             end
         end
 
+        -- Re-apply borders and layout so glow/scale/spacing option changes show live
+        if frame and frame.itemFrame then
+            for _, item in pairs(frame.itemFrame.items) do
+                item:UpdateBorder()
+            end
+            frame.itemFrame:RequestLayout()
+        end
+
         if frame and frame.moneyFrame and frame.moneyFrame.RefreshDisplay then
             frame.moneyFrame:RefreshDisplay()
         end

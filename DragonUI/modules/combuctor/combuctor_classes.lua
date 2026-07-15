@@ -3,6 +3,7 @@ local addon = select(2, ...)
 local mod = addon.CombuctorModule
 
 local format = string.format
+local floor, ceil, min, max, sqrt = math.floor, math.ceil, math.min, math.max, math.sqrt
 
 -- ============================================================================
 -- TEMPLATE HELPERS (moved from core: used by SideTab and BottomTab)
@@ -134,6 +135,7 @@ do
         self:Hide()
         self:SetParent(nil)
         self:UnlockHighlight()
+        self:SetAlpha(1)
         unused[self] = true
     end
 
@@ -240,6 +242,7 @@ do
         self:SetBorderQuality(quality)
         self:UpdateSlotColor()
         self:UpdateCooldown()
+        self:SetAlpha(self:MatchesSearch() and 1 or 0.3)
         if GameTooltip:IsOwned(self) and self.UpdateTooltip then
             self:UpdateTooltip()
         end
@@ -278,10 +281,29 @@ do
     end
 
     function ItemSlot:SetLocked(locked)
-        SetItemButtonDesaturated(self, locked)
+        SetItemButtonDesaturated(self, locked or not self:MatchesSearch())
     end
 
     function ItemSlot:UpdateLocked()
+        self:SetLocked(self:IsLocked())
+    end
+
+    function ItemSlot:GetSearch()
+        local p = self:GetParent()
+        p = p and p:GetParent()
+        return p and p.search
+    end
+
+    function ItemSlot:MatchesSearch()
+        local search = self:GetSearch()
+        if not search then return true end
+        local link = self:GetItem()
+        return (link and mod.ItemSearch:Find(link, search)) and true or false
+    end
+
+    -- Bagnonium-style search: non-matching slots dim in place, the grid never reshuffles
+    function ItemSlot:UpdateSearch()
+        self:SetAlpha(self:MatchesSearch() and 1 or 0.3)
         self:SetLocked(self:IsLocked())
     end
 
@@ -302,28 +324,29 @@ do
     function ItemSlot:SetBorderQuality(quality)
         local border = self.border
         local qBorder = self.questBorder
+        local cfg = mod.GetModuleConfig()
 
-        -- Quest item check
-        local isQuestItem, isQuestStarter = self:IsQuestItem()
-        if isQuestItem then
-            qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BORDER)
-            qBorder:SetAlpha(1)
-            qBorder:Show()
-            border:Hide()
-            return
-        end
-        if isQuestStarter then
-            qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BANG)
-            qBorder:SetAlpha(1)
-            qBorder:Show()
-            border:Hide()
-            return
+        if not cfg or cfg.glow_quest ~= false then
+            local isQuestItem, isQuestStarter = self:IsQuestItem()
+            if isQuestItem then
+                qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BORDER)
+                qBorder:SetAlpha(1)
+                qBorder:Show()
+                border:Hide()
+                return
+            end
+            if isQuestStarter then
+                qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BANG)
+                qBorder:SetAlpha(1)
+                qBorder:Show()
+                border:Hide()
+                return
+            end
         end
 
-        -- Quality border
-        if self:GetItem() and quality and quality > 1 then
+        if (not cfg or cfg.glow_quality ~= false) and self:GetItem() and quality and quality > 1 then
             local r, g, b = GetItemQualityColor(quality)
-            border:SetVertexColor(r, g, b, 0.5)
+            border:SetVertexColor(r, g, b, (cfg and cfg.glow_alpha) or 1)
             border:Show()
             qBorder:Hide()
             return
@@ -618,6 +641,8 @@ do
     function ItemFrame:OnShow()
         self:UpdateUpdatable()
         self:Regenerate()
+        -- Flush a layout requested while hidden (e.g. option changed with bags closed)
+        self:TriggerLayout()
     end
 
     function ItemFrame:OnHide()
@@ -665,11 +690,19 @@ do
                 return false
             elseif f.subRule and not f.subRule(player, bagType, name, link, quality, level, ilvl, itemType, subType, stackCount, equipLoc) then
                 return false
-            elseif f.name then
-                return mod.ItemSearch:Find(link, f.name)
             end
         end
         return true
+    end
+
+    function ItemFrame:SetSearch(text)
+        text = (text and text ~= '') and text or nil
+        if self.search ~= text then
+            self.search = text
+            for _, item in pairs(self.items) do
+                item:UpdateSearch()
+            end
+        end
     end
 
     function ItemFrame:AddItem(bag, slot)
@@ -762,20 +795,23 @@ do
         end
     end
 
-    function ItemFrame:Layout(spacing)
+    function ItemFrame:Layout()
         local width, height = self:GetWidth(), self:GetHeight()
-        spacing = spacing or 2
         local count = self.count
-        local size = 36 + spacing * 2
-        local cols = 0
-        local scale, rows
-        local maxScale = mod:GetMaxItemScale()
+        if count == 0 or width <= 0 or height <= 0 then return end
 
-        repeat
-            cols = cols + 1
-            scale = width / (size * cols)
-            rows = floor(height / (size * scale))
-        until (scale <= maxScale and cols * rows >= count)
+        local cfg = mod.GetModuleConfig()
+        local spacing = (cfg and cfg.item_spacing) or 2
+        local size = 36 + spacing * 2
+        local maxScale = (cfg and cfg.item_scale) or 1
+
+        -- Bagnonium best-fit: estimate columns from the frame's aspect ratio, cap by item scale
+        local rows = ceil(sqrt(count * height / width))
+        local cols = max(1, ceil(rows * width / height))
+        rows = ceil(count / cols)
+        local bestFit = min(width / cols, height / rows, maxScale * size)
+        cols = max(1, floor(width / bestFit + 0.001))
+        local scale = bestFit / size
 
         local items = self.items
         local i = 0
