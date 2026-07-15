@@ -622,7 +622,7 @@ local function BuildBagsTab(scroll)
         disabled = function() return not IsCombuctorEnabled() end,
     })
 
-    -- Category tabs (matching KPack Combuctor set names)
+    -- Category tabs (canonical set names)
     local Equipment = SET_EQUIPMENT
     local Usable = SET_USABLE
     local Weapon, Armor, _, Consumable, _, TradeGood, _, _, Recipe, Gem, Misc, Quest = GetAuctionItemClasses()

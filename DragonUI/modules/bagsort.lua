@@ -9,7 +9,6 @@ end
 -- BAG SORT MODULE FOR DRAGONUI
 -- Sorts items in bags and bank by type, rarity, level, name.
 -- Adds sort buttons to both Combustor frames and vanilla bag/bank frames.
--- Inspired by BankStack sorting algorithm adapted for DragonUI.
 -- ============================================================================
 
 -- Module state tracking
@@ -1061,7 +1060,7 @@ local function AddMove(source, destination)
     tinsert(moves, 1, encode_move(source, destination))
 end
 
--- BankStack Stack: fill partial target stacks from source_bags (reverse iteration).
+-- Fill partial target stacks from source_bags (reverse iteration).
 -- require_partial_source: same-bag compress skips full sources; cross-bag allows them.
 local function StackBags(source_bags, target_bags, require_partial_source)
     local target_items = {}
@@ -1124,7 +1123,7 @@ local function StackBagsAcross(source_bags, target_bags)
     StackBags(source_bags, target_bags, false)
 end
 
--- Check if a move actually needs to happen (exact BankStack logic)
+-- Check if a move actually needs to happen
 local function ShouldActuallyMove(source, destination)
     if destination == source then return end
     if not bag_ids[source] then return end
@@ -1135,7 +1134,7 @@ local function ShouldActuallyMove(source, destination)
     return true
 end
 
--- Update sorted array after scheduling a move (exact BankStack logic)
+-- Update sorted array after scheduling a move
 local function UpdateSorted(sorted, source, destination)
     for i, bs in pairs(sorted) do
         if bs == source then
@@ -1146,7 +1145,7 @@ local function UpdateSorted(sorted, source, destination)
     end
 end
 
--- Sort items in the given bags (exact BankStack core.Sort logic)
+-- Sort items in the given bags
 local function SortItems(bags)
     if not item_types then BuildSortOrder() end
 
