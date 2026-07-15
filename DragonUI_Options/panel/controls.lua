@@ -53,7 +53,7 @@ local function RecordSearchEntry(opts)
     local Panel = addon.OptionsPanel
     if not Panel or not Panel.searchIndex then return end
     local label    = safestr(opts.label)
-    local desc     = safestr(opts.desc)
+    local desc     = safestr(opts.desc ~= nil and opts.desc or opts.tooltip)
     local dbPath   = safestr(opts.dbPath)
     local subTab   = safestr(Panel._currentSubTabLabel)
     local subTabKey = safestr(Panel._currentSubTabKey)
@@ -635,6 +635,21 @@ function Controls:AddToggle(parent, opts)
     cb:SetLabel(label)
     if desc then cb:SetDescription(desc) end
     if opts.width then cb:SetWidth(opts.width) else cb:SetFullWidth(true) end
+
+    -- `tooltip` shows the text on hover instead of as an always-visible description
+    local tooltip = NormalizeDescription(opts.tooltip)
+    if tooltip then
+        -- ANCHOR_CURSOR: the AceGUI row spans the full panel width, so frame anchors land far away
+        cb.frame:HookScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+            GameTooltip:SetText(label, 1, 1, 1)
+            GameTooltip:AddLine(tooltip, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        cb.frame:HookScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+    end
 
     if opts.getFunc then
         cb:SetValue(opts.getFunc() and true or false)

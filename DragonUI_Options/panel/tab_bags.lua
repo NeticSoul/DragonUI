@@ -469,213 +469,6 @@ local function BuildBagsTab(scroll)
     end
 
     -- ====================================================================
-    -- INVENTORY CATEGORY TABS
-    -- ====================================================================
-    local tabSection = C:AddSection(scroll, LO["Inventory Tabs"])
-    C:AddDescription(tabSection, LO["Choose which category tabs appear on the inventory bag frame."])
-
-    -- "All" tab
-    C:AddToggle(tabSection, {
-        label = LO["Show 'All' Tab"],
-        desc = LO["Show the 'All' category tab that displays all items without filtering."],
-        getFunc = function() return HasSetInDB(SET_ALL) end,
-        setFunc = function(val) ToggleInventorySet(SET_ALL, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Category tabs (matching KPack Combuctor set names)
-    local Equipment = SET_EQUIPMENT
-    local Usable = SET_USABLE
-    local Weapon, Armor, _, Consumable, _, TradeGood, _, _, Recipe, Gem, Misc, Quest = GetAuctionItemClasses()
-    local Devices = select(10, GetAuctionItemSubClasses(6))
-
-    C:AddToggle(tabSection, {
-        label = LO["Show Equipment Tab"],
-        desc = LO["Show the Equipment category tab for armor and weapons."],
-        getFunc = function() return HasSetInDB(Equipment) end,
-        setFunc = function(val) ToggleInventorySet(Equipment, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Usable
-    C:AddToggle(tabSection, {
-        label = LO["Show Usable Tab"],
-        desc = LO["Show the Usable category tab for consumables and devices."],
-        getFunc = function() return HasSetInDB(Usable) end,
-        setFunc = function(val) ToggleInventorySet(Usable, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Quest
-    C:AddToggle(tabSection, {
-        label = LO["Show Quest Tab"],
-        desc = LO["Show the Quest items category tab."],
-        getFunc = function() return HasSetInDB(Quest) end,
-        setFunc = function(val) ToggleInventorySet(Quest, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Trade Goods
-    C:AddToggle(tabSection, {
-        label = LO["Show Trade Goods Tab"],
-        desc = LO["Show the Trade Goods category tab (includes gems and recipes)."],
-        getFunc = function() return HasSetInDB(TradeGood) end,
-        setFunc = function(val) ToggleInventorySet(TradeGood, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Miscellaneous
-    C:AddToggle(tabSection, {
-        label = LO["Show Miscellaneous Tab"],
-        desc = LO["Show the Miscellaneous items category tab."],
-        getFunc = function() return HasSetInDB(Misc) end,
-        setFunc = function(val) ToggleInventorySet(Misc, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- ====================================================================
-    -- BANK CATEGORY TABS
-    -- ====================================================================
-    local bankSection = C:AddSection(scroll, LO["Bank Tabs"])
-    C:AddDescription(bankSection, LO["Choose which category tabs appear on the bank frame."])
-
-    C:AddToggle(bankSection, {
-        label = LO["Show 'All' Tab"],
-        desc = LO["Show the 'All' category tab that displays all items without filtering."],
-        getFunc = function() return HasBankSetInDB(SET_ALL) end,
-        setFunc = function(val) ToggleBankSet(SET_ALL, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    C:AddToggle(bankSection, {
-        label = LO["Show Equipment Tab"],
-        desc = LO["Show the Equipment category tab for armor and weapons."],
-        getFunc = function() return HasBankSetInDB(Equipment) end,
-        setFunc = function(val) ToggleBankSet(Equipment, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    C:AddToggle(bankSection, {
-        label = LO["Show Usable Tab"],
-        desc = LO["Show the Usable category tab for consumables and devices."],
-        getFunc = function() return HasBankSetInDB(Usable) end,
-        setFunc = function(val) ToggleBankSet(Usable, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    C:AddToggle(bankSection, {
-        label = LO["Show Quest Tab"],
-        desc = LO["Show the Quest items category tab."],
-        getFunc = function() return HasBankSetInDB(Quest) end,
-        setFunc = function(val) ToggleBankSet(Quest, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    C:AddToggle(bankSection, {
-        label = LO["Show Trade Goods Tab"],
-        desc = LO["Show the Trade Goods category tab (includes gems and recipes)."],
-        getFunc = function() return HasBankSetInDB(TradeGood) end,
-        setFunc = function(val) ToggleBankSet(TradeGood, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    C:AddToggle(bankSection, {
-        label = LO["Show Miscellaneous Tab"],
-        desc = LO["Show the Miscellaneous items category tab."],
-        getFunc = function() return HasBankSetInDB(Misc) end,
-        setFunc = function(val) ToggleBankSet(Misc, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- ====================================================================
-    -- SUBTABS (BOTTOM FILTER TABS)
-    -- ====================================================================
-    local subtabSection = C:AddSection(scroll, LO["Subtabs"])
-    C:AddDescription(subtabSection, LO["Configure which bottom subtabs appear within each category tab. Applies to both inventory and bank."])
-
-    -- "All" category subtabs
-    C:AddLabel(subtabSection, "|cffAAAAAA" .. (LO["All"] or SET_ALL) .. "|r")
-    C:AddToggle(subtabSection, {
-        label = LO["Normal"],
-        desc = LO["Show the Normal bags subtab (non-profession bags)."],
-        getFunc = function() return not IsSubtabExcluded("inventory", SET_ALL, SET_NORMAL) end,
-        setFunc = function(val) ToggleSubtab(SET_ALL, SET_NORMAL, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-    C:AddToggle(subtabSection, {
-        label = LO["Trade Bags"],
-        desc = LO["Show the Trade bags subtab (profession bags)."],
-        getFunc = function() return not IsSubtabExcluded("inventory", SET_ALL, SET_TRADE) end,
-        setFunc = function(val) ToggleSubtab(SET_ALL, SET_TRADE, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Equipment subtabs
-    C:AddLabel(subtabSection, "|cffAAAAAA" .. (LO["Equipment"] or Equipment) .. "|r")
-    C:AddToggle(subtabSection, {
-        label = Armor,
-        desc = LO["Show the Armor subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", Equipment, Armor) end,
-        setFunc = function(val) ToggleSubtab(Equipment, Armor, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-    C:AddToggle(subtabSection, {
-        label = Weapon,
-        desc = LO["Show the Weapon subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", Equipment, Weapon) end,
-        setFunc = function(val) ToggleSubtab(Equipment, Weapon, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-    C:AddToggle(subtabSection, {
-        label = INVTYPE_TRINKET,
-        desc = LO["Show the Trinket subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", Equipment, INVTYPE_TRINKET) end,
-        setFunc = function(val) ToggleSubtab(Equipment, INVTYPE_TRINKET, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Usable subtabs
-    C:AddLabel(subtabSection, "|cffAAAAAA" .. (LO["Usable"] or Usable) .. "|r")
-    C:AddToggle(subtabSection, {
-        label = Consumable,
-        desc = LO["Show the Consumable subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", Usable, Consumable) end,
-        setFunc = function(val) ToggleSubtab(Usable, Consumable, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-    C:AddToggle(subtabSection, {
-        label = Devices,
-        desc = LO["Show the Devices subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", Usable, Devices) end,
-        setFunc = function(val) ToggleSubtab(Usable, Devices, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- Trade Goods subtabs
-    C:AddLabel(subtabSection, "|cffAAAAAA" .. TradeGood .. "|r")
-    C:AddToggle(subtabSection, {
-        label = TradeGood,
-        desc = LO["Show the Trade Goods subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, TradeGood) end,
-        setFunc = function(val) ToggleSubtab(TradeGood, TradeGood, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-    C:AddToggle(subtabSection, {
-        label = Gem,
-        desc = LO["Show the Gem subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, Gem) end,
-        setFunc = function(val) ToggleSubtab(TradeGood, Gem, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-    C:AddToggle(subtabSection, {
-        label = Recipe,
-        desc = LO["Show the Recipe subtab."],
-        getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, Recipe) end,
-        setFunc = function(val) ToggleSubtab(TradeGood, Recipe, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
-    })
-
-    -- ====================================================================
     -- DISPLAY OPTIONS
     -- ====================================================================
     local displaySection = C:AddSection(scroll, LO["Display"])
@@ -813,6 +606,214 @@ local function BuildBagsTab(scroll)
         setFunc = function(val) SetCombuctorOption("glow_alpha", val) end,
         disabled = function() return not IsCombuctorEnabled() end,
     })
+
+    -- ====================================================================
+    -- INVENTORY CATEGORY TABS
+    -- ====================================================================
+    local tabSection = C:AddSection(scroll, LO["Inventory Tabs"])
+    C:AddDescription(tabSection, LO["Choose which category tabs appear on the inventory bag frame."])
+
+    -- "All" tab
+    C:AddToggle(tabSection, {
+        label = LO["Show 'All' Tab"],
+        tooltip = LO["Show the 'All' category tab that displays all items without filtering."],
+        getFunc = function() return HasSetInDB(SET_ALL) end,
+        setFunc = function(val) ToggleInventorySet(SET_ALL, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Category tabs (matching KPack Combuctor set names)
+    local Equipment = SET_EQUIPMENT
+    local Usable = SET_USABLE
+    local Weapon, Armor, _, Consumable, _, TradeGood, _, _, Recipe, Gem, Misc, Quest = GetAuctionItemClasses()
+    local Devices = select(10, GetAuctionItemSubClasses(6))
+
+    C:AddToggle(tabSection, {
+        label = LO["Show Equipment Tab"],
+        tooltip = LO["Show the Equipment category tab for armor and weapons."],
+        getFunc = function() return HasSetInDB(Equipment) end,
+        setFunc = function(val) ToggleInventorySet(Equipment, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Usable
+    C:AddToggle(tabSection, {
+        label = LO["Show Usable Tab"],
+        tooltip = LO["Show the Usable category tab for consumables and devices."],
+        getFunc = function() return HasSetInDB(Usable) end,
+        setFunc = function(val) ToggleInventorySet(Usable, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Quest
+    C:AddToggle(tabSection, {
+        label = LO["Show Quest Tab"],
+        tooltip = LO["Show the Quest items category tab."],
+        getFunc = function() return HasSetInDB(Quest) end,
+        setFunc = function(val) ToggleInventorySet(Quest, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Trade Goods
+    C:AddToggle(tabSection, {
+        label = LO["Show Trade Goods Tab"],
+        tooltip = LO["Show the Trade Goods category tab (includes gems and recipes)."],
+        getFunc = function() return HasSetInDB(TradeGood) end,
+        setFunc = function(val) ToggleInventorySet(TradeGood, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Miscellaneous
+    C:AddToggle(tabSection, {
+        label = LO["Show Miscellaneous Tab"],
+        tooltip = LO["Show the Miscellaneous items category tab."],
+        getFunc = function() return HasSetInDB(Misc) end,
+        setFunc = function(val) ToggleInventorySet(Misc, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- ====================================================================
+    -- BANK CATEGORY TABS
+    -- ====================================================================
+    local bankSection = C:AddSection(scroll, LO["Bank Tabs"])
+    C:AddDescription(bankSection, LO["Choose which category tabs appear on the bank frame."])
+
+    C:AddToggle(bankSection, {
+        label = LO["Show 'All' Tab"],
+        tooltip = LO["Show the 'All' category tab that displays all items without filtering."],
+        getFunc = function() return HasBankSetInDB(SET_ALL) end,
+        setFunc = function(val) ToggleBankSet(SET_ALL, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(bankSection, {
+        label = LO["Show Equipment Tab"],
+        tooltip = LO["Show the Equipment category tab for armor and weapons."],
+        getFunc = function() return HasBankSetInDB(Equipment) end,
+        setFunc = function(val) ToggleBankSet(Equipment, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(bankSection, {
+        label = LO["Show Usable Tab"],
+        tooltip = LO["Show the Usable category tab for consumables and devices."],
+        getFunc = function() return HasBankSetInDB(Usable) end,
+        setFunc = function(val) ToggleBankSet(Usable, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(bankSection, {
+        label = LO["Show Quest Tab"],
+        tooltip = LO["Show the Quest items category tab."],
+        getFunc = function() return HasBankSetInDB(Quest) end,
+        setFunc = function(val) ToggleBankSet(Quest, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(bankSection, {
+        label = LO["Show Trade Goods Tab"],
+        tooltip = LO["Show the Trade Goods category tab (includes gems and recipes)."],
+        getFunc = function() return HasBankSetInDB(TradeGood) end,
+        setFunc = function(val) ToggleBankSet(TradeGood, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    C:AddToggle(bankSection, {
+        label = LO["Show Miscellaneous Tab"],
+        tooltip = LO["Show the Miscellaneous items category tab."],
+        getFunc = function() return HasBankSetInDB(Misc) end,
+        setFunc = function(val) ToggleBankSet(Misc, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- ====================================================================
+    -- SUBTABS (BOTTOM FILTER TABS)
+    -- ====================================================================
+    local subtabSection = C:AddSection(scroll, LO["Subtabs"])
+    C:AddDescription(subtabSection, LO["Configure which bottom subtabs appear within each category tab. Applies to both inventory and bank."])
+
+    -- "All" category subtabs
+    C:AddLabel(subtabSection, "|cffAAAAAA" .. (LO["All"] or SET_ALL) .. "|r")
+    C:AddToggle(subtabSection, {
+        label = LO["Normal"],
+        tooltip = LO["Show the Normal bags subtab (non-profession bags)."],
+        getFunc = function() return not IsSubtabExcluded("inventory", SET_ALL, SET_NORMAL) end,
+        setFunc = function(val) ToggleSubtab(SET_ALL, SET_NORMAL, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+    C:AddToggle(subtabSection, {
+        label = LO["Trade Bags"],
+        tooltip = LO["Show the Trade bags subtab (profession bags)."],
+        getFunc = function() return not IsSubtabExcluded("inventory", SET_ALL, SET_TRADE) end,
+        setFunc = function(val) ToggleSubtab(SET_ALL, SET_TRADE, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Equipment subtabs
+    C:AddLabel(subtabSection, "|cffAAAAAA" .. (LO["Equipment"] or Equipment) .. "|r")
+    C:AddToggle(subtabSection, {
+        label = Armor,
+        tooltip = LO["Show the Armor subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", Equipment, Armor) end,
+        setFunc = function(val) ToggleSubtab(Equipment, Armor, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+    C:AddToggle(subtabSection, {
+        label = Weapon,
+        tooltip = LO["Show the Weapon subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", Equipment, Weapon) end,
+        setFunc = function(val) ToggleSubtab(Equipment, Weapon, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+    C:AddToggle(subtabSection, {
+        label = INVTYPE_TRINKET,
+        tooltip = LO["Show the Trinket subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", Equipment, INVTYPE_TRINKET) end,
+        setFunc = function(val) ToggleSubtab(Equipment, INVTYPE_TRINKET, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Usable subtabs
+    C:AddLabel(subtabSection, "|cffAAAAAA" .. (LO["Usable"] or Usable) .. "|r")
+    C:AddToggle(subtabSection, {
+        label = Consumable,
+        tooltip = LO["Show the Consumable subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", Usable, Consumable) end,
+        setFunc = function(val) ToggleSubtab(Usable, Consumable, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+    C:AddToggle(subtabSection, {
+        label = Devices,
+        tooltip = LO["Show the Devices subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", Usable, Devices) end,
+        setFunc = function(val) ToggleSubtab(Usable, Devices, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
+    -- Trade Goods subtabs
+    C:AddLabel(subtabSection, "|cffAAAAAA" .. TradeGood .. "|r")
+    C:AddToggle(subtabSection, {
+        label = TradeGood,
+        tooltip = LO["Show the Trade Goods subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, TradeGood) end,
+        setFunc = function(val) ToggleSubtab(TradeGood, TradeGood, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+    C:AddToggle(subtabSection, {
+        label = Gem,
+        tooltip = LO["Show the Gem subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, Gem) end,
+        setFunc = function(val) ToggleSubtab(TradeGood, Gem, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+    C:AddToggle(subtabSection, {
+        label = Recipe,
+        tooltip = LO["Show the Recipe subtab."],
+        getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, Recipe) end,
+        setFunc = function(val) ToggleSubtab(TradeGood, Recipe, val) end,
+        disabled = function() return not IsCombuctorEnabled() end,
+    })
+
 end
 
 -- Register the tab
