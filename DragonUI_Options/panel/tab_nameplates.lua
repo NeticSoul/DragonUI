@@ -652,7 +652,7 @@ local function BuildHealthSubTab(scroll)
 
     C:AddToggle(health, {
         label = LO["Gray Tapped Units"],
-        desc = LO["Grays the health bar when a unit is tapped by another player or group. Remembers tap status after you mouse away or change target."],
+        desc = LO["Grays the health bar when a unit is tapped by another player or group."],
         dbPath = DB .. ".tapDeniedGray",
         callback = function()
             if addon.Nameplates and addon.Nameplates.tap then
