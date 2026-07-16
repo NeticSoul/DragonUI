@@ -810,11 +810,12 @@ function addon.RefreshButtons()
         end
     end
 
-    -- buttons_iterator() only walks main/multi bars, so pet/stance/possess need their own toggle pass.
+    -- buttons_iterator() only walks main/multi bars, so pet/stance/possess/extrabar need their own toggle pass.
     local additionalBars = {
         { prefix = 'PetActionButton', count = NUM_PET_ACTION_SLOTS },
         { prefix = 'ShapeshiftButton', count = NUM_SHAPESHIFT_SLOTS },
         { prefix = 'PossessButton', count = NUM_POSSESS_SLOTS },
+        { prefix = 'DragonUI_ExtraBarButton', count = 12 },
     }
     for _, bar in ipairs(additionalBars) do
         for index = 1, bar.count do

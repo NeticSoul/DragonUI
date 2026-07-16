@@ -13,4 +13,7 @@
     
     <!-- Multicast/Totem Bar (Shaman) -->
     <Script file="multicast.lua"/>
+
+    <!-- Extra Action Bar — standalone, independent of any class bonus bar -->
+    <Script file="extrabar.lua"/>
 </Ui>

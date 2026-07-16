@@ -126,3 +126,9 @@ L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works cor
 L["Detected |cFFFFFF00%s|r. Enable Nameplate Health Bar Compatibility so it works correctly?"] = "|cFFFFFF00%s|r détecté. Activer la compatibilité de la barre de vie des plaques pour qu'il fonctionne correctement ?"
 L["Enable"] = "Activer"
 
+-- Extra Bar (issue #330)
+L["ExtraBar1"] = "Barre Supplémentaire"
+L["Extra Bar"] = "Barre Supplémentaire"
+L["A standalone action bar, independent of any class bonus bar"] = "Une barre d'action autonome, indépendante de toute barre de bonus de classe"
+L["Drag a spell, item or macro here."] = "Faites glisser un sort, un objet ou une macro ici."
+

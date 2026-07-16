@@ -712,6 +712,7 @@ local function SetupVehicleBarHiding(hideMainBar)
     --    the previous approach (helper hider frame with manual Hide() calls)
     --    could be overridden by those Show() calls.
     --    Skip if already registered (e.g. during combat-safe early setup).
+    -- ExtraBar1Container: owned solely by extrabar.lua (SetupExtrabarVehicleVisibility).
     local secondaryBars = {
         {key = 'vehicleHide_bl', bar = MultiBarBottomLeft},
         {key = 'vehicleHide_br', bar = MultiBarBottomRight},

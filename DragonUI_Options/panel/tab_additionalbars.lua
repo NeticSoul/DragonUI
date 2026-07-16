@@ -180,6 +180,7 @@ local function BuildAdditionalBarsTab(scroll)
             if addon.RefreshMulticast then addon.RefreshMulticast(true) end
         end,
     })
+    -- Extra Bar (#330) is under Action Bars — general-purpose, not class-conditional like the bars above.
 end
 
 -- Register the tab (order 4 = right after Action Bars)

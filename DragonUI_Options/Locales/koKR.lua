@@ -614,6 +614,12 @@ L["Use Blizzard vehicle bar art with health/power display. Requires reload."] = 
 -- Totem Bar
 L["Totem Bar"] = "토템 바"
 L["Totem Bar (Shaman)"] = "토템바 (주술사)"
+
+-- Extra Bar (issue #330)
+L["Extra Bar"] = "추가 바"
+L["A 12-button action bar independent of every class's bonus bar (stance/stealth/vehicle)."] = "모든 직업의 보너스 바(변신/은신/탈것)와 무관한 12칸 액션 바입니다."
+L["Fade the extra bar until you hover over it."] = "마우스를 올리기 전까지 추가 바를 흐리게 표시합니다."
+L["Fade the extra bar until you enter combat."] = "전투에 진입하기 전까지 추가 바를 흐리게 표시합니다."
 L["Shamans only - Totem multicast bar. Position is controlled via Editor Mode."] = "주술사 전용 - 토템 멀티캐스트 바. 위치는 편집 모드에서 조정합니다."
 L["TIP: Use Editor Mode to position the totem bar (type /dragonui edit)."] = "팁: 편집 모드에서 토템 바의 위치를 조정하세요 (/dragonui edit 입력)."
 

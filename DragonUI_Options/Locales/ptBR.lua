@@ -238,6 +238,12 @@ L["Main Bars"] = "Barras Principais"
 L["Vehicle"] = "Veículo"
 L["Stance Bar"] = "Barra de Postura"
 L["Pet Bar"] = "Barra do Mascote"
+
+-- Extra Bar (issue #330)
+L["Extra Bar"] = "Barra Extra"
+L["A 12-button action bar independent of every class's bonus bar (stance/stealth/vehicle)."] = "Uma barra de ação de 12 botões, independente da barra de bônus de qualquer classe (forma/furtividade/veículo)."
+L["Fade the extra bar until you hover over it."] = "Esmaece a barra extra até você passar o mouse sobre ela."
+L["Fade the extra bar until you enter combat."] = "Esmaece a barra extra até você entrar em combate."
 L["Multicast"] = "Multicast"
 L["Buttons"] = "Botões"
 L["Hide Blizzard Elements"] = "Ocultar Elementos da Blizzard"

@@ -448,6 +448,21 @@ local defaults = {
                 show_on_hover = false,
                 show_in_combat = false,
                 visibility_logic = "and",
+            },
+            extrabar1 = {
+                x_position = 0,
+                y_position = 260,
+                scale = 0.9, -- baked into button pixels (GetSizeAndSpacing); matches mainbars.scale_actionbar
+                size = 36,
+                spacing = 6,
+                columns = 12, -- 12 = single row
+                change_button_order = false,
+                button_order = "bottom_left",
+                show_hotkey = true, -- default on: no well-known native binds like pet/stance
+                show_on_hover = false,
+                show_in_combat = false,
+                visibility_logic = "and",
+                slots = {},
             }
         },
 
@@ -784,6 +799,9 @@ local defaults = {
             },
             multicast = {
                 enabled = true -- Apply DragonUI multicast (totem/possess) bar positioning and styling
+            },
+            extrabar1 = {
+                enabled = false -- opt-in standalone bar (#330); Options → Action Bars → Visibility
             },
             micromenu = {
                 enabled = true -- Apply DragonUI micro menu and bags system styling and positioning

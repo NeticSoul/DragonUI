@@ -623,6 +623,12 @@ L["Use Blizzard vehicle bar art with health/power display. Requires reload."] = 
 -- Totem Bar
 L["Totem Bar"] = "Barra de Tótems"
 L["Totem Bar (Shaman)"] = "Barra de Tótems (Chamán)"
+
+-- Extra Bar (issue #330)
+L["Extra Bar"] = "Barra Extra"
+L["A 12-button action bar independent of every class's bonus bar (stance/stealth/vehicle)."] = "Una barra de acción de 12 botones, independiente de la barra de bonificación de cualquier clase (forma/sigilo/vehículo)."
+L["Fade the extra bar until you hover over it."] = "Atenúa la barra extra hasta que pases el ratón por encima."
+L["Fade the extra bar until you enter combat."] = "Atenúa la barra extra hasta que entres en combate."
 L["Shamans only - Totem multicast bar. Position is controlled via Editor Mode."] = "Solo chamanes - Barra multicast de tótems. La posición se controla mediante el Modo Editor."
 L["TIP: Use Editor Mode to position the totem bar (type /dragonui edit)."] = "CONSEJO: Usa el Modo Editor para posicionar la barra de tótems (escribe /dragonui edit)."
 

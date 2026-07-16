@@ -607,6 +607,12 @@ L["Use Blizzard vehicle bar art with health/power display. Requires reload."] = 
 -- 圖騰條
 L["Totem Bar"] = "圖騰條"
 L["Totem Bar (Shaman)"] = "圖騰條（薩滿）"
+
+-- Extra Bar (issue #330)
+L["Extra Bar"] = "額外欄"
+L["A 12-button action bar independent of every class's bonus bar (stance/stealth/vehicle)."] = "一個12格的動作列，獨立於任何職業的特殊列（形態/潛行/載具）。"
+L["Fade the extra bar until you hover over it."] = "在滑鼠懸停之前淡出額外欄。"
+L["Fade the extra bar until you enter combat."] = "在進入戰鬥之前淡出額外欄。"
 L["Shamans only - Totem multicast bar. Position is controlled via Editor Mode."] = "僅限薩滿 - 圖騰多目標施法條。位置透過編輯模式控制。"
 L["TIP: Use Editor Mode to position the totem bar (type /dragonui edit)."] = "提示：使用編輯模式來定點陣圖騰條（輸入 /dragonui edit）。"
 

@@ -1,0 +1,17 @@
+<Bindings>
+    <!-- CLICK = secure in combat. PUSHED flash is OnClick pulse in extrabar.lua (no IsKeyDown). -->
+    <Binding name="CLICK DragonUI_ExtraBarButton1:LeftButton" header="DragonUI">
+        <!-- BINDING_NAME_* set in modules/actionbars/extrabar.lua -->
+    </Binding>
+    <Binding name="CLICK DragonUI_ExtraBarButton2:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton3:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton4:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton5:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton6:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton7:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton8:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton9:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton10:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton11:LeftButton"/>
+    <Binding name="CLICK DragonUI_ExtraBarButton12:LeftButton"/>
+</Bindings>

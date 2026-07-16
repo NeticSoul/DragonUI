@@ -113,7 +113,8 @@ flashFrame:SetScript("OnUpdate", function(self)
             flashUntil[button] = nil
             if button.SetButtonState then
                 button:SetButtonState("NORMAL")
-                if button.action and ActionButton_UpdateState then
+                -- Real action buttons only (extrabar uses a dummy .action for cooldowns).
+                if button:GetAttribute("action") and ActionButton_UpdateState then
                     ActionButton_UpdateState(button)
                 end
             end
@@ -126,6 +127,9 @@ end)
 
 local function FlashActionButton(button)
     if not button or not button.SetButtonState then return end
+    -- Extra Bar has its own key flash; flashing here also fought its checked state.
+    local name = button.GetName and button:GetName()
+    if name and name:find("DragonUI_ExtraBarButton", 1, true) == 1 then return end
     button:SetButtonState("PUSHED")
     flashUntil[button] = GetTime() + KEY_PUSH_FLASH
     flashFrame:Show()

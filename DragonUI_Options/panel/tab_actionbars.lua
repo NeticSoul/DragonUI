@@ -596,6 +596,80 @@ local function BuildLayoutTab(scroll)
             print("|cFF00FF00[DragonUI]|r " .. LO["All bar layouts reset to defaults."])
         end,
     })
+
+    -- Extra Bar: position via Editor Mode (no sliders), like other movable bars.
+    local extrabarLayout = C:AddSection(scroll, LO["Extra Bar"])
+
+    C:AddSlider(extrabarLayout, {
+        label = LO["Scale"],
+        dbPath = "additional.extrabar1.scale",
+        min = 0.5, max = 2.0, step = 0.05,
+        width = 200,
+        callback = function()
+            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+        end,
+    })
+
+    C:AddSlider(extrabarLayout, {
+        label = LO["Button Size"],
+        getFunc = function()
+            local cfg = addon.db.profile.additional.extrabar1
+            if cfg and cfg.size then return cfg.size end
+            return 36
+        end,
+        setFunc = function(val)
+            addon.db.profile.additional.extrabar1.size = val
+            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+        end,
+        min = 16, max = 64, step = 1,
+        width = 200,
+    })
+
+    C:AddSlider(extrabarLayout, {
+        label = LO["Button Spacing"],
+        getFunc = function()
+            local cfg = addon.db.profile.additional.extrabar1
+            if cfg and cfg.spacing ~= nil then return cfg.spacing end
+            return 6
+        end,
+        setFunc = function(val)
+            addon.db.profile.additional.extrabar1.spacing = val
+            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+        end,
+        min = 0, max = 20, step = 1,
+        width = 200,
+    })
+
+    C:AddSlider(extrabarLayout, {
+        label = LO["Columns"],
+        dbPath = "additional.extrabar1.columns",
+        min = 1, max = 12, step = 1,
+        width = 200,
+        callback = function()
+            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+        end,
+    })
+
+    C:AddToggle(extrabarLayout, {
+        label = LO["Change Button Order"],
+        dbPath = "additional.extrabar1.change_button_order",
+        callback = function()
+            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+            RebuildLayoutTab()
+        end,
+    })
+
+    if C:GetDBValue("additional.extrabar1.change_button_order") then
+        C:AddDropdown(extrabarLayout, {
+            label = LO["Button Order"],
+            dbPath = "additional.extrabar1.button_order",
+            values = buttonOrderValues,
+            width = 200,
+            callback = function()
+                if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+            end,
+        })
+    end
 end
 
 -- ============================================================================
@@ -741,6 +815,37 @@ local function BuildVisibilityTab(scroll)
         label = LO["Left Bar"],
         dbPath = "actionbars.left_enabled",
         callback = RefreshVisibility,
+    })
+
+    C:AddToggle(enableSection, {
+        label = LO["Extra Bar"],
+        desc = LO["A 12-button action bar independent of every class's bonus bar (stance/stealth/vehicle)."],
+        dbPath = "modules.extrabar1.enabled",
+        callback = function()
+            if addon.RefreshExtrabarSystem then addon.RefreshExtrabarSystem() end
+        end,
+    })
+
+    -- Extra Bar hover/combat
+    local extrabarVis = C:AddSection(scroll, LO["Extra Bar"])
+
+    C:AddToggle(extrabarVis, {
+        label = LO["Show Hotkey Text"],
+        dbPath = "additional.extrabar1.show_hotkey",
+        callback = function()
+            if addon.RefreshExtrabarHotkeys then addon.RefreshExtrabarHotkeys() end
+        end,
+    })
+
+    C:AddVisibilityFadeToggles(extrabarVis, {
+        dbPrefix = "additional.extrabar1",
+        hoverDesc = LO["Fade the extra bar until you hover over it."],
+        combatDesc = LO["Fade the extra bar until you enter combat."],
+        callback = function()
+            if addon.VisibilityFade then
+                addon.VisibilityFade.Update("extrabar1")
+            end
+        end,
     })
 
     -- Main bar hover/combat

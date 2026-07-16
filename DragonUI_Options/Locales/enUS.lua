@@ -697,6 +697,12 @@ L["Totem Bar (Shaman)"] = true
 L["Shamans only - Totem multicast bar. Position is controlled via Editor Mode."] = true
 L["TIP: Use Editor Mode to position the totem bar (type /dragonui edit)."] = true
 
+-- Extra Bar (issue #330)
+L["Extra Bar"] = true
+L["A 12-button action bar independent of every class's bonus bar (stance/stealth/vehicle)."] = true
+L["Fade the extra bar until you hover over it."] = true
+L["Fade the extra bar until you enter combat."] = true
+
 -- ============================================================================
 -- CAST BARS TAB
 -- ============================================================================
