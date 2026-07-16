@@ -106,16 +106,15 @@ local function FadeToAlpha(entry, targetAlpha, duration, onComplete)
     end)
 end
 
--- EnableMouse() on secure action buttons (action/pet/totem/stance bars) is a PROTECTED call
--- (confirmed via ADDON_ACTION_BLOCKED) that can't be written while InCombatLockdown() is true,
--- except for the direct synchronous write from the PLAYER_REGEN_DISABLED handler below. Frames that
--- aren't secure (e.g. the minimap) don't have this restriction — pass mouseSafeInCombat to react
--- live to hover/combat changes mid-fight instead of only at the combat transition.
+-- EnableMouse is protected in combat on secure frames; mouseSafeInCombat opts in known-safe ones.
+-- Even those (e.g. MinimapCluster) can still get blocked in some contexts (PvP) — pcall per frame.
 local function ApplyMouseState(entry, cfg, shouldShow)
     if not entry.clickThrough or not entry.hoverFrames then return end
     if InCombatLockdown() and not entry.mouseSafeInCombat then return end
     for _, frame in ipairs(entry.hoverFrames) do
-        if frame and frame.EnableMouse then frame:EnableMouse(shouldShow) end
+        if frame and frame.EnableMouse then
+            pcall(frame.EnableMouse, frame, shouldShow)
+        end
     end
 end
 
@@ -269,9 +268,8 @@ function VF.Register(key, frame, opts)
     entry.onFadeComplete = opts.onFadeComplete
     entry.immediateHideCallback = opts.immediateHideCallback
 
-    -- Merge (not replace) so frames added later via AddHoverFrames survive a re-Register — once a
-    -- frame is marked tracked it never gets re-inserted, so overwriting the array here would
-    -- silently drop it forever the next time this key is re-registered (e.g. on a settings change).
+    -- Merge (not replace): overwriting here would silently drop frames added later via
+    -- AddHoverFrames the next time this key re-registers (e.g. a settings change).
     local hoverFrames = opts.hoverFrames or { frame }
     entry.hoverFrames = entry.hoverFrames or {}
     local enableMouse = opts.enableMouse
