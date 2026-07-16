@@ -2095,41 +2095,6 @@ end
 -- MODULE ENABLE/DISABLE SYSTEM
 -- =================================================================
 
-local function RestoreVanillaMinimapChrome()
-    if Minimap_UpdateRotationSetting then
-        Minimap_UpdateRotationSetting()
-    end
-    if MinimapBorder then
-        MinimapBorder:Show()
-    end
-    if MinimapBackdrop and MinimapCluster then
-        MinimapBackdrop:ClearAllPoints()
-        MinimapBackdrop:SetPoint("CENTER", MinimapCluster, "CENTER", 0, -20)
-        MinimapModule.backdropYOffset = nil
-    end
-    if MinimapBorderTop then
-        MinimapBorderTop:ClearAllPoints()
-        MinimapBorderTop:SetPoint("TOPRIGHT")
-        MinimapBorderTop:SetTexture("Interface\\Minimap\\UI-Minimap-Border")
-        MinimapBorderTop:SetTexCoord(0.25, 1.0, 0.0, 0.125)
-        MinimapBorderTop:SetSize(192, 32)
-        MinimapBorderTop:SetAlpha(1)
-        MinimapBorderTop:Show()
-    end
-    if Minimap and MinimapModule.activeMinimapScale then
-        Minimap:SetScale(1)
-        MinimapModule.activeMinimapScale = nil
-    end
-    local blizzFrames = {
-        MiniMapTrackingIcon, MiniMapTrackingIconOverlay, MiniMapMailBorder, MiniMapTrackingButtonBorder,
-    }
-    for _, frame in pairs(blizzFrames) do
-        if frame then
-            frame:SetAlpha(1)
-        end
-    end
-end
-
 function MinimapModule:StoreOriginalSettings()
     -- Store original Blizzard minimap settings
     if MinimapCluster then
@@ -2366,9 +2331,6 @@ function MinimapModule:RestoreMinimapSystem()
     if MiniMapWorldMapButton then
         MiniMapWorldMapButton:Show()
     end
-    if Minimap.Circle then
-        Minimap.Circle:Hide()
-    end
 
     -- CRITICAL: Restore original Blizzard minimap mask
     if Minimap and self.originalMask then
@@ -2409,7 +2371,44 @@ function MinimapModule:RestoreMinimapSystem()
         addon.MinimapDecorations:Restore()
     end
 
-    RestoreVanillaMinimapChrome()
+    -- Undo DragonUI-owned chrome only after we applied; never run this on cold start (fights other minimap addons).
+    local wasHybrid = self.sexyMapHybridMode or self._allowExternalBorderControl
+    if Minimap and Minimap.Circle then
+        Minimap.Circle:Hide()
+    end
+    if not wasHybrid then
+        if MinimapBorder then
+            MinimapBorder:Show()
+        end
+        if MinimapBorderTop then
+            MinimapBorderTop:ClearAllPoints()
+            MinimapBorderTop:SetPoint("TOPRIGHT")
+            MinimapBorderTop:SetTexture("Interface\\Minimap\\UI-Minimap-Border")
+            MinimapBorderTop:SetTexCoord(0.25, 1.0, 0.0, 0.125)
+            MinimapBorderTop:SetSize(192, 32)
+            MinimapBorderTop:SetAlpha(1)
+        end
+        if MinimapBackdrop and MinimapCluster then
+            MinimapBackdrop:ClearAllPoints()
+            MinimapBackdrop:SetPoint("CENTER", MinimapCluster, "CENTER", 0, -20)
+        end
+        local blizzFrames = {
+            MiniMapTrackingIcon, MiniMapTrackingIconOverlay, MiniMapMailBorder, MiniMapTrackingButtonBorder,
+        }
+        for _, frame in pairs(blizzFrames) do
+            if frame then
+                frame:SetAlpha(1)
+            end
+        end
+    end
+    if Minimap and self.activeMinimapScale then
+        Minimap:SetScale(1)
+        self.activeMinimapScale = nil
+    end
+    self.backdropYOffset = nil
+    if Minimap_UpdateRotationSetting then
+        Minimap_UpdateRotationSetting()
+    end
 
     addon:Print(L["Minimap module restored to Blizzard defaults"])
 end
@@ -2602,7 +2601,6 @@ function MinimapModule:Initialize()
     
     -- Check if minimap module is enabled
     if not IsModuleEnabled() then
-        RestoreVanillaMinimapChrome()
         return
     end
 

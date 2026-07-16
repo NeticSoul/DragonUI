@@ -174,7 +174,11 @@ end
 
 local function IsEffectEnabled()
     local config = GetMinimapConfig()
-    return IsModuleEnabled() and not IsHybridModeActive() and config and config.animated_border_enabled == true
+    return IsModuleEnabled()
+        and IsMinimapSystemEnabled()
+        and not IsHybridModeActive()
+        and config
+        and config.animated_border_enabled == true
 end
 
 local function ClampOpacity(value)
@@ -616,11 +620,18 @@ function MinimapDecorationsModule:Restore()
     if self.frames.backdrop then
         self.frames.backdrop:Hide()
     end
-    EnsureMinimapTopPriority()
 
-    if self.originalStates.minimapBorderTextureHiddenByDecorations then
-        local minimapModule = addon.MinimapModule
-        local borderTexture = minimapModule and minimapModule.borderFrame and minimapModule.borderFrame.border
+    local minimapModule = addon.MinimapModule
+    local minimapSystemActive = IsMinimapSystemEnabled()
+        and minimapModule
+        and minimapModule.applied
+    if minimapSystemActive then
+        EnsureMinimapTopPriority()
+    end
+
+    -- Skip circle/border restore when Minimap System is off (avoids DragonUI chrome over other addons).
+    if self.originalStates.minimapBorderTextureHiddenByDecorations and minimapSystemActive then
+        local borderTexture = minimapModule.borderFrame and minimapModule.borderFrame.border
         local circle = Minimap and Minimap.Circle
         local toggleButton = _G.MinimapToggleButton
         if borderTexture then
@@ -723,6 +734,12 @@ function MinimapDecorationsModule:Refresh()
     if IsEffectEnabled() then
         self:Apply()
     else
+        -- Hide DragonUI Border only applies while decorations are on; clear stale flag on disable.
+        local minimapConfig = GetMinimapConfig()
+        if minimapConfig and minimapConfig.animated_border_enabled ~= true
+            and minimapConfig.animated_border_hide_dragonui_border then
+            minimapConfig.animated_border_hide_dragonui_border = false
+        end
         self:Restore()
         if IsModuleEnabled()
             and IsMinimapSystemEnabled()

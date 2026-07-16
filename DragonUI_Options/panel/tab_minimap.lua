@@ -305,10 +305,18 @@ local function BuildMinimapTab(scroll)
     C:AddDescription(animatedBorder,
         LO["Adds decorative animated texture layers around the DragonUI minimap."])
 
+    local hideDragonUIBorderToggle
+
     C:AddToggle(animatedBorder, {
         label = LO["Enable Minimap Decorations"],
         dbPath = "minimap.animated_border_enabled",
         callback = function()
+            if not IsAnimatedBorderEnabled() then
+                C:SetDBValue("minimap.animated_border_hide_dragonui_border", false)
+                if hideDragonUIBorderToggle and hideDragonUIBorderToggle.SetValue then
+                    hideDragonUIBorderToggle:SetValue(false)
+                end
+            end
             UpdateAnimatedBorderSectionState()
             RefreshAnimatedBorder()
         end,
@@ -329,7 +337,7 @@ local function BuildMinimapTab(scroll)
         callback = RefreshAnimatedBorder,
     })
 
-    animatedBorderWidgets[#animatedBorderWidgets + 1] = C:AddToggle(animatedBorder, {
+    hideDragonUIBorderToggle = C:AddToggle(animatedBorder, {
         label = LO["Hide DragonUI Border"],
         dbPath = "minimap.animated_border_hide_dragonui_border",
         callback = function()
@@ -340,6 +348,7 @@ local function BuildMinimapTab(scroll)
             RefreshAnimatedBorder()
         end,
     })
+    animatedBorderWidgets[#animatedBorderWidgets + 1] = hideDragonUIBorderToggle
 
     animatedBorderScaleSlider = C:AddSlider(animatedBorder, {
         label = LO["Scale"],
