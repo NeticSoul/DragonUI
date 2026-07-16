@@ -1476,9 +1476,13 @@ L["DragonUI (Custom)"] = true
 L["Allow Nameplate Overlap"] = true
 L["Allow plates to overlap instead of stacking."] = true
 L["Addon Compatibility"] = true
-L["Enable this if you use an external nameplate addon (PlateBuffs, Icicle, ...) that isn't detecting DragonUI's nameplates correctly."] = true
+L["Enable this if you use an external nameplate addon (PlateBuffs, Crosshairs, ...) that isn't detecting DragonUI's nameplates correctly."] = true
 L["Nameplate Addon Compatibility"] = true
 L["Stops overriding the nameplate's native transparency/visibility, which some external addons rely on to find their target. Non-target nameplates will dim like vanilla."] = true
+L["Enable this if you use an addon (Icicle, ...) that attaches its own widgets to DragonUI's nameplate health bar."] = true
+L["Nameplate Health Bar Compatibility"] = true
+L["Hides the native health bar by fading its individual textures instead of the whole bar, for addons that attach widgets directly to it."] = true
+
 L["Totem Click Padding"] = true
 L["Extra clickable padding on totem nameplates (easier to click)."] = true
 L["Clamp Target to Screen"] = true

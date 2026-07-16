@@ -72,14 +72,55 @@ function NP.native_style.HideRegion(tex)
     end
 end
 
+-- Texture-only hide (never SetAlpha(0) on the bar, Icicle parents icons there); GetAlpha() gate skips no-op frames.
+local function SetBarTextureAlphas(bar, alpha)
+    local statusTex = bar.GetStatusBarTexture and bar:GetStatusBarTexture() or nil
+    if statusTex and statusTex.SetAlpha and statusTex.GetAlpha and statusTex:GetAlpha() ~= alpha then
+        statusTex:SetAlpha(alpha)
+    end
+    if not bar.GetNumRegions or not bar.GetRegions then
+        return
+    end
+    local n = bar:GetNumRegions()
+    if n == 0 then
+        return
+    end
+    local regions = { bar:GetRegions() }
+    for i = 1, n do
+        local region = regions[i]
+        if region and region ~= statusTex and region.GetObjectType and region:GetObjectType() == "Texture"
+            and region.SetAlpha and region.GetAlpha and region:GetAlpha() ~= alpha then
+            region:SetAlpha(alpha)
+        end
+    end
+end
+
+-- compat mode = texture-only path (Icicle parents widgets to the bar); default = cheap bar-level SetAlpha.
 function NP.native_style.NeutralizeStatusBarVisual(bar)
     if not bar then
         return
     end
-    -- Alpha suppression is reversible; replacing the status-bar texture is not.
-    if bar.SetAlpha then
-        bar:SetAlpha(0)
+    if not NP.module._barAlphaCompat then
+        if bar.SetAlpha and bar.GetAlpha and bar:GetAlpha() ~= 0 then
+            bar:SetAlpha(0)
+        end
+        return
     end
+    if bar.SetAlpha and bar.GetAlpha and bar:GetAlpha() ~= 1 then
+        bar:SetAlpha(1)
+    end
+    SetBarTextureAlphas(bar, 0)
+end
+
+-- Unconditional (not just under compat): a prior compat-on session may have zeroed the textures.
+function NP.native_style.RestoreStatusBarVisual(bar)
+    if not bar then
+        return
+    end
+    if bar.SetAlpha and bar.GetAlpha and bar:GetAlpha() ~= 1 then
+        bar:SetAlpha(1)
+    end
+    SetBarTextureAlphas(bar, 1)
 end
 
 -- Elite/rare classification

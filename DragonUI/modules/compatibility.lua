@@ -434,6 +434,41 @@ behaviors.NameplateAddonAlphaCompat = function(addonName, addonInfo)
     StaticPopup_Show(popupName)
 end
 
+-- Distinct from NameplateAddonAlphaCompat above: this skips the health-bar SetAlpha(0), not plate-root alpha.
+local nameplateBarAlphaCompatPrompted = false
+behaviors.NameplateBarAlphaCompat = function(addonName, addonInfo)
+    if nameplateBarAlphaCompatPrompted then
+        return
+    end
+
+    local npCfg = addon.db and addon.db.profile and addon.db.profile.modules
+        and addon.db.profile.modules.nameplates
+    if not npCfg or npCfg.nameplateBarAlphaCompat == true then
+        return
+    end
+
+    nameplateBarAlphaCompatPrompted = true
+
+    local popupName = "DRAGONUI_NAMEPLATE_BAR_ALPHA_COMPAT"
+    StaticPopupDialogs[popupName] = {
+        text = "|cFF00CCFFDragonUI|r\n\n" ..
+            string.format(L["Detected |cFFFFFF00%s|r. Enable Nameplate Health Bar Compatibility so it works correctly?"], addonInfo.name),
+        button1 = L["Enable"],
+        button2 = L["Not Now"],
+        OnAccept = function()
+            npCfg.nameplateBarAlphaCompat = true
+            ReloadUI()
+        end,
+        OnCancel = function() end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3
+    }
+
+    StaticPopup_Show(popupName)
+end
+
 -- Behavior: CompactRaidFrame taint mitigation
 behaviors.CompactRaidFrameFix = function(addonName, addonInfo)
 
@@ -1001,16 +1036,16 @@ ADDON_REGISTRY = {
         behavior = behaviors.NameplateAddonAlphaCompat,
         checkOnce = true
     },
-    ["icicle"] = {
-        name = "Icicle",
-        reason = L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."],
-        behavior = behaviors.NameplateAddonAlphaCompat,
-        checkOnce = true
-    },
     ["crosshairs"] = {
         name = "Crosshairs",
         reason = L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."],
         behavior = behaviors.NameplateAddonAlphaCompat,
+        checkOnce = true
+    },
+    ["icicle"] = {
+        name = "Icicle",
+        reason = L["Parents its cooldown icons to the native health bar; conflicts with DragonUI's default health-bar hiding."],
+        behavior = behaviors.NameplateBarAlphaCompat,
         checkOnce = true
     },
     ["nameplatesct"] = {

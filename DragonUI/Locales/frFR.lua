@@ -121,6 +121,8 @@ L["Broadcast and detect addon version updates across group members"] = "Détecte
 
 -- Nameplate addon compatibility popup
 L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "Utilise la transparence native de la plaque pour identifier la plaque de la cible ; entre en conflit avec le comportement anti-assombrissement par défaut de DragonUI."
+L["Parents its cooldown icons to the native health bar; conflicts with DragonUI's default health-bar hiding."] = "Attache ses icônes de temps de recharge à la barre de vie native ; entre en conflit avec le masquage par défaut de cette barre dans DragonUI."
 L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works correctly?"] = "|cFFFFFF00%s|r détecté. Activer la compatibilité des addons de plaques de nom pour qu'il fonctionne correctement ?"
+L["Detected |cFFFFFF00%s|r. Enable Nameplate Health Bar Compatibility so it works correctly?"] = "|cFFFFFF00%s|r détecté. Activer la compatibilité de la barre de vie des plaques pour qu'il fonctionne correctement ?"
 L["Enable"] = "Activer"
 

@@ -255,9 +255,11 @@ L["Known taint issues when manipulating party frames during combat. DragonUI pro
 L["Resets minimap mask and blip textures. DragonUI re-applies its custom textures automatically."] = "Setzt Minimap-Maske und Markierungs-Texturen zurück. DragonUI wendet seine benutzerdefinierten Texturen automatisch erneut an."
 L["SexyMap modifies the minimap borders, shape, and zone text which conflicts with DragonUI's minimap module."] = "SexyMap verändert die Minimap-Rahmen, Form und Zonentexte, was mit dem Minimap-Modul von DragonUI kollidiert."
 L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "Nutzt die native Transparenz der Namensplakette, um die Zielplakette zu erkennen; kollidiert mit DragonUIs Standard-Anti-Abdunkelung."
+L["Parents its cooldown icons to the native health bar; conflicts with DragonUI's default health-bar hiding."] = "Hängt seine Abklingzeit-Icons an die native Gesundheitsleiste; kollidiert mit DragonUIs Standard-Ausblendung dieser Leiste."
 
 -- Nameplate addon compatibility popup
 L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works correctly?"] = "|cFFFFFF00%s|r erkannt. Namensplaketten-Addon-Kompatibilität aktivieren, damit es korrekt funktioniert?"
+L["Detected |cFFFFFF00%s|r. Enable Nameplate Health Bar Compatibility so it works correctly?"] = "|cFFFFFF00%s|r erkannt. Namensplaketten-Gesundheitsleisten-Kompatibilität aktivieren, damit es korrekt funktioniert?"
 L["Enable"] = "Aktivieren"
 
 -- SexyMap compatibility popup

@@ -255,9 +255,11 @@ L["Known taint issues when manipulating party frames during combat. DragonUI pro
 L["Resets minimap mask and blip textures. DragonUI re-applies its custom textures automatically."] = "ë¯¸ë‹ˆë§µ ë§ˆìŠ¤í¬ì™€ ë¸”ë¦½ í…ìŠ¤ì²˜ë¥¼ ì´ˆê¸°í™”í•©ë‹ˆë‹¤. DragonUIê°€ ì‚¬ìš©ìž ì§€ì • í…ìŠ¤ì²˜ë¥¼ ìžë™ìœ¼ë¡œ ë‹¤ì‹œ ì ìš©í•©ë‹ˆë‹¤."
 L["SexyMap modifies the minimap borders, shape, and zone text which conflicts with DragonUI's minimap module."] = "SexyMapì´ ë¯¸ë‹ˆë§µ í…Œë‘ë¦¬, ëª¨ì–‘, ì§€ì—­ ì´ë¦„ í…ìŠ¤íŠ¸ë¥¼ ë³€ê²½í•˜ì—¬ DragonUIì˜ ë¯¸ë‹ˆë§µ ëª¨ë“ˆê³¼ ì¶©ëŒí•©ë‹ˆë‹¤."
 L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "네임플레이트의 기본 알파값으로 대상 플레이트를 식별합니다. DragonUI의 기본 밝기 유지(디밍 방지) 기능과 충돌합니다."
+L["Parents its cooldown icons to the native health bar; conflicts with DragonUI's default health-bar hiding."] = "재사용 대기시간 아이콘을 기본 생명력 바에 연결합니다. DragonUI의 기본 생명력 바 숨김과 충돌합니다."
 
 -- Nameplate addon compatibility popup
 L["Detected |cFFFFFF00%s|r. Enable Nameplate Addon Compatibility so it works correctly?"] = "|cFFFFFF00%s|r 감지됨. 올바르게 작동하도록 네임플레이트 addon 호환성을 활성화하시겠습니까?"
+L["Detected |cFFFFFF00%s|r. Enable Nameplate Health Bar Compatibility so it works correctly?"] = "|cFFFFFF00%s|r 감지됨. 올바르게 작동하도록 네임플레이트 생명력 바 호환성을 활성화하시겠습니까?"
 L["Enable"] = "활성화"
 
 -- SexyMap compatibility popup

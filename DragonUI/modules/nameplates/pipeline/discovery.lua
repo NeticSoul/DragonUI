@@ -326,8 +326,7 @@ end
 
 function NP.discovery.SuppressNativeChrome(plateData)
     NP.native_style.NoteNativePlateClassification(plateData)
-    -- Some external addons (BattleGroundHealers, or nameplateAlphaCompat's PlateBuffs/Icicle
-    -- etc.) identify nameplates by the native border texture path and gate on IsShown().
+    -- Some external addons identify nameplates by native border texture / IsShown().
     local alphaOnlyChrome = (NP.config.IsBattleGroundHealersLoaded and NP.config.IsBattleGroundHealersLoaded())
         or (NP.config.IsPlateAlphaCompatEnabled and NP.config.IsPlateAlphaCompatEnabled())
     -- Cached for ReassertHotChrome, which re-suppresses every frame without recomputing cfg/IsAddOnLoaded.
@@ -391,13 +390,7 @@ function NP.discovery.SuppressNativeChrome(plateData)
         end
     end
 
-    local bar = plateData.healthBar
-    if bar then
-        NP.native_style.NeutralizeStatusBarVisual(bar)
-        if bar.SetAlpha then
-            bar:SetAlpha(0)
-        end
-    end
+    NP.native_style.NeutralizeStatusBarVisual(plateData.healthBar)
     NP.native_style.HideRegion(plateData.castBarBorder)
 end
 
@@ -418,7 +411,7 @@ function NP.discovery.RestoreNativeChrome(plateData)
         plateData.border:Show()
     end
     if plateData.healthBar then
-        if plateData.healthBar.SetAlpha then plateData.healthBar:SetAlpha(1) end
+        NP.native_style.RestoreStatusBarVisual(plateData.healthBar)
         if plateData.healthBar.Show then plateData.healthBar:Show() end
     end
     if plateData.castBar then

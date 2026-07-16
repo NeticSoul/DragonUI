@@ -73,8 +73,7 @@ function NP.config.IsBGHCompatEnabled()
     return cfg.bghCompatEnabled ~= false and NP.config.IsBattleGroundHealersLoaded()
 end
 
--- Skips the native-alpha force/hide suppression that fights external plate
--- addons (PlateBuffs, Icicle, ...) which read native alpha/IsShown as identity signals.
+-- Skips native-alpha force that fights external plate addons reading alpha/IsShown as identity.
 function NP.config.IsPlateAlphaCompatEnabled()
     local cfg = NP.config.GetCfg()
     return cfg.nameplateAlphaCompat == true

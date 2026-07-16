@@ -323,6 +323,8 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
     NP.module._opacityFullParty = (cfg.opacityFullParty == true)
     NP.module._retailBehavior = NP.config.IsRetailBehavior()
+    NP.module._plateAlphaCompat = cfg.nameplateAlphaCompat == true
+    NP.module._barAlphaCompat = cfg.nameplateBarAlphaCompat == true
     NP.module._clampTargetEnabled = cfg.clampTarget == true
     NP.module._clampBossEnabled = cfg.clampBoss == true
     NP.module._clampTopInset = cfg.clampTopInset or 0
@@ -358,8 +360,8 @@ local function EngineOnUpdate(_, elapsed)
     -- 1. Harvest native alpha, then force plate root to 1 when target exists.
     -- retailCfg hoisted out of per-plate path (was 40 GetCfg/frame).
     -- awesome_wotlk: skip forcing alpha to 1 (stock dims non-target plates; awesome manages alpha/LoS).
-    -- nameplateAlphaCompat: same skip, opt-in for external plate addons that read native alpha as identity (PlateBuffs, Icicle, ...).
-    local skipAlphaForce = C_NamePlate ~= nil or NP.config.IsPlateAlphaCompatEnabled()
+    -- nameplateAlphaCompat: skip forcing alpha to 1 for addons that read native plate alpha as target identity.
+    local skipAlphaForce = C_NamePlate ~= nil or NP.module._plateAlphaCompat
     local retailBehavior = NP.module._retailBehavior
     local retailCfg = retailBehavior and NP.config.GetCfg() or nil
     local levelSettleNow = GetTime and GetTime() or 0
@@ -406,18 +408,19 @@ local function EngineOnUpdate(_, elapsed)
     -- 3. Identity transitions (target / mouseover / focus / threat).
     NP.identity.ProcessContextTransitions()
 
-    -- Client re-reveals native chrome on hover/target continuously; reassert every frame here.
+    -- Client re-reveals native chrome on hover/target; name+level+bar fill on any plate.
     if NP.module.targetPlate then
         NP.discovery.ReassertHotChrome(NP.module.targetPlate)
     end
     if NP.module.mouseoverPlate and NP.module.mouseoverPlate ~= NP.module.targetPlate then
         NP.discovery.ReassertHotChrome(NP.module.mouseoverPlate)
     end
-    -- Client re-Shows/resizes native name+level on hover; stomp all shown plates (BGH-safe).
     for _, pd in pairs(NP.module.plates) do
         local pl = pd.plate
         if pl and pl.IsShown and pl:IsShown() then
             NP.discovery.ReassertNativeFontChrome(pd)
+            -- Reassert native health-bar hide (cheap SetAlpha or texture-only if bar-compat on).
+            NP.native_style.NeutralizeStatusBarVisual(pd.healthBar)
         end
     end
 

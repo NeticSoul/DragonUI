@@ -931,7 +931,8 @@ local defaults = {
                 bghIconOffsetY = 0, -- y offset for BattleGroundHealers icon anchor
                 bghIconSize = 24, -- icon size override used by compatibility bridge
                 bghTestMode = false, -- enables manual mark-target testing for BattleGroundHealers compatibility
-                nameplateAlphaCompat = false, -- skip forcing native plate alpha to 1; keeps native target-alpha signal intact for external plate addons (PlateBuffs, Icicle, ...)
+                nameplateAlphaCompat = false, -- skip forcing native plate alpha to 1, for addons that read it as target identity (PlateBuffs, ...)
+                nameplateBarAlphaCompat = false, -- texture-only health-bar hide instead of bar-level SetAlpha, for addons parented to it (Icicle, ...)
             },
             tooltip = {
                 enabled = true, -- Enhanced tooltip styling with class colors
