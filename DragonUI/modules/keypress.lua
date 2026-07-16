@@ -99,6 +99,66 @@ local function isSecureButton(x)
     )
 end
 
+-- Override bindings skip ActionButtonDown / MultiActionButtonDown (the only path that
+-- SetButtonState("PUSHED") for keyboard). Mirror that brief press on the real button.
+local KEY_PUSH_FLASH = 0.12
+local flashUntil = {}
+local flashFrame = CreateFrame("Frame")
+flashFrame:Hide()
+flashFrame:SetScript("OnUpdate", function(self)
+    local now = GetTime()
+    local any
+    for button, untilTime in pairs(flashUntil) do
+        if now >= untilTime then
+            flashUntil[button] = nil
+            if button.SetButtonState then
+                button:SetButtonState("NORMAL")
+                if button.action and ActionButton_UpdateState then
+                    ActionButton_UpdateState(button)
+                end
+            end
+        else
+            any = true
+        end
+    end
+    if not any then self:Hide() end
+end)
+
+local function FlashActionButton(button)
+    if not button or not button.SetButtonState then return end
+    button:SetButtonState("PUSHED")
+    flashUntil[button] = GetTime() + KEY_PUSH_FLASH
+    flashFrame:Show()
+end
+
+local function ResolveMainActionButton(id)
+    id = tonumber(id)
+    if not id then return nil end
+    if VehicleMenuBar and VehicleMenuBar:IsProtected() and VehicleMenuBar:IsShown()
+        and id <= VEHICLE_MAX_ACTIONBUTTONS then
+        return _G["VehicleMenuBarActionButton" .. id]
+    end
+    if BonusActionBarFrame and BonusActionBarFrame:IsProtected() and BonusActionBarFrame:IsShown() then
+        return _G["BonusActionButton" .. id]
+    end
+    return _G["ActionButton" .. id]
+end
+
+local function EnsureFlashHook(bindButton)
+    if bindButton._dragonUIFlashHooked then return end
+    bindButton._dragonUIFlashHooked = true
+    bindButton:HookScript("OnClick", function(self)
+        if not active then return end
+        local target
+        if self._dragonUIActionId then
+            target = ResolveMainActionButton(self._dragonUIActionId)
+        else
+            target = self:GetAttribute("clickbutton")
+        end
+        FlashActionButton(target)
+    end)
+end
+
 -- Accelerate a single key (key is not currently overridden by us when called).
 local function accelerateKey(key, command)
     for _, template in ipairs(templates) do
@@ -141,6 +201,7 @@ local function accelerateKey(key, command)
 
             -- Clear any stale wrap from a previous acceleration of this key.
             SecureHandlerUnwrapScript(bindButton, "OnClick")
+            bindButton._dragonUIActionId = nil
 
             for _, attribute in ipairs(template.attributes) do
                 local attributeName = attribute[1]
@@ -149,6 +210,7 @@ local function accelerateKey(key, command)
                 if attributeName == "clickbutton" then
                     bindButton:SetAttribute(attributeName, _G[attributeValue])
                 elseif attributeName == "actionbutton" then
+                    bindButton._dragonUIActionId = tonumber(attributeValue)
                     -- Decide vehicle/bonus/action at click time, like ActionButtonUp().
                     SecureHandlerWrapScript(bindButton, "OnClick", bindButton, [[
                         local clickMacro = "/click ActionButton]] .. attributeValue .. [[";
@@ -171,6 +233,8 @@ local function accelerateKey(key, command)
                     bindButton:SetAttribute(attributeName, attributeValue)
                 end
             end
+
+            EnsureFlashHook(bindButton)
 
             -- Priority override so the key clicks our proxy on key-down.
             hook = false
