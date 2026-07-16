@@ -569,6 +569,9 @@ local function EngineOnEvent(_, event, unit, ...)
         end
         NP.identity.RefreshGroupTargetMatches()
         NP.auras.PruneCaches()
+        if NP.tap then
+            NP.tap.PruneCache()
+        end
         if NP.module._clampBossEnabled then
             E.QueueMass(CB.OnUpdateNameplate)
         end
@@ -658,6 +661,9 @@ local function EngineOnEvent(_, event, unit, ...)
         E.QueueMass(CB.OnUpdateThreatSituation)
         NP.module._deferredTargetResolveFrames = 1
         NP.auras.PruneCaches()
+        if NP.tap then
+            NP.tap.PruneCache()
+        end
         NP.layout.FlushPendingPlateLayout()
         if NP.config.IsOffTargetCastMonitorActive(NP.config.GetCfg())
             and NP.castbar.PruneCastMonitorStaleState then
@@ -924,6 +930,11 @@ local function RunNameplatesRestore()
     end
     for guid in pairs(NP.state.PlateAuraCache) do
         NP.state.PlateAuraCache[guid] = nil
+    end
+    if NP.state.PlateTapCache then
+        for guid in pairs(NP.state.PlateTapCache) do
+            NP.state.PlateTapCache[guid] = nil
+        end
     end
     for guid in pairs(NP.auras.DRState or {}) do
         NP.auras.DRState[guid] = nil

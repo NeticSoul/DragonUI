@@ -854,6 +854,7 @@ local defaults = {
                 threatGlow = true, -- show threat glow indicator (colored border)
                 tankMode = false, -- invert threat colors for a tank perspective (holding aggro = green)
                 raidMarkHealthColor = false, -- tint health bar by raid marker, allies and enemies alike
+                tapDeniedGray = true, -- gray health bar when unit is tapped by another player/group (GUID memory)
                 showTargetHighlight = true,
                 showTargetArrows = false,
                 showDebuffs = true,

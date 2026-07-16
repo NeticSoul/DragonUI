@@ -8,6 +8,8 @@ NP.state = NP.state or {}
 NP.state.GUIDToPlate = setmetatable({}, { __mode = "k" })
 NP.state.PlateAuraCache = {}
 NP.state.AuraDurationCache = {}
+-- guid -> true|false (tap denied by another player/group); written only on live unit reads.
+NP.state.PlateTapCache = {}
 
 -- Fallback GUID lookup when no bound GUID (by name and raid icon).
 NP.state.AuraGUIDByName = {}

@@ -1060,7 +1060,11 @@ function identity.RefreshGroupTargetMatches()
             plateData._matchedCastUnit = nil
         end
     end
+    local tapEnabled = NP.tap and NP.tap.IsEnabled()
     ForEachGroupTargetUnit(function(unit)
+        if tapEnabled then
+            NP.tap.UpdateFromUnit(unit)
+        end
         local owner = identity.FindPlateForUnit(unit)
         if owner then
             owner._matchedCastUnit = unit
@@ -1072,6 +1076,9 @@ function identity.RefreshGroupTargetMatches()
                         confidence = C.GUID_CONFIDENCE.GROUP_TARGET,
                     })
                 end
+            end
+            if tapEnabled and NP.engine and NP.engine.QueuePlate then
+                NP.engine.QueuePlate(owner, NP.engine.Callbacks.OnUpdateHealth)
             end
         end
     end)
@@ -1092,6 +1099,9 @@ function identity.ProcessContextTransitions()
     local newFocus = NP.module.focusPlate
 
     if newTarget ~= oldTarget then
+        if NP.tap and NP.tap.IsEnabled() then
+            NP.tap.UpdateFromUnit("target")
+        end
         if oldTarget then
             NP.gather.RefreshPlateTargetState(oldTarget, "scan_target_changed")
         end
@@ -1104,6 +1114,9 @@ function identity.ProcessContextTransitions()
     end
 
     if newMouseover ~= oldMouseover then
+        if NP.tap and NP.tap.IsEnabled() then
+            NP.tap.UpdateFromUnit("mouseover")
+        end
         if oldMouseover then
             identity.ValidatePlateGUIDOwnership(oldMouseover)
             NP.gather.RefreshPlateMouseoverState(oldMouseover, "scan_mouseover_changed")
@@ -1117,13 +1130,23 @@ function identity.ProcessContextTransitions()
     end
 
     if newFocus ~= oldFocus then
+        local tapEnabled = NP.tap and NP.tap.IsEnabled()
+        if tapEnabled then
+            NP.tap.UpdateFromUnit("focus")
+        end
         if oldFocus then
             identity.ValidatePlateGUIDOwnership(oldFocus)
             NP.engine.QueuePlate(oldFocus, NP.engine.Callbacks.OnUpdateCastbar)
+            if tapEnabled then
+                NP.engine.QueuePlate(oldFocus, NP.engine.Callbacks.OnUpdateHealth)
+            end
         end
         if newFocus then
             identity.ValidatePlateGUIDOwnership(newFocus)
             NP.engine.QueuePlate(newFocus, NP.engine.Callbacks.OnUpdateCastbar)
+            if tapEnabled then
+                NP.engine.QueuePlate(newFocus, NP.engine.Callbacks.OnUpdateHealth)
+            end
         end
     end
 

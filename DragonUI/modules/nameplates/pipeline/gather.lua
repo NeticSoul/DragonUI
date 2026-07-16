@@ -427,9 +427,13 @@ function NP.gather.IsPlayerPlate(plateData)
     return classKey == "FRIENDLY_PLAYER"
 end
 
--- Health color: raid marker tint > aggro tint > friendly overrides > native bar (class colors via CVar).
+-- Health color: tap denied > raid marker tint > aggro tint > friendly overrides > native bar.
 function NP.gather.GetHealthBarColor(plateData)
     local cfg = NP.config.GetCfg()
+    -- cfg gate first: disabled = zero tap work on the SyncHealth hot path.
+    if cfg.tapDeniedGray ~= false and NP.tap and NP.tap.IsTapDenied(plateData) then
+        return NP.tap.GetTapDeniedColor()
+    end
     if cfg.raidMarkHealthColor then
         local markName = NP.native_style.GetPlateRaidIconName(plateData)
         local markColor = markName and C.RAID_MARK_HEALTH_COLORS[markName]

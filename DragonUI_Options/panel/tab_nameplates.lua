@@ -650,6 +650,21 @@ local function BuildHealthSubTab(scroll)
 
     C:AddSpacer(health)
 
+    C:AddToggle(health, {
+        label = LO["Gray Tapped Units"],
+        desc = LO["Grays the health bar when a unit is tapped by another player or group. Remembers tap status after you mouse away or change target."],
+        dbPath = DB .. ".tapDeniedGray",
+        callback = function()
+            if addon.Nameplates and addon.Nameplates.tap then
+                local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
+                if np and np.tapDeniedGray == false then
+                    addon.Nameplates.tap.WipeCache()
+                end
+            end
+            RefreshNameplates()
+        end,
+    })
+
     C:AddColorPicker(health, {
         label = LO["Friendly Player Color"],
         dbPath = DB .. ".friendlyPlayerColor",

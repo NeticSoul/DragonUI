@@ -8,6 +8,7 @@
     <Script file="pipeline\identity.lua"/>
     <Script file="features\widgets.lua"/>
     <Script file="features\threat.lua"/>
+    <Script file="features\tap.lua"/>
     <Script file="features\castbar.lua"/>
     <Script file="features\auras.lua"/>
     <Script file="pipeline\layout.lua"/>
