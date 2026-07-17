@@ -47,7 +47,6 @@ local DEFAULT_PADDING = 4
 -- the NineSlice BorderArt asymmetry (TOPLEFT y=4 vs BOTTOMRIGHT y=-7) so the
 -- button highlight/glow doesn't touch the upper border edge.
 local DEFAULT_HEIGHT_PADDING = 6
-
 -- One-shot copy of the legacy global spacing into per-bar keys so old profiles keep their look.
 local function EnsureSpacingMigration(db)
     if not db or db.spacing_migrated then return end
@@ -254,9 +253,11 @@ function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, r
         buttonOrder = "bottom_left"
     end
 
-    -- Horizontal: symmetric (2px each side)
-    -- Vertical: asymmetric — 2px bottom, rest on top (compensates NineSlice border overshoot)
-    local edgePad = 2
+    -- Bottom inset for bottom_* growth orders. Must be covered by heightPadding
+    -- (main bar: heightPadding=6 → edgePad=2). Multibars pass heightPadding=0 —
+    -- if edgePad stayed 2, buttons sat at y=2 inside a height-G frame and stuck
+    -- out the top by 2px (editor overlay looked shifted down).
+    local edgePad = (heightPadding >= 2) and 2 or 0
     local step = ACTION_BUTTON_SIZE + spacing
 
     -- Is this the MAIN bar?  Main bar buttons always show (Dragonflight look).
@@ -784,6 +785,7 @@ end
 
     -- Helper: position side bar (left/right) buttons in a grid layout using columns.
     -- buttonOrder sets which corner slot 1 grows from (see SetBarGridButtonPoint).
+    -- Overlay model matches Extra Bar: grid size × SetScale, TOPLEFT 0,0 (no chrome padding).
     local function PositionSideBarButtons(barPrefix, barFrame, containerFrame, count, columns, spacing, buttonOrder)
         if not barFrame then return end
 
@@ -823,7 +825,6 @@ end
         local h = rows       * ACTION_BUTTON_SIZE + (rows       - 1) * spacing
         barFrame:SetSize(w, h)
 
-        -- Anchor bar frame to container
         if containerFrame then
             barFrame:ClearAllPoints()
             barFrame:SetPoint("TOPLEFT", containerFrame, "TOPLEFT", 0, 0)
@@ -925,8 +926,7 @@ end
         end
     end
 
-    -- Compute container (overlay) size for a bar with the given columns/count.
-    -- No padding: buttons fill the container edge-to-edge.
+    -- Button hit-rect grid only (Extra Bar model). NormalTexture ±2.2 is skin, not overlay size.
     local function BarContainerSize(cols, count, spacing)
         cols  = math.max(1, cols or 1)
         count = math.max(1, count or 12)
@@ -938,23 +938,29 @@ end
         return w, h
     end
 
-    -- Resize container (editor overlay) frames to match current bar dimensions.
-    -- Called when entering editor mode AND after layout changes so overlays stay in sync.
-    -- Overlay sizes are multiplied by the bar's scale so they wrap the visible
-    -- (scaled) bar rather than the larger, unscaled logical size.
-    -- Uses ResizeContainerStable to avoid shifting bars on screen.
+    -- Main bar: heightPadding=6 with edgePad=2 → 2px bottom / 4px top, so the button
+    -- block center sits 1 logical px below the art-frame center. Overlay uses the art
+    -- frame size; shift the bar up by that delta so buttons (not empty pad) sit on center.
+    local function GetMainBarButtonCenterOffsetY()
+        local edgePad = 2
+        return (DEFAULT_HEIGHT_PADDING / 2) - edgePad
+    end
+
     function addon.UpdateOverlaySizes()
         local db = addon.db and addon.db.profile and addon.db.profile.mainbars
         if not db then return end
 
-        -- Main bar container: match pUiMainBar scaled to visible size
         if addon.ActionBarFrames.mainbar and addon.pUiMainBar then
             local w, h = addon.pUiMainBar:GetSize()
             local scale = db.scale_actionbar or 0.9
             ResizeContainerStable(addon.ActionBarFrames.mainbar, w * scale, h * scale)
+            if not InCombatLockdown() then
+                local oy = GetMainBarButtonCenterOffsetY() * scale
+                addon.pUiMainBar:ClearAllPoints()
+                addon.pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
+            end
         end
 
-        -- Right bar container (columns-based grid)
         if addon.ActionBarFrames.rightbar then
             local cfg = db.right or {}
             local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "right"))
@@ -962,7 +968,6 @@ end
             ResizeContainerStable(addon.ActionBarFrames.rightbar, w * scale, h * scale)
         end
 
-        -- Left bar container (columns-based grid)
         if addon.ActionBarFrames.leftbar then
             local cfg = db.left or {}
             local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "left"))
@@ -970,7 +975,6 @@ end
             ResizeContainerStable(addon.ActionBarFrames.leftbar, w * scale, h * scale)
         end
 
-        -- Bottom left container
         if addon.ActionBarFrames.bottombarleft then
             local cfg = db.bottom_left or {}
             local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
@@ -978,7 +982,6 @@ end
             ResizeContainerStable(addon.ActionBarFrames.bottombarleft, w * scale, h * scale)
         end
 
-        -- Bottom right container
         if addon.ActionBarFrames.bottombarright then
             local cfg = db.bottom_right or {}
             local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
@@ -2062,39 +2065,36 @@ end
         addon.ActionBarFrames.repbar = addon.CreateUIFrame(xpRepWidth, barH, "RepBar")
     end
 
-    -- Position action bars to their container frames (initialization only - safe during addon load)
-    -- Side bar containers use TOPLEFT; bottom bars use CENTER inside their overlays.
+    -- Extra Bar model: sides TOPLEFT 0,0; bottoms CENTER; main CENTER with pad-derived Y offset.
     local function PositionActionBarsToContainers_Initial()
-        -- Position main bar - anchor pUiMainBar to its container (CENTER - has padding/NineSlice)
+        local mb = addon.db and addon.db.profile and addon.db.profile.mainbars
+
         if pUiMainBar and addon.ActionBarFrames.mainbar then
+            local scale = (mb and mb.scale_actionbar) or 0.9
+            local oy = GetMainBarButtonCenterOffsetY() * scale
             pUiMainBar:SetParent(UIParent)
             pUiMainBar:ClearAllPoints()
-            pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER")
+            pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
         end
 
-        -- Position right bar - TOPLEFT matches PositionSideBarButtons grid origin
         if MultiBarRight and addon.ActionBarFrames.rightbar then
             MultiBarRight:SetParent(UIParent)
             MultiBarRight:ClearAllPoints()
             MultiBarRight:SetPoint("TOPLEFT", addon.ActionBarFrames.rightbar, "TOPLEFT", 0, 0)
         end
 
-        -- Position left bar - TOPLEFT matches PositionSideBarButtons grid origin
         if MultiBarLeft and addon.ActionBarFrames.leftbar then
             MultiBarLeft:SetParent(UIParent)
             MultiBarLeft:ClearAllPoints()
             MultiBarLeft:SetPoint("TOPLEFT", addon.ActionBarFrames.leftbar, "TOPLEFT", 0, 0)
         end
 
-        -- Position bottom left bar - CENTER so the bar is visually centered
-        -- inside its container regardless of bar scale (0.9 default).
         if MultiBarBottomLeft and addon.ActionBarFrames.bottombarleft then
             MultiBarBottomLeft:SetParent(UIParent)
             MultiBarBottomLeft:ClearAllPoints()
             MultiBarBottomLeft:SetPoint("CENTER", addon.ActionBarFrames.bottombarleft, "CENTER", 0, 0)
         end
 
-        -- Position bottom right bar - CENTER for same reason
         if MultiBarBottomRight and addon.ActionBarFrames.bottombarright then
             MultiBarBottomRight:SetParent(UIParent)
             MultiBarBottomRight:ClearAllPoints()
