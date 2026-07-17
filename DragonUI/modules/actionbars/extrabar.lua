@@ -2,7 +2,7 @@
 
 local addon = select(2, ...);
 
--- Standalone 12-button bar: type1/spell1/item1/macrotext1 only — never shares the 1-120 action slot array.
+-- Standalone bars: type1/spell1/item1/macrotext1 only — never share the 1-120 action slot array.
 local CreateFrame = CreateFrame;
 local UIParent = UIParent;
 local InCombatLockdown = InCombatLockdown;
@@ -11,64 +11,105 @@ local ClearCursor = ClearCursor;
 local UnitExists = UnitExists;
 local config = addon.config;
 
-local NUM_EXTRABAR_BUTTONS = 12;
+-- ARIALN: RANGE_INDICATOR glyph (expressway lacks it); CJK/ruRU remapped in fonts.lua.
+local HOTKEY_FONT = addon.Fonts.ARIALN
+local LibKeyBound = LibStub("LibKeyBound-1.0", true) -- same short labels as keybinding.lua
 
--- Bindings.xml; Key Bindings UI reads BINDING_NAME_* globals (not AceLocale).
-_G.BINDING_HEADER_DragonUI = "DragonUI"
-for i = 1, NUM_EXTRABAR_BUTTONS do
-    _G["BINDING_NAME_CLICK DragonUI_ExtraBarButton" .. i .. ":LeftButton"] = "DragonUI Extra Bar - Button " .. i
+local bars = {}
+
+-- ============================================================================
+-- Store — slot persistence in addon.db.profile.additional[bar.id].slots
+-- Slot schema: {type="spell", spell="Name(Rank)", spellID?} | {type="item", item=id}
+--              | {type="macro", macrotext, texture, macro}
+-- ============================================================================
+
+-- Slider 7 must match MultiBars@7. Users who dialed 6 for the old visual mismatch → 7 once.
+local function EnsureExtrabarSpacingDefault(cfg)
+    if not cfg or cfg.spacing_visual_v2 then return end
+    cfg.spacing_visual_v2 = true
+    if cfg.spacing == 6 then
+        cfg.spacing = 7
+    end
 end
 
-local ExtraBarModule = {
-    initialized = false,
-    applied = false,
-    anchor = nil,    -- Editor Mode drag frame only (CreateUIFrame); never parents buttons
-    container = nil, -- button parent; sibling of anchor so drag mouse isn't blocked by children
-    buttons = {},
-    ticker = nil,
-}
-
-if addon.RegisterModule then
-    addon:RegisterModule("extrabar1", ExtraBarModule,
-        (addon.L and addon.L["Extra Bar"]) or "Extra Bar",
-        (addon.L and addon.L["A standalone action bar, independent of any class bonus bar"]) or "A standalone action bar, independent of any class bonus bar")
+local function Bar_GetConfig(bar)
+    local cfg = addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional[bar.id]
+    if cfg and bar.id == "extrabar1" then
+        EnsureExtrabarSpacingDefault(cfg)
+    end
+    return cfg
 end
 
-local function IsModuleEnabled()
-    return addon:IsModuleEnabled("extrabar1")
+local function Bar_GetSlots(bar)
+    local cfg = Bar_GetConfig(bar)
+    if not cfg then return nil end
+    cfg.slots = cfg.slots or {}
+    return cfg.slots
 end
 
-local function GetExtrabarConfig()
-    return addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.extrabar1
+local function Bar_PersistSlot(bar, index, data)
+    local slots = Bar_GetSlots(bar)
+    if slots then slots[index] = data end
 end
 
--- Bake scale into pixels (no SetScale): avoids FULLSCREEN strata / editor gaps / double-scale.
-local function GetExtrabarScale()
-    local cfg = GetExtrabarConfig() or {}
+local function CopySlotData(data)
+    if not data then return nil end
+    if data.type == "spell" then
+        return { type = "spell", spell = data.spell, spellID = data.spellID }
+    elseif data.type == "item" then
+        return { type = "item", item = data.item }
+    elseif data.type == "macro" then
+        return { type = "macro", macrotext = data.macrotext, texture = data.texture, macro = data.macro }
+    end
+    return nil
+end
+
+-- ============================================================================
+-- Layout config
+-- ============================================================================
+
+local function Bar_GetScale(bar)
+    local cfg = Bar_GetConfig(bar) or {}
     if cfg.scale ~= nil then return cfg.scale end
     local mainbars = addon.db and addon.db.profile and addon.db.profile.mainbars
     return (mainbars and mainbars.scale_actionbar) or 0.9
 end
 
-local function GetSizeAndSpacing()
-    local cfg = GetExtrabarConfig() or {}
-    local scale = GetExtrabarScale()
-    local baseSize = cfg.size or 36
-    local baseSpacing = cfg.spacing
-    if baseSpacing == nil then baseSpacing = 6 end
-    return baseSize * scale, baseSpacing * scale
+-- Logical units; visual size comes from container SetScale (same model as mainbars).
+-- Match ActionButton1's live size when present — hardcoded 36 can read slightly small vs MultiBars.
+local function Bar_GetButtonSize()
+    local ref = _G.ActionButton1
+    if ref then
+        local w = ref:GetWidth()
+        if w and w > 0 then return w end
+    end
+    return 36
 end
 
--- Same columns/button_order grid as mainbars (12 = one row).
-local function GetGridLayout()
-    local cfg = GetExtrabarConfig() or {}
-    local columns = math.max(1, math.min(NUM_EXTRABAR_BUTTONS, tonumber(cfg.columns) or NUM_EXTRABAR_BUTTONS))
-    local rows = math.ceil(NUM_EXTRABAR_BUTTONS / columns)
+local function Bar_GetSizeAndSpacing(bar)
+    local cfg = Bar_GetConfig(bar) or {}
+    local spacing = cfg.spacing
+    if spacing == nil then spacing = 7 end
+    -- ActionButton NormalTexture overhang eats ~1px of the gap; Extra chrome does not.
+    -- Layout uses spacing-1 so the same slider value matches MultiBars visually.
+    local gap = spacing
+    if gap > 0 then
+        gap = gap - 1
+    end
+    return Bar_GetButtonSize(), gap
+end
+
+-- Same columns/buttons_shown/button_order grid as mainbars.
+local function Bar_GetGridLayout(bar)
+    local cfg = Bar_GetConfig(bar) or {}
+    local shown = math.max(1, math.min(bar.numButtons, tonumber(cfg.buttons_shown) or bar.numButtons))
+    local columns = math.max(1, math.min(shown, tonumber(cfg.columns) or bar.numButtons))
+    local rows = math.ceil(shown / columns)
     local order = cfg.change_button_order and cfg.button_order or "bottom_left"
     if not (order == "top_left" or order == "bottom_left" or order == "top_right" or order == "bottom_right") then
         order = "bottom_left"
     end
-    return columns, rows, order
+    return columns, rows, order, shown
 end
 
 -- Like mainbars SetBarGridButtonPoint, but with our baked size/spacing (not ACTION_BUTTON_SIZE).
@@ -86,6 +127,26 @@ local function SetGridButtonPoint(button, container, row, col, order, step)
         button:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", x, y)
     end
 end
+
+-- widgets.<id> after first drag; else additional.<id> x/y (Editor Mode).
+local function Bar_GetContainerSize(bar)
+    local size, spacing = Bar_GetSizeAndSpacing(bar)
+    local columns, rows = Bar_GetGridLayout(bar)
+    local width = (size * columns) + (spacing * (columns - 1))
+    local height = (size * rows) + (spacing * (rows - 1))
+    return width, height
+end
+
+-- Anchor (editor overlay) wraps the visible scaled bar, like mainbars overlay sizing.
+local function Bar_GetAnchorSize(bar)
+    local width, height = Bar_GetContainerSize(bar)
+    local scale = Bar_GetScale(bar)
+    return width * scale, height * scale
+end
+
+-- ============================================================================
+-- Skin
+-- ============================================================================
 
 -- Own regions (no ActionButtonTemplate); same atlas path as buttons.lua main_buttons.
 local function SkinButton(button)
@@ -142,91 +203,9 @@ local function SkinButton(button)
     button.cooldown:SetFrameLevel(button:GetParent():GetFrameLevel() + 1)
 end
 
-local function GetSlotsTable()
-    local cfg = GetExtrabarConfig()
-    if not cfg then return nil end
-    cfg.slots = cfg.slots or {}
-    return cfg.slots
-end
-
-local function PersistSlot(index, data)
-    local slots = GetSlotsTable()
-    if slots then slots[index] = data end
-end
-
-local function ApplyToButton(button, data)
-    if InCombatLockdown() then
-        addon.CombatQueue:Add("extrabar1_apply_" .. button:GetID(), ApplyToButton, button, data)
-        return
-    end
-
-    button:SetAttribute("type1", nil)
-    button:SetAttribute("spell1", nil)
-    button:SetAttribute("item1", nil)
-    button:SetAttribute("macrotext1", nil)
-
-    if not data then
-        button.icon:Hide()
-        return
-    end
-
-    button:SetAttribute("type1", data.type)
-
-    if data.type == "spell" then
-        button:SetAttribute("spell1", data.spell)
-        local _, _, texture = GetSpellInfo(data.spell)
-        if texture then
-            button.icon:SetTexture(texture)
-            button.icon:Show()
-        end
-    elseif data.type == "item" then
-        button:SetAttribute("item1", "item:" .. data.item)
-        local texture = GetItemIcon(data.item) or select(10, GetItemInfo(data.item))
-        if texture then
-            button.icon:SetTexture(texture)
-            button.icon:Show()
-        end
-    elseif data.type == "macro" then
-        button:SetAttribute("macrotext1", data.macrotext)
-        if data.texture then
-            button.icon:SetTexture(data.texture)
-            button.icon:Show()
-        end
-    end
-end
-
-local function ClearSlot(button)
-    PersistSlot(button:GetID(), nil)
-    ApplyToButton(button, nil)
-end
-
-local function CopySlotData(data)
-    if not data then return nil end
-    if data.type == "spell" then
-        return { type = "spell", spell = data.spell }
-    elseif data.type == "item" then
-        return { type = "item", item = data.item }
-    elseif data.type == "macro" then
-        return { type = "macro", macrotext = data.macrotext, texture = data.texture, macro = data.macro }
-    end
-    return nil
-end
-
-local function SnapshotSlot(button)
-    local slots = GetSlotsTable()
-    local saved = slots and slots[button:GetID()]
-    if saved then return CopySlotData(saved) end
-    local t = button:GetAttribute("type1")
-    if t == "spell" then
-        return { type = "spell", spell = button:GetAttribute("spell1") }
-    elseif t == "item" then
-        local itemId = tonumber((button:GetAttribute("item1") or ""):match("item:(%d+)"))
-        if itemId then return { type = "item", item = itemId } end
-    elseif t == "macro" then
-        return { type = "macro", macrotext = button:GetAttribute("macrotext1") }
-    end
-    return nil
-end
+-- ============================================================================
+-- Spell resolution — name/rank/spellID → book slot / action slot (shared caches)
+-- ============================================================================
 
 -- "Name(Rank N)" with no space before '(' (GetSpellLink / CastSpellByName).
 local function SpellNameWithRank(index, bookType)
@@ -259,7 +238,7 @@ local function BareSpellName(spellName)
 end
 
 -- PickupSpell needs a book index. Exact "Name(Rank N)" wins; bare name → last match (max rank).
-local function FindSpellBookSlot(spellName)
+local function FindSpellBookSlotByName(spellName)
     if not spellName then return nil end
     local found
     local i = 1
@@ -273,9 +252,55 @@ local function FindSpellBookSlot(spellName)
     end
     local bare = BareSpellName(spellName)
     if bare and bare ~= spellName then
-        return FindSpellBookSlot(bare)
+        return FindSpellBookSlotByName(bare)
     end
     return found
+end
+
+local function SpellNameFromID(spellID)
+    if not spellID then return nil end
+    local name, rank = GetSpellInfo(spellID)
+    if not name then return nil end
+    if rank and rank ~= "" then
+        return name .. "(" .. rank .. ")"
+    end
+    return name
+end
+
+-- Saved names can come from another locale/rank; spellID rebuilds the live name.
+local function FindSpellBookSlot(spellName, spellID)
+    local slot = FindSpellBookSlotByName(spellName)
+    if slot then return slot end
+    local idName = SpellNameFromID(spellID)
+    if idName and idName ~= spellName then
+        return FindSpellBookSlotByName(idName)
+    end
+    return nil
+end
+
+-- Self-heal: saved spell name unknown on this client but spellID resolves → persist the live name.
+local function HealSpellName(data)
+    if not data or data.type ~= "spell" or not data.spellID then return end
+    if FindSpellBookSlotByName(data.spell) then return end
+    local liveName = SpellNameFromID(data.spellID)
+    if liveName and liveName ~= data.spell and FindSpellBookSlotByName(liveName) then
+        data.spell = liveName
+    end
+end
+
+-- GetActionTexture swaps to the lit icon while its form/stance is active; emulate for non-slot buttons.
+local function GetActiveShapeshiftTexture(data)
+    local numForms = GetNumShapeshiftForms() or 0
+    if numForms == 0 then return nil end
+    local target = BareSpellName(data.spell)
+    local idName = data.spellID and GetSpellInfo(data.spellID) or nil
+    for i = 1, numForms do
+        local texture, name, isActive = GetShapeshiftFormInfo(i)
+        if isActive and name and (name == target or name == idName) then
+            return texture
+        end
+    end
+    return nil
 end
 
 local function GetActionSpellName(slot)
@@ -323,6 +348,168 @@ local function FindActionSlotBySpellName(spellName)
     return nil
 end
 
+-- Cooldown hot path only; tooltips/pickup keep uncached FindSpellBookSlot.
+local bookSlotCache = {}
+local function InvalidateBookSlotCache()
+    wipe(bookSlotCache)
+end
+
+local function FindSpellBookSlotCached(spellName, spellID)
+    if not spellName then return nil end
+    local cached = bookSlotCache[spellName]
+    if cached == false then return nil end
+    if cached then
+        local name, rank = GetSpellName(cached, BOOKTYPE_SPELL)
+        if name then
+            local full = (rank and rank ~= "") and (name .. "(" .. rank .. ")") or name
+            if full == spellName or name == spellName then
+                return cached
+            end
+        end
+        bookSlotCache[spellName] = nil
+    end
+    local slot = FindSpellBookSlot(spellName, spellID)
+    bookSlotCache[spellName] = slot or false
+    return slot
+end
+
+-- Prefer GetActionCooldown (GCD); GetSpellCooldown(name) can omit it on some clients.
+local function GetButtonSpellCooldown(spellName, spellID)
+    if not spellName then return 0, 0, 0 end
+    local actionSlot = FindActionSlotBySpellName(spellName)
+    if actionSlot then
+        return GetActionCooldown(actionSlot)
+    end
+    local bookSlot = FindSpellBookSlotCached(spellName, spellID)
+    if bookSlot then
+        return GetSpellCooldown(bookSlot, BOOKTYPE_SPELL)
+    end
+    return GetSpellCooldown(spellName)
+end
+
+-- enable=0 on GCD would hide the swipe; skip identical SetTimer to avoid finish bling.
+local function ApplyCooldown(cooldown, start, duration, enable)
+    start, duration, enable = start or 0, duration or 0, enable or 0
+    if enable == 0 and duration > 0 and duration <= 1.5 then
+        enable = 1
+    end
+    if cooldown._ebStart == start and cooldown._ebDuration == duration and cooldown._ebEnable == enable then
+        return
+    end
+    cooldown._ebStart, cooldown._ebDuration, cooldown._ebEnable = start, duration, enable
+    CooldownFrame_SetTimer(cooldown, start, duration, enable)
+end
+
+-- ============================================================================
+-- Range / usable / checked helpers
+-- ============================================================================
+
+-- No action slot → IsActionInRange unavailable; melee uses CheckInteractDistance (~10 yd).
+local function SafeIsSpellInRange(spellName)
+    if not spellName or not UnitExists("target") or UnitIsDead("target") then
+        return nil
+    end
+    local result = IsSpellInRange(spellName, "target")
+    if result == 1 then return true end
+    if result == 0 then return false end
+    if IsHarmfulSpell(spellName) and UnitCanAttack("player", "target") and not SpellHasRange(spellName) then
+        return CheckInteractDistance("target", 3) and true or false
+    end
+    return nil
+end
+
+-- Same 1/0/nil as IsSpellInRange; nil = no range UI for this item.
+local function SafeIsItemInRange(itemId)
+    if not itemId or not UnitExists("target") or UnitIsDead("target") then
+        return nil
+    end
+    local result = IsItemInRange(itemId, "target")
+    if result == 1 then return true end
+    if result == 0 then return false end
+    return nil
+end
+
+-- Reuse rage_indicator.lua colors/flag (config only).
+local function GetRangeIndicatorColors()
+    local cfg = addon:GetModuleConfig("rage_indicator")
+    local oor = cfg and cfg.oor_color
+    local oom = cfg and cfg.oom_color
+    return (oor and oor.r) or 0.8, (oor and oor.g) or 0.2, (oor and oor.b) or 0.2,
+           (oom and oom.r) or 0.5, (oom and oom.g) or 0.5, (oom and oom.b) or 1.0
+end
+
+local function IsRangeIndicatorEnabled()
+    local cfg = addon:GetModuleConfig("rage_indicator")
+    return cfg and cfg.enabled
+end
+
+local function IsRangeDotEnabled()
+    local db = addon.db and addon.db.profile and addon.db.profile.buttons
+    return db and db.hotkey and db.hotkey.range
+end
+
+local function ApplyRangeIndicator(button, rangeValid)
+    if button.hotkeyBound then
+        button.hotkey:Show()
+        if rangeValid == false then
+            button.hotkey:SetVertexColor(1.0, 0.1, 0.1)
+        else
+            button.hotkey:SetVertexColor(0.6, 0.6, 0.6)
+        end
+    elseif button.hotkeyDotEligible then
+        if rangeValid == nil then
+            button.hotkey:Hide()
+        else
+            button.hotkey:SetText(RANGE_INDICATOR)
+            button.hotkey:Show()
+            if rangeValid == false then
+                button.hotkey:SetVertexColor(1.0, 0.1, 0.1)
+            else
+                button.hotkey:SetVertexColor(0.6, 0.6, 0.6)
+            end
+        end
+    else
+        button.hotkey:Hide()
+    end
+end
+
+-- IsCurrentAction equivalent for non-slot SecureActionButtons.
+local function SpellIsCurrent(spellName)
+    if not spellName then return nil end
+    if IsCurrentSpell(spellName) or IsAutoRepeatSpell(spellName) then return true end
+    local base = spellName:match("^(.-)%(")
+    if base and (IsCurrentSpell(base) or IsAutoRepeatSpell(base)) then return true end
+    return nil
+end
+
+local function IsButtonCurrent(button)
+    local slotType = button:GetAttribute("type1")
+    if slotType == "spell" then
+        return SpellIsCurrent(button:GetAttribute("spell1"))
+    elseif slotType == "item" then
+        local item = button:GetAttribute("item1")
+        return item and IsCurrentItem(item)
+    elseif slotType == "macro" then
+        local data = button:GetSlotData()
+        local macroIdx = data and data.macro
+        if not macroIdx then return nil end
+        local spellName = GetMacroSpell(macroIdx)
+        if spellName then return SpellIsCurrent(spellName) end
+        local _, itemLink = GetMacroItem(macroIdx)
+        return itemLink and IsCurrentItem(itemLink)
+    end
+    return nil
+end
+
+local function ButtonItemID(button)
+    local itemAttr = button:GetAttribute("item1")
+    return itemAttr and tonumber(itemAttr:match("item:(%d+)"))
+end
+
+-- ============================================================================
+-- Tooltip
+-- ============================================================================
+
 local function TooltipHasRankLine(rank)
     for i = 1, (GameTooltip:NumLines() or 0) do
         local left = _G["GameTooltipTextLeft" .. i]
@@ -367,12 +554,12 @@ local function ResolveSpellRank(name, preferred)
 end
 
 -- Second return: rank for EnsureSpellRankLine, or nil if SetAction already laid out Rank.
-local function SetTooltipByName(name, rank)
+local function SetTooltipByName(name, rank, spellID)
     if not name or name == "" then return false, nil end
     rank = ResolveSpellRank(name, rank)
     -- Parenthesized names: spellbook first so SetAction doesn't show a different main-bar rank.
     if name:find("(", 1, true) then
-        local slot = FindSpellBookSlot(name)
+        local slot = FindSpellBookSlot(name, spellID)
         if slot then
             GameTooltip:SetSpell(slot, BOOKTYPE_SPELL)
             local _, bookRank = GetSpellName(slot, BOOKTYPE_SPELL)
@@ -384,7 +571,7 @@ local function SetTooltipByName(name, rank)
         GameTooltip:SetAction(actionSlot)
         return true, nil
     end
-    local slot = FindSpellBookSlot(name)
+    local slot = FindSpellBookSlot(name, spellID)
     if slot then
         GameTooltip:SetSpell(slot, BOOKTYPE_SPELL)
         local _, bookRank = GetSpellName(slot, BOOKTYPE_SPELL)
@@ -398,6 +585,11 @@ local function SetTooltipByName(name, rank)
         else
             GameTooltip:SetHyperlink(link)
         end
+        return true, rank
+    end
+    -- Foreign-locale saves: name lookups fail but the stored spellID still resolves.
+    if spellID then
+        GameTooltip:SetHyperlink("spell:" .. spellID)
         return true, rank
     end
     local _, itemLink = GetItemInfo(name)
@@ -415,14 +607,14 @@ local function SetExtrabarTooltip(self)
     local rankToEnsure
     if t == "spell" then
         local spellName = self:GetAttribute("spell1")
-        local ok, rank = SetTooltipByName(spellName)
+        local data = self:GetSlotData()
+        local ok, rank = SetTooltipByName(spellName, nil, data and data.spellID)
         if ok then rankToEnsure = rank end
     elseif t == "item" then
         local link = self:GetAttribute("item1")
         if link then GameTooltip:SetHyperlink(link) end
     elseif t == "macro" then
-        local slots = GetSlotsTable()
-        local data = slots and slots[self:GetID()]
+        local data = self:GetSlotData()
         local macroIdx = data and data.macro
         local body = (data and data.macrotext) or self:GetAttribute("macrotext1")
         local showArg = body and body:match("#showtooltip([^\n]*)")
@@ -464,10 +656,48 @@ local function SetExtrabarTooltip(self)
     self.UpdateTooltip = SetExtrabarTooltip
 end
 
+-- ============================================================================
+-- Secure layer — sole writer of secure attributes
+-- ============================================================================
+
+local Secure = {}
+
+function Secure.Apply(button, data)
+    if InCombatLockdown() then
+        addon.CombatQueue:Add(button.bar.id .. "_apply_" .. button:GetID(), Secure.Apply, button, data)
+        return
+    end
+
+    button:SetAttribute("type1", nil)
+    button:SetAttribute("spell1", nil)
+    button:SetAttribute("item1", nil)
+    button:SetAttribute("macrotext1", nil)
+
+    if not data then return end
+
+    button:SetAttribute("type1", data.type)
+    if data.type == "spell" then
+        button:SetAttribute("spell1", data.spell)
+    elseif data.type == "item" then
+        button:SetAttribute("item1", "item:" .. data.item)
+    elseif data.type == "macro" then
+        button:SetAttribute("macrotext1", data.macrotext)
+    end
+end
+
+-- PreClick/PostClick cast-suppression toggle; callers already check InCombatLockdown.
+function Secure.SetType1(button, t)
+    button:SetAttribute("type1", t)
+end
+
+-- ============================================================================
+-- Cursor / drag
+-- ============================================================================
+
 local function PutDataOnCursor(data)
     if not data then return end
     if data.type == "spell" then
-        local slot = FindSpellBookSlot(data.spell)
+        local slot = FindSpellBookSlot(data.spell, data.spellID)
         if slot then PickupSpell(slot, BOOKTYPE_SPELL) end
     elseif data.type == "item" then
         PickupItem(data.item)
@@ -485,7 +715,9 @@ local function CursorToData()
         if b == "pet" or b == BOOKTYPE_PET then return false end -- secure spell = player book only
         local spellName = SpellNameWithRank(a, b)
         if not spellName then return false end
-        return { type = "spell", spell = spellName }
+        local link = GetSpellLink(a, b)
+        local spellID = link and tonumber(link:match("spell:(%d+)"))
+        return { type = "spell", spell = spellName, spellID = spellID }
     elseif kind == "item" then
         return { type = "item", item = a }
     elseif kind == "macro" then
@@ -493,12 +725,17 @@ local function CursorToData()
         return { type = "macro", macrotext = body, texture = texture, macro = a }
     elseif kind == "action" then
         -- Native bar drag: GetCursorInfo is ("action", slot).
-        local actionType, id, subType = GetActionInfo(a)
+        local actionType, id, subType, actionSpellID = GetActionInfo(a)
         if actionType == "spell" then
             if subType == "pet" or subType == BOOKTYPE_PET then return false end
             local spellName = SpellNameWithRank(id, subType or BOOKTYPE_SPELL)
             if not spellName then return false end
-            return { type = "spell", spell = spellName }
+            local spellID = tonumber(actionSpellID)
+            if not spellID then
+                local link = GetSpellLink(id, subType or BOOKTYPE_SPELL)
+                spellID = link and tonumber(link:match("spell:(%d+)"))
+            end
+            return { type = "spell", spell = spellName, spellID = spellID }
         elseif actionType == "item" then
             return { type = "item", item = id }
         elseif actionType == "macro" then
@@ -506,6 +743,21 @@ local function CursorToData()
             return { type = "macro", macrotext = body, texture = texture, macro = id }
         end
         return false
+    end
+    return nil
+end
+
+local function SnapshotSlot(button)
+    local saved = button:GetSlotData()
+    if saved then return CopySlotData(saved) end
+    local t = button:GetAttribute("type1")
+    if t == "spell" then
+        return { type = "spell", spell = button:GetAttribute("spell1") }
+    elseif t == "item" then
+        local itemId = ButtonItemID(button)
+        if itemId then return { type = "item", item = itemId } end
+    elseif t == "macro" then
+        return { type = "macro", macrotext = button:GetAttribute("macrotext1") }
     end
     return nil
 end
@@ -533,280 +785,29 @@ local function AssignFromCursor(button)
     lastAssignTime[button] = now
     local previous = SnapshotSlot(button)
     ClearCursor()
-    PersistSlot(button:GetID(), data)
-    ApplyToButton(button, data)
+    Bar_PersistSlot(button.bar, button:GetID(), data)
+    button:SetSlotData(data)
     if previous then
         PutDataOnCursor(previous)
     end
     return true
 end
 
--- No action slot → IsActionInRange unavailable; melee uses CheckInteractDistance (~10 yd).
-local function SafeIsSpellInRange(spellName)
-    if not spellName or not UnitExists("target") or UnitIsDead("target") then
-        return nil
-    end
-    local result = IsSpellInRange(spellName, "target")
-    if result == 1 then return true end
-    if result == 0 then return false end
-    if IsHarmfulSpell(spellName) and UnitCanAttack("player", "target") and not SpellHasRange(spellName) then
-        return CheckInteractDistance("target", 3) and true or false
-    end
-    return nil
+-- Same as ActionBarButtonTemplate OnDragStart: locked unless PICKUPACTION (default Shift).
+local function OnDragStart(self)
+    if InCombatLockdown() then return end
+    if GetCVar("lockActionBars") == "1" and not IsModifiedClick("PICKUPACTION") then return end
+
+    local previous = SnapshotSlot(self)
+    if not previous then return end
+
+    self:Clear()
+    PutDataOnCursor(previous)
 end
 
--- Same 1/0/nil as IsSpellInRange; nil = no range UI for this item.
-local function SafeIsItemInRange(itemId)
-    if not itemId or not UnitExists("target") or UnitIsDead("target") then
-        return nil
-    end
-    local result = IsItemInRange(itemId, "target")
-    if result == 1 then return true end
-    if result == 0 then return false end
-    return nil
-end
-
--- Reuse rage_indicator.lua colors/flag (config only).
-local function GetRangeIndicatorColors()
-    local cfg = addon:GetModuleConfig("rage_indicator")
-    local oor = cfg and cfg.oor_color
-    local oom = cfg and cfg.oom_color
-    return (oor and oor.r) or 0.8, (oor and oor.g) or 0.2, (oor and oor.b) or 0.2,
-           (oom and oom.r) or 0.5, (oom and oom.g) or 0.5, (oom and oom.b) or 1.0
-end
-
-local function IsRangeIndicatorEnabled()
-    local cfg = addon:GetModuleConfig("rage_indicator")
-    return cfg and cfg.enabled
-end
-
--- ARIALN: RANGE_INDICATOR glyph (expressway lacks it); CJK/ruRU remapped in fonts.lua.
-local HOTKEY_FONT = addon.Fonts.ARIALN
-
-local function IsRangeDotEnabled()
-    local db = addon.db and addon.db.profile and addon.db.profile.buttons
-    return db and db.hotkey and db.hotkey.range
-end
-
-local function ApplyRangeIndicator(button, rangeValid)
-    if button.hotkeyBound then
-        button.hotkey:Show()
-        if rangeValid == false then
-            button.hotkey:SetVertexColor(1.0, 0.1, 0.1)
-        else
-            button.hotkey:SetVertexColor(0.6, 0.6, 0.6)
-        end
-    elseif button.hotkeyDotEligible then
-        if rangeValid == nil then
-            button.hotkey:Hide()
-        else
-            button.hotkey:SetText(RANGE_INDICATOR)
-            button.hotkey:Show()
-            if rangeValid == false then
-                button.hotkey:SetVertexColor(1.0, 0.1, 0.1)
-            else
-                button.hotkey:SetVertexColor(0.6, 0.6, 0.6)
-            end
-        end
-    else
-        button.hotkey:Hide()
-    end
-end
-
--- Cooldown hot path only; tooltips/pickup keep uncached FindSpellBookSlot.
-local bookSlotCache = {}
-local function InvalidateBookSlotCache()
-    wipe(bookSlotCache)
-end
-
-local function FindSpellBookSlotCached(spellName)
-    if not spellName then return nil end
-    local cached = bookSlotCache[spellName]
-    if cached == false then return nil end
-    if cached then
-        local name, rank = GetSpellName(cached, BOOKTYPE_SPELL)
-        if name then
-            local full = (rank and rank ~= "") and (name .. "(" .. rank .. ")") or name
-            if full == spellName or name == spellName then
-                return cached
-            end
-        end
-        bookSlotCache[spellName] = nil
-    end
-    local slot = FindSpellBookSlot(spellName)
-    bookSlotCache[spellName] = slot or false
-    return slot
-end
-
--- Prefer GetActionCooldown (GCD); GetSpellCooldown(name) can omit it on some clients.
-local function GetButtonSpellCooldown(spellName)
-    if not spellName then return 0, 0, 0 end
-    local actionSlot = FindActionSlotBySpellName(spellName)
-    if actionSlot then
-        return GetActionCooldown(actionSlot)
-    end
-    local bookSlot = FindSpellBookSlotCached(spellName)
-    if bookSlot then
-        return GetSpellCooldown(bookSlot, BOOKTYPE_SPELL)
-    end
-    return GetSpellCooldown(spellName)
-end
-
--- enable=0 on GCD would hide the swipe; skip identical SetTimer to avoid finish bling.
-local function ApplyCooldown(cooldown, start, duration, enable)
-    start, duration, enable = start or 0, duration or 0, enable or 0
-    if enable == 0 and duration > 0 and duration <= 1.5 then
-        enable = 1
-    end
-    if cooldown._ebStart == start and cooldown._ebDuration == duration and cooldown._ebEnable == enable then
-        return
-    end
-    cooldown._ebStart, cooldown._ebDuration, cooldown._ebEnable = start, duration, enable
-    CooldownFrame_SetTimer(cooldown, start, duration, enable)
-end
-
--- IsCurrentAction equivalent for non-slot SecureActionButtons.
-local function SpellIsCurrent(spellName)
-    if not spellName then return nil end
-    if IsCurrentSpell(spellName) or IsAutoRepeatSpell(spellName) then return true end
-    local base = spellName:match("^(.-)%(")
-    if base and (IsCurrentSpell(base) or IsAutoRepeatSpell(base)) then return true end
-    return nil
-end
-
-local function IsButtonCurrent(button)
-    local slotType = button:GetAttribute("type1")
-    if slotType == "spell" then
-        return SpellIsCurrent(button:GetAttribute("spell1"))
-    elseif slotType == "item" then
-        local item = button:GetAttribute("item1")
-        return item and IsCurrentItem(item)
-    elseif slotType == "macro" then
-        local slots = GetSlotsTable()
-        local data = slots and slots[button:GetID()]
-        local macroIdx = data and data.macro
-        if not macroIdx then return nil end
-        local spellName = GetMacroSpell(macroIdx)
-        if spellName then return SpellIsCurrent(spellName) end
-        local _, itemLink = GetMacroItem(macroIdx)
-        return itemLink and IsCurrentItem(itemLink)
-    end
-    return nil
-end
-
-local function UpdateCheckedState(button)
-    -- Keep checked during key PUSHED flash (mouse keeps both after PostClick).
-    button:SetChecked(IsButtonCurrent(button) and 1 or 0)
-end
-
-local function UpdateButtonState(button)
-    local slotType = button:GetAttribute("type1")
-    if not slotType then
-        button.cooldown:Hide()
-        button.count:SetText("")
-        button.icon:SetVertexColor(1, 1, 1)
-        ApplyRangeIndicator(button, nil)
-        UpdateCheckedState(button)
-        return
-    end
-
-    if slotType == "spell" then
-        local spellName = button:GetAttribute("spell1")
-        ApplyCooldown(button.cooldown, GetButtonSpellCooldown(spellName))
-        button.count:SetText("")
-
-        local isUsable, notEnoughMana = IsUsableSpell(spellName)
-        local rangeValid = SafeIsSpellInRange(spellName)
-        local oorR, oorG, oorB, oomR, oomG, oomB = GetRangeIndicatorColors()
-        if not isUsable and notEnoughMana then
-            button.icon:SetVertexColor(oomR, oomG, oomB)
-        elseif not isUsable then
-            button.icon:SetVertexColor(0.4, 0.4, 0.4)
-        elseif IsRangeIndicatorEnabled() and rangeValid == false then
-            button.icon:SetVertexColor(oorR, oorG, oorB)
-        else
-            button.icon:SetVertexColor(1, 1, 1)
-        end
-        ApplyRangeIndicator(button, rangeValid)
-    elseif slotType == "item" then
-        local itemAttr = button:GetAttribute("item1")
-        local itemId = itemAttr and tonumber(itemAttr:match("item:(%d+)"))
-        if not itemId then
-            UpdateCheckedState(button)
-            return
-        end
-
-        ApplyCooldown(button.cooldown, GetItemCooldown(itemId))
-
-        local count = GetItemCount(itemId) -- ActionButton_UpdateCount: show 0+; never hide sole charge
-        if count > (button.maxDisplayCount or 9999) then
-            button.count:SetText("*")
-        else
-            button.count:SetText(count)
-        end
-
-        local rangeValid = SafeIsItemInRange(itemId)
-        local oorR, oorG, oorB = GetRangeIndicatorColors()
-        if not IsUsableItem(itemId) then
-            button.icon:SetVertexColor(0.4, 0.4, 0.4)
-        elseif IsRangeIndicatorEnabled() and rangeValid == false then
-            button.icon:SetVertexColor(oorR, oorG, oorB)
-        else
-            button.icon:SetVertexColor(1, 1, 1)
-        end
-        ApplyRangeIndicator(button, rangeValid)
-    elseif slotType == "macro" then
-        local slots = GetSlotsTable()
-        local data = slots and slots[button:GetID()]
-        local macroIdx = data and data.macro
-        local start, duration, enable = 0, 0, 0
-        if macroIdx then
-            local spellName = GetMacroSpell(macroIdx)
-            if spellName then
-                start, duration, enable = GetButtonSpellCooldown(spellName)
-            else
-                local _, itemLink = GetMacroItem(macroIdx)
-                local itemId = itemLink and tonumber(itemLink:match("item:(%d+)"))
-                if itemId then
-                    start, duration, enable = GetItemCooldown(itemId)
-                end
-            end
-        end
-        ApplyCooldown(button.cooldown, start, duration, enable)
-        button.count:SetText("")
-        button.icon:SetVertexColor(1, 1, 1)
-        ApplyRangeIndicator(button, nil)
-    end
-
-    UpdateCheckedState(button)
-end
-
-local LibKeyBound = LibStub("LibKeyBound-1.0", true) -- same short labels as keybinding.lua
-
-local function UpdateHotkeyText(button)
-    local cfg = GetExtrabarConfig()
-    if not cfg or cfg.show_hotkey == false then
-        button.hotkey:SetText("")
-        button.hotkeyBound = false
-        button.hotkeyDotEligible = false
-        button.hotkey:Hide()
-        return
-    end
-
-    local key = GetBindingKey("CLICK " .. button:GetName() .. ":LeftButton")
-    if key then
-        button.hotkeyBound = true
-        button.hotkeyDotEligible = false
-        button.hotkey:SetText(LibKeyBound and LibKeyBound:ToShortKey(key) or "")
-        button.hotkey:SetVertexColor(0.6, 0.6, 0.6)
-        button.hotkey:Show()
-    else
-        button.hotkeyBound = false
-        button.hotkeyDotEligible = IsRangeDotEnabled() and true or false
-        button.hotkey:SetText(button.hotkeyDotEligible and RANGE_INDICATOR or "")
-        button.hotkey:Hide()
-    end
-end
+-- ============================================================================
+-- Key push flash
+-- ============================================================================
 
 -- No IsKeyDown in 3.3.5a; CLICK binds get a short PUSHED flash instead of ActionButtonDown/Up.
 local KEY_PUSH_FLASH = 0.12
@@ -821,7 +822,7 @@ keyPushFrame:SetScript("OnUpdate", function(self)
             button._extrabarKeyPushed = nil
             keyPushUntil[button] = nil
             button:SetButtonState("NORMAL")
-            UpdateCheckedState(button)
+            button:UpdateChecked()
         else
             any = true
         end
@@ -846,27 +847,372 @@ local function HookKeyPushFlash(button)
     end)
 end
 
--- Same as ActionBarButtonTemplate OnDragStart: locked unless PICKUPACTION (default Shift).
-local function OnDragStart(self)
-    if InCombatLockdown() then return end
-    if GetCVar("lockActionBars") == "1" and not IsModifiedClick("PICKUPACTION") then return end
+-- ============================================================================
+-- Button prototype — instance → proto → widget metatable chain (Bartender pattern)
+-- ============================================================================
 
-    local previous = SnapshotSlot(self)
-    if not previous then return end
+local ButtonProto = CreateFrame("CheckButton")
+local ButtonProto_MT = { __index = ButtonProto }
 
-    ClearSlot(self)
-    PutDataOnCursor(previous)
+function ButtonProto:GetSlotData()
+    local slots = Bar_GetSlots(self.bar)
+    return slots and slots[self:GetID()]
 end
 
-local function CreateExtrabarButton(index, parent)
-    local name = "DragonUI_ExtraBarButton" .. index
+function ButtonProto:UpdateIcon(data)
+    if not data then
+        self.icon:Hide()
+        return
+    end
+    local texture
+    if data.type == "spell" then
+        texture = GetActiveShapeshiftTexture(data) or select(3, GetSpellInfo(data.spell))
+        if not texture and data.spellID then
+            texture = select(3, GetSpellInfo(data.spellID))
+        end
+    elseif data.type == "item" then
+        texture = GetItemIcon(data.item) or select(10, GetItemInfo(data.item))
+    elseif data.type == "macro" then
+        texture = data.texture
+    end
+    if texture then
+        self.icon:SetTexture(texture)
+        self.icon:Show()
+    end
+end
+
+-- Applies data to the live button (secure + visual); persistence is the caller's job.
+function ButtonProto:SetSlotData(data)
+    HealSpellName(data)
+    Secure.Apply(self, data)
+    self:UpdateIcon(data)
+    local bar = self.bar
+    if bar then
+        bar:RequestRefresh()
+        bar:UpdateRangePolling()
+    end
+end
+
+function ButtonProto:Clear()
+    Bar_PersistSlot(self.bar, self:GetID(), nil)
+    self:SetSlotData(nil)
+end
+
+function ButtonProto:UpdateCooldown()
+    local t = self:GetAttribute("type1")
+    if t == "spell" then
+        local data = self:GetSlotData()
+        ApplyCooldown(self.cooldown, GetButtonSpellCooldown(self:GetAttribute("spell1"), data and data.spellID))
+    elseif t == "item" then
+        local itemId = ButtonItemID(self)
+        if itemId then
+            ApplyCooldown(self.cooldown, GetItemCooldown(itemId))
+        end
+    elseif t == "macro" then
+        local data = self:GetSlotData()
+        local macroIdx = data and data.macro
+        local start, duration, enable = 0, 0, 0
+        if macroIdx then
+            local spellName = GetMacroSpell(macroIdx)
+            if spellName then
+                start, duration, enable = GetButtonSpellCooldown(spellName)
+            else
+                local _, itemLink = GetMacroItem(macroIdx)
+                local itemId = itemLink and tonumber(itemLink:match("item:(%d+)"))
+                if itemId then
+                    start, duration, enable = GetItemCooldown(itemId)
+                end
+            end
+        end
+        ApplyCooldown(self.cooldown, start, duration, enable)
+    else
+        self.cooldown:Hide()
+    end
+end
+
+function ButtonProto:UpdateCount()
+    if self:GetAttribute("type1") == "item" then
+        local itemId = ButtonItemID(self)
+        -- ActionButton_UpdateCount only shows count for consumable/stackable actions; maxStack>1 emulates that.
+        local maxStack = itemId and select(8, GetItemInfo(itemId))
+        if maxStack and maxStack > 1 then
+            local count = GetItemCount(itemId)
+            if count > (self.maxDisplayCount or 9999) then
+                self.count:SetText("*")
+            else
+                self.count:SetText(count)
+            end
+            return
+        end
+    end
+    self.count:SetText("")
+end
+
+function ButtonProto:UpdateUsable()
+    local t = self:GetAttribute("type1")
+    if t == "spell" then
+        local spellName = self:GetAttribute("spell1")
+        local isUsable, notEnoughMana = IsUsableSpell(spellName)
+        local rangeValid = SafeIsSpellInRange(spellName)
+        local oorR, oorG, oorB, oomR, oomG, oomB = GetRangeIndicatorColors()
+        if not isUsable and notEnoughMana then
+            self.icon:SetVertexColor(oomR, oomG, oomB)
+        elseif not isUsable then
+            self.icon:SetVertexColor(0.4, 0.4, 0.4)
+        elseif IsRangeIndicatorEnabled() and rangeValid == false then
+            self.icon:SetVertexColor(oorR, oorG, oorB)
+        else
+            self.icon:SetVertexColor(1, 1, 1)
+        end
+        ApplyRangeIndicator(self, rangeValid)
+    elseif t == "item" then
+        local itemId = ButtonItemID(self)
+        if not itemId then return end
+        local rangeValid = SafeIsItemInRange(itemId)
+        local oorR, oorG, oorB = GetRangeIndicatorColors()
+        if not IsUsableItem(itemId) then
+            self.icon:SetVertexColor(0.4, 0.4, 0.4)
+        elseif IsRangeIndicatorEnabled() and rangeValid == false then
+            self.icon:SetVertexColor(oorR, oorG, oorB)
+        else
+            self.icon:SetVertexColor(1, 1, 1)
+        end
+        ApplyRangeIndicator(self, rangeValid)
+    else
+        self.icon:SetVertexColor(1, 1, 1)
+        ApplyRangeIndicator(self, nil)
+    end
+end
+
+-- Range and OOR tint are coupled; polled together while a target exists.
+function ButtonProto:UpdateRange()
+    self:UpdateUsable()
+end
+
+function ButtonProto:UpdateChecked()
+    -- Keep checked during key PUSHED flash (mouse keeps both after PostClick).
+    self:SetChecked(IsButtonCurrent(self) and 1 or 0)
+end
+
+function ButtonProto:Update()
+    self:UpdateCooldown()
+    self:UpdateCount()
+    self:UpdateUsable()
+    self:UpdateChecked()
+end
+
+function ButtonProto:UpdateHotkey()
+    local cfg = Bar_GetConfig(self.bar)
+    if not cfg or cfg.show_hotkey == false then
+        self.hotkey:SetText("")
+        self.hotkeyBound = false
+        self.hotkeyDotEligible = false
+        self.hotkey:Hide()
+        return
+    end
+
+    -- Mirror the user's main-bar hotkey font (buttons.lua applies db.hotkey.font there).
+    local hotkeyDb = addon.db and addon.db.profile and addon.db.profile.buttons
+        and addon.db.profile.buttons.hotkey
+    if hotkeyDb and hotkeyDb.font then
+        self.hotkey:SetFont(unpack(hotkeyDb.font))
+    end
+
+    local key = GetBindingKey("CLICK " .. self:GetName() .. ":LeftButton")
+    if key then
+        self.hotkeyBound = true
+        self.hotkeyDotEligible = false
+        self.hotkey:SetText(LibKeyBound and LibKeyBound:ToShortKey(key) or "")
+        self.hotkey:SetVertexColor(0.6, 0.6, 0.6)
+        self.hotkey:Show()
+    else
+        self.hotkeyBound = false
+        self.hotkeyDotEligible = IsRangeDotEnabled() and true or false
+        self.hotkey:SetText(self.hotkeyDotEligible and RANGE_INDICATOR or "")
+        self.hotkey:Hide()
+    end
+end
+
+-- Button script handlers (shared, not per-button closures)
+
+local function Button_OnDragStart(self)
+    self._extrabarFromMouse = nil
+    OnDragStart(self)
+end
+
+-- Click-drop + suppress cast; SetChecked(0) like PetActionButton (stops toggle stick).
+local function Button_PreClick(self)
+    self:SetChecked(0)
+    local placed = AssignFromCursor(self)
+    local justPlaced = lastAssignTime[self] and (GetTime() - lastAssignTime[self]) < 0.1
+    if (placed or justPlaced) and not InCombatLockdown() then
+        Secure.SetType1(self, nil)
+        self._extrabarRestoreType = true
+    end
+end
+
+local function Button_PostClick(self)
+    if self._extrabarRestoreType and not InCombatLockdown() then
+        self._extrabarRestoreType = nil
+        local data = self:GetSlotData()
+        if data then Secure.SetType1(self, data.type) end
+    end
+    self:UpdateChecked()
+end
+
+local function Button_OnLeave()
+    GameTooltip:Hide()
+end
+
+-- ============================================================================
+-- Update engine — event-driven repaint coalesced per frame; OnUpdate only while
+-- dirty or range-polling (idle cost ~0)
+-- ============================================================================
+
+local RANGE_POLL_INTERVAL = 0.2
+
+local function Engine_OnUpdate(self, elapsed)
+    local bar = self.bar
+    if bar.dirty then
+        bar.dirty = nil
+        bar:RefreshAllStates()
+    end
+    if bar.rangePolling then
+        self.rangeElapsed = self.rangeElapsed + elapsed
+        if self.rangeElapsed >= RANGE_POLL_INTERVAL then
+            self.rangeElapsed = 0
+            if bar.container and bar.container:IsVisible() then
+                for _, button in pairs(bar.buttons) do
+                    button:UpdateRange()
+                end
+            end
+        end
+    elseif not bar.dirty then
+        self:Hide()
+    end
+end
+
+-- ============================================================================
+-- Bar factory
+-- ============================================================================
+
+local BarProto = {}
+local BarProto_MT = { __index = BarProto }
+
+function BarProto:IsEnabled()
+    return addon:IsModuleEnabled(self.id)
+end
+
+function BarProto:RequestRefresh()
+    self.dirty = true
+    self.engine:Show()
+end
+
+function BarProto:RefreshAllStates()
+    if not self.container or not self.container:IsVisible() then return end
+    for _, button in pairs(self.buttons) do
+        button:Update()
+    end
+end
+
+function BarProto:HasRangeContent()
+    for _, button in pairs(self.buttons) do
+        local t = button:GetAttribute("type1")
+        if t == "spell" or t == "item" then return true end
+    end
+    return false
+end
+
+function BarProto:UpdateRangePolling()
+    local active = self.applied and self.container and self.container:IsVisible()
+        and UnitExists("target") and self:HasRangeContent()
+    self.rangePolling = active or nil
+    if active then
+        self.engine.rangeElapsed = 0
+        self.engine:Show()
+    end
+end
+
+function BarProto:RefreshHotkeys()
+    for _, button in pairs(self.buttons) do
+        button:UpdateHotkey()
+    end
+end
+
+function BarProto:ReapplySavedSlots()
+    local slots = Bar_GetSlots(self)
+    if not slots then return end
+    for index, button in pairs(self.buttons) do
+        button:SetSlotData(slots[index])
+    end
+end
+
+function BarProto:ApplyAnchorPosition()
+    local widgetConfig = addon.db and addon.db.profile and addon.db.profile.widgets
+        and addon.db.profile.widgets[self.id]
+    self.anchor:ClearAllPoints()
+    if widgetConfig and (widgetConfig.anchor or widgetConfig.posX or widgetConfig.posY) then
+        local anchorPoint = widgetConfig.anchor or "CENTER"
+        self.anchor:SetPoint(anchorPoint, UIParent, anchorPoint, widgetConfig.posX or 0, widgetConfig.posY or 0)
+    else
+        local cfg = Bar_GetConfig(self) or {}
+        self.anchor:SetPoint("CENTER", UIParent, "CENTER", cfg.x_position or 0, cfg.y_position or 260)
+    end
+end
+
+function BarProto:CreateAnchor()
+    if self.anchor then return self.anchor end
+
+    local width, height = Bar_GetAnchorSize(self)
+    -- CreateUIFrame (not bare CreateFrame) registers Editor Mode drag like other widgets.
+    local anchor = _G["DragonUI_" .. self.uiFrameName] or addon.CreateUIFrame(width, height, self.uiFrameName)
+    anchor:SetSize(width, height)
+
+    self.anchor = anchor
+    self:ApplyAnchorPosition()
+    anchor:SetScale(1)
+    return anchor
+end
+
+-- Sibling of editor anchor on UIParent (petbar); never FULLSCREEN or buttons cover menus.
+function BarProto:CreateContainer()
+    local bar = self
+    local container = self.container or _G[self.containerName]
+        or CreateFrame("Frame", self.containerName, UIParent)
+    container:SetParent(UIParent)
+    -- Logical size + SetScale; CENTERed on the scaled anchor (SetAllPoints would defeat SetScale).
+    container:ClearAllPoints()
+    container:SetSize(Bar_GetContainerSize(self))
+    container:SetPoint("CENTER", self.anchor, "CENTER", 0, 0)
+    container:SetScale(Bar_GetScale(self))
+    container:SetFrameStrata("MEDIUM")
+    container:SetFrameLevel(5)
+    if not container._extrabarHooked then
+        container._extrabarHooked = true
+        container:SetScript("OnShow", function()
+            bar:RequestRefresh()
+            bar:UpdateRangePolling()
+        end)
+        container:SetScript("OnHide", function()
+            bar:UpdateRangePolling()
+        end)
+    end
+
+    self.container = container
+    return container
+end
+
+function BarProto:CreateButton(index)
+    local name = self.buttonNamePrefix .. index
     -- CheckButton like ActionBarButtonTemplate — same Checked/Pushed texture path as buttons.lua.
     local button = _G[name]
     if not button then
-        button = CreateFrame("CheckButton", name, parent, "SecureActionButtonTemplate")
+        button = CreateFrame("CheckButton", name, self.container, "SecureActionButtonTemplate")
     end
+    setmetatable(button, ButtonProto_MT)
+    button.bar = self
     button:SetID(index)
-    button:SetParent(parent)
+    button:SetParent(self.container)
     button:RegisterForClicks("AnyUp")
     button:RegisterForDrag("LeftButton")
 
@@ -893,7 +1239,8 @@ local function CreateExtrabarButton(index, parent)
         local hotkey = button:CreateFontString(nil, "OVERLAY")
         hotkey:SetDrawLayer("OVERLAY", 7)
         hotkey:SetFont(HOTKEY_FONT, 12, "OUTLINE")
-        hotkey:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
+        -- Same corner inset as buttons.lua NormalizeAdditionalHotkeyVisual (TOPRIGHT -2, -3).
+        hotkey:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -3)
         hotkey:SetJustifyH("RIGHT")
         hotkey:SetVertexColor(0.6, 0.6, 0.6)
         -- Same depth as buttons.lua / pretty hotkeys (black shadow down-left).
@@ -903,348 +1250,321 @@ local function CreateExtrabarButton(index, parent)
         hotkey:SetShadowColor(unpack(shadow or {0, 0, 0, 1}))
         button.hotkey = hotkey
 
-        button:SetScript("OnDragStart", function(self)
-            self._extrabarFromMouse = nil
-            OnDragStart(self)
-        end)
+        button:SetScript("OnDragStart", Button_OnDragStart)
         button:SetScript("OnReceiveDrag", AssignFromCursor)
         HookKeyPushFlash(button)
-        -- Click-drop + suppress cast; SetChecked(0) like PetActionButton (stops toggle stick).
-        button:SetScript("PreClick", function(self)
-            self:SetChecked(0)
-            local placed = AssignFromCursor(self)
-            local justPlaced = lastAssignTime[self] and (GetTime() - lastAssignTime[self]) < 0.1
-            if (placed or justPlaced) and not InCombatLockdown() then
-                self:SetAttribute("type1", nil)
-                self._extrabarRestoreType = true
-            end
-        end)
-        button:SetScript("PostClick", function(self)
-            if self._extrabarRestoreType and not InCombatLockdown() then
-                self._extrabarRestoreType = nil
-                local slots = GetSlotsTable()
-                local data = slots and slots[self:GetID()]
-                if data then self:SetAttribute("type1", data.type) end
-            end
-            UpdateCheckedState(self)
-        end)
+        button:SetScript("PreClick", Button_PreClick)
+        button:SetScript("PostClick", Button_PostClick)
         button:SetScript("OnEnter", SetExtrabarTooltip)
-        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        button:SetScript("OnLeave", Button_OnLeave)
 
         -- After OnEnter SetScript: MakeButtonBindable HookScript is wiped by a later SetScript.
         if addon.KeyBindingModule then
             addon.KeyBindingModule:MakeButtonBindable(button, "CLICK " .. name .. ":LeftButton",
-                "DragonUI Extra Bar - Button " .. index)
+                self.bindingLabel .. index)
         end
     end
 
     return button
 end
 
-local function CreateButtons(container)
+function BarProto:CreateButtons()
     if InCombatLockdown() then
-        addon.CombatQueue:Add("extrabar1_create_buttons", CreateButtons, container)
+        addon.CombatQueue:Add(self.id .. "_create_buttons", self.CreateButtons, self)
         return
     end
 
-    local size, spacing = GetSizeAndSpacing()
-    local columns, _, order = GetGridLayout()
+    local size, spacing = Bar_GetSizeAndSpacing(self)
+    local columns, _, order, shown = Bar_GetGridLayout(self)
     local step = size + spacing
 
-    for index = 1, NUM_EXTRABAR_BUTTONS do
-        local button = CreateExtrabarButton(index, container)
+    for index = 1, self.numButtons do
+        local button = self:CreateButton(index)
         button:SetSize(size, size)
-        local gridIndex = index - 1
-        local row = math.floor(gridIndex / columns)
-        local col = gridIndex % columns
-        SetGridButtonPoint(button, container, row, col, order, step)
-        button:Show()
-        ExtraBarModule.buttons[index] = button
+        if index <= shown then
+            local gridIndex = index - 1
+            SetGridButtonPoint(button, self.container, math.floor(gridIndex / columns), gridIndex % columns, order, step)
+            button:Show()
+        else
+            button:Hide()
+        end
+        self.buttons[index] = button
     end
 end
 
-local function ReapplySavedSlots()
-    local slots = GetSlotsTable()
-    if not slots then return end
-    for index, button in pairs(ExtraBarModule.buttons) do
-        ApplyToButton(button, slots[index])
-    end
-end
-
--- widgets.extrabar1 after first drag; else additional.extrabar1 x/y (Editor Mode).
-local function GetContainerSize()
-    local size, spacing = GetSizeAndSpacing()
-    local columns, rows = GetGridLayout()
-    local width = (size * columns) + (spacing * (columns - 1))
-    local height = (size * rows) + (spacing * (rows - 1))
-    return width, height
-end
-
-local function ApplyAnchorPosition(anchor)
-    local widgetConfig = addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.extrabar1
-    anchor:ClearAllPoints()
-    if widgetConfig and (widgetConfig.anchor or widgetConfig.posX or widgetConfig.posY) then
-        local anchorPoint = widgetConfig.anchor or "CENTER"
-        anchor:SetPoint(anchorPoint, UIParent, anchorPoint, widgetConfig.posX or 0, widgetConfig.posY or 0)
-    else
-        local cfg = GetExtrabarConfig() or {}
-        anchor:SetPoint("CENTER", UIParent, "CENTER", cfg.x_position or 0, cfg.y_position or 260)
-    end
-end
-
-local function CreateAnchor()
-    if ExtraBarModule.anchor then return ExtraBarModule.anchor end
-
-    local width, height = GetContainerSize()
-    -- CreateUIFrame (not bare CreateFrame) registers Editor Mode drag like other widgets.
-    local anchor = _G.DragonUI_ExtraBar1 or addon.CreateUIFrame(width, height, "ExtraBar1")
-    anchor:SetSize(width, height)
-
-    ApplyAnchorPosition(anchor)
-    anchor:SetScale(1)
-
-    ExtraBarModule.anchor = anchor
-    return anchor
-end
-
--- Sibling of editor anchor on UIParent (petbar); never FULLSCREEN or buttons cover menus.
-local function CreateContainer(anchor)
-    local container = ExtraBarModule.container or _G.DragonUI_ExtraBar1Container
-        or CreateFrame("Frame", "DragonUI_ExtraBar1Container", UIParent)
-    container:SetParent(UIParent)
-    container:SetAllPoints(anchor)
-    container:SetScale(1)
-    container:SetFrameStrata("MEDIUM")
-    container:SetFrameLevel(5)
-
-    ExtraBarModule.container = container
-    return container
-end
-
-local UPDATE_INTERVAL = 0.1
-
-local function RefreshAllButtonStates()
-    if not ExtraBarModule.container or not ExtraBarModule.container:IsVisible() then return end
-    for _, button in pairs(ExtraBarModule.buttons) do
-        UpdateButtonState(button)
-    end
-end
-
-local function Ticker_OnUpdate(self, elapsed)
-    self.elapsed = self.elapsed + elapsed
-    if self.elapsed < UPDATE_INTERVAL then return end
-    self.elapsed = 0
-    RefreshAllButtonStates()
-end
-
-local function StartTicker()
-    local ticker = ExtraBarModule.ticker
-    if not ticker then
-        ticker = CreateFrame("Frame")
-        ExtraBarModule.ticker = ticker
-    end
-    ticker.elapsed = 0
-    ticker:SetScript("OnUpdate", Ticker_OnUpdate)
-end
-
-local function StopTicker()
-    if ExtraBarModule.ticker then
-        ExtraBarModule.ticker:SetScript("OnUpdate", nil)
-    end
-end
-
-local function RefreshAllHotkeys()
-    for _, button in pairs(ExtraBarModule.buttons) do
-        UpdateHotkeyText(button)
-    end
-end
-
--- Sole owner of ExtraBar1Container [vehicleui] driver (VehicleMenuBar:IsShown is wrong with artstyle).
+-- Sole owner of the container [vehicleui] driver (VehicleMenuBar:IsShown is wrong with artstyle).
 local function IsVehicleArtStyle()
     local v = addon.db and addon.db.profile and addon.db.profile.additional
         and addon.db.profile.additional.vehicle
     return v and v.artstyle
 end
 
-local function SetupExtrabarVehicleVisibility()
-    if not ExtraBarModule.container then return end
+function BarProto:SetupVehicleVisibility()
+    if not self.container then return end
     if InCombatLockdown() then
-        addon.CombatQueue:Add("extrabar1_vehicle_vis", SetupExtrabarVehicleVisibility)
+        addon.CombatQueue:Add(self.id .. "_vehicle_vis", self.SetupVehicleVisibility, self)
         return
     end
 
-    local container = ExtraBarModule.container
     if IsVehicleArtStyle() then
-        RegisterStateDriver(container, "visibility", "[vehicleui] hide; show")
+        RegisterStateDriver(self.container, "visibility", "[vehicleui] hide; show")
     else
-        UnregisterStateDriver(container, "visibility")
+        UnregisterStateDriver(self.container, "visibility")
         if not (addon.EditorMode and addon.EditorMode:IsActive()) then
-            container:Show()
+            self.container:Show()
             if addon.VisibilityFade then
-                addon.VisibilityFade.Update("extrabar1")
+                addon.VisibilityFade.Update(self.id)
             end
         end
     end
 end
 
-local function ClearExtrabarVehicleVisibility()
-    if not ExtraBarModule.container or InCombatLockdown() then return end
-    UnregisterStateDriver(ExtraBarModule.container, "visibility")
+function BarProto:ClearVehicleVisibility()
+    if not self.container or InCombatLockdown() then return end
+    UnregisterStateDriver(self.container, "visibility")
 end
 
 -- Alpha-only hover/combat fade (VisibilityFade); layered on the vehicle state driver.
-local function RegisterVisibilityFade()
-    local hoverFrames = { ExtraBarModule.container }
-    for _, button in pairs(ExtraBarModule.buttons) do
+function BarProto:RegisterVisibilityFade()
+    local bar = self
+    local hoverFrames = { self.container }
+    for _, button in pairs(self.buttons) do
         table.insert(hoverFrames, button)
     end
 
-    addon.VisibilityFade.Register("extrabar1", ExtraBarModule.container, {
-        dbTable = GetExtrabarConfig,
+    addon.VisibilityFade.Register(self.id, self.container, {
+        dbTable = function() return Bar_GetConfig(bar) end,
         hoverFrames = hoverFrames,
         clickThrough = true,
     })
-    addon.VisibilityFade.Update("extrabar1")
+    addon.VisibilityFade.Update(self.id)
 end
 
 -- Editor Mode drags the anchor; container SetAllPoints it (buttons are not anchor children).
-local function UpdateEditorFrameRegistration()
-    if addon.EditableFrames and addon.EditableFrames.extrabar1 and ExtraBarModule.anchor then
-        addon.EditableFrames.extrabar1.frame = ExtraBarModule.anchor
-        local width, height = GetContainerSize()
-        ExtraBarModule.anchor:SetSize(width, height)
+function BarProto:UpdateEditorFrameRegistration()
+    if addon.EditableFrames and addon.EditableFrames[self.id] and self.anchor then
+        addon.EditableFrames[self.id].frame = self.anchor
+        local width, height = Bar_GetAnchorSize(self)
+        self.anchor:SetSize(width, height)
     end
 end
 
-local function ShowExtrabarTest()
-    if not ExtraBarModule.anchor then return end
-    ExtraBarModule.anchor:Show()
-    ExtraBarModule.anchor:SetMovable(true)
-    ExtraBarModule.anchor:EnableMouse(true)
-    if ExtraBarModule.anchor.editorTexture then ExtraBarModule.anchor.editorTexture:Show() end
-    if ExtraBarModule.anchor.editorText then ExtraBarModule.anchor.editorText:Show() end
+function BarProto:ShowTest()
+    if not self.anchor then return end
+    self.anchor:Show()
+    self.anchor:SetMovable(true)
+    self.anchor:EnableMouse(true)
+    if self.anchor.editorTexture then self.anchor.editorTexture:Show() end
+    if self.anchor.editorText then self.anchor.editorText:Show() end
 
     -- [vehicleui] driver blocks :Show(); drop it while the editor overlay is active.
-    if ExtraBarModule.container and not InCombatLockdown() then
-        UnregisterStateDriver(ExtraBarModule.container, "visibility")
-        ExtraBarModule.container:Show()
-        ExtraBarModule.container:SetAlpha(1)
+    if self.container and not InCombatLockdown() then
+        UnregisterStateDriver(self.container, "visibility")
+        self.container:Show()
+        self.container:SetAlpha(1)
     end
 end
 
-local function HideExtrabarTest()
-    if not ExtraBarModule.anchor then return end
-    ExtraBarModule.anchor:SetMovable(false)
-    ExtraBarModule.anchor:EnableMouse(false)
-    if ExtraBarModule.anchor.editorTexture then ExtraBarModule.anchor.editorTexture:Hide() end
-    if ExtraBarModule.anchor.editorText then ExtraBarModule.anchor.editorText:Hide() end
+function BarProto:HideTest()
+    if not self.anchor then return end
+    self.anchor:SetMovable(false)
+    self.anchor:EnableMouse(false)
+    if self.anchor.editorTexture then self.anchor.editorTexture:Hide() end
+    if self.anchor.editorText then self.anchor.editorText:Hide() end
 
     if addon.SaveUIFramePosition then
-        addon.SaveUIFramePosition(ExtraBarModule.anchor, "widgets", "extrabar1")
+        addon.SaveUIFramePosition(self.anchor, "widgets", self.id)
     end
 
-    SetupExtrabarVehicleVisibility()
+    self:SetupVehicleVisibility()
     if addon.VisibilityFade then
-        addon.VisibilityFade.Update("extrabar1")
+        addon.VisibilityFade.Update(self.id)
     end
 end
 
-local function ApplyExtrabarSystem()
-    if ExtraBarModule.applied or not IsModuleEnabled() then return end
+function BarProto:Apply()
+    if self.applied or not self:IsEnabled() then return end
 
-    local anchor = CreateAnchor()
-    local container = CreateContainer(anchor)
-    CreateButtons(container)
-    ReapplySavedSlots()
-    RefreshAllHotkeys()
-    StartTicker()
+    self:CreateAnchor()
+    self:CreateContainer()
+    self:CreateButtons()
+    self:ReapplySavedSlots()
+    self:RefreshHotkeys()
 
-    ExtraBarModule.applied = true
-    ExtraBarModule.initialized = true
+    self.applied = true
+    self.initialized = true
 
     if addon.VisibilityFade then
-        RegisterVisibilityFade()
+        self:RegisterVisibilityFade()
     end
-    SetupExtrabarVehicleVisibility()
-    UpdateEditorFrameRegistration()
+    self:SetupVehicleVisibility()
+    self:UpdateEditorFrameRegistration()
+    self:RequestRefresh()
+    self:UpdateRangePolling()
 end
 
-local function RestoreExtrabarSystem()
-    if not ExtraBarModule.applied then return end
+function BarProto:Restore()
+    if not self.applied then return end
 
-    StopTicker()
-    ClearExtrabarVehicleVisibility()
+    self.engine:Hide()
+    self.dirty = nil
+    self.rangePolling = nil
+    self:ClearVehicleVisibility()
     if addon.VisibilityFade then
-        addon.VisibilityFade.Reset("extrabar1", 1)
+        addon.VisibilityFade.Reset(self.id, 1)
     end
-    if ExtraBarModule.container then ExtraBarModule.container:Hide() end
+    if self.container then self.container:Hide() end
 
-    ExtraBarModule.applied = false
+    self.applied = false
 end
 
-function addon.RefreshExtrabarSystem()
+function BarProto:RefreshSystem()
     if InCombatLockdown() then
-        addon.CombatQueue:Add("extrabar1_refresh_system", addon.RefreshExtrabarSystem)
+        addon.CombatQueue:Add(self.id .. "_refresh_system", self.RefreshSystem, self)
         return
     end
 
-    if ExtraBarModule.applied then
-        if not IsModuleEnabled() then
-            RestoreExtrabarSystem()
+    if self.applied then
+        if not self:IsEnabled() then
+            self:Restore()
         else
-            addon.RefreshExtrabarFrame()
-            ReapplySavedSlots()
-            RefreshAllHotkeys()
-            SetupExtrabarVehicleVisibility()
+            self:RefreshFrame()
+            self:ReapplySavedSlots()
+            self:RefreshHotkeys()
+            self:SetupVehicleVisibility()
             if addon.VisibilityFade then
-                addon.VisibilityFade.Update("extrabar1")
+                addon.VisibilityFade.Update(self.id)
             end
         end
-    elseif IsModuleEnabled() then
-        ApplyExtrabarSystem()
+    elseif self:IsEnabled() then
+        self:Apply()
     end
-end
-
-function addon.RefreshExtrabarHotkeys()
-    RefreshAllHotkeys()
 end
 
 -- Live layout refresh (options sliders); no teardown — same shape as RefreshPetbarFrame.
-function addon.RefreshExtrabarFrame()
-    if not ExtraBarModule.anchor then return end
+function BarProto:RefreshFrame()
+    if not self.anchor then return end
     if InCombatLockdown() then
-        addon.CombatQueue:Add("extrabar1_refresh_frame", addon.RefreshExtrabarFrame)
+        addon.CombatQueue:Add(self.id .. "_refresh_frame", self.RefreshFrame, self)
         return
     end
 
-    local width, height = GetContainerSize()
-    ExtraBarModule.anchor:SetSize(width, height)
-    ExtraBarModule.anchor:SetScale(1)
-    ApplyAnchorPosition(ExtraBarModule.anchor)
+    local width, height = Bar_GetAnchorSize(self)
+    self.anchor:SetSize(width, height)
+    self.anchor:SetScale(1)
+    self:ApplyAnchorPosition()
 
-    if ExtraBarModule.container then
-        ExtraBarModule.container:SetParent(UIParent)
-        ExtraBarModule.container:SetAllPoints(ExtraBarModule.anchor)
-        ExtraBarModule.container:SetScale(1)
-        ExtraBarModule.container:SetFrameStrata("MEDIUM")
-        ExtraBarModule.container:SetFrameLevel(5)
+    if self.container then
+        self.container:SetParent(UIParent)
+        self.container:ClearAllPoints()
+        self.container:SetSize(Bar_GetContainerSize(self))
+        self.container:SetPoint("CENTER", self.anchor, "CENTER", 0, 0)
+        self.container:SetScale(Bar_GetScale(self))
+        self.container:SetFrameStrata("MEDIUM")
+        self.container:SetFrameLevel(5)
     end
 
-    local size, spacing = GetSizeAndSpacing()
-    local columns, _, order = GetGridLayout()
+    local size, spacing = Bar_GetSizeAndSpacing(self)
+    local columns, _, order, shown = Bar_GetGridLayout(self)
     local step = size + spacing
-    for index = 1, NUM_EXTRABAR_BUTTONS do
-        local button = ExtraBarModule.buttons[index]
+    for index = 1, self.numButtons do
+        local button = self.buttons[index]
         if button then
             button:SetSize(size, size)
-            local gridIndex = index - 1
-            local row = math.floor(gridIndex / columns)
-            local col = gridIndex % columns
-            SetGridButtonPoint(button, ExtraBarModule.container, row, col, order, step)
+            if index <= shown then
+                local gridIndex = index - 1
+                SetGridButtonPoint(button, self.container, math.floor(gridIndex / columns), gridIndex % columns, order, step)
+                button:Show()
+            else
+                button:Hide()
+            end
         end
     end
 
-    UpdateEditorFrameRegistration()
+    self:UpdateEditorFrameRegistration()
+end
+
+local function CreateExtraBar(spec)
+    local bar = setmetatable({
+        id = spec.id,
+        uiFrameName = spec.uiFrameName,
+        containerName = spec.containerName,
+        buttonNamePrefix = spec.buttonNamePrefix,
+        bindingLabel = spec.bindingLabel,
+        numButtons = spec.numButtons or 12,
+        buttons = {},
+        applied = false,
+        initialized = false,
+        anchor = nil,    -- Editor Mode drag frame only (CreateUIFrame); never parents buttons
+        container = nil, -- button parent; sibling of anchor so drag mouse isn't blocked by children
+    }, BarProto_MT)
+
+    -- Bindings.xml; Key Bindings UI reads BINDING_NAME_* globals (not AceLocale).
+    for i = 1, bar.numButtons do
+        _G["BINDING_NAME_CLICK " .. bar.buttonNamePrefix .. i .. ":LeftButton"] = bar.bindingLabel .. i
+    end
+
+    bar.engine = CreateFrame("Frame")
+    bar.engine:Hide()
+    bar.engine.bar = bar
+    bar.engine.rangeElapsed = 0
+    bar.engine:SetScript("OnUpdate", Engine_OnUpdate)
+
+    if addon.RegisterModule then
+        addon:RegisterModule(bar.id, bar, spec.displayName, spec.description)
+    end
+
+    table.insert(bars, bar)
+    return bar
+end
+
+-- ============================================================================
+-- extrabar1 instance + public API + events
+-- ============================================================================
+
+_G.BINDING_HEADER_DragonUI = "DragonUI"
+
+local ExtraBar1 = CreateExtraBar({
+    id = "extrabar1",
+    uiFrameName = "ExtraBar1",
+    containerName = "DragonUI_ExtraBar1Container",
+    buttonNamePrefix = "DragonUI_ExtraBarButton",
+    bindingLabel = "DragonUI Extra Bar - Button ",
+    numButtons = 12,
+    displayName = (addon.L and addon.L["Extra Bar"]) or "Extra Bar",
+    description = (addon.L and addon.L["A standalone action bar, independent of any class bonus bar"]) or "A standalone action bar, independent of any class bonus bar",
+})
+
+function addon.RefreshExtrabarSystem()
+    ExtraBar1:RefreshSystem()
+end
+
+function addon.RefreshExtrabarHotkeys()
+    ExtraBar1:RefreshHotkeys()
+end
+
+function addon.RefreshExtrabarFrame()
+    ExtraBar1:RefreshFrame()
+end
+
+local function RequestRefreshAll()
+    for _, bar in ipairs(bars) do
+        if bar.applied then bar:RequestRefresh() end
+    end
+end
+
+local function RefreshShapeshiftIcons()
+    for _, bar in ipairs(bars) do
+        if bar.applied then
+            for _, button in pairs(bar.buttons) do
+                local data = button:GetSlotData()
+                if data and data.type == "spell" then
+                    button:UpdateIcon(data)
+                end
+            end
+            bar:RequestRefresh()
+        end
+    end
 end
 
 local initFrame = CreateFrame("Frame")
@@ -1255,56 +1575,80 @@ initFrame:RegisterEvent("UPDATE_BINDINGS")
 initFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 initFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
 initFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
+initFrame:RegisterEvent("BAG_UPDATE")
 initFrame:RegisterEvent("ACTIONBAR_UPDATE_STATE")
+initFrame:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
 initFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 initFrame:RegisterEvent("SPELLS_CHANGED")
 initFrame:RegisterEvent("START_AUTOREPEAT_SPELL")
 initFrame:RegisterEvent("STOP_AUTOREPEAT_SPELL")
+initFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+initFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+initFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
+initFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+-- 3.3.5a has no SPELL_UPDATE_USABLE; player power events cover oom tint with no target.
+initFrame:RegisterEvent("UNIT_MANA")
+initFrame:RegisterEvent("UNIT_ENERGY")
+initFrame:RegisterEvent("UNIT_RAGE")
+initFrame:RegisterEvent("UNIT_RUNIC_POWER")
 initFrame:SetScript("OnEvent", function(self, event, arg1)
-    if event == "ADDON_LOADED" and arg1 == "DragonUI" then
+    if event == "ADDON_LOADED" then
+        if arg1 ~= "DragonUI" then return end
         self.addonLoaded = true
 
-        if addon.RegisterEditableFrame then
-            addon:RegisterEditableFrame({
-                name = "extrabar1",
-                frame = nil, -- set once the anchor is actually created
-                configPath = {"widgets", "extrabar1"},
-                showTest = ShowExtrabarTest,
-                hideTest = HideExtrabarTest,
-                editorVisible = IsModuleEnabled, -- hide editor overlay when module disabled
-            })
-        end
-
-        if addon.db then
-            addon.db.RegisterCallback(ExtraBarModule, "OnProfileChanged", function()
-                addon.RefreshExtrabarSystem()
-            end)
-            addon.db.RegisterCallback(ExtraBarModule, "OnProfileCopied", function()
-                addon.RefreshExtrabarSystem()
-            end)
-            addon.db.RegisterCallback(ExtraBarModule, "OnProfileReset", function()
-                addon.RefreshExtrabarSystem()
-            end)
+        for _, bar in ipairs(bars) do
+            local b = bar
+            if addon.RegisterEditableFrame then
+                addon:RegisterEditableFrame({
+                    name = b.id,
+                    frame = nil, -- set once the anchor is actually created
+                    configPath = {"widgets", b.id},
+                    showTest = function() b:ShowTest() end,
+                    hideTest = function() b:HideTest() end,
+                    editorVisible = function() return b:IsEnabled() end, -- hide editor overlay when module disabled
+                })
+            end
+            if addon.db then
+                local refresh = function() b:RefreshSystem() end
+                addon.db.RegisterCallback(b, "OnProfileChanged", refresh)
+                addon.db.RegisterCallback(b, "OnProfileCopied", refresh)
+                addon.db.RegisterCallback(b, "OnProfileReset", refresh)
+            end
         end
     elseif event == "PLAYER_LOGIN" and self.addonLoaded then
-        addon.RefreshExtrabarSystem()
-        SetupExtrabarVehicleVisibility()
-    elseif event == "PLAYER_ENTERING_WORLD" or event == "ACTIONBAR_SLOT_CHANGED" then
+        for _, bar in ipairs(bars) do
+            bar:RefreshSystem()
+            bar:SetupVehicleVisibility()
+        end
+    elseif event == "PLAYER_ENTERING_WORLD" then
         InvalidateActionSlotCache()
+        RequestRefreshAll()
+    elseif event == "ACTIONBAR_SLOT_CHANGED" then
+        InvalidateActionSlotCache()
+        RequestRefreshAll()
     elseif event == "SPELLS_CHANGED" then
         InvalidateBookSlotCache()
+        RequestRefreshAll()
     elseif event == "UPDATE_BINDINGS" then
-        RefreshAllHotkeys()
+        for _, bar in ipairs(bars) do
+            bar:RefreshHotkeys()
+        end
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        RequestRefreshAll()
+        for _, bar in ipairs(bars) do
+            if bar.applied then bar:UpdateRangePolling() end
+        end
+    elseif event == "UPDATE_SHAPESHIFT_FORM" or event == "UPDATE_SHAPESHIFT_FORMS" then
+        RefreshShapeshiftIcons()
+    elseif event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_MANA" or event == "UNIT_ENERGY"
+        or event == "UNIT_RAGE" or event == "UNIT_RUNIC_POWER" then
+        if arg1 == "player" then
+            RequestRefreshAll()
+        end
     elseif event == "SPELL_UPDATE_COOLDOWN" or event == "ACTIONBAR_UPDATE_COOLDOWN"
-        or event == "BAG_UPDATE_COOLDOWN" then
-        -- Ticker alone can miss the start of a short GCD swipe.
-        if ExtraBarModule.applied then
-            RefreshAllButtonStates()
-        end
-    elseif event == "ACTIONBAR_UPDATE_STATE"
+        or event == "BAG_UPDATE_COOLDOWN" or event == "BAG_UPDATE"
+        or event == "ACTIONBAR_UPDATE_STATE" or event == "ACTIONBAR_UPDATE_USABLE"
         or event == "START_AUTOREPEAT_SPELL" or event == "STOP_AUTOREPEAT_SPELL" then
-        if ExtraBarModule.applied then
-            RefreshAllButtonStates()
-        end
+        RequestRefreshAll()
     end
 end)

@@ -43,6 +43,13 @@ local function RefreshBars()
     if addon.RefreshMainbars then addon.RefreshMainbars() end
 end
 
+local function RefreshExtrabar()
+    if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+end
+
+-- Bar selected in the Layout > Button Spacing dropdown; persists across tab rebuilds.
+local selectedSpacingBar = "player"
+
 local buttonOrderValues = {
     top_left     = LO["Top Left"],
     bottom_left  = LO["Bottom Left"],
@@ -118,13 +125,21 @@ local function BuildGeneralTab(scroll)
         { path = "mainbars.scale_bottomright",  label = LO["Bottom Right Bar Scale"] },
     }
 
+    if addon:IsModuleEnabled("extrabar1") then
+        table.insert(barScales, {
+            path = "additional.extrabar1.scale",
+            label = LO["Extra Bar Scale"],
+            refresh = RefreshExtrabar,
+        })
+    end
+
     for _, bar in ipairs(barScales) do
         C:AddSlider(scales, {
             dbPath = bar.path,
             label = bar.label,
             min = 0.5, max = 2.0, step = 0.01,
             width = 250,
-            callback = RefreshBars,
+            callback = bar.refresh or RefreshBars,
         })
     end
 
@@ -136,6 +151,7 @@ local function BuildGeneralTab(scroll)
                 C:SetDBValue(bar.path, 0.9)
             end
             RefreshBars()
+            RefreshExtrabar()
             Panel:SelectTab("actionbars")
             print("|cFF00FF00[DragonUI]|r " .. LO["All action bar scales reset to 0.9"])
         end,
@@ -371,15 +387,58 @@ end
 -- ============================================================================
 
 local function BuildLayoutTab(scroll)
-    -- ---- Global Button Spacing ----
+    -- ---- Button Spacing (per bar) ----
     local spacingSection = C:AddSection(scroll, LO["Button Spacing"])
 
+    local spacingBars = {
+        player = LO["Main Bar"],
+        bottom_left = LO["Bottom Left Bar"],
+        bottom_right = LO["Bottom Right Bar"],
+        right = LO["Right Bar"],
+        left = LO["Left Bar"],
+    }
+    if addon:IsModuleEnabled("extrabar1") then
+        spacingBars.extrabar1 = LO["Extra Bar"]
+    end
+    if not spacingBars[selectedSpacingBar] then selectedSpacingBar = "player" end
+
+    C:AddDropdown(spacingSection, {
+        label = LO["Bar"],
+        values = spacingBars,
+        width = 200,
+        getFunc = function() return selectedSpacingBar end,
+        setFunc = function(value) selectedSpacingBar = value end,
+        -- Rebuild so the slider re-reads the newly selected bar's value.
+        callback = RebuildLayoutTab,
+    })
+
     C:AddSlider(spacingSection, {
-        dbPath = "mainbars.button_spacing",
         label = LO["Button Spacing"],
         min = 0, max = 20, step = 1,
         width = 250,
-        callback = RefreshBars,
+        getFunc = function()
+            if selectedSpacingBar == "extrabar1" then
+                local cfg = addon.db.profile.additional.extrabar1
+                local v = cfg and cfg.spacing
+                if v == nil then v = 7 end
+                return v
+            end
+            local mb = addon.db.profile.mainbars
+            local cfg = mb and mb[selectedSpacingBar]
+            return (cfg and cfg.button_spacing) or (mb and mb.button_spacing) or 7
+        end,
+        setFunc = function(val)
+            if selectedSpacingBar == "extrabar1" then
+                addon.db.profile.additional.extrabar1.spacing = val
+                RefreshExtrabar()
+            else
+                local mb = addon.db.profile.mainbars
+                if mb and mb[selectedSpacingBar] then
+                    mb[selectedSpacingBar].button_spacing = val
+                end
+                RefreshBars()
+            end
+        end,
     })
 
     -- ---- Main Bar ----
@@ -597,78 +656,44 @@ local function BuildLayoutTab(scroll)
         end,
     })
 
-    -- Extra Bar: position via Editor Mode (no sliders), like other movable bars.
-    local extrabarLayout = C:AddSection(scroll, LO["Extra Bar"])
+    -- Extra Bar: position via Editor Mode, scale in General > Scales; hidden while the module is off.
+    if addon:IsModuleEnabled("extrabar1") then
+        local extrabarLayout = C:AddSection(scroll, LO["Extra Bar"])
 
-    C:AddSlider(extrabarLayout, {
-        label = LO["Scale"],
-        dbPath = "additional.extrabar1.scale",
-        min = 0.5, max = 2.0, step = 0.05,
-        width = 200,
-        callback = function()
-            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
-        end,
-    })
-
-    C:AddSlider(extrabarLayout, {
-        label = LO["Button Size"],
-        getFunc = function()
-            local cfg = addon.db.profile.additional.extrabar1
-            if cfg and cfg.size then return cfg.size end
-            return 36
-        end,
-        setFunc = function(val)
-            addon.db.profile.additional.extrabar1.size = val
-            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
-        end,
-        min = 16, max = 64, step = 1,
-        width = 200,
-    })
-
-    C:AddSlider(extrabarLayout, {
-        label = LO["Button Spacing"],
-        getFunc = function()
-            local cfg = addon.db.profile.additional.extrabar1
-            if cfg and cfg.spacing ~= nil then return cfg.spacing end
-            return 6
-        end,
-        setFunc = function(val)
-            addon.db.profile.additional.extrabar1.spacing = val
-            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
-        end,
-        min = 0, max = 20, step = 1,
-        width = 200,
-    })
-
-    C:AddSlider(extrabarLayout, {
-        label = LO["Columns"],
-        dbPath = "additional.extrabar1.columns",
-        min = 1, max = 12, step = 1,
-        width = 200,
-        callback = function()
-            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
-        end,
-    })
-
-    C:AddToggle(extrabarLayout, {
-        label = LO["Change Button Order"],
-        dbPath = "additional.extrabar1.change_button_order",
-        callback = function()
-            if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
-            RebuildLayoutTab()
-        end,
-    })
-
-    if C:GetDBValue("additional.extrabar1.change_button_order") then
-        C:AddDropdown(extrabarLayout, {
-            label = LO["Button Order"],
-            dbPath = "additional.extrabar1.button_order",
-            values = buttonOrderValues,
+        C:AddSlider(extrabarLayout, {
+            label = LO["Columns"],
+            dbPath = "additional.extrabar1.columns",
+            min = 1, max = 12, step = 1,
             width = 200,
+            callback = RefreshExtrabar,
+        })
+
+        C:AddSlider(extrabarLayout, {
+            label = LO["Buttons Shown"],
+            dbPath = "additional.extrabar1.buttons_shown",
+            min = 1, max = 12, step = 1,
+            width = 200,
+            callback = RefreshExtrabar,
+        })
+
+        C:AddToggle(extrabarLayout, {
+            label = LO["Change Button Order"],
+            dbPath = "additional.extrabar1.change_button_order",
             callback = function()
-                if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
+                RefreshExtrabar()
+                RebuildLayoutTab()
             end,
         })
+
+        if C:GetDBValue("additional.extrabar1.change_button_order") then
+            C:AddDropdown(extrabarLayout, {
+                label = LO["Button Order"],
+                dbPath = "additional.extrabar1.button_order",
+                values = buttonOrderValues,
+                width = 200,
+                callback = RefreshExtrabar,
+            })
+        end
     end
 end
 
@@ -823,6 +848,8 @@ local function BuildVisibilityTab(scroll)
         dbPath = "modules.extrabar1.enabled",
         callback = function()
             if addon.RefreshExtrabarSystem then addon.RefreshExtrabarSystem() end
+            -- Scales/Layout sections are gated on the module; rebuild so they appear/disappear.
+            Panel:SelectTab("actionbars")
         end,
     })
 

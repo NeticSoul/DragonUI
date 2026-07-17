@@ -48,6 +48,25 @@ local DEFAULT_PADDING = 4
 -- button highlight/glow doesn't touch the upper border edge.
 local DEFAULT_HEIGHT_PADDING = 6
 
+-- One-shot copy of the legacy global spacing into per-bar keys so old profiles keep their look.
+local function EnsureSpacingMigration(db)
+    if not db or db.spacing_migrated then return end
+    db.spacing_migrated = true
+    local global = db.button_spacing
+    if global and global ~= ACTION_BUTTON_SPACING then
+        for _, key in ipairs({ "player", "bottom_left", "bottom_right", "right", "left" }) do
+            if db[key] then db[key].button_spacing = global end
+        end
+    end
+end
+
+local function GetBarSpacing(db, barKey)
+    if not db then return ACTION_BUTTON_SPACING end
+    EnsureSpacingMigration(db)
+    local cfg = db[barKey]
+    return (cfg and cfg.button_spacing) or db.button_spacing or ACTION_BUTTON_SPACING
+end
+
 -- ============================================================================
 -- GRID LAYOUT SYSTEM
 -- ============================================================================
@@ -675,21 +694,24 @@ local function InitializeMainbars()
         end
     end
 
-    local initSpacing = (addon.db and addon.db.profile and addon.db.profile.mainbars and addon.db.profile.mainbars.button_spacing) or ACTION_BUTTON_SPACING
+    local mainbarsDb = addon.db and addon.db.profile and addon.db.profile.mainbars
+    local playerSpacing = GetBarSpacing(mainbarsDb, "player")
+    local blSpacing = GetBarSpacing(mainbarsDb, "bottom_left")
+    local brSpacing = GetBarSpacing(mainbarsDb, "bottom_right")
 
     for index = 2, NUM_ACTIONBAR_BUTTONS do
         local ActionButtons = _G['ActionButton' .. index]
         ActionButtons:SetParent(pUiMainBar)
-        ActionButtons:SetClearPoint('LEFT', _G['ActionButton' .. (index - 1)], 'RIGHT', initSpacing, 0)
+        ActionButtons:SetClearPoint('LEFT', _G['ActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
 
         local BottomLeftButtons = _G['MultiBarBottomLeftButton' .. index]
-        BottomLeftButtons:SetClearPoint('LEFT', _G['MultiBarBottomLeftButton' .. (index - 1)], 'RIGHT', initSpacing, 0)
+        BottomLeftButtons:SetClearPoint('LEFT', _G['MultiBarBottomLeftButton' .. (index - 1)], 'RIGHT', blSpacing, 0)
 
         local BottomRightButtons = _G['MultiBarBottomRightButton' .. index]
-        BottomRightButtons:SetClearPoint('LEFT', _G['MultiBarBottomRightButton' .. (index - 1)], 'RIGHT', initSpacing, 0)
+        BottomRightButtons:SetClearPoint('LEFT', _G['MultiBarBottomRightButton' .. (index - 1)], 'RIGHT', brSpacing, 0)
 
         local BonusActionButtons = _G['BonusActionButton' .. index]
-        BonusActionButtons:SetClearPoint('LEFT', _G['BonusActionButton' .. (index - 1)], 'RIGHT', initSpacing, 0)
+        BonusActionButtons:SetClearPoint('LEFT', _G['BonusActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
     end
 end
 
@@ -843,8 +865,6 @@ end
             return
         end
 
-        local btnSpacing = db.button_spacing or ACTION_BUTTON_SPACING
-
         -- Right bar: grid layout using columns (horizontal = 12 cols, vertical = 1 col)
         if MultiBarRight then
             local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.rightbar
@@ -853,7 +873,7 @@ end
             local rightCols = rightCfg.columns or 1
             local rightRows = math.ceil(rightCount / rightCols)
             PositionSideBarButtons("MultiBarRightButton", MultiBarRight, containerFrame,
-                rightCount, rightCols, btnSpacing,
+                rightCount, rightCols, GetBarSpacing(db, "right"),
                 ResolveBarButtonOrder(rightCfg, "top_left", rightRows))
         end
 
@@ -865,7 +885,7 @@ end
             local leftCols = leftCfg.columns or 1
             local leftRows = math.ceil(leftCount / leftCols)
             PositionSideBarButtons("MultiBarLeftButton", MultiBarLeft, containerFrame,
-                leftCount, leftCols, btnSpacing,
+                leftCount, leftCols, GetBarSpacing(db, "left"),
                 ResolveBarButtonOrder(leftCfg, "top_left", leftRows))
         end
     end
@@ -934,12 +954,10 @@ end
             ResizeContainerStable(addon.ActionBarFrames.mainbar, w * scale, h * scale)
         end
 
-        local btnSpacing = db and db.button_spacing or ACTION_BUTTON_SPACING
-
         -- Right bar container (columns-based grid)
         if addon.ActionBarFrames.rightbar then
             local cfg = db.right or {}
-            local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, btnSpacing)
+            local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "right"))
             local scale = db.scale_rightbar or 0.9
             ResizeContainerStable(addon.ActionBarFrames.rightbar, w * scale, h * scale)
         end
@@ -947,7 +965,7 @@ end
         -- Left bar container (columns-based grid)
         if addon.ActionBarFrames.leftbar then
             local cfg = db.left or {}
-            local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, btnSpacing)
+            local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "left"))
             local scale = db.scale_leftbar or 0.9
             ResizeContainerStable(addon.ActionBarFrames.leftbar, w * scale, h * scale)
         end
@@ -955,7 +973,7 @@ end
         -- Bottom left container
         if addon.ActionBarFrames.bottombarleft then
             local cfg = db.bottom_left or {}
-            local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, btnSpacing)
+            local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
             local scale = db.scale_bottomleft or 0.9
             ResizeContainerStable(addon.ActionBarFrames.bottombarleft, w * scale, h * scale)
         end
@@ -963,7 +981,7 @@ end
         -- Bottom right container
         if addon.ActionBarFrames.bottombarright then
             local cfg = db.bottom_right or {}
-            local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, btnSpacing)
+            local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
             local scale = db.scale_bottomright or 0.9
             ResizeContainerStable(addon.ActionBarFrames.bottombarright, w * scale, h * scale)
         end
@@ -2020,12 +2038,11 @@ end
         local leftCfg  = db and db.left or {}
         local blCfg    = db and db.bottom_left or {}
         local brCfg    = db and db.bottom_right or {}
-        local btnSpacing = db and db.button_spacing or ACTION_BUTTON_SPACING
 
-        local rW, rH  = BarContainerSize(rightCfg.columns or 1,  rightCfg.buttons_shown or 12, btnSpacing)
-        local lW, lH  = BarContainerSize(leftCfg.columns or 1,   leftCfg.buttons_shown or 12, btnSpacing)
-        local blW, blH = BarContainerSize(blCfg.columns or 12,   blCfg.buttons_shown or 12, btnSpacing)
-        local brW, brH = BarContainerSize(brCfg.columns or 12,   brCfg.buttons_shown or 12, btnSpacing)
+        local rW, rH  = BarContainerSize(rightCfg.columns or 1,  rightCfg.buttons_shown or 12, GetBarSpacing(db, "right"))
+        local lW, lH  = BarContainerSize(leftCfg.columns or 1,   leftCfg.buttons_shown or 12, GetBarSpacing(db, "left"))
+        local blW, blH = BarContainerSize(blCfg.columns or 12,   blCfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
+        local brW, brH = BarContainerSize(brCfg.columns or 12,   brCfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
 
         local rScale  = db and db.scale_rightbar     or 0.9
         local lScale  = db and db.scale_leftbar      or 0.9
@@ -3379,12 +3396,11 @@ function addon.ApplyAllBarButtonCounts()
     local db = addon.db and addon.db.profile and addon.db.profile.mainbars
     if not db then return end
 
-    local btnSpacing = db.button_spacing or ACTION_BUTTON_SPACING
-
     -- Main bar: use grid layout from player sub-table
     local playerCfg = db.player or {}
     local mainColumns = playerCfg.columns or 12
     local mainCount = playerCfg.buttons_shown or 12
+    local playerSpacing = GetBarSpacing(db, "player")
     -- Auto-compute rows from columns and buttons shown
     local mainRows = math.ceil(mainCount / mainColumns)
 
@@ -3394,13 +3410,13 @@ function addon.ApplyAllBarButtonCounts()
     addon.ArrangeActionBarButtons("ActionButton",
         addon.pUiMainBar, addon.pUiMainBar,
         mainRows, mainColumns, mainCount,
-        nil, nil, btnSpacing, mainOrder)
+        nil, nil, playerSpacing, mainOrder)
 
     -- Also apply same layout to BonusActionButtons (vehicle/shapeshift override bar)
     addon.ArrangeActionBarButtons("BonusActionButton",
         nil, addon.pUiMainBar,
         mainRows, mainColumns, mainCount,
-        nil, nil, btnSpacing, mainOrder)
+        nil, nil, playerSpacing, mainOrder)
     EnsureBonusButtonsClickThrough()
 
     -- Dividers on visual column boundaries (unchanged when button order changes).
@@ -3426,7 +3442,7 @@ function addon.ApplyAllBarButtonCounts()
         addon.ArrangeActionBarButtons("MultiBarBottomLeftButton",
             MultiBarBottomLeft, MultiBarBottomLeft,
             blRows, blCols, blCount,
-            0, 0, btnSpacing, blOrder)
+            0, 0, GetBarSpacing(db, "bottom_left"), blOrder)
     end
 
     -- Bottom Right bar — use grid layout (no padding)
@@ -3439,7 +3455,7 @@ function addon.ApplyAllBarButtonCounts()
         addon.ArrangeActionBarButtons("MultiBarBottomRightButton",
             MultiBarBottomRight, MultiBarBottomRight,
             brRows, brCols, brCount,
-            0, 0, btnSpacing, brOrder)
+            0, 0, GetBarSpacing(db, "bottom_right"), brOrder)
     end
 
     -- Left/Right bars: grid layout via PositionSideBarButtons (respects columns + button order)
