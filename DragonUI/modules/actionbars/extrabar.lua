@@ -671,16 +671,17 @@ function Secure.Apply(button, data)
     button:SetAttribute("item1", nil)
     button:SetAttribute("macrotext1", nil)
 
-    if not data then return end
-
-    button:SetAttribute("type1", data.type)
-    if data.type == "spell" then
-        button:SetAttribute("spell1", data.spell)
-    elseif data.type == "item" then
-        button:SetAttribute("item1", "item:" .. data.item)
-    elseif data.type == "macro" then
-        button:SetAttribute("macrotext1", data.macrotext)
+    if data then
+        button:SetAttribute("type1", data.type)
+        if data.type == "spell" then
+            button:SetAttribute("spell1", data.spell)
+        elseif data.type == "item" then
+            button:SetAttribute("item1", "item:" .. data.item)
+        elseif data.type == "macro" then
+            button:SetAttribute("macrotext1", data.macrotext)
+        end
     end
+    button:UpdateGridVisibility()
 end
 
 -- PreClick/PostClick cast-suppression toggle; callers already check InCombatLockdown.
@@ -894,6 +895,33 @@ end
 function ButtonProto:Clear()
     Bar_PersistSlot(self.bar, self:GetID(), nil)
     self:SetSlotData(nil)
+end
+
+-- Empty slots follow Blizzard alwaysShowActionBars (FrameXML MultiActionBars / ActionButton showgrid).
+function ButtonProto:HasContent()
+    return self:GetAttribute("type1") ~= nil
+end
+
+function ButtonProto:UpdateGridVisibility()
+    if InCombatLockdown() then
+        addon.CombatQueue:Add(self.bar.id .. "_grid_" .. self:GetID(), self.UpdateGridVisibility, self)
+        return
+    end
+    local index = self:GetID()
+    local _, _, _, shown = Bar_GetGridLayout(self.bar)
+    if index > shown then
+        self:Hide()
+        return
+    end
+    if addon.EditorMode and addon.EditorMode:IsActive() then
+        self:Show()
+        return
+    end
+    if self:HasContent() or self.bar:ShouldShowEmpty() then
+        self:Show()
+    else
+        self:Hide()
+    end
 end
 
 function ButtonProto:UpdateCooldown()
@@ -1282,12 +1310,43 @@ function BarProto:CreateButtons()
         if index <= shown then
             local gridIndex = index - 1
             SetGridButtonPoint(button, self.container, math.floor(gridIndex / columns), gridIndex % columns, order, step)
-            button:Show()
-        else
-            button:Hide()
         end
         self.buttons[index] = button
+        button:UpdateGridVisibility()
     end
+
+    if addon.RefreshDarkModeActionButtons then
+        addon.RefreshDarkModeActionButtons()
+    end
+end
+
+function BarProto:ShouldShowEmpty()
+    if GetCVar("alwaysShowActionBars") == "1"
+        or ALWAYS_SHOW_MULTIBARS == "1" or ALWAYS_SHOW_MULTIBARS == 1 then
+        return true
+    end
+    if SpellBookFrame and SpellBookFrame:IsShown() then
+        return true
+    end
+    return (self.dragGrid or 0) > 0
+end
+
+function BarProto:UpdateAllGridVisibility()
+    for _, button in pairs(self.buttons) do
+        button:UpdateGridVisibility()
+    end
+end
+
+function BarProto:ShowGrid()
+    self.dragGrid = (self.dragGrid or 0) + 1
+    self:UpdateAllGridVisibility()
+end
+
+function BarProto:HideGrid()
+    local n = (self.dragGrid or 0) - 1
+    if n < 0 then n = 0 end
+    self.dragGrid = n
+    self:UpdateAllGridVisibility()
 end
 
 -- Sole owner of the container [vehicleui] driver (VehicleMenuBar:IsShown is wrong with artstyle).
@@ -1361,6 +1420,7 @@ function BarProto:ShowTest()
         self.container:Show()
         self.container:SetAlpha(1)
     end
+    self:UpdateAllGridVisibility()
 end
 
 function BarProto:HideTest()
@@ -1375,6 +1435,7 @@ function BarProto:HideTest()
     end
 
     self:SetupVehicleVisibility()
+    self:UpdateAllGridVisibility()
     if addon.VisibilityFade then
         addon.VisibilityFade.Update(self.id)
     end
@@ -1383,6 +1444,7 @@ end
 function BarProto:Apply()
     if self.applied or not self:IsEnabled() then return end
 
+    self.dragGrid = 0
     self:CreateAnchor()
     self:CreateContainer()
     self:CreateButtons()
@@ -1472,10 +1534,8 @@ function BarProto:RefreshFrame()
             if index <= shown then
                 local gridIndex = index - 1
                 SetGridButtonPoint(button, self.container, math.floor(gridIndex / columns), gridIndex % columns, order, step)
-                button:Show()
-            else
-                button:Hide()
             end
+            button:UpdateGridVisibility()
         end
     end
 
@@ -1491,6 +1551,7 @@ local function CreateExtraBar(spec)
         bindingLabel = spec.bindingLabel,
         numButtons = spec.numButtons or 12,
         buttons = {},
+        dragGrid = 0, -- ACTIONBAR_SHOWGRID counter (spellbook/CVar read live)
         applied = false,
         initialized = false,
         anchor = nil,    -- Editor Mode drag frame only (CreateUIFrame); never parents buttons
@@ -1551,6 +1612,12 @@ local function RequestRefreshAll()
     end
 end
 
+local function ForAppliedBars(method)
+    for _, bar in ipairs(bars) do
+        if bar.applied then bar[method](bar) end
+    end
+end
+
 local function RefreshShapeshiftIcons()
     for _, bar in ipairs(bars) do
         if bar.applied then
@@ -1565,6 +1632,30 @@ local function RefreshShapeshiftIcons()
     end
 end
 
+-- Spellbook / Always Show use MultiActionBar_* (refresh only — CVar/spellbook read live).
+-- Drag pickup uses ACTIONBAR_SHOWGRID (dragGrid counter).
+local gridHooksInstalled
+local function InstallGridHooks()
+    if gridHooksInstalled then return end
+    gridHooksInstalled = true
+
+    if MultiActionBar_ShowAllGrids then
+        hooksecurefunc("MultiActionBar_ShowAllGrids", function()
+            ForAppliedBars("UpdateAllGridVisibility")
+        end)
+    end
+    if MultiActionBar_HideAllGrids then
+        hooksecurefunc("MultiActionBar_HideAllGrids", function()
+            ForAppliedBars("UpdateAllGridVisibility")
+        end)
+    end
+
+    hooksecurefunc("SetCVar", function(name)
+        if name ~= "alwaysShowActionBars" then return end
+        ForAppliedBars("UpdateAllGridVisibility")
+    end)
+end
+
 local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("ADDON_LOADED")
 initFrame:RegisterEvent("PLAYER_LOGIN")
@@ -1577,6 +1668,8 @@ initFrame:RegisterEvent("BAG_UPDATE")
 initFrame:RegisterEvent("ACTIONBAR_UPDATE_STATE")
 initFrame:RegisterEvent("ACTIONBAR_UPDATE_USABLE")
 initFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+initFrame:RegisterEvent("ACTIONBAR_SHOWGRID")
+initFrame:RegisterEvent("ACTIONBAR_HIDEGRID")
 initFrame:RegisterEvent("SPELLS_CHANGED")
 initFrame:RegisterEvent("START_AUTOREPEAT_SPELL")
 initFrame:RegisterEvent("STOP_AUTOREPEAT_SPELL")
@@ -1593,6 +1686,7 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" then
         if arg1 ~= "DragonUI" then return end
         self.addonLoaded = true
+        InstallGridHooks()
 
         for _, bar in ipairs(bars) do
             local b = bar
@@ -1621,6 +1715,11 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
     elseif event == "PLAYER_ENTERING_WORLD" then
         InvalidateActionSlotCache()
         RequestRefreshAll()
+        ForAppliedBars("UpdateAllGridVisibility")
+    elseif event == "ACTIONBAR_SHOWGRID" then
+        ForAppliedBars("ShowGrid")
+    elseif event == "ACTIONBAR_HIDEGRID" then
+        ForAppliedBars("HideGrid")
     elseif event == "ACTIONBAR_SLOT_CHANGED" then
         InvalidateActionSlotCache()
         RequestRefreshAll()
