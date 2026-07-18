@@ -1200,6 +1200,8 @@ L["Show Level In Name When Targeted"] = "Mostrar nivel en el nombre al tener obj
 L["Show Level on Hover"] = "Mostrar nivel al pasar el ratón"
 L["Name Reaction Colors"] = "Color de reacción en nombres"
 L["Tint name text with the health bar reaction color (red/yellow/green/blue)."] = "Tiñe el nombre con el color de reacción de la barra de vida (rojo/amarillo/verde/azul)."
+L["Class Colors on Friendly Names"] = "Colores de clase en nombres aliados"
+L["Use class colors for friendly player name text."] = "Usa colores de clase para el nombre de jugadores aliados. Requiere Friendly Class Colors o Party Class Colors activado en Barra de vida."
 L["Class Colors on Enemy Names"] = "Colores de clase en nombres enemigos"
 L["Use class colors for enemy player name text."] = "Usa colores de clase para el nombre de jugadores enemigos. Requiere Enemy Player Class Colors activado en Barra de vida."
 

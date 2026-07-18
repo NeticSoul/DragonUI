@@ -677,11 +677,28 @@ local function BuildHealthSubTab(scroll)
         callback = RefreshNameplates,
     })
 
+    local function ClearFriendlyNameClassIfNoBarClass()
+        local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
+        if np and not np.friendlyClassColors and not np.partyClassColors then
+            np.friendlyNameClassColors = false
+        end
+    end
+
+    local function RefreshNameplatesAndTab()
+        RefreshNameplates()
+        if Panel and Panel.SelectTab then
+            Panel:SelectTab("nameplates")
+        end
+    end
+
     C:AddToggle(health, {
         label = LO["Party Class Colors"],
         desc = LO["Use class colors for party member nameplates instead of the friendly player color."],
         dbPath = DB .. ".partyClassColors",
-        callback = RefreshNameplates,
+        callback = function()
+            ClearFriendlyNameClassIfNoBarClass()
+            RefreshNameplatesAndTab()
+        end,
     })
 
     C:AddToggle(health, {
@@ -693,10 +710,7 @@ local function BuildHealthSubTab(scroll)
             if np and not val then
                 np.enemyNameClassColors = false
             end
-            RefreshNameplates()
-            if Panel and Panel.SelectTab then
-                Panel:SelectTab("nameplates")
-            end
+            RefreshNameplatesAndTab()
         end,
     })
 
@@ -704,7 +718,10 @@ local function BuildHealthSubTab(scroll)
         label = LO["Friendly Class Colors"],
         desc = LO["Class-color every friendly player, not just your group. Party and raid show automatically; others fill in when you target or mouse over them, or instantly with awesome_wotlk."],
         dbPath = DB .. ".friendlyClassColors",
-        callback = RefreshNameplates,
+        callback = function()
+            ClearFriendlyNameClassIfNoBarClass()
+            RefreshNameplatesAndTab()
+        end,
     })
 
     local headline = C:AddSection(scroll, LO["Headline Mode"])
@@ -904,6 +921,18 @@ local function BuildHealthSubTab(scroll)
         label = LO["Name Reaction Colors"],
         desc = LO["Tint name text with the health bar reaction color (red/yellow/green/blue)."],
         dbPath = DB .. ".nameReactionColors",
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(nameLevel, {
+        label = LO["Class Colors on Friendly Names"],
+        desc = LO["Use class colors for friendly player name text."],
+        dbPath = DB .. ".friendlyNameClassColors",
+        disabled = function()
+            local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
+            if not np then return false end
+            return not (np.friendlyClassColors or np.partyClassColors)
+        end,
         callback = RefreshNameplates,
     })
 

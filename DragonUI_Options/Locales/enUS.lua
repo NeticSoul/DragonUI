@@ -1293,6 +1293,8 @@ L["Show Level In Name When Targeted"] = true
 L["Show Level on Hover"] = true
 L["Name Reaction Colors"] = true
 L["Tint name text with the health bar reaction color (red/yellow/green/blue)."] = true
+L["Class Colors on Friendly Names"] = true
+L["Use class colors for friendly player name text."] = "Use class colors for friendly player name text. Requires Friendly Class Colors or Party Class Colors enabled in Health Bar."
 L["Class Colors on Enemy Names"] = true
 L["Use class colors for enemy player name text."] = "Use class colors for enemy player name text. Requires Enemy Player Class Colors enabled in Health Bar."
 

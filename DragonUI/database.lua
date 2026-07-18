@@ -914,6 +914,7 @@ local defaults = {
                 levelTextFormat = "plain", -- "brackets" | "parentheses" | "plain"
                 nameReactionColors = false, -- tint name text with health-bar reaction color
                 enemyNameClassColors = false, -- class colors for enemy player name text
+                friendlyNameClassColors = false, -- class colors for friendly player name text (needs bar class options)
                 friendlyPlayerColor = { r = 0, g = 0, b = 1 }, -- default friendly player color (vanilla blue)
                 friendlyNPCColor = { r = 0, g = 1, b = 0 }, -- default friendly NPC color (green)
                 partyClassColors = false, -- use class colors for party members instead of friendlyPlayerColor
