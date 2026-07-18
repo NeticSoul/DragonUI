@@ -154,6 +154,7 @@ local function DarkenActionButtonBorders(tint)
         "MultiBarRightButton",
         "MultiBarLeftButton",
         "BonusActionButton",
+        "DragonUI_ExtraBarButton",
     }
     for _, prefix in ipairs(prefixes) do
         for i = 1, 12 do
@@ -993,12 +994,11 @@ local function InstallNameBackgroundVertexGuards()
 end
 
 local function InstallVertexColorGuards()
-    if DarkModeModule.hooks.vertexGuardsInstalled then return end
-
-    -- Action bar button NormalTextures
+    -- Idempotent: Extra Bar buttons may not exist on the first PEW pass.
     local prefixes = {
         "ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
         "MultiBarRightButton", "MultiBarLeftButton", "BonusActionButton",
+        "DragonUI_ExtraBarButton",
     }
     for _, prefix in ipairs(prefixes) do
         for i = 1, 12 do
@@ -1364,4 +1364,5 @@ addon.RefreshDarkModeActionButtons = function()
     DarkenActionButtonBorders(tint)
     DarkenStanceButtonBorders(tint)
     DarkenPetButtonBorders(tint)
+    InstallVertexColorGuards()
 end
