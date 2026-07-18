@@ -1471,7 +1471,7 @@ function BarProto:Restore()
     self.rangePolling = nil
     self:ClearVehicleVisibility()
     if addon.VisibilityFade then
-        addon.VisibilityFade.Reset(self.id, 1)
+        addon.VisibilityFade.Unregister(self.id)
     end
     if self.container then self.container:Hide() end
 
@@ -1728,7 +1728,7 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
         RequestRefreshAll()
     elseif event == "UPDATE_BINDINGS" then
         for _, bar in ipairs(bars) do
-            bar:RefreshHotkeys()
+            if bar.applied then bar:RefreshHotkeys() end
         end
     elseif event == "PLAYER_TARGET_CHANGED" then
         RequestRefreshAll()

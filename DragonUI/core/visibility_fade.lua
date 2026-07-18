@@ -315,6 +315,20 @@ function VF.Reset(key, alpha)
     end
 end
 
+-- Full teardown on module disable: Reset leaves the hover poller ticking; this drops the entry.
+function VF.Unregister(key)
+    local entry = registry[key]
+    if not entry then return end
+    if hoverTimers[key] and addon.core and addon.core.CancelTimer then
+        addon.core:CancelTimer(hoverTimers[key], true)
+        hoverTimers[key] = nil
+    end
+    if entry.driver then entry.driver:SetScript("OnUpdate", nil) end
+    if entry.poller then entry.poller:SetScript("OnUpdate", nil) end
+    ApplyAlpha(entry, 1)
+    registry[key] = nil
+end
+
 function VF.RefreshAll()
     for key, entry in pairs(registry) do
         local frame = entry.frames and entry.frames[1]
