@@ -18,9 +18,7 @@ local LibKeyBound = LibStub("LibKeyBound-1.0", true) -- same short labels as key
 local bars = {}
 
 -- ============================================================================
--- Store — slot persistence in addon.db.profile.additional[bar.id].slots
--- Slot schema: {type="spell", spell="Name(Rank)", spellID?} | {type="item", item=id}
---              | {type="macro", macrotext, texture, macro}
+-- Store: additional[bar.id].slots[i] = spell{spell,spellID?}|item{item}|macro{macrotext,texture,macro}.
 -- ============================================================================
 
 -- Slider 7 must match MultiBars@7. Users who dialed 6 for the old visual mismatch → 7 once.
