@@ -119,6 +119,13 @@ local function BuildMicromenuTab(scroll)
     }
 
     C:AddToggle(visibility, {
+        label = LO["Always Hidden"],
+        desc = LO["Keep the micro menu permanently hidden, overriding hover and combat settings below."],
+        dbPath = "actionbars.micro_always_hidden",
+        callback = RefreshVisibility,
+    })
+
+    C:AddToggle(visibility, {
         label = LO["Show on Hover Only"],
         dbPath = "actionbars.micro_show_on_hover",
         callback = RefreshVisibility,

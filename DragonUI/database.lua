@@ -306,10 +306,12 @@ local defaults = {
 
 
             -- Micro menu and bag bar visibility
+            micro_always_hidden = false,
             micro_show_on_hover = false,
             micro_show_in_combat = false,
             micro_hide_in_combat = false,
             micro_visibility_logic = "and",
+            bag_always_hidden = false,
             bag_show_on_hover = false,
             bag_show_in_combat = false,
             bag_hide_in_combat = false,

@@ -131,6 +131,23 @@ function VF.Update(key)
     local cfg = GetConfig(entry)
     if not cfg then return end
 
+    -- Always-hidden overrides hover/combat entirely: snap to alpha 0 and disable mouse,
+    -- ignoring whatever show_on_hover/show_in_combat/hide_in_combat are set to.
+    if cfg.always_hidden then
+        entry.state.hovered = false
+        ApplyMouseState(entry, cfg, false)
+        if entry.immediateHideCallback and entry.onVisibilityChange then
+            entry.onVisibilityChange(false)
+        end
+        FadeToAlpha(entry, 0, 0, function()
+            if not entry.immediateHideCallback and entry.onVisibilityChange then
+                entry.onVisibilityChange(false)
+            end
+            if entry.onFadeComplete then entry.onFadeComplete(false) end
+        end)
+        return
+    end
+
     if not cfg.show_on_hover and not cfg.show_in_combat and not cfg.hide_in_combat then
         local _, _, fadeInDuration = GetFadeConfig(cfg)
         ApplyMouseState(entry, cfg, true)

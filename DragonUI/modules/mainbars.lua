@@ -3199,6 +3199,7 @@ local function GetMigratedBarDBTable(barKey, isSecondary)
         end
         local fadePrefix = GetMigratedBarFadePrefix(barKey)
         return {
+            always_hidden = ab[barKey .. "_always_hidden"],
             show_on_hover = ab[barKey .. "_show_on_hover"],
             show_in_combat = ab[barKey .. "_show_in_combat"],
             hide_in_combat = ab[barKey .. "_hide_in_combat"],
