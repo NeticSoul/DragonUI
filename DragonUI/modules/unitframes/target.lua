@@ -124,16 +124,17 @@ local function GetAuraCountsAndSizes(frame)
 end
 
 local function UpdateAuraPositionsDetached(self, auraName, numAuras, numOppositeAuras, largeAuraList, updateFunc,
-                                           maxRowWidth, offsetX, mirrorAurasVertically, smallSize, largeSize)
+                                           maxRowWidth, offsetX, mirrorAurasVertically, smallSize, largeSize, extraGap)
     local size
-    local offsetY = AURA_OFFSET_Y
+    extraGap = extraGap or 0
+    local offsetY = AURA_OFFSET_Y + extraGap
     local rowWidth = 0
     local firstAuraOnRow = 1
 
     for i = 1, numAuras do
         if largeAuraList[i] then
             size = largeSize
-            offsetY = AURA_OFFSET_Y + AURA_OFFSET_Y
+            offsetY = AURA_OFFSET_Y + AURA_OFFSET_Y + extraGap
         else
             size = smallSize
         end
@@ -150,7 +151,7 @@ local function UpdateAuraPositionsDetached(self, auraName, numAuras, numOpposite
             rowWidth = size
             self.auraRows = self.auraRows + 1
             firstAuraOnRow = i
-            offsetY = AURA_OFFSET_Y
+            offsetY = AURA_OFFSET_Y + extraGap
         else
             updateFunc(self, auraName, i, numOppositeAuras, i - 1, size, offsetX, offsetY, mirrorAurasVertically)
         end
@@ -286,14 +287,18 @@ local function ApplyDragonAuraLayout(frame)
     -- Attached mode mirrors Blizzard: shrink rows beside a visible ToT, expand back after NUM_TOT_AURA_ROWS.
     local haveToT = not detached and frame.totFrame and frame.totFrame:IsShown()
     local totRowWidth = frame.TOT_AURA_ROW_WIDTH or 101
-    local debuffOffsetX = detached and 3 or 4
+    local buffGap = addon.GetAuraChromeGap and addon.GetAuraChromeGap(buffSize + largeDelta) or 0
+    local debuffGap = addon.GetAuraChromeGap and addon.GetAuraChromeGap(debuffSize + largeDelta) or 0
+    local debuffOffsetX = (detached and 3 or 4) + debuffGap
 
     local maxRowWidth = (haveToT and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Buff", numBuffs, numDebuffs, largeBuffList,
-        UpdateBuffAnchorDetached, maxRowWidth, 3, mirrorAurasVertically, buffSize, buffSize + largeDelta)
+        UpdateBuffAnchorDetached, maxRowWidth, 3 + buffGap, mirrorAurasVertically, buffSize, buffSize + largeDelta,
+        buffGap)
     maxRowWidth = (haveToT and frame.auraRows < (_G.NUM_TOT_AURA_ROWS or 2) and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Debuff", numDebuffs, numBuffs, largeDebuffList,
-        UpdateDebuffAnchorDetached, maxRowWidth, debuffOffsetX, mirrorAurasVertically, debuffSize, debuffSize + largeDelta)
+        UpdateDebuffAnchorDetached, maxRowWidth, debuffOffsetX, mirrorAurasVertically, debuffSize, debuffSize + largeDelta,
+        debuffGap)
 
     if frame.spellbar and _G.Target_Spellbar_AdjustPosition then
         _G.Target_Spellbar_AdjustPosition(frame.spellbar)

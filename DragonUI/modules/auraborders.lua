@@ -3,10 +3,10 @@ local _G = getfenv(0)
 
 -- ============================================================================
 -- DragonUI - Aura Borders Module
--- Modern Dragonflight-style aura icons on player, target and focus frames:
--- crops the icon's baked-in bevel and frames it with a clean 1px border.
--- Debuff borders take the dispel-type color, buffs a neutral tint. The rounded
--- icon mask DragonflightUI uses is Legion+ only, hence the crop-and-frame here.
+-- Action buttons get free layering: CheckButton NormalTexture draws over the
+-- Cooldown child. Aura templates are plain Frames, so chrome lives on a sibling
+-- host above the Cooldown. Frame overhang scales with icon size to keep the same
+-- ratio as buttons.lua at 37px (fixed 2.2px overhang breaks on large auras).
 -- ============================================================================
 
 local AuraBordersModule = {
@@ -24,20 +24,9 @@ if addon.RegisterModule then
         { lifecyclePrefix = "AuraBorders" })
 end
 
--- Solid uniform border: 4 straight edges of a fixed thickness (WHITE8X8), so
--- every side is exactly equal — no beveled texture, no per-side quirks. Tinted
--- per aura: buffs a neutral color, debuffs the dispel-type color.
 local BORDER_TEXTURE = "Interface\\Buttons\\WHITE8X8"
--- Optional overlay texture (user-authored) laid on top of the solid border to
--- round its corners. Ships as a transparent 64x64 placeholder to paint into.
-local CUSTOM_TEXTURE = "Interface\\AddOns\\DragonUI\\assets\\auracustomborder"
-local CUSTOM_EXPAND = 0.5 -- grow the custom overlay this many px per side; keep it equal all sides or the square texture stretches
+local FRAME_TEXTURE = addon._dir .. "uiactionbariconframe.tga"
 
--- ============================================================================
--- BORDER SIZE / FIT — tune each context here.
--- thickness = border line width (px). overhang = how far it sits outside the icon.
--- Player auras are ~30px; target/focus auras are smaller (~17-21px).
--- ============================================================================
 local PLAYER_BUFF   = { thickness = 1.5, overhang = 1 }
 local PLAYER_DEBUFF = { thickness = 1.5, overhang = 1 }
 local UNIT_BUFF     = { thickness = 1,   overhang = 0.5 }
@@ -50,8 +39,15 @@ local function GetSpec(isDebuff, isUnit)
     return isDebuff and PLAYER_DEBUFF or PLAYER_BUFF
 end
 
-local ICON_CROP = 0.05 -- crop the baked-in icon bevel (matches buttons.lua)
-local DURATION_DROP = 2 -- push the player duration text down so the bottom border doesn't crowd it
+local DURATION_DROP = 2
+local BAR_REF = 37 -- buttons.lua SetSize(37,37); NormalTexture overhang tuned for this
+
+-- Keep the same frame/icon ratio as a 37px action button (overhang 2.2 / 2.3).
+local function ResolveFrameOverhang(size)
+    local scale = (size or BAR_REF) / BAR_REF
+    if scale < 0.45 then scale = 0.45 end
+    return 2.2 * scale, 2.3 * scale, -2.2 * scale, -2.2 * scale
+end
 
 local MAX_PLAYER_BUFFS = 32
 local MAX_PLAYER_DEBUFFS = 16
@@ -61,7 +57,6 @@ local MAX_TEMP_ENCHANTS = 3
 
 local DebuffTypeColor = DebuffTypeColor
 
--- Every button that ever received a border, for a clean restore.
 local styledButtons = {}
 
 local function GetConfig()
@@ -72,7 +67,7 @@ local function IsEnabled()
     return addon:IsModuleEnabled("auraborders")
 end
 
-local function IsCustomBorderEnabled()
+local function IsRoundedBorderEnabled()
     local cfg = GetConfig()
     return cfg and cfg.custom_border == true
 end
@@ -83,12 +78,10 @@ local function GetBuffColor()
     if c and c.r then
         return c.r, c.g, c.b
     end
-    return 0.6, 0.6, 0.6 -- grayish neutral for buff borders; debuffs use dispel color
+    return 0.6, 0.6, 0.6
 end
 
--- Builds a uniform 1px-style frame from 4 solid edges. Corners overlap (same
--- color), giving crisp square corners at any size.
-local function BuildSlice(host, thickness)
+local function BuildSquareSlice(host, thickness)
     local function line()
         local tex = host:CreateTexture(nil, "OVERLAY")
         tex:SetTexture(BORDER_TEXTURE)
@@ -115,60 +108,161 @@ local function BuildSlice(host, thickness)
     s.right:SetPoint("TOPRIGHT", host, "TOPRIGHT", 0, 0)
     s.right:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", 0, 0)
     s.right:SetWidth(thickness)
-
-    -- Optional overlay (created last = drawn on top of the lines), covering the
-    -- whole frame so a user-painted rounded border sits exactly over the corners.
-    s.custom = host:CreateTexture(nil, "OVERLAY")
-    s.custom:SetTexture(CUSTOM_TEXTURE)
-    s.custom:SetPoint("TOPLEFT", host, "TOPLEFT", -CUSTOM_EXPAND, CUSTOM_EXPAND)
-    s.custom:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", CUSTOM_EXPAND, -CUSTOM_EXPAND)
-    s.custom:Hide()
-
     return s
 end
 
-local function ColorSlice(slice, r, g, b)
-    for _, part in pairs(slice) do
-        part:SetVertexColor(r, g, b)
+local function ColorSquare(slice, r, g, b)
+    slice.top:SetVertexColor(r, g, b)
+    slice.bottom:SetVertexColor(r, g, b)
+    slice.left:SetVertexColor(r, g, b)
+    slice.right:SetVertexColor(r, g, b)
+end
+
+local function AnchorHostToButton(host, button)
+    local size = button:GetWidth() or BAR_REF
+    local trX, trY, blX, blY = ResolveFrameOverhang(size)
+    host:ClearAllPoints()
+    host:SetPoint("TOPRIGHT", button, trX, trY)
+    host:SetPoint("BOTTOMLEFT", button, blX, blY)
+end
+
+local CD_BASE = 20
+
+-- Aura cooldown model stops stretching past ~26px (CENTER-only template anchor); fixed rect + SetScale scales the swirl itself.
+local function FitCooldown(button, size)
+    local cd = _G[button:GetName() .. "Cooldown"]
+    if not cd then return nil end
+
+    -- Full button size, no inset — action bars run SetAllPoints(button) and the sweep edge hides under the frame.
+    if not size or size < 1 then size = BAR_REF end
+
+    cd:ClearAllPoints()
+    cd:SetPoint("CENTER", button, "CENTER", 0, 0)
+    cd:SetWidth(CD_BASE)
+    cd:SetHeight(CD_BASE)
+    cd:SetScale(size / CD_BASE)
+    cd:SetFrameLevel(button:GetFrameLevel() + 1)
+    button.duiCdFitted = true
+    return cd
+end
+
+local function FitAuraChrome(button, icon)
+    local size = button:GetWidth() or BAR_REF
+
+    -- Same as buttons.lua main_buttons: flush icon + bevel crop.
+    icon:ClearAllPoints()
+    icon:SetAllPoints(button)
+    icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    icon:SetDrawLayer("BORDER")
+
+    return FitCooldown(button, size)
+end
+
+-- Blizzard resets aura size (17/21) each update before target.lua's resize hook; refit on every size write.
+local function RefitChrome(button)
+    if not AuraBordersModule.applied or not styledButtons[button] then return end
+    local size = button:GetWidth() or BAR_REF
+    if button.duiCdFitted then
+        FitCooldown(button, size)
+    end
+    if button.duiHost and button.duiFrame and button.duiFrame:IsShown() then
+        AnchorHostToButton(button.duiHost, button)
     end
 end
 
-local function EnsureBorder(button, isDebuff, isUnit)
-    if button.duiSlice then
-        return button.duiSlice
+-- Sibling of Cooldown, higher frame level — only reliable way on Frame-based auras.
+local function EnsureChromeHost(button, cd)
+    local host = button.duiHost
+    if not host then
+        host = CreateFrame("Frame", nil, button)
+        button.duiHost = host
     end
 
-    local icon = _G[button:GetName() .. "Icon"]
+    AnchorHostToButton(host, button)
+
+    local base = button:GetFrameLevel() + 1
+    if cd and cd.GetFrameLevel then
+        local cdLevel = cd:GetFrameLevel()
+        if cdLevel >= base then
+            base = cdLevel
+        end
+    end
+    host:SetFrameLevel(base + 5)
+    return host
+end
+
+local function EnsureFrameChrome(button, cd)
+    local host = EnsureChromeHost(button, cd)
+
+    if not button.duiFrame then
+        local frame = host:CreateTexture(nil, "OVERLAY")
+        frame:SetTexture(FRAME_TEXTURE)
+        frame:SetAllPoints(host)
+        button.duiFrame = frame
+    else
+        button.duiFrame:ClearAllPoints()
+        button.duiFrame:SetAllPoints(host)
+    end
+
+    return button.duiFrame
+end
+
+local function EnsureSquareChrome(button, isDebuff, isUnit, cd)
+    local host = EnsureChromeHost(button, cd)
+    local spec = GetSpec(isDebuff, isUnit)
+    -- Square uses thin overhang; re-anchor tighter than the iconframe host.
+    local o = spec.overhang
+    host:ClearAllPoints()
+    host:SetPoint("TOPLEFT", button, "TOPLEFT", -o, o)
+    host:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", o, -o)
+
+    if not button.duiSlice then
+        button.duiSlice = BuildSquareSlice(host, spec.thickness)
+    end
+    return button.duiSlice
+end
+
+local function EnsureBorder(button, isDebuff, isUnit)
+    local icon = button.duiAuraIcon or _G[button:GetName() .. "Icon"]
     if not icon then return nil end
 
-    local spec = GetSpec(isDebuff, isUnit)
-
-    -- Host frame above the cooldown swipe (target/focus auras have a Cooldown
-    -- frame that would otherwise draw over the border), anchored to the icon.
-    local host = CreateFrame("Frame", nil, button)
-    local o = spec.overhang
-    host:SetPoint("TOPLEFT", icon, "TOPLEFT", -o, o)
-    host:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", o, -o)
-    local cd = _G[button:GetName() .. "Cooldown"]
-    local level = (cd and cd.GetFrameLevel and cd:GetFrameLevel()) or button:GetFrameLevel()
-    host:SetFrameLevel(level + 5)
-    host:Hide()
-
-    button.duiHost = host
-    button.duiSlice = BuildSlice(host, spec.thickness)
+    local cd = FitAuraChrome(button, icon)
     button.duiAuraIcon = icon
     styledButtons[button] = true
-    return button.duiSlice
+
+    if not button.duiSizeHooked then
+        hooksecurefunc(button, "SetWidth", RefitChrome)
+        hooksecurefunc(button, "SetHeight", RefitChrome)
+        button.duiSizeHooked = true
+    end
+
+    if IsRoundedBorderEnabled() then
+        EnsureFrameChrome(button, cd)
+    else
+        EnsureSquareChrome(button, isDebuff, isUnit, cd)
+    end
+    return true
 end
 
 local function RestoreButton(button)
     if button.duiHost then
         button.duiHost:Hide()
     end
+    if button.duiFrame then
+        button.duiFrame:Hide()
+    end
     if button.duiAuraIcon then
         button.duiAuraIcon:SetTexCoord(0, 1, 0, 1)
     end
-    button.duiCropped = nil
+    if button.duiCdFitted then
+        local cd = _G[button:GetName() .. "Cooldown"]
+        if cd then
+            cd:SetScale(1)
+            cd:ClearAllPoints()
+            cd:SetPoint("CENTER", button, "CENTER", 0, -1)
+        end
+        button.duiCdFitted = nil
+    end
     if button.duiDurMoved then
         local dur = button.duration or _G[button:GetName() .. "Duration"]
         if dur then
@@ -183,27 +277,16 @@ local function RestoreButton(button)
     end
 end
 
--- stockBorderName: Blizzard border to suppress (debuff dispel ring, temp-enchant
--- ring). Debuffs inherit its dispel color; buffs get the neutral tint.
 local function StyleAura(button, isDebuff, stockBorderName, isUnit)
     if not button then return end
-
-    local slice = EnsureBorder(button, isDebuff, isUnit)
-    if not slice then return end
 
     if not AuraBordersModule.applied then
         RestoreButton(button)
         return
     end
 
-    if not button.duiCropped then
-        button.duiAuraIcon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
-        button.duiCropped = true
-    end
+    if not EnsureBorder(button, isDebuff, isUnit) then return end
 
-    -- Player auras show the duration text right under the icon; nudge it down so
-    -- the border's bottom edge doesn't sit on top of it. (target/focus timers are
-    -- handled by the auracooldowns module, so leave those alone.)
     if not isUnit and not button.duiDurMoved then
         local dur = button.duration or _G[button:GetName() .. "Duration"]
         if dur then
@@ -214,16 +297,16 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
     end
 
     local stock = stockBorderName and _G[stockBorderName]
-
+    local r, g, b
     if isDebuff then
         if stock then
-            ColorSlice(slice, stock:GetVertexColor())
+            r, g, b = stock:GetVertexColor()
         else
             local none = DebuffTypeColor and DebuffTypeColor["none"]
-            ColorSlice(slice, none and none.r or 0.8, none and none.g or 0, none and none.b or 0)
+            r, g, b = none and none.r or 0.8, none and none.g or 0, none and none.b or 0
         end
     else
-        ColorSlice(slice, GetBuffColor())
+        r, g, b = GetBuffColor()
     end
 
     if stock then
@@ -231,22 +314,35 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
         button.duiStockBorder = stock
     end
 
-    -- With a custom overlay active, fade the straight lines out so only the
-    -- user's (rounded) texture shows.
-    local useCustom = IsCustomBorderEnabled()
-    local lineAlpha = useCustom and 0 or 1
-    slice.top:SetAlpha(lineAlpha)
-    slice.bottom:SetAlpha(lineAlpha)
-    slice.left:SetAlpha(lineAlpha)
-    slice.right:SetAlpha(lineAlpha)
-    if useCustom then slice.custom:Show() else slice.custom:Hide() end
-
-    button.duiHost:Show()
+    local rounded = IsRoundedBorderEnabled()
+    if rounded then
+        if button.duiSlice then
+            button.duiSlice.top:SetAlpha(0)
+            button.duiSlice.bottom:SetAlpha(0)
+            button.duiSlice.left:SetAlpha(0)
+            button.duiSlice.right:SetAlpha(0)
+        end
+        if button.duiFrame then
+            button.duiFrame:SetVertexColor(r, g, b, 1)
+            button.duiFrame:Show()
+        end
+        if button.duiHost then button.duiHost:Show() end
+    else
+        if button.duiFrame then button.duiFrame:Hide() end
+        local slice = button.duiSlice
+        if slice then
+            slice.top:SetAlpha(1)
+            slice.bottom:SetAlpha(1)
+            slice.left:SetAlpha(1)
+            slice.right:SetAlpha(1)
+            ColorSquare(slice, r, g, b)
+        end
+        if button.duiHost then button.duiHost:Show() end
+    end
 end
 
 -- ============================================================================
--- HOOKS (installed once; harmless while the module is disabled since StyleAura
--- hides the border whenever applied is false).
+-- HOOKS
 -- ============================================================================
 
 local function InstallHooks()
@@ -296,16 +392,12 @@ local function InstallHooks()
     AuraBordersModule.hooksInstalled = true
 end
 
--- ============================================================================
--- Re-style currently visible auras without invoking Blizzard update paths.
--- ============================================================================
-
 local function RestyleShown(name, isDebuff, stockSuffix, isUnit)
     local button = _G[name]
     if not button then return end
     if button:IsShown() then
         StyleAura(button, isDebuff, stockSuffix and (name .. stockSuffix) or nil, isUnit)
-    elseif button.duiHost then
+    elseif button.duiFrame or button.duiHost then
         RestoreButton(button)
     end
 end
@@ -330,21 +422,32 @@ local function RestyleAll()
     end
 end
 
--- ============================================================================
--- LIFECYCLE (driven by the module registry: Apply/Restore/Refresh<Prefix>System)
--- ============================================================================
+-- Rounded chrome overhangs 2.2*size/37 per side; report how much the stock 3px aura gap falls short.
+function addon.GetAuraChromeGap(size)
+    if not AuraBordersModule.applied or not IsRoundedBorderEnabled() then return 0 end
+    local deficit = 2 * 2.2 * ((size or BAR_REF) / BAR_REF) - 3
+    if deficit <= 0 then return 0 end
+    return math.ceil(deficit)
+end
 
 function addon.ApplyAuraBordersSystem()
     AuraBordersModule.initialized = true
     InstallHooks()
     AuraBordersModule.applied = true
     RestyleAll()
+    -- Re-run the aura layout so GetAuraChromeGap spacing tracks the new border style immediately.
+    if addon.RefreshTargetFocusAuraLayout then
+        addon.RefreshTargetFocusAuraLayout()
+    end
 end
 
 function addon.RestoreAuraBordersSystem()
     AuraBordersModule.applied = false
     for button in pairs(styledButtons) do
         RestoreButton(button)
+    end
+    if addon.RefreshTargetFocusAuraLayout then
+        addon.RefreshTargetFocusAuraLayout()
     end
 end
 

@@ -196,8 +196,14 @@ local function EnsureText(cooldown)
         return cooldown._duiAuraText
     end
 
-    local text = cooldown:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    text:SetPoint("CENTER", cooldown, "CENTER", 0, 0)
+    -- Sibling holder above the cooldown: auraborders scales the cooldown, which would scale a child FontString.
+    local parent = (cooldown.GetParent and cooldown:GetParent()) or cooldown
+    local holder = CreateFrame("Frame", nil, parent)
+    holder:SetAllPoints(parent)
+    holder:SetFrameLevel(parent:GetFrameLevel() + 15)
+
+    local text = holder:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    text:SetPoint("CENTER", parent, "CENTER", 0, 0)
     text:Hide()
 
     cooldown._duiAuraText = text
