@@ -351,17 +351,19 @@ local function actionbuttons_hotkey(button)
         return ''
     end
 
-    -- Blizzard sets ● unbound+hidden; OnUpdate shows it only when IsActionInRange is 0/1.
+    -- Keep ● placeholder (hidden); wiping it on early login kills OnUpdate range dots until reload.
     local nativeText = hotkey:GetText()
     local isNativeRangeDot = RANGE_INDICATOR and nativeText == RANGE_INDICATOR
     local text = ResolveButtonHotkeyText()
 
     hotkey:SetAlpha(1)
     if isNativeRangeDot then
-        if db.hotkey.range and button.action and HasAction(button.action) then
+        if db.hotkey.range then
             hotkey:SetText(RANGE_INDICATOR)
             hotkey:Hide()
-            button.rangeTimer = -1
+            if button.action and HasAction(button.action) then
+                button.rangeTimer = -1
+            end
         else
             hotkey:SetText('')
             hotkey:Hide()
