@@ -140,9 +140,57 @@
         SetMouseIfChanged(button, alpha >= 0.95)
     end
 
+local function GetOverflowButton()
+    return ChatModsModule.frames.overflowButton
+        or (_G.GENERAL_CHAT_DOCK and _G.GENERAL_CHAT_DOCK.overflowButton)
+        or _G.GeneralDockManagerOverflowButton
+end
+
+local function CacheOverflowButton()
+    local overflow = (_G.GENERAL_CHAT_DOCK and _G.GENERAL_CHAT_DOCK.overflowButton)
+        or _G.GeneralDockManagerOverflowButton
+    ChatModsModule.frames.overflowButton = overflow
+    return overflow
+end
+
+-- One check per tick for dock chrome (overflow/menu/friends), not per chat frame.
+local function IsDockChromeHovered()
+    local overflow = GetOverflowButton()
+    if overflow and overflow:IsShown() then
+        if overflow.list and overflow.list:IsShown() then
+            return true
+        end
+        if overflow:IsMouseOver() then
+            return true
+        end
+    end
+    if _G.ChatFrameMenuButton and _G.ChatFrameMenuButton:IsMouseOver() then
+        return true
+    end
+    if _G.FriendsMicroButton and _G.FriendsMicroButton:IsMouseOver() then
+        return true
+    end
+    return false
+end
+
+-- Do not Show(): Blizzard hides this when tabs fit; only sync alpha/mouse.
+-- Cancel Blizzard UIFrameFade (FadeIn/Out targets ~0.4/1); we mirror tabIdleAlpha like menu/friends.
+local function SetOverflowButtonAlpha(alpha)
+    local overflow = GetOverflowButton()
+    if not overflow or not overflow:IsShown() then return end
+    if UIFrameFadeRemoveFrame then
+        UIFrameFadeRemoveFrame(overflow)
+    end
+    if IsAlphaChanged(overflow:GetAlpha(), alpha) then
+        overflow:SetAlpha(alpha)
+    end
+    SetMouseIfChanged(overflow, alpha >= 0.95)
+end
+
 local function SetPrimaryChatButtonsAlpha(alpha)
     SetButtonAlpha(_G.ChatFrameMenuButton, alpha)
     SetButtonAlpha(_G.FriendsMicroButton, alpha)
+    SetOverflowButtonAlpha(alpha)
 end
 
     local function SetChatHoverButtonsVisible(i, visible, entry)
@@ -228,6 +276,37 @@ end
         return (config and config.editboxIdleAlpha ~= nil) and config.editboxIdleAlpha or 0
     end
 
+    -- Prefer SELECTED_CHAT_FRAME; overflow can leave it stale vs dock.selected.
+    local function GetSelectedChatFrameIndex()
+        local selectedChat = _G.SELECTED_CHAT_FRAME
+        local dockSelected = (_G.FCFDock_GetSelectedWindow and _G.GENERAL_CHAT_DOCK)
+            and _G.FCFDock_GetSelectedWindow(_G.GENERAL_CHAT_DOCK)
+        local selected = selectedChat
+        if dockSelected and selectedChat and selectedChat.isDocked and selectedChat ~= dockSelected then
+            selected = dockSelected
+        elseif not selected then
+            selected = dockSelected or _G.SELECTED_DOCK_FRAME
+        end
+        local index = (selected and selected.GetID and selected:GetID())
+            or ChatModsModule.frames.lastSelectedChatIndex
+            or 1
+        if index < 1 or index > CHAT_FRAME_LIMIT then
+            index = 1
+        end
+        return index
+    end
+
+    local function IsChatFrameHovered(cf, tab, bf, eb, dockChromeHovered)
+        if (tab and tab:IsMouseOver())
+            or (cf and cf:IsMouseOver())
+            or (bf and bf:IsMouseOver())
+            or (eb and (eb:IsMouseOver() or eb:HasFocus())) then
+            return true
+        end
+        -- Menu/friends/overflow sit on the dock column (same as Blizzard FCF_OnUpdate).
+        return (dockChromeHovered and cf and cf.isDocked) and true or false
+    end
+
     local StartChatButtonsHoverUpdater
     local StopChatButtonsHoverUpdater
 
@@ -240,14 +319,9 @@ end
         local styleIdleAlpha = GetStyleIdleAlpha(cfg)
         local ebIdleAlpha = GetEditboxIdleAlpha(cfg)
         local fadeBackgroundWithButtons = tabIdleAlpha <= ALPHA_EPSILON
-        local selectedIndex = (_G.SELECTED_CHAT_FRAME and _G.SELECTED_CHAT_FRAME.GetID and _G.SELECTED_CHAT_FRAME:GetID())
-            or ChatModsModule.frames.lastSelectedChatIndex
-            or 1
+        local selectedIndex = GetSelectedChatFrameIndex()
         local selectedAlpha = ChatModsModule.frames.lastSelectedButtonAlpha or tabIdleAlpha
-
-        if selectedIndex < 1 or selectedIndex > CHAT_FRAME_LIMIT then
-            selectedIndex = 1
-        end
+        local dockChromeHovered = IsDockChromeHovered()
 
         for i = 1, CHAT_FRAME_LIMIT do
             local cf = _G["ChatFrame" .. i]
@@ -258,10 +332,7 @@ end
             local tabAlpha = tabIdleAlpha
             if tab then
                 tab.noMouseAlpha = tabIdleAlpha
-                local hovered = (tab and tab:IsMouseOver())
-                    or (cf and cf:IsMouseOver())
-                    or (bf and bf:IsMouseOver())
-                    or (eb and (eb:IsMouseOver() or eb:HasFocus()))
+                local hovered = IsChatFrameHovered(cf, tab, bf, eb, dockChromeHovered)
                 local targetTabAlpha = hovered and 1 or tabIdleAlpha
                 if IsAlphaChanged(tab:GetAlpha(), targetTabAlpha) then
                     tab:SetAlpha(targetTabAlpha)
@@ -303,6 +374,11 @@ end
 
 local function OnChatHoverInteraction()
     if not ChatModsModule.applied then return end
+    -- hooksecurefunc runs after FCF_FadeIn/Out already queued UIFrameFade on overflow.
+    local overflow = GetOverflowButton()
+    if overflow and overflow:IsShown() and UIFrameFadeRemoveFrame then
+        UIFrameFadeRemoveFrame(overflow)
+    end
     StartChatButtonsHoverUpdater(true)
 end
 
@@ -370,14 +446,9 @@ local function EnsureChatButtonsHoverUpdater()
         ChatModsModule.frames.chatHoverForceUpdate = nil
         local tabIdleAlpha = GetTabIdleAlpha(cfg)
         local fadeBackgroundWithButtons = tabIdleAlpha <= ALPHA_EPSILON
-        local selectedIndex = (_G.SELECTED_CHAT_FRAME and _G.SELECTED_CHAT_FRAME.GetID and _G.SELECTED_CHAT_FRAME:GetID())
-            or ChatModsModule.frames.lastSelectedChatIndex
-            or 1
+        local selectedIndex = GetSelectedChatFrameIndex()
         local selectedAlpha = ChatModsModule.frames.lastSelectedButtonAlpha or tabIdleAlpha
-
-        if selectedIndex < 1 or selectedIndex > CHAT_FRAME_LIMIT then
-            selectedIndex = 1
-        end
+        local dockChromeHovered = IsDockChromeHovered()
 
         local hasActiveTransition = false
         local wroteVisualState = false
@@ -420,10 +491,7 @@ local function EnsureChatButtonsHoverUpdater()
                 entry.lastEditboxAlpha = nil
             end
 
-            local hovered = (entry.tab and entry.tab:IsMouseOver())
-                or (entry.cf and entry.cf:IsMouseOver())
-                or (entry.bf and entry.bf:IsMouseOver())
-                or (entry.eb and (entry.eb:IsMouseOver() or entry.eb:HasFocus()))
+            local hovered = IsChatFrameHovered(entry.cf, entry.tab, entry.bf, entry.eb, dockChromeHovered)
 
             local targetTabAlpha = hovered and 1 or ((entry.tab and entry.tab.noMouseAlpha) or 0)
             if hovered or IsAlphaChanged(tabAlpha, targetTabAlpha) then
@@ -541,6 +609,16 @@ local function ApplyChatFrameTweaks()
             end
         end
     end
+
+    local overflow = CacheOverflowButton()
+    if overflow then
+        AttachChatHoverRefreshHooks(overflow)
+        if overflow.list then
+            AttachChatHoverRefreshHooks(overflow.list)
+        end
+    end
+    AttachChatHoverRefreshHooks(_G.ChatFrameMenuButton)
+    AttachChatHoverRefreshHooks(_G.FriendsMicroButton)
 
     EnsureChatButtonsHoverUpdater()
     if ChatModsModule.applied then
@@ -1244,6 +1322,24 @@ local function ApplyChatModsSystem()
         ChatModsModule.hooks.chatDockSwitchRefresh = true
     end
 
+    -- Overflow list skips SELECTED_CHAT_FRAME + FCF_FadeInChatFrame (tab click does both).
+    if _G.FCFDockOverflowListButton_OnClick and not ChatModsModule.hooks.chatOverflowSelectRefresh then
+        hooksecurefunc("FCFDockOverflowListButton_OnClick", function(self)
+            if not ChatModsModule.applied then return end
+            local chatFrame = self and self.chatFrame
+            if not chatFrame then return end
+            _G.SELECTED_CHAT_FRAME = chatFrame
+            _G.SELECTED_DOCK_FRAME = chatFrame
+            -- Fade in like FCF_Tab_OnClick; RefreshChatFadeState would snap to idle (mouse left the list).
+            if _G.FCF_FadeInChatFrame then
+                _G.FCF_FadeInChatFrame(chatFrame)
+            else
+                StartChatButtonsHoverUpdater(true)
+            end
+        end)
+        ChatModsModule.hooks.chatOverflowSelectRefresh = true
+    end
+
     ChatModsModule.applied = true
     RefreshChatFadeState()
     StartChatButtonsHoverUpdater(true)
@@ -1292,13 +1388,19 @@ local function RestoreChatModsSystem()
     if ChatModsModule.originalStates.tabAlphaGlobals then
         local normalAlpha = ChatModsModule.originalStates.tabAlphaGlobals.normal
         local selectedAlpha = ChatModsModule.originalStates.tabAlphaGlobals.selected or normalAlpha
-        local selectedIndex = (_G.SELECTED_CHAT_FRAME and _G.SELECTED_CHAT_FRAME.GetID and _G.SELECTED_CHAT_FRAME:GetID())
+        local selectedIndex = GetSelectedChatFrameIndex()
 
         for i = 1, CHAT_FRAME_LIMIT do
             local tab = _G["ChatFrame" .. i .. "Tab"]
             if tab then
                 tab.noMouseAlpha = (selectedIndex == i) and selectedAlpha or normalAlpha
             end
+        end
+
+        local overflow = GetOverflowButton()
+        if overflow and overflow:IsShown() then
+            overflow:SetAlpha(selectedAlpha)
+            SetMouseIfChanged(overflow, true)
         end
 
         ChatModsModule.frames.tabIdleAlpha = nil
