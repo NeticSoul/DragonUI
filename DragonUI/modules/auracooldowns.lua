@@ -19,7 +19,8 @@ local AuraCooldownsModule = {
     registeredEvents = {},
     hooks = {},
     stateDrivers = {},
-    frames = {}
+    frames = {},
+    styleGeneration = 1
 }
 addon.AuraCooldownsModule = AuraCooldownsModule
 
@@ -223,10 +224,15 @@ local function ShouldCustomizeStacks(common, auraCfg)
 end
 
 local function StyleAuraButton(cooldown)
-    if not cooldown then return nil, nil, nil end
+    if not cooldown then return nil end
 
     local button = cooldown.GetParent and cooldown:GetParent()
-    if not button then return nil, nil, nil end
+    if not button then return nil end
+
+    -- Positions/fonts are static per config (Blizzard only SetText/Show/Hides the count); restyle once per config change.
+    if button._duiStyleGen == AuraCooldownsModule.styleGeneration then
+        return button
+    end
 
     local common = GetCommonConfig()
     local auraCfg = GetAuraTypeConfig(IsDebuffCooldown(cooldown))
@@ -250,7 +256,8 @@ local function StyleAuraButton(cooldown)
         end
     end
 
-    return button, common, auraCfg
+    button._duiStyleGen = AuraCooldownsModule.styleGeneration
+    return button
 end
 
 local function FormatRemaining(remaining)
@@ -295,11 +302,8 @@ local function UpdateCooldownText(cooldown)
         return
     end
 
-    local common = GetCommonConfig()
-    local auraCfg = GetAuraTypeConfig(IsDebuffCooldown(cooldown))
-
     if IsIconFeatureEnabled() then
-        button = select(1, StyleAuraButton(cooldown)) or button
+        button = StyleAuraButton(cooldown) or button
     end
 
     if not IsTimerFeatureEnabled() or not IsTimerEnabledForUnit(unitKey) then
@@ -338,14 +342,18 @@ local function UpdateCooldownText(cooldown)
     end
 
     local text = EnsureText(cooldown)
-    text:ClearAllPoints()
-    text:SetPoint(common.duration_anchor, button, common.duration_anchor, common.duration_offset_x, common.duration_offset_y)
-    SetJustifyFromAnchor(text, common.duration_anchor)
+    if text._duiStyleGen ~= AuraCooldownsModule.styleGeneration then
+        local common = GetCommonConfig()
+        text:ClearAllPoints()
+        text:SetPoint(common.duration_anchor, button, common.duration_anchor, common.duration_offset_x, common.duration_offset_y)
+        SetJustifyFromAnchor(text, common.duration_anchor)
 
-    local fontPath = ResolveFontPath(common.duration_font)
-    local fontSize = ReadNumber(unitCfg.font_size, 11)
-    if not text:SetFont(fontPath, fontSize, "THINOUTLINE") and STANDARD_TEXT_FONT then
-        text:SetFont(STANDARD_TEXT_FONT, fontSize, "THINOUTLINE")
+        local fontPath = ResolveFontPath(common.duration_font)
+        local fontSize = ReadNumber(unitCfg.font_size, 11)
+        if not text:SetFont(fontPath, fontSize, "THINOUTLINE") and STANDARD_TEXT_FONT then
+            text:SetFont(STANDARD_TEXT_FONT, fontSize, "THINOUTLINE")
+        end
+        text._duiStyleGen = AuraCooldownsModule.styleGeneration
     end
 
     local textValue, r, g, b = FormatRemaining(remaining)
@@ -510,6 +518,8 @@ local function RegisterModuleEvents()
 end
 
 function addon.ApplyAuraCooldownTextSystem()
+    -- Config may have changed: invalidate cached button/text styling so the next update restyles once.
+    AuraCooldownsModule.styleGeneration = AuraCooldownsModule.styleGeneration + 1
     AuraCooldownsModule.initialized = true
 
     if AuraCooldownsModule.applied then
