@@ -274,6 +274,7 @@ L["Castbar attached - follows Focus frame"] = "Barra de lancamento acoplada - se
 L["Re-attach Castbar to Target"] = "Reacoplar barra de lancamento ao Alvo"
 L["Re-attach Castbar to Focus"] = "Reacoplar barra de lancamento ao Foco"
 L["Visibility"] = "Visibilidade"
+L["Always Hidden"] = "Sempre oculto"
 L["Show on Hover Only"] = "Mostrar apenas ao passar o cursor"
 L["Show in Combat Only"] = "Mostrar apenas em combate"
 L["Hover/Combat Logic"] = "Logica Cursor/Combate"

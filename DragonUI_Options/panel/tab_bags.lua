@@ -260,6 +260,12 @@ local function BuildBagsTab(scroll)
     }
 
     C:AddToggle(bagVisibility, {
+        label = LO["Always Hidden"],
+        dbPath = "actionbars.bag_always_hidden",
+        callback = RefreshVisibilityAndCollapsedBags,
+    })
+
+    C:AddToggle(bagVisibility, {
         label = LO["Show on Hover Only"],
         dbPath = "actionbars.bag_show_on_hover",
         callback = RefreshVisibilityAndCollapsedBags,

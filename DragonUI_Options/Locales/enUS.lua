@@ -609,6 +609,7 @@ L["Bottom Right Bar"] = true
 L["Right Bar"] = true
 L["Left Bar"] = true
 L["Main Bar"] = true
+L["Always Hidden"] = true
 L["Show on Hover Only"] = true
 L["Show in Combat Only"] = true
 L["Hide the main bar until you hover over it."] = true

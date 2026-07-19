@@ -276,6 +276,7 @@ L["Castbar attached - follows Focus frame"] = "Barre d'incantation attachee - su
 L["Re-attach Castbar to Target"] = "Rattacher la barre d'incantation a la cible"
 L["Re-attach Castbar to Focus"] = "Rattacher la barre d'incantation au focus"
 L["Visibility"] = "Visibilite"
+L["Always Hidden"] = "Toujours masque"
 L["Show on Hover Only"] = "Afficher seulement au survol"
 L["Show in Combat Only"] = "Afficher seulement en combat"
 L["Hover/Combat Logic"] = "Logique Survol/Combat"
