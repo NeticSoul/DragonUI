@@ -264,7 +264,16 @@ local function GetExtraAuraRowOffset(auraRows)
         return 0
     end
 
-    local rowStep = (_G.SMALL_AURA_SIZE or 17) + (_G.AURA_OFFSET_Y or 3)
+    -- _G.SMALL_AURA_SIZE never exists (FrameXML local); honor DragonUI custom sizes when active.
+    local smallSize = 17
+    if addon.GetCustomAuraSizes then
+        local buffSize, debuffSize = addon.GetCustomAuraSizes()
+        if buffSize then
+            smallSize = math.max(buffSize, debuffSize or buffSize)
+        end
+    end
+
+    local rowStep = smallSize + (_G.AURA_OFFSET_Y or 3)
     return (rows - 2) * rowStep
 end
 
@@ -325,6 +334,23 @@ local function GetSpellbarToLowestAuraOffset(unitType, unitFrame)
     return offset
 end
 
+-- 16 makes the geometric result pixel-identical to the old "-21 - extraAuraOffset" all-SMALL formula.
+local COMPANION_AURA_GAP = 16
+
+local function GetCompanionSpacingYOffset(unitType, unitFrame, extraAuraOffset)
+    local frameBottom = unitFrame and unitFrame.GetBottom and unitFrame:GetBottom()
+    local lowestBottom = GetLowestVisibleAuraBottom(unitType)
+    if frameBottom and lowestBottom then
+        local geoY = (lowestBottom - frameBottom) - COMPANION_AURA_GAP
+        if geoY < -21 then
+            return geoY
+        end
+        return -21
+    end
+
+    return -21 - extraAuraOffset
+end
+
 local function GetAuraStackGeometryOffset(unitType, unitFrame, auraAnchor, auraAnchorSource, fallbackOffset)
     if auraAnchorSource == "spellbarAnchor" then
         return 0
@@ -340,6 +366,12 @@ local function GetAuraStackGeometryOffset(unitType, unitFrame, auraAnchor, auraA
     local spellbarBottom = spellbarAnchor:GetBottom()
     if not auraBottom or not spellbarBottom then
         return offset
+    end
+
+    -- A LARGE aura later in the last row hangs below spellbarAnchor (tops align); track the true lowest icon.
+    local lowestBottom = GetLowestVisibleAuraBottom(unitType)
+    if lowestBottom and lowestBottom < spellbarBottom then
+        spellbarBottom = lowestBottom
     end
 
     local geometryOffset = auraBottom - spellbarBottom
@@ -1672,7 +1704,7 @@ function CastbarModule:RefreshCastbar(unitType)
                 anchorPoint = "TOPLEFT"
                 relativePoint = "BOTTOMLEFT"
                 xPos = 25
-                yPos = -21 - extraAuraOffset
+                yPos = GetCompanionSpacingYOffset("target", TargetFrame, extraAuraOffset)
             elseif auraAnchor then
                 anchorFrame = (isDetached and TargetFrame and TargetFrame.spellbarAnchor) and TargetFrame.spellbarAnchor or auraAnchor
                 anchorPoint = "TOPLEFT"
@@ -1758,7 +1790,7 @@ function CastbarModule:RefreshCastbar(unitType)
                 anchorPoint = "TOPLEFT"
                 relativePoint = "BOTTOMLEFT"
                 xPos = 25
-                yPos = -21 - extraAuraOffset
+                yPos = GetCompanionSpacingYOffset("focus", FocusFrame, extraAuraOffset)
             elseif auraAnchor then
                 anchorFrame = (isDetached and FocusFrame and FocusFrame.spellbarAnchor) and FocusFrame.spellbarAnchor or auraAnchor
                 anchorPoint = "TOPLEFT"

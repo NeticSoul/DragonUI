@@ -20,6 +20,31 @@ local function RefreshTargetFocusAuraTimers()
     end
 end
 
+-- Discrete steps mapped to real wrap math: N per full 122px row -> size = floor(125/N) - 3; 6 = Blizzard 17px.
+local function PerRowToSize(perRow)
+    return math.floor(125 / perRow) - 3
+end
+
+local function SizeToPerRow(size)
+    if not size or size <= 0 then
+        size = 17
+    end
+    local perRow = math.floor(125 / (size + 3))
+    if perRow < 4 then perRow = 4 end
+    if perRow > 8 then perRow = 8 end
+    return perRow
+end
+
+-- Reflects the effective layout size (icon_size x icon_scale), matching GetCustomAuraSizes in target.lua.
+local function EffectivePerRow(auraCfg)
+    local size = tonumber(auraCfg and auraCfg.icon_size) or 0
+    local scale = tonumber(auraCfg and auraCfg.icon_scale) or 1
+    if size <= 0 then
+        size = 17
+    end
+    return SizeToPerRow(math.floor(size * scale + 0.5))
+end
+
 local function RefreshPlayerAuraSpacing()
     if addon.BuffFrameModule and addon.BuffFrameModule.RefreshAuraSpacing then
         addon.BuffFrameModule:RefreshAuraSpacing()
@@ -592,6 +617,35 @@ local function BuildAurasTab(scroll)
         return GetAuraCooldownConfig().count_font
     end)
 
+    C:AddHeading(iconSection, LO["Aura Size"])
+
+    RegisterDynamicWidget(C:AddSlider(iconSection, {
+        label = LO["Auras Per Row"],
+        desc = LO["Discrete size steps: how many auras fit in a full-width row. 6 is the Blizzard default (17px). Your own auras render slightly larger, and rows beside a visible Target-of-Target are narrower, so fewer may fit there."],
+        min = 4, max = 8, step = 1,
+        width = 220,
+        getFunc = function()
+            return EffectivePerRow(GetAuraCooldownConfig().buffs)
+        end,
+        setFunc = function(value)
+            local size = PerRowToSize(value)
+            local cfg = GetAuraCooldownConfig()
+            cfg.buffs.icon_size = size
+            cfg.debuffs.icon_size = size
+        end,
+        disabled = function()
+            return not IsIconCustomizationEnabled()
+        end,
+        callback = function()
+            if isRefreshingAuraWidgets then return end
+            RefreshAuraUI()
+        end,
+    }), function()
+        return not IsIconCustomizationEnabled()
+    end, function()
+        return EffectivePerRow(GetAuraCooldownConfig().buffs)
+    end)
+
     C:AddHeading(iconSection, LO["Aura Buffs"])
 
     RegisterDynamicWidget(C:AddSlider(iconSection, {
@@ -602,7 +656,10 @@ local function BuildAurasTab(scroll)
         disabled = function()
             return not IsIconCustomizationEnabled()
         end,
-        callback = RefreshTargetFocusAuraTimers,
+        callback = function()
+            if isRefreshingAuraWidgets then return end
+            RefreshAuraUI()
+        end,
     }), function()
         return not IsIconCustomizationEnabled()
     end, function()
@@ -617,7 +674,10 @@ local function BuildAurasTab(scroll)
         disabled = function()
             return not IsIconCustomizationEnabled()
         end,
-        callback = RefreshTargetFocusAuraTimers,
+        callback = function()
+            if isRefreshingAuraWidgets then return end
+            RefreshAuraUI()
+        end,
     }), function()
         return not IsIconCustomizationEnabled()
     end, function()
@@ -649,7 +709,10 @@ local function BuildAurasTab(scroll)
         disabled = function()
             return not IsIconCustomizationEnabled()
         end,
-        callback = RefreshTargetFocusAuraTimers,
+        callback = function()
+            if isRefreshingAuraWidgets then return end
+            RefreshAuraUI()
+        end,
     }), function()
         return not IsIconCustomizationEnabled()
     end, function()
@@ -664,7 +727,10 @@ local function BuildAurasTab(scroll)
         disabled = function()
             return not IsIconCustomizationEnabled()
         end,
-        callback = RefreshTargetFocusAuraTimers,
+        callback = function()
+            if isRefreshingAuraWidgets then return end
+            RefreshAuraUI()
+        end,
     }), function()
         return not IsIconCustomizationEnabled()
     end, function()

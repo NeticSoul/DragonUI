@@ -52,9 +52,45 @@ local function ShouldUseDetachedAuraLayout(frame)
     return false
 end
 
+local PLAYER_CAST_UNITS = { player = true, pet = true, vehicle = true }
+
+-- Returns buffSize, debuffSize when custom sizing is active; nil when Blizzard defaults apply.
+local function GetCustomAuraSizes()
+    local cfg = addon.db and addon.db.profile and addon.db.profile.modules
+        and addon.db.profile.modules.auracooldowns
+    if not cfg or cfg.enabled ~= true or cfg.icons_enabled ~= true then
+        return nil
+    end
+
+    local function Resolve(block)
+        local sub = cfg[block] or {}
+        local size = tonumber(sub.icon_size) or 0
+        local scale = tonumber(sub.icon_scale) or 1
+        if size <= 0 then
+            size = SMALL_AURA_SIZE
+        end
+        size = math.floor(size * scale + 0.5)
+        if size < 8 then
+            size = 8
+        end
+        return size
+    end
+
+    local buffSize = Resolve("buffs")
+    local debuffSize = Resolve("debuffs")
+    if buffSize == SMALL_AURA_SIZE and debuffSize == SMALL_AURA_SIZE then
+        return nil
+    end
+
+    return buffSize, debuffSize
+end
+
+addon.GetCustomAuraSizes = GetCustomAuraSizes
+
 local function GetAuraCountsAndSizes(frame)
     local selfName = frame and frame.GetName and frame:GetName()
-    if not selfName then
+    local unit = frame and frame.unit
+    if not selfName or not unit then
         return 0, 0, {}, {}
     end
 
@@ -63,13 +99,15 @@ local function GetAuraCountsAndSizes(frame)
     local largeBuffList = {}
     local largeDebuffList = {}
 
+    -- Large from caster (Blizzard's PLAYER_UNITS rule), not width: prior SetSize corrupts width inference.
     for i = 1, MAX_TARGET_BUFFS do
         local buff = _G[selfName .. "Buff" .. i]
         if not buff or not buff:IsShown() then
             break
         end
         numBuffs = i
-        largeBuffList[i] = (buff:GetWidth() or SMALL_AURA_SIZE) > SMALL_AURA_SIZE
+        local caster = select(8, UnitBuff(unit, i))
+        largeBuffList[i] = caster and PLAYER_CAST_UNITS[caster] or false
     end
 
     for i = 1, MAX_TARGET_DEBUFFS do
@@ -78,14 +116,15 @@ local function GetAuraCountsAndSizes(frame)
             break
         end
         numDebuffs = i
-        largeDebuffList[i] = (debuff:GetWidth() or SMALL_AURA_SIZE) > SMALL_AURA_SIZE
+        local caster = select(8, UnitDebuff(unit, i))
+        largeDebuffList[i] = caster and PLAYER_CAST_UNITS[caster] or false
     end
 
     return numBuffs, numDebuffs, largeBuffList, largeDebuffList
 end
 
 local function UpdateAuraPositionsDetached(self, auraName, numAuras, numOppositeAuras, largeAuraList, updateFunc,
-                                           maxRowWidth, offsetX, mirrorAurasVertically)
+                                           maxRowWidth, offsetX, mirrorAurasVertically, smallSize, largeSize)
     local size
     local offsetY = AURA_OFFSET_Y
     local rowWidth = 0
@@ -93,10 +132,10 @@ local function UpdateAuraPositionsDetached(self, auraName, numAuras, numOpposite
 
     for i = 1, numAuras do
         if largeAuraList[i] then
-            size = LARGE_AURA_SIZE
+            size = largeSize
             offsetY = AURA_OFFSET_Y + AURA_OFFSET_Y
         else
-            size = SMALL_AURA_SIZE
+            size = smallSize
         end
 
         if i == 1 then
@@ -216,7 +255,7 @@ local function UpdateDebuffAnchorDetached(self, debuffName, index, numBuffs, anc
     end
 end
 
-local function ApplyDetachedAuraLayout(frame)
+local function ApplyDragonAuraLayout(frame)
     if not frame or not frame.unit or not UnitExists(frame.unit) then
         return
     end
@@ -225,6 +264,15 @@ local function ApplyDetachedAuraLayout(frame)
     if frameName ~= "TargetFrame" and frameName ~= "FocusFrame" then
         return
     end
+
+    local detached = ShouldUseDetachedAuraLayout(frame)
+    local buffSize, debuffSize = GetCustomAuraSizes()
+    if not detached and not buffSize then
+        return
+    end
+    buffSize = buffSize or SMALL_AURA_SIZE
+    debuffSize = debuffSize or SMALL_AURA_SIZE
+    local largeDelta = LARGE_AURA_SIZE - SMALL_AURA_SIZE
 
     local numBuffs, numDebuffs, largeBuffList, largeDebuffList = GetAuraCountsAndSizes(frame)
     if numBuffs == 0 and numDebuffs == 0 then
@@ -235,13 +283,33 @@ local function ApplyDetachedAuraLayout(frame)
     local mirrorAurasVertically = frame.buffsOnTop and true or false
     frame.spellbarAnchor = nil
 
+    -- Attached mode mirrors Blizzard: shrink rows beside a visible ToT, expand back after NUM_TOT_AURA_ROWS.
+    local haveToT = not detached and frame.totFrame and frame.totFrame:IsShown()
+    local totRowWidth = frame.TOT_AURA_ROW_WIDTH or 101
+    local debuffOffsetX = detached and 3 or 4
+
+    local maxRowWidth = (haveToT and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Buff", numBuffs, numDebuffs, largeBuffList,
-        UpdateBuffAnchorDetached, DEFAULT_AURA_ROW_WIDTH, 3, mirrorAurasVertically)
+        UpdateBuffAnchorDetached, maxRowWidth, 3, mirrorAurasVertically, buffSize, buffSize + largeDelta)
+    maxRowWidth = (haveToT and frame.auraRows < (_G.NUM_TOT_AURA_ROWS or 2) and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Debuff", numDebuffs, numBuffs, largeDebuffList,
-        UpdateDebuffAnchorDetached, DEFAULT_AURA_ROW_WIDTH, 3, mirrorAurasVertically)
+        UpdateDebuffAnchorDetached, maxRowWidth, debuffOffsetX, mirrorAurasVertically, debuffSize, debuffSize + largeDelta)
 
     if frame.spellbar and _G.Target_Spellbar_AdjustPosition then
         _G.Target_Spellbar_AdjustPosition(frame.spellbar)
+    end
+end
+
+-- Re-runs the full Blizzard update chain (layout -> our hook -> spellbar -> castbar) after config changes.
+function addon.RefreshTargetFocusAuraLayout()
+    if type(_G.TargetFrame_UpdateAuras) ~= "function" then
+        return
+    end
+    if TargetFrame and UnitExists("target") then
+        _G.TargetFrame_UpdateAuras(TargetFrame)
+    end
+    if FocusFrame and UnitExists("focus") then
+        _G.TargetFrame_UpdateAuras(FocusFrame)
     end
 end
 
@@ -253,11 +321,7 @@ local function InstallDetachedAuraLayoutHook()
         return
     end
 
-    hooksecurefunc("TargetFrame_UpdateAuras", function(frame)
-        if ShouldUseDetachedAuraLayout(frame) then
-            ApplyDetachedAuraLayout(frame)
-        end
-    end)
+    hooksecurefunc("TargetFrame_UpdateAuras", ApplyDragonAuraLayout)
 
     _G.DragonUI_DetachedAuraLayoutHooked = true
 end

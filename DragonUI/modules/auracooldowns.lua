@@ -4,7 +4,6 @@ local ceil = math.ceil
 local format = string.format
 local GetTime = GetTime
 local hooksecurefunc = hooksecurefunc
-local abs = math.abs
 local UnitBuff = UnitBuff
 local UnitDebuff = UnitDebuff
 
@@ -211,10 +210,6 @@ local function HideCooldownText(cooldown)
     end
 end
 
-local function ShouldCustomizeIcon(auraCfg)
-    return auraCfg and ((auraCfg.icon_size or 0) > 0 or abs((auraCfg.icon_scale or 1) - 1) > 0.001)
-end
-
 local function ShouldCustomizeStacks(common, auraCfg)
     if not common or not auraCfg then
         return false
@@ -236,14 +231,7 @@ local function StyleAuraButton(cooldown)
     local common = GetCommonConfig()
     local auraCfg = GetAuraTypeConfig(IsDebuffCooldown(cooldown))
 
-    if ShouldCustomizeIcon(auraCfg) then
-        if (auraCfg.icon_size or 0) > 0 then
-            button:SetSize(auraCfg.icon_size, auraCfg.icon_size)
-        end
-        button:SetScale(auraCfg.icon_scale or 1)
-    else
-        button:SetScale(1)
-    end
+    -- icon_size/icon_scale feed the shared aura layout hook (target.lua); resizing here would fight it.
 
     if ShouldCustomizeStacks(common, auraCfg) then
         local buttonName = button.GetName and button:GetName()
@@ -570,5 +558,10 @@ function addon.RefreshAuraCooldownTextSystem()
         addon.ApplyAuraCooldownTextSystem()
     else
         addon.RestoreAuraCooldownTextSystem()
+    end
+
+    -- Size/scale changes must re-run wrap/anchor math and re-anchor the castbar.
+    if addon.RefreshTargetFocusAuraLayout then
+        addon.RefreshTargetFocusAuraLayout()
     end
 end
