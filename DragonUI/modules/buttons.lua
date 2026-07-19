@@ -277,9 +277,6 @@ local function actionbuttons_hotkey(button)
         return
     end
 
-    hotkey:Show()
-
-
     local function ResolveBindingTextFromCommand(command)
         if not command or command == '' then return nil end
         local key = GetBindingKey(command)
@@ -354,18 +351,25 @@ local function actionbuttons_hotkey(button)
         return ''
     end
 
-    -- Trust Blizzard's own hotkey text for the range dot; toggling this option requires a
-    -- reload (see requiresReload in the options panel) so this reads a fresh native value.
+    -- Blizzard sets ● unbound+hidden; OnUpdate shows it only when IsActionInRange is 0/1.
     local nativeText = hotkey:GetText()
     local isNativeRangeDot = RANGE_INDICATOR and nativeText == RANGE_INDICATOR
     local text = ResolveButtonHotkeyText()
 
     hotkey:SetAlpha(1)
     if isNativeRangeDot then
-        hotkey:SetText(db.hotkey.range and RANGE_INDICATOR or '')
+        if db.hotkey.range and button.action and HasAction(button.action) then
+            hotkey:SetText(RANGE_INDICATOR)
+            hotkey:Hide()
+            button.rangeTimer = -1
+        else
+            hotkey:SetText('')
+            hotkey:Hide()
+        end
     else
         local formattedText = GetKeyText(text)
         hotkey:SetText(formattedText)
+        hotkey:Show()
     end
 
     if db.hotkey.font then
