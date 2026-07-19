@@ -55,15 +55,42 @@ local function BuildMicromenuTab(scroll)
 
     C:AddSlider(menu, {
         label = LO["Icon Spacing"],
+        desc = LO["Padding between micromenu buttons."],
         getFunc = function()
-            return C:GetDBValue("micromenu." .. modeKey() .. ".icon_spacing")
+            return C:GetDBValue("micromenu." .. modeKey() .. ".icon_spacing") or 0
         end,
         setFunc = function(val)
             C:SetDBValue("micromenu." .. modeKey() .. ".icon_spacing", val)
             if addon.RefreshMicromenu then addon.RefreshMicromenu() end
         end,
-        min = 5, max = 40, step = 1,
+        min = -20, max = 40, step = 1,
         width = 200,
+    })
+
+    C:AddSlider(menu, {
+        label = LO["Columns"],
+        desc = LO["Number of micromenu button columns. Set to 1 for a vertical stack."],
+        getFunc = function()
+            return C:GetDBValue("micromenu." .. modeKey() .. ".columns") or 12
+        end,
+        setFunc = function(val)
+            C:SetDBValue("micromenu." .. modeKey() .. ".columns", val)
+            if addon.RefreshMicromenu then addon.RefreshMicromenu() end
+        end,
+        min = 1, max = 12, step = 1,
+        width = 200,
+    })
+
+    C:AddToggle(menu, {
+        label = LO["Invert Button Order"],
+        desc = LO["Reverse the order of micromenu buttons in the grid."],
+        getFunc = function()
+            return C:GetDBValue("micromenu." .. modeKey() .. ".invert_order") == true
+        end,
+        setFunc = function(val)
+            C:SetDBValue("micromenu." .. modeKey() .. ".invert_order", val)
+            if addon.RefreshMicromenu then addon.RefreshMicromenu() end
+        end,
     })
 
     C:AddToggle(menu, {

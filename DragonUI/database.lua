@@ -328,7 +328,9 @@ local defaults = {
                 scale_menu = 1.5,
                 x_position = 5,
                 y_position = -54,
-                icon_spacing = 15 -- Gap between icons
+                icon_spacing = 15, -- Migrated from old stride to padding on first load
+                columns = 12, -- 1 = vertical; high = single row
+                invert_order = false,
             },
 
             -- Normal colored icons configuration  
@@ -336,7 +338,9 @@ local defaults = {
                 scale_menu = 0.9,
                 x_position = -113,
                 y_position = -53,
-                icon_spacing = 26
+                icon_spacing = 26, -- Migrated from old stride to padding on first load
+                columns = 12, -- 1 = vertical; high = single row
+                invert_order = false,
             }
         },
 

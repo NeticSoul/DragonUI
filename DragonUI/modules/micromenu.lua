@@ -1840,15 +1840,124 @@ local function ApplyMicromenuSystem()
         HideUnwantedBagFrames()
     end
 
+    -- Buttons layout as a grid; hover/combat visibility stays on pUiMicroMenu.
+    local MICRO_LAYOUT_BASE_Y = 55
+
+    local function MigrateMicroIconSpacingToPadding()
+        local mm = addon.db and addon.db.profile and addon.db.profile.micromenu
+        if not mm or mm.spacing_is_padding then
+            return
+        end
+        mm.spacing_is_padding = true
+        -- Old values were origin-to-origin stride; convert once to edge padding.
+        if mm.grayscale and mm.grayscale.icon_spacing ~= nil then
+            mm.grayscale.icon_spacing = mm.grayscale.icon_spacing - 14
+        end
+        if mm.normal and mm.normal.icon_spacing ~= nil then
+            mm.normal.icon_spacing = mm.normal.icon_spacing - 32
+        end
+    end
+
+    local function CollectPresentMicroButtons()
+        local list = {}
+        for i = 1, #MICRO_BUTTONS do
+            if MICRO_BUTTONS[i] then
+                list[#list + 1] = MICRO_BUTTONS[i]
+            end
+        end
+        return list
+    end
+
+    local function GetMicroLayoutMetrics(config, useGrayscale, numButtons)
+        local buttonWidth = useGrayscale and 14 or 32
+        local buttonHeight = useGrayscale and 19 or 40
+        local pad = tonumber(config.icon_spacing)
+        if pad == nil then
+            pad = useGrayscale and 1 or -6
+        end
+        local hStep = buttonWidth + pad
+        local vStep = buttonHeight + pad
+        local columns = math.floor(tonumber(config.columns) or 12)
+        if columns < 1 then
+            columns = 1
+        end
+        if numButtons < 1 then
+            return buttonWidth, buttonHeight, hStep, vStep, 1, 1, buttonWidth, buttonHeight
+        end
+        if columns > numButtons then
+            columns = numButtons
+        end
+        local rows = math.ceil(numButtons / columns)
+        local totalWidth = columns * buttonWidth + (columns - 1) * pad
+        local totalHeight = rows * buttonHeight + (rows - 1) * pad
+        return buttonWidth, buttonHeight, hStep, vStep, columns, rows, totalWidth, totalHeight
+    end
+
+    local function LayoutMicroButtons()
+        local menu = _G.pUiMicroMenu
+        if not menu or not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
+            return
+        end
+
+        MigrateMicroIconSpacingToPadding()
+
+        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
+        local config = addon.db.profile.micromenu[useGrayscale and "grayscale" or "normal"]
+        if not config then
+            return
+        end
+
+        local buttons = CollectPresentMicroButtons()
+        local numButtons = #buttons
+        if config.invert_order and numButtons > 1 then
+            local reversed = {}
+            for i = numButtons, 1, -1 do
+                reversed[#reversed + 1] = buttons[i]
+            end
+            buttons = reversed
+        end
+
+        local _, _, hStep, vStep, columns, _, totalWidth, totalHeight =
+            GetMicroLayoutMetrics(config, useGrayscale, numButtons)
+
+        for i = 1, numButtons do
+            local button = buttons[i]
+            local idx = i - 1
+            local x = (idx % columns) * hStep
+            local y = MICRO_LAYOUT_BASE_Y + math.floor(idx / columns) * vStep
+
+            if button.SetPoint == addon._noop then
+                button.SetPoint = UIParent.SetPoint
+            end
+            button:ClearAllPoints()
+            button:SetPoint("BOTTOMLEFT", menu, "BOTTOMRIGHT", x, y)
+            button.SetPoint = addon._noop
+        end
+
+        local menuScale = config.scale_menu or 1
+        local overlayWidth = (totalWidth + 10) * menuScale
+        local overlayHeight = (totalHeight + 10) * menuScale
+        local menuOffX = -(totalWidth / 2)
+        local menuOffY = -(MICRO_LAYOUT_BASE_Y + totalHeight / 2)
+
+        menu.editorOffX = menuOffX
+        menu.editorOffY = menuOffY
+
+        if menu.editorFrame and not InCombatLockdown() then
+            menu.editorFrame:SetSize(overlayWidth, overlayHeight)
+            menu:ClearAllPoints()
+            menu:SetPoint("BOTTOMRIGHT", menu.editorFrame, "CENTER", menuOffX, menuOffY)
+        end
+    end
+
     local function setupMicroButtons(xOffset)
-        local buttonxOffset = 0
+        MigrateMicroIconSpacingToPadding()
 
         local useGrayscale = addon.db.profile.micromenu.grayscale_icons
         local configMode = useGrayscale and "grayscale" or "normal"
         local config = addon.db.profile.micromenu[configMode]
 
         local menuScale = config.scale_menu
-        local iconSpacing = config.icon_spacing
 
         local menu = _G.pUiMicroMenu
         if not menu then
@@ -1857,25 +1966,17 @@ local function ApplyMicromenuSystem()
         menu:SetScale(menuScale)
         menu:SetSize(10, 10)
 
-        -- Calculate overlay dimensions to match actual button span (in menu-scale coords)
-        -- Count only buttons that actually exist (some may be nil on certain servers)
-        local numButtons = 0
-        for _, btn in pairs(MICRO_BUTTONS) do
-            if btn then numButtons = numButtons + 1 end
-        end
-        local buttonWidth = useGrayscale and 14 or 32
-        local buttonHeight = useGrayscale and 19 or 40
-        local totalWidth = (numButtons - 1) * iconSpacing + buttonWidth
+        local presentButtons = CollectPresentMicroButtons()
+        local numButtons = #presentButtons
+        local _, _, _, _, _, _, totalWidth, totalHeight =
+            GetMicroLayoutMetrics(config, useGrayscale, numButtons)
 
-        -- Scale overlay to match menu scale so coordinates are in the same space
         local overlayWidth = (totalWidth + 10) * menuScale
-        local overlayHeight = (buttonHeight + 10) * menuScale
+        local overlayHeight = (totalHeight + 10) * menuScale
 
-        -- Menu-to-overlay offset: buttons are at (BOTTOMRIGHT of menu + (0..totalWidth, 55) in menu-local coords)
-        -- WoW multiplies SetPoint offsets by the frame's own scale, so we use UNSCALED values here.
-        -- Screen displacement = offset * menuScale, which then cancels with button offsets * menuScale.
+        -- Offsets must stay unscaled: WoW multiplies SetPoint by the frame's own scale.
         local menuOffX = -(totalWidth / 2)
-        local menuOffY = -(55 + buttonHeight / 2)
+        local menuOffY = -(MICRO_LAYOUT_BASE_Y + totalHeight / 2)
 
         if not menu.registeredInEditor then
             -- PATTERN: Overlay = position anchor, real UI anchored TO overlay
@@ -1912,7 +2013,8 @@ local function ApplyMicromenuSystem()
                 onHide = function()
                     -- Re-anchor menu when leaving editor mode (overlay may have been dragged)
                     menu:ClearAllPoints()
-                    menu:SetPoint("BOTTOMRIGHT", microMenuFrame, "CENTER", menuOffX, menuOffY)
+                    menu:SetPoint("BOTTOMRIGHT", microMenuFrame, "CENTER",
+                        menu.editorOffX or menuOffX, menu.editorOffY or menuOffY)
                 end
             })
 
@@ -1928,7 +2030,8 @@ local function ApplyMicromenuSystem()
             end
         end
 
-        for _, button in pairs(MICRO_BUTTONS) do
+        for i = 1, #MICRO_BUTTONS do
+            local button = MICRO_BUTTONS[i]
             if button then
                 local buttonName = button:GetName():gsub('MicroButton', '')
                 local name = string.lower(buttonName);
@@ -1949,8 +2052,6 @@ local function ApplyMicromenuSystem()
                     button:SetSize(32, 40)
                 end
 
-                button:ClearAllPoints()
-                button:SetPoint('BOTTOMLEFT', menu, 'BOTTOMRIGHT', buttonxOffset, 55)
                 button.SetPoint = addon._noop
                 button:SetHitRectInsets(0, 0, 0, 0)
 
@@ -2243,10 +2344,9 @@ local function ApplyMicromenuSystem()
                 if buttonName ~= "Character" then
                     RestoreOriginalHandlers(button)
                 end
-
-                buttonxOffset = buttonxOffset + iconSpacing
             end
         end
+        LayoutMicroButtons()
         UpdateCharacterPortraitVisibility()
 
         -- ====================================================================
@@ -2330,23 +2430,7 @@ local function ApplyMicromenuSystem()
     -- ============================================================================
 
     local function updateMicroButtonSpacing()
-        if not _G.pUiMicroMenu then
-            return
-        end
-
-        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-        local configMode = useGrayscale and "grayscale" or "normal"
-        local config = addon.db.profile.micromenu[configMode]
-        local iconSpacing = config.icon_spacing
-
-        local buttonxOffset = 0
-        for _, button in pairs(MICRO_BUTTONS) do
-            if button then
-                button:ClearAllPoints()
-                button:SetPoint('BOTTOMLEFT', _G.pUiMicroMenu, 'BOTTOMRIGHT', buttonxOffset, 55)
-                buttonxOffset = buttonxOffset + iconSpacing
-            end
-        end
+        LayoutMicroButtons()
     end
 
     function addon.RefreshMicromenuSpacing()
@@ -2517,24 +2601,7 @@ end
 
     addon.RefreshMicromenuIcons()
 
-    local buttonxOffset = 0
-    for _, button in pairs(MICRO_BUTTONS) do
-        if button then
-            local originalSetPoint = button.SetPoint
-            if button.SetPoint == addon._noop then
-                button.SetPoint = UIParent.SetPoint
-            end
-
-            button:ClearAllPoints()
-            button:SetPoint('BOTTOMLEFT', _G.pUiMicroMenu, 'BOTTOMRIGHT', buttonxOffset, 55)
-
-            if originalSetPoint == addon._noop then
-                button.SetPoint = originalSetPoint
-            end
-
-            buttonxOffset = buttonxOffset + config.icon_spacing
-        end
-    end
+    LayoutMicroButtons()
 
     addon.RefreshMicromenuVehicle()
     UpdateCharacterPortraitVisibility()
