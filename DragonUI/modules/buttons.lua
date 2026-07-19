@@ -56,6 +56,75 @@ local function GetButtonsConfig()
     return addon.db and addon.db.profile and addon.db.profile.buttons
 end
 
+-- Blizzard in-range hotkey gray; custom color only needs OnUpdate recolor when it differs.
+local HOTKEY_DEFAULT_R, HOTKEY_DEFAULT_G, HOTKEY_DEFAULT_B = 0.6, 0.6, 0.6
+local hotkeyStyle = {
+    ready = false,
+    recolor = false,
+    r = HOTKEY_DEFAULT_R, g = HOTKEY_DEFAULT_G, b = HOTKEY_DEFAULT_B, a = 1,
+    font = nil, size = 12, flags = "OUTLINE",
+    sr = 0, sg = 0, sb = 0, sa = 1,
+}
+
+local function UpdateHotkeyStyleCache()
+    local db = GetButtonsConfig()
+    local hk = db and db.hotkey
+    local font = hk and hk.font
+    local color = hk and hk.color
+    local shadow = hk and hk.shadow
+
+    hotkeyStyle.font = (font and font[1])
+        or (addon.Fonts and addon.Fonts.ARIALN)
+        or "Fonts\\ARIALN.TTF"
+    hotkeyStyle.size = (hk and hk.font_size) or (font and font[2]) or 12
+    hotkeyStyle.flags = (font and font[3]) or "OUTLINE"
+
+    hotkeyStyle.r = (color and color[1]) or HOTKEY_DEFAULT_R
+    hotkeyStyle.g = (color and color[2]) or HOTKEY_DEFAULT_G
+    hotkeyStyle.b = (color and color[3]) or HOTKEY_DEFAULT_B
+    hotkeyStyle.a = (color and color[4]) or 1
+
+    hotkeyStyle.sr = (shadow and shadow[1]) or 0
+    hotkeyStyle.sg = (shadow and shadow[2]) or 0
+    hotkeyStyle.sb = (shadow and shadow[3]) or 0
+    hotkeyStyle.sa = (shadow and shadow[4]) or 1
+
+    hotkeyStyle.recolor = (hotkeyStyle.r ~= HOTKEY_DEFAULT_R)
+        or (hotkeyStyle.g ~= HOTKEY_DEFAULT_G)
+        or (hotkeyStyle.b ~= HOTKEY_DEFAULT_B)
+        or (hotkeyStyle.a ~= 1)
+    hotkeyStyle.ready = true
+end
+
+local function EnsureHotkeyStyleCache()
+    if not hotkeyStyle.ready then
+        UpdateHotkeyStyleCache()
+    end
+end
+
+local function ApplyHotkeyTypography(hotkey)
+    if not hotkey then return end
+    EnsureHotkeyStyleCache()
+    hotkey:SetFont(hotkeyStyle.font, hotkeyStyle.size, hotkeyStyle.flags)
+    hotkey:SetShadowOffset(-1.3, -1.1)
+    hotkey:SetShadowColor(hotkeyStyle.sr, hotkeyStyle.sg, hotkeyStyle.sb, hotkeyStyle.sa)
+end
+
+local function ApplyHotkeyBoundColor(hotkey)
+    if not hotkey then return end
+    EnsureHotkeyStyleCache()
+    hotkey:SetVertexColor(hotkeyStyle.r, hotkeyStyle.g, hotkeyStyle.b, hotkeyStyle.a)
+end
+
+function addon.ApplyHotkeyTypography(hotkey)
+    ApplyHotkeyTypography(hotkey)
+end
+
+function addon.GetHotkeyBoundColor()
+    EnsureHotkeyStyleCache()
+    return hotkeyStyle.r, hotkeyStyle.g, hotkeyStyle.b, hotkeyStyle.a
+end
+
 local function IsAdditionalBarHotkeyEnabled(buttonName)
     if not buttonName or not addon.db or not addon.db.profile then
         return true
@@ -372,16 +441,10 @@ local function actionbuttons_hotkey(button)
         local formattedText = GetKeyText(text)
         hotkey:SetText(formattedText)
         hotkey:Show()
+        ApplyHotkeyBoundColor(hotkey)
     end
 
-    if db.hotkey.font then
-        hotkey:SetFont(unpack(db.hotkey.font))
-    end
-    hotkey:SetShadowOffset(-1.3, -1.1)
-    if db.hotkey.shadow then
-        hotkey:SetShadowColor(unpack(db.hotkey.shadow))
-    end
-
+    ApplyHotkeyTypography(hotkey)
     NormalizeAdditionalHotkeyVisual(button, hotkey)
 end
 
@@ -764,6 +827,8 @@ function addon.RefreshButtons()
         ButtonsModule.pendingRefresh = true
         return 
     end
+
+    UpdateHotkeyStyleCache()
     
     local db = GetButtonsConfig()
     if not db then return end
@@ -865,6 +930,8 @@ end
 function addon.RefreshAllHotkeys()
     if not IsModuleEnabled() then return end
 
+    UpdateHotkeyStyleCache()
+
     for button in addon.buttons_iterator() do
         if button then
             actionbuttons_hotkey(button)
@@ -872,6 +939,17 @@ function addon.RefreshAllHotkeys()
     end
 
     RefreshAdditionalBarHotkeys()
+end
+
+function addon.RefreshHotkeyStyle()
+    if IsModuleEnabled() then
+        addon.RefreshAllHotkeys()
+    else
+        UpdateHotkeyStyleCache()
+    end
+    if addon.RefreshExtrabarHotkeys then
+        addon.RefreshExtrabarHotkeys()
+    end
 end
 
 function addon.SetKeybindVisualMode(active)
@@ -968,6 +1046,22 @@ local function SetupHooks()
         end)
     end
 
+    -- Blizzard ActionButton_OnUpdate paints in-range gray; reassert custom color only when needed.
+    if type(_G.ActionButton_OnUpdate) == 'function' then
+        hooksecurefunc('ActionButton_OnUpdate', function(self)
+            if not hotkeyStyle.recolor or not IsModuleEnabled() or not self then return end
+            local name = self:GetName()
+            if not name then return end
+            local hotkey = _G[name .. 'HotKey']
+            if not hotkey or not hotkey:IsShown() then return end
+            local text = hotkey:GetText()
+            if not text or text == '' or text == RANGE_INDICATOR then return end
+            -- Keep Blizzard OOR red; IsActionInRange(0) matches ActionButton.lua range branch.
+            if IsActionInRange(self.action) == 0 then return end
+            hotkey:SetVertexColor(hotkeyStyle.r, hotkeyStyle.g, hotkeyStyle.b, hotkeyStyle.a)
+        end)
+    end
+
     if type(_G.PetActionButton_SetHotkeys) == 'function' then
         hooksecurefunc('PetActionButton_SetHotkeys', function()
             if not IsModuleEnabled() then return end
@@ -1061,6 +1155,19 @@ local function Initialize()
     if IsModuleEnabled() then
         ApplyButtonStyling()
         SetupHooks()
+    end
+
+    if addon.db and addon.db.RegisterCallback then
+        local function OnProfileChanged()
+            hotkeyStyle.ready = false
+            hotkeyStyle.recolor = false
+            if IsModuleEnabled() then
+                addon.RefreshAllHotkeys()
+            end
+        end
+        addon.db.RegisterCallback(ButtonsModule, "OnProfileChanged", OnProfileChanged)
+        addon.db.RegisterCallback(ButtonsModule, "OnProfileCopied", OnProfileChanged)
+        addon.db.RegisterCallback(ButtonsModule, "OnProfileReset", OnProfileChanged)
     end
     
     ButtonsModule.initialized = true

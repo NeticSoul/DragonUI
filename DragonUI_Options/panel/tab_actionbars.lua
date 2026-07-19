@@ -98,6 +98,25 @@ local function RefreshButtons()
     if addon.RefreshButtons then addon.RefreshButtons() end
 end
 
+local function RefreshHotkeyStyle()
+    if addon.RefreshHotkeyStyle then
+        addon.RefreshHotkeyStyle()
+    elseif addon.RefreshAllHotkeys then
+        addon.RefreshAllHotkeys()
+        if addon.RefreshExtrabarHotkeys then
+            addon.RefreshExtrabarHotkeys()
+        end
+    end
+end
+
+local function SyncHotkeyFontSize()
+    local hk = addon.db and addon.db.profile and addon.db.profile.buttons
+        and addon.db.profile.buttons.hotkey
+    if hk and hk.font then
+        hk.font[2] = hk.font_size or hk.font[2] or 12
+    end
+end
+
 local function RefreshCooldowns()
     if addon.RefreshCooldowns then addon.RefreshCooldowns() end
 end
@@ -290,6 +309,20 @@ local function BuildGeneralTab(scroll)
     })
 
     C:AddColorPicker(colorSection, {
+        label = LO["Hotkey Text Color"],
+        getFunc = function()
+            local c = addon.db.profile.buttons.hotkey.color
+            if c then return c[1], c[2], c[3], c[4] end
+            return 0.6, 0.6, 0.6, 1
+        end,
+        setFunc = function(r, g, b, a)
+            addon.db.profile.buttons.hotkey.color = { r, g, b, a }
+            RefreshHotkeyStyle()
+        end,
+        hasAlpha = true,
+    })
+
+    C:AddColorPicker(colorSection, {
         label = LO["Hotkey Shadow Color"],
         getFunc = function()
             local c = addon.db.profile.buttons.hotkey.shadow
@@ -298,9 +331,20 @@ local function BuildGeneralTab(scroll)
         end,
         setFunc = function(r, g, b, a)
             addon.db.profile.buttons.hotkey.shadow = { r, g, b, a }
-            RefreshButtons()
+            RefreshHotkeyStyle()
         end,
         hasAlpha = true,
+    })
+
+    C:AddSlider(colorSection, {
+        label = LO["Hotkey Font Size"],
+        dbPath = "buttons.hotkey.font_size",
+        min = 8, max = 24, step = 1,
+        width = 200,
+        callback = function()
+            SyncHotkeyFontSize()
+            RefreshHotkeyStyle()
+        end,
     })
 
     C:AddColorPicker(colorSection, {

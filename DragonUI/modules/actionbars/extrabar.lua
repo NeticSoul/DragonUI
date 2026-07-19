@@ -446,13 +446,21 @@ local function IsRangeDotEnabled()
     return db and db.hotkey and db.hotkey.range
 end
 
+local function ApplyBoundHotkeyColor(hotkey)
+    if addon.GetHotkeyBoundColor then
+        hotkey:SetVertexColor(addon.GetHotkeyBoundColor())
+    else
+        hotkey:SetVertexColor(0.6, 0.6, 0.6)
+    end
+end
+
 local function ApplyRangeIndicator(button, rangeValid)
     if button.hotkeyBound then
         button.hotkey:Show()
         if rangeValid == false then
             button.hotkey:SetVertexColor(1.0, 0.1, 0.1)
         else
-            button.hotkey:SetVertexColor(0.6, 0.6, 0.6)
+            ApplyBoundHotkeyColor(button.hotkey)
         end
     elseif button.hotkeyDotEligible then
         if rangeValid == nil then
@@ -1037,11 +1045,8 @@ function ButtonProto:UpdateHotkey()
         return
     end
 
-    -- Mirror the user's main-bar hotkey font (buttons.lua applies db.hotkey.font there).
-    local hotkeyDb = addon.db and addon.db.profile and addon.db.profile.buttons
-        and addon.db.profile.buttons.hotkey
-    if hotkeyDb and hotkeyDb.font then
-        self.hotkey:SetFont(unpack(hotkeyDb.font))
+    if addon.ApplyHotkeyTypography then
+        addon.ApplyHotkeyTypography(self.hotkey)
     end
 
     local key = GetBindingKey("CLICK " .. self:GetName() .. ":LeftButton")
@@ -1049,7 +1054,7 @@ function ButtonProto:UpdateHotkey()
         self.hotkeyBound = true
         self.hotkeyDotEligible = false
         self.hotkey:SetText(LibKeyBound and LibKeyBound:ToShortKey(key) or "")
-        self.hotkey:SetVertexColor(0.6, 0.6, 0.6)
+        ApplyBoundHotkeyColor(self.hotkey)
         self.hotkey:Show()
     else
         self.hotkeyBound = false
@@ -1264,16 +1269,17 @@ function BarProto:CreateButton(index)
         -- OVERLAY sublevel 7: above SkinButton's border (also OVERLAY).
         local hotkey = button:CreateFontString(nil, "OVERLAY")
         hotkey:SetDrawLayer("OVERLAY", 7)
-        hotkey:SetFont(HOTKEY_FONT, 12, "OUTLINE")
         -- Same corner inset as buttons.lua NormalizeAdditionalHotkeyVisual (TOPRIGHT -2, -3).
         hotkey:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -3)
         hotkey:SetJustifyH("RIGHT")
-        hotkey:SetVertexColor(0.6, 0.6, 0.6)
-        -- Same depth as buttons.lua / pretty hotkeys (black shadow down-left).
-        hotkey:SetShadowOffset(-1.3, -1.1)
-        local shadow = addon.db and addon.db.profile and addon.db.profile.buttons
-            and addon.db.profile.buttons.hotkey and addon.db.profile.buttons.hotkey.shadow
-        hotkey:SetShadowColor(unpack(shadow or {0, 0, 0, 1}))
+        if addon.ApplyHotkeyTypography then
+            addon.ApplyHotkeyTypography(hotkey)
+        else
+            hotkey:SetFont(HOTKEY_FONT, 12, "OUTLINE")
+            hotkey:SetShadowOffset(-1.3, -1.1)
+            hotkey:SetShadowColor(0, 0, 0, 1)
+        end
+        ApplyBoundHotkeyColor(hotkey)
         button.hotkey = hotkey
 
         button:SetScript("OnDragStart", Button_OnDragStart)

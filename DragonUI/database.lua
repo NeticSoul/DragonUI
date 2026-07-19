@@ -403,7 +403,9 @@ local defaults = {
                 show = true,
                 range = true,
                 shadow = {0, 0, 0, 1},
-                font = {_arialn, 12, "OUTLINE"}
+                color = {0.6, 0.6, 0.6, 1},
+                font = {_arialn, 12, "OUTLINE"},
+                font_size = 12,
             },
             macros = {
                 show = true,
