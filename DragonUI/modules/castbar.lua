@@ -1497,11 +1497,12 @@ function CastbarModule:HandleCastStop_Simple(unitType, wasInterrupted, isChannel
 end
 
 function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
-    -- UNIT_SPELLCAST_FAILED fires in two cases:
+    -- UNIT_SPELLCAST_FAILED fires in three cases:
     --   1) A spell failed to START (pressed another ability while casting) → ignore
-    --   2) The current cast was externally interrupted (CC/kick on target) → show "Failed"
-    -- Distinguish by comparing the event's spell name with the tracked cast:
-    --   same spell = real interruption; different spell = queued spell failure.
+    --   2) A re-press of the spell being cast was rejected (macro spam) → ignore
+    --   3) The current cast was externally interrupted (CC/kick on target) → show "Failed"
+    -- Case 2 carries the SAME spell name as the tracked cast, so the spell name alone
+    -- cannot tell it apart from case 3. Ask the engine instead: see below.
     local frames = self.frames[unitType]
     if not frames or not frames.castbar then return end
     local castbar = frames.castbar
@@ -1517,12 +1518,44 @@ function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
         end
     end
 
+    -- The engine is the authority, not the spell name. If it still reports an active cast,
+    -- the cast we track is alive and this event belongs to something else: a re-press
+    -- rejected while already casting (same spell name, defeats the check below), or another
+    -- spell of the same macro. A genuine failure clears the cast first, so a real one still
+    -- gets through.
+    if UnitCastingInfo(unit) or UnitChannelInfo(unit) then
+        return
+    end
+
     -- If the event spell doesn't match our tracked cast, it's a queued spell failure
     if eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
         return
     end
 
     self:HandleCastStop_Simple(unitType, true, nil, FAILED)
+end
+
+-- UNIT_SPELLCAST_INTERRUPTED used to be dispatched straight to
+-- HandleCastStop_Simple(unitType, true) with no verification, so an interruption belonging
+-- to ANOTHER spell wiped the bar of the cast in progress. Verify it the same way
+-- HandleCastFailed_Simple does before acting on it.
+function CastbarModule:HandleCastInterrupted_Simple(unitType, eventSpell, isChannel)
+    local frames = self.frames[unitType]
+    if not frames or not frames.castbar then return end
+    local castbar = frames.castbar
+    if not (castbar.castingEx or castbar.channelingEx) then return end
+
+    local unit = (unitType == "player") and "player" or unitType
+
+    if UnitCastingInfo(unit) or UnitChannelInfo(unit) then
+        return
+    end
+
+    if eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
+        return
+    end
+
+    self:HandleCastStop_Simple(unitType, true, isChannel)
 end
 
 function CastbarModule:HandleCastDelayed_Simple(unitType, unit)
@@ -2014,9 +2047,9 @@ function CastbarModule:HandleCastingEvent(event, unit, ...)
     elseif event == 'UNIT_SPELLCAST_FAILED' then
         self:HandleCastFailed_Simple(unitType, ...)
     elseif event == 'UNIT_SPELLCAST_INTERRUPTED' then
-        self:HandleCastStop_Simple(unitType, true)
+        self:HandleCastInterrupted_Simple(unitType, select(1, ...), false)
     elseif event == 'UNIT_SPELLCAST_CHANNEL_INTERRUPTED' then
-        self:HandleCastStop_Simple(unitType, true)
+        self:HandleCastInterrupted_Simple(unitType, select(1, ...), true)
     elseif event == 'UNIT_SPELLCAST_DELAYED' or event == 'UNIT_SPELLCAST_CHANNEL_UPDATE' then
         self:HandleCastDelayed_Simple(unitType, unit)
     elseif event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE' then
