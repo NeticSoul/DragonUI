@@ -258,10 +258,13 @@ local function BuildAurasTab(scroll)
         getFunc = function()
             local c = GetAuraBordersField("buff_color")
             if c and c.r then return c.r, c.g, c.b end
-            return 0.6, 0.6, 0.6
+            return 0.2, 0.2, 0.2
         end,
         setFunc = function(r, g, b)
-            C:EnsureModuleTable("auraborders").buff_color = { r = r, g = g, b = b }
+            local ab = C:EnsureModuleTable("auraborders")
+            ab.buff_color = { r = r, g = g, b = b }
+            -- Keep this color across reloads even if Dark Mode stays enabled.
+            ab.buff_color_user_override = true
         end,
         callback = RefreshAuraBorders,
         disabled = function() return not IsAuraBordersEnabled() end,

@@ -54,9 +54,11 @@ local function BuildEnhancementsTab(scroll)
         setFunc = function(val)
             EnsureModuleTable("darkmode").enabled = val
             if val then
-                if addon.ApplyDarkMode then addon.ApplyDarkMode() end
+                -- Force-push aura border tint on enable (clears Auras user override).
+                if addon.ApplyDarkMode then addon.ApplyDarkMode(true) end
             else
-                if addon.RestoreDarkMode then addon.RestoreDarkMode() end
+                -- Texture restore + reset aura buff border to default gray.
+                if addon.RestoreDarkMode then addon.RestoreDarkMode(true) end
             end
             -- Rebuild tab so the intensity dropdown updates its disabled state
             Panel:SelectTab("enhancements")
@@ -78,7 +80,7 @@ local function BuildEnhancementsTab(scroll)
             EnsureModuleTable("darkmode").intensity_preset = val
         end,
         callback = function()
-            if addon.RefreshDarkMode then addon.RefreshDarkMode() end
+            if addon.RefreshDarkMode then addon.RefreshDarkMode(true) end
         end,
         disabled = function() return not IsEnabled("darkmode") or GetModuleField("darkmode", "use_custom_color") == true end,
         width = 200,
@@ -90,7 +92,7 @@ local function BuildEnhancementsTab(scroll)
         getFunc = function() return GetModuleField("darkmode", "use_custom_color") == true end,
         setFunc = function(val)
             EnsureModuleTable("darkmode").use_custom_color = val
-            if addon.RefreshDarkMode then addon.RefreshDarkMode() end
+            if addon.RefreshDarkMode then addon.RefreshDarkMode(true) end
             Panel:SelectTab("enhancements")
         end,
         disabled = function() return not IsEnabled("darkmode") end,
@@ -108,7 +110,7 @@ local function BuildEnhancementsTab(scroll)
             EnsureModuleTable("darkmode").custom_color = { r = r, g = g, b = b }
         end,
         callback = function()
-            if addon.RefreshDarkMode then addon.RefreshDarkMode() end
+            if addon.RefreshDarkMode then addon.RefreshDarkMode(true) end
         end,
         hasAlpha = false,
     })

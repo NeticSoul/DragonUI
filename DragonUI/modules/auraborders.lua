@@ -25,7 +25,7 @@ if addon.RegisterModule then
 end
 
 local BORDER_TEXTURE = "Interface\\Buttons\\WHITE8X8"
-local FRAME_TEXTURE = addon._dir .. "uiactionbariconframe.tga"
+local FRAME_TEXTURE = addon._dir .. "uiactionbariconframe_white.tga"
 
 local PLAYER_BUFF   = { thickness = 1.5, overhang = 1 }
 local PLAYER_DEBUFF = { thickness = 1.5, overhang = 1 }
@@ -78,7 +78,25 @@ local function GetBuffColor()
     if c and c.r then
         return c.r, c.g, c.b
     end
-    return 0.6, 0.6, 0.6
+    return 0.2, 0.2, 0.2
+end
+
+-- Soft-edged frame texture vanishes faster than the solid icon at the same alpha.
+-- 0 = chrome stays opaque; 1 = match button SetAlpha. Tune here (not an options slider).
+local BORDER_EXPIRY_FADE = 0.4
+
+local function SyncChromeAlpha(button, alpha)
+    local host = button.duiHost
+    if not host then return end
+    if alpha == nil then
+        alpha = button.GetAlpha and button:GetAlpha() or 1
+    end
+    if alpha < 0 then
+        alpha = 0
+    elseif alpha > 1 then
+        alpha = 1
+    end
+    host:SetAlpha(1 - (1 - alpha) * BORDER_EXPIRY_FADE)
 end
 
 local function BuildSquareSlice(host, thickness)
@@ -185,17 +203,17 @@ local function RefitChrome(button)
     end
 end
 
--- Sibling of Cooldown, higher frame level — only reliable way on Frame-based auras.
-local function EnsureChromeHost(button, cd)
+local function ReparentChromeHost(button)
     local host = button.duiHost
-    if not host then
-        host = CreateFrame("Frame", nil, button)
-        button.duiHost = host
+    if not host then return end
+
+    local parent = button:GetParent() or UIParent
+    if host:GetParent() ~= parent then
+        host:SetParent(parent)
     end
 
-    AnchorHostToButton(host, button)
-
     local base = button:GetFrameLevel() + 1
+    local cd = _G[button:GetName() .. "Cooldown"]
     if cd and cd.GetFrameLevel then
         local cdLevel = cd:GetFrameLevel()
         if cdLevel >= base then
@@ -203,6 +221,51 @@ local function EnsureChromeHost(button, cd)
         end
     end
     host:SetFrameLevel(base + 5)
+end
+
+-- Sibling as a sibling (not a child): mirror Show/Hide/SetParent and apply compensated
+-- SetAlpha so the soft-edged chrome can track the buff expiry pulse.
+local function EnsureChromeVisibilitySync(button)
+    if button.duiAlphaHooked then return end
+
+    hooksecurefunc(button, "SetAlpha", function(self, alpha)
+        if self.duiHost and AuraBordersModule.applied and styledButtons[self] then
+            SyncChromeAlpha(self, alpha)
+        end
+    end)
+    hooksecurefunc(button, "Hide", function(self)
+        if self.duiHost then
+            self.duiHost:Hide()
+        end
+    end)
+    hooksecurefunc(button, "Show", function(self)
+        if self.duiHost and AuraBordersModule.applied and styledButtons[self] then
+            SyncChromeAlpha(self)
+            self.duiHost:Show()
+        end
+    end)
+    -- Consolidated buffs SetParent into the tooltip container after AuraButton_Update.
+    hooksecurefunc(button, "SetParent", function(self)
+        if self.duiHost and AuraBordersModule.applied and styledButtons[self] then
+            ReparentChromeHost(self)
+        end
+    end)
+
+    button.duiAlphaHooked = true
+end
+
+local function EnsureChromeHost(button, cd)
+    local parent = button:GetParent() or UIParent
+    local host = button.duiHost
+    if not host then
+        host = CreateFrame("Frame", nil, parent)
+        button.duiHost = host
+    end
+
+    ReparentChromeHost(button)
+    AnchorHostToButton(host, button)
+    SyncChromeAlpha(button)
+    EnsureChromeVisibilitySync(button)
     return host
 end
 
@@ -261,6 +324,7 @@ end
 
 local function RestoreButton(button)
     if button.duiHost then
+        button.duiHost:SetAlpha(1)
         button.duiHost:Hide()
     end
     if button.duiFrame then
@@ -353,7 +417,10 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
             button.duiFrame:SetVertexColor(r, g, b, 1)
             button.duiFrame:Show()
         end
-        if button.duiHost then button.duiHost:Show() end
+        if button.duiHost then
+            SyncChromeAlpha(button)
+            button.duiHost:Show()
+        end
     else
         if button.duiFrame then button.duiFrame:Hide() end
         local slice = button.duiSlice
@@ -364,7 +431,10 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
             slice.right:SetAlpha(1)
             ColorSquare(slice, r, g, b)
         end
-        if button.duiHost then button.duiHost:Show() end
+        if button.duiHost then
+            SyncChromeAlpha(button)
+            button.duiHost:Show()
+        end
     end
 end
 
