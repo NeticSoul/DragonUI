@@ -51,10 +51,7 @@ local function GetQuestFontSize()
     return 12
 end
 
--- Apply the configured font size to all quest tracker text elements.
--- Lines live in WATCHFRAME_QUESTLINES and WATCHFRAME_ACHIEVEMENTLINES as Lua
--- tables each with a .text FontString (and optional .dash FontString).
--- We apply to both to ensure the font change takes effect regardless of type.
+-- Lines use profile font_size; WatchFrameTitle is sized separately (12 narrow / 14 wide).
 local function ApplyQuestTrackerFonts()
     local targetSize = GetQuestFontSize()
     local lineSets = { WATCHFRAME_QUESTLINES, WATCHFRAME_ACHIEVEMENTLINES }
@@ -72,6 +69,15 @@ local function ApplyQuestTrackerFonts()
                     end
                 end
             end
+        end
+    end
+
+    local title = WatchFrameTitle
+    if title and title.GetFont then
+        local path, _, flags = title:GetFont()
+        if path then
+            local wide = WatchFrame and (WatchFrame:GetWidth() or 0) > 250
+            title:SetFont(path, wide and 14 or 12, flags)
         end
     end
 end
@@ -165,6 +171,40 @@ end
 -- =============================================================================
 -- QUEST TRACKER STYLING (NON-INTRUSIVE APPROACH)
 -- =============================================================================
+-- Re-apply after Collapse/Expand SetTexCoord; skip set_atlas (SetWidth can resize the button).
+local function ApplyCollapseExpandButtonArt()
+    local btn = WatchFrameCollapseExpandButton
+    if not btn then return end
+
+    local collapsed = WatchFrame and WatchFrame.collapsed
+    local normalAtlas = collapsed and 'QuestTracker-Expand' or 'QuestTracker-Collapse'
+    local pushedAtlas = collapsed and 'QuestTracker-Expand-Pressed' or 'QuestTracker-Collapse-Pressed'
+
+    local function skinTex(tex, atlas)
+        if not tex or not addon.functions.atlas_unpack then return end
+        local path, _, _, left, right, top, bottom = addon.functions.atlas_unpack(atlas)
+        if not path then return end
+        tex:SetTexture(path)
+        tex:SetTexCoord(left, right, top, bottom)
+        tex:SetAllPoints(btn)
+    end
+
+    skinTex(btn:GetNormalTexture(), normalAtlas)
+    skinTex(btn:GetPushedTexture(), pushedAtlas)
+    local disabled = btn:GetDisabledTexture()
+    if disabled then
+        skinTex(disabled, normalAtlas)
+        disabled:SetDesaturated(true)
+    end
+
+    -- Highlight must use the current icon atlas (plus vs minus).
+    local hi = btn:GetHighlightTexture()
+    if hi then
+        skinTex(hi, normalAtlas)
+        hi:SetBlendMode('ADD')
+    end
+end
+
 local function ApplyQuestTrackerStyling()
     local watchFrame = WatchFrame
     if not watchFrame or not watchFrame:IsShown() then return end
@@ -173,24 +213,44 @@ local function ApplyQuestTrackerStyling()
     -- Use fixed quest counting
     local trackedQuestsCount = GetTrackedQuestsCount()
 
-    -- Create/update background
+    local headerWidth = watchFrame:GetWidth() or 230
+    local isWide = headerWidth > 250
+    local btnSize = isWide and 16 or 13
+    local btn = WatchFrameCollapseExpandButton
+    local headerHeight = headerWidth / 8
+
     watchFrame.background = watchFrame.background or watchFrame:CreateTexture(nil, 'BACKGROUND')
     local background = watchFrame.background
 
-    -- Apply atlas texture first
     local success, err = pcall(background.set_atlas, background, 'QuestTracker-Header', true)
     if not success then
         return
     end
-    
-    -- SetSize after set_atlas(true). Scale with WatchFrame; wide (306) needs a small Y nudge.
-    local headerWidth = watchFrame:GetWidth() or 230
-    local headerHeight = headerWidth / 8
-    local yOff = headerWidth > 250 and 2 or 0
+
+    -- Wide: lift title + collapse on Y; art pinned to WatchFrame so lift does not move it.
+    local lift = isWide and 5 or 0
+    btn:SetSize(btnSize, btnSize)
+    btn:ClearAllPoints()
+    btn:SetPoint('TOPRIGHT', watchFrame, 'TOPRIGHT', -12, -5 + lift - (16 - btnSize) / 2)
+    if WatchFrameHeader then
+        WatchFrameHeader:ClearAllPoints()
+        WatchFrameHeader:SetPoint('TOPLEFT', watchFrame, 'TOPLEFT', 0, -6 + lift)
+    end
+    -- Wide: header title 1px up; collapse button stays put.
+    if WatchFrameTitle and WatchFrameHeader then
+        WatchFrameTitle:ClearAllPoints()
+        WatchFrameTitle:SetPoint('TOPLEFT', WatchFrameHeader, 'TOPLEFT', 0, isWide and 1 or 0)
+    end
     background:ClearAllPoints()
-    background:SetPoint('RIGHT', WatchFrameCollapseExpandButton, 'RIGHT', 0, yOff)
+    if isWide then
+        -- X matches button RIGHT (-12); Y fixed independent of lift.
+        background:SetPoint('RIGHT', watchFrame, 'TOPRIGHT', -12, -8)
+    else
+        background:SetPoint('RIGHT', btn, 'RIGHT', 0, 0)
+    end
     background:SetSize(headerWidth, headerHeight)
     background:SetAlpha(0.9)
+    ApplyCollapseExpandButtonArt()
 
     -- Get show_header setting
     local _, _, _, showHeader = GetQuestTrackerConfig()
@@ -511,6 +571,20 @@ function QuestTrackerModule:RestoreSystem()
     if WatchFrame and WatchFrame.background then
         WatchFrame.background:Hide()
     end
+
+    if WatchFrameHeader then
+        WatchFrameHeader:ClearAllPoints()
+        WatchFrameHeader:SetPoint('TOPLEFT', WatchFrame, 'TOPLEFT', 0, -6)
+    end
+    if WatchFrameTitle and WatchFrameHeader then
+        WatchFrameTitle:ClearAllPoints()
+        WatchFrameTitle:SetPoint('TOPLEFT', WatchFrameHeader, 'TOPLEFT', 0, 0)
+    end
+    if WatchFrameCollapseExpandButton then
+        WatchFrameCollapseExpandButton:SetSize(16, 16)
+        WatchFrameCollapseExpandButton:ClearAllPoints()
+        WatchFrameCollapseExpandButton:SetPoint('TOPRIGHT', WatchFrame, 'TOPRIGHT', -12, -5)
+    end
     
     self.applied = false
 end
@@ -529,6 +603,17 @@ local function InstallQuestTrackerHooks()
         hooksecurefunc('WatchFrame_Collapse', function(self)
             if self then
                 self:SetWidth(WATCHFRAME_EXPANDEDWIDTH or 204)
+            end
+            if IsModuleEnabled() then
+                ApplyCollapseExpandButtonArt()
+            end
+        end)
+    end
+
+    if WatchFrame_Expand then
+        hooksecurefunc('WatchFrame_Expand', function()
+            if IsModuleEnabled() then
+                ApplyCollapseExpandButtonArt()
             end
         end)
     end
