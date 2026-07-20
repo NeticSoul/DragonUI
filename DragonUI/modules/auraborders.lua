@@ -153,7 +153,22 @@ local function FitAuraChrome(button, icon)
     icon:ClearAllPoints()
     icon:SetAllPoints(button)
     icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    if not button.duiIconOrigLayer then
+        button.duiIconOrigLayer = icon:GetDrawLayer() or "BACKGROUND"
+    end
     icon:SetDrawLayer("BORDER")
+
+    -- Player AuraButtonTemplate puts Count on BACKGROUND with the icon; BORDER icon would hide stacks.
+    -- Target/focus counts already sit on ARTWORK/OVERLAY — leave them alone.
+    local count = button.count or _G[button:GetName() .. "Count"]
+    if count and not button.duiCountRaised then
+        local layer = count:GetDrawLayer()
+        if layer == "BACKGROUND" then
+            button.duiCountOrigLayer = layer
+            count:SetDrawLayer("OVERLAY")
+            button.duiCountRaised = true
+        end
+    end
 
     return FitCooldown(button, size)
 end
@@ -253,6 +268,18 @@ local function RestoreButton(button)
     end
     if button.duiAuraIcon then
         button.duiAuraIcon:SetTexCoord(0, 1, 0, 1)
+        if button.duiIconOrigLayer then
+            button.duiAuraIcon:SetDrawLayer(button.duiIconOrigLayer)
+            button.duiIconOrigLayer = nil
+        end
+    end
+    if button.duiCountRaised then
+        local count = button.count or _G[button:GetName() .. "Count"]
+        if count then
+            count:SetDrawLayer(button.duiCountOrigLayer or "BACKGROUND")
+        end
+        button.duiCountRaised = nil
+        button.duiCountOrigLayer = nil
     end
     if button.duiCdFitted then
         local cd = _G[button:GetName() .. "Cooldown"]
