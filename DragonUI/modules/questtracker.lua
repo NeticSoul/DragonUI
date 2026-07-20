@@ -276,15 +276,15 @@ local lastContentBottom = nil
 local watchFrameContentHoverProxy = {
     IsVisible = function() return WatchFrame and WatchFrame:IsVisible() end,
     IsMouseOver = function()
-        if not WatchFrame then return false end
+        -- nil lastContentBottom = empty tracker; do not fall back to the padded 600px frame.
+        if not WatchFrame or not lastContentBottom then return false end
         local top, left, right = WatchFrame:GetTop(), WatchFrame:GetLeft(), WatchFrame:GetRight()
-        local bottom = lastContentBottom or WatchFrame:GetBottom()
-        if not (top and left and right and bottom) then return false end
+        if not (top and left and right) then return false end
         -- UIParent's scale, not WatchFrame's — GetLeft/Right/Top/Bottom() report in that space.
         local scale = UIParent:GetEffectiveScale()
         local x, y = GetCursorPosition()
         x, y = x / scale, y / scale
-        return x >= left and x <= right and y <= top and y >= bottom
+        return x >= left and x <= right and y <= top and y >= lastContentBottom
     end,
     HookScript = function(_, ...) return WatchFrame:HookScript(...) end,
     EnableMouse = function(_, ...) return WatchFrame:EnableMouse(...) end,
@@ -412,9 +412,19 @@ end
 local function SyncQuestTrackerHitRect()
     if not WatchFrame then return end
     local top = WatchFrame:GetTop()
-    if not top then return end
+    local frameBottom = WatchFrame:GetBottom()
+    if not (top and frameBottom) then return end
 
-    local contentBottom = WatchFrameHeader and WatchFrameHeader:GetBottom()
+    -- Hidden header still has GetBottom(); using it left a phantom click strip on the padded frame.
+    local function ExcludeEntireFrame()
+        WatchFrame:SetHitRectInsets(0, 0, 0, math.max(0, top - frameBottom))
+        lastContentBottom = nil
+    end
+
+    local contentBottom = nil
+    if WatchFrameHeader and WatchFrameHeader:IsShown() then
+        contentBottom = WatchFrameHeader:GetBottom()
+    end
     local function considerLines(lineSet)
         if not lineSet then return end
         for _, line in pairs(lineSet) do
@@ -438,10 +448,8 @@ local function SyncQuestTrackerHitRect()
         end
     end
 
-    local frameBottom = WatchFrame:GetBottom()
-    if not (contentBottom and frameBottom) then
-        WatchFrame:SetHitRectInsets(0, 0, 0, 0)
-        lastContentBottom = nil
+    if not contentBottom then
+        ExcludeEntireFrame()
         return
     end
 
@@ -457,6 +465,7 @@ function QuestTrackerModule:SyncHoverVisibility()
     if addon.VisibilityFade then
         addon.VisibilityFade.Update("questtracker")
     end
+    SyncQuestTrackerHitRect()
 end
 
 -- =============================================================================
