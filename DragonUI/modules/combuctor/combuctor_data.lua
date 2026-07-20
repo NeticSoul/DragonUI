@@ -400,13 +400,14 @@ do
         if not cache then return end
 
         local invSlot = BankButtonIDToInvSlotID(bag, 1)
-        if not invSlot or not GetInventoryItemLink("player", invSlot) then
+        local bagLink = invSlot and GetInventoryItemLink("player", invSlot)
+        if not bagLink then
             cache.bankBags[bag] = nil
             return
         end
 
         local size = GetContainerNumSlots(bag)
-        local bagCache = { size = size, slots = {} }
+        local bagCache = { size = size, link = bagLink, slots = {} }
         for slot = 1, size do
             local _, count, _, _, _, _, link = GetContainerItemInfo(bag, slot)
             if link then
@@ -474,6 +475,15 @@ do
         local bagCache = cache.bankBags[bag]
         if bagCache and bagCache.size and bagCache.size > 0 then
             return bagCache.size
+        end
+    end
+
+    function BankCache:GetCachedBagLink(bag)
+        local cache = getCharCache()
+        if not cache then return end
+        local bagCache = cache.bankBags[bag]
+        if bagCache and bagCache.link then
+            return bagCache.link
         end
     end
 
@@ -545,9 +555,12 @@ do
         if self:IsBackpack(bag) or self:IsBank(bag) or self:IsKeyRing(bag) then
             return true
         end
-        -- Bank bags are equipped if we're at the bank.
         if self:IsBankBag(bag) then
-            return mod("InventoryEvents"):AtBank()
+            if mod("InventoryEvents"):AtBank() then
+                return true
+            end
+            -- Offline: only if ScanBankBag cached this bag (unlocks GetCachedBagSize/GetCachedItem).
+            return mod("BankCache"):GetCachedBagSize(bag) ~= nil
         end
         -- For bag slots 1-4, verify the inventory slot actually has a bag.
         local invSlot = self:ToInventorySlot(bag)
@@ -622,6 +635,13 @@ do
     function BagSlotInfo:GetItemInfo(player, bag)
         if self:IsBackpack(bag) or self:IsBank(bag) then return nil end
         if player == mod.playerName then
+            if self:IsBankBag(bag) and not mod("InventoryEvents"):AtBank() then
+                local link = mod("BankCache"):GetCachedBagLink(bag)
+                if link then
+                    return link, 1, GetItemIcon(link)
+                end
+                return nil
+            end
             local invSlot = self:ToInventorySlot(bag)
             if invSlot then
                 local link = GetInventoryItemLink("player", invSlot)

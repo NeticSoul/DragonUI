@@ -1085,6 +1085,14 @@ do
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         if BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id) then
             GameTooltip:SetText(BACKPACK_TOOLTIP)
+        elseif BagSlotInfo:IsBankBag(id) and BagSlotInfo:IsCached(mod.playerName, id) then
+            -- Offline bank: inventory API is empty; use cached bag link (name + slot count).
+            local link = mod("BankCache"):GetCachedBagLink(id)
+            if link then
+                GameTooltip:SetHyperlink(link)
+            else
+                GameTooltip:SetText(EQUIP_CONTAINER)
+            end
         else
             local invSlot = self:GetInventorySlot()
             if invSlot then
