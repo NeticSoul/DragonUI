@@ -183,14 +183,13 @@ local function ApplyQuestTrackerStyling()
         return
     end
     
-    -- Fixed header positioning (RetailUI pattern)
-    -- NOTE: SetSize MUST come AFTER set_atlas(name, true) because it overwrites size
-    -- Use WatchFrame width to match quest tracker, maintain 8:1 aspect ratio
+    -- SetSize after set_atlas(true). Scale with WatchFrame; wide (306) needs a small Y nudge.
     local headerWidth = watchFrame:GetWidth() or 230
-    local headerHeight = headerWidth / 8  -- Maintain aspect ratio (560/70 = 8)
+    local headerHeight = headerWidth / 8
+    local yOff = headerWidth > 250 and 2 or 0
     background:ClearAllPoints()
-    background:SetPoint('RIGHT', WatchFrameCollapseExpandButton, 'RIGHT', 0, 0)
-    background:SetSize(headerWidth, headerHeight)  -- Dynamic size matching WatchFrame
+    background:SetPoint('RIGHT', WatchFrameCollapseExpandButton, 'RIGHT', 0, yOff)
+    background:SetSize(headerWidth, headerHeight)
     background:SetAlpha(0.9)
 
     -- Get show_header setting
