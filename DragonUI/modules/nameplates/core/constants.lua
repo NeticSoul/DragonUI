@@ -105,6 +105,15 @@ local C = NP.const
 
 C.TOTEM_TEX = C.MINA_TEX .. "Totem\\"
 
+C.QUEST_ICON_TEX = {
+    pointer = C.MINA_TEX .. "Quests\\quest_pointer",
+    sword = C.MINA_TEX .. "Quests\\Kill\\kill_sword",
+    skull = C.MINA_TEX .. "Quests\\Kill\\kill_skull",
+    elite = C.MINA_TEX .. "Quests\\Kill\\kill_elite",
+    bag = C.MINA_TEX .. "Quests\\Loot\\loot_bag",
+    chest = C.MINA_TEX .. "Quests\\Loot\\loot_chest",
+}
+
 C.NAMEPLATE_FONT_MAP = {
     primary = "PRIMARY",
     actionbar = "ACTIONBAR",

@@ -17,6 +17,7 @@
     <Script file="features\raid_marker.lua"/>
     <Script file="features\combo.lua"/>
     <Script file="features\elite.lua"/>
+    <Script file="features\quest.lua"/>
     <Script file="features\totem.lua"/>
     <Script file="pipeline\lifecycle.lua"/>
     <Script file="pipeline\engine.lua"/>

@@ -92,6 +92,12 @@ function CB.OnUpdateCombo(plateData)
     NP.widgets.Sync("Combo", plateData)
 end
 
+function CB.OnUpdateQuest(plateData)
+    -- Elite after Quest: the elite dragon must reappear when a quest elite completes.
+    NP.widgets.Sync("Quest", plateData)
+    NP.widgets.Sync("Elite", plateData)
+end
+
 function CB.OnUpdateAuras(plateData)
     NP.gather.RefreshPlateAuras(plateData, nil, "queue_auras")
 end
@@ -554,6 +560,12 @@ local function EngineOnEvent(_, event, unit, ...)
         E.QueueMass(CB.OnUpdateCombo)
         return
     end
+    if event == "QUEST_LOG_UPDATE" or event == "UNIT_QUEST_LOG_CHANGED" then
+        if NP.quest and NP.quest.OnQuestLogChanged then
+            NP.quest.OnQuestLogChanged()
+        end
+        return
+    end
     if event == "PLAYER_TOTEM_UPDATE" then
         NP.widgets.OnTotemUpdate(unit)
         E.QueueMass(CB.OnUpdateNameplate)
@@ -837,6 +849,8 @@ local function RunNameplatesApply()
         f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         f:RegisterEvent("RAID_TARGET_UPDATE")
         f:RegisterEvent("UNIT_COMBO_POINTS")
+        f:RegisterEvent("QUEST_LOG_UPDATE")
+        f:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
         f:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
         f:RegisterEvent("PLAYER_TOTEM_UPDATE")
         f:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -941,6 +955,9 @@ local function RunNameplatesRestore()
     end
     for name in pairs(NP.state.AuraGUIDByName) do
         NP.state.AuraGUIDByName[name] = nil
+    end
+    if NP.quest and NP.quest.ClearIndex then
+        NP.quest.ClearIndex()
     end
     for icon in pairs(NP.state.AuraGUIDByRaidIcon) do
         NP.state.AuraGUIDByRaidIcon[icon] = nil

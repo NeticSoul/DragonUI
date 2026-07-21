@@ -912,6 +912,23 @@ local defaults = {
                 showEliteIcon = true, -- show elite/rare dragon icon on nameplates
                 eliteIconStyle = "dragon", -- "dragon" | "star" (star uses *-icon-old textures)
                 showComboPoints = false, -- show combo points on target nameplate
+                questIcons = { -- quest objective icons on nameplates (kill/loot); stock: target/mouseover/focus only, awesome_wotlk: all plates
+                    enabled = true,
+                    pointerMode = false, -- always show quest_pointer; skips kill/loot type crossref
+                    killIcon = "sword", -- "sword" | "skull"
+                    lootIcon = "bag", -- "bag" | "chest"
+                    eliteKillIcon = true, -- distinct icon on elite/rare kill objectives
+                    testIcon = "off", -- force-preview one icon on all plates for tuning: off|sword|skull|elite|bag|chest|pointer
+                    -- Per-icon x/y (from health-bar center) and display size; code-tunable defaults.
+                    icons = {
+                        sword   = { x = -93, y = 6, size = 24 },
+                        skull   = { x = -90, y = 7, size = 22 },
+                        elite   = { x = -90, y = 6, size = 26 },
+                        bag     = { x = -90, y = 7, size = 26 },
+                        chest   = { x = -90, y = 7, size = 22 },
+                        pointer = { x = -78, y = 7, size = 28 },
+                    },
+                },
                 showTotemIcons = false, -- show totem icon on shaman totem nameplates
                 totemIconPosition = "top", -- "top" | "left" | "right"
                 totemIconOnly = false, -- hide the totem nameplate entirely; show only the totem icon

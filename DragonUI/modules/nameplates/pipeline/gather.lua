@@ -185,10 +185,12 @@ function NP.gather.EnsurePlateVisualRoot(plateData, state, context)
 end
 
 -- Module-scoped sync lists to avoid per-refresh allocation.
+-- Quest is synced before Elite so it can suppress the native elite icon on quest elites.
 local FULL_SYNC_WIDGETS = {
     "Debuffs",
     "ThreatGlow",
     "RaidMarker",
+    "Quest",
     "Elite",
     "Combo",
     "Totem",
@@ -197,6 +199,7 @@ local FULL_SYNC_WIDGETS = {
 local TARGET_SYNC_WIDGETS = {
     "Debuffs",
     "ThreatGlow",
+    "Quest",
     "Elite",
     "Combo",
     "TargetHighlight",
@@ -367,6 +370,8 @@ local function ResolvePlateToken(plateData)
     end
     return nil
 end
+
+NP.gather.ResolvePlateToken = ResolvePlateToken
 
 -- Static subtitle (guild/title); nil until resolvable, then cached.
 function NP.gather.GetPlateSubtitleText(plateData, unit)
@@ -1113,6 +1118,7 @@ function NP.gather.RefreshPlateMouseoverState(plateData, reason)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
     NP.widgets.Sync("Debuffs", plateData, context, state)
+    NP.widgets.Sync("Quest", plateData, context, state)
 end
 
 -- Threat transitions (engine): sync glow and health tint when status changes.

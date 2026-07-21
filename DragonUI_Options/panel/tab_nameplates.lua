@@ -206,6 +206,7 @@ local subTabs = {
     { key = "target",   label = LO["Target & Threat"] },
     { key = "bars",     label = LO["Bars"] },
     { key = "icons",    label = LO["Icons"] },
+    { key = "quest",    label = LO["Quest"] },
     { key = "debuffs",  label = LO["Debuffs"] },
 }
 
@@ -1432,6 +1433,129 @@ local function BuildIconsSubTab(scroll)
     })
 end
 
+local function BuildQuestSubTab(scroll)
+    C:AddSpacer(scroll)
+
+    local function IsQuestIconsDisabled()
+        return not C:GetDBValue(DB .. ".questIcons.enabled")
+    end
+
+    -- X / Y / Size sliders in one row, bound to icons[keyGetter()] (the selected texture).
+    local function AddIconRow(parent, keyGetter)
+        local function field(f)
+            return DB .. ".questIcons.icons." .. keyGetter() .. "." .. f
+        end
+        local row = C:AddRow(parent)
+        C:AddSlider(row, {
+            label = LO["Offset X"],
+            getFunc = function() return C:GetDBValue(field("x")) end,
+            setFunc = function(v) C:SetDBValue(field("x"), v) end,
+            min = -200, max = 200, step = 1, width = 150,
+            disabled = IsQuestIconsDisabled,
+            callback = RefreshNameplates,
+        })
+        C:AddSlider(row, {
+            label = LO["Offset Y"],
+            getFunc = function() return C:GetDBValue(field("y")) end,
+            setFunc = function(v) C:SetDBValue(field("y"), v) end,
+            min = -200, max = 200, step = 1, width = 150,
+            disabled = IsQuestIconsDisabled,
+            callback = RefreshNameplates,
+        })
+        C:AddSlider(row, {
+            label = LO["Size"],
+            getFunc = function() return C:GetDBValue(field("size")) end,
+            setFunc = function(v) C:SetDBValue(field("size"), v) end,
+            min = 8, max = 128, step = 1, width = 150,
+            disabled = IsQuestIconsDisabled,
+            callback = RefreshNameplates,
+        })
+    end
+
+    -- General
+    local general = C:AddSection(scroll, LO["Quest Icons"])
+    C:AddToggle(general, {
+        label = LO["Show Quest Icons"],
+        desc = LO["Show kill/loot icons over your quest-objective mobs. Without awesome_wotlk, only your target, mouseover and focus show them."],
+        dbPath = DB .. ".questIcons.enabled",
+        callback = RefreshAndRebuildNameplates,
+    })
+    C:AddToggle(general, {
+        label = LO["Pointer Mode"],
+        desc = LO["Show a single quest marker on any objective mob instead of separate kill/loot icons."],
+        dbPath = DB .. ".questIcons.pointerMode",
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshAndRebuildNameplates,
+    })
+
+    -- Test preview (tuning aid)
+    local test = C:AddSection(scroll, LO["Test Preview"])
+    C:AddDescription(test, LO["Force one icon on all enemy nameplates so you can position and size it. Set to Off when done."])
+    C:AddDropdown(test, {
+        label = LO["Preview Icon"],
+        dbPath = DB .. ".questIcons.testIcon",
+        values = {
+            off = LO["Off"],
+            sword = LO["Sword"],
+            skull = LO["Skull"],
+            elite = LO["Elite"],
+            bag = LO["Bag"],
+            chest = LO["Chest"],
+            pointer = LO["Pointer"],
+        },
+        width = 220,
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshNameplates,
+    })
+
+    -- Kill icon: style + position/size of the selected texture
+    local killS = C:AddSection(scroll, LO["Kill Icon"])
+    C:AddDropdown(killS, {
+        label = LO["Icon"],
+        desc = LO["Choose the icon shown for kill objectives."],
+        dbPath = DB .. ".questIcons.killIcon",
+        values = {
+            sword = LO["Sword"],
+            skull = LO["Skull"],
+        },
+        width = 220,
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshAndRebuildNameplates,
+    })
+    AddIconRow(killS, function() return C:GetDBValue(DB .. ".questIcons.killIcon") end)
+
+    -- Elite kill icon (auto-override for elite/rare kill objectives)
+    local eliteS = C:AddSection(scroll, LO["Elite Kill Icon"])
+    C:AddToggle(eliteS, {
+        label = LO["Enabled"],
+        desc = LO["Show a distinct icon on elite and rare kill objectives."],
+        dbPath = DB .. ".questIcons.eliteKillIcon",
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshNameplates,
+    })
+    AddIconRow(eliteS, function() return "elite" end)
+
+    -- Loot icon
+    local lootS = C:AddSection(scroll, LO["Loot Icon"])
+    C:AddDropdown(lootS, {
+        label = LO["Icon"],
+        desc = LO["Choose the icon shown for loot/collect objectives."],
+        dbPath = DB .. ".questIcons.lootIcon",
+        values = {
+            bag = LO["Bag"],
+            chest = LO["Chest"],
+        },
+        width = 220,
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshAndRebuildNameplates,
+    })
+    AddIconRow(lootS, function() return C:GetDBValue(DB .. ".questIcons.lootIcon") end)
+
+    -- Pointer icon
+    local ptrS = C:AddSection(scroll, LO["Pointer Icon"])
+    AddIconRow(ptrS, function() return "pointer" end)
+end
+
 local function BuildDebuffsSubTab(scroll)
     C:AddSpacer(scroll)
 
@@ -1668,6 +1792,7 @@ local subTabBuilders = {
     target   = BuildTargetSubTab,
     bars     = BuildBarsSubTab,
     icons    = BuildIconsSubTab,
+    quest    = BuildQuestSubTab,
     debuffs  = BuildDebuffsSubTab,
 }
 

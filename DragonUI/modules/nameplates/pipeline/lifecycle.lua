@@ -22,6 +22,7 @@ function NP.lifecycle.InvalidatePlateVisuals(plateData, clearGuid)
         NP.widgets.Hide("RaidMarker", plateData)
         NP.widgets.Hide("Elite", plateData)
         NP.widgets.Hide("Totem", plateData)
+        NP.widgets.Hide("Quest", plateData)
     end
     if NP.castbar then
         NP.castbar.ResetPlateCastBar(plateData)
@@ -60,6 +61,9 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._plateLevelName = nil
     plateData._subtitleText = nil
     plateData._pvpTitleName = nil
+    plateData._questScan = nil
+    plateData._questPersist = nil
+    plateData._questElite = nil
     plateData._headlineClass = nil
     plateData._friendlyHealthClass = nil
     plateData._afkState = nil
