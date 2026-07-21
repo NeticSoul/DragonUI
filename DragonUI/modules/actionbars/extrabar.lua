@@ -888,11 +888,50 @@ function ButtonProto:UpdateIcon(data)
     end
 end
 
+-- Same source as buttons.lua RefreshButtons: profile.buttons.macros (ARIALN+OUTLINE + color).
+local function ApplyMacroNameStyle(nameFS)
+    local macros = addon.db and addon.db.profile and addon.db.profile.buttons
+        and addon.db.profile.buttons.macros
+    if not macros then
+        nameFS:SetFont(HOTKEY_FONT, 10, "OUTLINE")
+        return true
+    end
+    if macros.show == false then
+        nameFS:Hide()
+        nameFS:SetText("")
+        return false
+    end
+    nameFS:Show()
+    if macros.font then
+        nameFS:SetFont(unpack(macros.font))
+    else
+        nameFS:SetFont(HOTKEY_FONT, 10, "OUTLINE")
+    end
+    if macros.color then
+        nameFS:SetVertexColor(unpack(macros.color))
+    end
+    return true
+end
+
+-- ActionButton Name label; style from buttons.macros — only on slot change / UPDATE_MACROS / RefreshButtons.
+function ButtonProto:UpdateName()
+    local nameFS = self.name
+    if not nameFS then return end
+    if not ApplyMacroNameStyle(nameFS) then return end
+    local data = self:GetSlotData()
+    if data and data.type == "macro" and data.macro then
+        nameFS:SetText(GetMacroInfo(data.macro) or "")
+    else
+        nameFS:SetText("")
+    end
+end
+
 -- Applies data to the live button (secure + visual); persistence is the caller's job.
 function ButtonProto:SetSlotData(data)
     HealSpellName(data)
     Secure.Apply(self, data)
     self:UpdateIcon(data)
+    self:UpdateName()
     local bar = self.bar
     if bar then
         bar:RequestRefresh()
@@ -984,8 +1023,29 @@ end
 
 function ButtonProto:UpdateUsable()
     local t = self:GetAttribute("type1")
+    local spellName, itemId
     if t == "spell" then
-        local spellName = self:GetAttribute("spell1")
+        spellName = self:GetAttribute("spell1")
+    elseif t == "item" then
+        itemId = ButtonItemID(self)
+    elseif t == "macro" then
+        -- Same resolve path as UpdateCooldown / IsButtonCurrent (GetMacroSpell → GetMacroItem).
+        local data = self:GetSlotData()
+        local macroIdx = data and data.macro
+        if macroIdx then
+            spellName = GetMacroSpell(macroIdx)
+            if not spellName then
+                local _, itemLink = GetMacroItem(macroIdx)
+                itemId = itemLink and tonumber(itemLink:match("item:(%d+)"))
+            end
+        end
+    else
+        self.icon:SetVertexColor(1, 1, 1)
+        ApplyRangeIndicator(self, nil)
+        return
+    end
+
+    if spellName then
         local isUsable, notEnoughMana = IsUsableSpell(spellName)
         local rangeValid = SafeIsSpellInRange(spellName)
         local oorR, oorG, oorB, oomR, oomG, oomB = GetRangeIndicatorColors()
@@ -999,9 +1059,7 @@ function ButtonProto:UpdateUsable()
             self.icon:SetVertexColor(1, 1, 1)
         end
         ApplyRangeIndicator(self, rangeValid)
-    elseif t == "item" then
-        local itemId = ButtonItemID(self)
-        if not itemId then return end
+    elseif itemId then
         local rangeValid = SafeIsItemInRange(itemId)
         local oorR, oorG, oorB = GetRangeIndicatorColors()
         if not IsUsableItem(itemId) then
@@ -1149,7 +1207,7 @@ end
 function BarProto:HasRangeContent()
     for _, button in pairs(self.buttons) do
         local t = button:GetAttribute("type1")
-        if t == "spell" or t == "item" then return true end
+        if t == "spell" or t == "item" or t == "macro" then return true end
     end
     return false
 end
@@ -1167,6 +1225,12 @@ end
 function BarProto:RefreshHotkeys()
     for _, button in pairs(self.buttons) do
         button:UpdateHotkey()
+    end
+end
+
+function BarProto:RefreshMacroNames()
+    for _, button in pairs(self.buttons) do
+        button:UpdateName()
     end
 end
 
@@ -1265,6 +1329,15 @@ function BarProto:CreateButton(index)
         button.count = count
 
         SkinButton(button)
+
+        -- ActionButtonTemplate $parentName size/anchor; font/color from buttons.macros (not GameFont*).
+        local nameFS = button:CreateFontString(name .. "Name", "OVERLAY")
+        nameFS:SetDrawLayer("OVERLAY", 7)
+        nameFS:SetJustifyH("CENTER")
+        nameFS:SetSize(36, 10)
+        nameFS:SetPoint("BOTTOM", button, "BOTTOM", 0, 2)
+        button.name = nameFS
+        ApplyMacroNameStyle(nameFS)
 
         -- OVERLAY sublevel 7: above SkinButton's border (also OVERLAY).
         local hotkey = button:CreateFontString(nil, "OVERLAY")
@@ -1608,6 +1681,10 @@ function addon.RefreshExtrabarHotkeys()
     ExtraBar1:RefreshHotkeys()
 end
 
+function addon.RefreshExtrabarMacroNames()
+    ExtraBar1:RefreshMacroNames()
+end
+
 function addon.RefreshExtrabarFrame()
     ExtraBar1:RefreshFrame()
 end
@@ -1667,6 +1744,7 @@ initFrame:RegisterEvent("ADDON_LOADED")
 initFrame:RegisterEvent("PLAYER_LOGIN")
 initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 initFrame:RegisterEvent("UPDATE_BINDINGS")
+initFrame:RegisterEvent("UPDATE_MACROS")
 initFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 initFrame:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
 initFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
@@ -1735,6 +1813,10 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
     elseif event == "UPDATE_BINDINGS" then
         for _, bar in ipairs(bars) do
             if bar.applied then bar:RefreshHotkeys() end
+        end
+    elseif event == "UPDATE_MACROS" then
+        for _, bar in ipairs(bars) do
+            if bar.applied then bar:RefreshMacroNames() end
         end
     elseif event == "PLAYER_TARGET_CHANGED" then
         RequestRefreshAll()
