@@ -1217,12 +1217,13 @@ end
 -- ============================================================================
 
 function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
-    local spell, icon, startTime, endTime, notInterruptible
-    
+    local spell, icon, startTime, endTime, notInterruptible, castID
+
     if isChanneling then
         spell, _, _, icon, startTime, endTime, _, notInterruptible = UnitChannelInfo(unit)
+        castID = nil  -- channels carry no castID in 3.3.5a
     else
-        spell, _, _, icon, startTime, endTime, _, _, notInterruptible = UnitCastingInfo(unit)
+        spell, _, _, icon, startTime, endTime, _, castID, notInterruptible = UnitCastingInfo(unit)
     end
     
     if not spell then
@@ -1245,7 +1246,10 @@ function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
     castbar.startTime = start
     castbar.endTime = finish
     castbar.spellName = spell
-    
+    -- castID is the authority for matching later FAILED / INTERRUPTED events to this exact
+    -- cast (Blizzard CastingBarFrame model). nil for channels, which have none in 3.3.5a.
+    castbar.castID = castID
+
     -- Cancel any active fade
     castbar.fadeOutEx = false
     if frames.container then
@@ -1496,13 +1500,11 @@ function CastbarModule:HandleCastStop_Simple(unitType, wasInterrupted, isChannel
     end
 end
 
-function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
-    -- UNIT_SPELLCAST_FAILED fires in three cases:
-    --   1) A spell failed to START (pressed another ability while casting) → ignore
-    --   2) A re-press of the spell being cast was rejected (macro spam) → ignore
-    --   3) The current cast was externally interrupted (CC/kick on target) → show "Failed"
-    -- Case 2 carries the SAME spell name as the tracked cast, so the spell name alone
-    -- cannot tell it apart from case 3. Ask the engine instead: see below.
+function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell, eventRank, eventCastID)
+    -- UNIT_SPELLCAST_FAILED fires for several reasons: a spell that failed to start, a
+    -- re-press rejected mid-cast, another macro spell failing, or the tracked cast being
+    -- interrupted. Case "re-press" carries the SAME spell name as the tracked cast, so the
+    -- name alone cannot tell it apart. castID can: Blizzard's own cast bar matches on it.
     local frames = self.frames[unitType]
     if not frames or not frames.castbar then return end
     local castbar = frames.castbar
@@ -1518,17 +1520,16 @@ function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
         end
     end
 
-    -- The engine is the authority, not the spell name. If it still reports an active cast,
-    -- the cast we track is alive and this event belongs to something else: a re-press
-    -- rejected while already casting (same spell name, defeats the check below), or another
-    -- spell of the same macro. A genuine failure clears the cast first, so a real one still
-    -- gets through.
-    if UnitCastingInfo(unit) or UnitChannelInfo(unit) then
-        return
-    end
-
-    -- If the event spell doesn't match our tracked cast, it's a queued spell failure
-    if eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
+    -- castID is the authority, not the spell name. A rejected re-press carries the SAME name
+    -- as the tracked cast but a DIFFERENT castID; another macro spell (e.g. Auto Shot while
+    -- moving) has its own castID too. Both are ignored. A genuine failure/interrupt of the
+    -- tracked cast carries its castID, so it still gets through. Channels have no castID in
+    -- 3.3.5a and fall back to the spell-name guard.
+    if castbar.castID then
+        if eventCastID ~= castbar.castID then
+            return
+        end
+    elseif eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
         return
     end
 
@@ -1537,21 +1538,19 @@ end
 
 -- UNIT_SPELLCAST_INTERRUPTED used to be dispatched straight to
 -- HandleCastStop_Simple(unitType, true) with no verification, so an interruption belonging
--- to ANOTHER spell wiped the bar of the cast in progress. Verify it the same way
+-- to ANOTHER spell wiped the bar of the cast in progress. Verify castID the same way
 -- HandleCastFailed_Simple does before acting on it.
-function CastbarModule:HandleCastInterrupted_Simple(unitType, eventSpell, isChannel)
+function CastbarModule:HandleCastInterrupted_Simple(unitType, isChannel, eventSpell, eventRank, eventCastID)
     local frames = self.frames[unitType]
     if not frames or not frames.castbar then return end
     local castbar = frames.castbar
     if not (castbar.castingEx or castbar.channelingEx) then return end
 
-    local unit = (unitType == "player") and "player" or unitType
-
-    if UnitCastingInfo(unit) or UnitChannelInfo(unit) then
-        return
-    end
-
-    if eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
+    if castbar.castID then
+        if eventCastID ~= castbar.castID then
+            return
+        end
+    elseif eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
         return
     end
 
@@ -2047,9 +2046,9 @@ function CastbarModule:HandleCastingEvent(event, unit, ...)
     elseif event == 'UNIT_SPELLCAST_FAILED' then
         self:HandleCastFailed_Simple(unitType, ...)
     elseif event == 'UNIT_SPELLCAST_INTERRUPTED' then
-        self:HandleCastInterrupted_Simple(unitType, select(1, ...), false)
+        self:HandleCastInterrupted_Simple(unitType, false, ...)
     elseif event == 'UNIT_SPELLCAST_CHANNEL_INTERRUPTED' then
-        self:HandleCastInterrupted_Simple(unitType, select(1, ...), true)
+        self:HandleCastInterrupted_Simple(unitType, true, ...)
     elseif event == 'UNIT_SPELLCAST_DELAYED' or event == 'UNIT_SPELLCAST_CHANNEL_UPDATE' then
         self:HandleCastDelayed_Simple(unitType, unit)
     elseif event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE' then
