@@ -15,6 +15,11 @@ function NP.widgets.SyncEliteIcon(plateData, unit)
         if plateData._eliteIcon then plateData._eliteIcon:Hide() end
         return
     end
+    -- Quest widget shows kill_elite here; drop the duplicate dragon icon.
+    if plateData._questElite then
+        if plateData._eliteIcon then plateData._eliteIcon:Hide() end
+        return
+    end
     NP.native_style.NoteNativePlateClassification(plateData)
     if not unit or not UnitExists(unit) then
         unit = NP.match.ResolvePlateUnit(plateData)
