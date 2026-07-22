@@ -910,6 +910,7 @@ local defaults = {
                 debuffOffsetY = 0, -- vertical offset for the debuff icon row
                 showDebuffPositionDebug = false, -- persistent debug box showing debuff row bounds
                 showRaidMarkers = true, -- show raid target markers (skull, cross, etc.)
+                raidMarkerDebuffLayout = false, -- force beside-bar raid marker on all plates (as when showDebuffs)
                 showEliteIcon = true, -- show elite/rare dragon icon on nameplates
                 eliteIconStyle = "dragon", -- "dragon" | "star" (star uses *-icon-old textures)
                 showComboPoints = false, -- show combo points on target nameplate

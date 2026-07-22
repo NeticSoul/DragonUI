@@ -228,6 +228,10 @@ end
 local function SkinCheckBox(widget)
     -- Darken the checkbox background
     if widget.checkbg then
+        -- AceGUI reuses CheckBox widgets; always re-anchor so prior indent does not leak.
+        local indent = widget._dragonCheckIndent or 0
+        widget.checkbg:ClearAllPoints()
+        widget.checkbg:SetPoint("TOPLEFT", indent, 0)
         widget.checkbg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
         widget.checkbg:SetVertexColor(0.14, 0.14, 0.16, 1)
         widget.checkbg:SetWidth(18)
@@ -664,6 +668,9 @@ function Controls:AddToggle(parent, opts)
             cb:SetDisabled(opts.disabled)
         end
     end
+
+    -- Must assign every time: AceGUI recycles CheckBoxes and a prior indent would leak.
+    cb._dragonCheckIndent = opts.indent
 
     cb:SetCallback("OnValueChanged", function(_, _, value)
         if opts.setFunc then

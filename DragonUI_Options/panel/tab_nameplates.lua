@@ -1210,12 +1210,30 @@ local function BuildIconsSubTab(scroll)
 
     local iconSection = C:AddSection(scroll, LO["Icons & Markers"])
 
+    local function RebuildIconsSubTab()
+        RefreshNameplates()
+        if Panel and Panel.SelectTab then
+            Panel:SelectTab("nameplates")
+        end
+    end
+
     C:AddToggle(iconSection, {
         label = LO["Show Raid Markers"],
         desc = LO["Show raid target markers (skull, cross, star, etc.) on nameplates."],
         dbPath = DB .. ".showRaidMarkers",
-        callback = RefreshNameplates,
+        callback = RebuildIconsSubTab,
     })
+
+    -- Nested under Show Raid Markers (same pattern as off-target cast options).
+    if (Panel and Panel.indexing) or C:GetDBValue(DB .. ".showRaidMarkers") then
+        C:AddToggle(iconSection, {
+            label = LO["Beside Bar Layout"],
+            desc = LO["Place the raid marker beside the bar (as with DragonUI debuffs). Useful with other aura addons."],
+            dbPath = DB .. ".raidMarkerDebuffLayout",
+            indent = 18,
+            callback = RefreshNameplates,
+        })
+    end
 
     C:AddToggle(iconSection, {
         label = LO["Color Health Bar by Raid Marker"],

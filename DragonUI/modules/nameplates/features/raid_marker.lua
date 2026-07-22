@@ -42,8 +42,8 @@ function NP.widgets.ReflowTopOverlays(plateData)
         local markerX = C.RAID_MARKER_OFFSET_X or 0
         local markerY = C.RAID_MARKER_OFFSET_Y
 
-        -- Friendly: centered. Hostile + debuffs: beside bar. Else Y adjusts for combo.
-        if (not isFriendly) and cfg.showDebuffs then
+        -- Override: beside bar on all plates. Else hostile+debuffs. Else Y adjusts for combo.
+        if cfg.raidMarkerDebuffLayout or ((not isFriendly) and cfg.showDebuffs) then
             local barW = (hp.GetWidth and hp:GetWidth()) or select(1, NP.config.GetBarRefSize())
             local markerSize = C.RAID_MARKER_SIZE or 24
             local sideGap = C.RAID_MARKER_SIDE_GAP or 8
