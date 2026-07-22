@@ -61,8 +61,7 @@ local VANILLA_MINIMAP_MASK = "Textures\\MinimapMask"
 
 local ADDON_ORBIT_RADIUS = 15
 local DRAGONUI_SETTINGS_BUTTON_SIZE = 21
-local DRAGONUI_SETTINGS_BUTTON_ICON = "Interface\\Icons\\INV_Misc_Head_Dragon_01"
-local DRAGONUI_SETTINGS_BUTTON_ICON_FALLBACK = "Interface\\Icons\\Ability_Mount_RedDragonhawk"
+local DRAGONUI_SETTINGS_BUTTON_ICON = "Interface\\AddOns\\DragonUI\\assets\\INV_Misc_Head_Dragon_01"
 local DRAGONUI_CLASSIC_COLLECTOR_ICON = "Interface\\AddOns\\DragonUI\\assets\\dfrl_collector_toggle.tga"
 
 -- Addon icon whitelist: define before ReplaceBlizzardFrame
@@ -1541,7 +1540,6 @@ local function GetConfiguredMinimapCollector()
         MinimapModule = MinimapModule,
         DRAGONUI_SETTINGS_BUTTON_SIZE = DRAGONUI_SETTINGS_BUTTON_SIZE,
         DRAGONUI_SETTINGS_BUTTON_ICON = DRAGONUI_SETTINGS_BUTTON_ICON,
-        DRAGONUI_SETTINGS_BUTTON_ICON_FALLBACK = DRAGONUI_SETTINGS_BUTTON_ICON_FALLBACK,
         DRAGONUI_CLASSIC_COLLECTOR_ICON = DRAGONUI_CLASSIC_COLLECTOR_ICON,
         GetAllMinimapButtons = GetAllMinimapButtons,
         IsQuestMinimapPin = IsQuestMinimapPin,
