@@ -172,6 +172,7 @@ local function IsQuestMinimapPin(button)
                        or lower:find("pfmap", 1, true)
                        or lower:find("pfminimap", 1, true)
                        or lower:find("questie", 1, true)
+                       or lower:find("questhelper", 1, true)
                        or lower:find("totemradius", 1, true)
                        or lower:find("\\tomtom\\", 1, true) then
                         button.DragonUI_IsQuestPin = true
