@@ -336,6 +336,11 @@ L["Enable Combuctor"] = "통합가방(Combuctor) 활성화"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "아이템 필터, 검색, 품질 표시, 은행 연동을 지원하는 통합 가방 대체 기능입니다."
 L["Combuctor Settings"] = "Combuctor 설정"
 
+-- Item usability tint
+L["Item Usability"] = "아이템 사용 가능 여부"
+L["Tint Unusable Items"] = "사용 불가 아이템 색칠"
+L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = "캐릭터가 착용하거나 사용할 수 없는 장비 및 사용 아이템 아이콘을 빨간색으로 표시합니다 (잘못된 방어구 유형, 레벨, 직업 등)."
+
 -- Bag Sort
 L["Bag Sort"] = "가방 정렬"
 L["Enable Bag Sort"] = "가방 정렬 활성화"

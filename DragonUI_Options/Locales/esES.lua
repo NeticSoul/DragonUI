@@ -328,6 +328,11 @@ L["Enable Combuctor"] = "Activar Combuctor"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "Reemplazo de bolsas todo-en-uno con filtrado de objetos, búsqueda, indicadores de calidad e integración con el banco."
 L["Combuctor Settings"] = "Ajustes de Combuctor"
 
+-- Item usability tint
+L["Item Usability"] = "Usabilidad de objetos"
+L["Tint Unusable Items"] = "Colorear objetos no usables"
+L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = "Colorea de rojo el icono del equipo y objetos usables que tu personaje no puede equipar o usar (tipo de armadura, nivel, clase, etc.)."
+
 -- Bag Sort
 L["Bag Sort"] = "Ordenar Bolsas"
 L["Enable Bag Sort"] = "Activar Ordenar Bolsas"

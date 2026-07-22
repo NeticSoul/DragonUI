@@ -634,6 +634,11 @@ L["Fires action bar abilities the instant you press a key instead of when you re
 L["Enable Key Press"] = "Ativar pressionar tecla"
 L["Fire abilities on key press instead of key release."] = "Ativa habilidades ao pressionar a tecla, não ao soltar."
 
+-- Item usability tint
+L["Item Usability"] = "Usabilidade de itens"
+L["Tint Unusable Items"] = "Colorir itens inutilizáveis"
+L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = "Colore de vermelho os ícones de equipamento e itens usáveis que seu personagem não pode equipar ou usar (tipo de armadura, nível, classe, etc.)."
+
 -- Bag Sort
 L["Fill Bank Stacks from Bags"] = "Completar pilhas do banco com a bolsa"
 L["Pull matching items from your bags into partial bank stacks when sorting the bank."] = "Ao ordenar o banco, move itens correspondentes da bolsa para pilhas parciais no banco."

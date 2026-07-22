@@ -316,6 +316,21 @@ do
             SetItemButtonTextureVertexColor(self, 0.5, 1, 0.5)
             return
         end
+        -- Leave gray from SetItemButtonDesaturated alone while locked/search-dimmed.
+        if self:IsLocked() or not self:MatchesSearch() then
+            return
+        end
+        local link = self:GetItem()
+        if link and addon:IsUnusableItemTintEnabled() then
+            local bag, slot = self:GetBag(), self:GetID()
+            if self:IsCached() then
+                bag, slot = nil, nil
+            end
+            if addon:IsItemUnusableForTint(link, bag, slot) then
+                SetItemButtonTextureVertexColor(self, 0.9, 0, 0)
+                return
+            end
+        end
         SetItemButtonTextureVertexColor(self, 1, 1, 1)
     end
 
@@ -333,6 +348,7 @@ do
 
     function ItemSlot:UpdateLocked()
         self:SetLocked(self:IsLocked())
+        self:UpdateSlotColor()
     end
 
     function ItemSlot:GetSearch()
@@ -352,6 +368,7 @@ do
     function ItemSlot:UpdateSearch()
         self:SetAlpha(self:MatchesSearch() and 1 or 0.3)
         self:SetLocked(self:IsLocked())
+        self:UpdateSlotColor()
     end
 
     function ItemSlot:IsLocked()
@@ -362,9 +379,15 @@ do
         if self:GetItem() and not self:IsCached() then
             local start, duration, enable = GetContainerItemCooldown(self:GetBag(), self:GetID())
             CooldownFrame_SetTimer(self.cooldown, start or 0, duration or 0, enable or 0)
+            -- Match ContainerFrame_UpdateCooldown: gray while on CD with enable==0, else restore tint.
+            if duration and duration > 0 and enable == 0 then
+                SetItemButtonTextureVertexColor(self, 0.4, 0.4, 0.4)
+            else
+                self:UpdateSlotColor()
+            end
         else
             CooldownFrame_SetTimer(self.cooldown, 0, 0, 0)
-            SetItemButtonTextureVertexColor(self, 1, 1, 1)
+            self:UpdateSlotColor()
         end
     end
 

@@ -333,6 +333,27 @@ local function BuildBagsTab(scroll)
     })
 
     -- ====================================================================
+    -- ITEM USABILITY TINT (stock bags + Combuctor)
+    -- ====================================================================
+    local tintSection = C:AddSection(scroll, LO["Item Usability"] or "Item Usability")
+    C:AddToggle(tintSection, {
+        label = LO["Tint Unusable Items"] or "Tint Unusable Items",
+        desc = LO["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."]
+            or "Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.).",
+        getFunc = function()
+            local bags = addon.db and addon.db.profile and addon.db.profile.bags
+            return bags and bags.tint_unusable and true or false
+        end,
+        setFunc = function(val)
+            if not addon.db.profile.bags then addon.db.profile.bags = {} end
+            addon.db.profile.bags.tint_unusable = val and true or false
+            if addon.RefreshUnusableItemTints then
+                addon:RefreshUnusableItemTints()
+            end
+        end,
+    })
+
+    -- ====================================================================
     -- BAG SORT
     -- ====================================================================
     local sortSection = C:AddSection(scroll, LO["Bag Sort"] or "Bag Sort")

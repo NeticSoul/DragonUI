@@ -359,6 +359,11 @@ L["Enable Combuctor"] = true
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = true
 L["Combuctor Settings"] = true
 
+-- Item usability tint
+L["Item Usability"] = true
+L["Tint Unusable Items"] = true
+L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = true
+
 -- Bag Sort
 L["Bag Sort"] = true
 L["Enable Bag Sort"] = true

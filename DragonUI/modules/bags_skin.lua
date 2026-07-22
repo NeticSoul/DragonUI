@@ -714,3 +714,110 @@ end
 function BagSkinModule:Restore()
     self.applied = false
 end
+
+-- Unusable tint is independent of bag skin chrome (works with stock bags too).
+local unusableTintHooksInstalled = false
+
+-- Re-apply after Blizzard paths that force white (Update, UpdateCooldown, UpdateLocked).
+local function TintBagButtonUnusable(itemButton, bag, slot)
+    if not addon:IsUnusableItemTintEnabled() or not itemButton then
+        return
+    end
+    local texture, _, locked = GetContainerItemInfo(bag, slot)
+    if not texture or locked then
+        return
+    end
+    local start, duration, enable = GetContainerItemCooldown(bag, slot)
+    if duration and duration > 0 and enable == 0 then
+        return
+    end
+    local link = GetContainerItemLink(bag, slot)
+    if addon:IsItemUnusableForTint(link, bag, slot) then
+        SetItemButtonTextureVertexColor(itemButton, 0.9, 0, 0)
+    end
+end
+
+local function TintContainerFrameUnusable(frame)
+    if not addon:IsUnusableItemTintEnabled() or not frame then
+        return
+    end
+    local bag = frame:GetID()
+    local frameName = frame:GetName()
+    local size = frame.size or GetContainerNumSlots(bag)
+    for i = 1, size do
+        local itemButton = _G[frameName .. "Item" .. i]
+        if itemButton then
+            TintBagButtonUnusable(itemButton, bag, itemButton:GetID())
+        end
+    end
+end
+
+local function TintBankSlotUnusable(button)
+    if not button or not BankFrame or not BankFrame:IsShown() or button.isBag then
+        return
+    end
+    TintBagButtonUnusable(button, BANK_CONTAINER or -1, button:GetID())
+end
+
+local function InstallUnusableTintHooks()
+    if unusableTintHooksInstalled then
+        return
+    end
+    unusableTintHooksInstalled = true
+
+    hooksecurefunc("ContainerFrame_Update", TintContainerFrameUnusable)
+    if ContainerFrame_UpdateCooldown then
+        hooksecurefunc("ContainerFrame_UpdateCooldown", function(container, button)
+            if button then
+                TintBagButtonUnusable(button, container, button:GetID())
+            end
+        end)
+    end
+    -- Unlock path: SetItemButtonDesaturated(..., nil) forces white and skips our Update hook.
+    if ContainerFrame_UpdateLocked then
+        hooksecurefunc("ContainerFrame_UpdateLocked", TintContainerFrameUnusable)
+    end
+    if ContainerFrame_UpdateLockedItem then
+        hooksecurefunc("ContainerFrame_UpdateLockedItem", function(frame, slot)
+            if not addon:IsUnusableItemTintEnabled() or not frame or not slot then
+                return
+            end
+            local index = (frame.size or 0) + 1 - slot
+            local itemButton = _G[frame:GetName() .. "Item" .. index]
+            if itemButton then
+                TintBagButtonUnusable(itemButton, frame:GetID(), itemButton:GetID())
+            end
+        end)
+    end
+
+    if BankFrameItemButton_Update then
+        hooksecurefunc("BankFrameItemButton_Update", TintBankSlotUnusable)
+    end
+    if BankFrameItemButton_UpdateLocked then
+        hooksecurefunc("BankFrameItemButton_UpdateLocked", TintBankSlotUnusable)
+    end
+    if BankFrame_UpdateCooldown then
+        hooksecurefunc("BankFrame_UpdateCooldown", function(container, button)
+            if button then
+                TintBagButtonUnusable(button, container, button:GetID())
+            end
+        end)
+    end
+
+    local levelFrame = CreateFrame("Frame")
+    levelFrame:RegisterEvent("PLAYER_LEVEL_UP")
+    levelFrame:RegisterEvent("SPELLS_CHANGED")
+    levelFrame:SetScript("OnEvent", function(_, event)
+        if event == "SPELLS_CHANGED" then
+            if addon.ClearUnusableItemTintCache then
+                addon:ClearUnusableItemTintCache()
+            end
+            return
+        end
+        if addon.RefreshUnusableItemTints then
+            addon:RefreshUnusableItemTints()
+        end
+    end)
+end
+
+InstallUnusableTintHooks()

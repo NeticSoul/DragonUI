@@ -329,6 +329,11 @@ L["Enable Combuctor"] = "啟用揹包整合 (Combuctor)"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "具有物品過濾、搜尋、品質指示器和銀行整合功能的一體化揹包替代外掛。"
 L["Combuctor Settings"] = "Combuctor設定"
 
+-- Item usability tint
+L["Item Usability"] = "物品可用性"
+L["Tint Unusable Items"] = "標紅不可用物品"
+L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = "將角色無法裝備或使用的裝備和可用物品圖示標為紅色（錯誤的護甲類型、等級、職業等）。"
+
 -- 揹包整理
 L["Bag Sort"] = "揹包整理"
 L["Enable Bag Sort"] = "啟用揹包整理"

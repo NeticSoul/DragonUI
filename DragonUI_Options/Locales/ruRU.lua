@@ -330,6 +330,11 @@ L["Enable Combuctor"] = "Включить Combuctor"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "Замена сумок «всё в одном» с фильтрацией, поиском, индикаторами качества и интеграцией банка."
 L["Combuctor Settings"] = "Настройки Combuctor"
 
+-- Item usability tint
+L["Item Usability"] = "Пригодность предметов"
+L["Tint Unusable Items"] = "Подсвечивать непригодные предметы"
+L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = "Окрашивает красным иконки экипировки и используемых предметов, которые персонаж не может надеть или использовать (неверный тип брони, уровень, класс и т.д.)."
+
 -- Bag Sort
 L["Bag Sort"] = "Сортировка сумок"
 L["Enable Bag Sort"] = "Включить сортировку сумок"
