@@ -357,33 +357,36 @@ addon.DebugBankSlots = DebugBankSlots
 -- ============================================================================
 
 local MERCHANT_ITEMS_PER_PAGE = MERCHANT_ITEMS_PER_PAGE or 10
+local BUYBACK_ITEMS_PER_PAGE = BUYBACK_ITEMS_PER_PAGE or 12
 
 local function UpdateMerchantItems()
     if not IsModuleEnabled() then return end
     if not MerchantFrame or not MerchantFrame:IsShown() then return end
 
+    -- Same index math as FrameXML MerchantFrame_UpdateMerchantInfo
+    local page = MerchantFrame.page or 1
     for i = 1, MERCHANT_ITEMS_PER_PAGE do
         local button = _G["MerchantItem" .. i .. "ItemButton"]
         if button then
-            local link = GetMerchantItemLink(i)
-            if link then
-                local _, _, quality = GetItemInfo(link)
-                SetOverlayQuality(button, quality)
-            else
-                SetOverlayQuality(button, nil)
-            end
+            local index = ((page - 1) * MERCHANT_ITEMS_PER_PAGE) + i
+            SetOverlayQuality(button, GetQualityFromLink(GetMerchantItemLink(index)))
         end
     end
 
-    -- Buyback item
     local buybackButton = _G["MerchantBuyBackItemItemButton"]
     if buybackButton then
-        local link = GetBuybackItemLink(GetNumBuybackItems())
-        if link then
-            local _, _, quality = GetItemInfo(link)
-            SetOverlayQuality(buybackButton, quality)
-        else
-            SetOverlayQuality(buybackButton, nil)
+        SetOverlayQuality(buybackButton, GetQualityFromLink(GetBuybackItemLink(GetNumBuybackItems())))
+    end
+end
+
+local function UpdateBuybackItems()
+    if not IsModuleEnabled() then return end
+    if not MerchantFrame or not MerchantFrame:IsShown() then return end
+
+    for i = 1, BUYBACK_ITEMS_PER_PAGE do
+        local button = _G["MerchantItem" .. i .. "ItemButton"]
+        if button then
+            SetOverlayQuality(button, GetQualityFromLink(GetBuybackItemLink(i)))
         end
     end
 end
@@ -423,7 +426,11 @@ local function UpdateAllQualityBorders()
     UpdateAllCharacterSlots()
     UpdateAllBags()
     UpdateBankSlots()
-    UpdateMerchantItems()
+    if MerchantFrame and MerchantFrame:IsShown() and MerchantFrame.selectedTab == 2 then
+        UpdateBuybackItems()
+    else
+        UpdateMerchantItems()
+    end
     UpdateGuildBankSlots()
 end
 
@@ -511,11 +518,11 @@ local function ApplyItemQualitySystem()
         ItemQualityModule.hooks["Merchant"] = true
     end
 
-    -- Merchant Buyback
+    -- Merchant Buyback tab (slots use GetBuybackItemLink, not merchant indices)
     if not ItemQualityModule.hooks["MerchantBuyback"] and MerchantFrame_UpdateBuybackInfo then
         hooksecurefunc("MerchantFrame_UpdateBuybackInfo", function()
             if not IsModuleEnabled() then return end
-            UpdateMerchantItems()
+            UpdateBuybackItems()
         end)
         ItemQualityModule.hooks["MerchantBuyback"] = true
     end
@@ -645,7 +652,13 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 
     elseif event == "MERCHANT_SHOW" or event == "MERCHANT_UPDATE" then
         if not IsModuleEnabled() then return end
-        addon:After(0.2, UpdateMerchantItems)
+        addon:After(0.2, function()
+            if MerchantFrame and MerchantFrame:IsShown() and MerchantFrame.selectedTab == 2 then
+                UpdateBuybackItems()
+            else
+                UpdateMerchantItems()
+            end
+        end)
 
     elseif event == "GUILDBANKFRAME_OPENED" or event == "GUILDBANKBAGSLOTS_CHANGED" then
         if not IsModuleEnabled() then return end
