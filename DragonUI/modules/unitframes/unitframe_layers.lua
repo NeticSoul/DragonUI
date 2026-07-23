@@ -112,6 +112,16 @@ local FULL_POWER_ANIM_POWER_TYPES = {
 -- CORE BAR UPDATE FUNCTIONS
 -- ============================================================================
 
+-- DragonUI party frames draw their own visible bars over the (hidden) native ones.
+-- Anchor/size overlays on the visible bar; other frames have no DragonUI_* bar so this
+-- falls back to the native bar (a no-op for them). Data (unit/OnUpdate) stays on native.
+local function UFL_VisualHealthBar(frame)
+	return frame.DragonUI_HealthBar or frame.healthbar;
+end
+local function UFL_VisualManaBar(frame)
+	return frame.DragonUI_ManaBar or frame.manabar;
+end
+
 local function UnitFrameUtil_UpdateFillBarBase(frame, realbar, previousTexture, bar, amount, barOffsetXPercent)
 	if ( amount == 0 ) then
 		bar:Hide();
@@ -157,11 +167,11 @@ local function UnitFrameUtil_UpdateFillBarBase(frame, realbar, previousTexture, 
 end
 
 local function UnitFrameUtil_UpdateFillBar(frame, previousTexture, bar, amount, barOffsetXPercent)
-	return UnitFrameUtil_UpdateFillBarBase(frame, frame.healthbar, previousTexture, bar, amount, barOffsetXPercent);
+	return UnitFrameUtil_UpdateFillBarBase(frame, UFL_VisualHealthBar(frame), previousTexture, bar, amount, barOffsetXPercent);
 end
 
 local function UnitFrameUtil_UpdateManaFillBar(frame, previousTexture, bar, amount, barOffsetXPercent)
-	return UnitFrameUtil_UpdateFillBarBase(frame, frame.manabar, previousTexture, bar, amount, barOffsetXPercent);
+	return UnitFrameUtil_UpdateFillBarBase(frame, UFL_VisualManaBar(frame), previousTexture, bar, amount, barOffsetXPercent);
 end
 
 -- ============================================================================
@@ -195,11 +205,11 @@ local function UnitFrameHealPredictionBars_Update(frame)
 				frame.missingHealthText:ClearAllPoints();
 				if textFormat == "both" then
 					-- CENTER is free in "both" mode (text system uses left+right, not center)
-					frame.missingHealthText:SetPoint("CENTER", frame.healthbar, "CENTER", 0, 0);
+					frame.missingHealthText:SetPoint("CENTER", UFL_VisualHealthBar(frame), "CENTER", 0, 0);
 					frame.missingHealthText:SetJustifyH("CENTER");
 				else
 					-- RIGHT is free in all non-both modes (text system uses center only)
-					frame.missingHealthText:SetPoint("RIGHT", frame.healthbar, "RIGHT", -4, 0);
+					frame.missingHealthText:SetPoint("RIGHT", UFL_VisualHealthBar(frame), "RIGHT", -4, 0);
 					frame.missingHealthText:SetJustifyH("RIGHT");
 				end
 				if uflData then uflData.missingHealthFormat = textFormat; end
@@ -258,7 +268,7 @@ local function UnitFrameHealPredictionBars_Update(frame)
 		frame.overAbsorbGlow:Hide();
 	end
 
-	local healthTexture = frame.healthbar:GetStatusBarTexture();
+	local healthTexture = UFL_VisualHealthBar(frame):GetStatusBarTexture();
 	local myCurrentHealAbsorbPercent = 0;
 	local healAbsorbTexture = nil;
 
@@ -333,7 +343,7 @@ local function UnitFrameManaCostPredictionBars_Update(frame, isStarting, startTi
 		end
 		frame.predictedPowerCost = cost;
 	end
-	local manaBarTexture = frame.manabar:GetStatusBarTexture();
+	local manaBarTexture = UFL_VisualManaBar(frame):GetStatusBarTexture();
 	if _G.UnitFrameManaBar_Update then
 		_G.UnitFrameManaBar_Update(frame.manabar, frame.unit);
 	end
@@ -480,15 +490,15 @@ local function UnitFrameLayer_Initialize(self, myHealPredictionBar, otherHealPre
 
 	self.overAbsorbGlow:ClearAllPoints();
 	self.overAbsorbGlow:SetWidth(16);
-	self.overAbsorbGlow:SetPoint("TOPLEFT", self.healthbar, "TOPRIGHT", -7, 0);
-	self.overAbsorbGlow:SetPoint("BOTTOMLEFT", self.healthbar, "BOTTOMRIGHT", -7, 0);
+	self.overAbsorbGlow:SetPoint("TOPLEFT", UFL_VisualHealthBar(self), "TOPRIGHT", -7, 0);
+	self.overAbsorbGlow:SetPoint("BOTTOMLEFT", UFL_VisualHealthBar(self), "BOTTOMRIGHT", -7, 0);
 
 	self.healAbsorbBar:ClearAllPoints();
 	self.healAbsorbBar:SetTexture("Interface\\RaidFrame\\Absorb-Fill", true, true);
 
 	self.overHealAbsorbGlow:ClearAllPoints();
-	self.overHealAbsorbGlow:SetPoint("BOTTOMRIGHT", self.healthbar, "BOTTOMLEFT", 7, 0);
-	self.overHealAbsorbGlow:SetPoint("TOPRIGHT", self.healthbar, "TOPLEFT", 7, 0);
+	self.overHealAbsorbGlow:SetPoint("BOTTOMRIGHT", UFL_VisualHealthBar(self), "BOTTOMLEFT", 7, 0);
+	self.overHealAbsorbGlow:SetPoint("TOPRIGHT", UFL_VisualHealthBar(self), "TOPLEFT", 7, 0);
 
 	self.healAbsorbBarLeftShadow:ClearAllPoints();
 	self.healAbsorbBarRightShadow:ClearAllPoints();
@@ -542,8 +552,8 @@ local function UnitFrameLayer_Initialize(self, myHealPredictionBar, otherHealPre
 
 	-- Missing health deficit text
 	if not self.missingHealthText then
-		self.missingHealthText = self.healthbar:CreateFontString(nil, "OVERLAY", "TextStatusBarText");
-		self.missingHealthText:SetPoint("RIGHT", self.healthbar, "RIGHT", -4, 0);
+		self.missingHealthText = UFL_VisualHealthBar(self):CreateFontString(nil, "OVERLAY", "TextStatusBarText");
+		self.missingHealthText:SetPoint("RIGHT", UFL_VisualHealthBar(self), "RIGHT", -4, 0);
 		self.missingHealthText:SetJustifyH("RIGHT");
 		self.missingHealthText:SetTextColor(1, 0.3, 0.3);
 		self.missingHealthText:Hide();
