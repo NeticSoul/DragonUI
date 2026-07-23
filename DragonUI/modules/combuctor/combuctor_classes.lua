@@ -112,6 +112,20 @@ do
     local ItemSlotInfo = mod.ItemSlotInfo
     local PlayerInfo = mod("PlayerInfo")
 
+    -- Empty-slot tint by bag family (GetItemFamily bitflags)
+    local SLOT_COLOR_BY_FAMILY = {
+        [0x0001] = {1, 0.87, 0.68},      -- quiver
+        [0x0002] = {1, 0.87, 0.68},      -- ammo
+        [0x0004] = {0.64, 0.39, 1},      -- soul
+        [0x0008] = {1, 0.6, 0.45},       -- leather
+        [0x0010] = {0.64, 1, 0.82},      -- inscription
+        [0x0020] = {0.5, 1, 0.5},        -- herb
+        [0x0040] = {0.64, 0.83, 1},      -- enchant
+        [0x0080] = {0.36, 0.68, 0.52},   -- engineer
+        [0x0200] = {1, 0.65, 0.98},      -- gem
+        [0x0400] = {0.65, 0.53, 0.25},   -- mine
+    }
+
     local unused = {}
     local id = 1
 
@@ -332,7 +346,13 @@ do
 
     function ItemSlot:UpdateSlotColor()
         if (not self:GetItem()) and self:IsTradeBagSlot() then
-            self:SetSlotChromeColor(0.5, 1, 0.5)
+            local family = BagSlotInfo:GetBagType(self:GetPlayer(), self:GetBag()) or 0
+            local color = SLOT_COLOR_BY_FAMILY[family]
+            if color then
+                self:SetSlotChromeColor(color[1], color[2], color[3])
+            else
+                self:SetSlotChromeColor(0.5, 1, 0.5)
+            end
             return
         end
         -- Leave gray from SetItemButtonDesaturated alone while locked/search-dimmed.
@@ -915,8 +935,10 @@ do
             local showing = not parent or not parent.IsShowingBag or parent:IsShowingBag(bag)
             if numSlots > 0 and showing then
                 local family = self:GetBagType(bag) or 0
-                if (bagBreak > 1 or (bagBreak > 0 and family ~= group and family * group <= 0))
-                    and #buttons > breaks[#breaks] then
+                -- ByType: normal↔specialty; keyring always starts its own block
+                local byType = family ~= group
+                    and (family * group <= 0 or BagSlotInfo:IsKeyRing(bag))
+                if (bagBreak > 1 or (bagBreak > 0 and byType)) and #buttons > breaks[#breaks] then
                     table.insert(breaks, #buttons)
                 end
                 for slot = 1, numSlots do

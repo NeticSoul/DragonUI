@@ -1020,7 +1020,7 @@ local defaults = {
                 money_display = "icons", -- Coin display: "icons" (g/s/c icons) or "text"
                 item_scale = 1.25, -- Max item slot scale in the grid
                 item_spacing = 2, -- Gap between slots (pitch = 37 + spacing)
-                bag_break = 1, -- 0 off, 1 normal↔profession, 2 every bag
+                bag_break = 1, -- 0 off, 1 normal↔profession (+keyring block), 2 every bag
                 break_space = 1.3, -- Extra rows between bag-break groups
                 glow_quality = true, -- Colored ring on uncommon and better items
                 glow_quest = true, -- Golden border on quest items

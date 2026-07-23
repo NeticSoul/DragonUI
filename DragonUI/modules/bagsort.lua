@@ -201,6 +201,7 @@ local PLAYER_BAGS = {}
 for i = 0, NUM_BAG_SLOTS do
     tinsert(PLAYER_BAGS, i)
 end
+tinsert(PLAYER_BAGS, KEYRING_CONTAINER)
 
 local BANK_BAGS = { BANK_CONTAINER }
 for i = NUM_BAG_SLOTS + 1, NUM_BAG_SLOTS + NUM_BANKBAGSLOTS do
@@ -211,6 +212,7 @@ local ALL_BAGS = { BANK_CONTAINER }
 for i = 0, NUM_BAG_SLOTS + NUM_BANKBAGSLOTS do
     tinsert(ALL_BAGS, i)
 end
+tinsert(ALL_BAGS, KEYRING_CONTAINER)
 
 -- Internal caches
 local bag_ids = {}
@@ -906,24 +908,39 @@ local function ScanBags(bags)
     end
 end
 
--- Check if a bag is a specialty bag (quiver, soul bag, etc.)
-local function IsSpecialtyBag(bagid)
-    if bagid == BANK_CONTAINER or bagid == 0 then return false end
-    local invslot = ContainerIDToInventoryID(bagid)
-    if not invslot then return false end
-    local bagLink = GetInventoryItemLink("player", invslot)
-    if not bagLink then return false end
-    local itemType, itemSubType = select(6, GetItemInfo(bagLink))
-    -- Check for localized "Container" / "Bag" types
-    if itemType and itemSubType then
-        -- Normal bag: Container > Bag
-        local containerClass = GetAuctionItemClasses() -- first item is typically "Weapon"
-        -- Simple check: if subtype ~= first subclass of Container type, it's specialty
-        if itemType == (select(2, GetAuctionItemClasses())) then
-            return false -- It's armor, not a container
-        end
+-- Bag family (0 = normal). Specialty bags (herb/enchant/…) sort in their own pool.
+local function GetBagFamily(bag)
+    if bag == BACKPACK_CONTAINER or bag == BANK_CONTAINER then
+        return 0
     end
-    return false -- Assume normal for safety
+    -- Own pool (GetItemFamily 0x0100); never mix keys into normal/profession bags
+    if bag == KEYRING_CONTAINER then
+        return 0x0100
+    end
+    if IsGuildBankBag(bag) then
+        return 0
+    end
+    local _, bagType = GetContainerNumFreeSlots(bag)
+    return bagType or 0
+end
+
+-- Specialty families first, then normal (0), so profession bags never share a sort pool.
+local function GroupBagsByFamily(bags)
+    local groups, families = {}, {}
+    for _, bag in ipairs(bags) do
+        local family = GetBagFamily(bag)
+        if not groups[family] then
+            groups[family] = {}
+            tinsert(families, family)
+        end
+        tinsert(groups[family], bag)
+    end
+    table.sort(families, function(a, b)
+        if a == 0 then return false end
+        if b == 0 then return true end
+        return a > b
+    end)
+    return families, groups
 end
 
 -- Build sort order from auction item classes
@@ -1195,6 +1212,16 @@ local function SortItems(bags)
     end
 end
 
+-- Compress + sort each bag family on its own (herb/enchant/… never mix with normal bags)
+local function CompressAndSortBagGroups(bags)
+    local families, groups = GroupBagsByFamily(bags)
+    for i = 1, #families do
+        local group = groups[families[i]]
+        CompressStacks(group)
+        SortItems(group)
+    end
+end
+
 -- Move execution frame
 local moveFrame = CreateFrame("Frame")
 local moveTimer = 0
@@ -1302,8 +1329,7 @@ local function SortPlayerBags()
     end
 
     ScanBags(ALL_BAGS)
-    CompressStacks(PLAYER_BAGS)
-    SortItems(PLAYER_BAGS)
+    CompressAndSortBagGroups(PLAYER_BAGS)
     StartSorting()
 
     if #moves == 0 then
@@ -1345,10 +1371,15 @@ local function SortBankBags()
     end
 
     if IsBankFillFromBagsEnabled() then
-        StackBagsAcross(PLAYER_BAGS, BANK_BAGS)
+        local fillBags = {}
+        for _, bag in ipairs(PLAYER_BAGS) do
+            if bag ~= KEYRING_CONTAINER then
+                tinsert(fillBags, bag)
+            end
+        end
+        StackBagsAcross(fillBags, BANK_BAGS)
     end
-    CompressStacks(BANK_BAGS)
-    SortItems(BANK_BAGS)
+    CompressAndSortBagGroups(BANK_BAGS)
 
     -- Debug: print sorted order and moves
     if addon.debugMode then
