@@ -1217,12 +1217,13 @@ end
 -- ============================================================================
 
 function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
-    local spell, icon, startTime, endTime, notInterruptible
-    
+    local spell, icon, startTime, endTime, notInterruptible, castID
+
     if isChanneling then
         spell, _, _, icon, startTime, endTime, _, notInterruptible = UnitChannelInfo(unit)
+        castID = nil -- UnitChannelInfo has no castID in 3.3.5a
     else
-        spell, _, _, icon, startTime, endTime, _, _, notInterruptible = UnitCastingInfo(unit)
+        spell, _, _, icon, startTime, endTime, _, castID, notInterruptible = UnitCastingInfo(unit)
     end
     
     if not spell then
@@ -1245,7 +1246,8 @@ function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
     castbar.startTime = start
     castbar.endTime = finish
     castbar.spellName = spell
-    
+    castbar.castID = castID -- match FAILED/INTERRUPTED like CastingBarFrame (nil for channels)
+
     -- Cancel any active fade
     castbar.fadeOutEx = false
     if frames.container then
@@ -1496,12 +1498,7 @@ function CastbarModule:HandleCastStop_Simple(unitType, wasInterrupted, isChannel
     end
 end
 
-function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
-    -- UNIT_SPELLCAST_FAILED fires in two cases:
-    --   1) A spell failed to START (pressed another ability while casting) → ignore
-    --   2) The current cast was externally interrupted (CC/kick on target) → show "Failed"
-    -- Distinguish by comparing the event's spell name with the tracked cast:
-    --   same spell = real interruption; different spell = queued spell failure.
+function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell, _, eventCastID)
     local frames = self.frames[unitType]
     if not frames or not frames.castbar then return end
     local castbar = frames.castbar
@@ -1509,7 +1506,7 @@ function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
 
     local unit = (unitType == "player") and "player" or unitType
 
-    -- Ignore FAILED spam produced by re-pressing the same channel while it is still active.
+    -- Ignore FAILED spam from re-pressing the same channel while it is still active.
     if castbar.channelingEx then
         local activeChannelSpell = UnitChannelInfo(unit)
         if activeChannelSpell and castbar.spellName and activeChannelSpell == castbar.spellName then
@@ -1517,12 +1514,34 @@ function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell)
         end
     end
 
-    -- If the event spell doesn't match our tracked cast, it's a queued spell failure
-    if eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
+    -- Same-name re-press / other macro spells differ by castID; channels fall back to name.
+    if castbar.castID then
+        if eventCastID ~= castbar.castID then
+            return
+        end
+    elseif eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
         return
     end
 
     self:HandleCastStop_Simple(unitType, true, nil, FAILED)
+end
+
+-- INTERRUPTED used to kill any active bar; gate on castID (or spell name for channels).
+function CastbarModule:HandleCastInterrupted_Simple(unitType, isChannel, eventSpell, _, eventCastID)
+    local frames = self.frames[unitType]
+    if not frames or not frames.castbar then return end
+    local castbar = frames.castbar
+    if not (castbar.castingEx or castbar.channelingEx) then return end
+
+    if castbar.castID then
+        if eventCastID ~= castbar.castID then
+            return
+        end
+    elseif eventSpell and castbar.spellName and eventSpell ~= castbar.spellName then
+        return
+    end
+
+    self:HandleCastStop_Simple(unitType, true, isChannel)
 end
 
 function CastbarModule:HandleCastDelayed_Simple(unitType, unit)
@@ -2014,9 +2033,9 @@ function CastbarModule:HandleCastingEvent(event, unit, ...)
     elseif event == 'UNIT_SPELLCAST_FAILED' then
         self:HandleCastFailed_Simple(unitType, ...)
     elseif event == 'UNIT_SPELLCAST_INTERRUPTED' then
-        self:HandleCastStop_Simple(unitType, true)
+        self:HandleCastInterrupted_Simple(unitType, false, ...)
     elseif event == 'UNIT_SPELLCAST_CHANNEL_INTERRUPTED' then
-        self:HandleCastStop_Simple(unitType, true)
+        self:HandleCastInterrupted_Simple(unitType, true, ...)
     elseif event == 'UNIT_SPELLCAST_DELAYED' or event == 'UNIT_SPELLCAST_CHANNEL_UPDATE' then
         self:HandleCastDelayed_Simple(unitType, unit)
     elseif event == 'UNIT_SPELLCAST_NOT_INTERRUPTIBLE' then
