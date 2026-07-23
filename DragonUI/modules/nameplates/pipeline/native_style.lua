@@ -9,13 +9,13 @@ NP.native_style = NP.native_style or {}
 
 local RareEntryCache = {}
 
--- A real realm suffix has one hyphen; multi-hyphen names (French "Bat-le-désert") stay intact.
+-- Realm is Name-Realm (no spaces in Name). Multi-hyphen / spaced compounds are NPC grammar, not realms.
 function NP.native_style.StripRealm(name)
     if not name or name == "" then
         return nil
     end
     local base, realm = name:match("^([^%-]+)%-([^%-]+)$")
-    if base and realm then
+    if base and realm and not base:find(" ", 1, true) then
         return base
     end
     return name
