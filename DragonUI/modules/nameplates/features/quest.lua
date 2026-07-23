@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 local addon = select(2, ...)
 local NP = addon.Nameplates
 local C = NP.const
@@ -34,8 +35,93 @@ local indexBuilt = false
 local questLogVersion = 0
 -- Engine tick of the last rebuild; coalesces QUEST_LOG_UPDATE bursts within a tick.
 local lastBuildFrame = nil
+-- Engine tick a quest change was seen; a deferred rebuild runs one tick later because the
+-- first QUEST_LOG_UPDATE after accepting often carries an empty leaderboard.
+local pendingRebuildFrame = nil
 
 local SCAN_TTL = 0.7
+
+-- Token-less: match plate name to objectives so stock clients get icons on every plate.
+local killNameIndex = {}   -- normalizedMobName -> questID (kill objective)
+local lootNameIndex = {}   -- normalizedMobName -> questID (loot objective)
+-- Set when the active provider's DB wasn't ready during a rebuild; a ticker then retries.
+local lootProviderNotReady = false
+local lootRetryFrame
+-- Static quest->drop-mob map; computed once per quest per session (key for QuestHelper's costly DB).
+local staticLootCache = {}
+local lootCacheProviderId = nil
+
+NP.quest.lootProviders = NP.quest.lootProviders or {}
+function NP.quest.RegisterLootProvider(p)
+    table.insert(NP.quest.lootProviders, p)
+    table.sort(NP.quest.lootProviders, function(a, b) return (a.priority or 0) > (b.priority or 0) end)
+end
+
+-- Locale-safe capture of the mob name from a "monster" leaderboard line.
+local killNamePattern
+do
+    local fmt = QUEST_MONSTERS_KILLED or "%s slain: %d/%d"
+    fmt = fmt:gsub("%%s", "\001"):gsub("%%d", "\002")
+    fmt = fmt:gsub("([%^%$%(%)%.%[%]%*%+%-%?%%])", "%%%1")
+    fmt = fmt:gsub("\001", "(.-)"):gsub("\002", "%%d+")
+    killNamePattern = "^" .. fmt .. "$"
+end
+
+-- Persistent learned loot sources: [mobName] = {objectiveText=true}. nil until AceDB is ready.
+local function GetLearnedDB()
+    local db = addon.db
+    if not (db and db.global) then return nil end
+    db.global.questLootLearned = db.global.questLootLearned or {}
+    return db.global.questLootLearned
+end
+
+local function QueueQuestRefresh()
+    if NP.engine and NP.engine.QueueMass and NP.engine.Callbacks then
+        NP.engine.QueueMass(NP.engine.Callbacks.OnUpdateQuest)
+    end
+end
+
+local function NormalizeName(name)
+    if not name then return nil end
+    return name:gsub("^%s*(.-)%s*$", "%1"):lower()
+end
+
+-- Per-plate cache: the name-mode path runs every sync, so avoid re-normalizing a stable name.
+local function NormalizedPlateName(plateData)
+    local raw = plateData.plateName
+    if plateData._questNormSrc ~= raw then
+        plateData._questNormSrc = raw
+        plateData._questNormName = NormalizeName(raw)
+    end
+    return plateData._questNormName
+end
+
+-- Token path taught us this mob is a loot source; persist it, keyed by normalized objective text.
+local function LearnLootKey(mobKey, objText)
+    local learned = GetLearnedDB()
+    if not learned or not objText or not mobKey or mobKey == "" then return end
+    local objs = learned[mobKey]
+    if not objs then objs = {}; learned[mobKey] = objs end
+    if not objs[objText] then
+        objs[objText] = true
+        QueueQuestRefresh()
+    end
+end
+
+local function LearnLoot(plateData, objText)
+    LearnLootKey(NormalizedPlateName(plateData), objText)
+end
+
+-- True if this mob is a learned loot source for a still-incomplete active objective.
+local function LearnedLootActive(mobKey)
+    local learned = GetLearnedDB()
+    local objs = learned and learned[mobKey]
+    if not objs then return false end
+    for objText in pairs(objs) do
+        if objectiveTypeIndex[objText] == "loot" then return true end
+    end
+    return false
+end
 
 -- Normalize tooltip lines and leaderboard text to one locale-agnostic key.
 local function NormalizeObjectiveText(text)
@@ -53,10 +139,11 @@ end
 
 local function RebuildObjectiveIndex()
     wipe(objectiveTypeIndex)
+    wipe(killNameIndex)
     local selection = GetQuestLogSelection()
     local numEntries = GetNumQuestLogEntries()
     for i = 1, numEntries do
-        local _, _, _, _, isHeader, _, isComplete = GetQuestLogTitle(i)
+        local _, _, _, _, isHeader, _, isComplete, _, questID = GetQuestLogTitle(i)
         if not isHeader and not isComplete then
             SelectQuestLogEntry(i)
             local numObj = GetNumQuestLeaderBoards(i)
@@ -67,6 +154,13 @@ local function RebuildObjectiveIndex()
                     if norm and norm ~= "" then
                         objectiveTypeIndex[norm] =
                             (objType == "item" or objType == "object") and "loot" or "kill"
+                    end
+                    if objType == "monster" then
+                        local mobName = strmatch(desc, killNamePattern)
+                        local key = NormalizeName(mobName)
+                        if key and key ~= "" then
+                            killNameIndex[key] = questID or true
+                        end
                     end
                 end
             end
@@ -181,6 +275,95 @@ local function QueryObjective(unit, pointerMode)
     return ScanUnitForQuest(unit, pointerMode)
 end
 
+-- Highest-priority available provider, honoring the lootProvider config (auto|off|id).
+local function GetActiveLootProvider()
+    local cfg = NP.config.GetCfg().questIcons
+    local pref = (cfg and cfg.lootProvider) or "auto"
+    if pref == "off" then return nil end
+    for _, p in ipairs(NP.quest.lootProviders) do
+        if p.IsAvailable() then
+            if pref == "auto" then return p end
+            if pref == p.id then return p end
+        end
+    end
+    return nil
+end
+
+-- Providers (QuestHelper/Questie) compile their DBs async; retry the rebuild until ready.
+local function StartLootRetry()
+    if lootRetryFrame then return end
+    lootRetryFrame = CreateFrame("Frame")
+    local tick, waited = 0, 0
+    lootRetryFrame:SetScript("OnUpdate", function(self, e)
+        tick = tick + e
+        if tick < 2 then return end
+        waited, tick = waited + tick, 0
+        if not lootProviderNotReady or waited > 60 then
+            self:SetScript("OnUpdate", nil)
+            lootRetryFrame = nil
+            return
+        end
+        if NP.quest.OnQuestLogChanged then NP.quest.OnQuestLogChanged() end
+    end)
+end
+
+-- Only quests with an incomplete item/object objective contribute, so finished loot drops off.
+local function RebuildLootIndex()
+    wipe(lootNameIndex)
+    lootProviderNotReady = false
+    local cfg = NP.config.GetCfg().questIcons
+    if not cfg or cfg.enabled ~= true or cfg.nameResolution ~= true then return end
+    local prov = GetActiveLootProvider()
+    if not prov then
+        lootCacheProviderId = nil
+        return
+    end
+    if lootCacheProviderId ~= prov.id then
+        wipe(staticLootCache)
+        lootCacheProviderId = prov.id
+    end
+    local selection = GetQuestLogSelection()
+    local numEntries = GetNumQuestLogEntries()
+    for i = 1, numEntries do
+        local _, _, _, _, isHeader, _, isComplete, _, questID = GetQuestLogTitle(i)
+        if not isHeader and not isComplete and questID and questID > 0 then
+            SelectQuestLogEntry(i)
+            local hasIncompleteLoot = false
+            local numObj = GetNumQuestLeaderBoards(i)
+            for o = 1, numObj do
+                local _, objType, finished = GetQuestLogLeaderBoard(o, i)
+                if (objType == "item" or objType == "object") and not finished then
+                    hasIncompleteLoot = true
+                    break
+                end
+            end
+            if hasIncompleteLoot then
+                local names = staticLootCache[questID]
+                if names == nil then
+                    names = {}
+                    -- Third-party DB: guard against errors; false = DB not ready, leave uncached to retry.
+                    local ok, ready = pcall(prov.CollectLootMobs, questID, names)
+                    if not ok then
+                        staticLootCache[questID] = names
+                    elseif ready == false then
+                        lootProviderNotReady = true
+                    else
+                        staticLootCache[questID] = names
+                    end
+                end
+                for _, mn in ipairs(names) do
+                    local key = NormalizeName(mn)
+                    if key and key ~= "" and not killNameIndex[key] then
+                        lootNameIndex[key] = questID
+                    end
+                end
+            end
+        end
+    end
+    SelectQuestLogEntry(selection)
+    if lootProviderNotReady then StartLootRetry() end
+end
+
 local function ResolveQuestForPlate(plateData, unit, pointerMode)
     local now = GetTime and GetTime() or 0
     local key = (plateData.plateName or "?") .. "|" .. questLogVersion .. "|" .. (pointerMode and "p" or "t")
@@ -267,19 +450,37 @@ local function SyncQuestIcon(plateData, context)
     local unit = context and context.resolvedUnit or NP.gather.ResolvePlateToken(plateData)
 
     local hasObj, objType
+    -- Token first (most precise): resolve live and remember it.
     if unit and UnitExists(unit) and not UnitIsPlayer(unit) then
-        -- Token available: resolve live and remember it for token-less persistence.
         local tag
         hasObj, objType, tag = ResolveQuestForPlate(plateData, unit, pointerMode)
         if hasObj then
+            -- Learn loot sources from the tooltip scan so token-less plates can show them later.
+            if objType == "loot" and not hasQuestApi then
+                LearnLoot(plateData, tag)
+            end
             local p = plateData._questPersist or {}
             p.objType, p.tag, p.ver, p.pointer = objType, tag, questLogVersion, pointerMode
             plateData._questPersist = p
-        else
-            plateData._questPersist = nil
         end
-    else
-        -- No token: keep the last-known icon while its objective stays active.
+    end
+    -- Name fallback: the tooltip scan can miss (e.g. quest-tracking tooltip CVar off), so the
+    -- addon-free kill index / learned loot still covers the plate even when it has a token.
+    if not hasObj and q.nameResolution == true then
+        local reaction, kind = NP.native_style.GetPlateReaction(plateData)
+        if reaction ~= "FRIENDLY" and kind ~= "PLAYER" then
+            local key = NormalizedPlateName(plateData)
+            if key and key ~= "" then
+                if killNameIndex[key] then
+                    hasObj, objType = true, "kill"
+                elseif lootNameIndex[key] or LearnedLootActive(key) then
+                    hasObj, objType = true, "loot"
+                end
+            end
+        end
+    end
+    if not hasObj then
+        -- Last resort: the persisted icon while its objective stays active.
         local p = plateData._questPersist
         if p and IsPersistValid(p) then
             hasObj, objType = true, p.objType
@@ -302,7 +503,9 @@ end
 NP.widgets.Register("Quest", {
     ShouldShow = function(plateData)
         local q = NP.config.GetCfg().questIcons
-        return q ~= nil and q.enabled == true
+        if not q or q.enabled ~= true then return false end
+        if NP.quest_coexist and NP.quest_coexist.ShouldDeferToQuestie() then return false end
+        return true
     end,
     Ensure = function(plateData)
         return EnsureQuestIcon(plateData) ~= nil
@@ -313,25 +516,90 @@ NP.widgets.Register("Quest", {
     Hide = HideQuestIcon,
 })
 
--- Quest changed: rebuild the tooltip index (fresh data, event context), bump version, refresh.
+local function DoRebuildIndexes()
+    RebuildObjectiveIndex()
+    RebuildLootIndex()
+    questLogVersion = questLogVersion + 1
+end
+
+-- Quest changed: rebuild indexes now (coalesced per tick), bump version, refresh.
 function NP.quest.OnQuestLogChanged()
     local q = NP.config.GetCfg().questIcons
     if not q or q.enabled ~= true then return end
     local frame = NP.module and NP.module._engineFrame
     if frame == nil or lastBuildFrame ~= frame then
         lastBuildFrame = frame
-        if not hasQuestApi then
-            RebuildObjectiveIndex()
-        end
-        questLogVersion = questLogVersion + 1
+        DoRebuildIndexes()
     end
-    if NP.engine and NP.engine.QueueMass and NP.engine.Callbacks then
-        NP.engine.QueueMass(NP.engine.Callbacks.OnUpdateQuest)
+    pendingRebuildFrame = frame or 0
+    QueueQuestRefresh()
+end
+
+-- Engine tick hook: re-run the rebuild once the post-accept leaderboard has settled.
+function NP.quest.TickDeferredRebuild(currentFrame)
+    if pendingRebuildFrame == nil then return end
+    if currentFrame and currentFrame > pendingRebuildFrame then
+        pendingRebuildFrame = nil
+        lastBuildFrame = currentFrame
+        DoRebuildIndexes()
+        QueueQuestRefresh()
+    end
+end
+
+-- Loot fallback for the rare mob whose tooltip omits its loot objective; skips if token already taught it.
+function NP.quest.OnLootOpened()
+    local q = NP.config.GetCfg().questIcons
+    if not q or q.enabled ~= true or q.nameResolution ~= true then return end
+    if not next(objectiveTypeIndex) then return end
+    if not (UnitExists("target") and UnitIsDead("target") and not UnitIsPlayer("target")) then return end
+    local mobKey = NormalizeName(UnitName("target"))
+    if not mobKey or mobKey == "" then return end
+    if LearnedLootActive(mobKey) then return end
+    local learned = GetLearnedDB()
+    if not learned then return end
+    local numItems = GetNumLootItems and GetNumLootItems() or 0
+    local changed = false
+    for slot = 1, numItems do
+        local _, itemName = GetLootSlotInfo(slot)
+        local key = NormalizeObjectiveText(itemName)
+        if key and objectiveTypeIndex[key] == "loot" then
+            local objs = learned[mobKey]
+            if not objs then objs = {}; learned[mobKey] = objs end
+            if not objs[key] then
+                objs[key] = true
+                changed = true
+            end
+        end
+    end
+    if changed then QueueQuestRefresh() end
+end
+
+-- Fourth source: the mob-model mouseover token never resolves to a plate, so scan it directly.
+local lastMouseoverScan
+function NP.quest.OnMouseover()
+    local q = NP.config.GetCfg().questIcons
+    if not q or q.enabled ~= true or q.nameResolution ~= true or hasQuestApi then return end
+    if not next(objectiveTypeIndex) then return end
+    if not (UnitExists("mouseover") and not UnitIsPlayer("mouseover")
+        and UnitCanAttack("player", "mouseover")) then return end
+    local guid = UnitGUID("mouseover")
+    if guid == lastMouseoverScan then return end
+    lastMouseoverScan = guid
+    local mobKey = NormalizeName(UnitName("mouseover"))
+    if not mobKey or mobKey == "" or LearnedLootActive(mobKey) then return end
+    local hasObj, objType, tag = QueryObjective("mouseover", false)
+    if hasObj and objType == "loot" and tag then
+        LearnLootKey(mobKey, tag)
     end
 end
 
 function NP.quest.ClearIndex()
     wipe(objectiveTypeIndex)
+    wipe(killNameIndex)
+    wipe(lootNameIndex)
+    wipe(staticLootCache)
+    lootCacheProviderId = nil
     indexBuilt = false
     lastBuildFrame = nil
+    pendingRebuildFrame = nil
 end

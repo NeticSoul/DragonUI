@@ -490,3 +490,13 @@ L["Copy Text"] = "í…ìŠ¤íŠ¸ ë³µì‚¬"
 -- Version Check Module
 L["Version Check"] = "버전 확인"
 L["Broadcast and detect addon version updates across group members"] = "그룹원 간 애드온 버전 업데이트를 감지하고 방송합니다"
+
+-- Quest nameplate icons wizard (Questie coexistence)
+L["Quest Icons on Nameplates"] = "이름표의 퀘스트 아이콘"
+L["Which quest icons do you want on your nameplates?"] = "이름표에 어떤 퀘스트 아이콘을 표시할까요?"
+L["Kill"] = "처치"
+L["Loot"] = "전리품"
+L['Pointer mode (just "!")'] = '포인터 모드 ("!"만)'
+L["Use Questie"] = "Questie 사용"
+L["Applying quest icon settings needs a UI reload."] = "퀘스트 아이콘 설정을 적용하려면 UI를 다시 불러와야 합니다."
+L["Reload"] = "다시 불러오기"

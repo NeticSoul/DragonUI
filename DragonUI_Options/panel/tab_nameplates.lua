@@ -111,6 +111,16 @@ local function RefreshAndRebuildNameplates()
     end
 end
 
+-- Force the quest name/loot indexes to rebuild (provider or name-mode toggle changed).
+local function RefreshQuestNameResolution()
+    local np = addon.Nameplates
+    if np and np.quest then
+        if np.quest.ClearIndex then np.quest.ClearIndex() end
+        if np.quest.OnQuestLogChanged then np.quest.OnQuestLogChanged() end
+    end
+    RefreshNameplates()
+end
+
 local function OnModuleToggle(val)
     if not addon.db.profile.modules then
         addon.db.profile.modules = {}
@@ -1497,6 +1507,47 @@ local function BuildQuestSubTab(scroll)
         desc = LO["Show kill/loot icons over your quest-objective mobs. Without awesome_wotlk, only your target, mouseover and focus show them."],
         dbPath = DB .. ".questIcons.enabled",
         callback = RefreshAndRebuildNameplates,
+    })
+    C:AddToggle(general, {
+        label = LO["Resolve By Name"],
+        desc = LO["Match plate names to your active objectives so icons show on every plate without awesome_wotlk. Kill objectives work on their own; loot needs a quest addon below."],
+        dbPath = DB .. ".questIcons.nameResolution",
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshQuestNameResolution,
+    })
+    C:AddDropdown(general, {
+        label = LO["Loot Database"],
+        desc = LO["Which quest addon supplies loot data (which mob drops a quest item). Auto picks the best loaded one."],
+        dbPath = DB .. ".questIcons.lootProvider",
+        values = {
+            auto = LO["Auto"],
+            off = LO["Off"],
+            pfquest = "pfQuest",
+            questie = "Questie",
+            questhelper = "QuestHelper",
+        },
+        width = 220,
+        disabled = IsQuestIconsDisabled,
+        callback = RefreshQuestNameResolution,
+    })
+    C:AddDropdown(general, {
+        label = LO["Icons With Questie"],
+        desc = LO["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."],
+        dbPath = DB .. ".questIcons.questieCoexist",
+        values = {
+            ask = LO["Ask"],
+            dragonui = "DragonUI",
+            questie = "Questie",
+        },
+        width = 220,
+        disabled = function() return IsQuestIconsDisabled() or not (_G.Questie or _G.QuestieLoader) end,
+        callback = function()
+            local np = addon.Nameplates
+            if not (np and np.quest_coexist) then return end
+            local val = C:GetDBValue(DB .. ".questIcons.questieCoexist")
+            if np.quest_coexist.ApplyChoice then np.quest_coexist.ApplyChoice(val) end
+            if val == "ask" and np.quest_coexist.Check then np.quest_coexist.Check() end
+        end,
     })
     C:AddToggle(general, {
         label = LO["Pointer Mode"],

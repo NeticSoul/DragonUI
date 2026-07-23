@@ -11,7 +11,8 @@ local _arialn = addon.Fonts and addon.Fonts.ARIALN or "Fonts\\ARIALN.TTF"
 
 local defaults = {
     global = {
-        combuctorCache = {} -- Per-character bank snapshot (realm|name keys); used by combuctor module
+        combuctorCache = {}, -- Per-character bank snapshot (realm|name keys); used by combuctor module
+        questLootLearned = {} -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
     },
     profile = {
         version = 1,
@@ -916,6 +917,9 @@ local defaults = {
                 showComboPoints = false, -- show combo points on target nameplate
                 questIcons = { -- quest objective icons on nameplates (kill/loot); stock: target/mouseover/focus only, awesome_wotlk: all plates
                     enabled = true,
+                    nameResolution = true, -- token-less: match plate name to active objectives (kill: addon-free, loot: quest-addon DB)
+                    lootProvider = "auto", -- loot DB source: auto|off|pfquest|questie|questhelper
+                    questieCoexist = "ask", -- who draws icons when Questie's own nameplate icons are on: ask|dragonui|questie
                     pointerMode = false, -- always show quest_pointer; skips kill/loot type crossref
                     killIcon = "sword", -- "sword" | "skull"
                     lootIcon = "bag", -- "bag" | "chest"

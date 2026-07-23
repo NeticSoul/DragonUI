@@ -1479,3 +1479,13 @@ L["Square"] = "각진 모서리"
 -- Range Indicator colors
 L["Out of Range Color"] = "사거리 초과 색상"
 L["Not Enough Mana Color"] = "마나 부족 색상"
+
+-- Quest nameplate icons (loot providers + Questie coexistence)
+L["Resolve By Name"] = "이름으로 확인"
+L["Match plate names to your active objectives so icons show on every plate without awesome_wotlk. Kill objectives work on their own; loot needs a quest addon below."] = "이름표 이름을 활성 목표와 대조하여 awesome_wotlk 없이도 모든 이름표에 아이콘을 표시합니다. 처치 목표는 단독으로 작동하며, 전리품은 아래의 퀘스트 애드온이 필요합니다."
+L["Loot Database"] = "전리품 데이터베이스"
+L["Which quest addon supplies loot data (which mob drops a quest item). Auto picks the best loaded one."] = "어떤 퀘스트 애드온이 전리품 데이터(어떤 몹이 퀘스트 아이템을 떨어뜨리는지)를 제공할지 선택합니다. 자동은 로드된 것 중 가장 좋은 것을 선택합니다."
+L["Auto"] = "자동"
+L["Icons With Questie"] = "Questie와 아이콘"
+L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Questie가 자체 이름표 아이콘을 켠 채 로드되었을 때 누가 이름표에 퀘스트 아이콘을 그릴지 결정합니다. DragonUI는 Questie의 아이콘을 끄고(재시작 필요), Questie는 DragonUI의 아이콘을 숨깁니다."
+L["Ask"] = "묻기"

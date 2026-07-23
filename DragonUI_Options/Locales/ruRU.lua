@@ -1476,3 +1476,13 @@ L["Square"] = "Прямоугольный"
 -- Range Indicator colors
 L["Out of Range Color"] = "Цвет вне досягаемости"
 L["Not Enough Mana Color"] = "Цвет при нехватке маны"
+
+-- Quest nameplate icons (loot providers + Questie coexistence)
+L["Resolve By Name"] = "Определять по имени"
+L["Match plate names to your active objectives so icons show on every plate without awesome_wotlk. Kill objectives work on their own; loot needs a quest addon below."] = "Сопоставляет имена на табличках с вашими активными целями, чтобы значки отображались на всех табличках без awesome_wotlk. Цели на убийство работают сами; для добычи нужен аддон заданий (ниже)."
+L["Loot Database"] = "База данных добычи"
+L["Which quest addon supplies loot data (which mob drops a quest item). Auto picks the best loaded one."] = "Какой аддон заданий предоставляет данные о добыче (какой моб роняет предмет задания). «Авто» выбирает лучший из загруженных."
+L["Auto"] = "Авто"
+L["Icons With Questie"] = "Значки с Questie"
+L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Кто рисует значки заданий на табличках, когда загружен Questie со своими значками. DragonUI отключает значки Questie (нужна перезагрузка); Questie скрывает значки DragonUI."
+L["Ask"] = "Спросить"

@@ -358,6 +358,10 @@ local function EngineOnUpdate(_, elapsed)
     -- Engine tick counter for per-frame memoization.
     NP.module._engineFrame = (NP.module._engineFrame or 0) + 1
 
+    if NP.quest and NP.quest.TickDeferredRebuild then
+        NP.quest.TickDeferredRebuild(NP.module._engineFrame)
+    end
+
     -- 0. Castbar progress on active plates.
     NP.castbar.TickAllPlateCastBars()
 
@@ -540,6 +544,9 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "UPDATE_MOUSEOVER_UNIT" then
         NP.module.mouseoverGUID = UnitGUID("mouseover")
+        if NP.quest and NP.quest.OnMouseover then
+            NP.quest.OnMouseover()
+        end
         return
     end
     if event == "UNIT_TARGET" and unit then
@@ -566,6 +573,12 @@ local function EngineOnEvent(_, event, unit, ...)
         end
         return
     end
+    if event == "LOOT_OPENED" then
+        if NP.quest and NP.quest.OnLootOpened then
+            NP.quest.OnLootOpened()
+        end
+        return
+    end
     if event == "PLAYER_TOTEM_UPDATE" then
         NP.widgets.OnTotemUpdate(unit)
         E.QueueMass(CB.OnUpdateNameplate)
@@ -588,6 +601,9 @@ local function EngineOnEvent(_, event, unit, ...)
             E.QueueMass(CB.OnUpdateNameplate)
         end
         E.QueueMass(CB.OnUpdateCastbar)
+        if NP.quest_coexist and NP.quest_coexist.Check then
+            NP.quest_coexist.Check()
+        end
         return
     end
     if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
@@ -851,6 +867,7 @@ local function RunNameplatesApply()
         f:RegisterEvent("UNIT_COMBO_POINTS")
         f:RegisterEvent("QUEST_LOG_UPDATE")
         f:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
+        f:RegisterEvent("LOOT_OPENED")
         f:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
         f:RegisterEvent("PLAYER_TOTEM_UPDATE")
         f:RegisterEvent("PLAYER_REGEN_ENABLED")

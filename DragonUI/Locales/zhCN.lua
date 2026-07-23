@@ -521,3 +521,13 @@ L["URL"] = "URL"
 -- Version Check Module
 L["Version Check"] = "版本检查"
 L["Broadcast and detect addon version updates across group members"] = "检测队伍成员间插件版本更新，通过广播和接收版本信息"
+
+-- Quest nameplate icons wizard (Questie coexistence)
+L["Quest Icons on Nameplates"] = "姓名板任务图标"
+L["Which quest icons do you want on your nameplates?"] = "你想在姓名板上显示哪种任务图标？"
+L["Kill"] = "击杀"
+L["Loot"] = "拾取"
+L['Pointer mode (just "!")'] = '指针模式（仅"!"）'
+L["Use Questie"] = "使用 Questie"
+L["Applying quest icon settings needs a UI reload."] = "应用任务图标设置需要重载界面。"
+L["Reload"] = "重载"

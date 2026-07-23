@@ -1475,3 +1475,13 @@ L["Square"] = "方形"
 -- Range Indicator colors
 L["Out of Range Color"] = "超出范围颜色"
 L["Not Enough Mana Color"] = "法力不足颜色"
+
+-- Quest nameplate icons (loot providers + Questie coexistence)
+L["Resolve By Name"] = "按名称识别"
+L["Match plate names to your active objectives so icons show on every plate without awesome_wotlk. Kill objectives work on their own; loot needs a quest addon below."] = "将姓名板名称与你的进行中目标匹配，从而在没有 awesome_wotlk 的情况下在每个姓名板上显示图标。击杀目标可独立工作；拾取需要下方的任务插件。"
+L["Loot Database"] = "掉落数据库"
+L["Which quest addon supplies loot data (which mob drops a quest item). Auto picks the best loaded one."] = "由哪个任务插件提供掉落数据（哪个怪物掉落任务物品）。自动会选择已加载的最佳插件。"
+L["Auto"] = "自动"
+L["Icons With Questie"] = "与 Questie 的图标"
+L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "当 Questie 已加载并开启其自身姓名板图标时，由谁在姓名板上绘制任务图标。DragonUI 会禁用 Questie 的（需重载）；Questie 会隐藏 DragonUI 的。"
+L["Ask"] = "询问"

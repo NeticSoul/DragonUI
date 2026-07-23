@@ -528,3 +528,13 @@ L["Copy Text"] = true
 -- Version Check Module
 L["Version Check"] = true
 L["Broadcast and detect addon version updates across group members"] = true
+
+-- Quest nameplate icons wizard (Questie coexistence)
+L["Quest Icons on Nameplates"] = true
+L["Which quest icons do you want on your nameplates?"] = true
+L["Kill"] = true
+L["Loot"] = true
+L['Pointer mode (just "!")'] = true
+L["Use Questie"] = true
+L["Applying quest icon settings needs a UI reload."] = true
+L["Reload"] = true

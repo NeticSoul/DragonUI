@@ -491,3 +491,13 @@ L["Copy Text"] = "Копировать текст"
 
 L["Version Check"] = "Проверка версий"
 L["Broadcast and detect addon version updates across group members"] = "Обнаруживает обновления аддона среди участников группы, отправляя и получая версию"
+
+-- Quest nameplate icons wizard (Questie coexistence)
+L["Quest Icons on Nameplates"] = "Значки заданий на табличках"
+L["Which quest icons do you want on your nameplates?"] = "Какие значки заданий показывать на табличках?"
+L["Kill"] = "Убийство"
+L["Loot"] = "Добыча"
+L['Pointer mode (just "!")'] = 'Режим указателя (только «!»)'
+L["Use Questie"] = "Использовать Questie"
+L["Applying quest icon settings needs a UI reload."] = "Для применения настроек значков заданий нужна перезагрузка интерфейса."
+L["Reload"] = "Перезагрузить"

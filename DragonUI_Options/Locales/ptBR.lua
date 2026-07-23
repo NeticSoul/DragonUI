@@ -681,3 +681,13 @@ L["Square"] = "Quadrado"
 -- Range Indicator colors
 L["Out of Range Color"] = "Cor fora de alcance"
 L["Not Enough Mana Color"] = "Cor de mana insuficiente"
+
+-- Quest nameplate icons (loot providers + Questie coexistence)
+L["Resolve By Name"] = "Resolver por nome"
+L["Match plate names to your active objectives so icons show on every plate without awesome_wotlk. Kill objectives work on their own; loot needs a quest addon below."] = "Combina os nomes das placas com seus objetivos ativos para mostrar ícones em todas as placas sem o awesome_wotlk. Objetivos de matar funcionam sozinhos; saque precisa de um addon de missões (abaixo)."
+L["Loot Database"] = "Banco de dados de saque"
+L["Which quest addon supplies loot data (which mob drops a quest item). Auto picks the best loaded one."] = "Qual addon de missões fornece os dados de saque (qual criatura larga o item de missão). Automático escolhe o melhor carregado."
+L["Auto"] = "Automático"
+L["Icons With Questie"] = "Ícones com Questie"
+L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Quem desenha os ícones de missão nas placas quando o Questie está carregado com seus próprios ícones ativos. DragonUI desativa os do Questie (precisa recarregar); Questie oculta os do DragonUI."
+L["Ask"] = "Perguntar"

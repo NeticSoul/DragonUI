@@ -132,3 +132,13 @@ L["Extra Bar"] = "Barre Supplémentaire"
 L["A standalone action bar, independent of any class bonus bar"] = "Une barre d'action autonome, indépendante de toute barre de bonus de classe"
 L["Drag a spell, item or macro here."] = "Faites glisser un sort, un objet ou une macro ici."
 
+
+-- Quest nameplate icons wizard (Questie coexistence)
+L["Quest Icons on Nameplates"] = "Icônes de quête sur les plaques"
+L["Which quest icons do you want on your nameplates?"] = "Quelles icônes de quête voulez-vous sur vos plaques ?"
+L["Kill"] = "Tuer"
+L["Loot"] = "Butin"
+L['Pointer mode (just "!")'] = 'Mode pointeur (juste "!")'
+L["Use Questie"] = "Utiliser Questie"
+L["Applying quest icon settings needs a UI reload."] = "Appliquer les réglages des icônes de quête nécessite un rechargement de l'interface."
+L["Reload"] = "Recharger"

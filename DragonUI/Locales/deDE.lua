@@ -491,3 +491,13 @@ L["Copy Text"] = "Text kopieren"
 -- Version Check Module
 L["Version Check"] = "Versionsprüfung"
 L["Broadcast and detect addon version updates across group members"] = "Erkennt Addon-Updates zwischen Gruppenmitgliedern durch Senden und Empfangen der Version"
+
+-- Quest nameplate icons wizard (Questie coexistence)
+L["Quest Icons on Nameplates"] = "Questsymbole auf Namensplaketten"
+L["Which quest icons do you want on your nameplates?"] = "Welche Questsymbole möchtest du auf deinen Namensplaketten?"
+L["Kill"] = "Töten"
+L["Loot"] = "Beute"
+L['Pointer mode (just "!")'] = 'Zeigermodus (nur "!")'
+L["Use Questie"] = "Questie verwenden"
+L["Applying quest icon settings needs a UI reload."] = "Das Anwenden der Questsymbol-Einstellungen erfordert ein Neuladen der Oberfläche."
+L["Reload"] = "Neu laden"
