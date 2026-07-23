@@ -404,7 +404,7 @@ do
         f.nameFilter = _G[f:GetName() .. "Search"]
 
         f.qualityFilter = mod.QualityFilter:New(f)
-        f.qualityFilter:SetPoint("BOTTOM", 0, 7)
+        f.qualityFilter:SetPoint("BOTTOM", 0, 9)
 
         f.itemFrame = mod.ItemFrame:New(f)
         f.itemFrame:SetPoint("TOPLEFT", 14, -62)

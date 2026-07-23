@@ -1456,7 +1456,7 @@ do
                     if previous then
                         btn:SetPoint("LEFT", previous, "RIGHT", TOKEN_GAP, 0)
                     else
-                        btn:SetPoint("LEFT", self, "LEFT", 0, 1)
+                        btn:SetPoint("LEFT", self, "LEFT", 0, 0)
                     end
                     previous = btn
                 end
@@ -1623,7 +1623,7 @@ do
         f:AddQualityButton(7)
 
         -- 7 buttons, 1px apart: real width keeps the row properly centered
-        f:SetWidth(SIZE * 7 + 6)
+        f:SetWidth(SIZE * 7 + (-2) * 6)
         f:SetHeight(SIZE)
         f:UpdateHighlight()
 
@@ -1633,7 +1633,7 @@ do
     function QualityFilter:AddQualityButton(quality, qualityFlags)
         local button = FilterButton:Create(self, quality, qualityFlags or mod.QualityFlags[quality])
         if self.prev then
-            button:SetPoint("LEFT", self.prev, "RIGHT", 1, 0)
+            button:SetPoint("LEFT", self.prev, "RIGHT", -2, 0)
         else
             button:SetPoint("LEFT")
         end
