@@ -219,7 +219,7 @@ do
 
         if IsModuleEnabled() then
             -- Print version on login (not on every PLAYER_ENTERING_WORLD)
-            DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: version " .. (CURRENT_VERSION or "?"))
+            DEFAULT_CHAT_FRAME:AddMessage("|cff1785d1DragonUI|r: Version " .. (CURRENT_VERSION or "?"))
             SetupEvents()
 
             -- Initial broadcast shortly after login
