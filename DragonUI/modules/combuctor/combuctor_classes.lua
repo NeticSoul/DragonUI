@@ -318,7 +318,7 @@ do
         return [[Interface\PaperDoll\UI-Backpack-EmptySlot]]
     end
 
-    -- Retail skin shows empty chrome on NormalTexture; tint that too (BagBrother pattern)
+    -- Retail skin shows empty chrome on NormalTexture; tint that too
     function ItemSlot:SetSlotChromeColor(r, g, b)
         SetItemButtonTextureVertexColor(self, r, g, b)
         local nt = self:GetNormalTexture()
@@ -896,38 +896,83 @@ do
 
     function ItemFrame:Layout()
         local width, height = self:GetWidth(), self:GetHeight()
-        local count = self.count
-        if count == 0 or width <= 0 or height <= 0 then return end
+        if width <= 0 or height <= 0 then return end
 
         local cfg = mod.GetModuleConfig()
         local spacing = (cfg and cfg.item_spacing) or 2
-        local size = 36 + spacing * 2
-        local maxScale = (cfg and cfg.item_scale) or 1
+        local size = 37 + spacing
+        local maxScale = (cfg and cfg.item_scale) or 1.25
+        local bagBreak = (cfg and cfg.bag_break)
+        if bagBreak == nil then bagBreak = 1 end
+        local breakSpace = (cfg and cfg.break_space) or 1.3
 
-        -- Best-fit grid: estimate columns from the frame's aspect ratio, cap by item scale
-        local rows = ceil(sqrt(count * height / width))
-        local cols = max(1, ceil(rows * width / height))
-        rows = ceil(count / cols)
-        local bestFit = min(width / cols, height / rows, maxScale * size)
-        cols = max(1, floor(width / bestFit + 0.001))
-        local scale = bestFit / size
-
+        local buttons, breaks, group = {}, { 0 }, 0
+        local parent = self:GetParent()
         local items = self.items
-        local i = 0
 
         for _, bag in ipairs(self.bags) do
-            for slot = 1, self:GetBagSize(bag) do
-                local item = items[ToIndex(bag, slot)]
-                if item then
-                    i = i + 1
-                    local row = (i - 1) % cols
-                    local col = ceil(i / cols) - 1
-                    item:ClearAllPoints()
-                    item:SetScale(scale)
-                    item:SetPoint("TOPLEFT", self, "TOPLEFT", size * row + spacing, -(size * col + spacing))
-                    item:Show()
+            local numSlots = self:GetBagSize(bag)
+            local showing = not parent or not parent.IsShowingBag or parent:IsShowingBag(bag)
+            if numSlots > 0 and showing then
+                local family = self:GetBagType(bag) or 0
+                if (bagBreak > 1 or (bagBreak > 0 and family ~= group and family * group <= 0))
+                    and #buttons > breaks[#breaks] then
+                    table.insert(breaks, #buttons)
                 end
+                for slot = 1, numSlots do
+                    local item = items[ToIndex(bag, slot)]
+                    if item then
+                        table.insert(buttons, item)
+                    end
+                end
+                group = family
             end
+        end
+
+        local n = #buttons
+        if n == 0 then return end
+
+        local b = #breaks - 1
+        local function CountRows(cols)
+            local rows = b * (breakSpace - 1)
+            for k, index in ipairs(breaks) do
+                rows = rows + ceil(((breaks[k + 1] or n) - index) / cols)
+            end
+            return max(rows, 1)
+        end
+
+        -- Maximize cell size; on a tie pick the layout with least leftover chrome
+        -- (avoids a fat empty strip on the right while staying left-aligned).
+        local cap = maxScale * size
+        local maxCols = max(1, min(n, floor(width / max(size * 0.5, 1))))
+        local columns, bestFit, bestWaste = 1, 0, 1e9
+        for cols = 1, maxCols do
+            local rows = CountRows(cols)
+            local fit = min(width / cols, height / rows, cap)
+            local waste = (width - cols * fit) + (height - rows * fit)
+            if fit > bestFit + 0.001 or (fit >= bestFit - 0.001 and waste < bestWaste) then
+                bestFit, columns, bestWaste = fit, cols, waste
+            end
+        end
+        if bestFit <= 0 then
+            bestFit = min(width, height, cap)
+        end
+        local scale = bestFit / size
+
+        local breakpoint, stage, x, y = breaks[2] or n, 2, 0, 0
+        for i, button in ipairs(buttons) do
+            if i > breakpoint then
+                stage = stage + 1
+                breakpoint = breaks[stage] or n
+                x, y = 0, y + breakSpace
+            elseif x == columns then
+                x, y = 0, y + 1
+            end
+            button:ClearAllPoints()
+            button:SetScale(scale)
+            button:SetPoint("TOPLEFT", self, "TOPLEFT", size * x, -size * y)
+            button:Show()
+            x = x + 1
         end
     end
 
@@ -1025,7 +1070,7 @@ do
         ht:SetTexture(mod.CT.bagslot)
         ht:SetTexCoord(358 / 512, 419 / 512, 1 / 128, 62 / 128)
 
-        -- BagBrother checked = bag currently shown in the item grid
+        -- Checked = bag currently shown in the item grid
         local checked = bag:CreateTexture(nil, "OVERLAY")
         checked:SetAllPoints()
         checked:SetBlendMode("ADD")
@@ -1208,7 +1253,7 @@ do
                 GameTooltip:SetText(EQUIP_CONTAINER)
             end
         end
-        -- BagBrother ShowBag / HideBag hint
+        -- Show/hide bag filter hint
         if self:IsShowing() then
             GameTooltip:AddLine(mod.L.HideBag)
         else
@@ -1257,7 +1302,7 @@ do
             return
         end
 
-        -- BagBrother: left-click toggles bag visibility; right-click is unused (no bag menu on 3.3.5a)
+        -- Left-click toggles bag visibility; right-click unused (no bag menu on 3.3.5a)
         if button == "RightButton" then
             return
         end

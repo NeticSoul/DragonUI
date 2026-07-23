@@ -1681,7 +1681,7 @@ local function AttachCombuctorButtons(frame, sortRef, clearRef, sellScrapRef, so
     -- Single header row: [ searchBox ][ sellScrap ][ clearBtn ][ sortBtn ][ bagToggle ]
     if bagToggle then
         bagToggle:ClearAllPoints()
-        bagToggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -30)
+        bagToggle:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -30)
     end
 
     sortBtn:ClearAllPoints()
