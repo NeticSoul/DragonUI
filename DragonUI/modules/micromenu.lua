@@ -1545,8 +1545,17 @@ local function ApplyMicromenuSystem()
         MainMenuBarBackpackButton:SetPushedTexture(nil)
         MainMenuBarBackpackButton:SetHighlightTexture ''
         MainMenuBarBackpackButton:SetCheckedTexture ''
-        MainMenuBarBackpackButton:GetHighlightTexture():set_atlas('bag-main-highlight-2x')
-        MainMenuBarBackpackButton:GetCheckedTexture():set_atlas('bag-main-highlight-2x')
+        do
+            local ht = MainMenuBarBackpackButton:GetHighlightTexture()
+            ht:SetAllPoints()
+            ht:SetBlendMode('ADD')
+            ht:set_atlas('bag-main-highlight-2x')
+            local ct = MainMenuBarBackpackButton:GetCheckedTexture()
+            ct:SetAllPoints()
+            ct:SetBlendMode('ADD')
+            ct:SetDrawLayer('OVERLAY', 7)
+            ct:set_atlas('bag-main-highlight-2x')
+        end
         MainMenuBarBackpackButtonIconTexture:set_atlas('bag-main-2x')
 
         -- DON'T position MainMenuBarBackpackButton here if using overlay - will be positioned by the overlay
@@ -1570,19 +1579,37 @@ local function ApplyMicromenuSystem()
         highlight:SetAlpha(.4);
         highlight:set_atlas('bag-border-highlight-2x', true)
         KeyRingButton:GetNormalTexture():set_atlas('bag-reagent-border-2x')
-        KeyRingButton:GetCheckedTexture():set_atlas('bag-border-highlight-2x', true)
-        -- Fix KeyRing highlight sync
+        do
+            local ct = KeyRingButton:GetCheckedTexture()
+            ct:SetAllPoints()
+            ct:SetBlendMode('ADD')
+            ct:SetDrawLayer('OVERLAY', 7)
+            ct:set_atlas('bag-border-highlight-2x')
+        end
+        -- Combuctor replaces ContainerFrame_OnShow checked sync; highlight backpack/bag slots instead
         local function SyncKeyRingButton()
+            if addon.CombuctorModule and addon.CombuctorModule.CombuctorModule
+                and addon.CombuctorModule.CombuctorModule.applied
+                and addon.CombuctorHighlightMainMenuBags then
+                addon.CombuctorHighlightMainMenuBags()
+                return
+            end
             if KeyRingButton then
-                KeyRingButton:SetChecked(IsBagOpen(-2) or false)
+                KeyRingButton:SetChecked(IsBagOpen(-2) and 1 or nil)
             end
         end
 
         if not MicromenuModule.hooks.KeyRingSyncHooks then
             hooksecurefunc("ToggleKeyRing", SyncKeyRingButton)
             hooksecurefunc("CloseAllBags", function()
+                if addon.CombuctorModule and addon.CombuctorModule.CombuctorModule
+                    and addon.CombuctorModule.CombuctorModule.applied
+                    and addon.CombuctorHighlightMainMenuBags then
+                    addon.CombuctorHighlightMainMenuBags()
+                    return
+                end
                 if KeyRingButton then
-                    KeyRingButton:SetChecked(false)
+                    KeyRingButton:SetChecked(nil)
                 end
             end)
             hooksecurefunc("ContainerFrame_OnHide", SyncKeyRingButton)
@@ -1618,8 +1645,10 @@ local function ApplyMicromenuSystem()
                 normalTexture:Hide()
             end
 
-            bags:GetCheckedTexture():set_atlas('bag-border-highlight-2x', true)
+            bags:GetCheckedTexture():SetAllPoints()
+            bags:GetCheckedTexture():SetBlendMode('ADD')
             bags:GetCheckedTexture():SetDrawLayer('OVERLAY', 7)
+            bags:GetCheckedTexture():set_atlas('bag-border-highlight-2x')
 
             local highlight = bags:GetHighlightTexture();
             highlight:SetAllPoints();

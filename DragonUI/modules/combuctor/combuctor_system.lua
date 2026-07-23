@@ -8,6 +8,62 @@ local mod = addon.CombuctorModule
 
 local AutoShowInventory, AutoHideInventory
 
+local function HideBlizzardKeyring()
+    local index = IsBagOpen(KEYRING_CONTAINER)
+    if index then
+        local frame = _G["ContainerFrame" .. index]
+        if frame then
+            frame:Hide()
+        end
+    end
+end
+
+-- BagBrother HighlightMainMenu: light backpack + bag slots + keyring while Combuctor inventory is open.
+local function IsCombuctorInventoryShown()
+    if not mod.frames then return false end
+    for _, frame in pairs(mod.frames) do
+        if frame and not frame.isBank and frame.IsShown and frame:IsShown() then
+            return true
+        end
+    end
+    return false
+end
+
+local function HighlightMainMenuBags()
+    local active = IsCombuctorInventoryShown() and 1 or nil
+    local buttons = {
+        _G.MainMenuBarBackpackButton,
+        _G.CharacterBag0Slot,
+        _G.CharacterBag1Slot,
+        _G.CharacterBag2Slot,
+        _G.CharacterBag3Slot,
+        _G.KeyRingButton,
+    }
+    for i = 1, #buttons do
+        local button = buttons[i]
+        if button then
+            button:SetChecked(active)
+        end
+    end
+end
+
+-- CheckButtons toggle checked on click after OnClick; re-assert next frame
+local highlightBagsDriver
+local function ScheduleHighlightMainMenuBags()
+    if not highlightBagsDriver then
+        highlightBagsDriver = CreateFrame("Frame")
+    end
+    highlightBagsDriver:SetScript("OnUpdate", function(self)
+        self:SetScript("OnUpdate", nil)
+        HighlightMainMenuBags()
+    end)
+end
+
+-- Kept for micromenu / older call sites
+local function SyncKeyRingChecked()
+    ScheduleHighlightMainMenuBags()
+end
+
 local function ApplyCombuctorSystem()
     if mod.CombuctorModule.applied then return end
 
@@ -42,6 +98,7 @@ local function ApplyCombuctorSystem()
     mod.CombuctorModule.originalStates.OpenAllBags = _G.OpenAllBags
     mod.CombuctorModule.originalStates.ToggleAllBags = _G.ToggleAllBags
     mod.CombuctorModule.originalStates.ToggleBag = _G.ToggleBag
+    mod.CombuctorModule.originalStates.ToggleKeyRing = _G.ToggleKeyRing
 
     -- Hook bag functions
     _G.OpenBackpack = AutoShowInventory
@@ -51,24 +108,72 @@ local function ApplyCombuctorSystem()
     end
 
     _G.ToggleBank = function(bag) mod:Toggle(bag) end
-    _G.ToggleBackpack = function() mod:Toggle(BACKPACK_CONTAINER) end
+    _G.ToggleBackpack = function()
+        mod:Toggle(BACKPACK_CONTAINER)
+        ScheduleHighlightMainMenuBags()
+    end
     _G.ToggleBag = function(slot)
         if slot == BACKPACK_CONTAINER then
             mod:Toggle(BACKPACK_CONTAINER)
         else
             mod:Toggle(slot)
         end
+        ScheduleHighlightMainMenuBags()
+    end
+    -- Keyring lives inside Combuctor inventory (BagBrother-style); never open stock ContainerFrame
+    _G.ToggleKeyRing = function()
+        if IsOptionFrameOpen and IsOptionFrameOpen() then
+            return
+        end
+        HideBlizzardKeyring()
+        mod:Toggle(KEYRING_CONTAINER)
+        ScheduleHighlightMainMenuBags()
     end
     -- Some keybind paths call OpenAllBags directly, so make it a true toggle.
-    _G.OpenAllBags = function() mod:Toggle(BACKPACK_CONTAINER) end
+    _G.OpenAllBags = function()
+        mod:Toggle(BACKPACK_CONTAINER)
+        ScheduleHighlightMainMenuBags()
+    end
     if _G.ToggleAllBags then
-        _G.ToggleAllBags = function() mod:Toggle(BACKPACK_CONTAINER) end
+        _G.ToggleAllBags = function()
+            mod:Toggle(BACKPACK_CONTAINER)
+            ScheduleHighlightMainMenuBags()
+        end
     end
 
     if not mod.CombuctorModule.hooks.closeAllBags then
-        hooksecurefunc("CloseAllBags", function() mod:Hide(BACKPACK_CONTAINER) end)
+        hooksecurefunc("CloseAllBags", function()
+            mod:Hide(BACKPACK_CONTAINER)
+            ScheduleHighlightMainMenuBags()
+        end)
         mod.CombuctorModule.hooks.closeAllBags = true
     end
+
+    -- Stock BagSlotButton_UpdateChecked uses IsBagOpen(ContainerFrame) and clears the clicked bag
+    if not mod.CombuctorModule.hooks.bagSlotHighlight then
+        if _G.BagSlotButton_OnClick then
+            hooksecurefunc("BagSlotButton_OnClick", ScheduleHighlightMainMenuBags)
+        end
+        if _G.BagSlotButton_OnModifiedClick then
+            hooksecurefunc("BagSlotButton_OnModifiedClick", ScheduleHighlightMainMenuBags)
+        end
+        if _G.BackpackButton_OnClick then
+            hooksecurefunc("BackpackButton_OnClick", ScheduleHighlightMainMenuBags)
+        end
+        if _G.BackpackButton_OnModifiedClick then
+            hooksecurefunc("BackpackButton_OnModifiedClick", ScheduleHighlightMainMenuBags)
+        end
+        if _G.BagSlotButton_UpdateChecked then
+            hooksecurefunc("BagSlotButton_UpdateChecked", ScheduleHighlightMainMenuBags)
+        end
+        if _G.BackpackButton_UpdateChecked then
+            hooksecurefunc("BackpackButton_UpdateChecked", ScheduleHighlightMainMenuBags)
+        end
+        mod.CombuctorModule.hooks.bagSlotHighlight = true
+    end
+
+    HideBlizzardKeyring()
+    HighlightMainMenuBags()
     BankFrame:UnregisterAllEvents()
     BankFrame:Hide()
 
@@ -157,6 +262,7 @@ local function RestoreCombuctorSystem()
             if frame.HideFrame then frame:HideFrame() end
         end
     end
+    HighlightMainMenuBags()
 
     -- Restore original bag functions
     if mod.CombuctorModule.originalStates.OpenBackpack then
@@ -176,6 +282,9 @@ local function RestoreCombuctorSystem()
     end
     if mod.CombuctorModule.originalStates.ToggleBag then
         _G.ToggleBag = mod.CombuctorModule.originalStates.ToggleBag
+    end
+    if mod.CombuctorModule.originalStates.ToggleKeyRing then
+        _G.ToggleKeyRing = mod.CombuctorModule.originalStates.ToggleKeyRing
     end
 
     mod.CombuctorModule.originalStates = {}
@@ -302,3 +411,9 @@ addon.ApplyCombuctorSystem = ApplyCombuctorSystem
 addon.RestoreCombuctorSystem = RestoreCombuctorSystem
 addon.RefreshCombuctorFrames = RefreshCombuctorFrames
 addon.CombuctorItemSlot = mod.ItemSlot
+addon.CombuctorSyncKeyRingChecked = SyncKeyRingChecked
+addon.CombuctorHighlightMainMenuBags = HighlightMainMenuBags
+mod.SyncKeyRingChecked = SyncKeyRingChecked
+mod.HighlightMainMenuBags = HighlightMainMenuBags
+mod.ScheduleHighlightMainMenuBags = ScheduleHighlightMainMenuBags
+mod.HideBlizzardKeyring = HideBlizzardKeyring

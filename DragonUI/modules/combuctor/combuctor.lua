@@ -329,14 +329,16 @@ local SET_TRADE = "Trade"
 
 local defaults = {
     inventory = {
-        bags = { 0, 1, 2, 3, 4 },
+        -- KEYRING last: keys render after bag slots (BagBrother InventoryBags order)
+        bags = { 0, 1, 2, 3, 4, KEYRING_CONTAINER },
         position = { "BOTTOMRIGHT", nil, "BOTTOMRIGHT", -64, 64 },
         showBags = false,
         leftSideFilter = true,
         w = 384,
         h = 512,
         sets = {},
-        exclude = {}
+        exclude = {},
+        hiddenBags = {}, -- BagBrother: per-bag filter; true = omit from item grid
     },
     bank = {
         bags = { -1, 5, 6, 7, 8, 9, 10, 11 },
@@ -346,7 +348,8 @@ local defaults = {
         w = 512,
         h = 512,
         sets = {},
-        exclude = {}
+        exclude = {},
+        hiddenBags = {},
     },
     guild = {
         position = { "LEFT", nil, "LEFT", 24, 0 },
@@ -369,6 +372,9 @@ L.MoveTip = (addon.L and addon.L["|cff00ff00Drag|r to move"]) or "|cff00ff00Drag
 L.ResetPositionTip = (addon.L and addon.L["|cff00ff00Alt+Right-Click|r to reset position"]) or "|cff00ff00Alt+Right-Click|r to reset position"
 L.ToggleInventory = (addon.L and addon.L["Toggle Inventory"]) or "Toggle Inventory"
 L.ToggleBank = (addon.L and addon.L["Toggle Bank"]) or "Toggle Bank"
+L.ShowBag = (addon.L and addon.L["|cff00ff00Left-Click|r to show this bag's items"]) or "|cff00ff00Left-Click|r to show this bag's items"
+L.HideBag = (addon.L and addon.L["|cff00ff00Left-Click|r to hide this bag's items"]) or "|cff00ff00Left-Click|r to hide this bag's items"
+L.DragBag = (addon.L and addon.L["|cff00ff00Drag|r to move this bag"]) or "|cff00ff00Drag|r to move this bag"
 
 local function GetSetDisplayName(name)
     if name == SET_EQUIPMENT then
@@ -434,8 +440,24 @@ local function SetupDatabase()
     end
     if not DB.inventory.sets then DB.inventory.sets = {} end
     if not DB.inventory.exclude then DB.inventory.exclude = {} end
+    if not DB.inventory.hiddenBags then DB.inventory.hiddenBags = {} end
     if not DB.bank.sets then DB.bank.sets = {} end
     if not DB.bank.exclude then DB.bank.exclude = {} end
+    if not DB.bank.hiddenBags then DB.bank.hiddenBags = {} end
+
+    -- Existing profiles predate keyring-in-inventory; append without wiping bag order
+    if DB.inventory.bags then
+        local hasKeyring = false
+        for _, bagID in pairs(DB.inventory.bags) do
+            if bagID == KEYRING_CONTAINER then
+                hasKeyring = true
+                break
+            end
+        end
+        if not hasKeyring then
+            tinsert(DB.inventory.bags, KEYRING_CONTAINER)
+        end
+    end
 
     local localizedEquipment = (addon.L and addon.L["Equipment"]) or (addon.LO and addon.LO["Equipment"])
     local localizedUsable = (addon.L and addon.L["Usable"]) or (addon.LO and addon.LO["Usable"])

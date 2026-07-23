@@ -598,7 +598,18 @@ do
         if self:IsBank(bag) or self:IsBackpack(bag) then
             return 0
         end
+        -- BagBrother inventory.lua: keyring family is 9
+        if self:IsKeyRing(bag) then
+            return 9
+        end
         if player == mod.playerName then
+            -- Live container family (herb/enchant/…); matches InventoryEvents BagTypes
+            if not self:IsCached(player, bag) then
+                local _, bagType = GetContainerNumFreeSlots(bag)
+                if bagType then
+                    return bagType
+                end
+            end
             local itemLink = self:GetItemInfo(player, bag)
             if itemLink then
                 return GetItemFamily(itemLink)
@@ -608,11 +619,13 @@ do
     end
 
     function BagSlotInfo:IsTradeBag(player, bag)
+        -- Keyring family is non-zero but empty slots must not use trade-bag tint
+        if self:IsKeyRing(bag) then return false end
         return (self:GetBagType(player, bag) or 0) > 0
     end
 
     function BagSlotInfo:ToInventorySlot(bag)
-        if self:IsBackpack(bag) or self:IsBank(bag) then return nil end
+        if self:IsBackpack(bag) or self:IsBank(bag) or self:IsKeyRing(bag) then return nil end
         if self:IsBankBag(bag) then
             return BankButtonIDToInvSlotID(bag, 1)
         end
@@ -620,7 +633,7 @@ do
     end
 
     function BagSlotInfo:IsLocked(player, bag)
-        if self:IsBackpack(bag) or self:IsBank(bag) or self:IsCached(player, bag) then
+        if self:IsBackpack(bag) or self:IsBank(bag) or self:IsKeyRing(bag) or self:IsCached(player, bag) then
             return false
         end
         return IsInventoryItemLocked(self:ToInventorySlot(bag))

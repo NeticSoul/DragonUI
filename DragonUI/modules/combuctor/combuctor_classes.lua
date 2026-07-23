@@ -304,16 +304,35 @@ do
     end
 
     function ItemSlot:SetTexture(texture)
-        SetItemButtonTexture(self, texture)
+        if texture then
+            SetItemButtonTexture(self, texture)
+        elseif self._BagSkin_Applied then
+            -- Retail chrome is NormalTexture; hide classic empty-slot icon
+            SetItemButtonTexture(self, nil)
+        else
+            SetItemButtonTexture(self, self:GetEmptyItemTexture())
+        end
     end
 
     function ItemSlot:GetEmptyItemTexture()
         return [[Interface\PaperDoll\UI-Backpack-EmptySlot]]
     end
 
+    -- Retail skin shows empty chrome on NormalTexture; tint that too (BagBrother pattern)
+    function ItemSlot:SetSlotChromeColor(r, g, b)
+        SetItemButtonTextureVertexColor(self, r, g, b)
+        local nt = self:GetNormalTexture()
+        if nt then
+            nt:SetVertexColor(r, g, b)
+        end
+        if self._dragonuiSlotBorder then
+            self._dragonuiSlotBorder:SetVertexColor(r, g, b)
+        end
+    end
+
     function ItemSlot:UpdateSlotColor()
         if (not self:GetItem()) and self:IsTradeBagSlot() then
-            SetItemButtonTextureVertexColor(self, 0.5, 1, 0.5)
+            self:SetSlotChromeColor(0.5, 1, 0.5)
             return
         end
         -- Leave gray from SetItemButtonDesaturated alone while locked/search-dimmed.
@@ -328,10 +347,15 @@ do
             end
             if addon:IsItemUnusableForTint(link, bag, slot) then
                 SetItemButtonTextureVertexColor(self, 0.9, 0, 0)
+                local nt = self:GetNormalTexture()
+                if nt then nt:SetVertexColor(1, 1, 1) end
+                if self._dragonuiSlotBorder then
+                    self._dragonuiSlotBorder:SetVertexColor(1, 1, 1)
+                end
                 return
             end
         end
-        SetItemButtonTextureVertexColor(self, 1, 1, 1)
+        self:SetSlotChromeColor(1, 1, 1)
     end
 
     function ItemSlot:SetCount(count)
@@ -743,6 +767,11 @@ do
         end
         if not hasBag then return false end
 
+        local parent = self:GetParent()
+        if parent and parent.IsShowingBag and not parent:IsShowingBag(bag) then
+            return false
+        end
+
         local f = self.filter
         if next(f) then
             local player = self:GetPlayer()
@@ -927,8 +956,10 @@ do
 
     function ItemFrame:PlaceItem()
         if CursorHasItem() then
+            local parent = self:GetParent()
             for _, bag in ipairs(self.bags) do
-                if not self:IsBagCached(bag) then
+                if (not parent or not parent.IsShowingBag or parent:IsShowingBag(bag))
+                    and not self:IsBagCached(bag) then
                     for slot = 1, self:GetBagSize(bag) do
                         if not GetContainerItemLink(bag, slot) then
                             PickupContainerItem(bag, slot)
@@ -994,6 +1025,16 @@ do
         ht:SetTexture(mod.CT.bagslot)
         ht:SetTexCoord(358 / 512, 419 / 512, 1 / 128, 62 / 128)
 
+        -- BagBrother checked = bag currently shown in the item grid
+        local checked = bag:CreateTexture(nil, "OVERLAY")
+        checked:SetAllPoints()
+        checked:SetBlendMode("ADD")
+        checked:SetAlpha(0.55)
+        checked:SetTexture(mod.CT.bagslot)
+        checked:SetTexCoord(358 / 512, 419 / 512, 1 / 128, 62 / 128)
+        checked:Hide()
+        bag.checkedTex = checked
+
         bag:RegisterForClicks("anyUp")
         bag:RegisterForDrag("LeftButton")
 
@@ -1025,6 +1066,9 @@ do
         if BagSlotInfo:IsBank(id) or BagSlotInfo:IsBackpack(id) then
             SetItemButtonTexture(self, [[Interface\Buttons\Button-Backpack-Up]])
             SetItemButtonTextureVertexColor(self, 1, 1, 1)
+        elseif BagSlotInfo:IsKeyRing(id) then
+            SetItemButtonTexture(self, [[Interface\ContainerFrame\KeyRing-Bag-Icon]])
+            SetItemButtonTextureVertexColor(self, 1, 1, 1)
         else
             self:Update()
             self:RegisterEvent("ITEM_LOCK_CHANGED")
@@ -1037,6 +1081,8 @@ do
                 self:RegisterEvent("PLAYERBANKBAGSLOTS_CHANGED")
             end
         end
+        self:UpdateToggle()
+        self:UpdateFreeSlots()
     end
 
     function Bag:Release()
@@ -1044,6 +1090,9 @@ do
         self:Hide()
         self:SetParent(nil)
         self:UnregisterAllEvents()
+        if self.checkedTex then
+            self.checkedTex:Hide()
+        end
         _G[self:GetName() .. "Count"]:Hide()
         unused[self] = true
     end
@@ -1062,41 +1111,68 @@ do
         return BagSlotInfo:IsPurchasable(mod.playerName, self:GetID())
     end
 
+    function Bag:IsShowing()
+        local parent = self:GetParent()
+        return parent and parent.IsShowingBag and parent:IsShowingBag(self:GetID())
+    end
+
+    function Bag:UpdateToggle()
+        if self.checkedTex then
+            if self:IsShowing() then
+                self.checkedTex:Show()
+            else
+                self.checkedTex:Hide()
+            end
+        end
+        self:SetAlpha(self:IsShowing() and 1 or 0.45)
+    end
+
+    function Bag:UpdateFreeSlots()
+        local countFS = _G[self:GetName() .. "Count"]
+        if not countFS then return end
+        local id = self:GetID()
+        if BagSlotInfo:IsCached(mod.playerName, id) then
+            countFS:Hide()
+            return
+        end
+        local free = GetContainerNumFreeSlots(id)
+        if free and free > 0 then
+            countFS:SetText(free)
+            countFS:Show()
+        else
+            countFS:SetText("")
+            countFS:Hide()
+        end
+    end
+
     function Bag:Update()
         if not self:IsVisible() then return end
         local id = self:GetID()
-        if BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id) then return end
-
-        -- Actualizar bloqueo
-        if self:IsBagSlot() then
-            SetItemButtonDesaturated(self, BagSlotInfo:IsLocked(mod.playerName, id))
-        end
-
-        -- Update slot info (texture)
-        if self:IsBagSlot() then
-            local link, count, texture = BagSlotInfo:GetItemInfo(mod.playerName, id)
-            if link then
-                SetItemButtonTexture(self, texture or GetItemIcon(link))
-                SetItemButtonTextureVertexColor(self, 1, 1, 1)
-            else
-                SetItemButtonTexture(self, [[Interface\PaperDoll\UI-PaperDoll-Slot-Bag]])
-                if self:IsPurchasable() then
-                    SetItemButtonTextureVertexColor(self, 1, 0.1, 0.1)
-                else
+        if not (BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id) or BagSlotInfo:IsKeyRing(id)) then
+            if self:IsBagSlot() then
+                SetItemButtonDesaturated(self, BagSlotInfo:IsLocked(mod.playerName, id))
+                local link, _, texture = BagSlotInfo:GetItemInfo(mod.playerName, id)
+                if link then
+                    SetItemButtonTexture(self, texture or GetItemIcon(link))
                     SetItemButtonTextureVertexColor(self, 1, 1, 1)
+                else
+                    SetItemButtonTexture(self, [[Interface\PaperDoll\UI-PaperDoll-Slot-Bag]])
+                    if self:IsPurchasable() then
+                        SetItemButtonTextureVertexColor(self, 1, 0.1, 0.1)
+                    else
+                        SetItemButtonTextureVertexColor(self, 1, 1, 1)
+                    end
+                end
+                local invSlot = self:GetInventorySlot()
+                if invSlot and CursorCanGoInSlot(invSlot) then
+                    self:LockHighlight()
+                else
+                    self:UnlockHighlight()
                 end
             end
         end
-
-        -- Update cursor highlight
-        if self:IsBagSlot() then
-            local invSlot = self:GetInventorySlot()
-            if invSlot and CursorCanGoInSlot(invSlot) then
-                self:LockHighlight()
-            else
-                self:UnlockHighlight()
-            end
-        end
+        self:UpdateToggle()
+        self:UpdateFreeSlots()
     end
 
     function Bag:OnShow()
@@ -1108,6 +1184,8 @@ do
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         if BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id) then
             GameTooltip:SetText(BACKPACK_TOOLTIP)
+        elseif BagSlotInfo:IsKeyRing(id) then
+            GameTooltip:SetText(KEYRING, 1, 1, 1)
         elseif BagSlotInfo:IsBankBag(id) and BagSlotInfo:IsCached(mod.playerName, id) then
             -- Offline bank: inventory API is empty; use cached bag link (name + slot count).
             local link = mod("BankCache"):GetCachedBagLink(id)
@@ -1130,8 +1208,16 @@ do
                 GameTooltip:SetText(EQUIP_CONTAINER)
             end
         end
+        -- BagBrother ShowBag / HideBag hint
+        if self:IsShowing() then
+            GameTooltip:AddLine(mod.L.HideBag)
+        else
+            GameTooltip:AddLine(mod.L.ShowBag)
+        end
+        if self:IsBagSlot() then
+            GameTooltip:AddLine(mod.L.DragBag)
+        end
         GameTooltip:Show()
-        -- Highlight items in this bag
         local parent = self:GetParent()
         if parent and parent.itemFrame then
             parent.itemFrame:HighlightBag(id)
@@ -1150,30 +1236,44 @@ do
 
     function Bag:OnClick(button)
         local id = self:GetID()
-        if BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id) then return end
+        local parent = self:GetParent()
+
+        if CursorHasItem() then
+            if BagSlotInfo:IsKeyRing(id) then
+                PutKeyInKeyRing()
+            elseif BagSlotInfo:IsBackpack(id) then
+                PutItemInBackpack()
+            elseif not BagSlotInfo:IsBank(id) then
+                local invSlot = self:GetInventorySlot()
+                if invSlot then
+                    PutItemInBag(invSlot)
+                end
+            end
+            return
+        end
 
         if self:IsPurchasable() then
             self:PurchaseSlot()
-        elseif CursorHasItem() then
-            local invSlot = self:GetInventorySlot()
-            if invSlot then
-                PutItemInBag(invSlot)
-            end
-        else
-            local invSlot = self:GetInventorySlot()
-            if invSlot then
-                PickupBagFromSlot(invSlot)
-            end
+            return
+        end
+
+        -- BagBrother: left-click toggles bag visibility; right-click is unused (no bag menu on 3.3.5a)
+        if button == "RightButton" then
+            return
+        end
+        if parent and parent.ToggleBagFilter then
+            parent:ToggleBagFilter(id)
         end
     end
 
     function Bag:OnDrag()
         local id = self:GetID()
-        if not (BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id)) then
-            local invSlot = self:GetInventorySlot()
-            if invSlot then
-                PickupBagFromSlot(invSlot)
-            end
+        if BagSlotInfo:IsBackpack(id) or BagSlotInfo:IsBank(id) or BagSlotInfo:IsKeyRing(id) then
+            return
+        end
+        local invSlot = self:GetInventorySlot()
+        if invSlot then
+            PickupBagFromSlot(invSlot)
         end
     end
 
