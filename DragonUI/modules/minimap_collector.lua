@@ -172,7 +172,7 @@ local function LayoutSettingsIcon(btn, pressed)
     local icon = btn and btn.icon
     if not icon or GetStyle() ~= STYLE_DUI then return end
     local btnSize = btn:GetWidth() or deps.DRAGONUI_SETTINGS_BUTTON_SIZE or 21
-    -- File portrait: TexCoord breaks SetPortraitToTexture. Grow under oversized ring (Combuctor guild).
+    -- File portrait: TexCoord breaks SetPortraitToTexture. Grow under oversized ring (Bagster guild).
     local ringSize = btnSize + 4
     local rest = btnSize
     local size = pressed and (ringSize - 2) or rest

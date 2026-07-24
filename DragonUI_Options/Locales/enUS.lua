@@ -353,11 +353,11 @@ L["Dark"] = true
 L["DragonUI Style"] = true
 L["Nocturne"] = true
 
--- Combuctor
-L["Combuctor"] = true
-L["Enable Combuctor"] = true
+-- Bagster
+L["Bagster"] = true
+L["Enable Bagster"] = true
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = true
-L["Combuctor Settings"] = true
+L["Bagster Settings"] = true
 
 -- Item usability tint
 L["Item Usability"] = true
@@ -423,7 +423,7 @@ L["Show the Devices subtab."] = true
 L["Show the Trade Goods subtab."] = true
 L["Show the Gem subtab."] = true
 L["Show the Recipe subtab."] = true
-L["Configure Combuctor bag replacement settings."] = true
+L["Configure Bagster bag replacement settings."] = true
 L["Category Tabs"] = true
 L["Inventory Tabs"] = true
 L["Bank Tabs"] = true
@@ -486,7 +486,7 @@ L["Pet action bar positioning and styling"] = true
 L["Multicast (totem/possess) bar positioning and styling"] = true
 L["Chat Mods"] = true
 L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"] = true
-L["Combuctor"] = true
+L["Bagster"] = true
 L["All-in-one bag replacement with filtering and search"] = true
 
 -- ============================================================================

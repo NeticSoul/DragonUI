@@ -1,6 +1,6 @@
 -- UI classes: ItemSlot, ItemFrame, Bag, MoneyFrame, TokenBar, quality/side/bottom filters.
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
+local mod = addon.BagsterModule
 
 local format = string.format
 local floor, ceil, min, max, sqrt = math.floor, math.ceil, math.min, math.max, math.sqrt
@@ -143,7 +143,7 @@ do
         end
 
         local itemID = self:GetNextItemSlotID()
-        local item = self:Bind(CreateFrame("Button", format("DragonUI_CombuctorItem%d", itemID), nil, "ContainerFrameItemButtonTemplate"))
+        local item = self:Bind(CreateFrame("Button", format("DragonUI_BagsterItem%d", itemID), nil, "ContainerFrameItemButtonTemplate"))
 
         local name = item:GetName()
         item:SetID(itemID)
@@ -205,9 +205,9 @@ do
         self:SetID(slot)
         self:Update()
 
-        -- Slots spawn on demand, so CombuctorSkinItems may have run before this one existed
+        -- Slots spawn on demand, so BagsterSkinItems may have run before this one existed
         if not self._BagSkin_Applied then
-            mod.CombuctorRetailItemSlot(self)
+            mod.BagsterRetailItemSlot(self)
         end
     end
 
@@ -1048,7 +1048,7 @@ do
     local bagId = 1
 
     function Bag:New()
-        local bag = self:Bind(CreateFrame("Button", format("DragonUI_CombuctorBag%d", bagId)))
+        local bag = self:Bind(CreateFrame("Button", format("DragonUI_BagsterBag%d", bagId)))
         local name = bag:GetName()
         bag:SetSize(SIZE, SIZE)
         bag:SetHitRectInsets(-2, -2, -2, -2)
@@ -1345,8 +1345,8 @@ do
     end
 
     function Bag:PurchaseSlot()
-        if not StaticPopupDialogs["CONFIRM_BUY_BANK_SLOT_COMBUCTOR"] then
-            StaticPopupDialogs["CONFIRM_BUY_BANK_SLOT_COMBUCTOR"] = {
+        if not StaticPopupDialogs["CONFIRM_BUY_BANK_SLOT_BAGSTER"] then
+            StaticPopupDialogs["CONFIRM_BUY_BANK_SLOT_BAGSTER"] = {
                 text = CONFIRM_BUY_BANK_SLOT,
                 button1 = YES,
                 button2 = NO,
@@ -1362,7 +1362,7 @@ do
             }
         end
         PlaySound("igMainMenuOption")
-        StaticPopup_Show("CONFIRM_BUY_BANK_SLOT_COMBUCTOR")
+        StaticPopup_Show("CONFIRM_BUY_BANK_SLOT_BAGSTER")
     end
 
     function Bag:OnEvent(event)
@@ -1381,12 +1381,12 @@ do
     end
 
     function MoneyFrame:GetDisplayMode()
-        local mc = addon.db and addon.db.profile and addon.db.profile.modules and addon.db.profile.modules.combuctor
+        local mc = addon.db and addon.db.profile and addon.db.profile.modules and addon.db.profile.modules.bagster
         return (mc and mc.money_display) or "icons"
     end
 
     function MoneyFrame:New(parent)
-        local f = self:Bind(CreateFrame("Frame", format("DragonUI_CombuctorMoney%d", moneyId), parent))
+        local f = self:Bind(CreateFrame("Frame", format("DragonUI_BagsterMoney%d", moneyId), parent))
         f:SetHeight(19)
         f:SetWidth(120)
         f:SetScript("OnShow", self.OnShow)
@@ -1907,11 +1907,11 @@ do
     end
 
     function SideFilter:UpdateFilters()
-        local CombuctorSet = mod("Sets")
+        local BagsterSet = mod("Sets")
         local parent = self:GetParent()
         local numFilters = 0
 
-        for _, set in CombuctorSet:GetParentSets() do
+        for _, set in BagsterSet:GetParentSets() do
             if parent:HasSet(set.name) then
                 numFilters = numFilters + 1
                 self.buttons[numFilters]:Set(set)
@@ -2012,9 +2012,9 @@ do
     function BottomFilter:UpdateFilters()
         local numFilters = 0
         local parent = self:GetParent()
-        local CombuctorSet = mod("Sets")
+        local BagsterSet = mod("Sets")
 
-        for _, set in CombuctorSet:GetChildSets(parent:GetCategory()) do
+        for _, set in BagsterSet:GetChildSets(parent:GetCategory()) do
             if parent:HasSubSet(set.name, set.parent) then
                 numFilters = numFilters + 1
                 self.buttons[numFilters]:Set(set)

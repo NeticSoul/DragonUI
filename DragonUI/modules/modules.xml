@@ -1,4 +1,4 @@
-﻿<Ui xmlns="http://www.blizzard.com/wow/ui/">
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
     <!-- Conflict Detection module (loaded early) -->
     <Script file="compatibility.lua"/>
 
@@ -60,8 +60,8 @@
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>
     
-    <!-- Combuctor bag replacement module -->
-    <Include file="combuctor\combuctor.xml"/>
+    <!-- Bagster bag replacement module -->
+    <Include file="bagster\bagster.xml"/>
 
     <!-- Blizzard bag window skin -->
     <Script file="bags_skin.lua"/>

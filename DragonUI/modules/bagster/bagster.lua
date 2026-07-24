@@ -1,7 +1,7 @@
 local addon = select(2, ...)
 
 -- ============================================================================
--- COMBUCTOR MODULE FOR DRAGONUI
+-- BAGSTER MODULE FOR DRAGONUI
 -- All-in-one bag replacement with item filtering, search, bank integration.
 -- ============================================================================
 
@@ -52,7 +52,7 @@ local playerName = UnitName("player")
 local playerClass = select(2, UnitClass("player"))
 
 -- Module state tracking
-local CombuctorModule = {
+local BagsterModule = {
     initialized = false,
     applied = false,
     originalStates = {},
@@ -62,8 +62,8 @@ local CombuctorModule = {
 
 -- Register with ModuleRegistry
 if addon.RegisterModule then
-    addon:RegisterModule("combuctor", CombuctorModule,
-        (addon.L and addon.L["Combuctor"]) or "Combuctor",
+    addon:RegisterModule("bagster", BagsterModule,
+        (addon.L and addon.L["Bagster"]) or "Bagster",
         (addon.L and addon.L["All-in-one bag replacement with filtering and search"]) or "All-in-one bag replacement with filtering and search")
 end
 
@@ -72,30 +72,30 @@ end
 -- SELF-CONTAINED RETAIL SKINNING (no dependency on bags_skin)
 -- ============================================================================
 
-local CombuctorAssets = addon._dir
+local BagsterAssets = addon._dir
 
 local CT = {
-    slot_bg           = CombuctorAssets .. 'bagsitemslot2x',
-    slot_depress      = CombuctorAssets .. 'ui-quickslot-depress',
-    slot_highlight    = CombuctorAssets .. 'buttonhilight-square',
-    frame_metal       = CombuctorAssets .. 'uiframemetal2x',
-    frame_metal_h     = CombuctorAssets .. 'uiframemetalhorizontal2x',
-    frame_metal_v     = CombuctorAssets .. 'uiframemetalvertical2x',
-    frame_bg          = CombuctorAssets .. 'ui-background-rock',
-    close_btn         = CombuctorAssets .. 'redbutton2x',
-    bagslot           = CombuctorAssets .. 'bagslots2x',
-    bag_border        = CombuctorAssets .. 'bagborder2',
-    slot_border       = CombuctorAssets .. 'ui-quickslot2',
-    tabs              = CombuctorAssets .. 'uiframetabs',
-    sidetab           = CombuctorAssets .. 'sidetab',
-    coinGold          = CombuctorAssets .. 'coingold',
-    coinSilver        = CombuctorAssets .. 'coinsilver',
-    coinCopper        = CombuctorAssets .. 'coincopper',
+    slot_bg           = BagsterAssets .. 'bagsitemslot2x',
+    slot_depress      = BagsterAssets .. 'ui-quickslot-depress',
+    slot_highlight    = BagsterAssets .. 'buttonhilight-square',
+    frame_metal       = BagsterAssets .. 'uiframemetal2x',
+    frame_metal_h     = BagsterAssets .. 'uiframemetalhorizontal2x',
+    frame_metal_v     = BagsterAssets .. 'uiframemetalvertical2x',
+    frame_bg          = BagsterAssets .. 'ui-background-rock',
+    close_btn         = BagsterAssets .. 'redbutton2x',
+    bagslot           = BagsterAssets .. 'bagslots2x',
+    bag_border        = BagsterAssets .. 'bagborder2',
+    slot_border       = BagsterAssets .. 'ui-quickslot2',
+    tabs              = BagsterAssets .. 'uiframetabs',
+    sidetab           = BagsterAssets .. 'sidetab',
+    coinGold          = BagsterAssets .. 'coingold',
+    coinSilver        = BagsterAssets .. 'coinsilver',
+    coinCopper        = BagsterAssets .. 'coincopper',
 }
 
 
--- Retail-style nineslice border for Combuctor frames
-local function CombuctorAddNineSlice(frame)
+-- Retail-style nineslice border for Bagster frames
+local function BagsterAddNineSlice(frame)
     if frame._BagSkin_NineSlice then return end
 
     local ns = {}
@@ -192,8 +192,8 @@ local function CombuctorAddNineSlice(frame)
     end
 end
 
--- Retail-style item slot restyle for Combuctor item buttons
-local function CombuctorRetailItemSlot(btn)
+-- Retail-style item slot restyle for Bagster item buttons
+local function BagsterRetailItemSlot(btn)
     if btn._BagSkin_Applied then return end
     btn._BagSkin_Applied = true
 
@@ -261,11 +261,11 @@ end
 
 
 local function GetModuleConfig()
-    return addon:GetModuleConfig("combuctor")
+    return addon:GetModuleConfig("bagster")
 end
 
 local function IsModuleEnabled()
-    return addon:IsModuleEnabled("combuctor")
+    return addon:IsModuleEnabled("bagster")
 end
 
 -- ============================================================================
@@ -313,8 +313,8 @@ setmetatable(mod, {
     end
 })
 
--- mod.CombuctorModule stays the registry metadata table; addon.CombuctorModule is the split-file namespace.
-addon.CombuctorModule = mod
+-- mod.BagsterModule stays the registry metadata table; addon.BagsterModule is the split-file namespace.
+addon.BagsterModule = mod
 
 -- ============================================================================
 -- DATABASE
@@ -329,7 +329,7 @@ local SET_TRADE = "Trade"
 
 local defaults = {
     inventory = {
-        -- KEYRING last: keys render after bag slots (BagBrother InventoryBags order)
+        -- KEYRING last so keys render after bag slots
         bags = { 0, 1, 2, 3, 4, KEYRING_CONTAINER },
         position = { "BOTTOMRIGHT", nil, "BOTTOMRIGHT", -64, 64 },
         showBags = false,
@@ -338,7 +338,7 @@ local defaults = {
         h = 512,
         sets = {},
         exclude = {},
-        hiddenBags = {}, -- BagBrother: per-bag filter; true = omit from item grid
+        hiddenBags = {}, -- per-bag filter; true = omit from item grid
     },
     bank = {
         bags = { -1, 5, 6, 7, 8, 9, 10, 11 },
@@ -397,10 +397,10 @@ L.SimpleGem = select(8, GetAuctionItemSubClasses(7))
 local function SetupDatabase()
     if not addon.db then return end
     if not addon.db.profile.modules then addon.db.profile.modules = {} end
-    if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
+    if not addon.db.profile.modules.bagster then addon.db.profile.modules.bagster = {} end
 
-    -- Option defaults live in database.lua (modules.combuctor); only the frame layout db is lazy
-    local mc = addon.db.profile.modules.combuctor
+    -- Option defaults live in database.lua (modules.bagster); only the frame layout db is lazy
+    local mc = addon.db.profile.modules.bagster
     if not mc.db then mc.db = {} end
 
     DB = mc.db
@@ -553,9 +553,9 @@ mod.ItemSearch = ItemSearch
 mod.GetModuleConfig = GetModuleConfig
 mod.IsModuleEnabled = IsModuleEnabled
 mod.SetupDatabase = SetupDatabase
-mod.CombuctorModule = CombuctorModule
-mod.CombuctorAddNineSlice = CombuctorAddNineSlice
-mod.CombuctorRetailItemSlot = CombuctorRetailItemSlot
+mod.BagsterModule = BagsterModule
+mod.BagsterAddNineSlice = BagsterAddNineSlice
+mod.BagsterRetailItemSlot = BagsterRetailItemSlot
 mod.GetSetDisplayName = GetSetDisplayName
 mod.TEXTURE_ITEM_QUEST_BORDER = TEXTURE_ITEM_QUEST_BORDER
 mod.TEXTURE_ITEM_QUEST_BANG = TEXTURE_ITEM_QUEST_BANG

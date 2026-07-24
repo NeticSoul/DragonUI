@@ -331,10 +331,10 @@ L["DragonUI Style"] = "DragonUI \uc2a4\ud0c0\uc77c"
 L["Nocturne"] = "\ub179\ud134"
 
 
--- Combuctor
-L["Enable Combuctor"] = "통합가방(Combuctor) 활성화"
+-- Bagster
+L["Enable Bagster"] = "통합가방(Bagster) 활성화"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "아이템 필터, 검색, 품질 표시, 은행 연동을 지원하는 통합 가방 대체 기능입니다."
-L["Combuctor Settings"] = "Combuctor 설정"
+L["Bagster Settings"] = "Bagster 설정"
 
 -- Item usability tint
 L["Item Usability"] = "아이템 사용 가능 여부"
@@ -386,7 +386,7 @@ L["Show the Devices subtab."] = "장치 보조 탭 표시"
 L["Show the Trade Goods subtab."] = "전문기술 용품 보조 탭 표시"
 L["Show the Gem subtab."] = "보석 보조 탭 표시"
 L["Show the Recipe subtab."] = "도안 보조 탭 표시"
-L["Configure Combuctor bag replacement settings."] = "통합가방(Combuctor) 대체 설정 구성"
+L["Configure Bagster bag replacement settings."] = "통합가방(Bagster) 대체 설정 구성"
 L["Category Tabs"] = "카테고리 탭"
 L["Inventory Tabs"] = "소지품 탭"
 L["Bank Tabs"] = "은행 탭"
@@ -447,7 +447,7 @@ L["Pet action bar positioning and styling"] = "소환수 행동 단축바 위치
 L["Multicast (totem/possess) bar positioning and styling"] = "멀티캐스트 (토템/빙의) 바 위치 및 스타일"
 L["Chat Mods"] = "채팅 모드(기능)"
 L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"] = "채팅 강화: 버튼 숨김, 입력창 위치, URL/채팅 복사, 링크 툴팁, 대상에게 귓속말"
-L["Combuctor"] = "통합가방(Combuctor)"
+L["Bagster"] = "통합가방(Bagster)"
 L["All-in-one bag replacement with filtering and search"] = "필터 및 검색 기능이 포함된 통합 가방 시스템"
 
 -- ============================================================================

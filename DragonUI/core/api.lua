@@ -10,7 +10,7 @@ These are general-purpose functions that can be used by any module.
 local addon = select(2, ...)
 local L = addon.L
 
-addon.DB_SCHEMA_VERSION = 1
+addon.DB_SCHEMA_VERSION = 2
 addon.RELEASE_VERSION = GetAddOnMetadata("DragonUI", "Version") or "2.4.0"
 
 -- ============================================================================
@@ -1378,9 +1378,9 @@ local MODULE_LIFECYCLE_OVERRIDES = {
         restore = "RestoreChatModsSystem",
         loadOnce = true,
     },
-    combuctor = {
-        apply = "ApplyCombuctorSystem",
-        restore = "RestoreCombuctorSystem",
+    bagster = {
+        apply = "ApplyBagsterSystem",
+        restore = "RestoreBagsterSystem",
         loadOnce = true,
     },
     cooldowns = { refresh = "RefreshCooldowns", loadOnce = true },
@@ -2060,6 +2060,33 @@ function addon:ApplyDatabaseMigrations()
         ApplyMissingDefaults(self.defaults.profile, profile)
     end
 
+    -- Combuctor → Bagster rename. AceDB already rawset a default `bagster` table at :New, so we
+    -- can't gate on it being nil; the old `combuctor` table is the source of truth when present.
+    local modules = rawget(profile, "modules")
+    if modules then
+        local oldC = rawget(modules, "combuctor")
+        if oldC ~= nil then
+            if type(oldC) == "table" and type(rawget(modules, "bagster")) == "table" then
+                addon.DeepCopy(oldC, modules.bagster) -- user values win, defaults fill gaps
+            else
+                modules.bagster = oldC
+            end
+            modules.combuctor = nil
+        end
+    end
+    local global = self.db.global
+    if global then
+        local oldCache = rawget(global, "combuctorCache")
+        if oldCache ~= nil then
+            if type(oldCache) == "table" and type(rawget(global, "bagsterCache")) == "table" then
+                addon.DeepCopy(oldCache, global.bagsterCache)
+            else
+                global.bagsterCache = oldCache
+            end
+            global.combuctorCache = nil
+        end
+    end
+
     profile.version = self.DB_SCHEMA_VERSION
     self.db.version = self.DB_SCHEMA_VERSION
 end
@@ -2335,8 +2362,8 @@ function addon:RefreshUnusableItemTints()
             if button then BankFrameItemButton_Update(button) end
         end
     end
-    -- addon.CombuctorModule.frames = inventory/bank frames only (not RegisterModule.frames).
-    local frames = self.CombuctorModule and self.CombuctorModule.frames
+    -- addon.BagsterModule.frames = inventory/bank frames only (not RegisterModule.frames).
+    local frames = self.BagsterModule and self.BagsterModule.frames
     if frames then
         for i = 1, 2 do
             local frame = frames[i]

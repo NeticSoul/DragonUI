@@ -1,6 +1,6 @@
 -- FrameEvents relay, InventoryFrame class, template helpers and frame skinning.
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
+local mod = addon.BagsterModule
 
 local format = string.format
 local tinsert = table.insert
@@ -10,7 +10,7 @@ local tinsert = table.insert
 -- ============================================================================
 
 
--- DragonUI_CombuctorIconButtonTemplate (portrait)
+-- DragonUI_BagsterIconButtonTemplate (portrait)
 local function SetupIconButton(btn, parentFrame)
     btn:SetSize(64, 64)
     btn:SetPoint("TOPLEFT", parentFrame, "TOPLEFT", 4, -4)
@@ -54,7 +54,7 @@ local function SetupIconButton(btn, parentFrame)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- DragonUI_CombuctorDragFrameTemplate (title/drag bar)
+-- DragonUI_BagsterDragFrameTemplate (title/drag bar)
 local function SetupDragFrame(btn, parentFrame)
     btn:SetSize(262, 14)
     btn:SetPoint("TOP", parentFrame, "TOP", 0, -16)
@@ -87,7 +87,7 @@ local function SetupDragFrame(btn, parentFrame)
     btn:SetHighlightFontObject(GameFontHighlight)
 end
 
--- DragonUI_CombuctorSearchBoxTemplate
+-- DragonUI_BagsterSearchBoxTemplate
 local function SetupSearchBox(eb, parentFrame)
     eb:SetAutoFocus(false)
     eb:SetHeight(24)
@@ -226,7 +226,7 @@ local function SetupBagToggle(btn, parentFrame)
     ht:SetTexCoord(358 / 512, 419 / 512, 1 / 128, 62 / 128)
 end
 
--- Replaces DragonUI_CombuctorInventoryTemplate entirely
+-- Replaces DragonUI_BagsterInventoryTemplate entirely
 -- Creates the main inventory/bank frame with all children in pure Lua.
 local function CreateInventoryFrame(name, parent)
     parent = parent or UIParent
@@ -323,16 +323,16 @@ do
 
     function FrameEvents:Load()
         local CSet = mod("Sets")
-        CSet:RegisterMessage(self, "COMBUCTOR_SET_ADD", "UpdateSets")
-        CSet:RegisterMessage(self, "COMBUCTOR_SET_UPDATE", "UpdateSets")
-        CSet:RegisterMessage(self, "COMBUCTOR_SET_REMOVE", "UpdateSets")
-        CSet:RegisterMessage(self, "COMBUCTOR_CONFIG_SET_ADD", "UpdateSetConfig")
-        CSet:RegisterMessage(self, "COMBUCTOR_CONFIG_SET_REMOVE", "UpdateSetConfig")
-        CSet:RegisterMessage(self, "COMBUCTOR_SUBSET_ADD", "UpdateSubSets")
-        CSet:RegisterMessage(self, "COMBUCTOR_SUBSET_UPDATE", "UpdateSubSets")
-        CSet:RegisterMessage(self, "COMBUCTOR_SUBSET_REMOVE", "UpdateSubSets")
-        CSet:RegisterMessage(self, "COMBUCTOR_CONFIG_SUBSET_ADD", "UpdateSubSetConfig")
-        CSet:RegisterMessage(self, "COMBUCTOR_CONFIG_SUBSET_REMOVE", "UpdateSubSetConfig")
+        CSet:RegisterMessage(self, "BAGSTER_SET_ADD", "UpdateSets")
+        CSet:RegisterMessage(self, "BAGSTER_SET_UPDATE", "UpdateSets")
+        CSet:RegisterMessage(self, "BAGSTER_SET_REMOVE", "UpdateSets")
+        CSet:RegisterMessage(self, "BAGSTER_CONFIG_SET_ADD", "UpdateSetConfig")
+        CSet:RegisterMessage(self, "BAGSTER_CONFIG_SET_REMOVE", "UpdateSetConfig")
+        CSet:RegisterMessage(self, "BAGSTER_SUBSET_ADD", "UpdateSubSets")
+        CSet:RegisterMessage(self, "BAGSTER_SUBSET_UPDATE", "UpdateSubSets")
+        CSet:RegisterMessage(self, "BAGSTER_SUBSET_REMOVE", "UpdateSubSets")
+        CSet:RegisterMessage(self, "BAGSTER_CONFIG_SUBSET_ADD", "UpdateSubSetConfig")
+        CSet:RegisterMessage(self, "BAGSTER_CONFIG_SUBSET_REMOVE", "UpdateSubSetConfig")
     end
 
     function FrameEvents:UpdateSets(msg, name)
@@ -371,7 +371,7 @@ do
     local InventoryFrame = mod:NewClass("Frame")
     mod.Frame = InventoryFrame
 
-    local CombuctorSet = mod("Sets")
+    local BagsterSet = mod("Sets")
     local FrameEvents = mod("FrameEvents")
 
     local BASE_WIDTH = 384
@@ -384,7 +384,7 @@ do
 
     local lastID = 1
     function InventoryFrame:New(titleText, settings, isBank, key)
-        local f = self:Bind(CreateInventoryFrame(format("DragonUI_CombuctorFrame%d", lastID)))
+        local f = self:Bind(CreateInventoryFrame(format("DragonUI_BagsterFrame%d", lastID)))
         f:SetScript("OnShow", self.OnShow)
         f:SetScript("OnHide", self.OnHide)
 
@@ -676,10 +676,10 @@ do
     end
 
     function InventoryFrame:SetCategory(name)
-        if not (self:HasSet(name) and CombuctorSet:Get(name)) then
+        if not (self:HasSet(name) and BagsterSet:Get(name)) then
             name = self:GetDefaultCategory()
         end
-        local set = name and CombuctorSet:Get(name)
+        local set = name and BagsterSet:Get(name)
         if self:SetFilter("rule", (set and set.rule) or nil) then
             self.category = name
             self.sideFilter:UpdateHighlight()
@@ -692,17 +692,17 @@ do
     end
 
     function InventoryFrame:GetDefaultCategory()
-        for _, set in CombuctorSet:GetParentSets() do
+        for _, set in BagsterSet:GetParentSets() do
             if self:HasSet(set.name) then return set.name end
         end
     end
 
     function InventoryFrame:SetSubCategory(name)
         local parent = self:GetCategory()
-        if not (parent and self:HasSubSet(name, parent) and CombuctorSet:Get(name, parent)) then
+        if not (parent and self:HasSubSet(name, parent) and BagsterSet:Get(name, parent)) then
             name = self:GetDefaultSubCategory()
         end
-        local set = name and CombuctorSet:Get(name, parent)
+        local set = name and BagsterSet:Get(name, parent)
         if self:SetFilter("subRule", (set and set.rule) or nil) then
             self.subCategory = name
             self.bottomFilter:UpdateHighlight()
@@ -716,7 +716,7 @@ do
     function InventoryFrame:GetDefaultSubCategory()
         local parent = self:GetCategory()
         if parent then
-            for _, set in CombuctorSet:GetChildSets(parent) do
+            for _, set in BagsterSet:GetChildSets(parent) do
                 if self:HasSubSet(set.name, parent) then return set.name end
             end
         end
@@ -890,11 +890,11 @@ do
     end
 end
 
-local function CombuctorSkinFrame(frame)
-    if not frame or frame._BagSkin_Combuctor then return end
-    frame._BagSkin_Combuctor = true
+local function BagsterSkinFrame(frame)
+    if not frame or frame._BagSkin_Bagster then return end
+    frame._BagSkin_Bagster = true
 
-    mod.CombuctorAddNineSlice(frame)
+    mod.BagsterAddNineSlice(frame)
 
     -- Adjust NineSlice so it doesn't cover the header
     if frame._BagSkin_NineSlice then
@@ -981,13 +981,13 @@ local function CombuctorSkinFrame(frame)
     end
 end
 
-local function CombuctorSkinItems(frame)
+local function BagsterSkinItems(frame)
     for _, child in ipairs({ frame:GetChildren() }) do
         if child:GetObjectType() == 'Frame' then
             for _, subchild in ipairs({ child:GetChildren() }) do
                 if subchild:GetObjectType() == 'Button' and subchild:GetName() then
-                    if subchild:GetName():find('DragonUI_CombuctorItem') then
-                        mod.CombuctorRetailItemSlot(subchild)
+                    if subchild:GetName():find('DragonUI_BagsterItem') then
+                        mod.BagsterRetailItemSlot(subchild)
                     end
                 end
             end
@@ -997,19 +997,19 @@ end
 
 -- Action-bar bag buttons (backpack, CharacterBag0-3) belong to micromenu — never skin them here.
 -- Bag dropdown buttons style themselves in Bag:New (micromenu treatment).
-local function CombuctorApplySkin()
+local function BagsterApplySkin()
     for i = 1, 2 do
-        local frame = _G['DragonUI_CombuctorFrame' .. i]
+        local frame = _G['DragonUI_BagsterFrame' .. i]
         if frame then
-            mod.CombuctorSkinFrame(frame)
-            mod.CombuctorSkinItems(frame)
+            mod.BagsterSkinFrame(frame)
+            mod.BagsterSkinItems(frame)
         end
     end
 end
 
-mod.CombuctorSkinFrame = CombuctorSkinFrame
-mod.CombuctorSkinItems = CombuctorSkinItems
-mod.CombuctorApplySkin = CombuctorApplySkin
+mod.BagsterSkinFrame = BagsterSkinFrame
+mod.BagsterSkinItems = BagsterSkinItems
+mod.BagsterApplySkin = BagsterApplySkin
 mod.SetupIconButton = SetupIconButton
 mod.SetupDragFrame = SetupDragFrame
 mod.SetupSearchBox = SetupSearchBox

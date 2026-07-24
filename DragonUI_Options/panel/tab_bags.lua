@@ -2,7 +2,7 @@
 ================================================================================
 DragonUI Options Panel - Bags Tab
 ================================================================================
-Combuctor settings: enable/disable, category tabs, left/right side filter.
+Bagster settings: enable/disable, category tabs, left/right side filter.
 ================================================================================
 ]]
 
@@ -31,7 +31,7 @@ local SET_USABLE = "Usable"
 local SET_NORMAL = "Normal"
 local SET_TRADE = "Trade"
 
-local function GetLocalizedCombuctorSetName(name)
+local function GetLocalizedBagsterSetName(name)
     if name == SET_EQUIPMENT then
         return LO["Equipment"] or name
     elseif name == SET_USABLE then
@@ -44,7 +44,7 @@ local function GetLocalizedCombuctorSetName(name)
     return name
 end
 
-local function NormalizeCombuctorSetName(name)
+local function NormalizeBagsterSetName(name)
     if not name then return name end
 
     if name == SET_EQUIPMENT or name == (LO["Equipment"] or SET_EQUIPMENT) then
@@ -64,13 +64,13 @@ end
 -- HELPERS
 -- ============================================================================
 
-local function GetCombuctorDB()
-    local mc = addon.db.profile.modules and addon.db.profile.modules.combuctor
+local function GetBagsterDB()
+    local mc = addon.db.profile.modules and addon.db.profile.modules.bagster
     return mc and mc.db
 end
 
-local function IsCombuctorEnabled()
-    local mc = addon.db.profile.modules and addon.db.profile.modules.combuctor
+local function IsBagsterEnabled()
+    local mc = addon.db.profile.modules and addon.db.profile.modules.bagster
     return mc and mc.enabled
 end
 
@@ -116,32 +116,32 @@ local function GetBagSortConfig(create)
 end
 
 local function HasSetInDB(setName)
-    local db = GetCombuctorDB()
+    local db = GetBagsterDB()
     if not db or not db.inventory or not db.inventory.sets then return false end
-    local normalizedName = NormalizeCombuctorSetName(setName)
+    local normalizedName = NormalizeBagsterSetName(setName)
     for _, s in ipairs(db.inventory.sets) do
-        if NormalizeCombuctorSetName(s) == normalizedName then return true end
+        if NormalizeBagsterSetName(s) == normalizedName then return true end
     end
     return false
 end
 
 local function HasBankSetInDB(setName)
-    local db = GetCombuctorDB()
+    local db = GetBagsterDB()
     if not db or not db.bank or not db.bank.sets then return false end
-    local normalizedName = NormalizeCombuctorSetName(setName)
+    local normalizedName = NormalizeBagsterSetName(setName)
     for _, s in ipairs(db.bank.sets) do
-        if NormalizeCombuctorSetName(s) == normalizedName then return true end
+        if NormalizeBagsterSetName(s) == normalizedName then return true end
     end
     return false
 end
 
 local function ToggleSetInList(sets, setName, enabled)
     if not sets then return end
-    local normalizedName = NormalizeCombuctorSetName(setName)
+    local normalizedName = NormalizeBagsterSetName(setName)
     if enabled then
         local found = false
         for _, s in ipairs(sets) do
-            if NormalizeCombuctorSetName(s) == normalizedName then found = true; break end
+            if NormalizeBagsterSetName(s) == normalizedName then found = true; break end
         end
         if not found then
             if normalizedName == SET_ALL then
@@ -152,7 +152,7 @@ local function ToggleSetInList(sets, setName, enabled)
         end
     else
         for i = #sets, 1, -1 do
-            if NormalizeCombuctorSetName(sets[i]) == normalizedName then
+            if NormalizeBagsterSetName(sets[i]) == normalizedName then
                 table.remove(sets, i)
             end
         end
@@ -160,44 +160,44 @@ local function ToggleSetInList(sets, setName, enabled)
 end
 
 local function ToggleInventorySet(setName, enabled)
-    local db = GetCombuctorDB()
+    local db = GetBagsterDB()
     if db and db.inventory then
         ToggleSetInList(db.inventory.sets, setName, enabled)
     end
-    if addon.RefreshCombuctorFrames then
-        addon.RefreshCombuctorFrames()
+    if addon.RefreshBagsterFrames then
+        addon.RefreshBagsterFrames()
     end
 end
 
 local function ToggleBankSet(setName, enabled)
-    local db = GetCombuctorDB()
+    local db = GetBagsterDB()
     if db and db.bank then
         ToggleSetInList(db.bank.sets, setName, enabled)
     end
-    if addon.RefreshCombuctorFrames then
-        addon.RefreshCombuctorFrames()
+    if addon.RefreshBagsterFrames then
+        addon.RefreshBagsterFrames()
     end
 end
 
 -- Subtab exclude helpers
 local function IsSubtabExcluded(key, parentName, childName)
-    local db = GetCombuctorDB()
+    local db = GetBagsterDB()
     if not db or not db[key] or not db[key].exclude then return false end
-    local normalizedParent = NormalizeCombuctorSetName(parentName)
-    local normalizedChild = NormalizeCombuctorSetName(childName)
+    local normalizedParent = NormalizeBagsterSetName(parentName)
+    local normalizedChild = NormalizeBagsterSetName(childName)
     local list = db[key].exclude[normalizedParent] or db[key].exclude[parentName]
     if not list then return false end
     for _, name in ipairs(list) do
-        if NormalizeCombuctorSetName(name) == normalizedChild then return true end
+        if NormalizeBagsterSetName(name) == normalizedChild then return true end
     end
     return false
 end
 
 local function ToggleSubtab(parentName, childName, enabled)
-    local db = GetCombuctorDB()
+    local db = GetBagsterDB()
     if not db then return end
-    local normalizedParent = NormalizeCombuctorSetName(parentName)
-    local normalizedChild = NormalizeCombuctorSetName(childName)
+    local normalizedParent = NormalizeBagsterSetName(parentName)
+    local normalizedChild = NormalizeBagsterSetName(childName)
     for _, key in ipairs({"inventory", "bank"}) do
         if db[key] then
             if not db[key].exclude then db[key].exclude = {} end
@@ -205,7 +205,7 @@ local function ToggleSubtab(parentName, childName, enabled)
                 local list = db[key].exclude[normalizedParent] or db[key].exclude[parentName]
                 if list then
                     for i = #list, 1, -1 do
-                        if NormalizeCombuctorSetName(list[i]) == normalizedChild then table.remove(list, i) end
+                        if NormalizeBagsterSetName(list[i]) == normalizedChild then table.remove(list, i) end
                     end
                     if #list == 0 then
                         db[key].exclude[normalizedParent] = nil
@@ -217,15 +217,15 @@ local function ToggleSubtab(parentName, childName, enabled)
                 local list = db[key].exclude[normalizedParent]
                 local found = false
                 for _, name in ipairs(list) do
-                    if NormalizeCombuctorSetName(name) == normalizedChild then found = true; break end
+                    if NormalizeBagsterSetName(name) == normalizedChild then found = true; break end
                 end
                 if not found then table.insert(list, normalizedChild) end
             end
         end
     end
 
-    if addon.RefreshCombuctorFrames then
-        addon.RefreshCombuctorFrames()
+    if addon.RefreshBagsterFrames then
+        addon.RefreshBagsterFrames()
     end
 end
 
@@ -235,7 +235,7 @@ end
 
 local function BuildBagsTab(scroll)
     C:AddLabel(scroll, "|cffFFD700" .. LO["Bags"] .. "|r", { color = C.Theme.textGold })
-    C:AddDescription(scroll, LO["Configure Combuctor bag replacement settings."])
+    C:AddDescription(scroll, LO["Configure Bagster bag replacement settings."])
     C:AddSpacer(scroll)
 
     -- ====================================================================
@@ -333,7 +333,7 @@ local function BuildBagsTab(scroll)
     })
 
     -- ====================================================================
-    -- ITEM USABILITY TINT (stock bags + Combuctor)
+    -- ITEM USABILITY TINT (stock bags + Bagster)
     -- ====================================================================
     local tintSection = C:AddSection(scroll, LO["Item Usability"] or "Item Usability")
     C:AddToggle(tintSection, {
@@ -474,24 +474,24 @@ local function BuildBagsTab(scroll)
     })
 
     -- ====================================================================
-    -- COMBUCTOR ENABLE
+    -- BAGSTER ENABLE
     -- ====================================================================
-    local mainSection = C:AddSection(scroll, LO["Combuctor"])
+    local mainSection = C:AddSection(scroll, LO["Bagster"])
 
     C:AddToggle(mainSection, {
-        label = LO["Enable Combuctor"],
+        label = LO["Enable Bagster"],
         desc = LO["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."],
-        getFunc = function() return IsCombuctorEnabled() end,
+        getFunc = function() return IsBagsterEnabled() end,
         setFunc = function(val)
             if not addon.db.profile.modules then addon.db.profile.modules = {} end
-            if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
-            addon.db.profile.modules.combuctor.enabled = val
+            if not addon.db.profile.modules.bagster then addon.db.profile.modules.bagster = {} end
+            addon.db.profile.modules.bagster.enabled = val
         end,
         requiresReload = true,
     })
 
-    -- Everything below is Combuctor-only; the enable toggle reloads, so the panel rebuilds right
-    if not IsCombuctorEnabled() then
+    -- Everything below is Bagster-only; the enable toggle reloads, so the panel rebuilds right
+    if not IsBagsterEnabled() then
         return
     end
 
@@ -504,30 +504,30 @@ local function BuildBagsTab(scroll)
         label = LO["Left Side Tabs"] .. " (" .. LO["Inventory"] .. ")",
         desc = LO["Place category filter tabs on the left side of the bag frame instead of the right."],
         getFunc = function()
-            local db = GetCombuctorDB()
+            local db = GetBagsterDB()
             return db and db.inventory and db.inventory.leftSideFilter or false
         end,
         setFunc = function(val)
-            local db = GetCombuctorDB()
+            local db = GetBagsterDB()
             if db and db.inventory then db.inventory.leftSideFilter = val end
-            if addon.RefreshCombuctorFrames then addon.RefreshCombuctorFrames() end
+            if addon.RefreshBagsterFrames then addon.RefreshBagsterFrames() end
         end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(displaySection, {
         label = LO["Left Side Tabs"] .. " (" .. LO["Bank"] .. ")",
         desc = LO["Place category filter tabs on the left side of the bank frame instead of the right."],
         getFunc = function()
-            local db = GetCombuctorDB()
+            local db = GetBagsterDB()
             return db and db.bank and db.bank.leftSideFilter or false
         end,
         setFunc = function(val)
-            local db = GetCombuctorDB()
+            local db = GetBagsterDB()
             if db and db.bank then db.bank.leftSideFilter = val end
-            if addon.RefreshCombuctorFrames then addon.RefreshCombuctorFrames() end
+            if addon.RefreshBagsterFrames then addon.RefreshBagsterFrames() end
         end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     local moneyValues = {
@@ -538,31 +538,31 @@ local function BuildBagsTab(scroll)
         label = LO["Gold Display"] or "Gold Display",
         values = moneyValues,
         getFunc = function()
-            local mc = addon.db.profile.modules and addon.db.profile.modules.combuctor
+            local mc = addon.db.profile.modules and addon.db.profile.modules.bagster
             return (mc and mc.money_display) or "icons"
         end,
         setFunc = function(val)
             if not addon.db.profile.modules then addon.db.profile.modules = {} end
-            if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
-            addon.db.profile.modules.combuctor.money_display = val
-            if addon.RefreshCombuctorFrames then addon.RefreshCombuctorFrames() end
+            if not addon.db.profile.modules.bagster then addon.db.profile.modules.bagster = {} end
+            addon.db.profile.modules.bagster.money_display = val
+            if addon.RefreshBagsterFrames then addon.RefreshBagsterFrames() end
         end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
         width = 180,
     })
 
-    local function GetCombuctorConfig(create)
+    local function GetBagsterConfig(create)
         if create then
             if not addon.db.profile.modules then addon.db.profile.modules = {} end
-            if not addon.db.profile.modules.combuctor then addon.db.profile.modules.combuctor = {} end
+            if not addon.db.profile.modules.bagster then addon.db.profile.modules.bagster = {} end
         end
-        return addon.db.profile.modules and addon.db.profile.modules.combuctor
+        return addon.db.profile.modules and addon.db.profile.modules.bagster
     end
 
-    local function SetCombuctorOption(key, val)
-        local mc = GetCombuctorConfig(true)
+    local function SetBagsterOption(key, val)
+        local mc = GetBagsterConfig(true)
         mc[key] = val
-        if addon.RefreshCombuctorFrames then addon.RefreshCombuctorFrames() end
+        if addon.RefreshBagsterFrames then addon.RefreshBagsterFrames() end
     end
 
     C:AddSlider(displaySection, {
@@ -570,11 +570,11 @@ local function BuildBagsTab(scroll)
         desc = LO["Maximum size of item slots. The grid still shrinks them to fit the frame."] or "Maximum size of item slots. The grid still shrinks them to fit the frame.",
         min = 0.5, max = 1.5, step = 0.05, isPercent = true,
         getFunc = function()
-            local mc = GetCombuctorConfig(false)
+            local mc = GetBagsterConfig(false)
             return (mc and mc.item_scale) or 1.25
         end,
-        setFunc = function(val) SetCombuctorOption("item_scale", val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        setFunc = function(val) SetBagsterOption("item_scale", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddSlider(displaySection, {
@@ -582,44 +582,44 @@ local function BuildBagsTab(scroll)
         desc = LO["Gap between item slots in the grid."] or "Gap between item slots in the grid.",
         min = 0, max = 8, step = 1,
         getFunc = function()
-            local mc = GetCombuctorConfig(false)
+            local mc = GetBagsterConfig(false)
             return (mc and mc.item_spacing) or 2
         end,
-        setFunc = function(val) SetCombuctorOption("item_spacing", val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        setFunc = function(val) SetBagsterOption("item_spacing", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(displaySection, {
         label = LO["Quality Filter Row"] or "Quality Filter Row",
         desc = LO["Show the rarity filter dots at the bottom of the bag frame."] or "Show the rarity filter dots at the bottom of the bag frame.",
         getFunc = function()
-            local mc = GetCombuctorConfig(false)
+            local mc = GetBagsterConfig(false)
             return not mc or mc.show_quality_filter ~= false
         end,
-        setFunc = function(val) SetCombuctorOption("show_quality_filter", val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        setFunc = function(val) SetBagsterOption("show_quality_filter", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(displaySection, {
         label = LO["Quality Glow"] or "Quality Glow",
         desc = LO["Show a colored ring on uncommon and better items."] or "Show a colored ring on uncommon and better items.",
         getFunc = function()
-            local mc = GetCombuctorConfig(false)
+            local mc = GetBagsterConfig(false)
             return not mc or mc.glow_quality ~= false
         end,
-        setFunc = function(val) SetCombuctorOption("glow_quality", val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        setFunc = function(val) SetBagsterOption("glow_quality", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(displaySection, {
         label = LO["Quest Item Glow"] or "Quest Item Glow",
         desc = LO["Highlight quest items with a golden border."] or "Highlight quest items with a golden border.",
         getFunc = function()
-            local mc = GetCombuctorConfig(false)
+            local mc = GetBagsterConfig(false)
             return not mc or mc.glow_quest ~= false
         end,
-        setFunc = function(val) SetCombuctorOption("glow_quest", val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        setFunc = function(val) SetBagsterOption("glow_quest", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddSlider(displaySection, {
@@ -627,11 +627,11 @@ local function BuildBagsTab(scroll)
         desc = LO["Opacity of the quality ring on item slots."] or "Opacity of the quality ring on item slots.",
         min = 0.1, max = 1, step = 0.05, isPercent = true,
         getFunc = function()
-            local mc = GetCombuctorConfig(false)
+            local mc = GetBagsterConfig(false)
             return (mc and mc.glow_alpha) or 1
         end,
-        setFunc = function(val) SetCombuctorOption("glow_alpha", val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        setFunc = function(val) SetBagsterOption("glow_alpha", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- ====================================================================
@@ -646,7 +646,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the 'All' category tab that displays all items without filtering."],
         getFunc = function() return HasSetInDB(SET_ALL) end,
         setFunc = function(val) ToggleInventorySet(SET_ALL, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Category tabs (canonical set names)
@@ -660,7 +660,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Equipment category tab for armor and weapons."],
         getFunc = function() return HasSetInDB(Equipment) end,
         setFunc = function(val) ToggleInventorySet(Equipment, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Usable
@@ -669,7 +669,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Usable category tab for consumables and devices."],
         getFunc = function() return HasSetInDB(Usable) end,
         setFunc = function(val) ToggleInventorySet(Usable, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Quest
@@ -678,7 +678,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Quest items category tab."],
         getFunc = function() return HasSetInDB(Quest) end,
         setFunc = function(val) ToggleInventorySet(Quest, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Trade Goods
@@ -687,7 +687,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Trade Goods category tab (includes gems and recipes)."],
         getFunc = function() return HasSetInDB(TradeGood) end,
         setFunc = function(val) ToggleInventorySet(TradeGood, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Miscellaneous
@@ -696,7 +696,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Miscellaneous items category tab."],
         getFunc = function() return HasSetInDB(Misc) end,
         setFunc = function(val) ToggleInventorySet(Misc, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- ====================================================================
@@ -710,7 +710,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the 'All' category tab that displays all items without filtering."],
         getFunc = function() return HasBankSetInDB(SET_ALL) end,
         setFunc = function(val) ToggleBankSet(SET_ALL, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(bankSection, {
@@ -718,7 +718,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Equipment category tab for armor and weapons."],
         getFunc = function() return HasBankSetInDB(Equipment) end,
         setFunc = function(val) ToggleBankSet(Equipment, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(bankSection, {
@@ -726,7 +726,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Usable category tab for consumables and devices."],
         getFunc = function() return HasBankSetInDB(Usable) end,
         setFunc = function(val) ToggleBankSet(Usable, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(bankSection, {
@@ -734,7 +734,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Quest items category tab."],
         getFunc = function() return HasBankSetInDB(Quest) end,
         setFunc = function(val) ToggleBankSet(Quest, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(bankSection, {
@@ -742,7 +742,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Trade Goods category tab (includes gems and recipes)."],
         getFunc = function() return HasBankSetInDB(TradeGood) end,
         setFunc = function(val) ToggleBankSet(TradeGood, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     C:AddToggle(bankSection, {
@@ -750,7 +750,7 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Miscellaneous items category tab."],
         getFunc = function() return HasBankSetInDB(Misc) end,
         setFunc = function(val) ToggleBankSet(Misc, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- ====================================================================
@@ -766,14 +766,14 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Normal bags subtab (non-profession bags)."],
         getFunc = function() return not IsSubtabExcluded("inventory", SET_ALL, SET_NORMAL) end,
         setFunc = function(val) ToggleSubtab(SET_ALL, SET_NORMAL, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
     C:AddToggle(subtabSection, {
         label = LO["Trade Bags"],
         tooltip = LO["Show the Trade bags subtab (profession bags)."],
         getFunc = function() return not IsSubtabExcluded("inventory", SET_ALL, SET_TRADE) end,
         setFunc = function(val) ToggleSubtab(SET_ALL, SET_TRADE, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Equipment subtabs
@@ -783,21 +783,21 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Armor subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", Equipment, Armor) end,
         setFunc = function(val) ToggleSubtab(Equipment, Armor, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
     C:AddToggle(subtabSection, {
         label = Weapon,
         tooltip = LO["Show the Weapon subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", Equipment, Weapon) end,
         setFunc = function(val) ToggleSubtab(Equipment, Weapon, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
     C:AddToggle(subtabSection, {
         label = INVTYPE_TRINKET,
         tooltip = LO["Show the Trinket subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", Equipment, INVTYPE_TRINKET) end,
         setFunc = function(val) ToggleSubtab(Equipment, INVTYPE_TRINKET, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Usable subtabs
@@ -807,14 +807,14 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Consumable subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", Usable, Consumable) end,
         setFunc = function(val) ToggleSubtab(Usable, Consumable, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
     C:AddToggle(subtabSection, {
         label = Devices,
         tooltip = LO["Show the Devices subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", Usable, Devices) end,
         setFunc = function(val) ToggleSubtab(Usable, Devices, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
     -- Trade Goods subtabs
@@ -824,21 +824,21 @@ local function BuildBagsTab(scroll)
         tooltip = LO["Show the Trade Goods subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, TradeGood) end,
         setFunc = function(val) ToggleSubtab(TradeGood, TradeGood, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
     C:AddToggle(subtabSection, {
         label = Gem,
         tooltip = LO["Show the Gem subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, Gem) end,
         setFunc = function(val) ToggleSubtab(TradeGood, Gem, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
     C:AddToggle(subtabSection, {
         label = Recipe,
         tooltip = LO["Show the Recipe subtab."],
         getFunc = function() return not IsSubtabExcluded("inventory", TradeGood, Recipe) end,
         setFunc = function(val) ToggleSubtab(TradeGood, Recipe, val) end,
-        disabled = function() return not IsCombuctorEnabled() end,
+        disabled = function() return not IsBagsterEnabled() end,
     })
 
 end

@@ -325,10 +325,10 @@ L["Dark"] = "Тёмный"
 L["DragonUI Style"] = "Стиль DragonUI"
 L["Nocturne"] = "Ноктюрн"
 
--- Combuctor
-L["Enable Combuctor"] = "Включить Combuctor"
+-- Bagster
+L["Enable Bagster"] = "Включить Bagster"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "Замена сумок «всё в одном» с фильтрацией, поиском, индикаторами качества и интеграцией банка."
-L["Combuctor Settings"] = "Настройки Combuctor"
+L["Bagster Settings"] = "Настройки Bagster"
 
 -- Item usability tint
 L["Item Usability"] = "Пригодность предметов"
@@ -378,7 +378,7 @@ L["Show the Devices subtab."] = "Показать подвкладку «Уст�
 L["Show the Trade Goods subtab."] = "Показать подвкладку «Товары»."
 L["Show the Gem subtab."] = "Показать подвкладку «Самоцветы»."
 L["Show the Recipe subtab."] = "Показать подвкладку «Рецепты»."
-L["Configure Combuctor bag replacement settings."] = "Настроить параметры замены сумок Combuctor."
+L["Configure Bagster bag replacement settings."] = "Настроить параметры замены сумок Bagster."
 L["Category Tabs"] = "Вкладки категорий"
 L["Inventory Tabs"] = "Вкладки инвентаря"
 L["Bank Tabs"] = "Вкладки банка"
@@ -439,7 +439,7 @@ L["Pet action bar positioning and styling"] = "Позиционирование 
 L["Multicast (totem/possess) bar positioning and styling"] = "Позиционирование и стилизация панели мультикаста (тотемы/овладение)"
 L["Chat Mods"] = "Улучшения чата"
 L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"] = "Улучшения чата: скрытие кнопок, позиция строки ввода, копирование URL, копирование чата, ховер ссылок, шёпот цели"
-L["Combuctor"] = "Combuctor"
+L["Bagster"] = "Bagster"
 L["All-in-one bag replacement with filtering and search"] = "Универсальная замена сумок с фильтрацией и поиском"
 
 -- ============================================================================

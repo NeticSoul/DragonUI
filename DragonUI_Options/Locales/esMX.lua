@@ -323,10 +323,10 @@ L["Dark"] = "Oscuro"
 L["DragonUI Style"] = "Estilo DragonUI"
 L["Nocturne"] = "Nocturno"
 
--- Combuctor
-L["Enable Combuctor"] = "Activar Combuctor"
+-- Bagster
+L["Enable Bagster"] = "Activar Bagster"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "Reemplazo de bolsas todo-en-uno con filtrado de objetos, búsqueda, indicadores de calidad e integración con el banco."
-L["Combuctor Settings"] = "Ajustes de Combuctor"
+L["Bagster Settings"] = "Ajustes de Bagster"
 
 -- Item usability tint
 L["Item Usability"] = "Usabilidad de objetos"
@@ -390,7 +390,7 @@ L["Show the Devices subtab."] = "Mostrar la subpestaña de Dispositivos."
 L["Show the Trade Goods subtab."] = "Mostrar la subpestaña de Comercio."
 L["Show the Gem subtab."] = "Mostrar la subpestaña de Gemas."
 L["Show the Recipe subtab."] = "Mostrar la subpestaña de Recetas."
-L["Configure Combuctor bag replacement settings."] = "Configura los ajustes de reemplazo de bolsas de Combuctor."
+L["Configure Bagster bag replacement settings."] = "Configura los ajustes de reemplazo de bolsas de Bagster."
 L["Category Tabs"] = "Pestañas de Categoría"
 L["Inventory Tabs"] = "Pestañas del Inventario"
 L["Bank Tabs"] = "Pestañas del Banco"
@@ -451,7 +451,7 @@ L["Pet action bar positioning and styling"] = "Posición y estilo de barra de ma
 L["Multicast (totem/possess) bar positioning and styling"] = "Posición y estilo de barra multicast (tótems/posesión)"
 L["Chat Mods"] = "Mods de Chat"
 L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"] = "Mejoras de chat: ocultar botones, posición de caja de texto, copiar URL, copiar chat, enlaces al pasar el cursor y susurrar al objetivo"
-L["Combuctor"] = "Combuctor"
+L["Bagster"] = "Bagster"
 L["All-in-one bag replacement with filtering and search"] = "Reemplazo de bolsas todo en uno con filtros y búsqueda"
 
 -- ============================================================================

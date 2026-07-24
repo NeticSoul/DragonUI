@@ -1,6 +1,6 @@
 -- Apply/restore lifecycle, profile-change handling, init events, slash commands, addon.* exports.
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
+local mod = addon.BagsterModule
 
 -- ============================================================================
 -- APPLY / RESTORE SYSTEM
@@ -18,8 +18,8 @@ local function HideBlizzardKeyring()
     end
 end
 
--- BagBrother HighlightMainMenu: light backpack + bag slots + keyring while Combuctor inventory is open.
-local function IsCombuctorInventoryShown()
+-- Light backpack + bag slots + keyring on the micromenu while Bagster inventory is open.
+local function IsBagsterInventoryShown()
     if not mod.frames then return false end
     for _, frame in pairs(mod.frames) do
         if frame and not frame.isBank and frame.IsShown and frame:IsShown() then
@@ -30,7 +30,7 @@ local function IsCombuctorInventoryShown()
 end
 
 local function HighlightMainMenuBags()
-    local active = IsCombuctorInventoryShown() and 1 or nil
+    local active = IsBagsterInventoryShown() and 1 or nil
     local buttons = {
         _G.MainMenuBarBackpackButton,
         _G.CharacterBag0Slot,
@@ -64,8 +64,8 @@ local function SyncKeyRingChecked()
     ScheduleHighlightMainMenuBags()
 end
 
-local function ApplyCombuctorSystem()
-    if mod.CombuctorModule.applied then return end
+local function ApplyBagsterSystem()
+    if mod.BagsterModule.applied then return end
 
     mod.SetupDatabase()
     if not mod.DB then return end
@@ -83,7 +83,7 @@ local function ApplyCombuctorSystem()
     end
 
     -- Apply retail skin to frames (independent of bags_skin module)
-    mod.CombuctorApplySkin()
+    mod.BagsterApplySkin()
 
     AutoShowInventory = function()
         mod:Show(BACKPACK_CONTAINER, true)
@@ -92,19 +92,19 @@ local function ApplyCombuctorSystem()
         mod:Hide(BACKPACK_CONTAINER, true)
     end
 
-    mod.CombuctorModule.originalStates.OpenBackpack = _G.OpenBackpack
-    mod.CombuctorModule.originalStates.ToggleBank = _G.ToggleBank
-    mod.CombuctorModule.originalStates.ToggleBackpack = _G.ToggleBackpack
-    mod.CombuctorModule.originalStates.OpenAllBags = _G.OpenAllBags
-    mod.CombuctorModule.originalStates.ToggleAllBags = _G.ToggleAllBags
-    mod.CombuctorModule.originalStates.ToggleBag = _G.ToggleBag
-    mod.CombuctorModule.originalStates.ToggleKeyRing = _G.ToggleKeyRing
+    mod.BagsterModule.originalStates.OpenBackpack = _G.OpenBackpack
+    mod.BagsterModule.originalStates.ToggleBank = _G.ToggleBank
+    mod.BagsterModule.originalStates.ToggleBackpack = _G.ToggleBackpack
+    mod.BagsterModule.originalStates.OpenAllBags = _G.OpenAllBags
+    mod.BagsterModule.originalStates.ToggleAllBags = _G.ToggleAllBags
+    mod.BagsterModule.originalStates.ToggleBag = _G.ToggleBag
+    mod.BagsterModule.originalStates.ToggleKeyRing = _G.ToggleKeyRing
 
     -- Hook bag functions
     _G.OpenBackpack = AutoShowInventory
-    if not mod.CombuctorModule.hooks.closeBackpack then
+    if not mod.BagsterModule.hooks.closeBackpack then
         hooksecurefunc("CloseBackpack", AutoHideInventory)
-        mod.CombuctorModule.hooks.closeBackpack = true
+        mod.BagsterModule.hooks.closeBackpack = true
     end
 
     _G.ToggleBank = function(bag) mod:Toggle(bag) end
@@ -120,7 +120,7 @@ local function ApplyCombuctorSystem()
         end
         ScheduleHighlightMainMenuBags()
     end
-    -- Keyring lives inside Combuctor inventory (BagBrother-style); never open stock ContainerFrame
+    -- Keyring lives inside Bagster inventory; never open stock ContainerFrame
     _G.ToggleKeyRing = function()
         if IsOptionFrameOpen and IsOptionFrameOpen() then
             return
@@ -141,16 +141,16 @@ local function ApplyCombuctorSystem()
         end
     end
 
-    if not mod.CombuctorModule.hooks.closeAllBags then
+    if not mod.BagsterModule.hooks.closeAllBags then
         hooksecurefunc("CloseAllBags", function()
             mod:Hide(BACKPACK_CONTAINER)
             ScheduleHighlightMainMenuBags()
         end)
-        mod.CombuctorModule.hooks.closeAllBags = true
+        mod.BagsterModule.hooks.closeAllBags = true
     end
 
     -- Stock BagSlotButton_UpdateChecked uses IsBagOpen(ContainerFrame) and clears the clicked bag
-    if not mod.CombuctorModule.hooks.bagSlotHighlight then
+    if not mod.BagsterModule.hooks.bagSlotHighlight then
         if _G.BagSlotButton_OnClick then
             hooksecurefunc("BagSlotButton_OnClick", ScheduleHighlightMainMenuBags)
         end
@@ -169,7 +169,7 @@ local function ApplyCombuctorSystem()
         if _G.BackpackButton_UpdateChecked then
             hooksecurefunc("BackpackButton_UpdateChecked", ScheduleHighlightMainMenuBags)
         end
-        mod.CombuctorModule.hooks.bagSlotHighlight = true
+        mod.BagsterModule.hooks.bagSlotHighlight = true
     end
 
     HideBlizzardKeyring()
@@ -178,8 +178,8 @@ local function ApplyCombuctorSystem()
     BankFrame:Hide()
 
     -- The stock guild vault is load-on-demand; blanking its loader keeps it from ever existing
-    if mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI == nil then
-        mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI = _G.GuildBankFrame_LoadUI
+    if mod.BagsterModule.originalStates.GuildBankFrame_LoadUI == nil then
+        mod.BagsterModule.originalStates.GuildBankFrame_LoadUI = _G.GuildBankFrame_LoadUI
     end
     _G.GuildBankFrame_LoadUI = function() end
     if _G.GuildBankFrame then
@@ -187,7 +187,7 @@ local function ApplyCombuctorSystem()
         GuildBankFrame:Hide()
     end
 
-    if not mod.CombuctorModule.hooks.inventoryEvents then
+    if not mod.BagsterModule.hooks.inventoryEvents then
         mod("InventoryEvents"):Register(mod, "BANK_OPENED", function()
             mod:Show(BANK_CONTAINER, true)
             mod:Show(BACKPACK_CONTAINER, true)
@@ -196,11 +196,11 @@ local function ApplyCombuctorSystem()
             mod:Hide(BANK_CONTAINER, true)
             mod:Hide(BACKPACK_CONTAINER, true)
         end)
-        mod.CombuctorModule.hooks.inventoryEvents = true
+        mod.BagsterModule.hooks.inventoryEvents = true
     end
 
     -- Auto show/hide on trade/auction/mail
-    local autoEventFrame = mod.CombuctorModule.frames.autoEventFrame or CreateFrame("Frame")
+    local autoEventFrame = mod.BagsterModule.frames.autoEventFrame or CreateFrame("Frame")
     autoEventFrame:UnregisterAllEvents()
     autoEventFrame:SetScript("OnEvent", function(self, event)
         if event == "MAIL_CLOSED" or event == "TRADE_CLOSED" or
@@ -218,10 +218,10 @@ local function ApplyCombuctorSystem()
     autoEventFrame:RegisterEvent("TRADE_SHOW")
     autoEventFrame:RegisterEvent("TRADE_SKILL_SHOW")
     autoEventFrame:RegisterEvent("AUCTION_HOUSE_SHOW")
-    mod.CombuctorModule.frames.autoEventFrame = autoEventFrame
+    mod.BagsterModule.frames.autoEventFrame = autoEventFrame
 
     -- Slash commands
-    SlashCmdList["DRAGONUI_COMBUCTOR"] = function(msg)
+    SlashCmdList["DRAGONUI_BAGSTER"] = function(msg)
         msg = msg and msg:lower() or ""
         if msg == "bank" then
             mod:Toggle(BANK_CONTAINER)
@@ -231,29 +231,30 @@ local function ApplyCombuctorSystem()
             mod:Toggle(BACKPACK_CONTAINER)
         end
     end
-    SLASH_DRAGONUI_COMBUCTOR1 = "/cbt"
-    SLASH_DRAGONUI_COMBUCTOR2 = "/combuctor"
+    SLASH_DRAGONUI_BAGSTER1 = "/cbt"
+    SLASH_DRAGONUI_BAGSTER2 = "/bagster"
+    SLASH_DRAGONUI_BAGSTER3 = "/combuctor" -- legacy alias for muscle memory
 
-    mod.CombuctorModule.applied = true
+    mod.BagsterModule.applied = true
 end
 
-local function RestoreCombuctorSystem()
-    if not mod.CombuctorModule.applied then return end
+local function RestoreBagsterSystem()
+    if not mod.BagsterModule.applied then return end
 
     -- Apply did BankFrame:UnregisterAllEvents(); without these the native bank never opens again
     BankFrame:RegisterEvent("BANKFRAME_OPENED")
     BankFrame:RegisterEvent("BANKFRAME_CLOSED")
 
-    if mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI then
-        _G.GuildBankFrame_LoadUI = mod.CombuctorModule.originalStates.GuildBankFrame_LoadUI
+    if mod.BagsterModule.originalStates.GuildBankFrame_LoadUI then
+        _G.GuildBankFrame_LoadUI = mod.BagsterModule.originalStates.GuildBankFrame_LoadUI
     end
     if mod.HideGuildFrame then
         mod.HideGuildFrame()
     end
 
-    if mod.CombuctorModule.frames.autoEventFrame then
-        mod.CombuctorModule.frames.autoEventFrame:UnregisterAllEvents()
-        mod.CombuctorModule.frames.autoEventFrame:SetScript("OnEvent", nil)
+    if mod.BagsterModule.frames.autoEventFrame then
+        mod.BagsterModule.frames.autoEventFrame:UnregisterAllEvents()
+        mod.BagsterModule.frames.autoEventFrame:SetScript("OnEvent", nil)
     end
 
     -- Hide all frames
@@ -265,33 +266,33 @@ local function RestoreCombuctorSystem()
     HighlightMainMenuBags()
 
     -- Restore original bag functions
-    if mod.CombuctorModule.originalStates.OpenBackpack then
-        _G.OpenBackpack = mod.CombuctorModule.originalStates.OpenBackpack
+    if mod.BagsterModule.originalStates.OpenBackpack then
+        _G.OpenBackpack = mod.BagsterModule.originalStates.OpenBackpack
     end
-    if mod.CombuctorModule.originalStates.ToggleBank then
-        _G.ToggleBank = mod.CombuctorModule.originalStates.ToggleBank
+    if mod.BagsterModule.originalStates.ToggleBank then
+        _G.ToggleBank = mod.BagsterModule.originalStates.ToggleBank
     end
-    if mod.CombuctorModule.originalStates.ToggleBackpack then
-        _G.ToggleBackpack = mod.CombuctorModule.originalStates.ToggleBackpack
+    if mod.BagsterModule.originalStates.ToggleBackpack then
+        _G.ToggleBackpack = mod.BagsterModule.originalStates.ToggleBackpack
     end
-    if mod.CombuctorModule.originalStates.OpenAllBags then
-        _G.OpenAllBags = mod.CombuctorModule.originalStates.OpenAllBags
+    if mod.BagsterModule.originalStates.OpenAllBags then
+        _G.OpenAllBags = mod.BagsterModule.originalStates.OpenAllBags
     end
-    if mod.CombuctorModule.originalStates.ToggleAllBags then
-        _G.ToggleAllBags = mod.CombuctorModule.originalStates.ToggleAllBags
+    if mod.BagsterModule.originalStates.ToggleAllBags then
+        _G.ToggleAllBags = mod.BagsterModule.originalStates.ToggleAllBags
     end
-    if mod.CombuctorModule.originalStates.ToggleBag then
-        _G.ToggleBag = mod.CombuctorModule.originalStates.ToggleBag
+    if mod.BagsterModule.originalStates.ToggleBag then
+        _G.ToggleBag = mod.BagsterModule.originalStates.ToggleBag
     end
-    if mod.CombuctorModule.originalStates.ToggleKeyRing then
-        _G.ToggleKeyRing = mod.CombuctorModule.originalStates.ToggleKeyRing
+    if mod.BagsterModule.originalStates.ToggleKeyRing then
+        _G.ToggleKeyRing = mod.BagsterModule.originalStates.ToggleKeyRing
     end
 
-    mod.CombuctorModule.originalStates = {}
-    mod.CombuctorModule.applied = false
+    mod.BagsterModule.originalStates = {}
+    mod.BagsterModule.applied = false
 end
 
-local function RefreshCombuctorFrames()
+local function RefreshBagsterFrames()
     if not mod.frames then return end
 
     for _, frame in pairs(mod.frames) do
@@ -310,7 +311,7 @@ local function RefreshCombuctorFrames()
             local name = frame:GetName()
             local gframe = _G[name]
             if gframe then
-                mod.CombuctorSkinItems(gframe)
+                mod.BagsterSkinItems(gframe)
             end
         end
 
@@ -349,8 +350,8 @@ end
 
 local function OnProfileChanged()
     if mod.IsModuleEnabled() then
-        if not mod.CombuctorModule.applied then
-            ApplyCombuctorSystem()
+        if not mod.BagsterModule.applied then
+            ApplyBagsterSystem()
         else
             -- Profile changed while module is active: refresh mod.DB and existing frames
             mod.SetupDatabase()
@@ -373,10 +374,10 @@ local function OnProfileChanged()
             end
         end
     else
-        if addon:ShouldDeferModuleDisable("combuctor", mod.CombuctorModule) then
+        if addon:ShouldDeferModuleDisable("bagster", mod.BagsterModule) then
             return
         end
-        RestoreCombuctorSystem()
+        RestoreBagsterSystem()
     end
 end
 
@@ -402,17 +403,17 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         if not mod.IsModuleEnabled() then return end
-        ApplyCombuctorSystem()
+        ApplyBagsterSystem()
     end
 end)
 
 -- Export for external use
-addon.ApplyCombuctorSystem = ApplyCombuctorSystem
-addon.RestoreCombuctorSystem = RestoreCombuctorSystem
-addon.RefreshCombuctorFrames = RefreshCombuctorFrames
-addon.CombuctorItemSlot = mod.ItemSlot
-addon.CombuctorSyncKeyRingChecked = SyncKeyRingChecked
-addon.CombuctorHighlightMainMenuBags = HighlightMainMenuBags
+addon.ApplyBagsterSystem = ApplyBagsterSystem
+addon.RestoreBagsterSystem = RestoreBagsterSystem
+addon.RefreshBagsterFrames = RefreshBagsterFrames
+addon.BagsterItemSlot = mod.ItemSlot
+addon.BagsterSyncKeyRingChecked = SyncKeyRingChecked
+addon.BagsterHighlightMainMenuBags = HighlightMainMenuBags
 mod.SyncKeyRingChecked = SyncKeyRingChecked
 mod.HighlightMainMenuBags = HighlightMainMenuBags
 mod.ScheduleHighlightMainMenuBags = ScheduleHighlightMainMenuBags

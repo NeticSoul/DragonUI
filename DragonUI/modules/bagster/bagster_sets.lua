@@ -1,6 +1,6 @@
--- Item filtering / category set registry (CombuctorSet/Sets).
+-- Item filtering / category set registry (BagsterSet/Sets).
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
+local mod = addon.BagsterModule
 local tinsert = table.insert
 
 local SET_ALL = ALL or "All"
@@ -14,24 +14,24 @@ local SET_TRADE = "Trade"
 -- ============================================================================
 
 do
-    local CombuctorSet = mod:NewModule("Sets", mod("Envoy"):New())
+    local BagsterSet = mod:NewModule("Sets", mod("Envoy"):New())
 
     local parentSets = {}
     local childSets = {}
 
-    function CombuctorSet:Register(name, icon, rule, parent)
+    function BagsterSet:Register(name, icon, rule, parent)
         local set = { name = name, icon = icon, rule = rule, parent = parent }
         if parent then
             childSets[parent] = childSets[parent] or {}
             tinsert(childSets[parent], set)
-            self:Send("COMBUCTOR_SUBSET_ADD", name, parent)
+            self:Send("BAGSTER_SUBSET_ADD", name, parent)
         else
             tinsert(parentSets, set)
-            self:Send("COMBUCTOR_SET_ADD", name)
+            self:Send("BAGSTER_SET_ADD", name)
         end
     end
 
-    function CombuctorSet:Get(name, parent)
+    function BagsterSet:Get(name, parent)
         if parent then
             local children = childSets[parent]
             if children then
@@ -50,11 +50,11 @@ do
         end
     end
 
-    function CombuctorSet:GetParentSets()
+    function BagsterSet:GetParentSets()
         return ipairs(parentSets)
     end
 
-    function CombuctorSet:GetChildSets(parent)
+    function BagsterSet:GetChildSets(parent)
         return ipairs(childSets[parent] or {})
     end
 
@@ -70,38 +70,38 @@ do
     -- Register default item sets
 
     -- ALL: parent set
-    CombuctorSet:Register(SET_ALL, [[Interface\Icons\INV_Misc_EngGizmos_17]], function() return true end)
+    BagsterSet:Register(SET_ALL, [[Interface\Icons\INV_Misc_EngGizmos_17]], function() return true end)
     -- ALL subtabs: All, Normal, Trade
-    CombuctorSet:Register(SET_ALL, nil, nil, SET_ALL)
-    CombuctorSet:Register(mod.L.Normal, nil, function(player, bagType) return bagType and bagType == 0 end, SET_ALL)
-    CombuctorSet:Register(mod.L.Trade, nil, function(player, bagType) return bagType and bit.band(bagType, BAGTYPE_PROFESSION) > 0 end, SET_ALL)
+    BagsterSet:Register(SET_ALL, nil, nil, SET_ALL)
+    BagsterSet:Register(mod.L.Normal, nil, function(player, bagType) return bagType and bagType == 0 end, SET_ALL)
+    BagsterSet:Register(mod.L.Trade, nil, function(player, bagType) return bagType and bit.band(bagType, BAGTYPE_PROFESSION) > 0 end, SET_ALL)
 
     -- EQUIPMENT: parent set (armor + weapons)
     do
         local function isEquipment(_, _, _, _, _, _, _, itype)
             return (itype == mod.L.Armor or itype == mod.L.Weapon)
         end
-        CombuctorSet:Register(mod.L.Equipment, [[Interface\Icons\INV_Chest_Chain_04]], isEquipment)
+        BagsterSet:Register(mod.L.Equipment, [[Interface\Icons\INV_Chest_Chain_04]], isEquipment)
         -- Equipment subtabs: All, Armor, Weapon, Trinket
-        CombuctorSet:Register(SET_ALL, nil, nil, mod.L.Equipment)
+        BagsterSet:Register(SET_ALL, nil, nil, mod.L.Equipment)
     end
     do
         local function isArmor(_, _, _, _, _, _, _, itype, _, _, equipLoc)
             return itype == mod.L.Armor and equipLoc ~= "INVTYPE_TRINKET"
         end
-        CombuctorSet:Register(mod.L.Armor, nil, isArmor, mod.L.Equipment)
+        BagsterSet:Register(mod.L.Armor, nil, isArmor, mod.L.Equipment)
     end
     do
         local function isWeapon(_, _, _, _, _, _, _, itype)
             return itype == mod.L.Weapon
         end
-        CombuctorSet:Register(mod.L.Weapon, nil, isWeapon, mod.L.Equipment)
+        BagsterSet:Register(mod.L.Weapon, nil, isWeapon, mod.L.Equipment)
     end
     do
         local function isTrinket(_, _, _, _, _, _, _, _, _, _, equipLoc)
             return equipLoc == "INVTYPE_TRINKET"
         end
-        CombuctorSet:Register(INVTYPE_TRINKET, nil, isTrinket, mod.L.Equipment)
+        BagsterSet:Register(INVTYPE_TRINKET, nil, isTrinket, mod.L.Equipment)
     end
 
     -- USABLE: parent set (consumables + devices/explosives)
@@ -115,21 +115,21 @@ do
                 end
             end
         end
-        CombuctorSet:Register(mod.L.Usable, [[Interface\Icons\INV_Potion_93]], isUsable)
+        BagsterSet:Register(mod.L.Usable, [[Interface\Icons\INV_Potion_93]], isUsable)
         -- Usable subtabs: All, Consumable, Devices
-        CombuctorSet:Register(SET_ALL, nil, nil, mod.L.Usable)
+        BagsterSet:Register(SET_ALL, nil, nil, mod.L.Usable)
     end
     do
         local function isConsumable(_, _, _, _, _, _, _, itype)
             return itype == mod.L.Consumable
         end
-        CombuctorSet:Register(mod.L.Consumable, nil, isConsumable, mod.L.Usable)
+        BagsterSet:Register(mod.L.Consumable, nil, isConsumable, mod.L.Usable)
     end
     do
         local function isDevice(_, _, _, _, _, _, _, itype)
             return itype == mod.L.TradeGood
         end
-        CombuctorSet:Register(mod.L.Devices, nil, isDevice, mod.L.Usable)
+        BagsterSet:Register(mod.L.Devices, nil, isDevice, mod.L.Usable)
     end
 
     -- QUEST: parent set (no subtabs)
@@ -137,8 +137,8 @@ do
         local function isQuestItem(_, _, _, _, _, _, _, itype)
             return itype == mod.L.Quest
         end
-        CombuctorSet:Register(mod.L.Quest, [[Interface\QuestFrame\UI-QuestLog-BookIcon]], isQuestItem)
-        CombuctorSet:Register(SET_ALL, nil, nil, mod.L.Quest)
+        BagsterSet:Register(mod.L.Quest, [[Interface\QuestFrame\UI-QuestLog-BookIcon]], isQuestItem)
+        BagsterSet:Register(SET_ALL, nil, nil, mod.L.Quest)
     end
 
     -- TRADE GOODS: parent set (trade goods + gems + recipes, excluding devices/explosives)
@@ -149,27 +149,27 @@ do
             end
             return itype == mod.L.Recipe or itype == mod.L.Gem
         end
-        CombuctorSet:Register(mod.L.TradeGood, [[Interface\Icons\INV_Fabric_Silk_02]], isTradeGood)
+        BagsterSet:Register(mod.L.TradeGood, [[Interface\Icons\INV_Fabric_Silk_02]], isTradeGood)
         -- Trade Goods subtabs: All, Trade Goods, Gem, Recipe
-        CombuctorSet:Register(SET_ALL, nil, nil, mod.L.TradeGood)
+        BagsterSet:Register(SET_ALL, nil, nil, mod.L.TradeGood)
     end
     do
         local function isTradeGoodOnly(_, _, _, _, _, _, _, itype)
             return itype == mod.L.TradeGood
         end
-        CombuctorSet:Register(mod.L.TradeGood, nil, isTradeGoodOnly, mod.L.TradeGood)
+        BagsterSet:Register(mod.L.TradeGood, nil, isTradeGoodOnly, mod.L.TradeGood)
     end
     do
         local function isGem(_, _, _, _, _, _, _, itype)
             return itype == mod.L.Gem
         end
-        CombuctorSet:Register(mod.L.Gem, nil, isGem, mod.L.TradeGood)
+        BagsterSet:Register(mod.L.Gem, nil, isGem, mod.L.TradeGood)
     end
     do
         local function isRecipe(_, _, _, _, _, _, _, itype)
             return itype == mod.L.Recipe
         end
-        CombuctorSet:Register(mod.L.Recipe, nil, isRecipe, mod.L.TradeGood)
+        BagsterSet:Register(mod.L.Recipe, nil, isRecipe, mod.L.TradeGood)
     end
 
     -- MISCELLANEOUS: parent set (no subtabs)
@@ -177,7 +177,7 @@ do
         local function isMiscItem(_, _, _, link, _, _, _, itype)
             return itype == mod.L.Misc and (link:match("%d+") ~= "6265")
         end
-        CombuctorSet:Register(mod.L.Misc, [[Interface\Icons\INV_Misc_Rune_01]], isMiscItem)
-        CombuctorSet:Register(SET_ALL, nil, nil, mod.L.Misc)
+        BagsterSet:Register(mod.L.Misc, [[Interface\Icons\INV_Misc_Rune_01]], isMiscItem)
+        BagsterSet:Register(SET_ALL, nil, nil, mod.L.Misc)
     end
 end

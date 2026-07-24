@@ -1,6 +1,6 @@
--- Guild bank: combuctor-styled replacement for the stock guild vault UI.
+-- Guild bank: bagster-styled replacement for the stock guild vault UI.
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
+local mod = addon.BagsterModule
 
 local format = string.format
 local floor, ceil, min, max, sqrt = math.floor, math.ceil, math.min, math.max, math.sqrt
@@ -22,7 +22,7 @@ do
     local slotId = 1
 
     function GuildItemSlot:New(parent, slot)
-        local item = self:Bind(CreateFrame("Button", format("DragonUI_CombuctorGuildItem%d", slotId), parent, "ItemButtonTemplate"))
+        local item = self:Bind(CreateFrame("Button", format("DragonUI_BagsterGuildItem%d", slotId), parent, "ItemButtonTemplate"))
         slotId = slotId + 1
         item:SetID(slot)
         item:RegisterForClicks("anyUp")
@@ -44,7 +44,7 @@ do
         item:SetScript("OnLeave", self.OnLeave)
         item:SetScript("OnHide", self.OnHide)
 
-        mod.CombuctorRetailItemSlot(item)
+        mod.BagsterRetailItemSlot(item)
         return item
     end
 
@@ -353,7 +353,7 @@ do
     }
 
     function GuildFrame:New()
-        local name = "DragonUI_CombuctorFrame3"
+        local name = "DragonUI_BagsterFrame3"
         local f = self:Bind(CreateFrame("Frame", name, UIParent))
         f.sets = mod.DB.guild
         f:SetSize(f.sets.w or 512, f.sets.h or 512)
@@ -575,7 +575,7 @@ do
         f:SetScript("OnEvent", self.OnEvent)
 
         tinsert(UISpecialFrames, name)
-        mod.CombuctorSkinFrame(f)
+        mod.BagsterSkinFrame(f)
         f.title:SetText(GUILD_BANK)
 
         -- Guild emblem takes the portrait's spot: the portrait texture becomes the round disc
@@ -1034,7 +1034,7 @@ do
     watcher:RegisterEvent("GUILDBANKFRAME_OPENED")
     watcher:RegisterEvent("GUILDBANKFRAME_CLOSED")
     watcher:SetScript("OnEvent", function(_, event)
-        if not mod.CombuctorModule.applied then return end
+        if not mod.BagsterModule.applied then return end
         if event == "GUILDBANKFRAME_OPENED" then
             mod.ShowGuildFrame()
         else

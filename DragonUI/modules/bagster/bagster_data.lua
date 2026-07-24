@@ -1,6 +1,6 @@
 -- Event bus (Envoy), inventory event tracking, bank cache, player/bag/item slot info.
 local addon = select(2, ...)
-local mod = addon.CombuctorModule
+local mod = addon.BagsterModule
 
 -- ============================================================================
 -- ENVOY (EVENT BUS)
@@ -278,7 +278,7 @@ do
     -- Event handlers
     local eventFrame = CreateFrame("Frame")
     eventFrame:SetScript("OnEvent", function(self, event, ...)
-        if not mod.CombuctorModule.applied then return end
+        if not mod.BagsterModule.applied then return end
         if event == "PLAYER_LOGIN" then
             forEachBag(updateBag)
         elseif event == "BAG_UPDATE" then
@@ -340,7 +340,7 @@ do
     end)
 
     bankWatcher:SetScript("OnEvent", function(self, event)
-        if not mod.CombuctorModule.applied then return end
+        if not mod.BagsterModule.applied then return end
         if event == "BANKFRAME_OPENED" then
             self:Show()
         else
@@ -364,10 +364,10 @@ do
 
     local function getCharCache()
         if not addon.db or not addon.db.global then return end
-        local root = addon.db.global.combuctorCache
+        local root = addon.db.global.bagsterCache
         if not root then
-            addon.db.global.combuctorCache = {}
-            root = addon.db.global.combuctorCache
+            addon.db.global.bagsterCache = {}
+            root = addon.db.global.bagsterCache
         end
         local key = getCharKey()
         if not root[key] then
@@ -598,7 +598,7 @@ do
         if self:IsBank(bag) or self:IsBackpack(bag) then
             return 0
         end
-        -- BagBrother inventory.lua: keyring family is 9
+        -- keyring family is 9
         if self:IsKeyRing(bag) then
             return 9
         end

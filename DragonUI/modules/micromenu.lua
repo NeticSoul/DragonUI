@@ -1586,12 +1586,12 @@ local function ApplyMicromenuSystem()
             ct:SetDrawLayer('OVERLAY', 7)
             ct:set_atlas('bag-border-highlight-2x')
         end
-        -- Combuctor replaces ContainerFrame_OnShow checked sync; highlight backpack/bag slots instead
+        -- Bagster replaces ContainerFrame_OnShow checked sync; highlight backpack/bag slots instead
         local function SyncKeyRingButton()
-            if addon.CombuctorModule and addon.CombuctorModule.CombuctorModule
-                and addon.CombuctorModule.CombuctorModule.applied
-                and addon.CombuctorHighlightMainMenuBags then
-                addon.CombuctorHighlightMainMenuBags()
+            if addon.BagsterModule and addon.BagsterModule.BagsterModule
+                and addon.BagsterModule.BagsterModule.applied
+                and addon.BagsterHighlightMainMenuBags then
+                addon.BagsterHighlightMainMenuBags()
                 return
             end
             if KeyRingButton then
@@ -1602,10 +1602,10 @@ local function ApplyMicromenuSystem()
         if not MicromenuModule.hooks.KeyRingSyncHooks then
             hooksecurefunc("ToggleKeyRing", SyncKeyRingButton)
             hooksecurefunc("CloseAllBags", function()
-                if addon.CombuctorModule and addon.CombuctorModule.CombuctorModule
-                    and addon.CombuctorModule.CombuctorModule.applied
-                    and addon.CombuctorHighlightMainMenuBags then
-                    addon.CombuctorHighlightMainMenuBags()
+                if addon.BagsterModule and addon.BagsterModule.BagsterModule
+                    and addon.BagsterModule.BagsterModule.applied
+                    and addon.BagsterHighlightMainMenuBags then
+                    addon.BagsterHighlightMainMenuBags()
                     return
                 end
                 if KeyRingButton then

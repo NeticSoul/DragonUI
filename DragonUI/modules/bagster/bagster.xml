@@ -1,0 +1,11 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+
+    <Script file="bagster.lua"/>
+    <Script file="bagster_data.lua"/>
+    <Script file="bagster_sets.lua"/>
+    <Script file="bagster_classes.lua"/>
+    <Script file="bagster_frame.lua"/>
+    <Script file="bagster_guild.lua"/>
+    <Script file="bagster_system.lua"/>
+
+</Ui>

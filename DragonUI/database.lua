@@ -11,7 +11,7 @@ local _arialn = addon.Fonts and addon.Fonts.ARIALN or "Fonts\\ARIALN.TTF"
 
 local defaults = {
     global = {
-        combuctorCache = {}, -- Per-character bank snapshot (realm|name keys); used by combuctor module
+        bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         questLootLearned = {} -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
     },
     profile = {
@@ -1015,7 +1015,7 @@ local defaults = {
                 editboxIdleAlpha = 0, -- Editbox minimum opacity when idle (0 = fades with tabs, 1 = always visible)
                 editboxStyle = "dark", -- Editbox background style: "none", "dark", "dragon", "nocturne"
             },
-            combuctor = {
+            bagster = {
                 enabled = false, -- All-in-one bag replacement with filtering and search
                 money_display = "icons", -- Coin display: "icons" (g/s/c icons) or "text"
                 item_scale = 1.25, -- Max item slot scale in the grid

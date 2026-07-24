@@ -82,7 +82,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 
 ### Inventory And Navigation
 
-- 🎒 Auto-sort for bags and bank with slot locking, plus integrated Combuctor for unified inventory browsing.
+- 🎒 Auto-sort for bags and bank with slot locking, plus integrated module (Bagster) for unified inventory browsing.
 - 🗺️ Custom Retail-style minimap (compatible with SexyMap).
 
 ### Utility And Quality Of Life

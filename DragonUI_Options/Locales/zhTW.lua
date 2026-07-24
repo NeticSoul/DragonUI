@@ -324,10 +324,10 @@ L["DragonUI Style"] = "DragonUI \u6a23\u5f0f"
 L["Nocturne"] = "\u591c\u66f2"
 
 
--- 揹包整合 (Combuctor)
-L["Enable Combuctor"] = "啟用揹包整合 (Combuctor)"
+-- 揹包整合 (Bagster)
+L["Enable Bagster"] = "啟用揹包整合 (Bagster)"
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = "具有物品過濾、搜尋、品質指示器和銀行整合功能的一體化揹包替代外掛。"
-L["Combuctor Settings"] = "Combuctor設定"
+L["Bagster Settings"] = "Bagster設定"
 
 -- Item usability tint
 L["Item Usability"] = "物品可用性"
@@ -379,7 +379,7 @@ L["Show the Devices subtab."] = "顯示裝置子標籤頁。"
 L["Show the Trade Goods subtab."] = "顯示商品子標籤頁。"
 L["Show the Gem subtab."] = "顯示寶石子標籤頁。"
 L["Show the Recipe subtab."] = "顯示配方子標籤頁。"
-L["Configure Combuctor bag replacement settings."] = "配置揹包整合 (Combuctor) 替代設定。"
+L["Configure Bagster bag replacement settings."] = "配置揹包整合 (Bagster) 替代設定。"
 L["Category Tabs"] = "分類標籤頁"
 L["Inventory Tabs"] = "揹包標籤頁"
 L["Bank Tabs"] = "銀行標籤頁"
@@ -440,7 +440,7 @@ L["Pet action bar positioning and styling"] = "寵物動作條位置和樣式設
 L["Multicast (totem/possess) bar positioning and styling"] = "多目標施法（圖騰/控制）條位置和樣式設定"
 L["Chat Mods"] = "聊天功能修改"
 L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"] = "聊天增強：隱藏按鈕、輸入框位置、URL/聊天覆制、連結懸停提示、/告訴目標"
-L["Combuctor"] = "揹包整合 (Combuctor)"
+L["Bagster"] = "揹包整合 (Bagster)"
 L["All-in-one bag replacement with filtering and search"] = "具有過濾和搜尋功能的一體化揹包替代"
 
 -- ============================================================================
