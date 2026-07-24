@@ -351,7 +351,7 @@ local defaults = {
             scale = 1,
             x_position = 1,
             y_position = 41,
-            tint_unusable = false, -- Red icon tint for gear/Use items the player cannot use
+            tint_unusable = true, -- Red icon tint for gear/Use items the player cannot use
         },
 
         xprepbar = {

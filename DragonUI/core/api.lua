@@ -2095,7 +2095,7 @@ end
 -- BAG ITEM USABILITY TINT
 -- ============================================================================
 -- Tooltip red misses armor/weapon proficiency in 3.3.5a; class tables cover that.
--- Tint only weapons/armor/shields (not Use: stacks like essences via IsUsableItem).
+-- Tint equippable gear only (not Use: stacks like essences via IsUsableItem).
 
 local unusableTintCache = {}
 local armorSubs
@@ -2167,10 +2167,15 @@ local WEAPON_SLOTS = {
     INVTYPE_RANGED = true, INVTYPE_THROWN = true, INVTYPE_RANGEDRIGHT = true,
 }
 
--- No armor/weapon type; level + tooltip red (class/race/faction).
-local LEVEL_ONLY_SLOTS = {
-    INVTYPE_FINGER = true, INVTYPE_CLOAK = true,
+-- Every equippable slot: proficiency tables cover armor/weapons, tooltip red covers the rest.
+local EQUIPPABLE_SLOTS = {
+    INVTYPE_NECK = true, INVTYPE_FINGER = true, INVTYPE_TRINKET = true,
+    INVTYPE_CLOAK = true, INVTYPE_BODY = true, INVTYPE_TABARD = true,
+    INVTYPE_SHIELD = true, INVTYPE_HOLDABLE = true, INVTYPE_RELIC = true,
+    INVTYPE_AMMO = true, INVTYPE_QUIVER = true,
 }
+for slot in pairs(ARMOR_SLOTS) do EQUIPPABLE_SLOTS[slot] = true end
+for slot in pairs(WEAPON_SLOTS) do EQUIPPABLE_SLOTS[slot] = true end
 
 local function GetArmorSubs()
     if armorSubs then return armorSubs end
@@ -2324,10 +2329,9 @@ function addon:IsItemUnusableForTint(link, bag, slot)
     elseif wrongArmor or wrongWeapon then
         unusable = true
     else
-        -- Gear slots only — not consumables. Rings/cloaks: level + tooltip red.
+        -- Gear slots only — not consumables.
         local _, _, _, _, reqLevel, _, _, _, equipLoc = GetItemInfo(link)
-        if equipLoc and (LEVEL_ONLY_SLOTS[equipLoc] or ARMOR_SLOTS[equipLoc]
-                or WEAPON_SLOTS[equipLoc] or equipLoc == "INVTYPE_SHIELD") then
+        if equipLoc and EQUIPPABLE_SLOTS[equipLoc] then
             if reqLevel and reqLevel > UnitLevel("player") then
                 unusable = true
             else
