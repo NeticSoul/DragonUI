@@ -376,11 +376,15 @@ do
 
     local BASE_WIDTH = 384
     -- Right inset slightly tighter: last cell pitch already leaves spacing after the icon.
-    local ITEM_FRAME_LEFT_INSET = 16
+    local ITEM_FRAME_LEFT_INSET = 14
     local ITEM_FRAME_RIGHT_INSET = 12
     local ITEM_FRAME_WIDTH_OFFSET = -(ITEM_FRAME_LEFT_INSET + ITEM_FRAME_RIGHT_INSET)
     local BASE_HEIGHT = 512
     local ITEM_FRAME_HEIGHT_OFFSET = 417 - BASE_HEIGHT
+    -- Bag column: 36px ring centered 33 from the right edge, so 52 leaves it 15px of air on both sides
+    local BAG_COLUMN_RESERVE = 52
+    -- Chrome takes 95px of height, so two item rows is the real floor; anything higher blocks trimming
+    local MIN_HEIGHT = -ITEM_FRAME_HEIGHT_OFFSET + 78
 
     local lastID = 1
     function InventoryFrame:New(titleText, settings, isBank, key)
@@ -399,7 +403,7 @@ do
         f:SetHeight(settings.h or BASE_HEIGHT)
 
         -- Override min resize to allow smaller heights than the NineSlice base
-        f:SetMinResize(BASE_WIDTH, 350)
+        f:SetMinResize(BASE_WIDTH, MIN_HEIGHT)
 
         f.title = _G[f:GetName() .. "Title"]
         f.sideFilter = mod.SideFilter:New(f, f:IsSideFilterOnLeft())
@@ -759,8 +763,8 @@ do
         if not self.itemFrame then return end
         local prevW, prevH = self.itemFrame:GetWidth(), self.itemFrame:GetHeight()
         local newW = self:GetWidth() + ITEM_FRAME_WIDTH_OFFSET
-        if next(self.bagButtons) then
-            newW = newW - 36
+        if self.sets.showBags then
+            newW = newW - BAG_COLUMN_RESERVE
         end
         local newH = self:GetHeight() + ITEM_FRAME_HEIGHT_OFFSET
         if not (prevW == newW and prevH == newH) then
@@ -826,6 +830,11 @@ do
     function InventoryFrame:OnShow()
         PlaySound("igBackPackOpen")
         FrameEvents:Register(self)
+        -- Hiding mid-fade freezes the driver's OnUpdate, so finish the pending close here
+        if self._bagsClosing then
+            self._bagsClosing = nil
+            self:UpdateBagFrame()
+        end
         self:UpdateSets(self:GetDefaultCategory())
         if self.tokenBar then
             self.tokenBar:Refresh()

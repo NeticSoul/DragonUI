@@ -921,7 +921,7 @@ do
         local cfg = mod.GetModuleConfig()
         local spacing = (cfg and cfg.item_spacing) or 2
         local size = 37 + spacing
-        local maxScale = (cfg and cfg.item_scale) or 1.25
+        local maxScale = (cfg and cfg.item_scale) or 1
         local bagBreak = (cfg and cfg.bag_break)
         if bagBreak == nil then bagBreak = 1 end
         local breakSpace = (cfg and cfg.break_space) or 1.3
@@ -954,6 +954,11 @@ do
         local n = #buttons
         if n == 0 then return end
 
+        -- A block whose slots were all filtered out leaves a trailing break: phantom rows.
+        while #breaks > 1 and breaks[#breaks] >= n do
+            table.remove(breaks)
+        end
+
         local b = #breaks - 1
         local function CountRows(cols)
             local rows = b * (breakSpace - 1)
@@ -963,23 +968,28 @@ do
             return max(rows, 1)
         end
 
-        -- Maximize cell size; on a tie pick the layout with least leftover chrome
-        -- (avoids a fat empty strip on the right while staying left-aligned).
         local cap = maxScale * size
         local maxCols = max(1, min(n, floor(width / max(size * 0.5, 1))))
-        local columns, bestFit, bestWaste = 1, 0, 1e9
+        local bestFit = 0
         for cols = 1, maxCols do
-            local rows = CountRows(cols)
-            local fit = min(width / cols, height / rows, cap)
-            local waste = (width - cols * fit) + (height - rows * fit)
-            if fit > bestFit + 0.001 or (fit >= bestFit - 0.001 and waste < bestWaste) then
-                bestFit, columns, bestWaste = fit, cols, waste
-            end
+            local fit = min(width / cols, height / CountRows(cols), cap)
+            if fit > bestFit then bestFit = fit end
         end
         if bestFit <= 0 then
             bestFit = min(width, height, cap)
         end
+
+        -- Nearest column count, then the cell itself absorbs the leftover so the width fills exactly.
+        local gridCols = max(1, floor(width / bestFit + 0.5))
+        local columns = min(n, gridCols)
+        bestFit = min(width / gridCols, height / CountRows(columns))
         local scale = bestFit / size
+
+        -- Falls back to widening the gaps when the height caps the cell before the width is filled.
+        local pitchX = size
+        if columns == gridCols and gridCols > 1 then
+            pitchX = min((width - bestFit) / (gridCols - 1), bestFit * 1.25) / scale
+        end
 
         local breakpoint, stage, x, y = breaks[2] or n, 2, 0, 0
         for i, button in ipairs(buttons) do
@@ -992,7 +1002,7 @@ do
             end
             button:ClearAllPoints()
             button:SetScale(scale)
-            button:SetPoint("TOPLEFT", self, "TOPLEFT", size * x, -size * y)
+            button:SetPoint("TOPLEFT", self, "TOPLEFT", pitchX * x, -size * y)
             button:Show()
             x = x + 1
         end

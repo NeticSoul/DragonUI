@@ -1018,7 +1018,7 @@ local defaults = {
             bagster = {
                 enabled = false, -- All-in-one bag replacement with filtering and search
                 money_display = "icons", -- Coin display: "icons" (g/s/c icons) or "text"
-                item_scale = 1.25, -- Max item slot scale in the grid
+                item_scale = 1, -- Target item slot scale (1 = native 37px slot); cell flexes to fill the width
                 item_spacing = 2, -- Gap between slots (pitch = 37 + spacing)
                 bag_break = 1, -- 0 off, 1 normal↔profession (+keyring block), 2 every bag
                 break_space = 1.3, -- Extra rows between bag-break groups

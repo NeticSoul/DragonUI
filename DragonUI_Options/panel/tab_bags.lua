@@ -571,7 +571,7 @@ local function BuildBagsTab(scroll)
         min = 0.5, max = 1.5, step = 0.05, isPercent = true,
         getFunc = function()
             local mc = GetBagsterConfig(false)
-            return (mc and mc.item_scale) or 1.25
+            return (mc and mc.item_scale) or 1
         end,
         setFunc = function(val) SetBagsterOption("item_scale", val) end,
         disabled = function() return not IsBagsterEnabled() end,
