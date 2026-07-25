@@ -497,6 +497,52 @@ function UF.TargetStyle.Create(opts)
             BlizzFrame.DragonUI_PortraitHook = true
         end
 
+        -- Vanilla routes the bars through TextStatusBar, skipping UnitFrame_OnEnter's newbie tip.
+        if not BlizzFrame.DragonUI_BarTooltipHook then
+            local overBar
+
+            local function IsOverBar()
+                return ((HealthBar:IsVisible() and HealthBar:IsMouseOver())
+                    or (ManaBar:IsVisible() and ManaBar:IsMouseOver())) and true or false
+            end
+
+            local function ApplyTooltip()
+                if overBar then
+                    UnitFrame_UpdateTooltip(BlizzFrame)
+                else
+                    -- Newbie tips never install UpdateTooltip; a stale one would swap the tip out mid-hover.
+                    BlizzFrame.UpdateTooltip = nil
+                    UnitFrame_OnEnter(BlizzFrame)
+                end
+            end
+
+            -- Only reacts to crossing the bar edge; rebuilding on a timer flickers the tooltip.
+            local watcher = CreateFrame("Frame")
+            watcher:Hide()
+            watcher:SetScript("OnUpdate", function(self)
+                if not BlizzFrame:IsMouseOver() then
+                    self:Hide()
+                    return
+                end
+                local now = IsOverBar()
+                if now ~= overBar then
+                    overBar = now
+                    ApplyTooltip()
+                end
+            end)
+
+            BlizzFrame:HookScript("OnEnter", function()
+                overBar = IsOverBar()
+                ApplyTooltip()
+                watcher:Show()
+            end)
+            BlizzFrame:HookScript("OnLeave", function()
+                watcher:Hide()
+            end)
+
+            BlizzFrame.DragonUI_BarTooltipHook = true
+        end
+
         -- Hook afterBarHooks callback if provided
         if opts.afterBarHooks then
             opts.afterBarHooks(Module, ManaBar, GetConfig, updateCache)
@@ -842,6 +888,9 @@ function UF.TargetStyle.Create(opts)
         Portrait:SetSize(56, 56)
         Portrait:SetPoint("TOPRIGHT", BlizzFrame, "TOPRIGHT", -47, -15)
         Portrait:SetDrawLayer("ARTWORK", 0)
+
+        -- TargetFrame's OnLoad cuts 96px off its left hit rect; undo it so the button covers the bars.
+        BlizzFrame:SetHitRectInsets(0, 40, 10, 20)
 
         -- ---- Configure health bar ----
         -- Frame level -1 keeps bar fills below portrait area (level 0)
@@ -1268,8 +1317,6 @@ function UF.TargetStyle.Create(opts)
         elseif configKey == "focus" then
             if _G.FocusFrameToT then table.insert(extraFrames, _G.FocusFrameToT); table.insert(hoverFrames, _G.FocusFrameToT) end
         end
-        if BlizzFrame.DragonUIHealthHover then table.insert(hoverFrames, BlizzFrame.DragonUIHealthHover) end
-        if BlizzFrame.DragonUIManaHover then table.insert(hoverFrames, BlizzFrame.DragonUIManaHover) end
 
         local castbarFrames = addon.CastbarModule and addon.CastbarModule.frames
         local castbarContainer = castbarFrames and castbarFrames[configKey] and castbarFrames[configKey].container

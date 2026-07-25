@@ -511,8 +511,6 @@ function addon.RefreshPetFrame()
     if addon.VisibilityFade and _G.PetFrame then
         local petFrame = _G.PetFrame
         local hoverFrames = { petFrame }
-        if petFrame.DragonUIHealthHover then table.insert(hoverFrames, petFrame.DragonUIHealthHover) end
-        if petFrame.DragonUIManaHover then table.insert(hoverFrames, petFrame.DragonUIManaHover) end
         addon.VisibilityFade.Register("pet", petFrame, {
             dbTable = function() return addon.UF.GetConfig("pet") end,
             hoverFrames = hoverFrames,

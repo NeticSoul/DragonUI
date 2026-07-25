@@ -374,105 +374,59 @@ function TextSystem.SetupFrameTextSystem(frameType, unit, parentFrame, healthBar
     }
 end
 
--- Set up hover events for text display (player frame uses click-through)
+-- One shared sweep: an OnUpdate per bar costs more than checking every watched frame at once.
+local hoverWatchers = {}
+local hoverPoller = CreateFrame("Frame")
+hoverPoller:Hide()
+hoverPoller.elapsed = 0
+hoverPoller:SetScript("OnUpdate", function(self, elapsed)
+    self.elapsed = self.elapsed + elapsed
+    if self.elapsed < 0.05 then return end
+    self.elapsed = 0
+
+    for _, watcher in ipairs(hoverWatchers) do
+        local shown = watcher.parent:IsVisible()
+        local overHealth = (shown and TextSystem.IsMouseOverFrame(watcher.health)) and true or false
+        local overMana = (shown and TextSystem.IsMouseOverFrame(watcher.mana)) and true or false
+        if overHealth ~= watcher.overHealth or overMana ~= watcher.overMana then
+            watcher.overHealth, watcher.overMana = overHealth, overMana
+            watcher.update()
+        end
+    end
+end)
+
+-- Set up hover events for text display
 function TextSystem.SetupHoverEvents(parentFrame, healthBar, manaBar, updateCallback)
-    -- Detect if it's PlayerFrame to apply click-through
     local parentName = parentFrame:GetName() or ""
-    local isPlayerFrame = (parentName:find("DragonUIUnitframeFrame") ~= nil)
-    local isFocusFrame = (parentName == "FocusFrame")
-    
-    if healthBar then
-        local healthHover = CreateFrame("Frame", nil, parentFrame)
-        healthHover:SetAllPoints(healthBar)
-        healthHover:SetFrameLevel(parentFrame:GetFrameLevel() + 10)
-        
-        if isPlayerFrame then
-            -- PLAYER FRAME: Click-through enabled
-            healthHover:EnableMouse(false)  -- DO NOT capture clicks
-            -- Phase 3C: Use HookScript on Blizzard StatusBar to avoid taint
-            if not healthBar.DragonUIHoverSetup then
-                healthBar:EnableMouse(true)
-                healthBar:HookScript("OnEnter", updateCallback)
-                healthBar:HookScript("OnLeave", updateCallback)
-                healthBar.DragonUIHoverSetup = true
-            end
-        elseif isFocusFrame then
-            -- Focus: keep click-through behavior and poll hover state.
-            healthHover:EnableMouse(false)
-            if healthBar and healthBar.EnableMouse then
-                healthBar:EnableMouse(false)
-            end
-            if not healthHover.DragonUIHoverPoller then
-                healthHover.DragonUIHoverPoller = true
-                healthHover.DragonUIHoverElapsed = 0
-                healthHover.DragonUIHoverState = false
-                healthHover:SetScript("OnUpdate", function(self, elapsed)
-                    self.DragonUIHoverElapsed = (self.DragonUIHoverElapsed or 0) + elapsed
-                    if self.DragonUIHoverElapsed < 0.05 then return end
-                    self.DragonUIHoverElapsed = 0
 
-                    local isOver = TextSystem.IsMouseOverFrame(self)
-                    if isOver ~= self.DragonUIHoverState then
-                        self.DragonUIHoverState = isOver
-                        updateCallback()
-                    end
-                end)
-            end
-        else
-            -- Other frames keep hover overlay capture behavior.
-            healthHover:EnableMouse(true)
-            healthHover:SetScript("OnEnter", updateCallback)
-            healthHover:SetScript("OnLeave", updateCallback)
+    -- Player frame: hooked on the bars themselves to avoid tainting its custom container.
+    if parentName:find("DragonUIUnitframeFrame") then
+        local function HookBar(bar)
+            if not bar or bar.DragonUIHoverSetup then return end
+            bar:EnableMouse(true)
+            bar:HookScript("OnEnter", updateCallback)
+            bar:HookScript("OnLeave", updateCallback)
+            bar.DragonUIHoverSetup = true
         end
 
-        parentFrame.DragonUIHealthHover = healthHover
+        HookBar(healthBar)
+        HookBar(manaBar)
+        return
     end
 
-    if manaBar then
-        local manaHover = CreateFrame("Frame", nil, parentFrame)
-        manaHover:SetAllPoints(manaBar)
-        manaHover:SetFrameLevel(parentFrame:GetFrameLevel() + 10)
-        
-        if isPlayerFrame then
-            -- PLAYER FRAME: Click-through enabled
-            manaHover:EnableMouse(false)  -- DO NOT capture clicks
-            -- Phase 3C: Use HookScript on Blizzard StatusBar to avoid taint
-            if not manaBar.DragonUIHoverSetup then
-                manaBar:EnableMouse(true)
-                manaBar:HookScript("OnEnter", updateCallback)
-                manaBar:HookScript("OnLeave", updateCallback)
-                manaBar.DragonUIHoverSetup = true
-            end
-        elseif isFocusFrame then
-            -- Focus: keep click-through behavior and poll hover state.
-            manaHover:EnableMouse(false)
-            if manaBar and manaBar.EnableMouse then
-                manaBar:EnableMouse(false)
-            end
-            if not manaHover.DragonUIHoverPoller then
-                manaHover.DragonUIHoverPoller = true
-                manaHover.DragonUIHoverElapsed = 0
-                manaHover.DragonUIHoverState = false
-                manaHover:SetScript("OnUpdate", function(self, elapsed)
-                    self.DragonUIHoverElapsed = (self.DragonUIHoverElapsed or 0) + elapsed
-                    if self.DragonUIHoverElapsed < 0.05 then return end
-                    self.DragonUIHoverElapsed = 0
+    -- Mouse-enabled bars would swallow the unit button's tooltip and clicks; poll geometry instead.
+    if healthBar then healthBar:EnableMouse(false) end
+    if manaBar then manaBar:EnableMouse(false) end
 
-                    local isOver = TextSystem.IsMouseOverFrame(self)
-                    if isOver ~= self.DragonUIHoverState then
-                        self.DragonUIHoverState = isOver
-                        updateCallback()
-                    end
-                end)
-            end
-        else
-            -- Other frames keep hover overlay capture behavior.
-            manaHover:EnableMouse(true)
-            manaHover:SetScript("OnEnter", updateCallback)
-            manaHover:SetScript("OnLeave", updateCallback)
-        end
-
-        parentFrame.DragonUIManaHover = manaHover
+    local watcher = parentFrame.DragonUIHoverWatcher
+    if watcher then
+        watcher.health, watcher.mana, watcher.update = healthBar, manaBar, updateCallback
+        return
     end
+
+    watcher = {parent = parentFrame, health = healthBar, mana = manaBar, update = updateCallback}
+    parentFrame.DragonUIHoverWatcher = watcher
+    table.insert(hoverWatchers, watcher)
+    hoverPoller:Show()
 end
 
