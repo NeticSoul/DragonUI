@@ -442,6 +442,11 @@ L["Dark Mode"] = "Dunkelmodus"
 L["Darken UI borders and chrome"] = "UI-Rahmen und Zierrat abdunkeln"
 L["Item Quality"] = "Gegenstandsqualität"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "Gegenstandsrahmen in Taschen, Charakterfenster, Bank und beim Händler nach Qualität einfärben"
+-- Item Level
+L["Item Level"] = "Gegenstandsstufe"
+L["Show item level on gear icons in bags, character panel, bank, and more"] = "Gegenstandsstufe auf Ausrüstungssymbolen in Taschen, Charakterfenster, Bank und mehr anzeigen"
+L["Item Level: %d"] = "Gegenstandsstufe: %d"
+
 L["Key Binding"] = "Tastenbelegung"
 L["LibKeyBound integration for intuitive keybinding"] = "LibKeyBound-Integration für intuitive Tastenbelegung"
 L["Buff Frame"] = "Buff-Rahmen"

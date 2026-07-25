@@ -445,6 +445,17 @@ local function InstallInspectHook()
         if not IsModuleEnabled() then return end
         UpdateInspectSlot(button)
     end)
+
+    -- Retargeting reuses the open frame: InspectFrame_UnitChanged calls this right
+    -- after NotifyInspect, so slot data is still the previous unit's.
+    if InspectPaperDollFrame_OnShow then
+        hooksecurefunc("InspectPaperDollFrame_OnShow", function()
+            if not IsModuleEnabled() then return end
+            addon:After(0.1, UpdateAllInspectSlots)
+            addon:After(0.6, UpdateAllInspectSlots)
+        end)
+    end
+
     ItemQualityModule.hooks["Inspect"] = true
 end
 
@@ -595,7 +606,7 @@ eventFrame:RegisterEvent("MERCHANT_SHOW")
 eventFrame:RegisterEvent("MERCHANT_UPDATE")
 eventFrame:RegisterEvent("GUILDBANKFRAME_OPENED")
 eventFrame:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED")
-eventFrame:RegisterEvent("INSPECT_READY")
+eventFrame:RegisterEvent("INSPECT_TALENT_READY")
 eventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
@@ -639,7 +650,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         addon:After(0.5, UpdateBankSlots)
         addon:After(1.5, UpdateBankSlots)
 
-    elseif event == "INSPECT_READY" then
+    elseif event == "INSPECT_TALENT_READY" then
+        -- 3.3.5a has no INSPECT_READY; this is the only "inspect data arrived" signal
         if not IsModuleEnabled() then return end
         InstallInspectHook()
         addon:After(0.2, UpdateAllInspectSlots)

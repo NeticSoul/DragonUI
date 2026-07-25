@@ -573,6 +573,15 @@ end
 
 function Panel:SelectTab(key, highlight)
     if not self.tabs[key] then return end
+
+    -- Re-selecting the current tab is a rebuild (a toggle refreshing disabled
+    -- states), so keep the reading position instead of jumping to the top.
+    local savedOffset
+    if self.currentTab == key and not highlight and self.scrollWidget then
+        local status = self.scrollWidget.status or self.scrollWidget.localstatus
+        savedOffset = status and status.offset
+    end
+
     self.currentTab = key
     UpdateTabVisuals()
 
@@ -648,6 +657,15 @@ function Panel:SelectTab(key, highlight)
 
     -- DoLayout is synchronous; scroll/highlight can run immediately after.
     scroll:DoLayout()
+
+    if savedOffset and savedOffset ~= 0 then
+        local status = scroll.status or scroll.localstatus
+        if status then
+            -- FixScroll derives the scrollbar value from status.offset
+            status.offset = savedOffset
+            scroll:FixScroll()
+        end
+    end
 
     if highlight and self.HighlightSearchTarget then
         self:HighlightSearchTarget(scroll, highlight)

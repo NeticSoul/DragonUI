@@ -142,3 +142,9 @@ L['Pointer mode (just "!")'] = '指標模式（僅"!"）'
 L["Use Questie"] = "使用 Questie"
 L["Applying quest icon settings needs a UI reload."] = "套用任務圖示設定需要重新載入介面。"
 L["Reload"] = "重新載入"
+
+-- Item Level
+L["Item Level"] = "物品等級"
+L["Show item level on gear icons in bags, character panel, bank, and more"] = "在背包、角色面板、銀行等介面的裝備圖示上顯示物品等級"
+L["Item Level: %d"] = "物品等級：%d"
+

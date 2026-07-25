@@ -171,6 +171,9 @@ do
         SetItemButtonCount(self, count)
         SetItemButtonDesaturated(self, locked or not self:MatchesSearch())
         self:UpdateBorder()
+        if addon.UpdateItemLevelSlot then
+            addon.UpdateItemLevelSlot(self, self.hasItem, nil, "guildbank")
+        end
         self:SetAlpha(self:MatchesSearch() and 1 or 0.3)
 
         if GameTooltip:IsOwned(self) then

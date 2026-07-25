@@ -446,6 +446,11 @@ L["Dark Mode"] = "Modo Oscuro"
 L["Darken UI borders and chrome"] = "Oscurecer bordes y elementos de la interfaz"
 L["Item Quality"] = "Calidad de Objeto"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "Colorear los bordes de objetos por calidad en bolsas, personaje, banco y mercader"
+-- Item Level
+L["Item Level"] = "Nivel de Objeto"
+L["Show item level on gear icons in bags, character panel, bank, and more"] = "Mostrar el nivel de objeto en los iconos del equipo en bolsas, panel de personaje, banco y más"
+L["Item Level: %d"] = "Nivel de objeto: %d"
+
 L["Key Binding"] = "Atajos de Teclado"
 L["LibKeyBound integration for intuitive keybinding"] = "Integración con LibKeyBound para asignación de teclas intuitiva"
 L["Buff Frame"] = "Marco de Beneficios"

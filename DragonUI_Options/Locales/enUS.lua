@@ -307,6 +307,30 @@ L["Rare"] = true
 L["Epic"] = true
 L["Legendary"] = true
 
+-- Item Level
+L["Item Level"] = true
+L["Enable Item Level"] = true
+L["Show the item level on gear icons across bags, bank, character panel and more."] = true
+L["Size of the item level number on the icon."] = true
+L["Font"] = true
+L["Default (Arial Narrow)"] = true
+L["Outline"] = true
+L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = true
+L["Thick"] = true
+L["Average Item Level"] = true
+L["Show the average item level of equipped gear on the character and inspect panels."] = true
+L["Show in Tooltip"] = true
+L["Also enable Blizzard's own item level line in item tooltips."] = true
+L["Choose where the number appears:"] = true
+L["Guild Bank"] = true
+L["Character Panel"] = true
+L["Inspect"] = true
+L["Merchant"] = true
+L["Trade"] = true
+L["Loot"] = true
+L["Mail"] = true
+L["Auction House"] = true
+
 -- Enhanced Tooltips
 L["Enhanced Tooltips"] = true
 L["Improves GameTooltip with class-colored borders, class-colored names, target-of-target info, and styled health bars."] = true

@@ -442,6 +442,11 @@ L["Dark Mode"] = "Тёмный режим"
 L["Darken UI borders and chrome"] = "Затемнение рамок и элементов интерфейса"
 L["Item Quality"] = "Качество предметов"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "Окрашивание рамок предметов по качеству в сумках, окне персонажа, банке и у торговца"
+-- Item Level
+L["Item Level"] = "Уровень предмета"
+L["Show item level on gear icons in bags, character panel, bank, and more"] = "Показывать уровень предмета на значках экипировки в сумках, окне персонажа, банке и других местах"
+L["Item Level: %d"] = "Уровень предмета: %d"
+
 L["Key Binding"] = "Назначение клавиш"
 L["LibKeyBound integration for intuitive keybinding"] = "Интеграция LibKeyBound для удобного назначения клавиш"
 L["Buff Frame"] = "Фрейм эффектов"

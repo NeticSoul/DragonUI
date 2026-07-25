@@ -301,6 +301,7 @@ do
         self:SetLocked(locked)
         self:SetReadable(readable)
         self:SetBorderQuality(quality)
+        self:UpdateItemLevel(link)
         self:UpdateSlotColor()
         self:UpdateCooldown()
         self:SetAlpha(self:MatchesSearch() and 1 or 0.3)
@@ -473,6 +474,12 @@ do
     function ItemSlot:UpdateBorder()
         local _, _, _, quality = self:GetItemSlotInfo()
         self:SetBorderQuality(quality)
+    end
+
+    function ItemSlot:UpdateItemLevel(link)
+        if addon.UpdateItemLevelSlot then
+            addon.UpdateItemLevelSlot(self, link, nil, self:IsBank() and "bank" or "bags")
+        end
     end
 
     -- nil per-instance so Update() can't re-trigger OnEnter and clear bank tooltips

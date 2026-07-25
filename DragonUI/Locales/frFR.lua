@@ -142,3 +142,9 @@ L['Pointer mode (just "!")'] = 'Mode pointeur (juste "!")'
 L["Use Questie"] = "Utiliser Questie"
 L["Applying quest icon settings needs a UI reload."] = "Appliquer les réglages des icônes de quête nécessite un rechargement de l'interface."
 L["Reload"] = "Recharger"
+
+-- Item Level
+L["Item Level"] = "Niveau d'objet"
+L["Show item level on gear icons in bags, character panel, bank, and more"] = "Afficher le niveau d'objet sur les icônes d'équipement dans les sacs, la fiche de personnage, la banque et plus encore"
+L["Item Level: %d"] = "Niveau d'objet : %d"
+

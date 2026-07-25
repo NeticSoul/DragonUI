@@ -228,6 +228,141 @@ local function BuildEnhancementsTab(scroll)
     })
 
     -- ====================================================================
+    -- ITEM LEVEL
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local ilvlSection = C:AddSection(scroll, LO["Item Level"] or "Item Level")
+
+    local function IsItemLevelEnabled() return IsEnabled("itemlevel") end
+
+    C:AddToggle(ilvlSection, {
+        label = LO["Enable Item Level"] or "Enable Item Level",
+        desc = LO["Show the item level on gear icons across bags, bank, character panel and more."]
+            or "Show the item level on gear icons across bags, bank, character panel and more.",
+        getFunc = IsItemLevelEnabled,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").enabled = val
+            if val then
+                if addon.ApplyItemLevelSystem then addon.ApplyItemLevelSystem() end
+            end
+            if addon.RefreshItemLevel then addon:RefreshItemLevel() end
+            -- Rebuild tab so the sub-options update their disabled state
+            Panel:SelectTab("enhancements")
+        end,
+        requiresReload = false,
+    })
+
+    C:AddDropdown(ilvlSection, {
+        label = LO["Font"] or "Font",
+        values = {
+            ["default"] = LO["Default (Arial Narrow)"] or "Default (Arial Narrow)",
+            ["expressway"] = "Expressway",
+            ["primary"] = "Friz Quadrata",
+            ["narrow"] = "PT Sans Narrow",
+            ["skurri"] = "Skurri",
+            ["morpheus"] = "Morpheus",
+        },
+        getFunc = function() return GetModuleField("itemlevel", "font_family") or "default" end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").font_family = val
+        end,
+        callback = function()
+            if addon.RefreshItemLevelFont then addon:RefreshItemLevelFont() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        width = 200,
+    })
+
+    C:AddDropdown(ilvlSection, {
+        label = LO["Outline"] or "Outline",
+        desc = LO["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."]
+            or "Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier.",
+        values = {
+            ["NONE"] = LO["None"] or "None",
+            ["OUTLINE"] = LO["Outline"] or "Outline",
+            ["THICKOUTLINE"] = LO["Thick"] or "Thick",
+        },
+        getFunc = function() return GetModuleField("itemlevel", "font_outline") or "OUTLINE" end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").font_outline = val
+        end,
+        callback = function()
+            if addon.RefreshItemLevelFont then addon:RefreshItemLevelFont() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        width = 200,
+    })
+
+    C:AddSlider(ilvlSection, {
+        label = LO["Font Size"] or "Font Size",
+        desc = LO["Size of the item level number on the icon."] or "Size of the item level number on the icon.",
+        min = 8, max = 18, step = 1,
+        getFunc = function() return GetModuleField("itemlevel", "font_size") or 11 end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").font_size = val
+            if addon.RefreshItemLevelFont then addon:RefreshItemLevelFont() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+    })
+
+    C:AddToggle(ilvlSection, {
+        label = LO["Average Item Level"] or "Average Item Level",
+        desc = LO["Show the average item level of equipped gear on the character and inspect panels."]
+            or "Show the average item level of equipped gear on the character and inspect panels.",
+        getFunc = function() return GetModuleField("itemlevel", "show_average") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").show_average = val
+            if addon.RefreshItemLevel then addon:RefreshItemLevel() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(ilvlSection, {
+        label = LO["Show in Tooltip"] or "Show in Tooltip",
+        desc = LO["Also enable Blizzard's own item level line in item tooltips."]
+            or "Also enable Blizzard's own item level line in item tooltips.",
+        getFunc = function() return GetModuleField("itemlevel", "tooltip_cvar") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").tooltip_cvar = val
+            SetCVar("showItemLevel", val and 1 or 0)
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        requiresReload = false,
+    })
+
+    -- Per-context toggles
+    local ilvlContexts = {
+        { key = "bags",      label = LO["Bags"] or "Bags" },
+        { key = "bank",      label = LO["Bank"] or "Bank" },
+        { key = "guildbank", label = LO["Guild Bank"] or "Guild Bank" },
+        { key = "character", label = LO["Character Panel"] or "Character Panel" },
+        { key = "inspect",   label = LO["Inspect"] or "Inspect" },
+        { key = "merchant",  label = LO["Merchant"] or "Merchant" },
+        { key = "trade",     label = LO["Trade"] or "Trade" },
+        { key = "loot",      label = LO["Loot"] or "Loot" },
+        { key = "lootroll",  label = LO["Loot Roll"] or "Loot Roll" },
+        { key = "mail",      label = LO["Mail"] or "Mail" },
+        { key = "auction",   label = LO["Auction House"] or "Auction House" },
+    }
+
+    C:AddDescription(ilvlSection, LO["Choose where the number appears:"] or "Choose where the number appears:")
+
+    for _, context in ipairs(ilvlContexts) do
+        C:AddToggle(ilvlSection, {
+            label = context.label,
+            getFunc = function() return GetModuleField("itemlevel", context.key) ~= false end,
+            setFunc = function(val)
+                EnsureModuleTable("itemlevel")[context.key] = val
+                if addon.RefreshItemLevel then addon:RefreshItemLevel() end
+            end,
+            disabled = function() return not IsItemLevelEnabled() end,
+            relWidth = 0.33,
+            requiresReload = false,
+        })
+    end
+
+    -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================
     C:AddSpacer(scroll)

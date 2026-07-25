@@ -638,7 +638,14 @@ function Controls:AddToggle(parent, opts)
     local desc = NormalizeDescription(opts.desc)
     cb:SetLabel(label)
     if desc then cb:SetDescription(desc) end
-    if opts.width then cb:SetWidth(opts.width) else cb:SetFullWidth(true) end
+    -- relWidth packs toggles into columns inside a Flow container (e.g. 0.33 = 3 per row)
+    if opts.relWidth then
+        cb:SetRelativeWidth(opts.relWidth)
+    elseif opts.width then
+        cb:SetWidth(opts.width)
+    else
+        cb:SetFullWidth(true)
+    end
 
     -- `tooltip` shows the text on hover instead of as an always-visible description
     local tooltip = NormalizeDescription(opts.tooltip)

@@ -440,6 +440,11 @@ L["Dark Mode"] = "ë‹¤í¬ ëª¨ë“œ"
 L["Darken UI borders and chrome"] = "UI í…Œë‘ë¦¬ì™€ ìž¥ì‹ì„ ì–´ë‘¡ê²Œ í‘œì‹œ"
 L["Item Quality"] = "ì•„ì´í…œ í’ˆì§ˆ"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "ê°€ë°©, ìºë¦­í„° ì°½, ì€í–‰, ìƒì¸ ì°½ì˜ ì•„ì´í…œ í…Œë‘ë¦¬ë¥¼ í’ˆì§ˆë³„ë¡œ í‘œì‹œ"
+-- Item Level
+L["Item Level"] = "아이템 레벨"
+L["Show item level on gear icons in bags, character panel, bank, and more"] = "가방, 캐릭터 창, 은행 등에서 장비 아이콘에 아이템 레벨을 표시합니다"
+L["Item Level: %d"] = "아이템 레벨: %d"
+
 L["Key Binding"] = "í‚¤ ë°”ì¸ë”©"
 L["LibKeyBound integration for intuitive keybinding"] = "ì§ê´€ì ì¸ í‚¤ ì„¤ì •ì„ ìœ„í•œ LibKeyBound í†µí•©"
 L["Buff Frame"] = "ë²„í”„ í”„ë ˆìž„"

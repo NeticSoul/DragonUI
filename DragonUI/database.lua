@@ -1006,6 +1006,26 @@ local defaults = {
                 enabled = true, -- Color item borders by quality in bags, character panel, bank, merchant
                 min_quality = 2 -- Minimum quality to show (2 = Uncommon/green)
             },
+            itemlevel = {
+                enabled = true, -- Show item level on gear icons
+                font_size = 12,
+                font_family = "expressway", -- default|expressway|primary|narrow|skurri|morpheus
+                font_outline = "THICKOUTLINE", -- NONE|OUTLINE|THICKOUTLINE (no real bold in 3.3.5a)
+                show_average = true, -- Average item level on the character/inspect panel
+                tooltip_cvar = false, -- Also set Blizzard's showItemLevel CVar (tooltip line)
+                -- Per-context toggles
+                bags = true,
+                bank = true,
+                guildbank = true,
+                character = true,
+                inspect = true,
+                merchant = true,
+                trade = true,
+                loot = true,
+                lootroll = true,
+                mail = true,
+                auction = true,
+            },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy
                 editbox = "bottom", -- Editbox position: "top", "bottom", or "middle"
