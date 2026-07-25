@@ -397,23 +397,6 @@ end)
 
 -- Set up hover events for text display
 function TextSystem.SetupHoverEvents(parentFrame, healthBar, manaBar, updateCallback)
-    local parentName = parentFrame:GetName() or ""
-
-    -- Player frame: hooked on the bars themselves to avoid tainting its custom container.
-    if parentName:find("DragonUIUnitframeFrame") then
-        local function HookBar(bar)
-            if not bar or bar.DragonUIHoverSetup then return end
-            bar:EnableMouse(true)
-            bar:HookScript("OnEnter", updateCallback)
-            bar:HookScript("OnLeave", updateCallback)
-            bar.DragonUIHoverSetup = true
-        end
-
-        HookBar(healthBar)
-        HookBar(manaBar)
-        return
-    end
-
     -- Mouse-enabled bars would swallow the unit button's tooltip and clicks; poll geometry instead.
     if healthBar then healthBar:EnableMouse(false) end
     if manaBar then manaBar:EnableMouse(false) end
