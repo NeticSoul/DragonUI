@@ -708,6 +708,7 @@ L["Size of the item level number on the icon."] = "Taille du nombre de niveau d'
 L["Outline"] = "Contour"
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = "Épaisseur du contour noir. WoW 3.3.5a n'a pas de vrai gras, c'est donc un contour plus épais qui rend le nombre plus marqué."
 L["Thick"] = "Épais"
+L["Vertical position of the item level number on the icon."] = "Position verticale du nombre de niveau d'objet sur l'icône."
 L["Average Item Level"] = "Niveau d'objet moyen"
 L["Show the average item level of equipped gear on the character and inspect panels."] = "Afficher le niveau d'objet moyen de l'équipement porté sur les fiches de personnage et d'inspection."
 L["Show in Tooltip"] = "Afficher dans l'infobulle"

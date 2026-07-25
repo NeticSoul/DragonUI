@@ -298,6 +298,7 @@ L["Size of the item level number on the icon."] = "아이콘에 표시되는 아
 L["Outline"] = "외곽선"
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = "검은 외곽선의 두께입니다. WoW 3.3.5a에는 실제 굵은 글꼴이 없으므로 외곽선을 두껍게 해야 숫자가 더 굵어 보입니다."
 L["Thick"] = "두껍게"
+L["Vertical position of the item level number on the icon."] = "아이콘에 표시되는 아이템 레벨 숫자의 세로 위치입니다."
 L["Average Item Level"] = "평균 아이템 레벨"
 L["Show the average item level of equipped gear on the character and inspect panels."] = "캐릭터 및 살펴보기 창에 착용 장비의 평균 아이템 레벨을 표시합니다."
 L["Show in Tooltip"] = "툴팁에 표시"

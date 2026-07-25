@@ -288,6 +288,7 @@ L["Size of the item level number on the icon."] = "Größe der Gegenstandsstufen
 L["Outline"] = "Umrandung"
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = "Stärke der schwarzen Umrandung. WoW 3.3.5a kennt kein echtes Fett, daher lässt erst eine dickere Umrandung die Zahl kräftiger wirken."
 L["Thick"] = "Dick"
+L["Vertical position of the item level number on the icon."] = "Vertikale Position der Gegenstandsstufen-Zahl auf dem Symbol."
 L["Average Item Level"] = "Durchschnittliche Gegenstandsstufe"
 L["Show the average item level of equipped gear on the character and inspect panels."] = "Die durchschnittliche Gegenstandsstufe der angelegten Ausrüstung im Charakter- und Besichtigen-Fenster anzeigen."
 L["Show in Tooltip"] = "Im Tooltip anzeigen"

@@ -305,6 +305,26 @@ local function BuildEnhancementsTab(scroll)
         disabled = function() return not IsItemLevelEnabled() end,
     })
 
+    C:AddDropdown(ilvlSection, {
+        label = LO["Position"] or "Position",
+        desc = LO["Vertical position of the item level number on the icon."]
+            or "Vertical position of the item level number on the icon.",
+        values = {
+            ["BOTTOM"] = LO["Bottom"] or "Bottom",
+            ["CENTER"] = LO["Center"] or "Center",
+            ["TOP"] = LO["Top"] or "Top",
+        },
+        getFunc = function() return GetModuleField("itemlevel", "position") or "BOTTOM" end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").position = val
+        end,
+        callback = function()
+            if addon.RefreshItemLevelPosition then addon:RefreshItemLevelPosition() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        width = 200,
+    })
+
     C:AddToggle(ilvlSection, {
         label = LO["Average Item Level"] or "Average Item Level",
         desc = LO["Show the average item level of equipped gear on the character and inspect panels."]

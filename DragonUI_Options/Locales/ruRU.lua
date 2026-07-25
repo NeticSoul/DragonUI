@@ -293,6 +293,7 @@ L["Size of the item level number on the icon."] = "Размер числа ур�
 L["Outline"] = "Контур"
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = "Толщина чёрного контура. В WoW 3.3.5a нет настоящего полужирного начертания, поэтому число выглядит плотнее только за счёт более толстого контура."
 L["Thick"] = "Толстый"
+L["Vertical position of the item level number on the icon."] = "Вертикальное положение числа уровня предмета на значке."
 L["Average Item Level"] = "Средний уровень предметов"
 L["Show the average item level of equipped gear on the character and inspect panels."] = "Показывать средний уровень надетой экипировки в окнах персонажа и осмотра."
 L["Show in Tooltip"] = "Показывать в подсказке"

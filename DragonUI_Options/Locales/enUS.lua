@@ -317,6 +317,7 @@ L["Default (Arial Narrow)"] = true
 L["Outline"] = true
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = true
 L["Thick"] = true
+L["Vertical position of the item level number on the icon."] = true
 L["Average Item Level"] = true
 L["Show the average item level of equipped gear on the character and inspect panels."] = true
 L["Show in Tooltip"] = true

@@ -1011,6 +1011,7 @@ local defaults = {
                 font_size = 12,
                 font_family = "expressway", -- default|expressway|primary|narrow|skurri|morpheus
                 font_outline = "THICKOUTLINE", -- NONE|OUTLINE|THICKOUTLINE (no real bold in 3.3.5a)
+                position = "BOTTOM", -- BOTTOM|CENTER|TOP vertical placement on the icon
                 show_average = true, -- Average item level on the character/inspect panel
                 tooltip_cvar = false, -- Also set Blizzard's showItemLevel CVar (tooltip line)
                 -- Per-context toggles

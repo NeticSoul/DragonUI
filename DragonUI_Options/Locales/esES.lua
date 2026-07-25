@@ -290,6 +290,7 @@ L["Size of the item level number on the icon."] = "Tamaño del número de nivel 
 L["Outline"] = "Contorno"
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = "Grosor del contorno negro. WoW 3.3.5a no tiene negrita real, así que un contorno más grueso es lo que hace que el número se vea más marcado."
 L["Thick"] = "Grueso"
+L["Vertical position of the item level number on the icon."] = "Posición vertical del número de nivel de objeto en el icono."
 L["Average Item Level"] = "Nivel de Objeto Medio"
 L["Show the average item level of equipped gear on the character and inspect panels."] = "Mostrar el nivel de objeto medio del equipo en los paneles de personaje e inspección."
 L["Show in Tooltip"] = "Mostrar en la Descripción"

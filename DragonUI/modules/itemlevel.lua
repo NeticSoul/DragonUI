@@ -172,19 +172,51 @@ local function ApplyFont(fontString, sizeDelta)
     end
 end
 
-local function GetOrCreateText(button, anchorTo)
-    if button.__DragonUI_ILvl then
-        return button.__DragonUI_ILvl
+local TEXT_POSITIONS = {
+    BOTTOM = { "BOTTOM", "BOTTOM", 0, 2 },
+    CENTER = { "CENTER", "CENTER", 0, 0 },
+    TOP = { "TOP", "TOP", 0, -2 },
+}
+
+local function ResolveTextPosition()
+    local config = GetModuleConfig()
+    local pos = config and config.position
+    if pos and TEXT_POSITIONS[pos] then return pos end
+    return "BOTTOM"
+end
+
+local function ApplyTextPosition(fontString, anchor)
+    local pos = ResolveTextPosition()
+    local p = TEXT_POSITIONS[pos]
+    if fontString.__DragonUI_ILvlPos == pos and fontString.__DragonUI_ILvlAnchor == anchor then
+        return
     end
+    fontString:ClearAllPoints()
+    fontString:SetPoint(p[1], anchor, p[2], p[3], p[4])
+    fontString.__DragonUI_ILvlPos = pos
+    fontString.__DragonUI_ILvlAnchor = anchor
+end
 
-    local fontString = button:CreateFontString(nil, "OVERLAY")
-    fontString:SetDrawLayer("OVERLAY", 7)
-    fontString:SetJustifyH("CENTER")
-    fontString:SetPoint("BOTTOM", anchorTo or button, "BOTTOM", 0, 2)
-    ApplyFont(fontString)
+local function RefreshAllPositions()
+    for button, fontString in pairs(ItemLevelModule.texts) do
+        if fontString then
+            ApplyTextPosition(fontString, fontString.__DragonUI_ILvlAnchor or button)
+        end
+    end
+end
 
-    button.__DragonUI_ILvl = fontString
-    ItemLevelModule.texts[button] = fontString
+local function GetOrCreateText(button, anchorTo)
+    local anchor = anchorTo or button
+    local fontString = button.__DragonUI_ILvl
+    if not fontString then
+        fontString = button:CreateFontString(nil, "OVERLAY")
+        fontString:SetDrawLayer("OVERLAY", 7)
+        fontString:SetJustifyH("CENTER")
+        ApplyFont(fontString)
+        button.__DragonUI_ILvl = fontString
+        ItemLevelModule.texts[button] = fontString
+    end
+    ApplyTextPosition(fontString, anchor)
     return fontString
 end
 
@@ -203,7 +235,7 @@ local function DrawItemLevel(button, ilvl, r, g, b, anchorTo)
         return
     end
 
-    local fontString = button.__DragonUI_ILvl or GetOrCreateText(button, anchorTo)
+    local fontString = GetOrCreateText(button, anchorTo)
     fontString:SetText(ilvl)
     fontString:SetTextColor(r or 1, g or 1, b or 1)
     fontString:Show()
@@ -999,6 +1031,10 @@ function addon:RefreshItemLevelFont()
     self:RefreshItemLevel()
 end
 
+function addon:RefreshItemLevelPosition()
+    RefreshAllPositions()
+end
+
 -- ============================================================================
 -- PROFILE CHANGE HANDLER
 -- ============================================================================
@@ -1010,6 +1046,7 @@ local function OnProfileChanged()
         ItemLevelModule.applied = false
         ApplyItemLevelSystem()
         RefreshAllFonts()
+        RefreshAllPositions()
     else
         if addon:ShouldDeferModuleDisable("itemlevel", ItemLevelModule) then
             return

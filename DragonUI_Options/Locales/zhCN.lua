@@ -1496,6 +1496,7 @@ L["Size of the item level number on the icon."] = "图标上物品等级数字�
 L["Outline"] = "描边"
 L["Thickness of the black outline. WoW 3.3.5a has no real bold, so a thicker outline is what makes the number look heavier."] = "黑色描边的粗细。WoW 3.3.5a 没有真正的粗体，因此只有加粗描边才能让数字看起来更醒目。"
 L["Thick"] = "粗"
+L["Vertical position of the item level number on the icon."] = "图标上物品等级数字的垂直位置。"
 L["Average Item Level"] = "平均物品等级"
 L["Show the average item level of equipped gear on the character and inspect panels."] = "在角色和观察面板上显示已装备物品的平均物品等级。"
 L["Show in Tooltip"] = "在提示中显示"
