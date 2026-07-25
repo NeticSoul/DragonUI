@@ -14,10 +14,10 @@ Describe the issue.
 How can I reproduce it?
 
 ## Additional information
-- DragonUI version:
+- Are you using the latest release or the main branch?:
 - Server:
-- Does `/reload` fix it?
-- Does it happen with default DragonUI settings?
+- Does `/reload` fix it?:
+- Does it happen with default DragonUI settings/profile?:
 
 ## Screenshots
 If applicable.
