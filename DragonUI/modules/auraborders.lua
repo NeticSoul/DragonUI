@@ -136,6 +136,16 @@ local function ColorSquare(slice, r, g, b)
     slice.right:SetVertexColor(r, g, b)
 end
 
+-- Host is a sibling at the parent's scale; without this the overhang stays 1x on a scaled button.
+local function SyncChromeScale(button)
+    local host = button.duiHost
+    if not host then return end
+    local scale = button:GetScale() or 1
+    if scale > 0 and host:GetScale() ~= scale then
+        host:SetScale(scale)
+    end
+end
+
 local function AnchorHostToButton(host, button)
     local size = button:GetWidth() or BAR_REF
     local trX, trY, blX, blY = ResolveFrameOverhang(size)
@@ -263,6 +273,7 @@ local function EnsureChromeHost(button, cd)
     end
 
     ReparentChromeHost(button)
+    SyncChromeScale(button)
     AnchorHostToButton(host, button)
     SyncChromeAlpha(button)
     EnsureChromeVisibilitySync(button)
@@ -311,6 +322,7 @@ local function EnsureBorder(button, isDebuff, isUnit)
     if not button.duiSizeHooked then
         hooksecurefunc(button, "SetWidth", RefitChrome)
         hooksecurefunc(button, "SetHeight", RefitChrome)
+        hooksecurefunc(button, "SetScale", SyncChromeScale)
         button.duiSizeHooked = true
     end
 
