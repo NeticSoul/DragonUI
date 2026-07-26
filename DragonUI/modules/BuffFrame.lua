@@ -68,14 +68,172 @@ local function IsWeaponEnchantAtDefaultPosition()
     return not addon.db.profile.widgets.weapon_enchants.custom_position
 end
 
+local function GetBuffsConfig()
+    return addon.db and addon.db.profile and addon.db.profile.buffs
+end
+
 local function GetBuffHorizontalGap()
-    local cfg = addon.db and addon.db.profile and addon.db.profile.buffs
+    local cfg = GetBuffsConfig()
     return (cfg and tonumber(cfg.buff_horizontal_gap)) or 0
 end
 
 local function GetDebuffHorizontalGap()
-    local cfg = addon.db and addon.db.profile and addon.db.profile.buffs
+    local cfg = GetBuffsConfig()
     return (cfg and tonumber(cfg.debuff_horizontal_gap)) or 0
+end
+
+local function GetBuffScale()
+    local cfg = GetBuffsConfig()
+    local scale = cfg and tonumber(cfg.buff_scale)
+    if not scale or scale <= 0 then
+        return 1
+    end
+    return scale
+end
+
+local function GetDebuffScale()
+    local cfg = GetBuffsConfig()
+    local scale = cfg and tonumber(cfg.debuff_scale)
+    if not scale or scale <= 0 then
+        return 1
+    end
+    return scale
+end
+
+local function GetBuffsPerRow()
+    local cfg = GetBuffsConfig()
+    local perRow = cfg and tonumber(cfg.buffs_per_row)
+    if not perRow or perRow < 1 then
+        return BUFFS_PER_ROW or 16
+    end
+    return math.floor(perRow)
+end
+
+local function GetDebuffsPerRow()
+    local cfg = GetBuffsConfig()
+    local perRow = cfg and tonumber(cfg.debuffs_per_row)
+    if not perRow or perRow < 1 then
+        return BUFFS_PER_ROW or 16
+    end
+    return math.floor(perRow)
+end
+
+local function GetMaxBuffRows()
+    local cfg = GetBuffsConfig()
+    local rows = cfg and tonumber(cfg.max_buff_rows)
+    if not rows or rows < 0 then
+        return 0
+    end
+    return math.floor(rows)
+end
+
+local function GetMaxDebuffRows()
+    local cfg = GetBuffsConfig()
+    local rows = cfg and tonumber(cfg.max_debuff_rows)
+    if not rows or rows < 0 then
+        return 0
+    end
+    return math.floor(rows)
+end
+
+local function GetBuffVerticalGap()
+    local cfg = GetBuffsConfig()
+    local gap = cfg and tonumber(cfg.buff_vertical_gap)
+    if gap == nil then
+        return 15
+    end
+    return math.max(0, gap)
+end
+
+local function GetDebuffVerticalGap()
+    local cfg = GetBuffsConfig()
+    local gap = cfg and tonumber(cfg.debuff_vertical_gap)
+    if gap == nil then
+        return 15
+    end
+    return math.max(0, gap)
+end
+
+local function GetDebuffOffsetY()
+    local cfg = GetBuffsConfig()
+    local offset = cfg and tonumber(cfg.debuff_offset_y)
+    if offset == nil then
+        return 60
+    end
+    return math.max(0, offset)
+end
+
+local function GetBuffOrder()
+    local cfg = GetBuffsConfig()
+    local order = cfg and cfg.buff_order
+    if order == "duration_asc" or order == "duration_desc" then
+        if cfg then
+            cfg.buff_order = "duration"
+        end
+        return "duration"
+    end
+    if order == "other_first" or order == "duration" then
+        return order
+    end
+    return "player_first"
+end
+
+local function IsPlayerCaster(caster)
+    return caster == "player" or caster == "vehicle"
+end
+
+local function GetAuraRemaining(expires)
+    if not expires or expires <= 0 then
+        return 999999
+    end
+    local remaining = expires - GetTime()
+    if remaining < 0 then
+        return 0
+    end
+    return remaining
+end
+
+local function CollectSortedBuffButtons()
+    local list = {}
+    for index = 1, BUFF_ACTUAL_DISPLAY do
+        local button = _G["BuffButton" .. index]
+        if button and button:IsShown() and not button.consolidated then
+            local auraIndex = button:GetID() or index
+            local name, _, _, _, _, _, expires, caster = UnitBuff("player", auraIndex)
+            if not name and UnitExists and UnitExists("vehicle") then
+                name, _, _, _, _, _, expires, caster = UnitBuff("vehicle", auraIndex)
+            end
+            list[#list + 1] = {
+                button = button,
+                remaining = GetAuraRemaining(expires),
+                isPlayer = IsPlayerCaster(caster),
+                index = auraIndex,
+            }
+        end
+    end
+
+    local order = GetBuffOrder()
+    table.sort(list, function(a, b)
+        if order == "player_first" then
+            if a.isPlayer ~= b.isPlayer then
+                return a.isPlayer
+            end
+        elseif order == "other_first" then
+            if a.isPlayer ~= b.isPlayer then
+                return not a.isPlayer
+            end
+        end
+        if a.remaining ~= b.remaining then
+            return a.remaining < b.remaining
+        end
+        return a.index < b.index
+    end)
+    return list
+end
+
+local function IsToggleButtonEnabled()
+    local cfg = GetBuffsConfig()
+    return not cfg or cfg.show_toggle_button ~= false
 end
 
 local function GetEnchantSlack()
@@ -174,13 +332,238 @@ local function ReplaceBlizzardFrame(frame)
     original_CB_SetPoint(consolidatedBuffFrame, "TOPRIGHT", frame, "TOPRIGHT", 0, 0)
 end
 
--- Show/hide toggle button based on condition
+-- Show/hide toggle button based on condition and profile setting
 local function ShowToggleButtonIf(condition)
-    if condition then
+    if not dragonUIBuffFrame or not dragonUIBuffFrame.toggleButton then
+        return
+    end
+    if condition and IsToggleButtonEnabled() then
         dragonUIBuffFrame.toggleButton:Show()
     else
         dragonUIBuffFrame.toggleButton:Hide()
     end
+end
+
+local function ApplyAuraScales()
+    local buffScale = GetBuffScale()
+    local debuffScale = GetDebuffScale()
+
+    for index = 1, (BUFF_ACTUAL_DISPLAY or 32) do
+        local button = _G["BuffButton" .. index]
+        if button then
+            button:SetScale(buffScale)
+        end
+    end
+
+    for index = 1, 3 do
+        local enchant = _G["TempEnchant" .. index]
+        if enchant then
+            enchant:SetScale(buffScale)
+        end
+    end
+
+    if ConsolidatedBuffs then
+        ConsolidatedBuffs:SetScale(buffScale)
+    end
+
+    for index = 1, (DEBUFF_MAX_DISPLAY or 16) do
+        local debuff = _G["DebuffButton" .. index]
+        if debuff then
+            debuff:SetScale(debuffScale)
+        end
+    end
+end
+
+-- ============================================================================
+-- LAYOUT PREVIEW
+-- ============================================================================
+
+local PREVIEW_ICON_SIZE = 30
+local PREVIEW_BUFF_TEXTURE = "Interface\\Icons\\Spell_Holy_WordFortitude"
+local PREVIEW_DEBUFF_TEXTURE = "Interface\\Icons\\Spell_Shadow_CurseOfMannoroth"
+local previewBuffButtons = {}
+local previewDebuffButtons = {}
+
+local function IsLayoutPreviewEnabled()
+    local cfg = GetBuffsConfig()
+    return cfg and cfg.layout_preview == true
+end
+
+local function GetPreviewBuffCount()
+    local cfg = GetBuffsConfig()
+    local n = cfg and tonumber(cfg.layout_preview_buffs)
+    if not n or n < 0 then
+        return 40
+    end
+    return math.min(64, math.floor(n))
+end
+
+local function GetPreviewDebuffCount()
+    local cfg = GetBuffsConfig()
+    local n = cfg and tonumber(cfg.layout_preview_debuffs)
+    if not n or n < 0 then
+        return 16
+    end
+    return math.min(40, math.floor(n))
+end
+
+local function AcquirePreviewIcon(pool, index, isDebuff)
+    local button = pool[index]
+    if not button then
+        local name = isDebuff and ("DragonUIAuraPreviewDebuff" .. index) or ("DragonUIAuraPreviewBuff" .. index)
+        button = CreateFrame("Frame", name, UIParent)
+        button:SetSize(PREVIEW_ICON_SIZE, PREVIEW_ICON_SIZE)
+        button:EnableMouse(false)
+        button:SetFrameStrata("HIGH")
+
+        local icon = button:CreateTexture(nil, "ARTWORK")
+        icon:SetAllPoints()
+        icon:SetTexture(isDebuff and PREVIEW_DEBUFF_TEXTURE or PREVIEW_BUFF_TEXTURE)
+        button.icon = icon
+
+        if isDebuff then
+            local border = button:CreateTexture(nil, "OVERLAY")
+            border:SetAllPoints()
+            border:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays")
+            border:SetTexCoord(0.296875, 0.5703125, 0, 0.515625)
+            border:SetVertexColor(0.8, 0.1, 0.1)
+        end
+
+        local label = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+        label:SetPoint("BOTTOMRIGHT", -1, 1)
+        button.label = label
+        pool[index] = button
+    end
+    button.label:SetText(tostring(index))
+    return button
+end
+
+local function HidePreviewPool(pool)
+    for _, button in pairs(pool) do
+        button:Hide()
+        button:ClearAllPoints()
+    end
+end
+
+local function SetRealAuraButtonsShown(shown)
+    for index = 1, (BUFF_MAX_DISPLAY or 40) do
+        local button = _G["BuffButton" .. index]
+        if button and not shown then
+            button:Hide()
+        end
+    end
+    for index = 1, (DEBUFF_MAX_DISPLAY or 16) do
+        local button = _G["DebuffButton" .. index]
+        if button and not shown then
+            button:Hide()
+        end
+    end
+end
+
+local function LayoutPreviewGrid(pool, count, anchorFrame, perRow, hGap, vGap, scale, maxRows, isDebuff)
+    if not anchorFrame or count <= 0 then
+        HidePreviewPool(pool)
+        return nil, nil
+    end
+
+    local spacing = 6 + math.max(0, hGap)
+    local maxVisible = count
+    if maxRows and maxRows > 0 then
+        maxVisible = math.min(count, maxRows * perRow)
+    end
+
+    local previous = nil
+    local rowStarts = {}
+    local firstButton = nil
+    local lastRowStart = nil
+    local poolCount = 0
+    for _ in pairs(pool) do
+        poolCount = poolCount + 1
+    end
+
+    for i = 1, math.max(count, poolCount) do
+        if i > count then
+            if pool[i] then
+                pool[i]:Hide()
+                pool[i]:ClearAllPoints()
+            end
+        else
+            local button = AcquirePreviewIcon(pool, i, isDebuff)
+            button:SetScale(scale)
+            if i > maxVisible then
+                button:Hide()
+            else
+                button:Show()
+                local row = math.floor((i - 1) / perRow) + 1
+                local column = math.fmod(i - 1, perRow) + 1
+                button:ClearAllPoints()
+                if i == 1 then
+                    button:SetPoint("TOPRIGHT", anchorFrame, "TOPRIGHT", 0, 0)
+                    firstButton = button
+                    lastRowStart = button
+                    rowStarts[row] = button
+                elseif column == 1 then
+                    local previousRowStart = rowStarts[row - 1] or rowStarts[1] or previous
+                    button:SetPoint("TOPRIGHT", previousRowStart, "BOTTOMRIGHT", 0, -vGap)
+                    rowStarts[row] = button
+                    lastRowStart = button
+                else
+                    button:SetPoint("TOPRIGHT", previous, "TOPLEFT", -spacing, 0)
+                end
+                previous = button
+            end
+        end
+    end
+
+    return firstButton, lastRowStart
+end
+
+function BuffFrameModule:UpdateLayoutPreview()
+    if not IsLayoutPreviewEnabled() then
+        HidePreviewPool(previewBuffButtons)
+        HidePreviewPool(previewDebuffButtons)
+        return
+    end
+
+    if not dragonUIBuffFrame then
+        return
+    end
+
+    -- Hide live aura icons so the fake grid is easy to read.
+    SetRealAuraButtonsShown(false)
+
+    local buffCount = GetPreviewBuffCount()
+    local debuffCount = GetPreviewDebuffCount()
+    local firstBuff, lastBuffRow = LayoutPreviewGrid(
+        previewBuffButtons,
+        buffCount,
+        dragonUIBuffFrame,
+        GetBuffsPerRow(),
+        GetBuffHorizontalGap(),
+        GetBuffVerticalGap(),
+        GetBuffScale(),
+        GetMaxBuffRows(),
+        false
+    )
+
+    local debuffAnchor = dragonUIDebuffFrame
+    if debuffAnchor and not IsDebuffFrameDetached() then
+        debuffAnchor:ClearAllPoints()
+        local attachTo = lastBuffRow or firstBuff or dragonUIBuffFrame
+        debuffAnchor:SetPoint("TOPRIGHT", attachTo, "BOTTOMRIGHT", 0, -GetDebuffOffsetY())
+    end
+
+    LayoutPreviewGrid(
+        previewDebuffButtons,
+        debuffCount,
+        debuffAnchor or dragonUIBuffFrame,
+        GetDebuffsPerRow(),
+        GetDebuffHorizontalGap(),
+        GetDebuffVerticalGap(),
+        GetDebuffScale(),
+        GetMaxDebuffRows(),
+        true
+    )
 end
 
 -- Count active buffs on a unit
@@ -531,26 +914,38 @@ function BuffFrameModule:Enable()
     -- Used by both buff row-2 fix and debuff anchoring.
     -- ========================================================================
     local function GetBuffLayoutInfo()
-        -- Only reserve slots when enchants are currently visible in the chain.
         local slack = GetEnchantSlack()
-        local perRow = BUFFS_PER_ROW or 16
+        local perRow = GetBuffsPerRow()
+        local sorted = CollectSortedBuffButtons()
         local firstBuff = nil
         local lastRowStart = nil
-        local numVisible = 0
-        for i = 1, BUFF_ACTUAL_DISPLAY do
-            local btn = _G["BuffButton" .. i]
-            if btn and btn:IsShown() and not btn.consolidated then
-                numVisible = numVisible + 1
-                if numVisible == 1 then
-                    firstBuff = btn
-                    lastRowStart = btn
-                end
-                local idx = numVisible + slack
-                if idx > 1 and math.fmod(idx, perRow) == 1 then
-                    lastRowStart = btn  -- first buff of a new row
-                end
+        local numVisible = #sorted
+        for i, entry in ipairs(sorted) do
+            local button = entry.button
+            if i == 1 then
+                firstBuff = button
+                lastRowStart = button
+            end
+            local layoutIndex = i + slack
+            if layoutIndex > 1 and math.fmod(layoutIndex, perRow) == 1 then
+                lastRowStart = button
             end
         end
+
+        -- When Consolidated Buffs is on, many (or all) icons live in that button.
+        -- With no visible BuffButtons, anchor debuffs below ConsolidatedBuffs /
+        -- weapon enchants instead of the empty mover frame.
+        if not firstBuff then
+            if ConsolidatedBuffs and ConsolidatedBuffs:IsShown() then
+                firstBuff = ConsolidatedBuffs
+                lastRowStart = ConsolidatedBuffs
+            elseif not weaponEnchantsAreSeparated
+                and TemporaryEnchantFrame and TemporaryEnchantFrame:IsShown() then
+                firstBuff = TemporaryEnchantFrame
+                lastRowStart = TemporaryEnchantFrame
+            end
+        end
+
         return firstBuff, lastRowStart, numVisible
     end
 
@@ -587,6 +982,8 @@ function BuffFrameModule:Enable()
     FixDebuffPositions = function()
         if not buffFramePositionLocked or not dragonUIDebuffFrame then return end
 
+        local debuffOffsetY = GetDebuffOffsetY()
+
         if IsDebuffFrameDetached() then
             local w = addon.db.profile.widgets.debuffs
             dragonUIDebuffFrame:ClearAllPoints()
@@ -595,31 +992,67 @@ function BuffFrameModule:Enable()
         else
             local firstBuff, lastRowStart = GetBuffLayoutInfo()
             local anchor = lastRowStart or firstBuff
+            if not anchor and ConsolidatedBuffs and ConsolidatedBuffs:IsShown() then
+                anchor = ConsolidatedBuffs
+            end
             dragonUIDebuffFrame:ClearAllPoints()
             if anchor then
-                dragonUIDebuffFrame:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -60)
+                dragonUIDebuffFrame:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -debuffOffsetY)
             else
-                -- No buffs visible — anchor directly below the buff frame
-                dragonUIDebuffFrame:SetPoint("TOPRIGHT", dragonUIBuffFrame, "BOTTOMRIGHT", 0, -60)
+                -- No buffs / consolidated button visible — below the buff mover
+                dragonUIDebuffFrame:SetPoint("TOPRIGHT", dragonUIBuffFrame, "BOTTOMRIGHT", 0, -debuffOffsetY)
             end
         end
 
-        local firstDebuff = _G["DebuffButton1"]
-        if firstDebuff then
-            firstDebuff:ClearAllPoints()
-            firstDebuff:SetPoint("TOPRIGHT", dragonUIDebuffFrame, "TOPRIGHT", 0, 0)
+        -- Collect active debuffs first, then lay them out with OUR per-row setting.
+        -- Blizzard's DebuffButton_UpdateAnchors uses BUFFS_PER_ROW and would
+        -- otherwise overwrite any independent debuffs_per_row value.
+        local active = {}
+        for index = 1, (DEBUFF_MAX_DISPLAY or 16) do
+            local debuff = _G["DebuffButton" .. index]
+            if debuff and debuff:IsShown() then
+                active[#active + 1] = debuff
+            end
+        end
 
-            local debuffGap = GetDebuffHorizontalGap()
-            if debuffGap > 0 then
-                local previousDebuff = firstDebuff
-                for index = 2, (DEBUFF_MAX_DISPLAY or 16) do
-                    local debuff = _G["DebuffButton" .. index]
-                    if debuff and debuff:IsShown() then
+        if #active == 0 then
+            return
+        end
+
+        local firstDebuff = active[1]
+        firstDebuff:ClearAllPoints()
+        firstDebuff:SetPoint("TOPRIGHT", dragonUIDebuffFrame, "TOPRIGHT", 0, 0)
+
+        local perRow = GetDebuffsPerRow()
+        local spacing = 6 + math.max(0, GetDebuffHorizontalGap())
+        local vGap = GetDebuffVerticalGap()
+        local maxRows = GetMaxDebuffRows()
+        local maxVisible = (maxRows > 0) and (maxRows * perRow) or #active
+        local previousDebuff = nil
+        local rowStarts = {}
+
+        for count, debuff in ipairs(active) do
+            if count > maxVisible then
+                debuff:Hide()
+            else
+                local row = math.floor((count - 1) / perRow) + 1
+                local column = math.fmod(count - 1, perRow) + 1
+
+                if count == 1 then
+                    rowStarts[row] = debuff
+                elseif column == 1 then
+                    local previousRowStart = rowStarts[row - 1] or rowStarts[1] or previousDebuff
+                    if previousRowStart then
                         debuff:ClearAllPoints()
-                        debuff:SetPoint("TOPRIGHT", previousDebuff, "TOPLEFT", -(6 + debuffGap), 0)
-                        previousDebuff = debuff
+                        debuff:SetPoint("TOPRIGHT", previousRowStart, "BOTTOMRIGHT", 0, -vGap)
                     end
+                    rowStarts[row] = debuff
+                elseif previousDebuff then
+                    debuff:ClearAllPoints()
+                    debuff:SetPoint("TOPRIGHT", previousDebuff, "TOPLEFT", -spacing, 0)
                 end
+
+                previousDebuff = debuff
             end
         end
     end
@@ -627,12 +1060,18 @@ function BuffFrameModule:Enable()
 
     local function ReanchorBuffButtons()
         local buffGap = GetBuffHorizontalGap()
-        local perRow = BUFFS_PER_ROW or 16
+        local perRow = GetBuffsPerRow()
         local slack = GetEnchantSlack()
-        local count = 0
+        local vGap = GetBuffVerticalGap()
+        local maxRows = GetMaxBuffRows()
+        local maxVisible = nil
+        if maxRows > 0 then
+            maxVisible = math.max(0, maxRows * perRow - slack)
+        end
         local previousBuff = nil
         local rowStarts = {}
         local spacing = 6 + math.max(0, buffGap)
+        local sorted = CollectSortedBuffButtons()
 
         local function AnchorFirstBuff(button)
             if weaponEnchantsAreSeparated and ConsolidatedBuffs then
@@ -665,10 +1104,12 @@ function BuffFrameModule:Enable()
             end
         end
 
-        for index = 1, BUFF_ACTUAL_DISPLAY do
-            local button = _G["BuffButton" .. index]
-            if button and button:IsShown() and not button.consolidated then
-                count = count + 1
+        for count, entry in ipairs(sorted) do
+            local button = entry.button
+
+            if buffsHiddenByToggle or (maxVisible and count > maxVisible) then
+                button:Hide()
+            else
                 local layoutIndex = count + slack
                 local row = math.floor((layoutIndex - 1) / perRow) + 1
                 local column = math.fmod(layoutIndex - 1, perRow) + 1
@@ -680,7 +1121,7 @@ function BuffFrameModule:Enable()
                     local previousRowStart = rowStarts[row - 1] or rowStarts[1] or previousBuff
                     if previousRowStart then
                         button:ClearAllPoints()
-                        button:SetPoint("TOPRIGHT", previousRowStart, "BOTTOMRIGHT", 0, -15)
+                        button:SetPoint("TOPRIGHT", previousRowStart, "BOTTOMRIGHT", 0, -vGap)
                     end
                     rowStarts[row] = button
                 elseif previousBuff then
@@ -694,11 +1135,27 @@ function BuffFrameModule:Enable()
     end
 
     function BuffFrameModule:RefreshAuraSpacing()
-        if BuffFrame_UpdateAllBuffAnchors then
+        ApplyAuraScales()
+        -- Full update re-shows buttons previously hidden by max-row caps.
+        if BuffFrame_Update then
+            BuffFrame_Update()
+        elseif BuffFrame_UpdateAllBuffAnchors then
             BuffFrame_UpdateAllBuffAnchors()
+            FixDebuffPositions()
+        else
+            FixDebuffPositions()
         end
         self:UpdatePosition()
-        FixDebuffPositions()
+        self:UpdateToggleButtonVisibility()
+        self:UpdateLayoutPreview()
+    end
+
+    function BuffFrameModule:UpdateToggleButtonVisibility()
+        local hasBuffs = GetUnitBuffCount("player", 16) > 0
+        if not hasBuffs and UnitExists and UnitExists("vehicle") then
+            hasBuffs = GetUnitBuffCount("vehicle", 16) > 0
+        end
+        ShowToggleButtonIf(hasBuffs)
     end
 
     -- ========================================================================
@@ -731,6 +1188,7 @@ function BuffFrameModule:Enable()
 
             -- 2) Rebuild the visible buff grid every update to avoid stale
             --    anchors from Blizzard or external addons leaving asymmetric rows.
+            ApplyAuraScales()
             ReanchorBuffButtons()
 
             -- 3) Respect buff toggle: re-hide buffs if user collapsed them
@@ -742,21 +1200,38 @@ function BuffFrameModule:Enable()
                     end
                 end
             end
+
+            -- Debuffs must follow the latest buff / consolidated layout.
+            FixDebuffPositions()
+            BuffFrameModule:UpdateLayoutPreview()
         end)
     end
 
     -- ========================================================================
     -- HOOK: DebuffButton_UpdateAnchors — fix debuff positioning
-    -- Blizzard anchors the first debuff to ConsolidatedBuffs BOTTOMRIGHT.
-    -- Since we moved ConsolidatedBuffs, debuffs end up too far right.
-    -- This hook re-anchors the first debuff below the last buff row.
+    -- Blizzard anchors the first debuff to ConsolidatedBuffs BOTTOMRIGHT and
+    -- wraps later icons with BUFFS_PER_ROW. We defer one frame so our full
+    -- grid (using debuffs_per_row) runs AFTER Blizzard finishes the whole pass.
     -- ========================================================================
     if not BuffFrameModule._hookedDebuffAnchors then
         BuffFrameModule._hookedDebuffAnchors = true
-        hooksecurefunc("DebuffButton_UpdateAnchors", function(buttonName, index)
+        local debuffFixPending = false
+        local debuffFixFrame = CreateFrame("Frame")
+        debuffFixFrame:Hide()
+        debuffFixFrame:SetScript("OnUpdate", function(self)
+            self:Hide()
+            debuffFixPending = false
             if not buffFramePositionLocked then return end
-            if index ~= 1 then return end  -- only fix the first debuff; rest chain from it
+            ApplyAuraScales()
             FixDebuffPositions()
+            BuffFrameModule:UpdateLayoutPreview()
+        end)
+
+        hooksecurefunc("DebuffButton_UpdateAnchors", function()
+            if not buffFramePositionLocked then return end
+            if debuffFixPending then return end
+            debuffFixPending = true
+            debuffFixFrame:Show()
         end)
     end
 
@@ -875,6 +1350,9 @@ end
 
 -- Disable the buff frame module
 function BuffFrameModule:Disable()
+    HidePreviewPool(previewBuffButtons)
+    HidePreviewPool(previewDebuffButtons)
+
     -- Restore original BuffFrame and ConsolidatedBuffs positioning methods
     buffFramePositionLocked = false
     BuffFrame.SetPoint = original_BuffFrame_SetPoint

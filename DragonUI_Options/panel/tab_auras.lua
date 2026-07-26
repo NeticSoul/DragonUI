@@ -2,7 +2,7 @@
 ================================================================================
 DragonUI Options Panel - Auras Tab
 ================================================================================
-Weapon enchant separation options.
+Player buff/debuff layout, weapon enchants, aura borders, and target/focus auras.
 ================================================================================
 ]]
 
@@ -303,9 +303,66 @@ local function BuildAurasTab(scroll)
         "|cff888888" .. LO["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can drag to any position on screen."] .. "|r")
 
     C:AddSpacer(scroll)
-    local playerAuraSpacingSection = C:AddSection(scroll, LO["Player Aura Spacing"])
+    local playerAuraSection = C:AddSection(scroll, LO["Player Buffs & Debuffs"])
 
-    C:AddSlider(playerAuraSpacingSection, {
+    C:AddDescription(playerAuraSection,
+        LO["Layout settings for the player buff and debuff bar. These do not affect target or focus auras."])
+
+    C:AddToggle(playerAuraSection, {
+        label = LO["Show Toggle Button"],
+        desc = LO["Show a collapse/expand button next to the buff icons."],
+        dbPath = "buffs.show_toggle_button",
+        callback = function()
+            if addon.BuffFrameModule and addon.BuffFrameModule.UpdateToggleButtonVisibility then
+                addon.BuffFrameModule:UpdateToggleButtonVisibility()
+            else
+                RefreshPlayerAuraSpacing()
+            end
+        end,
+    })
+
+    C:AddHeading(playerAuraSection, LO["Buffs"])
+
+    C:AddDropdown(playerAuraSection, {
+        label = LO["Buff Order"],
+        desc = LO["How to sort player buff icons on the buff bar."],
+        dbPath = "buffs.buff_order",
+        values = {
+            player_first = LO["Player Buffs First"],
+            other_first = LO["Other Player Buffs First"],
+            duration = LO["Duration Buffs First"],
+        },
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Buff Icon Scale"],
+        dbPath = "buffs.buff_scale",
+        min = 0.5, max = 2, step = 0.05,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Buffs Per Row"],
+        desc = LO["How many buff icons to show in each row."],
+        dbPath = "buffs.buffs_per_row",
+        min = 1, max = 32, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Max Buff Rows"],
+        desc = LO["Maximum number of buff rows to display. Use 0 for no limit."],
+        dbPath = "buffs.max_buff_rows",
+        min = 0, max = 10, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
         label = LO["Buff Horizontal Gap"],
         dbPath = "buffs.buff_horizontal_gap",
         min = 0, max = 20, step = 1,
@@ -313,10 +370,92 @@ local function BuildAurasTab(scroll)
         callback = RefreshPlayerAuraSpacing,
     })
 
-    C:AddSlider(playerAuraSpacingSection, {
+    C:AddSlider(playerAuraSection, {
+        label = LO["Buff Vertical Gap"],
+        desc = LO["Space between buff rows."],
+        dbPath = "buffs.buff_vertical_gap",
+        min = 0, max = 40, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddHeading(playerAuraSection, LO["Debuffs"])
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Debuff Icon Scale"],
+        dbPath = "buffs.debuff_scale",
+        min = 0.5, max = 2, step = 0.05,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Debuffs Per Row"],
+        desc = LO["How many debuff icons to show in each row."],
+        dbPath = "buffs.debuffs_per_row",
+        min = 1, max = 32, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Max Debuff Rows"],
+        desc = LO["Maximum number of debuff rows to display. Use 0 for no limit."],
+        dbPath = "buffs.max_debuff_rows",
+        min = 0, max = 10, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
         label = LO["Debuff Horizontal Gap"],
         dbPath = "buffs.debuff_horizontal_gap",
         min = 0, max = 20, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Debuff Vertical Gap"],
+        desc = LO["Space between debuff rows."],
+        dbPath = "buffs.debuff_vertical_gap",
+        min = 0, max = 40, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Debuff Attached Offset Y"],
+        desc = LO["Vertical gap below the buff bar when debuffs are attached (not detached in Editor Mode)."],
+        dbPath = "buffs.debuff_offset_y",
+        min = 0, max = 120, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddHeading(playerAuraSection, LO["Layout Preview"])
+
+    C:AddDescription(playerAuraSection,
+        LO["Shows fake buff and debuff icons so you can tune scale, rows, and spacing without needing real auras. Turn this off when finished."])
+
+    C:AddToggle(playerAuraSection, {
+        label = LO["Enable Layout Preview"],
+        dbPath = "buffs.layout_preview",
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Preview Buff Count"],
+        dbPath = "buffs.layout_preview_buffs",
+        min = 0, max = 64, step = 1,
+        width = 220,
+        callback = RefreshPlayerAuraSpacing,
+    })
+
+    C:AddSlider(playerAuraSection, {
+        label = LO["Preview Debuff Count"],
+        dbPath = "buffs.layout_preview_debuffs",
+        min = 0, max = 40, step = 1,
         width = 220,
         callback = RefreshPlayerAuraSpacing,
     })

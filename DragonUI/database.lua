@@ -521,7 +521,20 @@ local defaults = {
             buffs_hidden = false,
             separate_weapon_enchants = false,
             buff_horizontal_gap = 0,
-            debuff_horizontal_gap = 0
+            debuff_horizontal_gap = 0,
+            buff_scale = 1,
+            debuff_scale = 1,
+            buffs_per_row = 16,
+            debuffs_per_row = 16,
+            max_buff_rows = 0,
+            max_debuff_rows = 0,
+            buff_vertical_gap = 15,
+            debuff_vertical_gap = 15,
+            debuff_offset_y = 60,
+            buff_order = "player_first",
+            layout_preview = false,
+            layout_preview_buffs = 40,
+            layout_preview_debuffs = 16,
         },
 
         -- CASTBAR SETTINGS
@@ -1000,7 +1013,8 @@ local defaults = {
                 class_colored_name = true, -- Color unit name by class
                 target_of_target = true, -- Show target-of-target line
                 health_bar = true, -- Show health bar on tooltip
-                anchor_cursor = false -- Anchor tooltip to cursor
+                anchor_cursor = false, -- Anchor tooltip to cursor
+                show_aura_source = true, -- Show caster name (and spell ID) on buff/debuff tooltips
             },
             itemquality = {
                 enabled = true, -- Color item borders by quality in bags, character panel, bank, merchant
