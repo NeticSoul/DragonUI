@@ -231,7 +231,7 @@ local function GetPartyUnitForPlate(plateData)
     local name = plateData.plateName
     for i = 1, GetNumPartyMembers() do
         local unit = "party" .. i
-        if UnitExists(unit) and NP.native_style.StripRealm(UnitName(unit)) == name then
+        if UnitExists(unit) and NP.native_style.UnitNameEquals(UnitName(unit), name) then
             return unit
         end
     end
@@ -247,7 +247,7 @@ function NP.gather.GetGroupUnitForPlate(plateData)
     local now = GetTime and GetTime() or 0
     local cached = plateData._groupUnit
     if cached and plateData._groupUnitProbeAt and now < plateData._groupUnitProbeAt
-        and UnitExists(cached) and NP.native_style.StripRealm(UnitName(cached)) == name then
+        and UnitExists(cached) and NP.native_style.UnitNameEquals(UnitName(cached), name) then
         return cached
     end
     plateData._groupUnitProbeAt = now + 0.3
@@ -256,7 +256,7 @@ function NP.gather.GetGroupUnitForPlate(plateData)
     if numRaid > 0 then
         for i = 1, numRaid do
             local unit = "raid" .. i
-            if UnitExists(unit) and NP.native_style.StripRealm(UnitName(unit)) == name then
+            if UnitExists(unit) and NP.native_style.UnitNameEquals(UnitName(unit), name) then
                 plateData._groupUnit = unit
                 return unit
             end
@@ -264,7 +264,7 @@ function NP.gather.GetGroupUnitForPlate(plateData)
     else
         for i = 1, GetNumPartyMembers() do
             local unit = "party" .. i
-            if UnitExists(unit) and NP.native_style.StripRealm(UnitName(unit)) == name then
+            if UnitExists(unit) and NP.native_style.UnitNameEquals(UnitName(unit), name) then
                 plateData._groupUnit = unit
                 return unit
             end

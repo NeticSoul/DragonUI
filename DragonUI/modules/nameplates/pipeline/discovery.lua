@@ -135,7 +135,10 @@ function NP.discovery.GetPlateName(plateData)
     if plateData.ogNameText and plateData.ogNameText.GetText then
         local text = plateData.ogNameText:GetText()
         if text and text ~= "" then
-            return NP.native_style.StripRealm(text)
+            -- Keep the native string intact for display. StripRealm is only for
+            -- matching UnitName/CLEU (Name-Realm); applying it here truncates
+            -- hyphenated NPC names like "Blood-Queen Lana'thel" → "Blood".
+            return text
         end
     end
     return plateData.plateName

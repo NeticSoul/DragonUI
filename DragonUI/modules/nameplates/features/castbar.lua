@@ -1078,7 +1078,9 @@ local CastMonitorGuidToPlate = {}
 local CastMonitorPlateToGuid = setmetatable({}, { __mode = "k" })
 
 local function StripCastSourceName(sourceName)
-    return sourceName and NP.native_style.StripRealm(strsplit("-", sourceName)) or nil
+    -- Do not strsplit first: that turns "Blood-Queen Lana'thel" into "Blood"
+    -- before StripRealm can preserve the spaced NPC compound.
+    return sourceName and NP.native_style.StripRealm(sourceName) or nil
 end
 
 local function ClearCastMonitorStickyForGUID(guid)
