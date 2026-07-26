@@ -312,13 +312,7 @@ local function BuildAurasTab(scroll)
         label = LO["Show Toggle Button"],
         desc = LO["Show a collapse/expand button next to the buff icons."],
         dbPath = "buffs.show_toggle_button",
-        callback = function()
-            if addon.BuffFrameModule and addon.BuffFrameModule.UpdateToggleButtonVisibility then
-                addon.BuffFrameModule:UpdateToggleButtonVisibility()
-            else
-                RefreshPlayerAuraSpacing()
-            end
-        end,
+        callback = RefreshPlayerAuraSpacing,
     })
 
     C:AddHeading(playerAuraSection, LO["Buffs"])
@@ -328,6 +322,7 @@ local function BuildAurasTab(scroll)
         desc = LO["How to sort player buff icons on the buff bar."],
         dbPath = "buffs.buff_order",
         values = {
+            blizzard = LO["Default (Blizzard)"],
             player_first = LO["Player Buffs First"],
             other_first = LO["Other Player Buffs First"],
             duration = LO["Duration Buffs First"],

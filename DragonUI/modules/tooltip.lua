@@ -406,6 +406,9 @@ local function RGBToHex(r, g, b)
         math.floor((b or 1) * 255 + 0.5))
 end
 
+local AURA_ID_LABEL = _G.ID or "ID"
+local AURA_SOURCE_FALLBACK_COLOR = { r = 1, g = 1, b = 1 }
+
 local function AuraSourceAlreadyShown(tt, spellId)
     if not spellId then
         return false
@@ -414,11 +417,21 @@ local function AuraSourceAlreadyShown(tt, spellId)
     for i = 1, tt:NumLines() do
         local left = _G["GameTooltipTextLeft" .. i]
         local text = left and left:GetText()
-        if text and text:find(needle, 1, true) and text:find("ID", 1, true) then
+        if text and text:find(needle, 1, true) and text:find(AURA_ID_LABEL, 1, true) then
             return true
         end
     end
     return false
+end
+
+-- Returns UnitAura's 8th..11th values: unitCaster, isStealable, shouldConsolidate, spellId.
+local function GetAuraCasterAndSpellId(unit, index, filter)
+    if filter == "HARMFUL" then
+        return select(8, UnitDebuff(unit, index))
+    elseif filter == "HELPFUL" then
+        return select(8, UnitBuff(unit, index))
+    end
+    return select(8, UnitAura(unit, index, filter))
 end
 
 local function AddAuraSourceInfo(tt, unit, index, filter)
@@ -426,26 +439,15 @@ local function AddAuraSourceInfo(tt, unit, index, filter)
         return
     end
 
-    local caster, spellId
-    if filter == "HARMFUL" then
-        caster = select(8, UnitDebuff(unit, index))
-        spellId = select(11, UnitDebuff(unit, index))
-    elseif filter == "HELPFUL" then
-        caster = select(8, UnitBuff(unit, index))
-        spellId = select(11, UnitBuff(unit, index))
-    else
-        caster = select(8, UnitAura(unit, index, filter))
-        spellId = select(11, UnitAura(unit, index, filter))
-    end
+    local caster, _, _, spellId = GetAuraCasterAndSpellId(unit, index, filter)
 
     if AuraSourceAlreadyShown(tt, spellId) then
         return
     end
 
-    local idLabel = _G.ID or "ID"
     local leftText
     if spellId then
-        leftText = string.format("|cFFCA3C3C%s|r %d", idLabel, spellId)
+        leftText = string.format("|cFFCA3C3C%s|r %d", AURA_ID_LABEL, spellId)
     end
 
     local rightText
@@ -453,7 +455,7 @@ local function AddAuraSourceInfo(tt, unit, index, filter)
         local name = UnitName(caster)
         if name then
             local _, class = UnitClass(caster)
-            local color = (class and CLASS_COLORS[class]) or { r = 1, g = 1, b = 1 }
+            local color = (class and CLASS_COLORS[class]) or AURA_SOURCE_FALLBACK_COLOR
             rightText = RGBToHex(color.r, color.g, color.b) .. name
         end
     end
