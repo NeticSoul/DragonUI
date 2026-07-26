@@ -400,6 +400,11 @@ local function ApplyAuraScales()
         SetAuraScale(ConsolidatedBuffs, buffScale)
     end
 
+    -- Collapses the buff row, so it tracks the buff scale and ignores the debuff one.
+    if toggleButton then
+        SetAuraScale(toggleButton, buffScale)
+    end
+
     for index = 1, (DEBUFF_MAX_DISPLAY or 16) do
         local debuff = _G["DebuffButton" .. index]
         if debuff then
