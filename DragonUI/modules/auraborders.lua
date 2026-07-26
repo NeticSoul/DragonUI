@@ -158,7 +158,8 @@ local CD_BASE = 20
 
 -- Aura cooldown model stops stretching past ~26px (CENTER-only template anchor); fixed rect + SetScale scales the swirl itself.
 local function FitCooldown(button, size)
-    local cd = _G[button:GetName() .. "Cooldown"]
+    local name = button.GetName and button:GetName()
+    local cd = name and _G[name .. "Cooldown"]
     if not cd then return nil end
 
     -- Full button size, no inset — action bars run SetAllPoints(button) and the sweep edge hides under the frame.
@@ -188,7 +189,8 @@ local function FitAuraChrome(button, icon)
 
     -- Player AuraButtonTemplate puts Count on BACKGROUND with the icon; BORDER icon would hide stacks.
     -- Target/focus counts already sit on ARTWORK/OVERLAY — leave them alone.
-    local count = button.count or _G[button:GetName() .. "Count"]
+    local name = button.GetName and button:GetName()
+    local count = button.count or (name and _G[name .. "Count"])
     if count and not button.duiCountRaised then
         local layer = count:GetDrawLayer()
         if layer == "BACKGROUND" then
@@ -222,8 +224,16 @@ local function ReparentChromeHost(button)
         host:SetParent(parent)
     end
 
+    -- Preview icons use HIGH; without this the sibling chrome stays on UIParent's
+    -- default strata and draws behind the icon (real BuffButtons share LOW).
+    local strata = button.GetFrameStrata and button:GetFrameStrata()
+    if strata and host:GetFrameStrata() ~= strata then
+        host:SetFrameStrata(strata)
+    end
+
     local base = button:GetFrameLevel() + 1
-    local cd = _G[button:GetName() .. "Cooldown"]
+    local name = button.GetName and button:GetName()
+    local cd = name and _G[name .. "Cooldown"]
     if cd and cd.GetFrameLevel then
         local cdLevel = cd:GetFrameLevel()
         if cdLevel >= base then
@@ -312,7 +322,8 @@ local function EnsureSquareChrome(button, isDebuff, isUnit, cd)
 end
 
 local function EnsureBorder(button, isDebuff, isUnit)
-    local icon = button.duiAuraIcon or _G[button:GetName() .. "Icon"]
+    local name = button.GetName and button:GetName()
+    local icon = button.duiAuraIcon or button.icon or (name and _G[name .. "Icon"])
     if not icon then return nil end
 
     local cd = FitAuraChrome(button, icon)
@@ -349,8 +360,9 @@ local function RestoreButton(button)
             button.duiIconOrigLayer = nil
         end
     end
+    local name = button.GetName and button:GetName()
     if button.duiCountRaised then
-        local count = button.count or _G[button:GetName() .. "Count"]
+        local count = button.count or (name and _G[name .. "Count"])
         if count then
             count:SetDrawLayer(button.duiCountOrigLayer or "BACKGROUND")
         end
@@ -358,7 +370,7 @@ local function RestoreButton(button)
         button.duiCountOrigLayer = nil
     end
     if button.duiCdFitted then
-        local cd = _G[button:GetName() .. "Cooldown"]
+        local cd = name and _G[name .. "Cooldown"]
         if cd then
             cd:SetScale(1)
             cd:ClearAllPoints()
@@ -367,7 +379,7 @@ local function RestoreButton(button)
         button.duiCdFitted = nil
     end
     if button.duiDurMoved then
-        local dur = button.duration or _G[button:GetName() .. "Duration"]
+        local dur = button.duration or (name and _G[name .. "Duration"])
         if dur then
             dur:ClearAllPoints()
             dur:SetPoint("TOP", button, "BOTTOM", 0, 0)
@@ -391,7 +403,8 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
     if not EnsureBorder(button, isDebuff, isUnit) then return end
 
     if not isUnit and not button.duiDurMoved then
-        local dur = button.duration or _G[button:GetName() .. "Duration"]
+        local name = button.GetName and button:GetName()
+        local dur = button.duration or (name and _G[name .. "Duration"])
         if dur then
             dur:ClearAllPoints()
             dur:SetPoint("TOP", button, "BOTTOM", 0, -DURATION_DROP)
@@ -399,7 +412,7 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
         end
     end
 
-    local stock = stockBorderName and _G[stockBorderName]
+    local stock = (stockBorderName and _G[stockBorderName]) or button.Border
     local r, g, b
     if isDebuff then
         if stock then
@@ -539,11 +552,25 @@ function addon.GetAuraChromeGap(size)
     return math.ceil(deficit)
 end
 
+-- Styled frames are retained and hooked for good, so only pass pooled/persistent frames.
+function addon.StyleAuraButton(button, isDebuff)
+    StyleAura(button, isDebuff == true, nil, false)
+end
+
+-- RestyleAll only walks fixed Blizzard names, so the pooled preview icons need their own pass.
+local function RefreshLayoutPreviewBorders()
+    local mod = addon.BuffFrameModule
+    if mod and mod.UpdateLayoutPreview then
+        mod:UpdateLayoutPreview()
+    end
+end
+
 function addon.ApplyAuraBordersSystem()
     AuraBordersModule.initialized = true
     InstallHooks()
     AuraBordersModule.applied = true
     RestyleAll()
+    RefreshLayoutPreviewBorders()
     -- Re-run the aura layout so GetAuraChromeGap spacing tracks the new border style immediately.
     if addon.RefreshTargetFocusAuraLayout then
         addon.RefreshTargetFocusAuraLayout()

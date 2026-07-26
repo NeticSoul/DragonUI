@@ -454,21 +454,24 @@ local function AcquirePreviewIcon(pool, index, isDebuff)
         button:EnableMouse(false)
         button:SetFrameStrata("HIGH")
 
-        local icon = button:CreateTexture(nil, "ARTWORK")
+        -- Match AuraButtonTemplate: icon on BACKGROUND so auraborders can raise it to BORDER.
+        local icon = button:CreateTexture(nil, "BACKGROUND")
         icon:SetAllPoints()
         icon:SetTexture(isDebuff and PREVIEW_DEBUFF_TEXTURE or PREVIEW_BUFF_TEXTURE)
         button.icon = icon
 
         if isDebuff then
             local border = button:CreateTexture(nil, "OVERLAY")
-            border:SetAllPoints()
             border:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays")
             border:SetTexCoord(0.296875, 0.5703125, 0, 0.515625)
             border:SetVertexColor(0.8, 0.1, 0.1)
+            border:SetSize(33, 32)
+            border:SetPoint("CENTER")
+            button.Border = border
         end
 
-        local label = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
-        label:SetPoint("BOTTOMRIGHT", -1, 1)
+        local label = button:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+        label:SetPoint("BOTTOMRIGHT", -2, 2)
         button.label = label
         pool[index] = button
     end
@@ -547,6 +550,9 @@ local function LayoutPreviewGrid(pool, count, anchorFrame, perRow, hGap, vGap, s
                     lastRowStart = button
                 else
                     button:SetPoint("TOPRIGHT", previous, "TOPLEFT", -spacing, 0)
+                end
+                if addon.StyleAuraButton then
+                    addon.StyleAuraButton(button, isDebuff)
                 end
                 previous = button
             end
