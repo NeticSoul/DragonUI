@@ -197,10 +197,9 @@ local function ApplyCollapseExpandButtonArt()
         disabled:SetDesaturated(true)
     end
 
-    -- Highlight must use the current icon atlas (plus vs minus).
     local hi = btn:GetHighlightTexture()
     if hi then
-        skinTex(hi, normalAtlas)
+        skinTex(hi, 'QuestTracker-Red-Highlight')
         hi:SetBlendMode('ADD')
     end
 end
@@ -215,7 +214,8 @@ local function ApplyQuestTrackerStyling()
 
     local headerWidth = watchFrame:GetWidth() or 230
     local isWide = headerWidth > 250
-    local btnSize = isWide and 16 or 13
+    local btnW = isWide and 18 or 13
+    local btnH = isWide and 19 or 14
     local btn = WatchFrameCollapseExpandButton
     local headerHeight = headerWidth / 8
 
@@ -229,9 +229,9 @@ local function ApplyQuestTrackerStyling()
 
     -- Wide: lift title + collapse on Y; art pinned to WatchFrame so lift does not move it.
     local lift = isWide and 5 or 0
-    btn:SetSize(btnSize, btnSize)
+    btn:SetSize(btnW, btnH)
     btn:ClearAllPoints()
-    btn:SetPoint('TOPRIGHT', watchFrame, 'TOPRIGHT', -12, -5 + lift - (16 - btnSize) / 2)
+    btn:SetPoint('TOPRIGHT', watchFrame, 'TOPRIGHT', -12, -5 + lift - (19 - btnH) / 2)
     if WatchFrameHeader then
         WatchFrameHeader:ClearAllPoints()
         WatchFrameHeader:SetPoint('TOPLEFT', watchFrame, 'TOPLEFT', 0, -6 + lift)
