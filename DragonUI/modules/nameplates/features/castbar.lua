@@ -1078,7 +1078,9 @@ local CastMonitorGuidToPlate = {}
 local CastMonitorPlateToGuid = setmetatable({}, { __mode = "k" })
 
 local function StripCastSourceName(sourceName)
-    return sourceName and NP.native_style.StripRealm(strsplit("-", sourceName)) or nil
+    -- Do not strsplit first: that turns "Blood-Queen Lana'thel" into "Blood"
+    -- before StripRealm can preserve the spaced NPC compound.
+    return sourceName and NP.native_style.StripRealm(sourceName) or nil
 end
 
 local function ClearCastMonitorStickyForGUID(guid)
@@ -1655,11 +1657,11 @@ local function ScoreCastSourceCandidate(pd, sourceGUID, cfg)
     return score, hasStrongHint
 end
 
-local function FindBestScoredNameMatch(rawName, sourceGUID, cfg)
+local function FindBestScoredNameMatch(sourceName, sourceGUID, cfg)
     if IsOffTargetSafeOnly(cfg) then
         return nil
     end
-    if not rawName then
+    if not sourceName then
         return nil
     end
 
@@ -1670,7 +1672,7 @@ local function FindBestScoredNameMatch(rawName, sourceGUID, cfg)
     local aggressive = IsAggressiveCastMonitor(cfg)
 
     for _, pd in pairs(NP.module.plates) do
-        if IsVisiblePlate(pd) and pd.plateName == rawName then
+        if IsVisiblePlate(pd) and NP.native_style.UnitNameEquals(pd.plateName, sourceName) then
             local score, hasStrongHint = ScoreCastSourceCandidate(pd, sourceGUID, cfg)
             if score > bestScore then
                 second, secondScore = best, bestScore
@@ -1712,20 +1714,19 @@ local function FindBestScoredNameMatch(rawName, sourceGUID, cfg)
 end
 
 local function TryNameMatch(sourceName, sourceFlags, sourceGUID, cfg)
-    local rawName = sourceName and strsplit("-", sourceName)
-    if not rawName then
+    if not sourceName then
         return nil
     end
     local found
     local count = 0
     for _, pd in pairs(NP.module.plates) do
-        if pd.plateName == rawName and IsVisiblePlate(pd) then
+        if IsVisiblePlate(pd) and NP.native_style.UnitNameEquals(pd.plateName, sourceName) then
             count = count + 1
             found = pd
         end
     end
     if count >= 1 and IsAggressiveCastMonitor(cfg) and not IsOffTargetSafeOnly(cfg) then
-        return FindBestScoredNameMatch(rawName, sourceGUID, cfg)
+        return FindBestScoredNameMatch(sourceName, sourceGUID, cfg)
     end
     if count == 1 and found then
         local isPlayer = IsPlayerUnitFlags(sourceFlags)

@@ -9,16 +9,34 @@ NP.native_style = NP.native_style or {}
 
 local RareEntryCache = {}
 
--- Realm is Name-Realm (no spaces in Name). Multi-hyphen / spaced compounds are NPC grammar, not realms.
+-- Strip cross-realm "Name-Realm" suffixes. Player names never contain spaces or
+-- hyphens, so only the unambiguous Name-SingleToken form is stripped.
+-- Spaced compounds ("Blood-Queen Lana'thel") and multi-hyphen names
+-- (French "Bat-le-désert", realm "Azjol-Nerub") are NPC/realm grammar — leave intact.
 function NP.native_style.StripRealm(name)
     if not name or name == "" then
         return nil
     end
+    -- Any space means NPC compound or spaced realm; do not guess.
+    if name:find(" ", 1, true) then
+        return name
+    end
     local base, realm = name:match("^([^%-]+)%-([^%-]+)$")
-    if base and realm and not base:find(" ", 1, true) then
+    if base and realm then
         return base
     end
     return name
+end
+
+-- UnitName()'s first return never includes a realm. Plate/CLEU strings might.
+function NP.native_style.UnitNameEquals(unitName, plateOrCombatName)
+    if not unitName or not plateOrCombatName then
+        return false
+    end
+    if unitName == plateOrCombatName then
+        return true
+    end
+    return unitName == NP.native_style.StripRealm(plateOrCombatName)
 end
 
 -- Boss level marker: numeric -1, or the "??"/"-1" text shown on boss plates.

@@ -12,10 +12,6 @@ NP.match = NP.identity
 
 local identity = NP.identity
 
-local function StripRealm(name)
-    return NP.native_style.StripRealm(name)
-end
-
 -- Health and name matching
 
 function identity.UnitMatchesPlateHealth(unit, plateData)
@@ -48,7 +44,7 @@ function identity.UnitNameMatchesPlate(unit, plateData)
     if not name or not unit or not UnitExists(unit) then
         return false
     end
-    return StripRealm(UnitName(unit)) == name
+    return NP.native_style.UnitNameEquals(UnitName(unit), name)
 end
 
 function identity.PlateMatchesUnitFingerprint(plateData, unit, allowFullHealthNPC)
@@ -470,12 +466,12 @@ function identity.IsMageMirrorImagePlate(plateData, arenaUnit)
     if class ~= "MAGE" then
         return false
     end
-    local arenaName = StripRealm(UnitName(arenaUnit))
+    local arenaName = UnitName(arenaUnit)
     local plateName = plateData.plateName
-    if not arenaName or not plateName or arenaName ~= plateName then
+    if not arenaName or not plateName or not NP.native_style.UnitNameEquals(arenaName, plateName) then
         return false
     end
-    if identity.CountVisiblePlatesByName(arenaName) <= 1 then
+    if identity.CountVisiblePlatesByName(plateName) <= 1 then
         return false
     end
     local maxHealth = identity.GetPlateMaxHealth(plateData)
