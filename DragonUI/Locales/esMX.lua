@@ -246,13 +246,9 @@ L["Use DragonUI"] = "Usar DragonUI"
 L["Disable Both"] = "Desactivar ambos"
 L["Use DragonUI Unit Frame Layers"] = "Usar Unit Frame Layers de DragonUI"
 L["Disable both Unit Frame Layers"] = "Desactivar ambos Unit Frame Layers"
-L["DragonUI - Party Frame Issue"] = true
-L["You joined a party while in combat. Due to CompactRaidFrame taint issues, party frames may not display correctly."] = true
-L["Reload the UI to fix party frame display?"] = true
 
 -- Conflict reasons
 L["Conflicts with DragonUI's custom unit frame textures and power bar system."] = "Entra en conflicto con las texturas personalizadas de marcos de unidad y el sistema de barra de poder de DragonUI."
-L["Known taint issues when manipulating party frames during combat. DragonUI provides automatic fixes."] = "Problemas conocidos de contaminación al manipular marcos de grupo en combate. DragonUI proporciona correcciones automáticas."
 L["Resets minimap mask and blip textures. DragonUI re-applies its custom textures automatically."] = "Restablece la máscara del minimapa y las texturas de puntos. DragonUI vuelve a aplicar sus texturas personalizadas automáticamente."
 L["SexyMap modifies the minimap borders, shape, and zone text which conflicts with DragonUI's minimap module."] = "SexyMap modifica los bordes del minimapa, la forma y el texto de zona, lo cual entra en conflicto con el módulo de minimapa de DragonUI."
 L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "Usa la transparencia nativa de la placa para identificar la placa del objetivo; entra en conflicto con el comportamiento anti-atenuado por defecto de DragonUI."

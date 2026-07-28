@@ -51,28 +51,11 @@ local function ResolveRegistryKey(addonName)
         return lowered
     end
 
-    -- Compact raid frame addon can appear with different names/casing.
-    if lowered == "compactraidframes" or lowered == "blizzard_compactraidframes" then
-        return "compactraidframe"
-    end
-
     return nil
 end
 
 local function IsRegistryAddonLoaded(addonName)
-    if IsAddonLoadedCached(addonName) then
-        return true
-    end
-
-    if addonName == "compactraidframe" then
-        return IsAddonLoadedCached("compactraidframes")
-            or IsAddonLoadedCached("CompactRaidFrame")
-            or IsAddonLoadedCached("CompactRaidFrames")
-            or IsAddonLoadedCached("Blizzard_CompactRaidFrames")
-            or _G.CompactRaidFrameManager ~= nil
-    end
-
-    return false
+    return IsAddonLoadedCached(addonName)
 end
 
 -- ============================================================================
@@ -468,91 +451,6 @@ behaviors.NameplateBarAlphaCompat = function(addonName, addonInfo)
 
     StaticPopup_Show(popupName)
 end
-
--- Behavior: CompactRaidFrame taint mitigation
-behaviors.CompactRaidFrameFix = function(addonName, addonInfo)
-
-    local function CleanPartyFrames()
-        DelayedCall(function()
-            if _G.PartyMemberFrame_UpdateParty then
-                _G.PartyMemberFrame_UpdateParty()
-            end
-            
-            -- Apply DragonUI refresh if available
-            if addon and addon.RefreshPartyFrames then
-                addon.RefreshPartyFrames()
-            end
-        end, 0.2)
-    end
-    
-    -- Show reload dialog for party frame creation issues
-    local function ShowPartyReloadDialog()
-        StaticPopupDialogs["DRAGONUI_PARTY_RELOAD"] = {
-            text = "|cFFFFFF00" .. L["DragonUI - Party Frame Issue"] .. "|r\n\n" ..
-                   L["You joined a party while in combat. Due to CompactRaidFrame taint issues, party frames may not display correctly."] ..
-                   "\n\n|cFFFF9999" .. L["Reload the UI to fix party frame display?"] .. "|r",
-            button1 = L["Reload UI"],
-            button2 = L["Skip"],
-            OnAccept = function()
-                ReloadUI()
-            end,
-            OnCancel = function() end,
-            timeout = 15, -- Auto-dismiss after 15 seconds
-            whileDead = true,
-            hideOnEscape = true,
-            preferredIndex = 3
-        }
-        
-        StaticPopup_Show("DRAGONUI_PARTY_RELOAD")
-    end
-
-    -- Highest concurrent party size seen this session. CompactRaidFrame-style addons
-    -- pool/reuse unit frames, so a new one is only ever forced into existence past this peak.
-    local sessionMaxPartySize = GetNumPartyMembers()
-    local lastKnownPartySize = sessionMaxPartySize
-    local needsReload = false
-    local needsClean = false
-
-    local QUEUE_ID = "compatibility_compactraidframe_partyfix"
-
-    local function ApplyPendingFix()
-        if needsReload then
-            ShowPartyReloadDialog()
-        elseif needsClean then
-            CleanPartyFrames()
-        end
-        needsReload = false
-        needsClean = false
-    end
-
-    -- Event-driven (no polling): reacts to roster changes, comparing against the
-    -- session peak instead of "was I solo when this fight started".
-    local function OnPartyRosterChanged()
-        local currentPartySize = GetNumPartyMembers()
-        if currentPartySize == lastKnownPartySize then
-            return
-        end
-
-        if currentPartySize > sessionMaxPartySize then
-            if InCombatLockdown() then
-                needsReload = true
-            end
-            sessionMaxPartySize = currentPartySize
-        elseif InCombatLockdown() and (currentPartySize > 0 or lastKnownPartySize > 0) then
-            needsClean = true
-        end
-
-        lastKnownPartySize = currentPartySize
-
-        if InCombatLockdown() and (needsReload or needsClean) then
-            addon.CombatQueue:Add(QUEUE_ID, ApplyPendingFix)
-        end
-    end
-
-    compatibility.raidUpdateHandlers = compatibility.raidUpdateHandlers or {}
-    compatibility.raidUpdateHandlers[addonName] = OnPartyRosterChanged
-end
-
 
 -- ============================================================================
 -- ADDON REGISTRY
@@ -1022,13 +920,6 @@ ADDON_REGISTRY = {
         reason = L["Conflicts with DragonUI's custom unit frame textures and power bar system."],
         behavior = behaviors.UnitFrameLayersCompatibility,
         checkOnce = true
-    },
-    ["compactraidframe"] = {
-        name = "CompactRaidFrame",
-        reason = L["Known taint issues when manipulating party frames during combat. DragonUI provides automatic fixes."],
-        behavior = behaviors.CompactRaidFrameFix,
-        checkOnce = true,
-        listenToRaidEvents = true -- Enable raid event monitoring
     },
     ["platebuffs"] = {
         name = "PlateBuffs",
