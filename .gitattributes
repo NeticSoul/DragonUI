@@ -2,3 +2,9 @@
 .gitignore export-ignore
 .gitattributes export-ignore
 .github/ export-ignore
+
+# Texture and font formats are binary: never apply CRLF conversion or text diffs
+*.blp binary
+*.tga binary
+*.dds binary
+*.ttf binary
