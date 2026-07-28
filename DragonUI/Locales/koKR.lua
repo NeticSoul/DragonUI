@@ -246,13 +246,9 @@ L["Use DragonUI"] = "DragonUI ì‚¬ìš©"
 L["Disable Both"] = "ë‘˜ ë‹¤ ë¹„í™œì„±í™”"
 L["Use DragonUI Unit Frame Layers"] = "DragonUI Unit Frame Layers ì‚¬ìš©"
 L["Disable both Unit Frame Layers"] = "ë‘ Unit Frame Layers ëª¨ë‘ ë¹„í™œì„±í™”"
-L["DragonUI - Party Frame Issue"] = true
-L["You joined a party while in combat. Due to CompactRaidFrame taint issues, party frames may not display correctly."] = true
-L["Reload the UI to fix party frame display?"] = true
 
 -- Conflict reasons
 L["Conflicts with DragonUI's custom unit frame textures and power bar system."] = "DragonUIì˜ ì‚¬ìš©ìž ì§€ì • ìœ ë‹› í”„ë ˆìž„ í…ìŠ¤ì²˜ ë° ìžì› ë°” ì‹œìŠ¤í…œê³¼ ì¶©ëŒí•©ë‹ˆë‹¤."
-L["Known taint issues when manipulating party frames during combat. DragonUI provides automatic fixes."] = "ì „íˆ¬ ì¤‘ íŒŒí‹° í”„ë ˆìž„ ì¡°ìž‘ ì‹œ ì•Œë ¤ì§„ ì˜¤ì—¼ ë¬¸ì œê°€ ìžˆìŠµë‹ˆë‹¤. DragonUIê°€ ìžë™ ìˆ˜ì • ê¸°ëŠ¥ì„ ì œê³µí•©ë‹ˆë‹¤."
 L["Resets minimap mask and blip textures. DragonUI re-applies its custom textures automatically."] = "ë¯¸ë‹ˆë§µ ë§ˆìŠ¤í¬ì™€ ë¸”ë¦½ í…ìŠ¤ì²˜ë¥¼ ì´ˆê¸°í™”í•©ë‹ˆë‹¤. DragonUIê°€ ì‚¬ìš©ìž ì§€ì • í…ìŠ¤ì²˜ë¥¼ ìžë™ìœ¼ë¡œ ë‹¤ì‹œ ì ìš©í•©ë‹ˆë‹¤."
 L["SexyMap modifies the minimap borders, shape, and zone text which conflicts with DragonUI's minimap module."] = "SexyMapì´ ë¯¸ë‹ˆë§µ í…Œë‘ë¦¬, ëª¨ì–‘, ì§€ì—­ ì´ë¦„ í…ìŠ¤íŠ¸ë¥¼ ë³€ê²½í•˜ì—¬ DragonUIì˜ ë¯¸ë‹ˆë§µ ëª¨ë“ˆê³¼ ì¶©ëŒí•©ë‹ˆë‹¤."
 L["Reads native nameplate alpha to identify the target's plate; conflicts with DragonUI's default anti-dim behavior."] = "네임플레이트의 기본 알파값으로 대상 플레이트를 식별합니다. DragonUI의 기본 밝기 유지(디밍 방지) 기능과 충돌합니다."
