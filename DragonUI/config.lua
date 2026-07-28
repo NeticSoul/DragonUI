@@ -9,7 +9,7 @@ local addon = select(2,...);
 -- Localization (must load before any core/ file that references addon.L)
 addon.L = LibStub("AceLocale-3.0"):GetLocale("DragonUI")
 
-addon._dir = [[Interface\AddOns\DragonUI\assets\]];
+addon._dir = [[Interface\AddOns\DragonUI\Textures\]];
 
 -- Use centralized font system (loaded via core/fonts.lua before this file)
 local _actionbarFont = addon.Fonts.ACTIONBAR

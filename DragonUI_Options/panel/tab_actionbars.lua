@@ -388,7 +388,7 @@ local function BuildGeneralTab(scroll)
     else
         -- Texture previews row
         local previewRow = C:AddRow(gryphons)
-        local assets = addon._dir or "Interface\\AddOns\\DragonUI\\assets\\"
+        local assets = addon._dir or "Interface\\AddOns\\DragonUI\\Textures\\"
         local faction = UnitFactionGroup and UnitFactionGroup("player") or "Alliance"
 
         -- Classic gryphon preview

@@ -216,7 +216,7 @@
 				<Layers>
 					<Layer level="BACKGROUND">
 						<!-- Action buttons background -->
-						<Texture name="$parentBACKGROUND1" file="Interface\AddOns\DragonUI\assets\mechanical2">
+						<Texture name="$parentBACKGROUND1" file="Interface\AddOns\DragonUI\Textures\mechanical2">
 							<Size>
 								<AbsDimension x="546" y="88"/>
 							</Size>
@@ -228,7 +228,7 @@
 					</Layer>
 					<!-- Top border -->
 					<Layer level="BORDER">
-						<Texture name="$parentBORDER2" file="Interface\AddOns\DragonUI\assets\mechanical2">
+						<Texture name="$parentBORDER2" file="Interface\AddOns\DragonUI\Textures\mechanical2">
 							<Size>
 								<AbsDimension x="538" y="26"/>
 							</Size>
@@ -240,7 +240,7 @@
 					</Layer>
 					<Layer level="OVERLAY">
 						<!-- Left end cap -->
-						<Texture name="$parentOVERLAY1" file="Interface\AddOns\DragonUI\assets\mechanical2">
+						<Texture name="$parentOVERLAY1" file="Interface\AddOns\DragonUI\Textures\mechanical2">
 							<Size>
 								<AbsDimension x="121" y="128"/>
 							</Size>
@@ -250,7 +250,7 @@
 							<TexCoords left="0.060546875" right="0.283203125" top="0.76953125" bottom="0.98828125"/>
 						</Texture>
 						<!-- Right end cap -->
-						<Texture name="$parentOVERLAY2" file="Interface\AddOns\DragonUI\assets\mechanical2">
+						<Texture name="$parentOVERLAY2" file="Interface\AddOns\DragonUI\Textures\mechanical2">
 							<Size>
 								<AbsDimension x="121" y="128"/>
 							</Size>

@@ -1,6 +1,6 @@
 local addon = select(2, ...)
 local L = addon.L
-addon._dir = "Interface\\AddOns\\DragonUI\\assets\\"
+addon._dir = "Interface\\AddOns\\DragonUI\\Textures\\"
 local class = addon._class
 
 -- ============================================================================

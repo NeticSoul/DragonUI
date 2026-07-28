@@ -74,7 +74,7 @@ end
 local ApplyChoice = NP.quest_coexist.ApplyChoice
 
 -- DragonUI's flat "options panel" look, so the wizard matches the rest of the addon.
-local ASSETS = "Interface\\AddOns\\DragonUI\\assets\\"
+local ASSETS = "Interface\\AddOns\\DragonUI\\Textures\\"
 local FLAT = "Interface\\ChatFrame\\ChatFrameBackground"
 local ACCENT = { 0.11, 0.55, 0.85 }
 local GOLD = { 1.0, 0.82, 0.0 }

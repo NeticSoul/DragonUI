@@ -56,13 +56,13 @@ local DEFAULT_MINIMAP_HEIGHT = Minimap:GetHeight() * 1.36
 local blipScale = 1.12
 local BORDER_SIZE = 71 * 2 * 2 ^ 1
 local BORDER_TO_MAP_RATIO = BORDER_SIZE / (DEFAULT_MINIMAP_WIDTH / blipScale)
-local DRAGONUI_MINIMAP_MASK = "Interface\\AddOns\\DragonUI\\assets\\uiminimapmask.tga"
+local DRAGONUI_MINIMAP_MASK = "Interface\\AddOns\\DragonUI\\Textures\\uiminimapmask.tga"
 local VANILLA_MINIMAP_MASK = "Textures\\MinimapMask"
 
 local ADDON_ORBIT_RADIUS = 15
 local DRAGONUI_SETTINGS_BUTTON_SIZE = 21
-local DRAGONUI_SETTINGS_BUTTON_ICON = "Interface\\AddOns\\DragonUI\\assets\\INV_Misc_Head_Dragon_01"
-local DRAGONUI_CLASSIC_COLLECTOR_ICON = "Interface\\AddOns\\DragonUI\\assets\\dfrl_collector_toggle.tga"
+local DRAGONUI_SETTINGS_BUTTON_ICON = "Interface\\AddOns\\DragonUI\\Textures\\INV_Misc_Head_Dragon_01"
+local DRAGONUI_CLASSIC_COLLECTOR_ICON = "Interface\\AddOns\\DragonUI\\Textures\\dfrl_collector_toggle.tga"
 
 -- Addon icon whitelist: define before ReplaceBlizzardFrame
 local WHITE_LIST = {'MiniMapBattlefieldFrame', 'MiniMapTrackingButton', 'MiniMapMailFrame', 'HelpOpenTicketButton',
@@ -726,10 +726,10 @@ local function ReplaceBlizzardFrame(frame)
     end
 
     -- POI (Point of Interest) Custom Textures
-    minimapFrame:SetStaticPOIArrowTexture("Interface\\AddOns\\DragonUI\\assets\\poi-static")
-    minimapFrame:SetCorpsePOIArrowTexture("Interface\\AddOns\\DragonUI\\assets\\poi-corpse")
-    minimapFrame:SetPOIArrowTexture("Interface\\AddOns\\DragonUI\\assets\\poi-guard")
-    minimapFrame:SetPlayerTexture("Interface\\AddOns\\DragonUI\\assets\\poi-player")
+    minimapFrame:SetStaticPOIArrowTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-static")
+    minimapFrame:SetCorpsePOIArrowTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-corpse")
+    minimapFrame:SetPOIArrowTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-guard")
+    minimapFrame:SetPlayerTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-player")
 
     -- Player arrow size (configurable)
     local playerArrowSize = addon.db and addon.db.profile and addon.db.profile.minimap and
@@ -744,7 +744,7 @@ local function ReplaceBlizzardFrame(frame)
         useNewBlipStyle = true -- Default to new style
     end
 
-    local blipTexture = useNewBlipStyle and "Interface\\AddOns\\DragonUI\\assets\\objecticons" or
+    local blipTexture = useNewBlipStyle and "Interface\\AddOns\\DragonUI\\Textures\\objecticons" or
                             'Interface\\Minimap\\ObjectIcons'
     minimapFrame:SetBlipTexture(blipTexture)
 
@@ -762,7 +762,7 @@ local function ReplaceBlizzardFrame(frame)
                                addon.db.profile.minimap.blip_skin
             if useNew == nil then useNew = true end
 
-            local tex = useNew and "Interface\\AddOns\\DragonUI\\assets\\objecticons" or
+            local tex = useNew and "Interface\\AddOns\\DragonUI\\Textures\\objecticons" or
                             'Interface\\Minimap\\ObjectIcons'
 
             MinimapModule._settingBlipTexture = true
@@ -770,10 +770,10 @@ local function ReplaceBlizzardFrame(frame)
             MinimapModule._settingBlipTexture = false
 
             -- Re-apply POI textures (Carbonite resets these on init)
-            Minimap:SetStaticPOIArrowTexture("Interface\\AddOns\\DragonUI\\assets\\poi-static")
-            Minimap:SetCorpsePOIArrowTexture("Interface\\AddOns\\DragonUI\\assets\\poi-corpse")
-            Minimap:SetPOIArrowTexture("Interface\\AddOns\\DragonUI\\assets\\poi-guard")
-            Minimap:SetPlayerTexture("Interface\\AddOns\\DragonUI\\assets\\poi-player")
+            Minimap:SetStaticPOIArrowTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-static")
+            Minimap:SetCorpsePOIArrowTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-corpse")
+            Minimap:SetPOIArrowTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-guard")
+            Minimap:SetPlayerTexture("Interface\\AddOns\\DragonUI\\Textures\\poi-player")
             -- Only re-apply mask if not in hybrid mode (SexyMap controls the mask/shape)
             local hybridCheck = MinimapModule.sexyMapHybridMode
                 or (addon.db and addon.db.profile and addon.db.profile.modules
@@ -853,7 +853,7 @@ local function ReplaceBlizzardFrame(frame)
         minimapBorderTexture:Hide()
         if not Minimap.Circle then
             Minimap.Circle = MinimapBackdrop:CreateTexture(nil, 'ARTWORK')
-            Minimap.Circle:SetTexture("Interface\\AddOns\\DragonUI\\assets\\uiminimapborder.tga")
+            Minimap.Circle:SetTexture("Interface\\AddOns\\DragonUI\\Textures\\uiminimapborder.tga")
         end
         UpdateMinimapCircleSize()
 
@@ -1255,7 +1255,7 @@ local function ApplyAddonIconSkin(button)
         button.circle = button:CreateTexture(nil, 'OVERLAY')
         button.circle:SetSize(23, 23)
         button.circle:SetPoint('CENTER', button)
-        button.circle:SetTexture("Interface\\AddOns\\DragonUI\\assets\\border_buttons.tga")
+        button.circle:SetTexture("Interface\\AddOns\\DragonUI\\Textures\\border_buttons.tga")
 
         -- Hook fade (once, permanent; functions check IsFadeEnabled() dynamically)
         if not button.DragonUI_FadeHooked then
@@ -2422,10 +2422,10 @@ local function ApplyBlipTextureForFadeVisibility(shouldShow)
     if not settings then return end
     local texture
     if shouldShow then
-        texture = settings.blip_skin and "Interface\\AddOns\\DragonUI\\assets\\objecticons"
+        texture = settings.blip_skin and "Interface\\AddOns\\DragonUI\\Textures\\objecticons"
             or 'Interface\\Minimap\\ObjectIcons'
     else
-        texture = "Interface\\AddOns\\DragonUI\\assets\\blip_blank"
+        texture = "Interface\\AddOns\\DragonUI\\Textures\\blip_blank"
     end
     MinimapModule._settingBlipTexture = true
     Minimap:SetBlipTexture(texture)
@@ -2677,7 +2677,7 @@ function MinimapModule:UpdateSettings()
             useNewBlipStyle = true -- Default to new style
         end
 
-        local blipTexture = useNewBlipStyle and "Interface\\AddOns\\DragonUI\\assets\\objecticons" or
+        local blipTexture = useNewBlipStyle and "Interface\\AddOns\\DragonUI\\Textures\\objecticons" or
                                 'Interface\\Minimap\\ObjectIcons'
         -- Use re-entrancy guard to avoid triggering our own SetBlipTexture hook
         MinimapModule._settingBlipTexture = true
@@ -2851,7 +2851,7 @@ function MinimapModule:ApplyAllSettings()
 
     --  APPLY BLIP TEXTURE (NEW VS OLD STYLE)
     if settings.blip_skin ~= nil and Minimap then
-        local blipTexture = settings.blip_skin and "Interface\\AddOns\\DragonUI\\assets\\objecticons" or
+        local blipTexture = settings.blip_skin and "Interface\\AddOns\\DragonUI\\Textures\\objecticons" or
                                 'Interface\\Minimap\\ObjectIcons'
         Minimap:SetBlipTexture(blipTexture)
     end

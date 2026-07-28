@@ -51,7 +51,7 @@ Fonts.PRIMARY = LOCALE_SYSTEM_FONTS[_locale] or "Fonts\\FRIZQT__.TTF"
 -- falls back to the locale system font on CJK/Cyrillic.
 Fonts.ACTIONBAR = _needsSystemFont
     and LOCALE_SYSTEM_FONTS[_locale]
-    or [[Interface\AddOns\DragonUI\assets\expressway.ttf]]
+    or [[Interface\AddOns\DragonUI\Textures\expressway.ttf]]
 
 --- Narrow UI font (options panel, editor mode labels).
 -- PTSansNarrow.ttf on Latin locales, locale system font on CJK/Cyrillic.
