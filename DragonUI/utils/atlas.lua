@@ -18,15 +18,16 @@ local uiactionbar2x_flying = assets..'uiactionbar2x_flying';
 local uiactionbarvertical = assets..'uiactionbarvertical';
 local uiactionbarvertical2x = assets..'uiactionbarvertical2x';
 
-local rui_ActionBarHorizontal = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\ActionBarHorizontal.blp';
-local rui_ActionBarVertical = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\ActionBarVertical.blp';
-local rui_BagSlots = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\BagSlots.blp';
+-- These three were byte-identical copies of the aliases above under a second naming scheme.
+local rui_ActionBarHorizontal = uiactionbar2x_new;
+local rui_ActionBarVertical = uiactionbarvertical2x;
+local rui_BagSlots = bagmain2x;
 local rui_BagSlotsKey = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\BagSlotsKey.blp';
 local rui_Battlefield = 'Interface\\AddOns\\DragonUI\\Textures\\uibattlefieldicon.tga';
 local rui_Calendar = 'Interface\\AddOns\\DragonUI\\Textures\\Minimap\\Calendar.blp';
 local rui_CastingBar = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\CastingBar.blp';
 local rui_CollapseButton = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\CollapseButton.blp';
-local rui_ExperienceBar = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\ExperienceBar.blp';
+local rui_ExperienceBar = uiexperiencebar;
 local rui_GuildBanner = 'Interface\\AddOns\\DragonUI\\Textures\\Minimap\\GuildBanner.BLP';
 local rui_LFGRole = 'Interface\\AddOns\\DragonUI\\Textures\\PlayerFrame\\LFGRoleIcons.blp';
 local rui_MicroMenu = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\MicroMenu.blp';
