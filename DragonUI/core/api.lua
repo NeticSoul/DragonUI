@@ -2074,6 +2074,14 @@ function addon:ApplyDatabaseMigrations()
             modules.combuctor = nil
         end
     end
+
+    -- Extra bar slots moved to db.char; drop the profile-wide leftovers so alts stop inheriting them.
+    local additional = rawget(profile, "additional")
+    local extrabar1 = additional and rawget(additional, "extrabar1")
+    if extrabar1 then
+        extrabar1.slots = nil
+    end
+
     local global = self.db.global
     if global then
         local oldCache = rawget(global, "combuctorCache")

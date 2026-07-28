@@ -18,7 +18,7 @@ local LibKeyBound = LibStub("LibKeyBound-1.0", true) -- same short labels as key
 local bars = {}
 
 -- ============================================================================
--- Store: additional[bar.id].slots[i] = spell{spell,spellID?}|item{item}|macro{macrotext,texture,macro}.
+-- Store: db.char.extrabar[bar.id][i] = spell{spell,spellID?}|item{item}|macro{macrotext,texture,macro}.
 -- ============================================================================
 
 -- Slider 7 must match MultiBars@7. Users who dialed 6 for the old visual mismatch → 7 once.
@@ -38,18 +38,6 @@ local function Bar_GetConfig(bar)
     return cfg
 end
 
-local function Bar_GetSlots(bar)
-    local cfg = Bar_GetConfig(bar)
-    if not cfg then return nil end
-    cfg.slots = cfg.slots or {}
-    return cfg.slots
-end
-
-local function Bar_PersistSlot(bar, index, data)
-    local slots = Bar_GetSlots(bar)
-    if slots then slots[index] = data end
-end
-
 local function CopySlotData(data)
     if not data then return nil end
     if data.type == "spell" then
@@ -60,6 +48,28 @@ local function CopySlotData(data)
         return { type = "macro", macrotext = data.macrotext, texture = data.texture, macro = data.macro }
     end
     return nil
+end
+
+-- Per character, not per profile: profiles are shared between alts, spell assignments are not.
+local function Bar_GetSlots(bar)
+    local char = addon.db and addon.db.char
+    if not char then return nil end
+    local store = char.extrabar
+    if type(store) ~= "table" then
+        store = {}
+        char.extrabar = store
+    end
+    local slots = store[bar.id]
+    if type(slots) ~= "table" then
+        slots = {}
+        store[bar.id] = slots
+    end
+    return slots
+end
+
+local function Bar_PersistSlot(bar, index, data)
+    local slots = Bar_GetSlots(bar)
+    if slots then slots[index] = data end
 end
 
 -- ============================================================================
@@ -888,12 +898,26 @@ function ButtonProto:UpdateIcon(data)
     end
 end
 
+local function SetMacroNameFont(nameFS, macros)
+    local font = macros and macros.font
+    if font and font[1] and font[2] then
+        nameFS:SetFont(font[1], font[2], font[3])
+    else
+        nameFS:SetFont(HOTKEY_FONT, 10, "OUTLINE")
+    end
+    -- A path that fails to load leaves the FontString fontless, and any later SetText errors out.
+    if not nameFS:GetFont() then
+        nameFS:SetFontObject(GameFontHighlightSmallOutline)
+    end
+end
+
 -- Same source as buttons.lua RefreshButtons: profile.buttons.macros (ARIALN+OUTLINE + color).
 local function ApplyMacroNameStyle(nameFS)
     local macros = addon.db and addon.db.profile and addon.db.profile.buttons
         and addon.db.profile.buttons.macros
+    -- Font before any early return: the hidden branch still calls SetText.
+    SetMacroNameFont(nameFS, macros)
     if not macros then
-        nameFS:SetFont(HOTKEY_FONT, 10, "OUTLINE")
         return true
     end
     if macros.show == false then
@@ -902,11 +926,6 @@ local function ApplyMacroNameStyle(nameFS)
         return false
     end
     nameFS:Show()
-    if macros.font then
-        nameFS:SetFont(unpack(macros.font))
-    else
-        nameFS:SetFont(HOTKEY_FONT, 10, "OUTLINE")
-    end
     if macros.color then
         nameFS:SetVertexColor(unpack(macros.color))
     end
@@ -1330,8 +1349,8 @@ function BarProto:CreateButton(index)
 
         SkinButton(button)
 
-        -- ActionButtonTemplate $parentName size/anchor; font/color from buttons.macros (not GameFont*).
-        local nameFS = button:CreateFontString(name .. "Name", "OVERLAY")
+        -- ActionButtonTemplate $parentName; inherited font is only a floor, buttons.macros overrides it.
+        local nameFS = button:CreateFontString(name .. "Name", "OVERLAY", "GameFontHighlightSmallOutline")
         nameFS:SetDrawLayer("OVERLAY", 7)
         nameFS:SetJustifyH("CENTER")
         nameFS:SetSize(36, 10)
@@ -1340,7 +1359,7 @@ function BarProto:CreateButton(index)
         ApplyMacroNameStyle(nameFS)
 
         -- OVERLAY sublevel 7: above SkinButton's border (also OVERLAY).
-        local hotkey = button:CreateFontString(nil, "OVERLAY")
+        local hotkey = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmallGray")
         hotkey:SetDrawLayer("OVERLAY", 7)
         -- Same corner inset as buttons.lua NormalizeAdditionalHotkeyVisual (TOPRIGHT -2, -3).
         hotkey:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -3)
