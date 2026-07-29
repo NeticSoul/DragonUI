@@ -1089,6 +1089,7 @@ L["A UI reload is required to apply this change."] = "이 변경 사항을 적�
 L["Size & Scale"] = "크기 및 비율"
 L["Bar Height"] = "바 높이"
 L["Height of the XP and Reputation bars (in pixels)."] = "경험치 및 평판 바의 높이(픽셀 단위)입니다."
+L["Width of the XP and Reputation bars (in pixels)."] = "경험치 및 평판 바의 너비(픽셀 단위)입니다."
 L["Experience Bar Scale"] = "경험치 바 크기 비율"
 L["Scale of the experience bar."] = "경험치 바의 크기 비율을 설정합니다."
 L["Reputation Bar Scale"] = "평판 바 크기 비율"

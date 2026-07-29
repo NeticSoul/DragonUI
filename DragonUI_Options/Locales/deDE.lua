@@ -1085,6 +1085,7 @@ L["A UI reload is required to apply this change."] = "Ein UI-Neuladen ist erford
 L["Size & Scale"] = "Größe & Skalierung"
 L["Bar Height"] = "Leistenhöhe"
 L["Height of the XP and Reputation bars (in pixels)."] = "Höhe der EP- und Rufleisten (in Pixel)."
+L["Width of the XP and Reputation bars (in pixels)."] = "Breite der EP- und Rufleisten (in Pixel)."
 L["Experience Bar Scale"] = "Skalierung EP-Leiste"
 L["Scale of the experience bar."] = "Skalierung der EP-Leiste."
 L["Reputation Bar Scale"] = "Rufleisten-Skalierung"

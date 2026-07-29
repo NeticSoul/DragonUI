@@ -1226,7 +1226,8 @@ end
         local isFullyRested = exhaustionThreshold and exhaustionThreshold >= remainingXP
 
         if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
-            local barW = cfg.bar_width or 466
+            local barW = dfXpBar:GetWidth()
+            if not barW or barW == 0 then barW = cfg.bar_width or 466 end
             ExhaustionTick:SetParent(dfXpBar)
             ExhaustionTick:SetFrameStrata("HIGH")
             ExhaustionTick:SetFrameLevel(20)
@@ -1305,10 +1306,12 @@ end
                 dfXpBar.RestedBar:SetValue(currXP + restedXP)
                 local showMark = cfg.show_rested_mark ~= false
                 if showMark then
+                    local bw = dfXpBar:GetWidth()
+                    if not bw or bw == 0 then bw = sizeX end
                     dfXpBar.RestedBarMark:Show()
                     dfXpBar.RestedBarMark:ClearAllPoints()
                     dfXpBar.RestedBarMark:SetPoint("LEFT", dfXpBar, "LEFT",
-                        (currXP + restedXP) / maxXP * sizeX - markSizeX / 2, 0)
+                        (currXP + restedXP) / maxXP * bw - markSizeX / 2, 0)
                 else
                     dfXpBar.RestedBarMark:Hide()
                 end
@@ -1450,13 +1453,12 @@ end
             -- Reference: SetAllPoints first, then override with offset anchors, then set_atlas
             local borderTex = MainMenuXPBarTexture0
             if borderTex then
-                borderTex:SetAllPoints(MainMenuExpBar)
+                borderTex:ClearAllPoints()
                 borderTex:SetPoint("TOPLEFT", MainMenuExpBar, "TOPLEFT", -3, 3)
                 borderTex:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 3, -6)
                 borderTex:SetDrawLayer("OVERLAY", 1)
                 borderTex:SetTexture(ExperienceBarAsset)
                 borderTex:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
-                borderTex:SetSize(571, 17)
                 borderTex:Show()
             end
 
@@ -1593,26 +1595,23 @@ end
             -- Border: ReputationXPBarTexture0 (noop.lua clears, we re-apply)
             local repBorder = ReputationXPBarTexture0
             if repBorder then
-                repBorder:SetAllPoints(ReputationWatchStatusBar)
+                repBorder:ClearAllPoints()
                 repBorder:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -3, 2)
                 repBorder:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
                 repBorder:SetDrawLayer("OVERLAY", 1)
                 repBorder:SetTexture(ExperienceBarAsset)
                 repBorder:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
-                repBorder:SetSize(571, 17)
                 repBorder:Show()
             end
 
-            -- Border: ReputationWatchBarTexture0 (noop.lua clears, we re-apply)
             local repBorder2 = ReputationWatchBarTexture0
             if repBorder2 then
-                repBorder2:SetAllPoints(ReputationWatchStatusBar)
+                repBorder2:ClearAllPoints()
                 repBorder2:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -3, 2)
                 repBorder2:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
                 repBorder2:SetDrawLayer("OVERLAY", 1)
                 repBorder2:SetTexture(ExperienceBarAsset)
                 repBorder2:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
-                repBorder2:SetSize(571, 17)
                 repBorder2:Show()
             end
 
@@ -1744,6 +1743,16 @@ end
         end
     end
 
+    -- 3.3.5a StatusBar fill width sticks after SetSize unless SetValue actually changes.
+    local function NudgeStatusBarFill(bar)
+        if not bar then return end
+        local v = bar:GetValue()
+        local vmin, vmax = bar:GetMinMaxValues()
+        if not vmax or vmax <= vmin then return end
+        bar:SetValue(vmin)
+        bar:SetValue(v)
+    end
+
     -- Position bars centered within their individual editor frames
     local function UpdateBarPositions()
         local cfg = GetXpRepConfig() or {}
@@ -1760,25 +1769,29 @@ end
         end
 
         if style == "dragonflightui" then
-            -- Resize custom bars to current config
+            -- Resize root; fixed UV so chrome stretches with SetSize (no UV∝width).
             if dfXpBar then
                 dfXpBar:SetSize(barW, barH)
-                dfXpBar.Background:SetTexCoord(0, barW / 842, 0, 1)
-                dfXpBar.Border:SetTexCoord(0, barW / 842, 0, 1)
+                dfXpBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
+                dfXpBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
                 dfXpBar:ClearAllPoints()
                 dfXpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
             end
             if dfRepBar then
                 dfRepBar:SetSize(barW, barH)
-                dfRepBar.Background:SetTexCoord(0, barW / 842, 0, 1)
-                dfRepBar.Border:SetTexCoord(0, barW / 842, 0, 1)
+                dfRepBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
+                dfRepBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
                 dfRepBar:ClearAllPoints()
                 dfRepBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
             end
 
-            -- Update bar values
             UpdateDragonflightUIXPBar()
             UpdateDragonflightUIRepBar()
+            if dfXpBar then
+                NudgeStatusBarFill(dfXpBar.Bar)
+                NudgeStatusBarFill(dfXpBar.RestedBar)
+            end
+            NudgeStatusBarFill(dfRepBar and dfRepBar.Bar)
 
         else -- retailui
             -- Position Blizzard XP bar centered in its editor frame
@@ -1787,6 +1800,7 @@ end
                 MainMenuExpBar:SetSize(barW, barH)
                 MainMenuExpBar:SetScale(cfg.expbar_scale or 1.0)
                 MainMenuExpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
+                NudgeStatusBarFill(MainMenuExpBar)
             end
 
             -- Position Blizzard Rep bar centered in its editor frame
@@ -1798,6 +1812,7 @@ end
                 if ReputationWatchStatusBar then
                     ReputationWatchStatusBar:SetAllPoints(ReputationWatchBar)
                     ReputationWatchStatusBar:SetSize(barW, barH)
+                    NudgeStatusBarFill(ReputationWatchStatusBar)
                 end
             end
         end

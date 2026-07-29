@@ -1081,6 +1081,7 @@ L["A UI reload is required to apply this change."] = "Для применени�
 L["Size & Scale"] = "Размер и масштаб"
 L["Bar Height"] = "Высота полосы"
 L["Height of the XP and Reputation bars (in pixels)."] = "Высота полос опыта и репутации (в пикселях)."
+L["Width of the XP and Reputation bars (in pixels)."] = "Ширина полос опыта и репутации (в пикселях)."
 L["Experience Bar Scale"] = "Масштаб полосы опыта"
 L["Scale of the experience bar."] = "Масштаб полосы опыта."
 L["Reputation Bar Scale"] = "Масштаб полосы репутации"

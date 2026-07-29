@@ -1056,6 +1056,7 @@ L["A UI reload is required to apply this change."] = "需要重新載入介面�
 L["Size & Scale"] = "大小和縮放"
 L["Bar Height"] = "條高度"
 L["Height of the XP and Reputation bars (in pixels)."] = "經驗值和聲望條的高度（以畫素為單位）。"
+L["Width of the XP and Reputation bars (in pixels)."] = "經驗值和聲望條的寬度（以畫素為單位）。"
 L["Experience Bar Scale"] = "經驗條縮放"
 L["Scale of the experience bar."] = "經驗條的縮放比例。"
 L["Reputation Bar Scale"] = "聲望條縮放"

@@ -65,6 +65,15 @@ local function BuildXpRepTab(scroll)
     local sizeSection = C:AddSection(scroll, LO["Size & Scale"])
 
     C:AddSlider(sizeSection, {
+        label = LO["Bar Width"],
+        desc = LO["Width of the XP and Reputation bars (in pixels)."],
+        dbPath = "xprepbar.bar_width",
+        min = 200, max = 1500, step = 1,
+        width = 200,
+        callback = RefreshBars,
+    })
+
+    C:AddSlider(sizeSection, {
         label = LO["Bar Height"],
         desc = LO["Height of the XP and Reputation bars (in pixels)."],
         dbPath = isDFUI and "xprepbar.bar_height_dfui" or "xprepbar.bar_height_retailui",

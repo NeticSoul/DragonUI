@@ -1176,6 +1176,7 @@ L["A UI reload is required to apply this change."] = true
 L["Size & Scale"] = true
 L["Bar Height"] = true
 L["Height of the XP and Reputation bars (in pixels)."] = true
+L["Width of the XP and Reputation bars (in pixels)."] = true
 L["Experience Bar Scale"] = true
 L["Scale of the experience bar."] = true
 L["Reputation Bar Scale"] = true
