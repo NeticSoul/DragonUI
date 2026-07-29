@@ -17,8 +17,8 @@ local _actionbarFont = addon.Fonts.ACTIONBAR
 -- Static assets (not backed by database)
 local static_assets = {
 	font = _actionbarFont,
-	normal = addon._dir..'uiactionbariconframe.tga',
-	highlight = addon._dir..'uiactionbariconframehighlight.tga',
+	normal = addon._dir..'ActionBars\\uiactionbariconframe.tga',
+	highlight = addon._dir..'ActionBars\\uiactionbariconframehighlight.tga',
 };
 
 -- Static font definitions for button text elements

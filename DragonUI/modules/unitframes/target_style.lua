@@ -53,7 +53,7 @@ function UF.TargetStyle.Create(opts)
 
     -- Name background color variants sourced from UIUnitFrame2x_PTR.blp.
     -- Coords extracted from the local PTR atlas (1024x512) and mapped by color.
-    local NAME_BG_PTR_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\UIUnitFrame2x_PTR"
+    local NAME_BG_PTR_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Target\\UIUnitFrame2x_PTR"
     local NAME_BG_WIDTH = 135
     local NAME_BG_HEIGHT = 14
     local NAME_BG_OFFSET_X = -0.5

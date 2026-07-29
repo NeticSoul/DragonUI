@@ -15,23 +15,23 @@ local BAG_HORIZONTAL_GAP = 9
 
 local assets = addon._dir
 local textures = {
-    slot = assets .. "bagsitemslot2x",
-    bankSlot = assets .. "bagsitembankslot2x",
-    metal = assets .. "uiframemetal2x",
-    metalHorizontal = assets .. "uiframemetalhorizontal2x",
-    metalVertical = assets .. "uiframemetalvertical2x",
-    background = assets .. "ui-background-rock",
-    close = assets .. "redbutton2x",
-    pushed = assets .. "ui-quickslot-depress",
-    highlight = assets .. "buttonhilight-square",
-    slotBorder = assets .. "ui-quickslot2",
-    coinbox = assets .. "commoncoinbox",
-    currencybox = assets .. "commoncurrencybox",
-    coinGold = assets .. "coingold",
-    coinSilver = assets .. "coinsilver",
-    coinCopper = assets .. "coincopper",
+    slot = assets .. "Bags\\bagsitemslot2x",
+    bankSlot = assets .. "Bags\\bagsitembankslot2x",
+    metal = assets .. "UI\\uiframemetal2x",
+    metalHorizontal = assets .. "UI\\uiframemetalhorizontal2x",
+    metalVertical = assets .. "UI\\uiframemetalvertical2x",
+    background = assets .. "UI\\ui-background-rock",
+    close = assets .. "UI\\redbutton2x",
+    pushed = assets .. "UI\\ui-quickslot-depress",
+    highlight = assets .. "UI\\buttonhilight-square",
+    slotBorder = assets .. "UI\\ui-quickslot2",
+    coinbox = assets .. "Coins\\commoncoinbox",
+    currencybox = assets .. "Coins\\commoncurrencybox",
+    coinGold = assets .. "Coins\\coingold",
+    coinSilver = assets .. "Coins\\coinsilver",
+    coinCopper = assets .. "Coins\\coincopper",
     -- pre-masked (round alpha baked in offline, no runtime mask API exists in 3.3.5a)
-    backpackIcon = assets .. "INV_Misc_Bag_08_round",
+    backpackIcon = assets .. "Bags\\INV_Misc_Bag_08_round",
 }
 
 -- Native layout splits CONTAINER_WIDTH's 29px slack 17/12 left-right; this recenters the grid.

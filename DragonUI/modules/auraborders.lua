@@ -25,7 +25,7 @@ if addon.RegisterModule then
 end
 
 local BORDER_TEXTURE = "Interface\\Buttons\\WHITE8X8"
-local FRAME_TEXTURE = addon._dir .. "uiactionbariconframe_white.tga"
+local FRAME_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe_white.tga"
 
 local PLAYER_BUFF   = { thickness = 1.5, overhang = 1 }
 local PLAYER_DEBUFF = { thickness = 1.5, overhang = 1 }

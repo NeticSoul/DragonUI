@@ -6,30 +6,29 @@
 local addon = select(2,...);
 local assets = addon._dir;
 local unpack = unpack;
-local uiactionbar = assets..'uiactionbar';
-local uiexperiencebar = assets..'uiexperiencebar';
-local uimicromenu = assets..'uimicromenu';
-local uimicromenu2x = assets..'uimicromenu2x';
-local collapse = assets..'uicollapsebutton';
-local bagmain2x = assets..'bagslots2x';
-local uiactionbar2x_ = assets..'uiactionbar2x_';
-local uiactionbar2x_new = assets..'uiactionbar2x_new';
-local uiactionbar2x_flying = assets..'uiactionbar2x_flying';
-local uiactionbarvertical = assets..'uiactionbarvertical';
-local uiactionbarvertical2x = assets..'uiactionbarvertical2x';
+local uiactionbar = assets..'ActionBars\\uiactionbar';
+local uiexperiencebar = assets..'XP\\uiexperiencebar';
+local uimicromenu2x = assets..'Micromenu\\Atlas\\uimicromenu2x';
+local collapse = assets..'Micromenu\\uicollapsebutton';
+local bagmain2x = assets..'Bags\\bagslots2x';
+local uiactionbar2x_ = assets..'ActionBars\\uiactionbar2x_';
+local uiactionbar2x_new = assets..'ActionBars\\uiactionbar2x_new';
+local uiactionbar2x_flying = assets..'ActionBars\\uiactionbar2x_flying';
+local uiactionbarvertical = assets..'ActionBars\\uiactionbarvertical';
+local uiactionbarvertical2x = assets..'ActionBars\\uiactionbarvertical2x';
 
 -- These three were byte-identical copies of the aliases above under a second naming scheme.
 local rui_ActionBarHorizontal = uiactionbar2x_new;
 local rui_ActionBarVertical = uiactionbarvertical2x;
 local rui_BagSlots = bagmain2x;
 local rui_BagSlotsKey = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\BagSlotsKey.blp';
-local rui_Battlefield = 'Interface\\AddOns\\DragonUI\\Textures\\uibattlefieldicon.tga';
+local rui_Battlefield = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uibattlefieldicon.tga';
 local rui_Calendar = 'Interface\\AddOns\\DragonUI\\Textures\\Minimap\\Calendar.blp';
 local rui_CastingBar = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\CastingBar.blp';
 local rui_CollapseButton = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\CollapseButton.blp';
 local rui_ExperienceBar = uiexperiencebar;
 local rui_GuildBanner = 'Interface\\AddOns\\DragonUI\\Textures\\Minimap\\GuildBanner.BLP';
-local rui_LFGRole = 'Interface\\AddOns\\DragonUI\\Textures\\PlayerFrame\\LFGRoleIcons.blp';
+local rui_LFGRole = 'Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Player\\LFGRoleIcons.blp';
 local rui_MicroMenu = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\MicroMenu.blp';
 local rui_Minimap = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\Minimap.blp';
 local rui_QuestTracker = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\QuestTracker.BLP';
@@ -49,7 +48,7 @@ addon.atlasinfo = {
 	['ui-hud-actionbar-wyvern-thick-left'] = { uiactionbar2x_new, 104.5, 96, 1/512, 357/512, 881/2048, 1215/2048 },
 	['ui-hud-actionbar-wyvern-thick-right'] = { uiactionbar2x_new, 104.5, 96, 1/512, 357/512, 1217/2048, 1551/2048 },
 
-	['ui-hud-experiencebar'] = { assets..'mainmenubar', 537, 14, 0.1123046875, 0.646484375, 0.18798828125, 0.24951171875 },
+	['ui-hud-experiencebar'] = { assets..'ActionBars\\mainmenubar', 537, 14, 0.1123046875, 0.646484375, 0.18798828125, 0.24951171875 },
 	['ui-hud-experiencebar-round'] = { uiexperiencebar, 537, 18, 1/2048, 572/2048, 1/64, 18/64 },
 	['ui-hud-experiencebar-background'] = { uiexperiencebar, 530, 10, 0.00088878125, 570/2048, 20/64, 29/64 },
 	['ui-hud-experiencebar-frame-pip'] = { uiexperiencebar, 10, 14, 588/2048, 598/2048, 45/64, 59/64 },
@@ -134,7 +133,7 @@ addon.atlasinfo = {
 	['bag-border-empty-2x'] = { bagmain2x, 34, 34, 295/512, 356/512, 64/128, 125/128 },
 	['bag-border-highlight-2x'] = { bagmain2x, 40, 40, 358/512, 419/512, 1/128, 62/128 },
 	['bag-reagent-border-empty-2x'] = { bagmain2x, 34, 34, 421/512, 482/512, 1/128, 62/128 },
-	['bag-reagent-border-2x'] = { assets..'bagslots2key.tga', _, _, 3/128, 63/128, 64/128, 125/128 },
+	['bag-reagent-border-2x'] = { assets..'Bags\\bagslots2key.tga', _, _, 3/128, 63/128, 64/128, 125/128 },
 	
 	-- NineSlice
 	['ui-hud-actionbar-frame-nineslice-cornerbottomleft'] = { uiactionbar2x_, 20, 20, 465/512, 499/512, 383/2048, 429/2048 },

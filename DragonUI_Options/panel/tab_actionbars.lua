@@ -394,7 +394,7 @@ local function BuildGeneralTab(scroll)
         -- Classic gryphon preview
         C:AddTexturePreview(previewRow, {
             label = LO["Classic"],
-            texture = assets .. "uiactionbar2x_",
+            texture = assets .. "ActionBars\\uiactionbar2x_",
             texCoord = { 1/512, 357/512, 209/2048, 543/2048 },
             width = 80,
             height = 80,
@@ -409,7 +409,7 @@ local function BuildGeneralTab(scroll)
         end
         C:AddTexturePreview(previewRow, {
             label = faction == "Horde" and LO["Dragonflight (Wyvern)"] or LO["Dragonflight (Gryphon)"],
-            texture = assets .. "uiactionbar2x_new",
+            texture = assets .. "ActionBars\\uiactionbar2x_new",
             texCoord = dfTexCoord,
             width = 80,
             height = 80,
@@ -418,7 +418,7 @@ local function BuildGeneralTab(scroll)
         -- Flying gryphon preview
         C:AddTexturePreview(previewRow, {
             label = LO["Flying"],
-            texture = assets .. "uiactionbar2x_flying",
+            texture = assets .. "ActionBars\\uiactionbar2x_flying",
             texCoord = { 1/256, 158/256, 149/2048, 342/2048 },
             width = 70,
             height = 90,

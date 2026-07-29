@@ -262,7 +262,7 @@ CreateDragonUIButton = function()
     if not menuHost then return false end
 
     -- Swap to nil to disable and fall back to the solid-color path.
-    local TEX_CUSTOM_NORMAL = addon._dir .. "gamemenu_btn.tga"
+    local TEX_CUSTOM_NORMAL = addon._dir .. "Micromenu\\gamemenu_btn.tga"
     local TEX_CUSTOM_HOVER  = nil
     local TEX_CUSTOM_PUSHED = nil
 

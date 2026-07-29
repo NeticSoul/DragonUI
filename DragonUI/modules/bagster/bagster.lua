@@ -75,22 +75,22 @@ end
 local BagsterAssets = addon._dir
 
 local CT = {
-    slot_bg           = BagsterAssets .. 'bagsitemslot2x',
-    slot_depress      = BagsterAssets .. 'ui-quickslot-depress',
-    slot_highlight    = BagsterAssets .. 'buttonhilight-square',
-    frame_metal       = BagsterAssets .. 'uiframemetal2x',
-    frame_metal_h     = BagsterAssets .. 'uiframemetalhorizontal2x',
-    frame_metal_v     = BagsterAssets .. 'uiframemetalvertical2x',
-    frame_bg          = BagsterAssets .. 'ui-background-rock',
-    close_btn         = BagsterAssets .. 'redbutton2x',
-    bagslot           = BagsterAssets .. 'bagslots2x',
-    bag_border        = BagsterAssets .. 'bagborder2',
-    slot_border       = BagsterAssets .. 'ui-quickslot2',
-    tabs              = BagsterAssets .. 'uiframetabs',
-    sidetab           = BagsterAssets .. 'sidetab',
-    coinGold          = BagsterAssets .. 'coingold',
-    coinSilver        = BagsterAssets .. 'coinsilver',
-    coinCopper        = BagsterAssets .. 'coincopper',
+    slot_bg           = BagsterAssets .. 'Bags\\bagsitemslot2x',
+    slot_depress      = BagsterAssets .. 'UI\\ui-quickslot-depress',
+    slot_highlight    = BagsterAssets .. 'UI\\buttonhilight-square',
+    frame_metal       = BagsterAssets .. 'UI\\uiframemetal2x',
+    frame_metal_h     = BagsterAssets .. 'UI\\uiframemetalhorizontal2x',
+    frame_metal_v     = BagsterAssets .. 'UI\\uiframemetalvertical2x',
+    frame_bg          = BagsterAssets .. 'UI\\ui-background-rock',
+    close_btn         = BagsterAssets .. 'UI\\redbutton2x',
+    bagslot           = BagsterAssets .. 'Bags\\bagslots2x',
+    bag_border        = BagsterAssets .. 'Bags\\bagborder2',
+    slot_border       = BagsterAssets .. 'UI\\ui-quickslot2',
+    tabs              = BagsterAssets .. 'UI\\uiframetabs',
+    sidetab           = BagsterAssets .. 'UI\\sidetab',
+    coinGold          = BagsterAssets .. 'Coins\\coingold',
+    coinSilver        = BagsterAssets .. 'Coins\\coinsilver',
+    coinCopper        = BagsterAssets .. 'Coins\\coincopper',
 }
 
 

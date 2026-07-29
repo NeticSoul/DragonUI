@@ -1679,7 +1679,7 @@ local function ApplyMicromenuSystem()
                 bags.background = bags:CreateTexture(nil, 'BACKGROUND')
                 bags.background:SetSize(w, h)
                 bags.background:SetPoint('CENTER')
-                bags.background:SetTexture(addon._dir .. 'bagslots2x')
+                bags.background:SetTexture(addon._dir .. 'Bags\\bagslots2x')
                 bags.background:SetTexCoord(295 / 512, 356 / 512, 64 / 128, 125 / 128)
             end
             bags.background:Show()
@@ -2390,7 +2390,7 @@ local function ApplyMicromenuSystem()
                 local latencyBar = CreateFrame("StatusBar", "DragonUIPerformanceBar", HelpMicroButton)
                 latencyBar.updateInterval = 0
 
-                latencyBar:SetStatusBarTexture(addon._dir .. "ui-mainmenubar-performancebar")
+                latencyBar:SetStatusBarTexture(addon._dir .. "Micromenu\\ui-mainmenubar-performancebar")
                 latencyBar:SetStatusBarColor(0, 1, 0)
                 latencyBar:GetStatusBarTexture():SetBlendMode("ADD")
                 latencyBar:GetStatusBarTexture():SetDrawLayer("OVERLAY")
@@ -2714,7 +2714,7 @@ end
     local function ApplyLFGFrameStyle()
         MiniMapLFGFrameIcon:SetScale(1.5)
         MiniMapLFGFrameBorder:SetTexture(nil)
-        MiniMapLFGFrame.eye.texture:SetTexture(addon._dir .. 'uigroupfinderflipbookeye.tga')
+        MiniMapLFGFrame.eye.texture:SetTexture(addon._dir .. 'Micromenu\\uigroupfinderflipbookeye.tga')
     end
 
     ApplyLFGFrameStyle()

@@ -60,14 +60,14 @@ local PLAYER_BORDER_WIDTH = 256
 local PLAYER_BORDER_HEIGHT = 128
 
 -- Dedicated player corner embellishment (normal state) from standalone texture.
-local PLAYER_CORNER_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\ui-hud-unitframe-player-portraiton-cornerembellishment-2x"
+local PLAYER_CORNER_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Player\\ui-hud-unitframe-player-portraiton-cornerembellishment-2x"
 local PLAYER_CORNER_TEX_COORDS = {
     0, 44 / 64,
     0, 44 / 64
 }
 
 -- Combat icon uses the white crossed-swords glyph from atlas crop.
-local PLAYER_COMBAT_ICON_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\uiunitframe2x_ptr_icons_crop"
+local PLAYER_COMBAT_ICON_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Player\\uiunitframe2x_ptr_icons_crop"
 local PLAYER_COMBAT_ICON_TEX_COORDS = {
     2 / 256, 32 / 256,   -- x: 2..31 (exclusive right edge at 32)
     63 / 256, 90 / 256   -- y: 63..89 (exclusive bottom edge at 90)
@@ -1689,7 +1689,7 @@ local function UpdatePlayerDragonDecoration()
 
     -- Create dragon texture in high strata frame
     local dragon = dragonParent:CreateTexture(nil, "OVERLAY")
-    dragon:SetTexture("Interface\\AddOns\\DragonUI\\Textures\\uiunitframeboss2x")
+    dragon:SetTexture("Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\uiunitframeboss2x")
     dragon:SetTexCoord(coords.texCoord[1], coords.texCoord[2], coords.texCoord[3], coords.texCoord[4])
     dragon:SetAllPoints(dragonParent)
 

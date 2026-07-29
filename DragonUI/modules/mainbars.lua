@@ -1139,7 +1139,7 @@ end
         -- Background layer
         f.Background = f:CreateTexture(nil, "BACKGROUND")
         f.Background:SetAllPoints()
-        f.Background:SetTexture(addon._dir .. "xp\\Background")
+        f.Background:SetTexture(addon._dir .. "XP\\Background")
         f.Background:SetTexCoord(0, 0.55517578, 0, 1)
 
         -- Rested XP background bar (shows the TOTAL rested range behind main fill)
@@ -1147,7 +1147,7 @@ end
         f.RestedBar:SetPoint("TOPLEFT", 0, 0)
         f.RestedBar:SetPoint("BOTTOMRIGHT", 0, 0)
         f.RestedBar.Texture = f.RestedBar:CreateTexture(nil, "ARTWORK")
-        f.RestedBar.Texture:SetTexture(addon._dir .. "xp\\RestedBackground")
+        f.RestedBar.Texture:SetTexture(addon._dir .. "XP\\RestedBackground")
         f.RestedBar.Texture:SetAllPoints()
         f.RestedBar.Texture:SetDrawLayer("ARTWORK", 0)
         f.RestedBar:SetStatusBarTexture(f.RestedBar.Texture)
@@ -1159,7 +1159,7 @@ end
         f.RestedBarMark = CreateFrame("Frame", nil, f)
         f.RestedBarMark:SetSize(markSizeX, markSizeY)
         f.RestedBarMark.Texture = f.RestedBarMark:CreateTexture(nil, "OVERLAY")
-        f.RestedBarMark.Texture:SetTexture(addon._dir .. "uiexperiencebar")
+        f.RestedBarMark.Texture:SetTexture(addon._dir .. "XP\\uiexperiencebar")
         f.RestedBarMark.Texture:SetTexCoord(1170 / 2048, 1192 / 2048, 201 / 256, 231 / 256)
         f.RestedBarMark.Texture:SetAllPoints()
 
@@ -1168,7 +1168,7 @@ end
         f.Bar:SetPoint("TOPLEFT", 0, 0)
         f.Bar:SetPoint("BOTTOMRIGHT", 0, 0)
         f.Bar.Texture = f.Bar:CreateTexture(nil, "ARTWORK")
-        f.Bar.Texture:SetTexture(addon._dir .. "xp\\Main")
+        f.Bar.Texture:SetTexture(addon._dir .. "XP\\Main")
         f.Bar.Texture:SetAllPoints()
         f.Bar:SetStatusBarTexture(f.Bar.Texture)
         f.Bar.Texture:SetDrawLayer("ARTWORK", 1)
@@ -1177,7 +1177,7 @@ end
 
         -- Border overlay
         f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
-        f.Border:SetTexture(addon._dir .. "xp\\Overlay")
+        f.Border:SetTexture(addon._dir .. "XP\\Overlay")
         f.Border:SetTexCoord(0, 0.55517578, 0, 1)
         f.Border:SetPoint("TOPLEFT", 0, 1)
         f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
@@ -1241,7 +1241,7 @@ end
         -- Background
         f.Background = f:CreateTexture(nil, "BACKGROUND")
         f.Background:SetAllPoints()
-        f.Background:SetTexture(addon._dir .. "xp\\Background")
+        f.Background:SetTexture(addon._dir .. "XP\\Background")
         f.Background:SetTexCoord(0, 0.55517578, 0, 1)
 
         -- Main rep progress bar
@@ -1249,14 +1249,14 @@ end
         f.Bar:SetPoint("TOPLEFT", 0, 0)
         f.Bar:SetPoint("BOTTOMRIGHT", 0, 0)
         f.Bar.Texture = f.Bar:CreateTexture(nil, "ARTWORK")
-        f.Bar.Texture:SetTexture(addon._dir .. "reputation\\Rep")
+        f.Bar.Texture:SetTexture(addon._dir .. "Reputation\\Rep")
         f.Bar.Texture:SetAllPoints()
         f.Bar:SetStatusBarTexture(f.Bar.Texture)
         f.Bar:EnableMouse(true)
 
         -- Border overlay
         f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
-        f.Border:SetTexture(addon._dir .. "xp\\Overlay")
+        f.Border:SetTexture(addon._dir .. "XP\\Overlay")
         f.Border:SetTexCoord(0, 0.55517578, 0, 1)
         f.Border:SetPoint("TOPLEFT", 0, 1)
         f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
@@ -1369,9 +1369,9 @@ end
 
         -- Set main bar texture based on rested state
         if exhaustionStateID == 1 then
-            dfXpBar.Bar.Texture:SetTexture(addon._dir .. "xp\\Rested")
+            dfXpBar.Bar.Texture:SetTexture(addon._dir .. "XP\\Rested")
         else
-            dfXpBar.Bar.Texture:SetTexture(addon._dir .. "xp\\Main")
+            dfXpBar.Bar.Texture:SetTexture(addon._dir .. "XP\\Main")
         end
         dfXpBar.Bar:SetMinMaxValues(0, maxXP)
         dfXpBar.Bar:SetValue(currXP)
@@ -1450,13 +1450,13 @@ end
 
         -- Standing-based texture color
         if standing == 1 or standing == 2 then
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "reputation\\RepRed")
+            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepRed")
         elseif standing == 3 then
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "reputation\\RepOrange")
+            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepOrange")
         elseif standing == 4 then
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "reputation\\RepYellow")
+            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepYellow")
         else
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "reputation\\RepGreen")
+            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepGreen")
         end
 
         dfRepBar.Bar:SetMinMaxValues(0, maxRep - minRep)
@@ -1485,7 +1485,7 @@ end
         local cfg = GetXpRepConfig() or {}
         local barW = cfg.bar_width or 466
         local barH = GetXpBarHeight("retailui")
-        local ExperienceBarAsset = addon._dir .. "uiexperiencebar"
+        local ExperienceBarAsset = addon._dir .. "XP\\uiexperiencebar"
 
         -- === XP BAR ===
         -- NOTE: Do NOT ClearAllPoints here — positioning is handled by

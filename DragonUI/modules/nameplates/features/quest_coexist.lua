@@ -116,10 +116,10 @@ local function MakeSelector(parent, x, y, iconTex, mirror, onClick)
     if mirror then icon:SetTexCoord(1, 0, 0, 1) end -- sword is mirrored on the plate too
     local frameTex = b:CreateTexture(nil, "OVERLAY")
     frameTex:SetAllPoints()
-    frameTex:SetTexture(ASSETS .. "uiactionbariconframe")
+    frameTex:SetTexture(ASSETS .. "ActionBars\\uiactionbariconframe")
     local selTex = b:CreateTexture(nil, "OVERLAY")
     selTex:SetAllPoints()
-    selTex:SetTexture(ASSETS .. "uiactionbariconframehighlight")
+    selTex:SetTexture(ASSETS .. "ActionBars\\uiactionbariconframehighlight")
     selTex:Hide()
     b.icon, b.selTex = icon, selTex
     b:SetScript("OnClick", onClick)

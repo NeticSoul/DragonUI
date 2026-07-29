@@ -19,7 +19,7 @@ local GetSpellTexture, GetSpellInfo = GetSpellTexture, GetSpellInfo
 -- CONSTANTS AND TEXTURES
 -- ============================================================================
 
-local TEXTURE_PATH = "Interface\\AddOns\\DragonUI\\Textures\\CastbarOriginal\\"
+local TEXTURE_PATH = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\"
 local TEXTURES = {
     atlas = TEXTURE_PATH .. "uicastingbar2x",
     atlasSmall = TEXTURE_PATH .. "uicastingbar",

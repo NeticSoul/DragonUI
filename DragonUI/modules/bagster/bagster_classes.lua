@@ -1700,7 +1700,7 @@ do
     local SIZE = 20
     local IsModifierKeyDown = IsModifierKeyDown
 
-    local GEM_ATLAS = [[Interface\AddOns\DragonUI\Textures\RarityGemAtlas]]
+    local GEM_ATLAS = [[Interface\AddOns\DragonUI\Textures\UI\RarityGemAtlas]]
     local GEM_COORDS = {
         border    = { 0.015625, 0.234375, 0.015625, 0.234375 },
         highlight = { 0.515625, 0.734375, 0.015625, 0.234375 },

@@ -21,7 +21,7 @@ local hooksecurefunc = hooksecurefunc
 -- MODULE CONSTANTS (from shared core)
 -- ===============================================================
 local PET_TEX = UF.TEXTURES.pet
-local TEXTURE_PATH = PET_TEX.TEXTURE_PATH
+local SMALL_FRAME_PATH = PET_TEX.SMALL_FRAME_PATH
 local UNITFRAME_PATH = PET_TEX.UNITFRAME_PATH
 local ATLAS_TEXTURE = PET_TEX.ATLAS_TEXTURE
 local TOT_BASE = PET_TEX.TOT_BASE
@@ -309,7 +309,7 @@ local function ReplaceBlizzardPetFrame()
             petFrame,
             'DragonUIPetFrameBackground',
             {'BACKGROUND', 1},
-            TEXTURE_PATH .. TOT_BASE .. 'BACKGROUND',
+            SMALL_FRAME_PATH .. TOT_BASE .. 'BACKGROUND',
             {'LEFT', portrait, 'CENTER', -24, -9}
         )
     end
@@ -319,7 +319,7 @@ local function ReplaceBlizzardPetFrame()
             PetFrameHealthBar,
             'DragonUIPetFrameBorder',
             {'OVERLAY', 6},
-            TEXTURE_PATH .. TOT_BASE .. 'BORDER',
+            SMALL_FRAME_PATH .. TOT_BASE .. 'BORDER',
             {'LEFT', portrait, 'CENTER', -24, -9}
         )
     end
@@ -453,10 +453,10 @@ end
 local function OnPetFrameUpdate()
     -- Refresh textures
     if moduleState.frame.background then
-        moduleState.frame.background:SetTexture(TEXTURE_PATH .. TOT_BASE .. 'BACKGROUND')
+        moduleState.frame.background:SetTexture(SMALL_FRAME_PATH .. TOT_BASE .. 'BACKGROUND')
     end
     if moduleState.frame.border then
-        moduleState.frame.border:SetTexture(TEXTURE_PATH .. TOT_BASE .. 'BORDER')
+        moduleState.frame.border:SetTexture(SMALL_FRAME_PATH .. TOT_BASE .. 'BORDER')
     end
     
     UpdatePowerBarTexture()

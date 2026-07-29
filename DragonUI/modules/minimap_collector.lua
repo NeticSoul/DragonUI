@@ -39,7 +39,7 @@ local ANIM_DURATION   = 0.14
 local ANIM_SHRINK     = 0.35
 local HIGHLIGHT_TEX   = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 local WHITE_TEX       = "Interface\\Buttons\\WHITE8X8"
-local BORDER_TEX      = "Interface\\AddOns\\DragonUI\\Textures\\border_buttons.tga"
+local BORDER_TEX      = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\border_buttons.tga"
 local GOLD_R, GOLD_G, GOLD_B = 1.0, 0.82, 0.20
 
 local INCLUDE_BUTTONS = {
