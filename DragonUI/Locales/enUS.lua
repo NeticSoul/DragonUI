@@ -28,6 +28,8 @@ L["Options panel not available. Try /reload."] = true
 
 -- Module availability
 L["Editor mode not available."] = true
+L["Position editor not available."] = true
+L["Reset only supports resetting every position at once. Use /dragonui reset."] = true
 L["Keybind mode not available."] = true
 L["Vehicle debug not available"] = true
 L["KeyBinding module not available"] = true

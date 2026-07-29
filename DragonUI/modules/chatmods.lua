@@ -1505,9 +1505,9 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         -- Register profile callbacks
         addon:After(0.5, function()
             if addon.db and addon.db.RegisterCallback then
-                addon.db.RegisterCallback(addon, "OnProfileChanged", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileCopied", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileReset", OnProfileChanged)
+                addon.db.RegisterCallback(ChatModsModule, "OnProfileChanged", OnProfileChanged)
+                addon.db.RegisterCallback(ChatModsModule, "OnProfileCopied", OnProfileChanged)
+                addon.db.RegisterCallback(ChatModsModule, "OnProfileReset", OnProfileChanged)
             end
         end)
 

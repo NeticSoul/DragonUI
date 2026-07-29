@@ -308,7 +308,13 @@ end
 
 local function stancebutton_position()
     if not IsModuleEnabled() or not stancebar or not anchor then return end
-    
+
+    -- PLAYER_LOGIN also fires on a mid-combat /reload; reparenting secure buttons there is blocked.
+    if InCombatLockdown() then
+        addon.CombatQueue:Add("stance_position_buttons", stancebutton_position)
+        return
+    end
+
     -- READ VALUES FROM DATABASE
     local stanceConfig = GetStanceConfig()
     local additionalConfig = (addon.db and addon.db.profile and addon.db.profile.additional) or {}

@@ -624,15 +624,15 @@ local function RegisterEvents()
         if event == "ADDON_LOADED" and addonName == "DragonUI" then
             -- Initialize multicast system as early as possible
             if addon.core and addon.core.RegisterMessage then
-                addon.core.RegisterMessage(addon, "DRAGONUI_READY", ApplyMulticastSystem)
+                addon.core.RegisterMessage(MulticastModule, "DRAGONUI_READY", ApplyMulticastSystem)
             end
             
             -- Register profile callbacks
             DelayedCall(0.5, function()
                 if addon.db and addon.db.RegisterCallback then
-                    addon.db.RegisterCallback(addon, "OnProfileChanged", OnProfileChanged)
-                    addon.db.RegisterCallback(addon, "OnProfileCopied", OnProfileChanged)
-                    addon.db.RegisterCallback(addon, "OnProfileReset", OnProfileChanged)
+                    addon.db.RegisterCallback(MulticastModule, "OnProfileChanged", OnProfileChanged)
+                    addon.db.RegisterCallback(MulticastModule, "OnProfileCopied", OnProfileChanged)
+                    addon.db.RegisterCallback(MulticastModule, "OnProfileReset", OnProfileChanged)
                 end
             end)
             

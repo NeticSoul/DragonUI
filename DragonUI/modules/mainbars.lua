@@ -2707,15 +2707,15 @@ end
             -- Set up profile callbacks - Execute immediately
             do
                 if addon.db then
-                    addon.db.RegisterCallback(addon, "OnProfileChanged", function()
+                    addon.db.RegisterCallback(MainbarsModule, "OnProfileChanged", function()
                         -- Execute immediately - no timer needed
                         addon.RefreshMainbarsSystem()
                     end)
-                    addon.db.RegisterCallback(addon, "OnProfileCopied", function()
-                        -- Execute immediately - no timer needed  
+                    addon.db.RegisterCallback(MainbarsModule, "OnProfileCopied", function()
+                        -- Execute immediately - no timer needed
                         addon.RefreshMainbarsSystem()
                     end)
-                    addon.db.RegisterCallback(addon, "OnProfileReset", function()
+                    addon.db.RegisterCallback(MainbarsModule, "OnProfileReset", function()
                         -- Execute immediately - no timer needed
                         addon.RefreshMainbarsSystem()
                     end)

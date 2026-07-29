@@ -25,7 +25,8 @@ local BagSortModule = {
 if addon.RegisterModule then
     addon:RegisterModule("bagsort", BagSortModule,
         T("Bag Sort", "Bag Sort"),
-        T("Sort bags and bank items with buttons", "Sort bags and bank items with buttons"))
+        T("Sort bags and bank items with buttons", "Sort bags and bank items with buttons"),
+        { lifecyclePrefix = "BagSort" })
 end
 
 -- ============================================================================
@@ -2328,6 +2329,10 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
         ApplyBagSortSystem()
     end
 end)
+
+-- Registry lifecycle resolves these off `addon` via lifecyclePrefix "BagSort".
+addon.ApplyBagSortSystem = ApplyBagSortSystem
+addon.RestoreBagSortSystem = RestoreBagSortSystem
 
 -- Expose sort functions for other modules/macros
 addon.SortPlayerBags = SortPlayerBags

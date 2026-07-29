@@ -908,7 +908,7 @@ addon.package:RegisterEvents(OnQuestLogUpdate, 'QUEST_LOG_UPDATE')
 
 -- Profile change handler
 if addon.core and addon.core.RegisterMessage then
-    addon.core.RegisterMessage(addon, "DRAGONUI_PROFILE_CHANGED", function()
+    addon.core.RegisterMessage(QuestTrackerModule, "DRAGONUI_PROFILE_CHANGED", function()
         addon.RefreshQuestTracker()
     end)
 end

@@ -139,6 +139,8 @@ local api = UF.TargetStyle.Create({
 
     -- Extra bar hooks: force white on SetMinMaxValues
     afterBarHooks = function(Module, ManaBar, GetConfig, updateCache)
+        -- FocusFrame_SetSmallSize re-runs InitializeFrame, so this must not stack.
+        if ManaBar.DragonUI_MinMaxHook then return end
         hooksecurefunc(ManaBar, "SetMinMaxValues", function(self)
             if not UnitExists("focus") then return end
             local texture = self:GetStatusBarTexture()
@@ -146,6 +148,7 @@ local api = UF.TargetStyle.Create({
                 texture:SetVertexColor(1, 1, 1, 1)
             end
         end)
+        ManaBar.DragonUI_MinMaxHook = true
     end,
 
     extraEventHandler = function(event, unitToken, UpdateClassification,

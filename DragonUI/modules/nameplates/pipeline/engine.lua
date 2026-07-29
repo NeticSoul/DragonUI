@@ -1092,14 +1092,14 @@ initFrame:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" and arg1 == "DragonUI" then
         addon:After(0.5, function()
             if addon.db and addon.db.RegisterCallback then
-                addon.db.RegisterCallback(addon, "OnProfileChanged", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileCopied", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileReset", OnProfileChanged)
+                addon.db.RegisterCallback(NP, "OnProfileChanged", OnProfileChanged)
+                addon.db.RegisterCallback(NP, "OnProfileCopied", OnProfileChanged)
+                addon.db.RegisterCallback(NP, "OnProfileReset", OnProfileChanged)
             end
         end)
     end
 end)
 
 if addon.core and addon.core.RegisterMessage then
-    addon.core.RegisterMessage(addon, "DRAGONUI_READY", BootstrapNameplates)
+    addon.core.RegisterMessage(NP, "DRAGONUI_READY", BootstrapNameplates)
 end

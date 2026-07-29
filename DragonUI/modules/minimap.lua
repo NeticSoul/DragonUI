@@ -14,7 +14,6 @@ local MinimapModule = {
     initialized = false,
     applied = false,
     originalStates = {},
-    registeredEvents = {},
     hooks = {},
     stateDrivers = {},
     frames = {},
@@ -470,10 +469,7 @@ end
 local function ReplaceBlizzardFrame(frame)
     -- Check combat lockdown before making secure frame changes
     if InCombatLockdown() then
-        MinimapModule.registeredEvents.PLAYER_REGEN_ENABLED = function()
-            ReplaceBlizzardFrame(frame)
-            MinimapModule.registeredEvents.PLAYER_REGEN_ENABLED = nil
-        end
+        addon.CombatQueue:Add("minimap_replace_blizzard_frame", ReplaceBlizzardFrame, frame)
         return
     end
 
@@ -2216,9 +2212,9 @@ function MinimapModule:ApplyMinimapSystem()
 
     -- Check combat lockdown
     if InCombatLockdown() then
-        self.registeredEvents.PLAYER_REGEN_ENABLED = function()
-            self:ApplyMinimapSystem()
-        end
+        addon.CombatQueue:Add("minimap_apply", function()
+            MinimapModule:ApplyMinimapSystem()
+        end)
         return
     end
 
@@ -2239,22 +2235,6 @@ function MinimapModule:ApplyMinimapSystem()
 
 end
 
--- EVENT HANDLING: Proper event registration/cleanup
-local function RegisterModuleEvents()
-    if MinimapModule.registeredEvents.PLAYER_REGEN_ENABLED then
-        local eventFrame = CreateFrame("Frame")
-        eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        eventFrame:SetScript("OnEvent", function(self, event)
-            if MinimapModule.registeredEvents.PLAYER_REGEN_ENABLED then
-                MinimapModule.registeredEvents.PLAYER_REGEN_ENABLED()
-                MinimapModule.registeredEvents.PLAYER_REGEN_ENABLED = nil
-                self:UnregisterAllEvents()
-            end
-        end)
-        MinimapModule.frames.eventFrame = eventFrame
-    end
-end
-
 function MinimapModule:RestoreMinimapSystem()
     if not self.applied then
         return -- Already restored
@@ -2262,9 +2242,9 @@ function MinimapModule:RestoreMinimapSystem()
 
     -- Check combat lockdown
     if InCombatLockdown() then
-        self.registeredEvents.PLAYER_REGEN_ENABLED = function()
-            self:RestoreMinimapSystem()
-        end
+        addon.CombatQueue:Add("minimap_restore", function()
+            MinimapModule:RestoreMinimapSystem()
+        end)
         return
     end
 

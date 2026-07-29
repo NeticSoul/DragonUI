@@ -1785,13 +1785,6 @@ local function SetupPartyHooks()
                 if healthbar then
                     UpdateHealthText(healthbar, false)
                 end
-            elseif event == "UNIT_POWER" or event == "UNIT_MAXPOWER" or event == "UNIT_DISPLAYPOWER" then
-                -- Update power bar texture on power type change (e.g. druid shifting)
-                UpdateManaBarTexture(frame)
-                local manabar = _G[frame:GetName() .. 'ManaBar']
-                if manabar then
-                    UpdateManaText(manabar, false)
-                end
             end
         end
     end)
@@ -1807,7 +1800,11 @@ local function SetupPartyHooks()
 
     -- Hook for mana bar (without touching health)
     hooksecurefunc("UnitFrameManaBar_Update", function(statusbar, unit)
-        if statusbar and statusbar:GetName() and statusbar:GetName():match("^PartyMemberFrame%dManaBar$") then
+        local id = statusbar and statusbar:GetName()
+            and statusbar:GetName():match("^PartyMemberFrame(%d)ManaBar$")
+        if id then
+            -- Only path that sees power changes: PartyMemberFrame itself registers no power event.
+            UpdateManaBarTexture(_G['PartyMemberFrame' .. id])
             -- Drive our overlay from the native bar (read-only); never touch the native texture.
             ApplyManaBarClipping(statusbar, statusbar:GetValue())
             UpdateManaText(statusbar, false)

@@ -941,9 +941,9 @@ local function OnProfileChanged()
 end
 
 if addon.core and addon.core.RegisterMessage then
-	addon.core.RegisterMessage(addon, "DRAGONUI_PROFILE_CHANGED", OnProfileChanged);
-	addon.core.RegisterMessage(addon, "DRAGONUI_PROFILE_COPIED", OnProfileChanged);
-	addon.core.RegisterMessage(addon, "DRAGONUI_PROFILE_RESET", OnProfileChanged);
+	addon.core.RegisterMessage(UnitFrameLayersModule, "DRAGONUI_PROFILE_CHANGED", OnProfileChanged);
+	addon.core.RegisterMessage(UnitFrameLayersModule, "DRAGONUI_PROFILE_COPIED", OnProfileChanged);
+	addon.core.RegisterMessage(UnitFrameLayersModule, "DRAGONUI_PROFILE_RESET", OnProfileChanged);
 end
 
 -- Also register via callback table if available

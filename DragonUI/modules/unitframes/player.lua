@@ -130,14 +130,24 @@ local ELITE_STATUS_PULSE_SETTINGS = {
 -- Event lookup tables for O(1) performance
 local HEALTH_EVENTS = {
     UNIT_HEALTH = true,
-    UNIT_MAXHEALTH = true,
-    UNIT_HEALTH_FREQUENT = true
+    UNIT_MAXHEALTH = true
 }
 
+-- 3.3.5a has no UNIT_POWER/UNIT_MAXPOWER; power changes fire one event per power token.
 local POWER_EVENTS = {
-    UNIT_MAXMANA = true,
     UNIT_DISPLAYPOWER = true,
-    UNIT_POWER_UPDATE = true
+    UNIT_MANA = true,
+    UNIT_RAGE = true,
+    UNIT_FOCUS = true,
+    UNIT_ENERGY = true,
+    UNIT_HAPPINESS = true,
+    UNIT_RUNIC_POWER = true,
+    UNIT_MAXMANA = true,
+    UNIT_MAXRAGE = true,
+    UNIT_MAXFOCUS = true,
+    UNIT_MAXENERGY = true,
+    UNIT_MAXHAPPINESS = true,
+    UNIT_MAXRUNIC_POWER = true
 }
 
 -- Rune type coordinates
@@ -2825,7 +2835,7 @@ local function SetupPlayerEvents()
                     PlayerFrameHealthBar:GetScript("OnEvent")(PlayerFrameHealthBar, "UNIT_HEALTH", "player")
                 end
                 if PlayerFrameManaBar then
-                    PlayerFrameManaBar:GetScript("OnEvent")(PlayerFrameManaBar, "UNIT_POWER_UPDATE", "player")
+                    PlayerFrameManaBar:GetScript("OnEvent")(PlayerFrameManaBar, "UNIT_MANA", "player")
                     -- FIX: Restore white tint for texture purity
                     UpdateManaBarColor(PlayerFrameManaBar)
                 end
@@ -3030,9 +3040,9 @@ end
 
 -- Register profile callbacks
 if addon.db and addon.db.RegisterCallback then
-    addon.db.RegisterCallback(addon, "OnProfileChanged", OnProfileChanged)
-    addon.db.RegisterCallback(addon, "OnProfileCopied", OnProfileChanged)
-    addon.db.RegisterCallback(addon, "OnProfileReset", OnProfileChanged)
+    addon.db.RegisterCallback(Module, "OnProfileChanged", OnProfileChanged)
+    addon.db.RegisterCallback(Module, "OnProfileCopied", OnProfileChanged)
+    addon.db.RegisterCallback(Module, "OnProfileReset", OnProfileChanged)
 end
 
 -- Expose public API

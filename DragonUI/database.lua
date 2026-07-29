@@ -877,6 +877,8 @@ local defaults = {
                 fontSize = 2, -- Scale 1-10, maps to name/HP font px
                 nameFont = "primary", -- font for name/level text (primary, actionbar, narrow, arial, system)
                 showHealthPercent = true,
+                showHealthNumber = false, -- show HP as a number (e.g. 22k) plus percent on the health bar
+                healthNumberFontSize = 2, -- Scale 1-10, maps to health-number font px
                 nameOverlayHealthBar = false, -- anchor name/level/percent/elite icon centered on the health bar instead of above it
                 nameOverlayOffsetY = 0, -- vertical (Y) offset applied when nameOverlayHealthBar is enabled
                 nameRowPaddingX = 0, -- horizontal inset (left & right) applied to name/level/percent row; does not affect the elite icon
@@ -974,6 +976,7 @@ local defaults = {
                 friendlyNameOnlyAFK = false, -- show <AFK> for away friendly players in headline mode
                 friendlyNPCNameOnly = false, -- headline mode for friendly NPCs
                 friendlyNPCNameOnlyTitle = false, -- show <Title/Occupation> subtitle for friendly NPCs (awesome_wotlk only)
+                headlineExcludeTarget = false, -- keep health/power/cast bars on the current target while headline mode is active
                 enemyPlayerClassColors = false, -- use class colors for enemy player nameplates (ShowClassColorInNameplate)
                 disableNonTargetFade = false, -- when true, target/non-target use the same full opacity
                 opacityNonTarget = 0.5, -- default non-target opacity
@@ -1048,6 +1051,7 @@ local defaults = {
                 chatBgIdleAlpha = 0, -- Chat style background opacity when idle/mouse away (0 = hidden, 1 = always visible)
                 editboxIdleAlpha = 0, -- Editbox minimum opacity when idle (0 = fades with tabs, 1 = always visible)
                 editboxStyle = "dark", -- Editbox background style: "none", "dark", "dragon", "nocturne"
+                vanillaEditbox = false, -- Use the stock chat input appearance instead of the DragonUI one
             },
             bagster = {
                 enabled = false, -- All-in-one bag replacement with filtering and search

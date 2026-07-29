@@ -300,7 +300,13 @@ end
 -- Position pet buttons (legacy approach - this is what makes it work!)
 local function petbutton_position()
     if not IsModuleEnabled() then return end
-    
+
+    -- PLAYER_LOGIN also fires on a mid-combat /reload; reparenting secure buttons there is blocked.
+    if InCombatLockdown() then
+        addon.CombatQueue:Add("petbar_position_buttons", petbutton_position)
+        return
+    end
+
     local petbar = PetbarModule.petbar
     if not petbar then return end
     
@@ -357,8 +363,10 @@ local function petbutton_position()
     end
 
     -- Hook for pet action updates
-    hooksecurefunc('PetActionBar_Update', petbutton_updatestate)
-    PetbarModule.hooks.PetActionBar_Update = true
+    if not PetbarModule.hooks.PetActionBar_Update then
+        hooksecurefunc('PetActionBar_Update', petbutton_updatestate)
+        PetbarModule.hooks.PetActionBar_Update = true
+    end
 end
 
 -- Create event frame for legacy system
@@ -701,13 +709,13 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         
         -- Set up profile callbacks (DragonUI modular system)
         if addon.db then
-            addon.db.RegisterCallback(addon, "OnProfileChanged", function()
+            addon.db.RegisterCallback(PetbarModule, "OnProfileChanged", function()
                 addon.RefreshPetbarSystem()
             end)
-            addon.db.RegisterCallback(addon, "OnProfileCopied", function()
+            addon.db.RegisterCallback(PetbarModule, "OnProfileCopied", function()
                 addon.RefreshPetbarSystem()
             end)
-            addon.db.RegisterCallback(addon, "OnProfileReset", function()
+            addon.db.RegisterCallback(PetbarModule, "OnProfileReset", function()
                 addon.RefreshPetbarSystem()
             end)
         end

@@ -395,9 +395,9 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
 
         addon:After(0.5, function()
             if addon.db and addon.db.RegisterCallback then
-                addon.db.RegisterCallback(addon, "OnProfileChanged", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileCopied", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileReset", OnProfileChanged)
+                addon.db.RegisterCallback(mod, "OnProfileChanged", OnProfileChanged)
+                addon.db.RegisterCallback(mod, "OnProfileCopied", OnProfileChanged)
+                addon.db.RegisterCallback(mod, "OnProfileReset", OnProfileChanged)
             end
         end)
 

@@ -36,26 +36,23 @@ local function ToggleEditorMode()
     end
 end
 
--- Reset all mover positions
+-- Reset all frame positions to defaults (widgets + the position keys the editor owns)
 local function ResetPositions(arg)
     if InCombatLockdown() then
         addon:Print(L["Cannot reset positions during combat!"])
         return
     end
-    
+
+    -- No per-frame reset exists; EditorMode only resets the whole widget set.
     if arg and arg ~= "" then
-        -- Reset specific mover
-        if addon.MoversSystem then
-            addon.MoversSystem:ResetPosition(arg)
-        end
+        addon:Print(L["Reset only supports resetting every position at once. Use /dragonui reset."])
+        return
+    end
+
+    if addon.EditorMode then
+        addon.EditorMode:ShowResetConfirmation()
     else
-        -- Reset all
-        if addon.MoversSystem then
-            addon.MoversSystem:ResetAllPositions()
-        elseif addon.HideAllEditableFrames then
-            -- Legacy system - just inform user
-            addon:Print(L["Use /dragonui edit to enter edit mode, then right-click frames to reset."])
-        end
+        addon:Print(L["Position editor not available."])
     end
 end
 

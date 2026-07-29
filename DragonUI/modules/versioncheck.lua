@@ -180,27 +180,41 @@ end
 
 local function SetupEvents()
     if not IsModuleEnabled() then return end
-    if eventFrame then return end
 
-    eventFrame = CreateFrame("Frame", "DragonUI_VersionCheck", UIParent)
+    if not eventFrame then
+        eventFrame = CreateFrame("Frame", "DragonUI_VersionCheck", UIParent)
+        eventFrame:SetScript("OnEvent", function(_frame, event, ...)
+            if event == "CHAT_MSG_ADDON" then
+                OnAddonMessage(...)
+            elseif event == "PARTY_MEMBERS_CHANGED"
+                or event == "RAID_ROSTER_UPDATE"
+            then
+                BroadcastVersion()
+            elseif event == "GUILD_ROSTER_UPDATE" then
+                if IsInGuild() then
+                    SendVersion("GUILD")
+                end
+            end
+        end)
+    end
+
     eventFrame:RegisterEvent("CHAT_MSG_ADDON")
     eventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
     eventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
 
-    eventFrame:SetScript("OnEvent", function(_frame, event, ...)
-        if event == "CHAT_MSG_ADDON" then
-            OnAddonMessage(...)
-        elseif event == "PARTY_MEMBERS_CHANGED"
-            or event == "RAID_ROSTER_UPDATE"
-        then
-            BroadcastVersion()
-        elseif event == "GUILD_ROSTER_UPDATE" then
-            if IsInGuild() then
-                SendVersion("GUILD")
-            end
-        end
-    end)
+    VersionCheckModule.applied = true
+end
+
+function VersionCheckModule:Apply()
+    SetupEvents()
+end
+
+function VersionCheckModule:Restore()
+    if eventFrame then
+        eventFrame:UnregisterAllEvents()
+    end
+    self.applied = false
 end
 
 -- ============================================================================
