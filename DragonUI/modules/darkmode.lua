@@ -107,12 +107,18 @@ end
 
 local function DarkenTexture(texture, tint)
     if not texture then return end
+    local pr, pg, pb, pa = texture:GetVertexColor()
     if not texture.__DragonUI_OrigColor then
-        texture.__DragonUI_OrigColor = { texture:GetVertexColor() }
+        texture.__DragonUI_OrigColor = { pr, pg, pb, pa }
     end
+    -- SetVertexColor(r,g,b) resets alpha to 1 and undoes hide_main_bar_background on gryphons.
+    local keepAlpha = texture.GetAlpha and texture:GetAlpha() or 1
     texture.__DragonUI_SettingDark = true
-    texture:SetVertexColor(tint[1], tint[2], tint[3])
+    texture:SetVertexColor(tint[1], tint[2], tint[3], pa)
     texture.__DragonUI_SettingDark = nil
+    if texture.SetAlpha then
+        texture:SetAlpha(keepAlpha)
+    end
     DarkModeModule.darkenedTextures[texture] = true
 end
 
@@ -120,9 +126,13 @@ local function RestoreTexture(texture)
     if not texture then return end
     if texture.__DragonUI_OrigColor then
         local c = texture.__DragonUI_OrigColor
+        local keepAlpha = texture.GetAlpha and texture:GetAlpha() or 1
         texture.__DragonUI_SettingDark = true
         texture:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
         texture.__DragonUI_SettingDark = nil
+        if texture.SetAlpha then
+            texture:SetAlpha(keepAlpha)
+        end
         texture.__DragonUI_OrigColor = nil
     end
     DarkModeModule.darkenedTextures[texture] = nil
@@ -869,6 +879,11 @@ local function ApplyDarkMode(forceAuraSync)
     DarkenAddonButtonBorders(tint)
     DarkenCompactRaidFrameManager(tint)
 
+    -- Re-pin hide_main_bar_background (art/gryphon alpha) after SetVertexColor.
+    if addon.RefreshActionBarVisibility then
+        addon.RefreshActionBarVisibility()
+    end
+
     DarkModeModule.applied = true
     SyncAuraBorderColorFromDarkMode(GetAuraBorderTintValues(), forceAuraSync == true)
 
@@ -916,6 +931,10 @@ RestoreDarkMode = function(resetAuraBorders)
     DarkModeModule.applied = false
     if resetAuraBorders then
         SyncAuraBorderColorFromDarkMode(nil, true)
+    end
+
+    if addon.RefreshActionBarVisibility then
+        addon.RefreshActionBarVisibility()
     end
 end
 

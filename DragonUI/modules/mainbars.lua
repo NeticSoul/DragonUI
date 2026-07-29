@@ -3316,6 +3316,14 @@ function addon.UpdateGryphonStyle()
         MainMenuBarLeftEndCap:Hide()
         MainMenuBarRightEndCap:Hide()
     end
+
+    -- Style refresh Shows endcaps; keep them invisible when background hide is on.
+    local buttonsCfg = addon.db and addon.db.profile and addon.db.profile.buttons
+    if buttonsCfg and buttonsCfg.hide_main_bar_background then
+        if addon.pUiMainBarArt then addon.pUiMainBarArt:SetAlpha(0) end
+        MainMenuBarLeftEndCap:SetAlpha(0)
+        MainMenuBarRightEndCap:SetAlpha(0)
+    end
 end
 
 -- ============================================================================
