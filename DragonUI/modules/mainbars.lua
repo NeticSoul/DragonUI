@@ -2855,6 +2855,7 @@ end
 
 -- Push DragonUI profile → Blizzard (persistent via SetActionBarToggles)
 function addon.SyncBarCVarsFromProfile()
+    if not IsModuleEnabled() then return end
     if syncingBars then return end
     syncingBars = true
     local config = addon.db and addon.db.profile and addon.db.profile.actionbars
@@ -2924,6 +2925,7 @@ end
 
 -- Pull Blizzard globals → DragonUI profile (called from MultiActionBar_Update hook)
 local function SyncBarGlobalsToProfile()
+    if not IsModuleEnabled() then return end
     if syncingBars then return end
     local config = addon.db and addon.db.profile and addon.db.profile.actionbars
     if not config then return end
@@ -3276,6 +3278,7 @@ end
 
 -- Refresh all bars (called from options or after profile change)
 function addon.RefreshActionBarVisibility()
+    if not IsModuleEnabled() then return end
     if InCombatLockdown() then return end
     -- Skip during vehicle — vehicle module handles bar visibility
     if UnitHasVehicleUI and UnitHasVehicleUI("player") then return end
@@ -3334,9 +3337,13 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     elseif event == "PLAYER_LOGIN" then
         -- Backup check
         InitializeMainbars()
-        -- Initialize visibility system after all bars are created
-        InitializeActionBarVisibility()
-        InitializeMigratedActionBarVisibility()
+        -- These visibility systems own native bar alpha/mouse behavior. Leave
+        -- them entirely to Blizzard when the Blizzard-owned layout mode
+        -- disables the mainbars module.
+        if IsModuleEnabled() then
+            InitializeActionBarVisibility()
+            InitializeMigratedActionBarVisibility()
+        end
         self:UnregisterEvent("PLAYER_LOGIN")
     end
 end)

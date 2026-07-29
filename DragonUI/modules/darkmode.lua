@@ -85,6 +85,13 @@ local function GetTintValues()
     return { intensity, intensity, intensity }
 end
 
+-- Native Blizzard layout skins load before this module but apply at runtime.
+-- Expose only the active-state check here; the tracked tint bridge is declared
+-- after DarkenTexture below.
+addon.IsDarkModeApplied = function()
+    return DarkModeModule.applied == true
+end
+
 -- Unit frames need to be noticeably darker than other UI chrome
 -- due to their color composition (gold borders on dark backgrounds)
 local function GetUFTintValues()
@@ -114,6 +121,15 @@ local function DarkenTexture(texture, tint)
     texture:SetVertexColor(tint[1], tint[2], tint[3])
     texture.__DragonUI_SettingDark = nil
     DarkModeModule.darkenedTextures[texture] = true
+end
+
+-- Child chrome can be created after the main Dark Mode sweep (vehicle/totem
+-- transitions, delayed bags). Let native-layout skinning register those
+-- textures with the same restore bookkeeping instead of merely recoloring.
+addon.ApplyDarkModeChromeTexture = function(texture)
+    if not DarkModeModule.applied or not texture then return false end
+    DarkenTexture(texture, GetTintValues())
+    return true
 end
 
 local function RestoreTexture(texture)
@@ -550,8 +566,10 @@ local function DarkenBagBorders(tint)
     for _, name in ipairs(bagSlotNames) do
         local btn = _G[name]
         if btn then
-            if btn.customBorder then DarkenTexture(btn.customBorder, tint) end
-            if btn.background then DarkenTexture(btn.background, tint) end
+            local border = btn.customBorder or btn.__DragonUINativeBorder
+            local background = btn.background or btn.__DragonUINativeBackground
+            if border then DarkenTexture(border, tint) end
+            if background then DarkenTexture(background, tint) end
         end
     end
 
@@ -560,7 +578,14 @@ local function DarkenBagBorders(tint)
     -- overlay using bag-border-2x (the ring used on regular bag slots) and darken that.
     local keyring = _G["KeyRingButton"]
     if keyring then
-        if not keyring.__DragonUI_DarkBorder then
+        local nativeBorder = keyring.__DragonUINativeBorder
+        if nativeBorder then
+            if keyring.__DragonUI_DarkBorder
+                and keyring.__DragonUI_DarkBorder ~= nativeBorder then
+                keyring.__DragonUI_DarkBorder:Hide()
+            end
+            DarkenTexture(nativeBorder, tint)
+        elseif not keyring.__DragonUI_DarkBorder then
             local border = keyring:CreateTexture(nil, "OVERLAY", nil, 7)
             -- Anchor to the NormalTexture which defines the visible border area
             local normalTex = keyring:GetNormalTexture()
@@ -574,12 +599,14 @@ local function DarkenBagBorders(tint)
             border:Hide()
             keyring.__DragonUI_DarkBorder = border
         end
-        local border = keyring.__DragonUI_DarkBorder
-        border:SetVertexColor(tint[1], tint[2], tint[3])
-        border:Show()
-        DarkModeModule.darkenedTextures[border] = true
-        if not border.__DragonUI_OrigColor then
-            border.__DragonUI_OrigColor = { 1, 1, 1, 1 }
+        if not nativeBorder then
+            local border = keyring.__DragonUI_DarkBorder
+            border:SetVertexColor(tint[1], tint[2], tint[3])
+            border:Show()
+            DarkModeModule.darkenedTextures[border] = true
+            if not border.__DragonUI_OrigColor then
+                border.__DragonUI_OrigColor = { 1, 1, 1, 1 }
+            end
         end
     end
 
@@ -593,6 +620,19 @@ end
 local function DarkenBackpackCutout(tint)
     local backpack = _G["MainMenuBarBackpackButton"]
     if not backpack then return end
+
+    -- Native layout already owns a correctly sized child cutout. Reuse it so
+    -- Dark Mode does not stack a second overlay or disturb native geometry.
+    local nativeCutout = backpack.__DragonUINativeDarkCutout
+    if nativeCutout then
+        if backpack.__DragonUI_DarkCutout
+            and backpack.__DragonUI_DarkCutout ~= nativeCutout then
+            backpack.__DragonUI_DarkCutout:Hide()
+        end
+        DarkenTexture(nativeCutout, tint)
+        nativeCutout:Show()
+        return
+    end
 
     -- Create the cutout overlay once, reuse on subsequent calls
     if not backpack.__DragonUI_DarkCutout then
@@ -631,6 +671,10 @@ local function DarkenMicroMenuBorders(tint)
         "SocialsMicroButton",
         "PVPMicroButton",
         "LFDMicroButton",
+        "LFGMicroButton",
+        "CollectionsMicroButton",
+        "PathToAscensionMicroButton",
+        "ChallengesMicroButton",
         "MainMenuMicroButton",
         "HelpMicroButton",
     }
@@ -639,11 +683,15 @@ local function DarkenMicroMenuBorders(tint)
         if btn then
             -- DragonUI replaces normal/pushed with icon art.
             -- The actual background/chrome is stored in DragonUIBackground fields.
-            if btn.DragonUIBackground then
-                DarkenTexture(btn.DragonUIBackground, tint)
+            local background = btn.DragonUIBackground
+                or btn.__DragonUINativeBackground
+            local pushedBackground = btn.DragonUIBackgroundPushed
+                or btn.__DragonUINativePushedBackground
+            if background then
+                DarkenTexture(background, tint)
             end
-            if btn.DragonUIBackgroundPushed then
-                DarkenTexture(btn.DragonUIBackgroundPushed, tint)
+            if pushedBackground then
+                DarkenTexture(pushedBackground, tint)
             end
             -- DO NOT touch GetNormalTexture/GetPushedTexture — those are icons
         end

@@ -182,6 +182,13 @@ local function BuildGeneralTab(scroll)
     local positions = C:AddSection(scroll, LO["Action Bar Positions"])
 
     C:AddToggle(positions, {
+        label = LO["Native Blizzard Layout (DragonUI Skin)"],
+        desc = LO["Apply DragonUI styling to Blizzard's native action bars, stance and pet controls, micro menu, bags, and XP/reputation bars. Blizzard retains paging, visibility, and vehicle behavior; gryphons, stock bar art, and paging controls are hidden. Disable this and reload to return to the standard DragonUI layout."],
+        dbPath = "blizzard_default_layout.enabled",
+        requiresReload = true,
+    })
+
+    C:AddToggle(positions, {
         label = LO["Left Bar Horizontal"],
         desc = LO["Make the left secondary bar horizontal instead of vertical."],
         dbPath = "mainbars.left.horizontal",

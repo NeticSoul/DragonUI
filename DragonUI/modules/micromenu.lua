@@ -970,7 +970,9 @@ end
 -- Blizzard refreshes the micro button bar.
 if UpdateMicroButtons then
     hooksecurefunc("UpdateMicroButtons", function()
-        UpdateCharacterPortraitVisibility()
+        if IsModuleEnabled() then
+            UpdateCharacterPortraitVisibility()
+        end
     end)
 end
 
@@ -1533,11 +1535,15 @@ local function ApplyMicromenuSystem()
     -- Create global bags bar
     _G.pUiBagsBar = CreateFrame('Frame', 'pUiBagsBar', UIParent);
     local pUiBagsBar = _G.pUiBagsBar;
-    -- DON'T parent automatically - will be done in setup when necessary
-    KeyRingButton:SetParent(_G.CharacterBag3Slot);
 
     function MainMenuMicroButtonMixin:bagbuttons_setup()
+        if not IsModuleEnabled() then return end
         MicromenuModule.hooks = MicromenuModule.hooks or {}
+
+        -- This root-frame change belongs only to DragonUI's managed bag layout.
+        -- Native-layout mode disables this module, so Blizzard retains the
+        -- keyring's original parent and default positioning chain.
+        KeyRingButton:SetParent(_G.CharacterBag3Slot)
 
         -- Setup main backpack button
         MainMenuBarBackpackButton:SetSize(50, 50)
@@ -1847,6 +1853,7 @@ local function ApplyMicromenuSystem()
     end
 
     function MainMenuMicroButtonMixin:bagbuttons_refresh()
+        if not IsModuleEnabled() then return end
         if _G.pUiBagsBar then
             for _, bags in pairs(bagslots) do
                 if bags:GetParent() ~= _G.pUiBagsBar then
@@ -2609,6 +2616,7 @@ end
     end
 
     function addon.RefreshMicromenu()
+    if not IsModuleEnabled() then return end
     if not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
         return
     end
@@ -2637,6 +2645,7 @@ end
 end
 
     function addon.RefreshBags()
+        if not IsModuleEnabled() then return end
         if not _G.pUiBagsBar then
             return
         end
@@ -2980,11 +2989,11 @@ local function Initialize()
         return
     end
 
-    -- Ensure default widget coordinates exist before module setup runs.
-    LoadDefaultWidgetSettings()
-
     -- Only apply if module is enabled
     if IsModuleEnabled() then
+        -- Ensure default widget coordinates exist only when this layout-owning
+        -- module is actually active.
+        LoadDefaultWidgetSettings()
         -- Wait for PLAYER_LOGIN to apply system
         addon.package:RegisterEvents(function()
             ApplyMicromenuSystem()

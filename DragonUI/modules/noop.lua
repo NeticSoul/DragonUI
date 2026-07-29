@@ -26,8 +26,7 @@ local ApplyNoopChanges
 
 -- Check if noop module is enabled
 local function IsNoopEnabled()
-    return addon.db and addon.db.profile and addon.db.profile.modules and 
-           addon.db.profile.modules.noop and addon.db.profile.modules.noop.enabled
+    return addon:IsModuleEnabled("noop")
 end
 
 -- Actual implementation of noop changes (called when not in combat)

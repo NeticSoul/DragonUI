@@ -16,6 +16,11 @@ local defaults = {
     },
     profile = {
         version = 1,
+        -- Optional native-layout mode: skin Blizzard's bottom UI in place
+        -- while preserving native paging, visibility, and vehicle behavior.
+        blizzard_default_layout = {
+            enabled = false,
+        },
         -- Widgets
         widgets = {
             minimap = {

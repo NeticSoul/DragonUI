@@ -573,6 +573,8 @@ L["All action bar scales reset to 0.9"] = true
 
 -- Positions section
 L["Action Bar Positions"] = true
+L["Native Blizzard Layout (DragonUI Skin)"] = true
+L["Apply DragonUI styling to Blizzard's native action bars, stance and pet controls, micro menu, bags, and XP/reputation bars. Blizzard retains paging, visibility, and vehicle behavior; gryphons, stock bar art, and paging controls are hidden. Disable this and reload to return to the standard DragonUI layout."] = true
 L["Tip: Use the Move UI Elements button above to reposition action bars with your mouse."] = true
 L["Left Bar Horizontal"] = true
 L["Make the left secondary bar horizontal instead of vertical."] = true

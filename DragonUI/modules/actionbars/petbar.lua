@@ -639,7 +639,23 @@ end
 
 -- Re-runs the per-slot alpha logic after the "Show Empty Slots" (grid) toggle changes.
 function addon.RefreshPetbarGrid()
-    if not IsModuleEnabled() then return end
+    if not IsModuleEnabled() then
+        -- Native-layout mode deliberately leaves Blizzard's pet-bar frame in
+        -- place, but it should still honor DragonUI's existing grid option.
+        -- Alpha-only updates preserve Blizzard's anchors and secure behavior.
+        local layout = addon.BlizzardDefaultLayout
+        if not (layout and layout.IsEnabled and layout:IsEnabled()) then return end
+
+        local config = GetDynamicConfig()
+        for index = 1, NUM_PET_ACTION_SLOTS do
+            local button = _G["PetActionButton" .. index]
+            if button then
+                local name = GetPetActionInfo(index)
+                button:SetAlpha((config.grid or name) and 1 or 0)
+            end
+        end
+        return
+    end
     petbutton_updatestate()
 end
 

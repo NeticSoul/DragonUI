@@ -3,6 +3,8 @@
     <Script file="compatibility.lua"/>
 
     <!-- Actionbar modules -->
+    <!-- Optional DragonUI skin for Blizzard's native action bar layout. -->
+    <Script file="blizzard_default_layout.lua"/>
     <Script file="noop.lua"/>
     <Script file="buttons.lua"/>
     <Script file="rage_indicator.lua"/>

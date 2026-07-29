@@ -1584,6 +1584,13 @@ end
 -- @param name: Module identifier
 -- @return boolean
 function MR:IsEnabled(name)
+    if addon.GetModuleEnabledOverride then
+        local override = addon:GetModuleEnabledOverride(name)
+        if override ~= nil then
+            return override
+        end
+    end
+
     local info = self.modules[name]
     if info and info.isEnabled then
         return info.isEnabled()
@@ -1976,6 +1983,13 @@ end
 -- @param moduleName: string key matching database.lua modules table
 -- @return boolean
 function addon:IsModuleEnabled(moduleName)
+    if self.GetModuleEnabledOverride then
+        local override = self:GetModuleEnabledOverride(moduleName)
+        if override ~= nil then
+            return override
+        end
+    end
+
     local cfg = self:GetModuleConfig(moduleName)
     return cfg and cfg.enabled or false
 end

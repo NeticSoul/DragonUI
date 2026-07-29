@@ -31,6 +31,7 @@ local ButtonsModule = {
     originalValues = {},  -- Store original button states for restoration
     hooked = false,
     pendingRefresh = false,  -- Flag to indicate pending refresh after combat
+    pendingNativeAdditionalRefresh = false,
 }
 
 -- Register with ModuleRegistry (if available)
@@ -54,6 +55,18 @@ end
 
 local function GetButtonsConfig()
     return addon.db and addon.db.profile and addon.db.profile.buttons
+end
+
+local function IsNativeSkinMode()
+    local layout = addon.BlizzardDefaultLayout
+    return layout and layout.IsEnabled and layout:IsEnabled()
+end
+
+local function ApplyNativeTint(button)
+    local layout = addon.BlizzardDefaultLayout
+    if layout and layout.TintActionButton then
+        layout:TintActionButton(button)
+    end
 end
 
 -- Blizzard in-range hotkey gray; custom color only needs OnUpdate recolor when it differs.
@@ -230,6 +243,7 @@ end
 
 function addon.actionbuttons_grid()
     if not IsModuleEnabled() then return end
+    if IsNativeSkinMode() then return end
     if InCombatLockdown() then
         ButtonsModule.pendingRefresh = true
         return
@@ -592,6 +606,7 @@ local function main_buttons(button, skipCombatGuard)
 	button:GetPushedTexture():SetDrawLayer('OVERLAY')
 
 	button.background = setup_background(button, normal, true)
+	ApplyNativeTint(button)
 	
 	button.__styled = true
 end
@@ -616,7 +631,10 @@ local function additional_buttons(button)
     StoreOriginalButtonState(button)
     
 	button:SetNormalTexture(config.assets.normal)
-	if button.background then return; end
+	if button.background then
+		ApplyNativeTint(button)
+		return
+	end
 
 	local name = button:GetName();
 	local icon = _G[name..'Icon']
@@ -665,6 +683,7 @@ local function additional_buttons(button)
 		hooksecurefunc(button, "SetNormalTexture", fix_texture)
 	end
 	button.background = setup_background(button, normal, false)
+	ApplyNativeTint(button)
 
 	-- Apply the toggle now — waiting for the next RefreshButtons() pass flashes it visible first.
 	if button.background then
@@ -786,7 +805,10 @@ local function ApplyButtonStyling()
     for button in addon.buttons_iterator() do
         if button then
             main_buttons(button)
-            button:SetSize(37, 37)
+            -- Keep Blizzard's chained button geometry untouched in native mode.
+            if not IsNativeSkinMode() then
+                button:SetSize(37, 37)
+            end
         end
     end
     
@@ -817,6 +839,7 @@ local function actionbuttons_update(button)
 	local name = button:GetName();
 	if name:find('MultiCast') then return; end
 	button:SetNormalTexture(config.assets.normal);
+	ApplyNativeTint(button)
 end
 
 function addon.RefreshButtons()
@@ -877,6 +900,7 @@ function addon.RefreshButtons()
                 end
 
                 ActionButton_Update(button)
+                ApplyNativeTint(button)
             end
         end
     end
@@ -897,7 +921,18 @@ function addon.RefreshButtons()
                 else
                     button.background:Show()
                 end
+                ApplyNativeTint(button)
             end
+        end
+    end
+
+    -- Native multicast buttons use additive child fills rather than the normal
+    -- button.background field. Refresh them here as well so the existing
+    -- "Main Bar Only Background" option updates them live.
+    if IsNativeSkinMode() then
+        local layout = addon.BlizzardDefaultLayout
+        if layout and layout.SkinMulticastButtons then
+            layout:SkinMulticastButtons()
         end
     end
 
@@ -1099,12 +1134,14 @@ local function SetupHooks()
         if normalTexture then
             normalTexture:SetVertexColor(cachedBorderColor[1], cachedBorderColor[2], cachedBorderColor[3], cachedBorderColor[4])
         end
+        ApplyNativeTint(button)
     end)
     
     -- HideGrid hook: protect ONLY main bar from ever being hidden.
     -- Additional bars are fully managed by Blizzard — we don't touch them.
     hooksecurefunc('ActionButton_HideGrid', function(button)
         if not IsModuleEnabled() then return end
+        if IsNativeSkinMode() then return end
         if InCombatLockdown() then return end
         if not button then return end
         local name = button:GetName()
@@ -1147,6 +1184,37 @@ function addon.RefreshButtonStyling()
     end
 end
 
+-- The native-layout mode disables the stance, pet, multicast, and vehicle
+-- placement modules. Reuse their texture templates directly so those Blizzard
+-- buttons receive DragonUI chrome without moving their root frames.
+function addon.RefreshNativeAdditionalButtonSkins()
+    if not IsModuleEnabled() or not IsNativeSkinMode() then return end
+    if InCombatLockdown() then
+        -- These templates include protected button setters and Cooldown frame
+        -- anchoring. Defer the whole refresh instead of taking the vehicle
+        -- module's combat-bypass path.
+        ButtonsModule.pendingNativeAdditionalRefresh = true
+        return
+    end
+
+    ButtonsModule.pendingNativeAdditionalRefresh = false
+
+    addon.possessbuttons_template()
+    addon.petbuttons_template()
+    addon.stancebuttons_template()
+    addon.vehiclebuttons_template()
+    addon.totembuttons_template()
+
+    if addon.RefreshPetbarGrid then
+        addon.RefreshPetbarGrid()
+    end
+
+    local layout = addon.BlizzardDefaultLayout
+    if layout and layout.SkinMulticastButtons then
+        layout:SkinMulticastButtons()
+    end
+end
+
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
@@ -1158,6 +1226,7 @@ local function Initialize()
     if IsModuleEnabled() then
         ApplyButtonStyling()
         SetupHooks()
+        addon.RefreshNativeAdditionalButtonSkins()
     end
 
     if addon.db and addon.db.RegisterCallback then
@@ -1180,6 +1249,7 @@ end
 addon.package:RegisterEvents(function()
     if IsModuleEnabled() then
         addon.actionbuttons_grid()
+        addon.RefreshNativeAdditionalButtonSkins()
         addon.RefreshButtons()
     end
     collectgarbage()
@@ -1208,6 +1278,13 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
             ButtonsModule.pendingRefresh = false
             addon.actionbuttons_grid()
             addon.RefreshButtons()
+        end
+        if ButtonsModule.pendingNativeAdditionalRefresh then
+            if IsModuleEnabled() and IsNativeSkinMode() then
+                addon.RefreshNativeAdditionalButtonSkins()
+            else
+                ButtonsModule.pendingNativeAdditionalRefresh = false
+            end
         end
     elseif event == "UPDATE_BINDINGS" then
         -- ORIGINAL PATTERN: Update hotkeys when bindings change
