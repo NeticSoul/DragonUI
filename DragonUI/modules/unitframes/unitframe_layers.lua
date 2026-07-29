@@ -920,38 +920,6 @@ initFrame:SetScript("OnEvent", function(self, event)
 end);
 
 -- ============================================================================
--- PROFILE CALLBACKS
--- ============================================================================
-
-local function OnProfileChanged()
-	if IsModuleEnabled() then
-		ApplyUnitFrameLayersSystem();
-		-- Re-update all tracked frames
-		for _, frame in pairs(UnitFrameLayersModule.frames) do
-			if frame and frame.myHealPredictionBar then
-				UnitFrameHealPredictionBars_Update(frame);
-			end
-		end
-	else
-		if addon:ShouldDeferModuleDisable("unitframe_layers", UnitFrameLayersModule) then
-			return
-		end
-		RestoreUnitFrameLayersSystem();
-	end
-end
-
-if addon.core and addon.core.RegisterMessage then
-	addon.core.RegisterMessage(UnitFrameLayersModule, "DRAGONUI_PROFILE_CHANGED", OnProfileChanged);
-	addon.core.RegisterMessage(UnitFrameLayersModule, "DRAGONUI_PROFILE_COPIED", OnProfileChanged);
-	addon.core.RegisterMessage(UnitFrameLayersModule, "DRAGONUI_PROFILE_RESET", OnProfileChanged);
-end
-
--- Also register via callback table if available
-if addon.profileCallbacks then
-	addon.profileCallbacks.unitframe_layers = OnProfileChanged;
-end
-
--- ============================================================================
 -- DIAGNOSTIC COMMAND: /dragonui ufl
 -- ============================================================================
 

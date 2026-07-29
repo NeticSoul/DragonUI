@@ -1379,17 +1379,6 @@ function compatibility:GetActiveAddons()
 end
 
 -- ============================================================================
--- CLEANUP FUNCTIONS
--- ============================================================================
-
-local function Cleanup()
-    for addonName, _ in pairs(activeEventFrames) do
-        UnregisterEventsForAddon(addonName)
-    end
-    activeEventFrames = {}
-end
-
--- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
@@ -1420,51 +1409,6 @@ local sexyMapInstalled = IsSexyMapInstalled()
 addon._sexyMapInstalled = sexyMapInstalled
 
 if sexyMapInstalled then
-    local sexyMapOptions = {
-        name = L["SexyMap Compatibility"],
-        type = "group",
-        order = 11, -- right after minimap
-        args = {
-            description = {
-                type = 'description',
-                name = L["Choose how DragonUI and SexyMap share the minimap."],
-                order = 1
-            },
-            sexymap_mode = {
-                type = 'select',
-                name = L["Minimap Mode"],
-                desc = L["Requires UI reload to apply."],
-                values = {
-                    ["sexymap"]  = L["SexyMap"],
-                    ["dragonui"] = L["DragonUI"],
-                    ["hybrid"]   = L["Hybrid"],
-                },
-                get = function()
-                    local cfg = addon.db and addon.db.profile and addon.db.profile.modules
-                        and addon.db.profile.modules.minimap
-                    return cfg and cfg.sexymap_mode or "dragonui"
-                end,
-                set = function(_, val)
-                    if addon.db and addon.db.profile and addon.db.profile.modules
-                        and addon.db.profile.modules.minimap then
-                        addon.db.profile.modules.minimap.sexymap_mode = val
-                    end
-                    StaticPopup_Show("DRAGONUI_SEXYMAP_MODE_RELOAD")
-                end,
-                order = 2,
-            },
-            mode_desc = {
-                type = 'description',
-                name = function()
-                    return "\n|cFF888888" .. L["SexyMap"] .. ":|r " .. L["Uses SexyMap for the minimap."] .. "\n" ..
-                           "|cFF888888" .. L["DragonUI"] .. ":|r " .. L["Uses DragonUI for the minimap."] .. "\n" ..
-                              "|cFF888888" .. L["Hybrid"] .. ":|r " .. L["SexyMap visuals with DragonUI editor and positioning."]
-                end,
-                order = 3
-            }
-        }
-    }
-
     StaticPopupDialogs["DRAGONUI_SEXYMAP_MODE_RELOAD"] = {
         text = "|cFF00CCFFDragonUI|r\n\n" .. L["Minimap mode changed. Reload UI to apply?"],
         button1 = ACCEPT or "Accept",
@@ -1475,13 +1419,4 @@ if sexyMapInstalled then
         hideOnEscape = true,
         preferredIndex = 3
     }
-
-    -- DragonUI_Options is LoadOnDemand — RegisterOptionsGroup may not exist yet.
-    -- Queue the table; it gets picked up when the first RegisterOptionsGroup call runs.
-    if addon.RegisterOptionsGroup then
-        addon:RegisterOptionsGroup("sexymap", sexyMapOptions)
-    else
-        addon._pendingOptionsGroups = addon._pendingOptionsGroups or {}
-        table.insert(addon._pendingOptionsGroups, { name = "sexymap", table = sexyMapOptions })
-    end
 end

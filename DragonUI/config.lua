@@ -64,12 +64,21 @@ end
 -- Config wrapper: routes access through metatables to database or static values
 addon.config = {};
 
+-- Proxies hold no data (every read hits addon.db.profile), so one per section is
+-- profile-switch safe and stops hot event paths allocating a table per access.
+local proxyCache = {};
+
 setmetatable(addon.config, {
 	__index = function(t, section)
 		if section == "assets" then
 			return static_assets;
 		end
-		
+
+		local cached = proxyCache[section];
+		if cached then
+			return cached;
+		end
+
 		-- Dynamic proxy: delegates lookups to addon.db.profile[section]
 		local proxy = {};
 		setmetatable(proxy, {
@@ -165,6 +174,7 @@ setmetatable(addon.config, {
 				return GetProfileValue(section, key);
 			end
 		});
+		proxyCache[section] = proxy;
 		return proxy;
 	end
 });

@@ -35,8 +35,6 @@ L["Vehicle debug not available"] = true
 L["KeyBinding module not available"] = true
 L["Unable to open configuration"] = true
 L["Commands: /dragonui config, /dragonui edit"] = true
-L["Reset position: %s"] = true
-L["All positions reset to defaults"] = true
 L["Editor mode enabled - Drag frames to reposition"] = true
 L["Editor mode disabled - Positions saved"] = true
 L["Minimap module restored to Blizzard defaults"] = true
@@ -50,7 +48,6 @@ L["Remaining: "] = true
 L["Rested: "] = true
 
 -- Errors
-L["Error executing pending operation:"] = true
 L["Error -- Addon 'DragonUI_Options' not found or is disabled."] = true
 
 -- ============================================================================
@@ -63,7 +60,6 @@ L["/dragonui or /dui - Open configuration"] = true
 L["/dragonui config - Open configuration"] = true
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = true
 L["/dragonui reset - Reset all positions to defaults"] = true
-L["/dragonui reset <name> - Reset specific mover"] = true
 L["/dragonui status - Show module status"] = true
 L["/dragonui kb - Toggle keybind mode"] = true
 L["/dragonui version - Show version info"] = true
@@ -82,10 +78,8 @@ L["Target Frame"] = true
 L["Focus Frame"] = true
 L["Party Frames"] = true
 L["Cooldowns"] = true
-L["Registered Movers: "] = true
 L["Editable Frames: "] = true
 L["DragonUI Version: "] = true
-L["Use /dragonui edit to enter edit mode, then right-click frames to reset."] = true
 
 -- ============================================================================
 -- EDITOR MODE
@@ -367,7 +361,6 @@ L["disabled"] = true
 L["Enabled"] = true
 L["Disabled"] = true
 L["Legacy refresh failed for"] = true
-L["RegisterMover: name and parent are required"] = true
 L["Bonus Action Button %d"] = true
 L["Stance Button %d"] = true
 L["Pet Action Button %d"] = true
@@ -413,6 +406,8 @@ L["%s uses permanent secure hooks and will fully disable after /reload."] = true
 L["%s remains active until /reload because its secure hooks cannot be removed safely."] = true
 L["Cooldown Text"] = true
 L["Cooldown text on action buttons"] = true
+L["Range Indicator"] = true
+L["Color action button icons when target is out of range or ability is unusable."] = true
 L["Cast Bar"] = true
 L["Custom player, target, and focus cast bars"] = true
 L["Multicast"] = true
@@ -524,7 +519,6 @@ L["Bags already sorted!"] = true
 L["You must be at the bank."] = true
 L["Bank already sorted!"] = true
 L["Reputation: "] = true
-L["Error in SafeCall:"] = true
 
 L["Double-Click to Copy"] = true
 L["Copy Text"] = true

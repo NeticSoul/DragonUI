@@ -4,7 +4,7 @@
 ## Version: 2.5
 ## Author: NeticSoul
 ## SavedVariables: DragonUIDB
-## OptionalDeps: Blizzard_TimeManager, Blizzard_PartyUI
+## OptionalDeps: Blizzard_TimeManager
 ## X-License: MIT for project-authored code; bundled dependencies retain their own licenses
 
 # Core libraries (always loaded)

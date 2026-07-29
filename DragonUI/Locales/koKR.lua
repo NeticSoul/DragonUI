@@ -33,8 +33,6 @@ L["Vehicle debug not available"] = "íƒˆê²ƒ ë””ë²„ê·¸ë¥¼ ì�
 L["KeyBinding module not available"] = "ë‹¨ì¶•í‚¤ ì„¤ì • ëª¨ë“ˆì„ ì‚¬ìš©í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤."
 L["Unable to open configuration"] = "ì„¤ì •ì°½ì„ ì—´ ìˆ˜ ì—†ìŠµë‹ˆë‹¤."
 L["Commands: /dragonui config, /dragonui edit"] = "ëª…ë ¹ì–´: /dragonui config, /dragonui edit"
-L["Reset position: %s"] = "ìœ„ì¹˜ ì´ˆê¸°í™”: %s"
-L["All positions reset to defaults"] = "ëª¨ë“  ìœ„ì¹˜ê°€ ê¸°ë³¸ê°’ìœ¼ë¡œ ì´ˆê¸°í™”ë˜ì—ˆìŠµë‹ˆë‹¤"
 L["Editor mode enabled - Drag frames to reposition"] = "íŽ¸ì§‘ ëª¨ë“œ í™œì„±í™” - í”„ë ˆìž„ì„ ë“œëž˜ê·¸í•˜ì—¬ ìœ„ì¹˜ ë³€ê²½"
 L["Editor mode disabled - Positions saved"] = "íŽ¸ì§‘ ëª¨ë“œ ë¹„í™œì„±í™” - ìœ„ì¹˜ê°€ ì €ìž¥ë˜ì—ˆìŠµë‹ˆë‹¤"
 L["Minimap module restored to Blizzard defaults"] = "ë¯¸ë‹ˆë§µ ëª¨ë“ˆì´ ë¸”ë¦¬ìžë“œ ê¸°ë³¸ê°’ìœ¼ë¡œ ë³µì›ë˜ì—ˆìŠµë‹ˆë‹¤"
@@ -48,7 +46,6 @@ L["Remaining: "] = "ë‚¨ìŒ: "
 L["Rested: "] = "íœ´ì‹: "
 
 -- Errors
-L["Error executing pending operation:"] = "ëŒ€ê¸° ì¤‘ì¸ ìž‘ì—… ì‹¤í–‰ ì˜¤ë¥˜:"
 L["Error -- Addon 'DragonUI_Options' not found or is disabled."] = "ì˜¤ë¥˜ -- 'DragonUI_Options' ì• ë“œì˜¨ì„ ì°¾ì„ ìˆ˜ ì—†ê±°ë‚˜ ë¹„í™œì„±í™”ë˜ì–´ ìžˆìŠµë‹ˆë‹¤."
 
 -- ============================================================================
@@ -61,7 +58,6 @@ L["/dragonui or /dui - Open configuration"] = "/dragonui ë˜ëŠ” /dui - ì
 L["/dragonui config - Open configuration"] = "/dragonui config - ì„¤ì •ì°½ ì—´ê¸°"
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = "/dragonui edit - íŽ¸ì§‘ ëª¨ë“œ ì „í™˜ (UI ìš”ì†Œ ì´ë™)"
 L["/dragonui reset - Reset all positions to defaults"] = "/dragonui reset - ëª¨ë“  ìœ„ì¹˜ë¥¼ ê¸°ë³¸ê°’ìœ¼ë¡œ ì´ˆê¸°í™”"
-L["/dragonui reset <name> - Reset specific mover"] = "/dragonui reset <ì´ë¦„> - íŠ¹ì • ìš”ì†Œì˜ ìœ„ì¹˜ ì´ˆê¸°í™”"
 L["/dragonui status - Show module status"] = "/dragonui status - ëª¨ë“ˆ ìƒíƒœ í‘œì‹œ"
 L["/dragonui kb - Toggle keybind mode"] = "/dragonui kb - ë‹¨ì¶•í‚¤ ì„¤ì • ëª¨ë“œ ì „í™˜"
 L["/dragonui version - Show version info"] = "/dragonui version - ë²„ì „ ì •ë³´ í‘œì‹œ"
@@ -80,10 +76,8 @@ L["Target Frame"] = true
 L["Focus Frame"] = true
 L["Party Frames"] = true
 L["Cooldowns"] = true
-L["Registered Movers: "] = "ë“±ë¡ëœ ì´ë™ ì§€ì : "
 L["Editable Frames: "] = "íŽ¸ì§‘ ê°€ëŠ¥í•œ í”„ë ˆìž„: "
 L["DragonUI Version: "] = "DragonUI ë²„ì „: "
-L["Use /dragonui edit to enter edit mode, then right-click frames to reset."] = "/dragonui editë¥¼ ìž…ë ¥í•˜ì—¬ íŽ¸ì§‘ ëª¨ë“œë¡œ ë“¤ì–´ê°„ ë’¤, í”„ë ˆìž„ì„ ìš°í´ë¦­í•˜ë©´ ìœ„ì¹˜ê°€ ì´ˆê¸°í™”ë©ë‹ˆë‹¤."
 
 -- ============================================================================
 -- EDITOR MODE
@@ -354,7 +348,6 @@ L["disabled"] = true
 L["Enabled"] = "í™œì„±í™”ë¨"
 L["Disabled"] = "ë¹„í™œì„±í™”ë¨"
 L["Legacy refresh failed for"] = true
-L["RegisterMover: name and parent are required"] = true
 L["Bonus Action Button %d"] = true
 L["Stance Button %d"] = true
 L["Pet Action Button %d"] = true
@@ -486,7 +479,6 @@ L["Bags already sorted!"] = "ê°€ë°©ì´ ì´ë¯¸ ì •ë ¬ë�
 L["You must be at the bank."] = "ì€í–‰ì— ìžˆì–´ì•¼ í•©ë‹ˆë‹¤."
 L["Bank already sorted!"] = "ì€í–‰ì´ ì´ë¯¸ ì •ë ¬ë˜ì–´ ìžˆìŠµë‹ˆë‹¤!"
 L["Reputation: "] = "í‰íŒ: "
-L["Error in SafeCall:"] = "SafeCall ì˜¤ë¥˜:"
 
 L["Double-Click to Copy"] = "|cff33ff11ë”ë¸” í´ë¦­|rí•˜ì—¬ ë³µì‚¬"
 L["Copy Text"] = "í…ìŠ¤íŠ¸ ë³µì‚¬"

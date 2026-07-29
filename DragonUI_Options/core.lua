@@ -59,22 +59,6 @@ StaticPopupDialogs["DRAGONUI_DELETE_PROFILE"] = {
 }
 
 -- ============================================================================
--- REGISTRATION FUNCTION (kept for backwards compatibility)
--- ============================================================================
-
--- Register an options group directly to addon.Options.args
--- Retained so any module calling this won't error, but no longer rendered
-function addon:RegisterOptionsGroup(name, optionsTable, order)
-    if not addon.Options then
-        addon.Options = { type = "group", name = "DragonUI", args = {} }
-    end
-    addon.Options.args[name] = optionsTable
-    if order then
-        addon.Options.args[name].order = order
-    end
-end
-
--- ============================================================================
 -- INITIALIZE OPTIONS (called after all option files are loaded)
 -- ============================================================================
 

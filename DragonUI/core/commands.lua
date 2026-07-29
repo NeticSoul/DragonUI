@@ -28,9 +28,6 @@ local function ToggleEditorMode()
     
     if addon.EditorMode then
         addon.EditorMode:Toggle()
-    elseif addon.MoversSystem then
-        local isActive = addon.MoversSystem.configMode
-        addon.MoversSystem:ToggleConfigMode(not isActive)
     else
         addon:Print(L["Editor mode not available."])
     end
@@ -89,16 +86,7 @@ local function ShowStatus()
         end
     end
     
-    -- Show mover count
-    if addon.MoversSystem then
-        local count = 0
-        for _ in pairs(addon.MoversSystem.created) do
-            count = count + 1
-        end
-        print(string.format("  " .. L["Registered Movers: "] .. "|cFF00FF00%d|r", count))
-    end
-    
-    -- Show editable frames count (legacy)
+    -- Show editable frames count
     if addon.EditableFrames then
         local count = 0
         for _ in pairs(addon.EditableFrames) do
@@ -163,7 +151,6 @@ local function ShowHelp()
     print("  " .. L["/dragonui config - Open configuration"])
     print("  " .. L["/dragonui edit - Toggle editor mode (move UI elements)"])
     print("  " .. L["/dragonui reset - Reset all positions to defaults"])
-    print("  " .. L["/dragonui reset <name> - Reset specific mover"])
     print("  " .. L["/dragonui status - Show module status"])
     print("  " .. L["/dragonui debug on|off|status - Toggle diagnostic logging"])
     print("  " .. L["/dragonui kb - Toggle keybind mode"])

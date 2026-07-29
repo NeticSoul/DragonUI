@@ -67,6 +67,10 @@ local function GetTotemConfig()
     return addon.db.profile.additional.totem
 end
 
+local function IsModuleEnabled()
+    return addon:IsModuleEnabled("multicast")
+end
+
 -- =============================================================================
 -- DYNAMIC ANCHOR SYSTEM
 -- Anchors totem bar based on which action bars are visible:
@@ -492,7 +496,9 @@ end
 -- UNIFIED REFRESH FUNCTION (using SCALE, not SetSize)
 -- =============================================================================
 function addon.RefreshMulticast(fullRefresh)
-    if InCombatLockdown() or UnitAffectingCombat("player") then 
+    if not IsModuleEnabled() then return end
+
+    if InCombatLockdown() or UnitAffectingCombat("player") then
         addon.CombatQueue:Add(fullRefresh and "multicast_RefreshFull" or "multicast_Refresh", function()
             addon.RefreshMulticast(fullRefresh)
         end)
@@ -512,17 +518,12 @@ function addon.RefreshMulticast(fullRefresh)
     end
 end
 
--- Full rebuild
-function addon.RefreshMulticastFull()
-    if InCombatLockdown() or UnitAffectingCombat("player") then return end
-    addon.RefreshMulticast(true)
-end
 
 -- =============================================================================
 -- APPLY SYSTEM FUNCTION
 -- =============================================================================
 local function ApplyMulticastSystem()
-    if MulticastModule.applied then return end
+    if MulticastModule.applied or not IsModuleEnabled() then return end
     
     -- Create frames
     CreateMulticastFrames()

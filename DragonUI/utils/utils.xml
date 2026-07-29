@@ -4,7 +4,6 @@
 	<Script file="atlas.lua"/>
 	<Script file="core.lua"/>
 	<Script file="events.lua"/>
-	<Script file="formatting.lua"/>
 	<Script file="nineslice.lua"/>
 
 <!--

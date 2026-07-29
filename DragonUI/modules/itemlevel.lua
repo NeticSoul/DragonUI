@@ -854,8 +854,6 @@ local function ApplyTooltipCVar()
     end
 end
 
-addon.ApplyItemLevelTooltipCVar = ApplyTooltipCVar
-
 -- ============================================================================
 -- HOOK INSTALLATION
 -- ============================================================================

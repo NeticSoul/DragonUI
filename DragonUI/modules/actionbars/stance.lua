@@ -45,7 +45,7 @@ end
 -- IMPORTANT: Keep in sync with database.lua → additional.stance
 local STANCE_DEFAULTS = {
     x_position = -211,
-    y_offset = -60,
+    y_offset = -58,
     button_size = 31,
     button_spacing = 6,
 }
@@ -195,7 +195,7 @@ local function CreateStanceFrames()
 
         local stanceCfg = addon.db.profile.additional.stance
         stanceCfg.x_position = math.floor((stanceCfg.x_position or -211) + deltaX + 0.5)
-        stanceCfg.y_offset = math.floor((stanceCfg.y_offset or -60) + deltaY + 0.5)
+        stanceCfg.y_offset = math.floor((stanceCfg.y_offset or -58) + deltaY + 0.5)
 
         stancebar_update()
 
@@ -718,37 +718,6 @@ function addon.RefreshStance()
 	if addon.VisibilityFade then
 		addon.VisibilityFade.Update("stancebar")
 	end
-end
-
--- Debug function for troubleshooting stance bar issues
-function addon.DebugStanceBar()
-    if not IsModuleEnabled() then
-        
-        return {enabled = false}
-    end
-    
-	local info = {
-		stanceBarInitialized = stanceBarInitialized,
-		moduleEnabled = IsModuleEnabled(),
-		inCombat = InCombatLockdown(),
-		unitInCombat = UnitAffectingCombat('player'),
-		anchorExists = anchor and true or false,
-		stanceBarExists = _G.pUiStanceBar and true or false,
-		numShapeshiftForms = GetNumShapeshiftForms(),
-		stanceConfig = GetStanceConfig()
-	};
-	
-	
-	for k, v in pairs(info) do
-	
-	end
-	
-	if anchor then
-		local point, relativeTo, relativePoint, x, y = anchor:GetPoint();
-	
-	end
-	
-	return info;
 end
 
 -- ============================================================================

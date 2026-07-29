@@ -136,14 +136,6 @@ local layouts =
 -- NINE SLICE UTILS
 NineSliceUtils = {}
 
-function NineSliceUtils.ApplyUniqueCornersLayout(self, textureKit)
-	NineSliceUtils.ApplyLayout(self, layouts.UniqueCornersLayout, textureKit);
-end
-
-function NineSliceUtils.ApplyIdenticalCornersLayout(self, textureKit)
-	NineSliceUtils.ApplyLayout(self, layouts.IdenticalCornersLayout, textureKit);
-end
-
 function NineSliceUtils.ApplyLayout(container, userLayout, textureKit)
 	for pieceIndex, setup in ipairs(nineSliceSetup) do
 		local pieceName = setup.pieceName
@@ -164,16 +156,8 @@ function NineSliceUtils.ApplyLayout(container, userLayout, textureKit)
 	end
 end
 
-function NineSliceUtils.ApplyLayoutByName(container, userLayoutName, textureKit)
-	return NineSliceUtils.ApplyLayout(container, NineSliceUtils.GetLayout(userLayoutName), textureKit)
-end
-
 function NineSliceUtils.GetLayout(layoutName)
 	return layouts[layoutName]
-end
-
-function NineSliceUtils.AddLayout(layoutName, layout)
-	layouts[layoutName] = layout
 end
 
 --------------------------------------------------

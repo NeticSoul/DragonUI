@@ -33,8 +33,6 @@ L["Vehicle debug not available"] = "Fahrzeug-Debug ist nicht verfügbar"
 L["KeyBinding module not available"] = "Tastenbelegungs-Modul ist nicht verfügbar"
 L["Unable to open configuration"] = "Konfiguration kann nicht geöffnet werden"
 L["Commands: /dragonui config, /dragonui edit"] = "Befehle: /dragonui config, /dragonui edit"
-L["Reset position: %s"] = "Position zurückgesetzt: %s"
-L["All positions reset to defaults"] = "Alle Positionen auf Standardwerte zurückgesetzt"
 L["Editor mode enabled - Drag frames to reposition"] = "Editormodus aktiviert - Rahmen ziehen zum Neupositionieren"
 L["Editor mode disabled - Positions saved"] = "Editormodus deaktiviert - Positionen gespeichert"
 L["Minimap module restored to Blizzard defaults"] = "Minimap-Modul auf Blizzard-Standardwerte zurückgesetzt"
@@ -48,7 +46,6 @@ L["Remaining: "] = "Verbleibend: "
 L["Rested: "] = "Ausgeruht: "
 
 -- Errors
-L["Error executing pending operation:"] = "Fehler beim Ausführen der ausstehenden Operation:"
 L["Error -- Addon 'DragonUI_Options' not found or is disabled."] = "Fehler -- Addon 'DragonUI_Options' wurde nicht gefunden oder ist deaktiviert."
 
 -- ============================================================================
@@ -61,7 +58,6 @@ L["/dragonui or /dui - Open configuration"] = "/dragonui oder /dui - Konfigurati
 L["/dragonui config - Open configuration"] = "/dragonui config - Konfiguration öffnen"
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = "/dragonui edit - Editor-Modus umschalten (UI-Elemente verschieben)"
 L["/dragonui reset - Reset all positions to defaults"] = "/dragonui reset - Alle Positionen auf Standard zurücksetzen"
-L["/dragonui reset <name> - Reset specific mover"] = "/dragonui reset <name> - Bestimmten Mover zurücksetzen"
 L["/dragonui status - Show module status"] = "/dragonui status - Modulstatus anzeigen"
 L["/dragonui kb - Toggle keybind mode"] = "/dragonui kb - Tastenbelegungsmodus umschalten"
 L["/dragonui version - Show version info"] = "/dragonui version - Versionsinfo anzeigen"
@@ -80,10 +76,8 @@ L["Target Frame"] = true
 L["Focus Frame"] = true
 L["Party Frames"] = true
 L["Cooldowns"] = true
-L["Registered Movers: "] = "Registrierte Mover: "
 L["Editable Frames: "] = "Bearbeitbare Frames: "
 L["DragonUI Version: "] = "DragonUI-Version: "
-L["Use /dragonui edit to enter edit mode, then right-click frames to reset."] = "Nutze /dragonui edit, um den Bearbeitungsmodus zu aktivieren, und klicke dann mit Rechtsklick auf Frames, um sie zurückzusetzen."
 
 -- ============================================================================
 -- EDITOR MODE
@@ -356,7 +350,6 @@ L["disabled"] = true
 L["Enabled"] = "Aktiviert"
 L["Disabled"] = "Deaktiviert"
 L["Legacy refresh failed for"] = true
-L["RegisterMover: name and parent are required"] = true
 L["Bonus Action Button %d"] = true
 L["Stance Button %d"] = true
 L["Pet Action Button %d"] = true
@@ -488,7 +481,6 @@ L["Bags already sorted!"] = "Taschen sind bereits sortiert!"
 L["You must be at the bank."] = "Du musst an der Bank sein."
 L["Bank already sorted!"] = "Bank ist bereits sortiert!"
 L["Reputation: "] = "Ruf: "
-L["Error in SafeCall:"] = "Fehler in SafeCall:"
 
 L["Copy Text"] = "Text kopieren"
 

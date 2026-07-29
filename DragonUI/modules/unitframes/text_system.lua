@@ -330,14 +330,6 @@ function TextSystem.SetupFrameTextSystem(frameType, unit, parentFrame, healthBar
         }
     end
 
-    if not healthBar then
-
-    end
-
-    if not manaBar then
-
-    end
-
     prefix = prefix or frameType:gsub("^%l", string.upper) .. "Frame"
 
     -- Store reference to returned textSystem for dynamic unit access

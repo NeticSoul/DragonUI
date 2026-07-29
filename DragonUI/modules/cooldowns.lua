@@ -26,6 +26,9 @@ end
 -- Create a table within the main addon object to hold our functions
 addon.cooldownMixin = {}
 
+-- Tenths are only drawn under 5s; above that the text changes once a second.
+local TICK_FAST, TICK_SLOW = 0.05, 0.25
+
 function addon.cooldownMixin:update_cooldown(elapsed)
     if not self:GetParent().action then
         return
@@ -34,8 +37,14 @@ function addon.cooldownMixin:update_cooldown(elapsed)
         return
     end
 
+    self.duiNextTick = (self.duiNextTick or 0) - (elapsed or 0)
+    if self.duiNextTick > 0 then
+        return
+    end
+
     local text = self.text
     local remaining = self.remain - GetTime()
+    self.duiNextTick = remaining <= 5 and TICK_FAST or TICK_SLOW
 
     if remaining > 0 then
         local db = addon.db.profile.buttons.cooldown
@@ -116,6 +125,7 @@ function addon.cooldownMixin:set_cooldown(start, duration)
 
     if moduleDb.enabled and start > 0 and duration > db.min_duration then
         self.remain = start + duration
+        self.duiNextTick = 0 -- draw on the next frame instead of waiting out the previous tick
 
         local text = self.text or addon.cooldownMixin.create_string(self)
         -- Apply user font if valid, otherwise addon.Fonts.ACTIONBAR stays from create_string
@@ -181,28 +191,6 @@ function addon.RefreshCooldowns()
     end
 end
 
--- Force update all cooldowns (useful when enabling cooldowns for the first time)
-function addon.ForceRefreshCooldowns()
-    if not addon.buttons_iterator then
-        return
-    end
-    local moduleDb = addon.db.profile.modules.cooldowns
-    local db = addon.db.profile.buttons.cooldown
-    if not moduleDb or not moduleDb.enabled or not db then
-        return
-    end
-
-    for button in addon.buttons_iterator() do
-        if button then
-            local cooldown = _G[button:GetName() .. 'Cooldown']
-            if cooldown and cooldown.GetCooldown then
-                local start, duration = cooldown:GetCooldown()
-                -- Force check even if start is 0 to ensure proper initialization
-                addon.cooldownMixin.set_cooldown(cooldown, start, duration)
-            end
-        end
-    end
-end
 
 -- Called from core.lua to ensure the hook is applied only once at the right time
 local isHooked = false

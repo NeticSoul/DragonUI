@@ -305,6 +305,13 @@ do
         { 'MOUSEWHEELUP', 'MU' },
         { 'MOUSEWHEELDOWN', 'MD' },
         { 'SPACE', 'BAR' },
+        -- ruRU spells the numpad out; KEY_NUMPAD1 above doesn't cover it.
+        { '0 (цифр. кл.)', 'N0' },
+        { '1 (цифр. кл.)', 'N1' },
+        { '2 (цифр. кл.)', 'N2' },
+        { '3 (цифр. кл.)', 'N3' },
+        { '4 (цифр. кл.)', 'N4' },
+        { '5 (цифр. кл.)', 'N5' },
     }
 
     -- returns formatted key for text.

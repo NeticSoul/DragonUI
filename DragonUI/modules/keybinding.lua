@@ -15,7 +15,7 @@ end)
 if success then
     LibKeyBound = result
 else
-    print("|cFFFF0000[DragonUI KeyBind]|r " .. L["LibKeyBound-1.0 not found or failed to load:"], result)
+    addon:Error(L["LibKeyBound-1.0 not found or failed to load:"], result)
     return
 end
 

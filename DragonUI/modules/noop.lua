@@ -200,6 +200,12 @@ NoopModule.eventFrame = initFrame
 
 -- Public API for options
 function addon.RefreshNoopSystem()
-    -- Since this requires reload, just inform the user
-    
+    if IsNoopEnabled() and not NoopModule.applied then
+        ApplyNoopChanges()
+        return
+    end
+    -- Blizzard chrome is demolished in place; only a reload can put it back.
+    if NoopModule.applied and not IsNoopEnabled() then
+        addon:Print(addon.L["Changing this setting requires a UI reload to apply correctly."])
+    end
 end

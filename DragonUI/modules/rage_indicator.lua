@@ -19,8 +19,9 @@ local RageIndicatorModule = {
 
 if addon.RegisterModule then
     addon:RegisterModule("rage_indicator", RageIndicatorModule,
-    "Range Indicator",
-    "Color action button icons when target is out of range or ability is unusable.")
+    (addon.L and addon.L["Range Indicator"]) or "Range Indicator",
+    (addon.L and addon.L["Color action button icons when target is out of range or ability is unusable."])
+        or "Color action button icons when target is out of range or ability is unusable.")
 end
 
 local updateInterval = 0.2
@@ -226,8 +227,6 @@ function addon.RestoreRageIndicatorSystem()
     SetSystemState(false)
 end
 
--- Optional alias for external callers following old naming style.
-addon.UpdateRageIndicatorState = addon.RefreshRageIndicatorSystem
 
 local function RegisterTrackedEvent(frame, event)
     frame:RegisterEvent(event)

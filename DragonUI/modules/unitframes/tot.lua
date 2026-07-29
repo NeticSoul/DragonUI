@@ -40,15 +40,8 @@ addon.TargetOfTarget = {
     RefreshToTFrame = ToTModule.Refresh,
     Reset = ToTModule.Reset,
     anchor = ToTModule.anchor,
-    ChangeToTFrame = ToTModule.Refresh,
     UpdateClassPortrait = ToTModule.UpdateClassPortrait,
 }
-
--- Legacy compatibility aliases
-addon.unitframe = addon.unitframe or {}
-addon.unitframe.ChangeToT = ToTModule.Refresh
-addon.unitframe.ReApplyToTFrame = ToTModule.Refresh
-addon.unitframe.StyleToTFrame = ToTModule.Refresh
 
 function addon:RefreshToTFrame()
     ToTModule.Refresh()

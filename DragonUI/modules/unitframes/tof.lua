@@ -40,15 +40,8 @@ addon.TargetOfFocus = {
     RefreshToFFrame = ToFModule.Refresh,
     Reset = ToFModule.Reset,
     anchor = ToFModule.anchor,
-    ChangeToFFrame = ToFModule.Refresh,
     UpdateClassPortrait = ToFModule.UpdateClassPortrait,
 }
-
--- Legacy compatibility aliases
-addon.unitframe = addon.unitframe or {}
-addon.unitframe.ChangeFocusToT = ToFModule.Refresh
-addon.unitframe.ReApplyFocusToTFrame = ToFModule.Refresh
-addon.unitframe.StyleFocusToTFrame = ToFModule.Refresh
 
 function addon:RefreshToFFrame()
     ToFModule.Refresh()

@@ -372,12 +372,3 @@ addon.package:RegisterEvents(function()
     end
 end, "PLAYER_ENTERING_WORLD")
 
--- Profile change handler
-if addon.core and addon.core.RegisterMessage then
-    addon.core.RegisterMessage(LootRollModule, "DRAGONUI_PROFILE_CHANGED", function()
-        if LootRollModule.initialized then
-            UpdateAnchorPosition()
-            AttachContainer()
-        end
-    end)
-end

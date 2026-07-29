@@ -11,7 +11,7 @@ local addon = select(2, ...)
 local L = addon.L
 
 addon.DB_SCHEMA_VERSION = 2
-addon.RELEASE_VERSION = GetAddOnMetadata("DragonUI", "Version") or "2.4.0"
+addon.RELEASE_VERSION = GetAddOnMetadata("DragonUI", "Version") or "2.5"
 
 -- ============================================================================
 -- TABLE UTILITIES
@@ -321,9 +321,6 @@ function addon.CreateUIFrame(width, height, frameName)
     return frame
 end
 
--- Global function alias for backwards compatibility
-CreateUIFrame = addon.CreateUIFrame
-
 -- Export nineslice functions for modules with custom behavior
 addon.AddNineslice = AddNineslice
 addon.SetNinesliceState = SetNinesliceState
@@ -359,9 +356,6 @@ function addon.ShowUIFrame(frame)
     end
 end
 
--- Global function alias for backwards compatibility
-ShowUIFrame = addon.ShowUIFrame
-
 -- Hide a UI frame (enable editor mode for this frame)
 function addon.HideUIFrame(frame, exclude)
     frame:SetMovable(true)
@@ -388,9 +382,6 @@ function addon.HideUIFrame(frame, exclude)
         table.insert(addon.frames[frame], target)
     end
 end
-
--- Global function alias for backwards compatibility
-HideUIFrame = addon.HideUIFrame
 
 -- ============================================================================
 -- POSITION SAVE/LOAD FUNCTIONS
@@ -453,9 +444,6 @@ function addon.SaveUIFramePosition(frame, configPath1, configPath2)
     end
 end
 
--- Global function alias for backwards compatibility
-SaveUIFramePosition = addon.SaveUIFramePosition
-
 -- Apply a saved widgets.* position to a frame (position presets / reload helpers)
 function addon.ApplyWidgetPositionFromDB(widgetKey, frame)
     if not widgetKey or not frame or not addon.db or not addon.db.profile or not addon.db.profile.widgets then
@@ -485,8 +473,6 @@ function addon.ApplyWidgetPositionFromDB(widgetKey, frame)
     frame:SetPoint(anchor, UIParent, anchor, posX, posY)
 end
 
-ApplyWidgetPositionFromDB = addon.ApplyWidgetPositionFromDB
-
 -- Apply frame position from database
 function addon.ApplyUIFramePosition(frame, configPath)
     if not frame or not configPath then
@@ -506,9 +492,6 @@ function addon.ApplyUIFramePosition(frame, configPath)
     frame:ClearAllPoints()
     frame:SetPoint(config.anchor or "CENTER", UIParent, config.anchorParent or "CENTER", config.x or 0, config.y or 0)
 end
-
--- Global function alias for backwards compatibility
-ApplyUIFramePosition = addon.ApplyUIFramePosition
 
 -- ============================================================================
 -- SETTINGS VALIDATION
@@ -536,9 +519,6 @@ function addon.CheckSettingsExists(moduleTable, configPaths)
         moduleTable:UpdateWidgets()
     end
 end
-
--- Global function alias for backwards compatibility
-CheckSettingsExists = addon.CheckSettingsExists
 
 -- ============================================================================
 -- EDITABLE FRAMES REGISTRY
@@ -1962,7 +1942,6 @@ end
 -- ============================================================================
 
 -- No-op function reusable across all modules (avoids multiple definitions)
-addon._noop = addon._noop or function() end
 
 -- Get module config from addon.db.profile.modules[moduleName]
 -- @param moduleName: string key matching database.lua modules table

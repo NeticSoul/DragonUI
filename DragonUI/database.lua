@@ -725,10 +725,6 @@ local defaults = {
                 scale = 1.0,
                 x = -27,
                 y = -14,
-                textFormat = 'numeric',
-                breakUpLargeNumbers = false,
-                showHealthTextAlways = false,
-                showManaTextAlways = false,
                 override = false,
                 anchor = 'BOTTOMRIGHT',
                 anchorParent = 'BOTTOMRIGHT',
@@ -741,10 +737,6 @@ local defaults = {
                 scale = 1.0,
                 x = -27,
                 y = -14,
-                textFormat = 'numeric',
-                breakUpLargeNumbers = false,
-                showHealthTextAlways = false,
-                showManaTextAlways = false,
                 override = false,
                 anchor = 'BOTTOMRIGHT',
                 anchorParent = 'BOTTOMRIGHT',
@@ -753,7 +745,6 @@ local defaults = {
             boss = {
                 enabled = true,
                 scale = 1.0,
-                classcolor = false,
                 override = false,
                 anchor = 'TOPRIGHT',
                 anchorParent = 'TOPRIGHT',
@@ -1047,10 +1038,10 @@ local defaults = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy
                 editbox = "bottom", -- Editbox position: "top", "bottom", or "middle"
                 tabIdleAlpha = 0, -- Tab opacity when not hovered (0 = hidden, 1 = fully visible)
-                chatStyle = "none", -- Chat frame background style: "none", "dark", "dragon", "nocturne"
+                chatStyle = "none", -- Chat frame background style: "none", "dark", "dragon", "midnight"
                 chatBgIdleAlpha = 0, -- Chat style background opacity when idle/mouse away (0 = hidden, 1 = always visible)
                 editboxIdleAlpha = 0, -- Editbox minimum opacity when idle (0 = fades with tabs, 1 = always visible)
-                editboxStyle = "dark", -- Editbox background style: "none", "dark", "dragon", "nocturne"
+                editboxStyle = "dark", -- Editbox background style: "none", "dark", "dragon", "midnight"
                 vanillaEditbox = false, -- Use the stock chat input appearance instead of the DragonUI one
             },
             bagster = {
@@ -1102,7 +1093,7 @@ addon.db = {
     global = addon.defaults and addon.defaults.global or {}
 };
 
--- Recursive table copy (preserves existing keys in target)
+-- Duplicates addon.DeepCopy on purpose: database.lua loads before core/api.lua defines it.
 local function deepCopy(source, target)
     for key, value in pairs(source) do
         if type(value) == "table" then

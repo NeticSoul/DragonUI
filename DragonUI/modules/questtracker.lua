@@ -723,7 +723,7 @@ local function InstallQuestTrackerHooks()
         end)
     end
 
-    -- Item consumed/replaced right as OnUpdate fires makes GetItemCooldown return nils, and CooldownFrame_SetTimer errors comparing nil to a number.
+    -- GetItemCooldown returns nil mid-swap; a post-hook can't stop the original erroring, so wrap it.
     if WatchFrameItem_UpdateCooldown then
         local original = WatchFrameItem_UpdateCooldown
         WatchFrameItem_UpdateCooldown = function(self)
@@ -906,9 +906,3 @@ addon.package:RegisterEvents(OnPlayerEnteringWorld, 'PLAYER_ENTERING_WORLD')
 -- Register quest log update event
 addon.package:RegisterEvents(OnQuestLogUpdate, 'QUEST_LOG_UPDATE')
 
--- Profile change handler
-if addon.core and addon.core.RegisterMessage then
-    addon.core.RegisterMessage(QuestTrackerModule, "DRAGONUI_PROFILE_CHANGED", function()
-        addon.RefreshQuestTracker()
-    end)
-end

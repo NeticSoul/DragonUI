@@ -555,6 +555,7 @@ local function ApplyTooltipSystem()
     -- Hook OnTooltipCleared to reset state
     if not TooltipModule.hooks["OnCleared"] then
         GameTooltip:HookScript("OnTooltipCleared", function(self)
+            if not IsModuleEnabled() then return end
             -- Reset border color
             self:SetBackdropBorderColor(1, 1, 1)
             -- Clear cached bar color so OnValueChanged stops overriding

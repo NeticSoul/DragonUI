@@ -12,7 +12,6 @@ libs\LibStub\LibStub.lua
 libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
 libs\AceGUI-3.0\AceGUI-3.0.xml
 libs\AceConfig-3.0\AceConfig-3.0.xml
-libs\AceDBOptions-3.0\AceDBOptions-3.0.xml
 
 # Localization for options (AceLocale-3.0 already loaded by main DragonUI addon)
 Locales\Load_Locales.xml
@@ -20,34 +19,7 @@ Locales\Load_Locales.xml
 # Core options system
 core.lua
 
-# General options (editor mode, keybind buttons)
-general.lua
-
-# Module toggles
-modules.lua
-
-# Action bars configuration
-actionbars.lua
-
-# Micro menu, bags, xp/rep bars, gryphons, additional bars
-micromenu.lua
-
-# Quest tracker
-questtracker.lua
-
-# Minimap
-minimap.lua
-
-# Cast bars
-castbars.lua
-
-# Unit frames
-unitframes.lua
-
-# Profiles
-profiles.lua
-
-# New custom panel system (AceGUI-based)
+# Custom panel system (AceGUI-based)
 panel\controls.lua
 panel\panel.lua
 panel\tab_general.lua

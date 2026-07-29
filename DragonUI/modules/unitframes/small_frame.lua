@@ -825,9 +825,6 @@ function UF.SmallFrame.Create(opts)
             if unit == opts.unitToken then
                 UpdateClassification()
             end
-
-        -- UNIT_FACTION
-        elseif event == "UNIT_FACTION" then
         end
     end
 
@@ -842,7 +839,6 @@ function UF.SmallFrame.Create(opts)
         Module.eventsFrame:RegisterEvent("CVAR_UPDATE")
     end
     Module.eventsFrame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
-    Module.eventsFrame:RegisterEvent("UNIT_FACTION")
     Module.eventsFrame:SetScript("OnEvent", OnEvent)
 
 

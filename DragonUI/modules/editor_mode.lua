@@ -352,9 +352,6 @@ function EditorMode:Show()
         addon.EnableActionBarOverlays()
     end
     
-    --  Maintain configured scales during editor mode
-    EditorMode:InstallScaleHooks()
-    
     -- Update overlay sizes after showing
     if addon.UpdateOverlaySizes then
         addon.UpdateOverlaySizes()
@@ -363,11 +360,6 @@ function EditorMode:Show()
     if addon.PositionPresets then
         addon.PositionPresets:ShowPanel()
     end
-    
-    -- Refresh AceConfig to update button state
-    self:RefreshOptionsUI()
-    
-    
 end
 
 local errorFrameInit = CreateFrame("Frame")
@@ -394,29 +386,12 @@ function EditorMode:Hide(showReloadPopup)
         addon.DisableActionBarOverlays()
     end
     
-    --  Remove scale hooks when exiting editor mode
-    EditorMode:RemoveScaleHooks()
-    
-    -- Refresh AceConfig to update button state
-    self:RefreshOptionsUI()
-    
     -- Only show reload UI popup if not coming from reset positions
     if showReloadPopup ~= false then
         StaticPopup_Show("DRAGONUI_RELOAD_UI")
     end
     
     
-end
-
-function EditorMode:RefreshOptionsUI()
-    -- Refresh AceConfig interface to update button states
-    -- Use scheduler to ensure it happens after state changes are complete
-    addon.core:ScheduleTimer(function()
-        local AceConfigRegistry = LibStub("AceConfigRegistry-3.0", true)
-        if AceConfigRegistry then
-            AceConfigRegistry:NotifyChange("DragonUI")
-        end
-    end, 0.1)
 end
 
 function EditorMode:Toggle()
@@ -437,52 +412,6 @@ SLASH_DRAGONUI_EDITOR1 = "/duiedit"
 SLASH_DRAGONUI_EDITOR2 = "/dragonedit"
 SlashCmdList["DRAGONUI_EDITOR"] = function()
     EditorMode:Toggle()
-end
-
--- Scale hooks to maintain configured scales during editor mode
-local scaleHooks = {}
-
-function EditorMode:InstallScaleHooks()
-    -- Disabled: conflicts with RetailUI pattern in mainbars.lua
-    -- Hook for MainMenuExpBar
-    --[[ 
-    if MainMenuExpBar and not scaleHooks.xpbar then
-        scaleHooks.xpbar = function()
-            if addon.db and addon.db.profile.xprepbar and addon.db.profile.xprepbar.expbar_scale then
-                MainMenuExpBar:SetScale(addon.db.profile.xprepbar.expbar_scale)
-            end
-        end
-        
-        -- Hook to events that can change the scale
-        hooksecurefunc(MainMenuExpBar, "SetScale", scaleHooks.xpbar)
-        hooksecurefunc(MainMenuExpBar, "SetPoint", scaleHooks.xpbar)
-        hooksecurefunc(MainMenuExpBar, "ClearAllPoints", scaleHooks.xpbar)
-    end
-    ]]--
-    
-    -- Disabled: conflicts with RetailUI pattern in mainbars.lua
-    -- Hook for ReputationWatchBar
-    --[[
-    if ReputationWatchBar and not scaleHooks.repbar then
-        scaleHooks.repbar = function()
-            if addon.db and addon.db.profile.xprepbar and addon.db.profile.xprepbar.repbar_scale then
-                ReputationWatchBar:SetScale(addon.db.profile.xprepbar.repbar_scale)
-            end
-        end
-        
-        -- Hook to events that can change the scale
-        hooksecurefunc(ReputationWatchBar, "SetScale", scaleHooks.repbar)
-        hooksecurefunc(ReputationWatchBar, "SetPoint", scaleHooks.repbar)
-        hooksecurefunc(ReputationWatchBar, "ClearAllPoints", scaleHooks.repbar)
-    end
-    ]]--
-end
-
-function EditorMode:RemoveScaleHooks()
-    -- Secure hooks cannot be removed directly,
-    -- so we simply mark them as removed so they don't execute
-    scaleHooks.xpbar = nil
-    scaleHooks.repbar = nil
 end
 
 function EditorMode:ShowResetConfirmation()

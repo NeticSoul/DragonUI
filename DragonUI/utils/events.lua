@@ -18,13 +18,20 @@ function addon.package:RegisterEvents(callback, ...)
 		if not self.events[event] then
 			self.events[event] = {}
 		end
+
+		-- Skip only this event: returning here would drop every remaining event in the list.
+		local duplicate = false
 		for _,module in next, self.events[event] do
 			if module == callback then
-				return -- avoid repeat functions
+				duplicate = true
+				break
 			end
 		end
-		tinsert(self.events[event], callback)
-		self.events:RegisterEvent(event)
+
+		if not duplicate then
+			tinsert(self.events[event], callback)
+			self.events:RegisterEvent(event)
+		end
 	end
 end
 

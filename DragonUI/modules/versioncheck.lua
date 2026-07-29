@@ -188,12 +188,10 @@ local function SetupEvents()
                 OnAddonMessage(...)
             elseif event == "PARTY_MEMBERS_CHANGED"
                 or event == "RAID_ROSTER_UPDATE"
+                or event == "GUILD_ROSTER_UPDATE"
             then
+                -- Large guilds fire this constantly; BroadcastVersion carries the throttle.
                 BroadcastVersion()
-            elseif event == "GUILD_ROSTER_UPDATE" then
-                if IsInGuild() then
-                    SendVersion("GUILD")
-                end
             end
         end)
     end

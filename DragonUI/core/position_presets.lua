@@ -333,7 +333,6 @@ function PositionPresets:Snapshot()
     local snapshot = {
         version = SNAPSHOT_VERSION,
         widgets = {},
-        movers = CopyTable(profile.movers or {}),
         questtracker = PickFields(profile.questtracker, QUESTTRACKER_POSITION_KEYS),
         lootroll = PickFields(profile.lootroll, LOOTROLL_POSITION_KEYS),
         castbar = {},
@@ -398,10 +397,6 @@ function PositionPresets:Restore(snapshot)
     local profile = addon.db and addon.db.profile
     if not profile then
         return false
-    end
-
-    if type(snapshot.movers) == "table" then
-        profile.movers = CopyTable(snapshot.movers)
     end
 
     if type(snapshot.questtracker) == "table" then
@@ -628,10 +623,6 @@ function PositionPresets:ApplyStoredPositions()
 
         if addon.RefreshMulticast then
             addon.RefreshMulticast(true)
-        end
-
-        if addon.MoversSystem and addon.MoversSystem.ApplyAllPositions then
-            addon.MoversSystem:ApplyAllPositions()
         end
 
         if addon.RefreshQuestTracker then
