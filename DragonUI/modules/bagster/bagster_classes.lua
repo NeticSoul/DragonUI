@@ -651,6 +651,14 @@ do
         end
     end
 
+    -- Native events registered directly on Updater (below), not through the InventoryEvents bus.
+    function FrameEvents:QUEST_ACCEPTED()
+        for f in self:GetFrames() do
+            if f:GetPlayer() == mod.playerName then f:UpdateQuestBorders() end
+        end
+    end
+    FrameEvents.UNIT_QUEST_LOG_CHANGED = FrameEvents.QUEST_ACCEPTED
+
     function FrameEvents:UpdateSlot(...)
         for f in self:GetFrames() do
             if f:GetPlayer() == mod.playerName then
@@ -879,6 +887,12 @@ do
     function ItemFrame:UpdateSlotColor(bagId)
         for _, item in pairs(self.items) do
             if item:GetBag() == bagId then item:UpdateSlotColor() end
+        end
+    end
+
+    function ItemFrame:UpdateQuestBorders()
+        for _, item in pairs(self.items) do
+            item:UpdateBorder()
         end
     end
 
