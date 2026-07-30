@@ -529,6 +529,15 @@ local function ApplyTooltipSystem()
         TooltipModule.hooks["SetUnit"] = true
     end
 
+    -- UnitFrame_UpdateTooltip recolors TextLeft1 with GameTooltip_UnitColor after SetUnit.
+    if not TooltipModule.hooks["UnitFrameTooltip"] then
+        hooksecurefunc("UnitFrame_UpdateTooltip", function(self)
+            if not IsModuleEnabled() or not self or not self.unit then return end
+            ColorTooltipName(self.unit)
+        end)
+        TooltipModule.hooks["UnitFrameTooltip"] = true
+    end
+
     -- GameObject tooltips (e.g. BG doors) never call SetUnit, so OnTooltipSetUnit never fires for them — hook the bar's own OnShow instead.
     if not TooltipModule.hooks["BarShow"] then
         GameTooltipStatusBar:HookScript("OnShow", function(self)
