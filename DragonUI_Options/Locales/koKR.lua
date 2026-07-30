@@ -1420,6 +1420,8 @@ L["White border glow on the current target nameplate."] = "현재 대상 이름�
 L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = "어그로 상태를 나타내는 색상 광채 (빨강 = 탱킹, 주황 = 잃는 중, 노랑 = 얻는 중)."
 L["Tank Mode"] = "탱크 모드"
 L["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."] = "탱커 관점으로 어그로 색상을 반전합니다: 초록색은 어그로를 유지 중, 빨간색은 잃었음을 의미합니다."
+L["DPS Mode"] = "DPS 모드"
+L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "전투 중 DPS 위협 색상: 초록=어그로 없음, 노랑=전환, 빨강=어그로 보유."
 L["Keep all nameplates fully opaque when you have a target."] = "대상이 있을 때 모든 이름표를 불투명하게 유지."
 L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "페이드 활성화 시 비대상 이름표 투명도 (0.1 - 1.0)."
 L["Show enemy cast bar on the targeted nameplate."] = "대상 이름표에 적 시전 바 표시."

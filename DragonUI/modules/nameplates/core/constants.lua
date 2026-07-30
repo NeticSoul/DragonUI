@@ -149,6 +149,10 @@ C.AGGRO_COLORS = {
     tankHolding = { 0.0, 1.0, 0.0 },
     tankWarning = { 1.0, 1.0, 0.0 },
     tankLost = { 1.0, 0.0, 0.0 },
+    -- DPS-mode (ThreatPlates-style): LOW=safe, MEDIUM=warn, HIGH=danger.
+    dpsSafe = { 0.0, 1.0, 0.0 },
+    dpsWarning = { 1.0, 1.0, 0.0 },
+    dpsDanger = { 1.0, 0.0, 0.0 },
 }
 
 C.RAID_MARK_HEALTH_COLORS = {

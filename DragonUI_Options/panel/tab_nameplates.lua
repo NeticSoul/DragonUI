@@ -1012,12 +1012,36 @@ local function BuildTargetSubTab(scroll)
         callback = RefreshNameplates,
     })
 
-    C:AddToggle(targetThreat, {
-        label = LO["Tank Mode"],
-        desc = LO["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."],
-        dbPath = DB .. ".tankMode",
-        callback = RefreshNameplates,
-    })
+    -- Tank Mode / DPS Mode are mutually exclusive — enabling one clears the other.
+    local function AddThreatRoleToggle(roleKey, otherKey, label, desc)
+        C:AddToggle(targetThreat, {
+            label = label,
+            desc = desc,
+            dbPath = DB .. "." .. roleKey,
+            callback = function()
+                local conflicted = C:GetDBValue(DB .. "." .. roleKey)
+                    and C:GetDBValue(DB .. "." .. otherKey)
+                if conflicted then
+                    C:SetDBValue(DB .. "." .. otherKey, false)
+                end
+                RefreshNameplates()
+                if conflicted and Panel.currentTab then
+                    Panel:SelectTab(Panel.currentTab)
+                end
+            end,
+        })
+    end
+
+    AddThreatRoleToggle(
+        "tankMode", "dpsMode",
+        LO["Tank Mode"],
+        LO["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."]
+    )
+    AddThreatRoleToggle(
+        "dpsMode", "tankMode",
+        LO["DPS Mode"],
+        LO["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."]
+    )
 end
 
 local function BuildBarsSubTab(scroll)

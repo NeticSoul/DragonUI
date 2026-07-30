@@ -899,6 +899,7 @@ local defaults = {
                 castBarSpellNameOffsetY = 0, -- vertical offset for the cast bar spell name text
                 threatGlow = true, -- show threat glow indicator (colored border)
                 tankMode = false, -- invert threat colors for a tank perspective (holding aggro = green)
+                dpsMode = false, -- ThreatPlates-style DPS threat colors (in combat); exclusive with tankMode
                 raidMarkHealthColor = false, -- tint health bar by raid marker, allies and enemies alike
                 tapDeniedGray = true, -- gray health bar when unit is tapped by another player/group (GUID memory)
                 showTargetHighlight = true,

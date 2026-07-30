@@ -1392,6 +1392,8 @@ L["White border glow on the current target nameplate."] = "目前目標名牌上
 L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = "指示仇恨狀態的彩色光暈 (紅 = 坦克中，橙 = 失去中，黃 = 獲取中)。"
 L["Tank Mode"] = "坦克模式"
 L["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."] = "為坦克反轉仇恨顏色：綠色表示你持有仇恨，紅色表示你已失去仇恨。"
+L["DPS Mode"] = "DPS模式"
+L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "戰鬥中依仇恨為DPS著色：綠色=無仇恨，黃色=過渡，紅色=你有仇恨。"
 L["Keep all nameplates fully opaque when you have a target."] = "有目標時保持所有名牌不透明。"
 L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "啟用淡出時非目標名牌的透明度 (0.1 - 1.0)。"
 L["Show enemy cast bar on the targeted nameplate."] = "在目標名牌上顯示敵方施法條。"

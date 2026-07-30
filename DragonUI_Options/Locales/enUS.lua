@@ -1570,6 +1570,8 @@ L["White border glow on the current target nameplate."] = true
 L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = true
 L["Tank Mode"] = true
 L["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."] = true
+L["DPS Mode"] = true
+L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = true
 L["Keep all nameplates fully opaque when you have a target."] = true
 L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "Opacity for non-target nameplates when fade is enabled (0.0 - 1.0)."
 L["Show enemy cast bar on the targeted nameplate."] = true

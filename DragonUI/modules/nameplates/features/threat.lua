@@ -76,18 +76,36 @@ function NP.threat.IsTankMode()
     return NP.config.GetCfg().tankMode == true
 end
 
--- Damage role: any aggro is warning; tank role inverts (status 3 safe, lost aggro warns).
+-- Mutually exclusive with tankMode; tank wins if both are somehow true.
+function NP.threat.IsDpsMode()
+    local cfg = NP.config.GetCfg()
+    return cfg.dpsMode == true and cfg.tankMode ~= true
+end
+
+-- Tank "lost aggro" only when the hostile is already engaged (needs unit token).
+local function ResolveTankLostColor(plateData)
+    local unit = NP.identity and NP.identity.ResolvePlateCastUnit
+        and NP.identity.ResolvePlateCastUnit(plateData)
+    if unit and UnitExists(unit) and UnitAffectingCombat(unit) then
+        return C.AGGRO_COLORS.tankLost
+    end
+    return nil
+end
+
+-- Default: any aggro warns. Tank: hold=safe / lose=warn.
+-- DPS matches ThreatPlates: LOW=green, MEDIUM=yellow, HIGH=red (no unit-token gate).
 local function ResolveAggroColor(plateData, status)
-    if status <= 0 then
-        if not NP.threat.IsTankMode() then
-            return nil
+    if NP.threat.IsDpsMode() then
+        if status >= 3 then
+            return C.AGGRO_COLORS.dpsDanger
+        elseif status >= 1 then
+            return C.AGGRO_COLORS.dpsWarning
         end
-        -- In tank mode, status 0 indicates lost aggro only when the hostile
-        -- unit is already engaged.
-        local unit = NP.identity and NP.identity.ResolvePlateCastUnit
-            and NP.identity.ResolvePlateCastUnit(plateData)
-        if unit and UnitExists(unit) and UnitAffectingCombat(unit) then
-            return C.AGGRO_COLORS.tankLost
+        return C.AGGRO_COLORS.dpsSafe
+    end
+    if status <= 0 then
+        if NP.threat.IsTankMode() then
+            return ResolveTankLostColor(plateData)
         end
         return nil
     end

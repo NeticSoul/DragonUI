@@ -1417,6 +1417,8 @@ L["White border glow on the current target nameplate."] = "Белая рамка
 L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = "Цветовое свечение угрозы (красный = танкует, оранжевый = теряет, жёлтый = набирает)."
 L["Tank Mode"] = "Режим танка"
 L["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."] = "Инвертирует цвета угрозы для танка: зелёный значит, что вы держите агро, красный — что потеряли его."
+L["DPS Mode"] = "Режим ДПС"
+L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "В бою окрашивает по угрозе для ДПС: зелёный = нет агро, жёлтый = переход, красный = у вас агро."
 L["Keep all nameplates fully opaque when you have a target."] = "Все индикаторы непрозрачны при наличии цели."
 L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "Прозрачность не-целей при затухании (0.1 - 1.0)."
 L["Show enemy cast bar on the targeted nameplate."] = "Показывать вражескую полосу каста на индикаторе цели."

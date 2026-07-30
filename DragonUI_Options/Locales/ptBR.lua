@@ -551,6 +551,8 @@ L["White border glow on the current target nameplate."] = "Borda branca na placa
 L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = "Brilho colorido indicando ameaca (vermelho = tankando, laranja = perdendo, amarelo = ganhando)."
 L["Tank Mode"] = "Modo Tanque"
 L["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."] = "Inverte as cores de ameaca para um tanque: verde significa que voce mantem o aggro, vermelho que o perdeu."
+L["DPS Mode"] = "Modo DPS"
+L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "Em combate, coloriza por ameaça para DPS: verde = sem aggro, amarelo = transição, vermelho = você tem aggro."
 L["Keep all nameplates fully opaque when you have a target."] = "Manter todas as placas opacas com um alvo."
 L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "Opacidade de nao-alvos com fade ativo (0.1 - 1.0)."
 L["Show enemy cast bar on the targeted nameplate."] = "Mostrar barra de lancamento inimiga na placa do alvo."
