@@ -811,6 +811,7 @@ L["Icon Size"] = true
 L["Size of the spell icon"] = true
 L["Modern Icon Border"] = true
 L["Modern Icon Border Desc"] = "Frame the spell icon with the DragonUI action-bar border instead of the classic ring."
+L["Modern Icon Border Debuff Desc"] = "Frame debuff icons with the DragonUI action-bar border. Crowd control tints the frame instead of drawing a separate outline."
 L["Text Mode"] = true
 L["Choose how to display spell text: Simple (centered spell name only) or Detailed (spell name + time)"] = true
 L["Simple (Centered Name Only)"] = true

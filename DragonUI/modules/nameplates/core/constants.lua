@@ -97,7 +97,7 @@ NP.const = {
     THREAT_BUDGET_BUCKETS = 4,
     -- Max nameplate token probes per engine tick.
     TOKEN_PROBE_PLATES_PER_TICK = 3,
-    -- Max BuildPlateState refreshes per tick; caps mass-refresh spikes (FruitPlates pattern).
+    -- Max BuildPlateState refreshes per tick; caps mass-refresh spikes.
     FULL_REFRESH_PLATES_PER_TICK = 8,
 }
 

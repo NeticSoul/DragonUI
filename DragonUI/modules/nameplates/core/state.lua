@@ -7,7 +7,21 @@ NP.state = NP.state or {}
 
 NP.state.GUIDToPlate = setmetatable({}, { __mode = "k" })
 NP.state.PlateAuraCache = {}
+-- Swapped for the saved table on init; the combat log needs a learned duration to render.
 NP.state.AuraDurationCache = {}
+
+function NP.state.BindPersistentAuraDurations()
+    local db = addon.db
+    if not (db and db.global) then return end
+    db.global.auraDurations = db.global.auraDurations or {}
+    local persisted = db.global.auraDurations
+    for spellId, duration in pairs(NP.state.AuraDurationCache) do
+        if not persisted[spellId] then
+            persisted[spellId] = duration
+        end
+    end
+    NP.state.AuraDurationCache = persisted
+end
 -- guid -> true|false (tap denied by another player/group); written only on live unit reads.
 NP.state.PlateTapCache = {}
 

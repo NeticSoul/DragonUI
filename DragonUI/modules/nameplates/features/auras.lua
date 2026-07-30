@@ -753,6 +753,11 @@ end
 -- Default debuff-type colors; unknown → red.
 local FALLBACK_DEBUFF_COLOR = { r = 1, g = 0, b = 0 }
 
+local function IsDebuffIconBorderEnabled(cfg)
+    if not addon.CreateIconFrameTexture then return false end
+    return not (cfg and cfg.debuffModernIconBorder == false)
+end
+
 -- CC highlight border using Blizzard debuff-type colors.
 local function ApplyPriorityHighlight(icon, aura, cfg)
     if not icon then return end
@@ -764,8 +769,22 @@ local function ApplyPriorityHighlight(icon, aura, cfg)
     end
 
     local showBorder = cfg and cfg.debuffHighlightCC and aura and aura.spellId and CCSpellList[aura.spellId]
-    if showBorder then
-        local color = (aura.debuffType and DebuffTypeColor and DebuffTypeColor[aura.debuffType]) or FALLBACK_DEBUFF_COLOR
+    local color = showBorder
+        and ((aura.debuffType and DebuffTypeColor and DebuffTypeColor[aura.debuffType]) or FALLBACK_DEBUFF_COLOR)
+        or nil
+
+    -- The frame buries priorityBorder's 1px overhang, so it carries the CC colour instead.
+    if icon.duiIconFrame and IsDebuffIconBorderEnabled(cfg) then
+        if color then
+            icon.duiIconFrame:SetVertexColor(color.r, color.g, color.b, 1)
+        else
+            icon.duiIconFrame:SetVertexColor(1, 1, 1, 1)
+        end
+        icon.priorityBorder:Hide()
+        return
+    end
+
+    if color then
         icon.priorityBorder:SetVertexColor(color.r, color.g, color.b, 1)
         icon.priorityBorder:Show()
     else
@@ -1004,7 +1023,8 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
     local showCooldown = cfg == nil or cfg.showDebuffCooldown ~= false
     local cooldownFontSize = (cfg and cfg.debuffCooldownFontSize) or 9
     local cooldownTextAnchor = (cfg and cfg.debuffCooldownTextAnchor) or "topright"
-    local spacing = 2
+    local framed = IsDebuffIconBorderEnabled(cfg)
+    local spacing = 2 + (framed and addon.GetIconFrameGap(iconSize, 2) or 0)
 
     host._debuffCooldownFontSize = cooldownFontSize
     host._debuffShowCooldown = showCooldown
@@ -1043,9 +1063,29 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
             icon.text:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 0, 0)
             icon.cooldownText = icon.textLayer:CreateFontString(nil, "OVERLAY")
             icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cooldownFontSize, "OUTLINE")
+            -- Sublayer 2 puts the frame above the swipe overlay, still under the textLayer child.
+            if addon.CreateIconFrameTexture then
+                icon.duiIconFrame = addon.CreateIconFrameTexture(icon, "OVERLAY", 2)
+            end
             host.icons[shown] = icon
         end
         icon:SetSize(iconSize, iconSize)
+        if icon.duiIconFrame then
+            if framed then
+                addon.LayoutIconFrameTexture(icon.duiIconFrame, icon, iconSize)
+                icon.duiIconFrame:Show()
+            else
+                icon.duiIconFrame:Hide()
+            end
+        end
+        if icon._duiFramedArt ~= framed then
+            icon._duiFramedArt = framed
+            if framed then
+                icon.texture:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+            else
+                icon.texture:SetTexCoord(0, 1, 0, 1)
+            end
+        end
         icon:ClearAllPoints()
         if shown == 1 then
             icon:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", 0, 0)
@@ -1254,7 +1294,7 @@ function NP.auras.ApplyPreviewGeometry(plateData, cfg)
     cfg = cfg or NP.config.GetCfg()
     local iconSize = cfg.debuffIconSize or 24
     local maxIcons = cfg.maxDebuffs or 5
-    local spacing = 2
+    local spacing = 2 + (IsDebuffIconBorderEnabled(cfg) and addon.GetIconFrameGap(iconSize, 2) or 0)
     local width = (iconSize * maxIcons) + (spacing * max(0, maxIcons - 1))
 
     overlay:ClearAllPoints()

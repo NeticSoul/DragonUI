@@ -39,6 +39,21 @@ function identity.UnitMatchesPlateHealth(unit, plateData)
     return abs((uh / um) - plateFrac) <= C.HEALTH_MATCH_TOLERANCE
 end
 
+-- Unlike current health, max health holds still; no comparable scale means no rejection.
+function identity.PlateMaxHealthConflicts(unit, plateData)
+    local hb = plateData and plateData.healthBar
+    if not hb or not hb.GetMinMaxValues then
+        return false
+    end
+    local _, maxVal = hb:GetMinMaxValues()
+    local um = unit and UnitExists(unit) and UnitHealthMax(unit)
+    -- Blizzard normalizes some plate bars to a percentage; those have nothing absolute to match.
+    if not maxVal or maxVal <= 100 or not um or um <= 100 then
+        return false
+    end
+    return abs(maxVal - um) > NP.max(1, um * 0.01)
+end
+
 function identity.UnitNameMatchesPlate(unit, plateData)
     local name = plateData.plateName
     if not name or not unit or not UnitExists(unit) then
@@ -116,11 +131,21 @@ local function PlateIsMouseoverToken(plateData)
     return plate and plate.IsMouseOver and plate:IsMouseOver() or false
 end
 
--- Alpha alone goes stale on self-target (no plate); also require a fingerprint match.
+-- Alpha goes stale on self-target; name + max health + GUID veto cover it, current health can't.
 function identity.PlatePassesUnitTokenGate(plateData, unit)
     if unit == "target" then
-        return identity.PlateHasTargetAlpha(plateData)
-            and identity.PlateMatchesUnitFingerprint(plateData, unit, true)
+        if not identity.PlateHasTargetAlpha(plateData) then
+            return false
+        end
+        if not identity.UnitNameMatchesPlate(unit, plateData) then
+            return false
+        end
+        if identity.PlateMaxHealthConflicts(unit, plateData) then
+            return false
+        end
+        local plateGuid = NP.state.GetPlateGUID(plateData)
+        local targetGuid = UnitGUID(unit)
+        return not (plateGuid and targetGuid and plateGuid ~= targetGuid)
     elseif unit == "mouseover" then
         return PlateIsMouseoverToken(plateData)
     end

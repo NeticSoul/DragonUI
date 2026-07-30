@@ -21,6 +21,13 @@ local function GetOverhang(size)
     return OVERHANG * scale
 end
 
+-- Extra pixels a row of framed icons needs so neighbouring frames stop overlapping.
+function addon.GetIconFrameGap(size, baseGap)
+    local deficit = (2 * GetOverhang(size)) - (baseGap or 0)
+    if deficit <= 0 then return 0 end
+    return math.ceil(deficit)
+end
+
 function addon.CreateIconFrameTexture(host, layer, sublayer)
     if not host or not host.CreateTexture then return nil end
     local tex = host:CreateTexture(nil, layer or "OVERLAY", nil, sublayer)

@@ -232,7 +232,7 @@ end
 
 -- Native chrome suppression
 -- Keep FontStrings on the plate (BGH/compat scan GetRegions + GetText).
--- FruitPlates-style wipe: SetWidth(0.001)+SetAlpha(0); client re-Shows on hover so we reassert.
+-- Wipe via SetWidth(0.001)+SetAlpha(0); client re-Shows on hover so we reassert.
 
 local function SuppressNativeFontString(fs, alphaOnly)
     if not fs then

@@ -13,7 +13,8 @@ local defaults = {
     global = {
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
-        questLootLearned = {} -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
+        questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
+        auraDurations = {} -- Observed debuff durations for nameplates: [spellId] = seconds
     },
     profile = {
         version = 1,
@@ -920,6 +921,7 @@ local defaults = {
                 debuffOnlyMine = false, -- only show debuffs the player applied
                 debuffFilterMode = "all", -- "all" | "whitelist" | "blacklist"
                 debuffFilterList = "", -- comma-separated spell IDs for whitelist/blacklist
+                debuffModernIconBorder = true, -- action-bar style frame around debuff icons
                 debuffHighlightCC = false, -- colored border for crowd-control/lockout debuffs (curated spell list)
                 debuffOffsetX = 0, -- horizontal offset for the debuff icon row
                 debuffOffsetY = 0, -- vertical offset for the debuff icon row

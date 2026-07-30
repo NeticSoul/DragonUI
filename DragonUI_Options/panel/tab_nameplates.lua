@@ -1722,6 +1722,14 @@ local function BuildDebuffsSubTab(scroll)
     })
 
     C:AddToggle(debuffSection, {
+        label = LO["Modern Icon Border"],
+        desc = LO["Modern Icon Border Debuff Desc"],
+        dbPath = DB .. ".debuffModernIconBorder",
+        disabled = IsDebuffsDisabled,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(debuffSection, {
         label = LO["Show Debuff Cooldown Text"],
         desc = LO["Show remaining debuff time on each debuff icon."],
         dbPath = DB .. ".showDebuffCooldown",

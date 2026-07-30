@@ -890,6 +890,7 @@ local function RunNameplatesApply()
 
     NP.module.applied = true
     NP.module.initialized = true
+    NP.state.BindPersistentAuraDurations()
     NP.widgets.RefreshAllOwnTotems()
     NP.lifecycle.ScanNameplates()
     E.QueueMass(CB.OnUpdateNameplate)
