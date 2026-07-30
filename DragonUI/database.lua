@@ -387,6 +387,9 @@ local defaults = {
 
         style = {
             gryphons = 'new',
+            gryphonScale = 1,
+            gryphonOffsetX = 0,
+            gryphonOffsetY = 0,
             xpbar = 'dragonflightui',
             exhaustion_tick = true -- Show exhaustion tick (on by default)
         },

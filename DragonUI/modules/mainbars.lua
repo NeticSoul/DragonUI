@@ -3286,16 +3286,31 @@ function addon.UpdateGryphonStyle()
 
     local faction = UnitFactionGroup('player')
 
+    local scale = db_style.gryphonScale or 1
+    local offsetX = db_style.gryphonOffsetX or 0
+    local offsetY = db_style.gryphonOffsetY or 0
+
+    -- Endcaps are Textures, not Frames: no SetScale. Resize relative to the atlas's native
+    -- size (fixed by set_atlas right before this runs) so repeated calls don't compound.
+    -- Left/right offsetX mirrors so a positive value pulls both gryphons inward symmetrically.
+    local function ApplyEndCapTransform(baseLeftX, baseLeftY, baseRightX, baseRightY)
+        MainMenuBarLeftEndCap:SetClearPoint('BOTTOMLEFT', baseLeftX + offsetX, baseLeftY + offsetY)
+        MainMenuBarRightEndCap:SetClearPoint('BOTTOMRIGHT', baseRightX - offsetX, baseRightY + offsetY)
+        local lw, lh = MainMenuBarLeftEndCap:GetWidth(), MainMenuBarLeftEndCap:GetHeight()
+        local rw, rh = MainMenuBarRightEndCap:GetWidth(), MainMenuBarRightEndCap:GetHeight()
+        MainMenuBarLeftEndCap:SetWidth(lw * scale)
+        MainMenuBarLeftEndCap:SetHeight(lh * scale)
+        MainMenuBarRightEndCap:SetWidth(rw * scale)
+        MainMenuBarRightEndCap:SetHeight(rh * scale)
+    end
+
     if db_style.gryphons == 'old' then
-        MainMenuBarLeftEndCap:SetClearPoint('BOTTOMLEFT', -85, -22)
-        MainMenuBarRightEndCap:SetClearPoint('BOTTOMRIGHT', 84, -22)
         MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-gryphon-left', true)
         MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-gryphon-right', true)
+        ApplyEndCapTransform(-85, -22, 84, -22)
         MainMenuBarLeftEndCap:Show()
         MainMenuBarRightEndCap:Show()
     elseif db_style.gryphons == 'new' then
-        MainMenuBarLeftEndCap:SetClearPoint('BOTTOMLEFT', -95, -23)
-        MainMenuBarRightEndCap:SetClearPoint('BOTTOMRIGHT', 95, -23)
         if faction == 'Alliance' then
             MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-gryphon-thick-left', true)
             MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-gryphon-thick-right', true)
@@ -3303,13 +3318,13 @@ function addon.UpdateGryphonStyle()
             MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-wyvern-thick-left', true)
             MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-wyvern-thick-right', true)
         end
+        ApplyEndCapTransform(-95, -23, 95, -23)
         MainMenuBarLeftEndCap:Show()
         MainMenuBarRightEndCap:Show()
     elseif db_style.gryphons == 'flying' then
-        MainMenuBarLeftEndCap:SetClearPoint('BOTTOMLEFT', -80, -21)
-        MainMenuBarRightEndCap:SetClearPoint('BOTTOMRIGHT', 80, -21)
         MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-gryphon-flying-left', true)
         MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-gryphon-flying-right', true)
+        ApplyEndCapTransform(-80, -21, 80, -21)
         MainMenuBarLeftEndCap:Show()
         MainMenuBarRightEndCap:Show()
     else

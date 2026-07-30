@@ -383,6 +383,37 @@ local function BuildGeneralTab(scroll)
         end,
     })
 
+    C:AddSlider(gryphons, {
+        label = LO["Gryphon Scale"],
+        dbPath = "style.gryphonScale",
+        min = 0.5, max = 2, step = 0.01,
+        width = 200,
+        callback = function()
+            if addon.RefreshMainbars then addon.RefreshMainbars() end
+        end,
+    })
+
+    C:AddSlider(gryphons, {
+        label = LO["Gryphon Offset X"],
+        desc = LO["Moves both gryphons inward or outward, mirrored left/right."],
+        dbPath = "style.gryphonOffsetX",
+        min = -200, max = 200, step = 1,
+        width = 200,
+        callback = function()
+            if addon.RefreshMainbars then addon.RefreshMainbars() end
+        end,
+    })
+
+    C:AddSlider(gryphons, {
+        label = LO["Gryphon Offset Y"],
+        dbPath = "style.gryphonOffsetY",
+        min = -200, max = 200, step = 1,
+        width = 200,
+        callback = function()
+            if addon.RefreshMainbars then addon.RefreshMainbars() end
+        end,
+    })
+
     if IsD3D9ExActive() then
         C:AddDescription(gryphons, LO["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."])
     else
