@@ -47,6 +47,7 @@ local lootNameIndex = {}   -- normalizedMobName -> questID (loot objective)
 -- Set when the active provider's DB wasn't ready during a rebuild; a ticker then retries.
 local lootProviderNotReady = false
 local lootRetryFrame
+local lootRetryActive
 -- Static quest->drop-mob map; computed once per quest per session (key for QuestHelper's costly DB).
 local staticLootCache = {}
 local lootCacheProviderId = nil
@@ -291,8 +292,12 @@ end
 
 -- Providers (QuestHelper/Questie) compile their DBs async; retry the rebuild until ready.
 local function StartLootRetry()
-    if lootRetryFrame then return end
-    lootRetryFrame = CreateFrame("Frame")
+    if lootRetryActive then return end
+    lootRetryActive = true
+    -- WoW frames are never GC'd; reuse and gate with lootRetryActive.
+    if not lootRetryFrame then
+        lootRetryFrame = CreateFrame("Frame")
+    end
     local tick, waited = 0, 0
     lootRetryFrame:SetScript("OnUpdate", function(self, e)
         tick = tick + e
@@ -300,7 +305,7 @@ local function StartLootRetry()
         waited, tick = waited + tick, 0
         if not lootProviderNotReady or waited > 60 then
             self:SetScript("OnUpdate", nil)
-            lootRetryFrame = nil
+            lootRetryActive = nil
             return
         end
         if NP.quest.OnQuestLogChanged then NP.quest.OnQuestLogChanged() end

@@ -94,7 +94,7 @@ end
 -- Alpha can go stale for a tick; veto with the GUID already refreshed this frame.
 function identity.IsTargetPlateVisual(plateData, hasTarget)
     if hasTarget == nil then
-        hasTarget = UnitExists("target") == 1
+        hasTarget = UnitExists("target") and true or false
     end
     if not hasTarget then
         return false

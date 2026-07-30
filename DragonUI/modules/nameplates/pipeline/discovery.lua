@@ -247,12 +247,15 @@ local function SuppressNativeFontString(fs, alphaOnly)
                 fs._duiOrigWidth = w
             end
         end
-        fs:SetWidth(0.001)
+        -- ReassertHotChrome hits this every frame on target/mouseover.
+        if not fs.GetWidth or fs:GetWidth() > 0.01 then
+            fs:SetWidth(0.001)
+        end
     end
-    if fs.SetAlpha then
+    if fs.SetAlpha and (not fs.GetAlpha or fs:GetAlpha() ~= 0) then
         fs:SetAlpha(0)
     end
-    if not alphaOnly then
+    if not alphaOnly and fs.IsShown and fs:IsShown() then
         fs:Hide()
     end
     if not fs._duiChromeHooked and fs.HookScript then
@@ -451,9 +454,19 @@ function NP.discovery.RestoreNativeChrome(plateData)
         plateData.ogNameText:SetText(plateData.plateName)
     end
     RestoreNativeFontString(plateData.levelText, plate)
+    if NP.widgets and NP.widgets.RestoreNativeRaidIcon then
+        NP.widgets.RestoreNativeRaidIcon(plateData)
+    end
     if showElite then
-        if plateData.eliteIcon and plateData.eliteIcon.Show then plateData.eliteIcon:Show() end
-        if plateData.bossIcon and plateData.bossIcon.Show then plateData.bossIcon:Show() end
+        -- SuppressNativePlateIcon left alpha at 0; Show alone is not enough.
+        if plateData.eliteIcon then
+            if plateData.eliteIcon.SetAlpha then plateData.eliteIcon:SetAlpha(1) end
+            if plateData.eliteIcon.Show then plateData.eliteIcon:Show() end
+        end
+        if plateData.bossIcon then
+            if plateData.bossIcon.SetAlpha then plateData.bossIcon:SetAlpha(1) end
+            if plateData.bossIcon.Show then plateData.bossIcon:Show() end
+        end
     else
         NP.native_style.HideRegion(plateData.bossIcon)
         NP.native_style.HideRegion(plateData.eliteIcon)

@@ -718,12 +718,6 @@ function NP.castbar.RegisterCastTick(plateData)
     end
 end
 
-function NP.castbar.UnregisterCastTick(plateData)
-    if plateData then
-        activeTickPlates[plateData] = nil
-    end
-end
-
 local function PlateNeedsCastTick(plateData)
     if not plateData then
         return false

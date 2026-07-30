@@ -1142,7 +1142,6 @@ function NP.layout.LayoutMinaStack(plateData)
         NP.clickbox.ApplyPlateClickbox(plateData)
     end
 
-    local cfg = NP.config.GetCfg()
     if cfg.showPartyRaidCastBars and plateData.minaPartyCast then
         NP.castbar.LayoutPartyCastBar(plateData)
     end
@@ -1216,12 +1215,6 @@ function NP.layout.LayoutCastBarStack(plateData)
 end
 
 -- Clickbox delegation
-
-function NP.layout.UpdatePlateClickArea(plateData)
-    if NP.clickbox then
-        NP.clickbox.ApplyPlateClickbox(plateData)
-    end
-end
 
 function NP.layout.FlushPendingPlateLayout()
     if InCombatLockdown() then

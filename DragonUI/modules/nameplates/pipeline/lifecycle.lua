@@ -282,13 +282,6 @@ function NP.lifecycle.OnHideNameplate(plateData, _reason)
     NP.identity.InvalidatePlate(plateData)
 end
 
-function NP.lifecycle.OnResetNameplate(plateData)
-    NP.lifecycle.OnHideNameplate(plateData, "reset")
-    if plateData and plateData.plate and plateData.plate.IsShown and plateData.plate:IsShown() then
-        NP.lifecycle.OnShowNameplate(plateData, "reset_show")
-    end
-end
-
 -- Registration and scan
 
 function NP.lifecycle.SetupPlate(plateData)

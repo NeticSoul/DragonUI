@@ -72,10 +72,6 @@ end
 E.Callbacks = E.Callbacks or {}
 local CB = E.Callbacks
 
-function CB.OnResetNameplate(plateData)
-    NP.lifecycle.OnResetNameplate(plateData)
-end
-
 function CB.OnUpdateNameplate(plateData)
     NP.gather.RefreshPlateFull(plateData, "queue_update")
 end
@@ -114,14 +110,8 @@ function CB.OnUpdatePower(plateData)
     NP.gather.RefreshPlatePower(plateData, "queue_power")
 end
 
--- Drain: reset > functions > mass-full (budgeted) > mass-partial > per-plate.
+-- Drain: functions > mass-full (budgeted) > mass-partial > per-plate.
 function E.ProcessQueues()
-    if E.massQueue[CB.OnResetNameplate] then
-        ForEachVisiblePlate(CB.OnResetNameplate)
-        E.ResetQueues()
-        return
-    end
-
     for queuedFunction in pairs(E.functionQueue) do
         E.functionQueue[queuedFunction] = nil
         queuedFunction()
@@ -365,7 +355,7 @@ local function EngineOnUpdate(_, elapsed)
     -- 0. Castbar progress on active plates.
     NP.castbar.TickAllPlateCastBars()
 
-    local hasTarget = UnitExists("target") == 1
+    local hasTarget = UnitExists("target") and true or false
 
     -- 1. Harvest native alpha, then force plate root to 1 when target exists.
     -- retailCfg hoisted out of per-plate path (was 40 GetCfg/frame).
@@ -794,6 +784,48 @@ end
 
 -- Apply / Restore / Refresh
 
+-- Re-run on every apply: RegisterEvent is idempotent, and restore unregisters the whole set.
+local function RegisterEngineEvents(f)
+    f:RegisterEvent("PLAYER_TARGET_CHANGED")
+    f:RegisterEvent("PLAYER_FOCUS_CHANGED")
+    f:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+    f:RegisterEvent("UNIT_TARGET")
+    f:RegisterEvent("UNIT_HEALTH")
+    f:RegisterEvent("UNIT_MANA")
+    f:RegisterEvent("UNIT_MAXMANA")
+    f:RegisterEvent("UNIT_AURA")
+    f:RegisterEvent("UNIT_SPELLCAST_START")
+    f:RegisterEvent("UNIT_SPELLCAST_STOP")
+    f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+    f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+    f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+    f:RegisterEvent("UNIT_SPELLCAST_FAILED")
+    f:RegisterEvent("UNIT_SPELLCAST_FAILED_QUIET")
+    f:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
+    f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
+    f:RegisterEvent("UNIT_SPELLCAST_DELAYED")
+    f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
+    f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    f:RegisterEvent("RAID_TARGET_UPDATE")
+    f:RegisterEvent("UNIT_COMBO_POINTS")
+    f:RegisterEvent("QUEST_LOG_UPDATE")
+    f:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
+    f:RegisterEvent("LOOT_OPENED")
+    f:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
+    f:RegisterEvent("PLAYER_TOTEM_UPDATE")
+    f:RegisterEvent("PLAYER_REGEN_ENABLED")
+    f:RegisterEvent("PLAYER_REGEN_DISABLED")
+    f:RegisterEvent("PLAYER_ENTERING_WORLD")
+    f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+    f:RegisterEvent("PARTY_MEMBERS_CHANGED")
+    f:RegisterEvent("RAID_ROSTER_UPDATE")
+    f:RegisterEvent("ARENA_OPPONENT_UPDATE")
+    if C_NamePlate then
+        f:RegisterEvent("NAME_PLATE_CREATED")
+        f:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+    end
+end
+
 local function RunNameplatesRefresh()
     if not NP.config.IsModuleEnabled() then
         addon:RestoreNameplatesSystem()
@@ -843,47 +875,10 @@ local function RunNameplatesApply()
 
     if not NP.module.eventFrame then
         local f = CreateFrame("Frame")
-        f:RegisterEvent("PLAYER_TARGET_CHANGED")
-        f:RegisterEvent("PLAYER_FOCUS_CHANGED")
-        f:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
-        f:RegisterEvent("UNIT_TARGET")
-        f:RegisterEvent("UNIT_HEALTH")
-        f:RegisterEvent("UNIT_MANA")
-        f:RegisterEvent("UNIT_MAXMANA")
-        f:RegisterEvent("UNIT_AURA")
-        f:RegisterEvent("UNIT_SPELLCAST_START")
-        f:RegisterEvent("UNIT_SPELLCAST_STOP")
-        f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
-        f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
-        f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
-        f:RegisterEvent("UNIT_SPELLCAST_FAILED")
-        f:RegisterEvent("UNIT_SPELLCAST_FAILED_QUIET")
-        f:RegisterEvent("UNIT_SPELLCAST_NOT_INTERRUPTIBLE")
-        f:RegisterEvent("UNIT_SPELLCAST_INTERRUPTIBLE")
-        f:RegisterEvent("UNIT_SPELLCAST_DELAYED")
-        f:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
-        f:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        f:RegisterEvent("RAID_TARGET_UPDATE")
-        f:RegisterEvent("UNIT_COMBO_POINTS")
-        f:RegisterEvent("QUEST_LOG_UPDATE")
-        f:RegisterEvent("UNIT_QUEST_LOG_CHANGED")
-        f:RegisterEvent("LOOT_OPENED")
-        f:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
-        f:RegisterEvent("PLAYER_TOTEM_UPDATE")
-        f:RegisterEvent("PLAYER_REGEN_ENABLED")
-        f:RegisterEvent("PLAYER_REGEN_DISABLED")
-        f:RegisterEvent("PLAYER_ENTERING_WORLD")
-        f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-        f:RegisterEvent("PARTY_MEMBERS_CHANGED")
-        f:RegisterEvent("RAID_ROSTER_UPDATE")
-        f:RegisterEvent("ARENA_OPPONENT_UPDATE")
-        if C_NamePlate then
-            f:RegisterEvent("NAME_PLATE_CREATED")
-            f:RegisterEvent("NAME_PLATE_UNIT_ADDED")
-        end
         f:SetScript("OnEvent", EngineOnEvent)
         NP.module.eventFrame = f
     end
+    RegisterEngineEvents(NP.module.eventFrame)
     NP.module.eventFrame:Show()
 
     if NP.clickbox and NP.clickbox.InitSecureSystem then
@@ -908,6 +903,8 @@ local function RunNameplatesRestore()
         NP.module.scannerFrame:Hide()
     end
     if NP.module.eventFrame then
+        -- Hidden frames still fire OnEvent; unregister so CLEU stops dispatching while disabled.
+        NP.module.eventFrame:UnregisterAllEvents()
         NP.module.eventFrame:Hide()
     end
     E.ResetQueues()
@@ -1033,7 +1030,8 @@ local function RunNameplatesRestore()
     NP.module.playerInCombat = nil
     NP.module._castMonitorEnabled = nil
     NP.module._castMonitorSignature = nil
-    NP.module._clickboxPreviewUntil = nil
+    NP.module._clickboxSliderAutoShow = nil
+    NP.module._clickboxSliderIdleUntil = nil
     NP.module._clickboxNativeW = nil
     NP.module._clickboxNativeH = nil
     NP.module._clickboxSecurePending = nil

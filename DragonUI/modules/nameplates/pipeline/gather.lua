@@ -12,36 +12,18 @@ NP.gather = NP.gather or {}
 function NP.gather.GatherPlateSnapshot(plateData, reason, hpValue)
     local healthBar = plateData.healthBar
     local healthCur = hpValue
-    local healthMin, healthMax
-    if healthBar and healthBar.GetMinMaxValues then
-        healthMin, healthMax = healthBar:GetMinMaxValues()
-    end
     if healthCur == nil and healthBar and healthBar.GetValue then
         healthCur = healthBar:GetValue()
     end
 
-    local nativeAlpha = plateData._nativeAlpha
-    local plate = plateData.plate
-    if nativeAlpha == nil and plate and plate.GetAlpha then
-        nativeAlpha = plate:GetAlpha()
-    end
-
     return {
-        reason = reason,
         plateName = NP.discovery.GetPlateName(plateData),
         plateGUID = NP.state.GetPlateGUID(plateData),
         healthCur = healthCur,
-        healthMin = healthMin,
-        healthMax = healthMax,
-        nativeAlpha = nativeAlpha,
         targetGUID = UnitGUID("target"),
         mouseoverGUID = UnitGUID("mouseover"),
-        targetExists = UnitExists("target") == 1,
-        mouseoverExists = UnitExists("mouseover") == 1,
-        raidIconVisible = plateData.raidIcon and plateData.raidIcon.IsShown
-            and plateData.raidIcon:IsShown() or false,
-        castVisible = plateData.castBar and plateData.castBar.IsShown
-            and plateData.castBar:IsShown() or false,
+        targetExists = UnitExists("target") and true or false,
+        mouseoverExists = UnitExists("mouseover") and true or false,
     }
 end
 
@@ -92,15 +74,8 @@ function NP.gather.ResolveContext(plateData, snapshot, reason)
         end
     end
 
-    local resolvedUnit = NP.identity.GetUnitForPlate(plateData)
-    local isTarget = NP.identity.IsTargetPlate(plateData)
     return {
-        reason = reason,
-        plateGUID = NP.state.GetPlateGUID(plateData),
-        resolvedUnit = resolvedUnit,
-        isTarget = isTarget,
-        isMouseover = NP.identity.IsMouseoverPlate(plateData),
-        classification = NP.native_style.ResolvePlateClassification(plateData, resolvedUnit),
+        resolvedUnit = NP.identity.GetUnitForPlate(plateData),
     }
 end
 
@@ -109,9 +84,7 @@ function NP.gather.ComputeVisualState(plateData, snapshot, context, reason)
     -- Headline mode hides power and cast bars (health is hidden in SyncHealth).
     local nameOnly = NP.gather.IsHeadlineActive(plateData)
     return {
-        reason = reason,
         showPower = (not nameOnly) and (npCfg.showPowerBar ~= false),
-        showDebuffs = npCfg.showDebuffs ~= false,
         showCastbar = (not nameOnly) and (npCfg.showCastBar ~= false),
         showTargetHighlight = NP.identity.IsTargetPlateVisual(plateData),
     }
@@ -1055,7 +1028,6 @@ function NP.gather.RefreshPlateAuras(plateData, hintedUnit, reason)
 end
 
 function NP.gather.RefreshPlateCastbar(plateData, reason)
-    local refreshReason = reason or "cast_update"
     -- Headline mode hides the castbar regardless of the cast event path.
     if NP.gather.IsHeadlineActive(plateData) then
         NP.castbar.HidePlateCastBar(plateData)

@@ -83,11 +83,6 @@ function DebuffRuntime.GetSpellNameIndex()
     return spellNameToIdCache
 end
 
-function DebuffRuntime.WarmSpellNameIndex()
-    StartSpellNameIndex()
-    return spellNameToIdCache
-end
-
 function DebuffRuntime.ResolveSpellIdByName(name)
     if not name or name == "" then
         return nil
@@ -101,7 +96,6 @@ end
 
 -- Shared with options panel.
 NP.auras.GetSpellNameIndex = DebuffRuntime.GetSpellNameIndex
-NP.auras.WarmSpellNameIndex = DebuffRuntime.WarmSpellNameIndex
 
 local function NormalizeAuraName(name)
     if not name or name == "" then
@@ -272,9 +266,13 @@ function NP.auras.WipeDRState(guid)
     end
 end
 
+-- Scratch reused each tick; consumer must read before the next wipe.
+local expiredGUIDsScratch = {}
+
 function NP.auras.CleanExpiredAuras()
     local now = GetTime()
-    local expiredGUIDs = {}
+    local expiredGUIDs = expiredGUIDsScratch
+    wipe(expiredGUIDs)
     for guid, auras in pairs(NP.state.PlateAuraCache) do
         local changed = false
         for auraKey, data in pairs(auras) do
@@ -631,7 +629,6 @@ local function ApplyCooldownTextAnchor(icon, anchor)
 end
 
 -- Forward declarations for swipe helpers; hoisted so pollers resolve style once per sweep.
-local UpdateSwipeProgress
 local UpdateSwipeProgressStyled
 local GetSwipeStyle
 
@@ -972,10 +969,6 @@ function UpdateSwipeProgressStyled(icon, remaining, style)
     local progress = 1 - (remaining / icon._swipeDuration)
     if progress < 0 then progress = 0 elseif progress > 1 then progress = 1 end
     style.update(icon, progress)
-end
-
-function UpdateSwipeProgress(icon, remaining, cfg)
-    UpdateSwipeProgressStyled(icon, remaining, GetSwipeStyle(cfg))
 end
 
 local function HideSwipeCooldown(icon)

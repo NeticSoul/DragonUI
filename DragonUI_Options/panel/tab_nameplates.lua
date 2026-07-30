@@ -543,11 +543,29 @@ local function BuildLayoutSubTab(scroll)
 
     local clickboxSection = C:AddSection(scroll, LO["Clickbox"])
 
+    local CLICKBOX_AUTO_SHOW_IDLE = 3
+    local showClickboxToggle
+
+    local function RefreshShowClickboxWidget(value)
+        local panel = addon.OptionsPanel
+        if not (panel and panel.IsOpen and panel:IsOpen()) then return end
+        if showClickboxToggle and showClickboxToggle.SetValue then
+            showClickboxToggle:SetValue(value and true or false)
+        end
+    end
+
     local function OnClickboxSliderChanged()
         RefreshNameplates()
-        if addon.Nameplates and addon.Nameplates.clickbox then
-            addon.Nameplates.clickbox.EnablePreview(10)
+        local NP = addon.Nameplates
+        if not (NP and NP.clickbox and NP.module) then return end
+        if not C:GetDBValue(DB .. ".showClickbox") then
+            C:SetDBValue(DB .. ".showClickbox", true)
+            -- Flags the Show as ours, so only an auto-enable is auto-disabled when the sliders go idle.
+            NP.module._clickboxSliderAutoShow = true
+            RefreshShowClickboxWidget(true)
         end
+        NP.module._clickboxSliderIdleUntil = GetTime() + CLICKBOX_AUTO_SHOW_IDLE
+        NP.clickbox.RefreshAllOverlays()
     end
 
     C:AddSlider(clickboxSection, {
@@ -577,18 +595,25 @@ local function BuildLayoutSubTab(scroll)
         callback = OnClickboxSliderChanged,
     })
 
-    C:AddToggle(clickboxSection, {
+    showClickboxToggle = C:AddToggle(clickboxSection, {
         label = LO["Show Clickbox"],
         desc = LO["Displays the box selection space (clickbox) of nameplates."],
         dbPath = DB .. ".showClickbox",
         callback = function()
-            if addon.Nameplates and addon.Nameplates.clickbox then
-                addon.Nameplates.module._clickboxPreviewUntil = nil
-                addon.Nameplates.clickbox.RefreshAll()
-                addon.Nameplates.clickbox.RefreshAllOverlays()
+            local NP = addon.Nameplates
+            if NP and NP.clickbox and NP.module then
+                -- Toggling by hand takes ownership of the setting; drop any pending auto-off.
+                NP.module._clickboxSliderAutoShow = nil
+                NP.module._clickboxSliderIdleUntil = nil
+                NP.clickbox.RefreshAll()
+                NP.clickbox.RefreshAllOverlays()
             end
         end,
     })
+
+    if addon.Nameplates and addon.Nameplates.module then
+        addon.Nameplates.module._clickboxToggleRefresh = RefreshShowClickboxWidget
+    end
 end
 
 local function BuildHealthSubTab(scroll)

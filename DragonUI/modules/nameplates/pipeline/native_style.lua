@@ -1,7 +1,6 @@
 local addon = select(2, ...)
 local NP = addon.Nameplates
 local C = NP.const
-local abs = NP.abs
 
 -- Nameplates native_style: classification, bar color, helpers.
 

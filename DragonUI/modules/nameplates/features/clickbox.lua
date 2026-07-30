@@ -5,8 +5,6 @@ local NP = addon.Nameplates
 
 NP.clickbox = NP.clickbox or {}
 
-local PREVIEW_SECONDS = 10
-
 local function ApplyClickboxForCombatPlate(plateData)
     -- Never enumerate or resize arbitrary protected WorldFrame children from a
     -- secure snippet. Keep the current clickbox stable during combat and apply
@@ -50,11 +48,10 @@ function NP.clickbox.CaptureBaseSize(plateData)
     end
     local plate = plateData.plate
     if not plate or not plate.GetSize then
-        plateData._clickboxBaseW = 120
-        plateData._clickboxBaseH = 20
         return
     end
     local w, h = plate:GetSize()
+    -- Once only: post-Apply GetSize() already includes the clickbox factor.
     if w and w > 0 and h and h > 0 then
         plateData._clickboxBaseW = w
         plateData._clickboxBaseH = h
@@ -64,9 +61,6 @@ function NP.clickbox.CaptureBaseSize(plateData)
         if not NP.module._clickboxNativeH then
             NP.module._clickboxNativeH = h
         end
-    else
-        plateData._clickboxBaseW = 120
-        plateData._clickboxBaseH = 20
     end
 end
 
@@ -109,15 +103,6 @@ function NP.clickbox.GetClickboxSize(plateData)
     return w, h
 end
 
-function NP.clickbox.GetSecureClickboxSize()
-    local cfg = NP.config.GetCfg()
-    local wFactor = cfg.clickboxWidthFactor or 1
-    local hFactor = cfg.clickboxHeightFactor or 1
-    local baseW = NP.module._clickboxNativeW or 120
-    local baseH = NP.module._clickboxNativeH or 20
-    return baseW * wFactor, baseH * hFactor
-end
-
 function NP.clickbox.UpdateSecureAttributes()
     if InCombatLockdown() then
         NP.module._clickboxSecurePending = true
@@ -127,12 +112,7 @@ function NP.clickbox.UpdateSecureAttributes()
 end
 
 function NP.clickbox.ShouldShowOverlay()
-    local cfg = NP.config.GetCfg()
-    if cfg.showClickbox == true then
-        return true
-    end
-    local untilTime = NP.module._clickboxPreviewUntil
-    return untilTime and GetTime() < untilTime or false
+    return NP.config.GetCfg().showClickbox == true
 end
 
 function NP.clickbox.EnsureOverlay(plateData)
@@ -170,11 +150,6 @@ function NP.clickbox.SyncOverlay(plateData)
     end
 end
 
-function NP.clickbox.EnablePreview(seconds)
-    NP.module._clickboxPreviewUntil = GetTime() + (seconds or PREVIEW_SECONDS)
-    NP.clickbox.RefreshAllOverlays()
-end
-
 function NP.clickbox.RefreshAllOverlays()
     for _, plateData in pairs(NP.module.plates) do
         NP.clickbox.SyncOverlay(plateData)
@@ -182,15 +157,20 @@ function NP.clickbox.RefreshAllOverlays()
 end
 
 function NP.clickbox.TickPreview()
-    if not NP.module._clickboxPreviewUntil then
+    local idleUntil = NP.module._clickboxSliderIdleUntil
+    if not idleUntil or GetTime() < idleUntil then
         return
     end
-    if GetTime() >= NP.module._clickboxPreviewUntil then
-        NP.module._clickboxPreviewUntil = nil
-        if not NP.config.GetCfg().showClickbox then
-            NP.clickbox.RefreshAllOverlays()
+    NP.module._clickboxSliderIdleUntil = nil
+    -- Only a Show the sliders switched on may be switched back off; a user-owned Show stays.
+    if NP.module._clickboxSliderAutoShow then
+        NP.module._clickboxSliderAutoShow = nil
+        NP.config.GetCfg().showClickbox = false
+        if NP.module._clickboxToggleRefresh then
+            NP.module._clickboxToggleRefresh(false)
         end
     end
+    NP.clickbox.RefreshAllOverlays()
 end
 
 function NP.clickbox.ApplyPlateClickbox(plateData)
@@ -267,8 +247,8 @@ function NP.clickbox.RestorePlate(plateData)
     if not plate or InCombatLockdown() then
         return false
     end
-    local width = plateData._clickboxBaseW or NP.module._clickboxNativeW
-    local height = plateData._clickboxBaseH or NP.module._clickboxNativeH
+    local width = NP.module._clickboxNativeW or plateData._clickboxBaseW
+    local height = NP.module._clickboxNativeH or plateData._clickboxBaseH
     if width and height and plate.SetSize then
         plate:SetSize(width, height)
     end
@@ -282,8 +262,6 @@ function NP.clickbox.ResetPlate(plateData)
     if not plateData then
         return
     end
-    plateData._clickboxBaseW = nil
-    plateData._clickboxBaseH = nil
     plateData._clickAreaPending = nil
     if plateData.clickboxOverlay then
         plateData.clickboxOverlay:Hide()

@@ -9,6 +9,47 @@ local function IsComboVisible(plateData)
     return host and host.IsShown and host:IsShown() or false
 end
 
+-- On the region, not plateData: plateData is rebuilt on re-apply.
+local function RememberNativeRaidIconAnchor(native)
+    if native._duiOrigPoints then
+        return
+    end
+    local points = {}
+    for i = 1, (native.GetNumPoints and native:GetNumPoints()) or 0 do
+        points[i] = { native:GetPoint(i) }
+    end
+    native._duiOrigPoints = points
+    native._duiOrigParent = native.GetParent and native:GetParent() or nil
+    local w, h = native:GetWidth(), native:GetHeight()
+    if w and w > 0.01 and h and h > 0.01 then
+        native._duiOrigW, native._duiOrigH = w, h
+    end
+end
+
+-- Undo ReflowTopOverlays reparent/alpha; Blizzard chrome has no other restore path.
+function NP.widgets.RestoreNativeRaidIcon(plateData)
+    local native = plateData and plateData.raidIcon
+    if not native then
+        return
+    end
+    if native._duiOrigParent and native.SetParent then
+        native:SetParent(native._duiOrigParent)
+    end
+    local points = native._duiOrigPoints
+    if points and #points > 0 then
+        native:ClearAllPoints()
+        for i = 1, #points do
+            native:SetPoint(unpack(points[i], 1, 5))
+        end
+    end
+    if native._duiOrigW and native._duiOrigH then
+        native:SetSize(native._duiOrigW, native._duiOrigH)
+    end
+    if native.SetAlpha then
+        native:SetAlpha(1)
+    end
+end
+
 function NP.widgets.ReflowTopOverlays(plateData)
     if not plateData then return end
 
@@ -34,6 +75,7 @@ function NP.widgets.ReflowTopOverlays(plateData)
         -- since it inherits its parent's visibility — keep it on visualRoot
         -- instead, which is never hidden, while still anchoring to hp's position.
         local headline = NP.gather.IsHeadlineActive and NP.gather.IsHeadlineActive(plateData)
+        RememberNativeRaidIconAnchor(native)
         if native.SetParent then
             native:SetParent((headline and plateData.visualRoot) or hp)
         end
@@ -75,20 +117,13 @@ function NP.widgets.SyncRaidMarker(plateData)
         if native.SetAlpha then native:SetAlpha(0) end
         return
     end
-    NP.widgets.ReflowTopOverlays(plateData)
-    local shown = native.IsShown and native:IsShown()
-    if not shown then
-        if NP.widgets.LayoutRaidMarker(plateData) and native.SetAlpha then
-            native:SetAlpha(0)
-        end
-        return
+    -- Layout already reflowed via widgets.Sync; alpha/Show only here.
+    if native.IsShown and native:IsShown() then
+        if native.SetAlpha then native:SetAlpha(1) end
+        native:Show()
+    elseif native.SetAlpha then
+        native:SetAlpha(0)
     end
-    if not NP.widgets.LayoutRaidMarker(plateData) then
-        if native.SetAlpha then native:SetAlpha(0) end
-        return
-    end
-    if native.SetAlpha then native:SetAlpha(1) end
-    native:Show()
 end
 
 NP.widgets.Register("RaidMarker", {
