@@ -748,3 +748,11 @@ L["Loot"] = "Saque"
 L["Mail"] = "Correio"
 L["Auction House"] = "Casa de Leilões"
 
+
+-- Alt Gold
+L["Alt Gold"] = "Ouro de outros personagens"
+L["Enable Alt Gold"] = "Ativar ouro de outros personagens"
+L["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] = "Passe o mouse sobre as moedas nas bolsas para listar o ouro de cada personagem que entrou com o DragonUI."
+L["Show a tooltip with your other characters' gold when hovering the money in bags."] = "Mostra uma dica com o ouro dos seus outros personagens ao passar o mouse sobre o dinheiro nas bolsas."
+L["Show All Realms"] = "Mostrar todos os reinos"
+L["List characters from every realm instead of only the realm you are playing on."] = "Lista personagens de todos os reinos em vez de apenas o reino atual."

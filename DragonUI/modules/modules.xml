@@ -72,6 +72,9 @@
     <!-- Bag Sort module (sort buttons for bags and bank) -->
     <Script file="bagsort.lua"/>
 
+    <!-- Alt Gold module (other characters' money on the bag coin tooltip) -->
+    <Script file="altmoney.lua"/>
+
     <!-- Version Check module (cross-player version broadcast) -->
     <Script file="versioncheck.lua"/>
 </Ui>

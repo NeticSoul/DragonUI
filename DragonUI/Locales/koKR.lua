@@ -496,3 +496,11 @@ L['Pointer mode (just "!")'] = '포인터 모드 ("!"만)'
 L["Use Questie"] = "Questie 사용"
 L["Applying quest icon settings needs a UI reload."] = "퀘스트 아이콘 설정을 적용하려면 UI를 다시 불러와야 합니다."
 L["Reload"] = "다시 불러오기"
+
+-- Alt Gold
+L["Alt Gold"] = "다른 캐릭터 골드"
+L["Show the gold of your other characters when hovering the money in your bags"] = "가방의 소지금에 마우스를 올리면 다른 캐릭터의 골드를 표시합니다"
+L["Character Gold"] = "캐릭터 골드"
+L["No other characters recorded yet"] = "아직 기록된 다른 캐릭터가 없습니다"
+L["(current)"] = "(현재)"
+L["Total"] = "합계"

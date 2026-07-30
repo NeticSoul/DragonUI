@@ -1539,3 +1539,11 @@ L["Auto"] = "Automático"
 L["Icons With Questie"] = "Iconos con Questie"
 L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Quién dibuja los iconos de misión en las placas cuando Questie está cargado con sus propios iconos activos. DragonUI desactiva los de Questie (requiere recarga); Questie oculta los de DragonUI."
 L["Ask"] = "Preguntar"
+
+-- Alt Gold
+L["Alt Gold"] = "Oro de otros personajes"
+L["Enable Alt Gold"] = "Activar oro de otros personajes"
+L["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] = "Pasa el mouse sobre las monedas de las bolsas para ver el oro de cada personaje que haya iniciado sesión con DragonUI."
+L["Show a tooltip with your other characters' gold when hovering the money in bags."] = "Muestra un tooltip con el oro de tus otros personajes al pasar el mouse sobre el dinero de las bolsas."
+L["Show All Realms"] = "Mostrar todos los reinos"
+L["List characters from every realm instead of only the realm you are playing on."] = "Lista los personajes de todos los reinos en vez de solo el reino en el que juegas."

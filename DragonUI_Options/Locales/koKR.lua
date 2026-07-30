@@ -1549,3 +1549,11 @@ L["Auto"] = "자동"
 L["Icons With Questie"] = "Questie와 아이콘"
 L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Questie가 자체 이름표 아이콘을 켠 채 로드되었을 때 누가 이름표에 퀘스트 아이콘을 그릴지 결정합니다. DragonUI는 Questie의 아이콘을 끄고(재시작 필요), Questie는 DragonUI의 아이콘을 숨깁니다."
 L["Ask"] = "묻기"
+
+-- Alt Gold
+L["Alt Gold"] = "다른 캐릭터 골드"
+L["Enable Alt Gold"] = "다른 캐릭터 골드 활성화"
+L["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] = "가방의 동전에 마우스를 올리면 DragonUI로 접속한 모든 캐릭터의 골드가 표시됩니다."
+L["Show a tooltip with your other characters' gold when hovering the money in bags."] = "가방의 소지금에 마우스를 올리면 다른 캐릭터의 골드를 툴팁으로 표시합니다."
+L["Show All Realms"] = "모든 서버 표시"
+L["List characters from every realm instead of only the realm you are playing on."] = "현재 서버뿐 아니라 모든 서버의 캐릭터를 표시합니다."

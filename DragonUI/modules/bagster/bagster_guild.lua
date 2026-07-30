@@ -421,6 +421,7 @@ do
         f.moneyFrame = mod.MoneyFrame:New(f)
         f.moneyFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, 8)
         f.moneyFrame.GetMoneyValue = function() return GetGuildBankMoney() end
+        f.moneyFrame.isGuildFunds = true
         f.moneyFrame:UnregisterEvent("PLAYER_MONEY")
         f.moneyFrame:RegisterEvent("GUILDBANK_UPDATE_MONEY")
         f.moneyFrame:RegisterEvent("GUILDBANK_UPDATE_WITHDRAWMONEY")

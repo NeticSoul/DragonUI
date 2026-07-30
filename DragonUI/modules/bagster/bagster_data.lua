@@ -505,7 +505,7 @@ do
         if player == mod.playerName then
             return GetMoney()
         end
-        return 0
+        return (addon.GetCharacterMoney and addon.GetCharacterMoney(player)) or 0
     end
 end
 

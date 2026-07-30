@@ -419,6 +419,14 @@ L["Item Usability"] = true
 L["Tint Unusable Items"] = true
 L["Color icons red for gear and usable items your character cannot equip or use (wrong armor type, level, class, etc.)."] = true
 
+-- Alt Gold
+L["Alt Gold"] = true
+L["Enable Alt Gold"] = true
+L["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] = true
+L["Show a tooltip with your other characters' gold when hovering the money in bags."] = true
+L["Show All Realms"] = true
+L["List characters from every realm instead of only the realm you are playing on."] = true
+
 -- Bag Sort
 L["Bag Sort"] = true
 L["Enable Bag Sort"] = true

@@ -1549,3 +1549,11 @@ L["Auto"] = "Auto"
 L["Icons With Questie"] = "Symbole mit Questie"
 L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Wer die Questsymbole auf Plaketten zeichnet, wenn Questie mit eigenen Plakettensymbolen geladen ist. DragonUI deaktiviert die von Questie (Neuladen nötig); Questie blendet die von DragonUI aus."
 L["Ask"] = "Fragen"
+
+-- Alt Gold
+L["Alt Gold"] = "Twink-Gold"
+L["Enable Alt Gold"] = "Twink-Gold aktivieren"
+L["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] = "Fahre über die Münzen in deinen Taschen, um das Gold aller Charaktere zu sehen, die sich mit DragonUI angemeldet haben."
+L["Show a tooltip with your other characters' gold when hovering the money in bags."] = "Zeigt beim Überfahren des Geldes in den Taschen einen Tooltip mit dem Gold deiner anderen Charaktere."
+L["Show All Realms"] = "Alle Realms anzeigen"
+L["List characters from every realm instead of only the realm you are playing on."] = "Listet Charaktere von allen Realms auf statt nur vom aktuellen Realm."

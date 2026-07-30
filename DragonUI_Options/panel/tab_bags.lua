@@ -115,6 +115,22 @@ local function GetBagSortConfig(create)
     return modules.bagsort
 end
 
+local function GetAltMoneyConfig(create)
+    if not addon.db or not addon.db.profile then return nil end
+    if create and not addon.db.profile.modules then
+        addon.db.profile.modules = {}
+    end
+
+    local modules = addon.db.profile.modules
+    if not modules then return nil end
+
+    if create and not modules.altmoney then
+        modules.altmoney = {}
+    end
+
+    return modules.altmoney
+end
+
 local function HasSetInDB(setName)
     local db = GetBagsterDB()
     if not db or not db.inventory or not db.inventory.sets then return false end
@@ -469,6 +485,44 @@ local function BuildBagsTab(scroll)
         end,
         disabled = function()
             local cfg = GetBagSortConfig(false)
+            return not (cfg and cfg.enabled)
+        end,
+    })
+
+    -- ====================================================================
+    -- ALT GOLD
+    -- ====================================================================
+    local altMoneySection = C:AddSection(scroll, LO["Alt Gold"] or "Alt Gold")
+    C:AddDescription(altMoneySection, LO["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] or "Hover the coins in your bags to list the gold of every character that has logged in with DragonUI.")
+
+    C:AddToggle(altMoneySection, {
+        label = LO["Enable Alt Gold"] or "Enable Alt Gold",
+        desc = LO["Show a tooltip with your other characters' gold when hovering the money in bags."] or "Show a tooltip with your other characters' gold when hovering the money in bags.",
+        getFunc = function()
+            local cfg = GetAltMoneyConfig(false)
+            return cfg and cfg.enabled
+        end,
+        setFunc = function(val)
+            local cfg = GetAltMoneyConfig(true)
+            if cfg then cfg.enabled = val end
+            -- Hooks are installed lazily, so a first-time enable needs Apply to reach the stock bag frames.
+            if val and addon.ApplyAltMoneySystem then addon.ApplyAltMoneySystem() end
+        end,
+    })
+
+    C:AddToggle(altMoneySection, {
+        label = LO["Show All Realms"] or "Show All Realms",
+        desc = LO["List characters from every realm instead of only the realm you are playing on."] or "List characters from every realm instead of only the realm you are playing on.",
+        getFunc = function()
+            local cfg = GetAltMoneyConfig(false)
+            return cfg and cfg.show_all_realms
+        end,
+        setFunc = function(val)
+            local cfg = GetAltMoneyConfig(true)
+            if cfg then cfg.show_all_realms = val end
+        end,
+        disabled = function()
+            local cfg = GetAltMoneyConfig(false)
             return not (cfg and cfg.enabled)
         end,
     })

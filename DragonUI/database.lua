@@ -12,6 +12,7 @@ local _arialn = addon.Fonts and addon.Fonts.ARIALN or "Fonts\\ARIALN.TTF"
 local defaults = {
     global = {
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
+        characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
         questLootLearned = {} -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
     },
     profile = {
@@ -1070,6 +1071,10 @@ local defaults = {
                 lock_hotkey = "ALT_LEFT", -- Modifier + mouse button used to lock or unlock a slot
                 lock_color = { 0.15, 0.80, 1.00, 0.95 }, -- Tint applied to the locked-slot padlock icon
                 reverse_stack = false, -- Stack items from the end so new loot appears at the top
+            },
+            altmoney = {
+                enabled = true, -- Other characters' gold on the bag money tooltip
+                show_all_realms = true, -- Include characters from other realms in the list
             },
             unitframe_layers = {
                 enabled = false, -- Heal prediction, absorb shields, animated health loss overlays on unit frames

@@ -1501,6 +1501,10 @@ do
         f.btnText:SetScript("OnClick", OnCoinClick)
         f.btnText:Hide()
 
+        if addon.RegisterAltMoneyFrame then
+            addon.RegisterAltMoneyFrame(f)
+        end
+
         moneyId = moneyId + 1
         f:Update()
         return f

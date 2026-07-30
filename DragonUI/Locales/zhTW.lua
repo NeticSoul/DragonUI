@@ -148,3 +148,11 @@ L["Item Level"] = "物品等級"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "在背包、角色面板、銀行等介面的裝備圖示上顯示物品等級"
 L["Item Level: %d"] = "物品等級：%d"
 
+
+-- Alt Gold
+L["Alt Gold"] = "其他角色金幣"
+L["Show the gold of your other characters when hovering the money in your bags"] = "將滑鼠移到揹包金錢上時顯示其他角色的金幣"
+L["Character Gold"] = "角色金幣"
+L["No other characters recorded yet"] = "尚未記錄其他角色"
+L["(current)"] = "(當前)"
+L["Total"] = "總計"

@@ -527,3 +527,11 @@ L['Pointer mode (just "!")'] = '指针模式（仅"!"）'
 L["Use Questie"] = "使用 Questie"
 L["Applying quest icon settings needs a UI reload."] = "应用任务图标设置需要重载界面。"
 L["Reload"] = "重载"
+
+-- Alt Gold
+L["Alt Gold"] = "其他角色金币"
+L["Show the gold of your other characters when hovering the money in your bags"] = "将鼠标悬停在背包金钱上时显示其他角色的金币"
+L["Character Gold"] = "角色金币"
+L["No other characters recorded yet"] = "尚未记录其他角色"
+L["(current)"] = "(当前)"
+L["Total"] = "总计"

@@ -497,3 +497,11 @@ L['Pointer mode (just "!")'] = 'Zeigermodus (nur "!")'
 L["Use Questie"] = "Questie verwenden"
 L["Applying quest icon settings needs a UI reload."] = "Das Anwenden der Questsymbol-Einstellungen erfordert ein Neuladen der Oberfläche."
 L["Reload"] = "Neu laden"
+
+-- Alt Gold
+L["Alt Gold"] = "Twink-Gold"
+L["Show the gold of your other characters when hovering the money in your bags"] = "Zeigt das Gold deiner anderen Charaktere, wenn du über das Geld in deinen Taschen fährst"
+L["Character Gold"] = "Gold der Charaktere"
+L["No other characters recorded yet"] = "Noch keine weiteren Charaktere erfasst"
+L["(current)"] = "(aktuell)"
+L["Total"] = "Gesamt"

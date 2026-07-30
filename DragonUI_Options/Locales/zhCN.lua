@@ -1546,3 +1546,11 @@ L["Loot"] = "拾取"
 L["Mail"] = "邮件"
 L["Auction House"] = "拍卖行"
 
+
+-- Alt Gold
+L["Alt Gold"] = "其他角色金币"
+L["Enable Alt Gold"] = "启用其他角色金币"
+L["Hover the coins in your bags to list the gold of every character that has logged in with DragonUI."] = "将鼠标悬停在背包的金币上，即可列出所有使用 DragonUI 登录过的角色的金币。"
+L["Show a tooltip with your other characters' gold when hovering the money in bags."] = "将鼠标悬停在背包金钱上时，显示包含其他角色金币的提示。"
+L["Show All Realms"] = "显示所有服务器"
+L["List characters from every realm instead of only the realm you are playing on."] = "列出所有服务器的角色，而不仅是当前服务器。"

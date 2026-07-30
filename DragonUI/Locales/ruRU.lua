@@ -497,3 +497,11 @@ L['Pointer mode (just "!")'] = 'Режим указателя (только «!�
 L["Use Questie"] = "Использовать Questie"
 L["Applying quest icon settings needs a UI reload."] = "Для применения настроек значков заданий нужна перезагрузка интерфейса."
 L["Reload"] = "Перезагрузить"
+
+-- Alt Gold
+L["Alt Gold"] = "Золото других персонажей"
+L["Show the gold of your other characters when hovering the money in your bags"] = "Показывает золото других ваших персонажей при наведении на деньги в сумках"
+L["Character Gold"] = "Золото персонажей"
+L["No other characters recorded yet"] = "Другие персонажи ещё не записаны"
+L["(current)"] = "(текущий)"
+L["Total"] = "Всего"

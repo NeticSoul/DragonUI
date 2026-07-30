@@ -152,3 +152,11 @@ L["Item Level"] = "Nível de Item"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "Mostrar o nível de item nos ícones de equipamento em bolsas, painel do personagem, banco e mais"
 L["Item Level: %d"] = "Nível de item: %d"
 
+
+-- Alt Gold
+L["Alt Gold"] = "Ouro de outros personagens"
+L["Show the gold of your other characters when hovering the money in your bags"] = "Mostra o ouro dos seus outros personagens ao passar o mouse sobre o dinheiro nas bolsas"
+L["Character Gold"] = "Ouro dos personagens"
+L["No other characters recorded yet"] = "Nenhum outro personagem registrado ainda"
+L["(current)"] = "(atual)"
+L["Total"] = "Total"
