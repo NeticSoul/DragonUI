@@ -75,20 +75,44 @@ local function AddCastbarControls(parent, dbPrefix, refreshFunc, opts)
         callback = refreshFunc,
     })
 
+    local iconDependents = {}
+    local function IsIconHidden()
+        return not C:GetDBValue(dbPrefix .. ".showIcon")
+    end
+    -- Sibling disabled states are evaluated once at build, so toggling Show Icon has to push them.
+    local function RefreshIconControlStates()
+        local hidden = IsIconHidden()
+        for i = 1, #iconDependents do
+            local widget = iconDependents[i]
+            if widget and widget.SetDisabled then
+                widget:SetDisabled(hidden)
+            end
+        end
+    end
+
     C:AddToggle(parent, {
         label = LO["Show Icon"],
         dbPath = dbPrefix .. ".showIcon",
-        callback = refreshFunc,
+        callback = function()
+            RefreshIconControlStates()
+            refreshFunc()
+        end,
     })
 
-    C:AddSlider(parent, {
+    iconDependents[#iconDependents + 1] = C:AddSlider(parent, {
         label = LO["Icon Size"],
         dbPath = dbPrefix .. ".sizeIcon",
         min = 1, max = 64, step = 1,
         width = 200,
-        disabled = function()
-            return not C:GetDBValue(dbPrefix .. ".showIcon")
-        end,
+        disabled = IsIconHidden,
+        callback = refreshFunc,
+    })
+
+    iconDependents[#iconDependents + 1] = C:AddToggle(parent, {
+        label = LO["Modern Icon Border"],
+        desc = LO["Modern Icon Border Desc"],
+        dbPath = dbPrefix .. ".modernIconBorder",
+        disabled = IsIconHidden,
         callback = refreshFunc,
     })
 

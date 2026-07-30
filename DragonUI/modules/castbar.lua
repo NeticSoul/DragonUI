@@ -136,6 +136,23 @@ local function IsEnabled(unitType)
     return cfg and cfg.enabled
 end
 
+local function UsesModernIconBorder(cfg)
+    return addon.CreateIconFrameTexture ~= nil and not (cfg and cfg.modernIconBorder == false)
+end
+
+local function SetIconBordersShown(frames, shown, cfg)
+    local icon = frames.icon
+    if not icon then return end
+
+    local modern = shown and UsesModernIconBorder(cfg)
+    if icon.Border then
+        if shown and not modern then icon.Border:Show() else icon.Border:Hide() end
+    end
+    if icon.ModernBorder then
+        if modern then icon.ModernBorder:Show() else icon.ModernBorder:Hide() end
+    end
+end
+
 local function GetCastbarWidgetKey(unitType)
     if unitType == "target" then
         return "targetCastbar"
@@ -1126,6 +1143,10 @@ local function CreateCastbar(unitType)
     iconBorder:SetVertexColor(0.8, 0.8, 0.8, 1)
     iconBorder:Hide()
     frames.icon.Border = iconBorder
+
+    if addon.CreateIconFrameTexture then
+        frames.icon.ModernBorder = addon.CreateIconFrameTexture(frames.castbar, 'OVERLAY')
+    end
     
     -- Shield (for target/focus only — player casts are always interruptible in 3.3.5a)
     if unitType ~= "player" then
@@ -1357,16 +1378,12 @@ function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
     if frames.icon and cfg and cfg.showIcon then
         frames.icon:SetTexture(GetSpellIcon(spell, icon))
         frames.icon:Show()
-        if frames.icon.Border then
-            frames.icon.Border:Show()
-        end
+        SetIconBordersShown(frames, true, cfg)
     else
         if frames.icon then
             frames.icon:Hide()
         end
-        if frames.icon and frames.icon.Border then
-            frames.icon.Border:Hide()
-        end
+        SetIconBordersShown(frames, false, cfg)
         -- Hide shield when icon is hidden (shield anchors to icon)
         if frames.shield then
             frames.shield:Hide()
@@ -1887,7 +1904,12 @@ function CastbarModule:RefreshCastbar(unitType)
             frames.icon.Border:SetPoint('CENTER', frames.icon, 'CENTER', 0, 0)
             frames.icon.Border:SetSize(iconSize * 1.7, iconSize * 1.7)
         end
-        
+
+        if frames.icon.ModernBorder then
+            addon.LayoutIconFrameTexture(frames.icon.ModernBorder, frames.icon, iconSize)
+        end
+        SetIconBordersShown(frames, frames.icon:IsShown() and cfg.showIcon, cfg)
+
         if frames.shield then
             if unitType == "player" then
                 frames.shield:ClearAllPoints()

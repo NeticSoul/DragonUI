@@ -740,7 +740,7 @@ L["Bag Bar"] = true
 
 L["Bars that appear based on your class and situation."] = true
 L["Specialized bars that appear when needed (stance/pet/vehicle/totems)"] = true
-L["Auto-show bars: Stance (Warriors/Druids/DKs) • Pet (Hunters/Warlocks/DKs) • Vehicle (All classes) • Totem (Shamans)"] = true
+L["Auto-show bars: Stance (Warriors/Druids/DKs) \226\128\162 Pet (Hunters/Warlocks/DKs) \226\128\162 Vehicle (All classes) \226\128\162 Totem (Shamans)"] = true
 
 -- Common settings
 L["Common Settings"] = true
@@ -809,6 +809,8 @@ L["Show Spell Icon"] = true
 L["Show the spell icon next to the target castbar"] = true
 L["Icon Size"] = true
 L["Size of the spell icon"] = true
+L["Modern Icon Border"] = true
+L["Modern Icon Border Desc"] = "Frame the spell icon with the DragonUI action-bar border instead of the classic ring."
 L["Text Mode"] = true
 L["Choose how to display spell text: Simple (centered spell name only) or Detailed (spell name + time)"] = true
 L["Simple (Centered Name Only)"] = true
@@ -869,7 +871,7 @@ L["Opacity of the latency indicator."] = true
 -- ============================================================================
 
 L["Enhancements"] = true
-L["Visual enhancements that add Dragonflight-style polish to the UI. These are optional — disable any you don't want."] = true
+L["Visual enhancements that add Dragonflight-style polish to the UI. These are optional \226\128\148 disable any you don't want."] = true
 
 -- (Dark Mode, Range Indicator, Item Quality, Tooltips defined above in MODULES section)
 
@@ -1144,14 +1146,14 @@ L["Vertical position (only active if Override is checked)"] = true
 -- Target of Target
 L["Target of Target"] = true
 L["Follows the Target frame by default. Move it in Editor Mode (/dragonui edit) to detach and position freely."] = true
-L["Detached — positioned freely via Editor Mode"] = true
-L["Attached — follows Target frame"] = true
+L["Detached \226\128\148 positioned freely via Editor Mode"] = true
+L["Attached \226\128\148 follows Target frame"] = true
 L["Re-attach to Target"] = true
 
 -- Target of Focus
 L["Target of Focus"] = true
 L["Follows the Focus frame by default. Move it in Editor Mode (/dragonui edit) to detach and position freely."] = true
-L["Attached — follows Focus frame"] = true
+L["Attached \226\128\148 follows Focus frame"] = true
 L["Re-attach to Focus"] = true
 
 -- Party Frames
@@ -1564,7 +1566,7 @@ L["Fine-tune the elite/rare icon's vertical position."] = true
 L["Name & Level"] = true
 L["Target & Threat"] = true
 L["Icons & Markers"] = true
-L["Power Bar — Players Only"] = true
+L["Power Bar \226\128\148 Players Only"] = true
 L["Always show the unit level next to the name."] = true
 L["White border glow on the current target nameplate."] = true
 L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = true

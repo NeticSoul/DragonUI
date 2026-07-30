@@ -362,6 +362,29 @@ end
 -- UNIT FRAME BORDERS: darken ONLY the border/background textures,
 -- never the portrait or health/mana bar fill.
 -- -----------------------------------------------------------------------
+-- Party pet art lives two anonymous frames deep (PartyFrameTemplates.xml), so GetRegions() never reaches it.
+local function DarkenNestedPartyArt(frame, tint, depth)
+    if not frame or (depth or 0) > 3 then return end
+
+    if frame.GetRegions then
+        for _, region in ipairs({ frame:GetRegions() }) do
+            if region and region.GetObjectType and region:GetObjectType() == "Texture" then
+                local path = region.GetTexture and region:GetTexture()
+                -- Anchored match keeps the -Flash highlight variant out.
+                if type(path) == "string" and path:upper():find("UI%-PARTYFRAME$") then
+                    DarkenTexture(region, tint)
+                end
+            end
+        end
+    end
+
+    if frame.GetChildren then
+        for _, child in ipairs({ frame:GetChildren() }) do
+            DarkenNestedPartyArt(child, tint, (depth or 0) + 1)
+        end
+    end
+end
+
 local function DarkenUnitFrameBorders(tint)
     local nameBgTint = GetTargetFocusNameBackgroundTint(tint)
 
@@ -506,7 +529,9 @@ local function DarkenUnitFrameBorders(tint)
         if frame and frame.DragonUI_BorderFrame and frame.DragonUI_BorderFrame.texture then
             DarkenTexture(frame.DragonUI_BorderFrame.texture, tint)
         end
-        DarkenFrameBorderTextures(_G["PartyMemberFrame" .. i .. "PetFrame"])
+        local petFrame = _G["PartyMemberFrame" .. i .. "PetFrame"]
+        DarkenFrameBorderTextures(petFrame)
+        DarkenNestedPartyArt(petFrame, tint, 0)
     end
 end
 
@@ -775,6 +800,12 @@ local function DarkenCastbarBorders(tint)
                 end
             end
         end
+        -- Same art as the action button NormalTexture, so it takes the same tint to stay in step.
+        local spellIcon = _G[name .. "Icon"]
+        if spellIcon and spellIcon.ModernBorder then
+            DarkenTexture(spellIcon.ModernBorder, tint)
+        end
+
         -- Darken the text background frame border
         local textBG = _G[name .. "TextBG"]
         if textBG and textBG.GetRegions then
@@ -887,6 +918,10 @@ local function ApplyDarkMode(forceAuraSync)
     DarkModeModule.applied = true
     SyncAuraBorderColorFromDarkMode(GetAuraBorderTintValues(), forceAuraSync == true)
 
+    if addon.RefreshNameplateCastIconChrome then
+        addon.RefreshNameplateCastIconChrome()
+    end
+
     -- Delayed re-darken for XP/Rep borders: mainbars creates DragonflightUI bars
     -- and restyles RetailUI textures at various times. A second pass at 0.5s
     -- guarantees we catch borders regardless of init ordering.
@@ -931,6 +966,10 @@ RestoreDarkMode = function(resetAuraBorders)
     DarkModeModule.applied = false
     if resetAuraBorders then
         SyncAuraBorderColorFromDarkMode(nil, true)
+    end
+
+    if addon.RefreshNameplateCastIconChrome then
+        addon.RefreshNameplateCastIconChrome()
     end
 
     if addon.RefreshActionBarVisibility then
@@ -1407,6 +1446,12 @@ addon.RefreshDarkModeUnitFrames = function()
     if not DarkModeModule.applied then return end
     local ufTint = GetUFTintValues()
     DarkenUnitFrameBorders(ufTint)
+end
+
+-- Plates recycle constantly, so their chrome pulls the tint on demand instead of being swept.
+addon.GetDarkModeTint = function()
+    if not IsModuleEnabled() or not DarkModeModule.applied then return nil end
+    return GetTintValues()
 end
 
 -- Re-darken castbar borders (called from castbar.lua after lazy castbar creation)

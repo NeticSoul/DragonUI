@@ -444,6 +444,59 @@ function NP.castbar.GetCastSpellIconSize(notInterruptible)
     return base
 end
 
+local function IsCastIconBorderEnabled()
+    if not addon.CreateIconFrameTexture then return false end
+    local cfg = NP.config.GetCfg()
+    return not (cfg and cfg.castBarModernIconBorder == false)
+end
+
+-- Chrome is a sibling texture, so it needs the icon's own Show/Hide mirrored onto it.
+function NP.castbar.SyncCastIconFrame(icon, bar, iconSize)
+    if not icon then return end
+
+    local tex = icon.duiIconFrame
+    if not tex then
+        if not bar or not IsCastIconBorderEnabled() then return end
+        tex = addon.CreateIconFrameTexture(bar, "OVERLAY")
+        if not tex then return end
+        icon.duiIconFrame = tex
+        hooksecurefunc(icon, "Show", function(self) NP.castbar.SyncCastIconFrame(self) end)
+        hooksecurefunc(icon, "Hide", function(self)
+            if self.duiIconFrame then self.duiIconFrame:Hide() end
+        end)
+    end
+
+    if icon:IsShown() and IsCastIconBorderEnabled() then
+        addon.LayoutIconFrameTexture(tex, icon, iconSize)
+        local tint = addon.GetDarkModeTint and addon.GetDarkModeTint()
+        if tint then
+            tex:SetVertexColor(tint[1], tint[2], tint[3], 1)
+        else
+            tex:SetVertexColor(1, 1, 1, 1)
+        end
+        tex:Show()
+    else
+        tex:Hide()
+    end
+end
+
+local function ResyncBarIconChrome(bar)
+    if not bar then return end
+    local icon = bar.minaCastIcon or bar.minaIcon
+    if icon and icon.duiIconFrame then
+        NP.castbar.SyncCastIconFrame(icon, bar)
+    end
+end
+
+-- Dark mode toggles mid-cast, so live plates need the new tint without waiting for the next layout.
+function addon.RefreshNameplateCastIconChrome()
+    if not NP.module or not NP.module.plates then return end
+    for _, plateData in pairs(NP.module.plates) do
+        ResyncBarIconChrome(plateData.minaCast)
+        ResyncBarIconChrome(plateData.minaPartyCast)
+    end
+end
+
 function NP.castbar.LayoutCastSpellIcon(icon, bar, notInterruptible)
     if not icon or not bar then return 14 end
     local iconSize = NP.castbar.GetCastSpellIconSize(notInterruptible)
@@ -455,6 +508,7 @@ function NP.castbar.LayoutCastSpellIcon(icon, bar, notInterruptible)
     icon:ClearAllPoints()
     icon:SetSize(iconSize, iconSize)
     icon:SetPoint("RIGHT", bar, "LEFT", anchorX, anchorY)
+    NP.castbar.SyncCastIconFrame(icon, bar, iconSize)
     return iconSize
 end
 

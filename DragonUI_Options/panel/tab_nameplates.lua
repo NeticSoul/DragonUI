@@ -1147,6 +1147,14 @@ local function BuildBarsSubTab(scroll)
     })
 
     C:AddToggle(castSection, {
+        label = LO["Modern Icon Border"],
+        desc = LO["Modern Icon Border Desc"],
+        dbPath = DB .. ".castBarModernIconBorder",
+        disabled = IsCastBarDisabled,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(castSection, {
         label = LO["Show Party/Raid Cast Bars"],
         desc = LO["Also show cast bars on party and raid allies, even when you are not targeting them."],
         dbPath = DB .. ".showPartyRaidCastBars",
