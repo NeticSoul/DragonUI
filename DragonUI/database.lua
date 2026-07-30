@@ -517,7 +517,7 @@ local defaults = {
             visibility_logic = "and",
         },
 
-        --  BUFFS SETTINGS (NEW)
+        --  BUFFS SETTINGS 
         buffs = {
             enabled = true,
             show_toggle_button = true,
@@ -527,8 +527,8 @@ local defaults = {
             debuff_horizontal_gap = 0,
             buff_scale = 1,
             debuff_scale = 1,
-            buffs_per_row = 16,
-            debuffs_per_row = 16,
+            buffs_per_row = 12,
+            debuffs_per_row = 12,
             max_buff_rows = 0,
             max_debuff_rows = 0,
             buff_vertical_gap = 15,
