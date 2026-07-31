@@ -136,7 +136,7 @@ function DebuffRuntime.WipeAuraCache(guid)
     end
 end
 
-function DebuffRuntime.AddCachedAura(guid, spellId, expiration, count, casterGUID, texture, debuffType, spellName)
+function DebuffRuntime.AddCachedAura(guid, spellId, expiration, count, casterGUID, texture, debuffType, spellName, duration, isBuff)
     if not guid then return end
     spellId = tonumber(spellId)
     if not spellId then return end
@@ -151,6 +151,8 @@ function DebuffRuntime.AddCachedAura(guid, spellId, expiration, count, casterGUI
         casterGUID = casterGUID,
         texture = texture,
         debuffType = debuffType,
+        duration = duration,
+        isBuff = isBuff,
     }
 end
 
@@ -162,24 +164,65 @@ function DebuffRuntime.RemoveCachedAura(guid, spellId, casterGUID)
     end
 end
 
--- Learned duration (EMA); ignore DR-shortened observations below 95% of learned base.
+-- Learned duration (EMA); DR-shortened and PvP-capped readings must never become a baseline.
 
 local AURA_DURATION_EMA_ALPHA = 0.35
+-- A DR-halved observation lands on exactly 0.5x, so anything shorter than this is not a baseline.
+local MIN_LEARNABLE_RATIO = 0.6
 
-function DebuffRuntime.LearnAuraDuration(spellId, observedDuration)
+local AuraDurations = addon.AuraDurations
+
+local function ApplyLearnedDuration(store, spellId, observedDuration)
+    local existing = store[spellId]
+    if not existing then
+        store[spellId] = observedDuration
+    elseif observedDuration >= existing * 0.95 then
+        store[spellId] = existing + AURA_DURATION_EMA_ALPHA * (observedDuration - existing)
+    end
+end
+
+local function IsDiminishedNow(spellId, destGUID)
+    local category = destGUID and DebuffRuntime.GetDRCategory(spellId)
+    return category ~= nil and DebuffRuntime.GetDRFactor(destGUID, category, GetTime()) < 1
+end
+
+function DebuffRuntime.LearnAuraDuration(spellId, observedDuration, casterGUID, destGUID, destIsPlayer)
     if not spellId or not observedDuration or observedDuration <= 0 then
         return
     end
-    local existing = NP.state.AuraDurationCache[spellId]
-    if not existing then
-        NP.state.AuraDurationCache[spellId] = observedDuration
+    if IsDiminishedNow(spellId, destGUID) then
         return
     end
-    if observedDuration >= existing * 0.95 then
-        NP.state.AuraDurationCache[spellId] = existing + AURA_DURATION_EMA_ALPHA * (observedDuration - existing)
-    elseif observedDuration > existing then
-        NP.state.AuraDurationCache[spellId] = observedDuration
+    if casterGUID then
+        local perCaster = NP.state.AuraDurationByCaster[casterGUID]
+        if not perCaster then
+            perCaster = {}
+            NP.state.AuraDurationByCaster[casterGUID] = perCaster
+        end
+        ApplyLearnedDuration(perCaster, spellId, observedDuration)
     end
+    -- PvP caps make durations on players legitimately short; they must not reach the saved table.
+    if destIsPlayer then
+        return
+    end
+    local static = AuraDurations and AuraDurations.Duration[spellId]
+    if static and observedDuration < static * MIN_LEARNABLE_RATIO then
+        return
+    end
+    ApplyLearnedDuration(NP.state.AuraDurationCache, spellId, observedDuration)
+end
+
+-- The caster's own observation wins: the global average blurs when several casters are specced differently.
+local function GetBaseAuraDuration(spellId, casterGUID)
+    if not spellId then return nil end
+    local perCaster = casterGUID and NP.state.AuraDurationByCaster[casterGUID]
+    local learned = (perCaster and perCaster[spellId]) or NP.state.AuraDurationCache[spellId]
+    if learned then return learned end
+    return AuraDurations and AuraDurations.Duration[spellId]
+end
+
+local function GetStaticDebuffType(spellId)
+    return (spellId and AuraDurations) and AuraDurations.DebuffType[spellId] or nil
 end
 
 -- DR duration estimate for CLEU-only path (unit APIs already return DR-reduced duration).
@@ -292,17 +335,33 @@ function NP.auras.CleanExpiredAuras()
 end
 
 -- Prune caches on combat end / zone change.
+local pruneLiveNames = {}
+local pruneLiveGUIDs = {}
+
 function NP.auras.PruneCaches()
-    for name in pairs(NP.state.AuraGUIDByName) do
-        NP.state.AuraGUIDByName[name] = nil
+    -- An ally outside the group is reachable only by name, so a visible plate keeps its mapping.
+    wipe(pruneLiveNames)
+    wipe(pruneLiveGUIDs)
+    for _, plateData in pairs(NP.module.plates or {}) do
+        local plate = plateData and plateData.plate
+        if plateData.plateName and plate and plate.IsShown and plate:IsShown() then
+            pruneLiveNames[plateData.plateName] = true
+        end
+    end
+    for name, guid in pairs(NP.state.AuraGUIDByName) do
+        if pruneLiveNames[name] then
+            pruneLiveGUIDs[guid] = true
+        else
+            NP.state.AuraGUIDByName[name] = nil
+        end
     end
     for icon in pairs(NP.state.AuraGUIDByRaidIcon) do
         NP.state.AuraGUIDByRaidIcon[icon] = nil
     end
     for guid in pairs(NP.state.PlateAuraCache) do
         local plateData = NP.state.GUIDToPlate[guid]
-        local live = plateData and plateData.plate and plateData.plate.IsShown
-            and plateData.plate:IsShown()
+        local live = (plateData and plateData.plate and plateData.plate.IsShown
+            and plateData.plate:IsShown()) or pruneLiveGUIDs[guid]
         if not live then
             NP.state.PlateAuraCache[guid] = nil
         end
@@ -315,16 +374,30 @@ function NP.auras.PruneCaches()
             NP.auras.WipeDRState(guid)
         end
     end
+    -- Only the player and the group cast the same spell often enough to be worth keeping.
+    local playerGUID = UnitGUID("player")
+    for guid in pairs(NP.state.AuraDurationByCaster) do
+        if guid ~= playerGUID and not (NP.identity and NP.identity.GroupGUIDToUnit[guid]) then
+            NP.state.AuraDurationByCaster[guid] = nil
+        end
+    end
 end
 
 -- Spell filter list parsing (cached by raw string).
 
-local parsedFilterListCache = { raw = nil, set = nil }
+-- Keyed by raw string: debuff, buff and friendly lists are consulted in the same pass.
+local parsedFilterListCache = {}
+local parsedFilterListCount = 0
 
 local function GetParsedFilterSet(rawList)
     rawList = rawList or ""
-    if parsedFilterListCache.raw == rawList then
-        return parsedFilterListCache.set
+    local cached = parsedFilterListCache[rawList]
+    if cached then
+        return cached
+    end
+    if parsedFilterListCount > 8 then
+        wipe(parsedFilterListCache)
+        parsedFilterListCount = 0
     end
     local ids = {}
     local names = {}
@@ -340,8 +413,8 @@ local function GetParsedFilterSet(rawList)
         end
     end
     local set = { ids = ids, names = names }
-    parsedFilterListCache.raw = rawList
-    parsedFilterListCache.set = set
+    parsedFilterListCache[rawList] = set
+    parsedFilterListCount = parsedFilterListCount + 1
     return set
 end
 
@@ -365,90 +438,179 @@ local function AuraMatchesFilterSet(data, filterSet)
     return false
 end
 
-function DebuffRuntime.PassesFilters(cfg, data)
+-- Mechanics do not flag these (Ice Block carries none), so this hand-kept list seeds defensiveBuffList.
+local DEFENSIVE_BUFFS = {
+    [642] = true, -- Divine Shield
+    [1022] = true, [5599] = true, [10278] = true, -- Hand of Protection
+    [498] = true, [5573] = true, -- Divine Protection
+    [45438] = true, -- Ice Block
+    [48707] = true, -- Anti-Magic Shell
+    [48792] = true, -- Icebound Fortitude
+    [31224] = true, -- Cloak of Shadows
+    [5277] = true, -- Evasion
+    [19263] = true, -- Deterrence
+    [23920] = true, -- Spell Reflection
+    [871] = true, -- Shield Wall
+    [12975] = true, -- Last Stand
+    [22812] = true, -- Barkskin
+    [61336] = true, -- Survival Instincts
+    [33206] = true, -- Pain Suppression
+    [47585] = true, -- Dispersion
+    [46924] = true, -- Bladestorm
+    [8178] = true, -- Grounding Totem Effect
+    [51690] = true, -- Killing Spree
+    [1719] = true, -- Recklessness
+    [12292] = true, -- Death Wish
+}
+
+-- User lists win over the built-ins so the options panel can show exactly what counts as what.
+local function IsDefensiveBuff(spellId, cfg)
+    if not spellId then return false end
+    local raw = cfg and cfg.defensiveBuffList
+    if raw and raw ~= "" then
+        return GetParsedFilterSet(raw).ids[spellId] == true
+    end
+    return DEFENSIVE_BUFFS[spellId] == true
+end
+
+-- Crowd control comes from the client's own SpellMechanic ids: every rank and every mob spell.
+local function IsCrowdControl(spellId, cfg)
+    if not spellId then return false end
+    if AuraDurations and AuraDurations.CrowdControl[spellId] then return true end
+    local raw = cfg and cfg.ccExtraList
+    return raw ~= nil and raw ~= "" and GetParsedFilterSet(raw).ids[spellId] == true
+end
+
+-- Sort ranks only. Icon size is a separate, explicit choice: see IsHighlightedAura.
+local AURA_RANK = {
+    OWN_CC = 1,
+    OTHER_CC = 2,
+    DEFENSIVE = 3,
+    OWN_DEBUFF = 4,
+    PURGEABLE = 5,
+    OTHER_DEBUFF = 6,
+}
+NP.auras.AURA_RANK = AURA_RANK
+
+function DebuffRuntime.GetAuraRank(data, playerGUID, cfg)
+    if not data then return AURA_RANK.OTHER_DEBUFF end
+    local mine = data.casterGUID ~= nil and data.casterGUID == playerGUID
+    if data.isBuff then
+        if IsDefensiveBuff(data.spellId, cfg) then
+            return AURA_RANK.DEFENSIVE
+        end
+        return AURA_RANK.PURGEABLE
+    end
+    if IsCrowdControl(data.spellId, cfg) then
+        return mine and AURA_RANK.OWN_CC or AURA_RANK.OTHER_CC
+    end
+    return mine and AURA_RANK.OWN_DEBUFF or AURA_RANK.OTHER_DEBUFF
+end
+
+-- Which auras draw larger. Explicit, not derived from the rank: the player can see and change it.
+function DebuffRuntime.IsHighlightedAura(data, cfg)
+    if not data or not cfg then return false end
+    local mode = cfg.auraHighlightMode or "cc"
+    if mode == "none" then return false end
+    if (mode == "cc" or mode == "ccAndList") and IsCrowdControl(data.spellId, cfg) then
+        return true
+    end
+    if mode == "list" or mode == "ccAndList" then
+        local raw = cfg.auraHighlightList
+        return raw ~= nil and raw ~= "" and AuraMatchesFilterSet(data, GetParsedFilterSet(raw))
+    end
+    return false
+end
+
+function DebuffRuntime.GetAuraSizeScale(data, cfg)
+    if DebuffRuntime.IsHighlightedAura(data, cfg) then
+        return tonumber(cfg.auraHighlightScale) or 1.35
+    end
+    return 1
+end
+
+local function PassesListFilter(mode, rawList, data)
+    if mode ~= "whitelist" and mode ~= "blacklist" then
+        return true
+    end
+    local inSet = AuraMatchesFilterSet(data, GetParsedFilterSet(rawList))
+    if mode == "whitelist" then return inSet end
+    return not inSet
+end
+
+-- Pre-filter: a raid's worth of ally auras must not reach the cache only to be dropped on draw.
+function DebuffRuntime.IsAllyAuraWanted(spellId, cfg, isBuff)
+    if not spellId or not cfg then return false end
+    if not isBuff and cfg.friendlyIncludeAllDebuffs then
+        return true
+    end
+    if cfg.friendlyIncludeCC and IsCrowdControl(spellId, cfg) then
+        return true
+    end
+    if cfg.friendlyIncludeDefensive and IsDefensiveBuff(spellId, cfg) then
+        return true
+    end
+    local raw = cfg.friendlyAuraFilterList
+    return raw ~= nil and raw ~= "" and GetParsedFilterSet(raw).ids[spellId] == true
+end
+
+function DebuffRuntime.PassesFilters(cfg, data, isFriendlyPlate)
     if not cfg or not data then
         return true
     end
+    -- Allies carry dozens of auras; anything but an explicit list fills the screen.
+    if isFriendlyPlate then
+        if not data.isBuff and cfg.friendlyIncludeAllDebuffs then
+            return true
+        end
+        if cfg.friendlyIncludeCC and IsCrowdControl(data.spellId, cfg) then
+            return true
+        end
+        if cfg.friendlyIncludeDefensive and IsDefensiveBuff(data.spellId, cfg) then
+            return true
+        end
+        return AuraMatchesFilterSet(data, GetParsedFilterSet(cfg.friendlyAuraFilterList))
+    end
+    if data.isBuff then
+        if cfg.showBuffs == false then
+            return false
+        end
+        local mode = cfg.buffFilterMode or "purgeable"
+        -- Purgeable covers what a plate actually needs: what to spellsteal, dispel or wait out.
+        if mode == "purgeable" then
+            local dispel = data.debuffType or GetStaticDebuffType(data.spellId)
+            return dispel == "Magic" or dispel == "Enrage" or IsDefensiveBuff(data.spellId, cfg)
+        end
+        return PassesListFilter(mode, cfg.buffFilterList, data)
+    end
+    -- Crowd control matters whoever cast it, so it survives the "only mine" filter.
     if cfg.debuffOnlyMine and data.casterGUID ~= UnitGUID("player") then
-        return false
-    end
-    local mode = cfg.debuffFilterMode
-    if mode == "whitelist" or mode == "blacklist" then
-        local filterSet = GetParsedFilterSet(cfg.debuffFilterList)
-        local inSet = AuraMatchesFilterSet(data, filterSet)
-        if mode == "whitelist" and not inSet then
-            return false
-        end
-        if mode == "blacklist" and inSet then
+        if not (cfg.debuffIncludeOtherCC and IsCrowdControl(data.spellId, cfg)) then
             return false
         end
     end
-    return true
+    return PassesListFilter(cfg.debuffFilterMode, cfg.debuffFilterList, data)
 end
 
--- CC/lockout priority weights for sort (dispel type is not a reliable proxy).
-local CCSpellList = {
-    -- Stuns
-    [1833] = 6, -- Cheap Shot
-    [408] = 6, [8643] = 6, -- Kidney Shot
-    [6552] = 6, [6554] = 6, -- Pummel
-    [72] = 6, [1672] = 6, [1673] = 6, [1679] = 6, [12798] = 6, -- Shield Bash
-    [5211] = 6, [6798] = 6, [8983] = 6, -- Bash
-    [20549] = 6, -- War Stomp
-    [853] = 6, [5588] = 6, [5589] = 6, [10308] = 6, -- Hammer of Justice
-    [12809] = 6, -- Concussion Blow
-    [20253] = 6, [20614] = 6, [20615] = 6, -- Intercept
-    [676] = 4, -- Disarm
-    [30283] = 6, -- Shadowfury
-    [89766] = 6,
-    -- Fears
-    [5782] = 6, [6213] = 6, [6215] = 6, -- Fear
-    [17928] = 6, -- Howl of Terror
-    [8122] = 6, [8124] = 6, [10888] = 6, [10890] = 6, -- Psychic Scream
-    [5246] = 6, -- Intimidating Shout
-    -- Horrors: Death Coil ranks 1-6
-    [6789] = 6, [17925] = 6, [17926] = 6,
-    [27223] = 6, [47859] = 6, [47860] = 6,
-    -- Incapacitates / Polymorph-type
-    [118] = 6, [12824] = 6, [12825] = 6, [12826] = 6, -- Polymorph
-    [28271] = 6, [28272] = 6, [61305] = 6, -- Polymorph (Pig/Turtle/Black Cat)
-    [710] = 6, [18647] = 6, -- Banish
-    [51514] = 6, -- Hex
-    [2637] = 6, [18657] = 6, [18658] = 6, -- Hibernate
-    [6770] = 6, [2070] = 6, [11297] = 6, -- Sap
-    [3355] = 6, [14308] = 6, [14309] = 6, -- Freezing Trap
-    [20066] = 6, -- Repentance
-    [9484] = 6, [9485] = 6, -- Shackle Undead
-    [33786] = 6, -- Cyclone
-    [19386] = 6, [24132] = 6, [24133] = 6, [27068] = 6, -- Wyvern Sting
-    [1513] = 6, [14326] = 6, [14327] = 6, -- Scare Beast
-    -- Silences
-    [15487] = 5, -- Silence
-    [19244] = 5, [24259] = 5, -- Spell Lock
-    [1330] = 5, -- Garrote (Silence)
-    [50613] = 5, [28730] = 5, [25046] = 5, [69179] = 5, -- Arcane Torrent
-    -- Interrupts / lockouts
-    [2139] = 5, -- Counterspell
-    [1766] = 5, -- Kick
-    [47528] = 5, -- Mind Freeze
-}
-
 local function DebuffPriorityComparator(a, b)
-    local pa = (a.spellId and CCSpellList[a.spellId]) or 0
-    local pb = (b.spellId and CCSpellList[b.spellId]) or 0
-    if pa ~= pb then
-        return pa > pb
+    if a.rank ~= b.rank then
+        return a.rank < b.rank
     end
     return a.expiration < b.expiration
 end
 
--- Pooled debuff list; callers consume synchronously and copy scalars only.
+local function ChronologicalComparator(a, b)
+    return a.expiration < b.expiration
+end
+
+-- Pooled aura list; callers consume synchronously and copy scalars only.
 local cachedDebuffPool = {}
 local cachedDebuffResult = {}
 
-function DebuffRuntime.GetCachedDebuffs(guid, maxCount, cfg)
+function DebuffRuntime.GetCachedAuras(guid, maxCount, cfg, isFriendlyPlate)
     if not guid or not NP.state.PlateAuraCache[guid] then return nil end
     local now = GetTime()
+    local playerGUID = UnitGUID("player")
     local result = cachedDebuffResult
     for i = #result, 1, -1 do
         result[i] = nil
@@ -456,7 +618,7 @@ function DebuffRuntime.GetCachedDebuffs(guid, maxCount, cfg)
     local n = 0
     for _, data in pairs(NP.state.PlateAuraCache[guid]) do
         local active = data.expiration and (data.expiration == 0 or data.expiration > now)
-        if active and DebuffRuntime.PassesFilters(cfg, data) then
+        if active and DebuffRuntime.PassesFilters(cfg, data, isFriendlyPlate) then
             local _, _, tex = GetSpellInfo(data.spellId)
             n = n + 1
             local slot = cachedDebuffPool[n]
@@ -469,10 +631,15 @@ function DebuffRuntime.GetCachedDebuffs(guid, maxCount, cfg)
             slot.expiration = data.expiration
             slot.debuffType = data.debuffType
             slot.spellId = data.spellId
+            slot.casterGUID = data.casterGUID
+            slot.duration = data.duration
+            slot.isBuff = data.isBuff
+            slot.rank = DebuffRuntime.GetAuraRank(data, playerGUID, cfg)
             result[n] = slot
         end
     end
-    sort(result, DebuffPriorityComparator)
+    sort(result, (cfg and cfg.auraSortMode == "chronological")
+        and ChronologicalComparator or DebuffPriorityComparator)
     if maxCount and n > maxCount then
         for i = maxCount + 1, n do
             result[i] = nil
@@ -480,6 +647,9 @@ function DebuffRuntime.GetCachedDebuffs(guid, maxCount, cfg)
     end
     return result
 end
+
+-- Kept for callers that predate the buff-aware rename.
+DebuffRuntime.GetCachedDebuffs = DebuffRuntime.GetCachedAuras
 
 -- UnitDebuff scan when unitid is available
 
@@ -498,14 +668,16 @@ function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     if not unit or not UnitExists(unit) then
         return nil
     end
-    -- Enemies only: never cache friendly buffs as debuffs.
-    if UnitIsFriend("player", unit) then
+    local cfg = NP.config.GetCfg()
+    local isFriendly = UnitIsFriend("player", unit) and true or false
+    if isFriendly and not cfg.showFriendlyAuras then
         return nil
     end
     local guid = UnitGUID(unit)
     if not guid then
         return nil
     end
+    local destIsPlayer = UnitIsPlayer(unit)
 
     -- Preserve known casterGUID across rescans when UnitDebuff returns nil caster.
     -- Scratch table; wiped per UNIT_AURA and aura CLEU event.
@@ -529,9 +701,33 @@ function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
         end
         spellId = tonumber(spellId) or DebuffRuntime.ResolveSpellIdByName(name)
         if spellId and IsAuraExpirationActive(expirationTime) then
-            DebuffRuntime.LearnAuraDuration(spellId, duration)
             local casterGUID = (unitCaster and UnitGUID(unitCaster)) or knownCasters[spellId]
-            DebuffRuntime.AddCachedAura(guid, spellId, expirationTime, count, casterGUID, iconTex, debuffType, name)
+            DebuffRuntime.LearnAuraDuration(spellId, duration, casterGUID, guid, destIsPlayer)
+            DebuffRuntime.AddCachedAura(guid, spellId, expirationTime, count, casterGUID, iconTex, debuffType, name, duration)
+        end
+    end
+
+    if cfg.showBuffs or isFriendly then
+        for i = 1, 40 do
+            local name, _, iconTex, count, debuffType, duration, expirationTime, unitCaster,
+                _, _, spellId = UnitBuff(unit, i)
+            if not name then
+                break
+            end
+            spellId = tonumber(spellId) or DebuffRuntime.ResolveSpellIdByName(name)
+            if spellId and IsAuraExpirationActive(expirationTime) then
+                local casterGUID = (unitCaster and UnitGUID(unitCaster)) or knownCasters[spellId]
+                DebuffRuntime.LearnAuraDuration(spellId, duration, casterGUID, guid, destIsPlayer)
+                DebuffRuntime.AddCachedAura(guid, spellId, expirationTime, count, casterGUID, iconTex, debuffType, name, duration, true)
+            end
+        end
+    end
+
+    -- Strongest name -> GUID proof there is; the plate needs it once the token is gone.
+    if destIsPlayer then
+        local unitName = UnitName(unit)
+        if unitName then
+            NP.state.AuraGUIDByName[unitName] = guid
         end
     end
 
@@ -550,6 +746,11 @@ end
 function DebuffRuntime.UpdateAuraCacheByLookup(guid)
     if not guid then
         return false
+    end
+    -- Group tokens give exact durations, so they beat the target/mouseover probes for allies.
+    local groupUnit = NP.identity.GetGroupUnitByGUID and NP.identity.GetGroupUnitByGUID(guid)
+    if groupUnit then
+        return DebuffRuntime.UpdateAuraCacheFromUnit(groupUnit) ~= nil
     end
     if guid == UnitGUID("target") then
         return DebuffRuntime.UpdateAuraCacheFromUnit("target") ~= nil
@@ -687,7 +888,7 @@ local function PollHostIcons(host, now, cfg)
         end
     end
     if anyExpired and host._renderGUID then
-        local cached = DebuffRuntime.GetCachedDebuffs(host._renderGUID, host._renderMaxIcons, cfg)
+        local cached = DebuffRuntime.GetCachedAuras(host._renderGUID, host._renderMaxIcons, cfg, host._renderFriendly)
         NP.auras.RenderDebuffWidgets(host, cached, host._renderMaxIcons, cfg)
     end
     pollHostIconsActive[host] = nil
@@ -750,12 +951,26 @@ local function SetAuraPoller(host, enabled)
     end
 end
 
--- Default debuff-type colors; unknown → red.
-local FALLBACK_DEBUFF_COLOR = { r = 1, g = 0, b = 0 }
-
 local function IsDebuffIconBorderEnabled(cfg)
     if not addon.CreateIconFrameTexture then return false end
     return not (cfg and cfg.debuffModernIconBorder == false)
+end
+
+-- Blizzard's rule: every debuff gets a colour, no dispel type means "none". Only the palette is ours.
+local function ResolveAuraBorderColor(aura, cfg)
+    if not (aura and cfg and cfg.debuffHighlightCC) then return nil end
+    local colors = cfg.auraColors
+    if aura.isBuff then
+        return colors and colors.Buff
+    end
+    if cfg.auraColorCCEnabled and IsCrowdControl(aura.spellId, cfg) then
+        return colors and colors.CrowdControl
+    end
+    local key = aura.debuffType
+    if key == nil or key == "" or (colors and colors[key]) == nil then
+        key = "none"
+    end
+    return colors and colors[key]
 end
 
 -- CC highlight border using Blizzard debuff-type colors.
@@ -768,13 +983,13 @@ local function ApplyPriorityHighlight(icon, aura, cfg)
         icon.priorityBorder:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 1, -1)
     end
 
-    local showBorder = cfg and cfg.debuffHighlightCC and aura and aura.spellId and CCSpellList[aura.spellId]
-    local color = showBorder
-        and ((aura.debuffType and DebuffTypeColor and DebuffTypeColor[aura.debuffType]) or FALLBACK_DEBUFF_COLOR)
-        or nil
+    local color = ResolveAuraBorderColor(aura, cfg)
 
     -- The frame buries priorityBorder's 1px overhang, so it carries the CC colour instead.
     if icon.duiIconFrame and IsDebuffIconBorderEnabled(cfg) then
+        if addon.SetIconFrameTextureTinted then
+            addon.SetIconFrameTextureTinted(icon.duiIconFrame, color ~= nil)
+        end
         if color then
             icon.duiIconFrame:SetVertexColor(color.r, color.g, color.b, 1)
         else
@@ -964,7 +1179,7 @@ local function ApplySwipeCooldown(icon, aura, cfg)
     if icon._swipeExpiration ~= expiration then
         icon._swipeExpiration = expiration
         local remaining = expiration - GetTime()
-        local totalDuration = (aura.spellId and NP.state.AuraDurationCache[aura.spellId]) or remaining
+        local totalDuration = aura.duration or GetBaseAuraDuration(aura.spellId, aura.casterGUID) or remaining
         if totalDuration < remaining then
             totalDuration = remaining
         end
@@ -1008,6 +1223,11 @@ function NP.auras.ApplyDebuffIconFrameLevels(host)
                 icon:SetFrameLevel(base + 1)
             end
         end
+        if icon.frameLayer and icon.frameLayer.SetFrameLevel then
+            if not icon.frameLayer.GetFrameLevel or icon.frameLayer:GetFrameLevel() ~= base + 2 then
+                icon.frameLayer:SetFrameLevel(base + 2)
+            end
+        end
         if icon.textLayer and icon.textLayer.SetFrameLevel then
             if not icon.textLayer.GetFrameLevel or icon.textLayer:GetFrameLevel() ~= base + 3 then
                 icon.textLayer:SetFrameLevel(base + 3)
@@ -1024,7 +1244,6 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
     local cooldownFontSize = (cfg and cfg.debuffCooldownFontSize) or 9
     local cooldownTextAnchor = (cfg and cfg.debuffCooldownTextAnchor) or "topright"
     local framed = IsDebuffIconBorderEnabled(cfg)
-    local spacing = 2 + (framed and addon.GetIconFrameGap(iconSize, 2) or 0)
 
     host._debuffCooldownFontSize = cooldownFontSize
     host._debuffShowCooldown = showCooldown
@@ -1046,6 +1265,7 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
     end
 
     local shown = 0
+    local rowWidth, tallest = 0, 0
     for _, aura in ipairs(cachedAuras) do
         shown = shown + 1
         if shown > maxIcons then break end
@@ -1055,6 +1275,10 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
             icon.texture = icon:CreateTexture(nil, "ARTWORK")
             icon.texture:SetAllPoints(icon)
             -- Layer order: highlight → art → swipe overlay → text (child frame).
+            -- 3.3.5a ignores texture sublayers, so the lazy swipe would draw over the frame art.
+            icon.frameLayer = CreateFrame("Frame", nil, icon)
+            icon.frameLayer:SetAllPoints(icon)
+            icon.frameLayer:SetFrameLevel(icon:GetFrameLevel() + 1)
             icon.textLayer = CreateFrame("Frame", nil, icon)
             icon.textLayer:SetAllPoints(icon)
             icon.textLayer:SetFrameLevel(icon:GetFrameLevel() + 2)
@@ -1063,16 +1287,16 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
             icon.text:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 0, 0)
             icon.cooldownText = icon.textLayer:CreateFontString(nil, "OVERLAY")
             icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cooldownFontSize, "OUTLINE")
-            -- Sublayer 2 puts the frame above the swipe overlay, still under the textLayer child.
             if addon.CreateIconFrameTexture then
-                icon.duiIconFrame = addon.CreateIconFrameTexture(icon, "OVERLAY", 2)
+                icon.duiIconFrame = addon.CreateIconFrameTexture(icon.frameLayer, "OVERLAY")
             end
             host.icons[shown] = icon
         end
-        icon:SetSize(iconSize, iconSize)
+        local size = iconSize * DebuffRuntime.GetAuraSizeScale(aura, cfg)
+        icon:SetSize(size, size)
         if icon.duiIconFrame then
             if framed then
-                addon.LayoutIconFrameTexture(icon.duiIconFrame, icon, iconSize)
+                addon.LayoutIconFrameTexture(icon.duiIconFrame, icon, size)
                 icon.duiIconFrame:Show()
             else
                 icon.duiIconFrame:Hide()
@@ -1087,11 +1311,16 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
             end
         end
         icon:ClearAllPoints()
+        -- Bottom-aligned so a bigger rank grows upward instead of shifting the row.
         if shown == 1 then
             icon:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", 0, 0)
+            rowWidth = size
         else
-            icon:SetPoint("BOTTOMLEFT", host.icons[shown - 1], "BOTTOMRIGHT", spacing, 0)
+            local gap = 2 + (framed and addon.GetIconFrameGap(size, 2) or 0)
+            icon:SetPoint("BOTTOMLEFT", host.icons[shown - 1], "BOTTOMRIGHT", gap, 0)
+            rowWidth = rowWidth + gap + size
         end
+        if size > tallest then tallest = size end
         icon.texture:SetTexture(aura.texture)
         icon.text:SetText(aura.count and aura.count > 1 and aura.count or "")
         icon.expiration = aura.expiration
@@ -1128,7 +1357,7 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
         host.icons[i]._lastCdText = nil
     end
 
-    host:SetSize((iconSize * shown) + (spacing * max(0, shown - 1)), iconSize)
+    host:SetSize(max(1, rowWidth), max(iconSize, tallest))
     NP.auras.ApplyDebuffIconFrameLevels(host)
 
     -- Poll while icons are visible to update both expiration and countdown text.
@@ -1148,7 +1377,12 @@ function NP.auras.ResolvePlateDebuffGUID(plateData)
     end
     local reaction, ptype = NP.native_style.GetPlateReaction(plateData)
     if reaction == "FRIENDLY" then
-        return nil
+        -- Player names are unique per realm, so a name match is proof enough for an ally.
+        if not (NP.config.GetCfg().showFriendlyAuras and ptype == "PLAYER" and plateData.plateName) then
+            return nil
+        end
+        return NP.identity.GetGroupGUIDByName(plateData.plateName)
+            or NP.state.AuraGUIDByName[plateData.plateName]
     end
     if ptype == "PLAYER" and plateData.plateName then
         local guid = NP.state.AuraGUIDByName[plateData.plateName]
@@ -1212,6 +1446,17 @@ function NP.auras.SyncDebuffs(plateData, hintedUnit)
     NP.identity.ValidatePlateGUIDOwnership(plateData)
 
     local unit = NP.identity.GetUnitForPlate(plateData, hintedUnit)
+    -- GetUnitForPlate stops at target/focus/mouseover; plate and group tokens need no targeting.
+    if not unit then
+        -- Re-check the name: nameplateN can have been recycled onto another unit since last sync.
+        local token = plateData.namePlateUnitToken
+        if token and UnitExists(token) and NP.identity.UnitNameMatchesPlate(token, plateData) then
+            unit = token
+        elseif cfg.showFriendlyAuras
+            and NP.native_style.GetPlateReaction(plateData) == "FRIENDLY" then
+            unit = NP.identity.GetGroupUnitByName(plateData.plateName)
+        end
+    end
     if unit then
         local refreshedGUID = DebuffRuntime.UpdateAuraCacheFromUnit(unit)
         if refreshedGUID and not NP.state.GetPlateGUID(plateData)
@@ -1238,8 +1483,11 @@ function NP.auras.SyncDebuffs(plateData, hintedUnit)
     end
 
     if guid then
-        local cached = DebuffRuntime.GetCachedDebuffs(guid, maxIcons, cfg)
+        -- Plate colour, not the token: a friendly plate without one must still filter as friendly.
+        local isFriendlyPlate = NP.native_style.GetPlateReaction(plateData) == "FRIENDLY"
+        local cached = DebuffRuntime.GetCachedAuras(guid, maxIcons, cfg, isFriendlyPlate)
         host._renderGUID = guid
+        host._renderFriendly = isFriendlyPlate
         NP.auras.RenderDebuffWidgets(host, cached, maxIcons, cfg)
     else
         -- Without a resolvable GUID, hide this widget without invalidating caches.
@@ -1363,21 +1611,30 @@ function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sour
     end
     -- SPELL_AURA_BROKEN_SPELL: irregular suffix; string guard lets it reach removal path.
     local auraType = select(1, ...)
-    if type(auraType) == "string" and auraType ~= "DEBUFF" then
+    local cfg = NP.config.GetCfg()
+    local isBuff = auraType == "BUFF"
+    if isBuff and not (cfg.showBuffs or cfg.showFriendlyAuras) then
+        return
+    end
+    if type(auraType) == "string" and auraType ~= "DEBUFF" and not isBuff then
         return
     end
     if type(destFlags) == "string" then
         destFlags = tonumber(destFlags) or tonumber(destFlags, 16)
     end
-    if destFlags and COMBATLOG_OBJECT_REACTION_FRIENDLY
-        and bit.band(destFlags, COMBATLOG_OBJECT_REACTION_FRIENDLY) ~= 0 then
+    local destIsFriendly = destFlags and COMBATLOG_OBJECT_REACTION_FRIENDLY
+        and bit.band(destFlags, COMBATLOG_OBJECT_REACTION_FRIENDLY) ~= 0
+    if destIsFriendly and not cfg.showFriendlyAuras then
         return
     end
     spellId = tonumber(spellId)
     if not destGUID or not spellId then
         return
     end
-    -- Hostile-player name -> GUID for the name-based lookup fallback.
+    if destIsFriendly and not DebuffRuntime.IsAllyAuraWanted(spellId, cfg, isBuff) then
+        return
+    end
+    -- Player name -> GUID for the name-based lookup fallback (allies included once enabled).
     if destName and destFlags and COMBATLOG_OBJECT_CONTROL_PLAYER
         and bit.band(destFlags, COMBATLOG_OBJECT_CONTROL_PLAYER) ~= 0 then
         local rawName = strsplit("-", destName)
@@ -1390,7 +1647,7 @@ function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sour
         changed = true
     elseif event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH" then
         local _, _, texture = GetSpellInfo(spellId)
-        local baseDuration = NP.state.AuraDurationCache[spellId]
+        local baseDuration = GetBaseAuraDuration(spellId, sourceGUID)
         if baseDuration and baseDuration > 0 then
             local effectiveDuration = baseDuration
             local category = DebuffRuntime.GetDRCategory(spellId)
@@ -1403,15 +1660,15 @@ function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sour
                 -- all (full immunity); guard defensively rather than show 0s.
                 effectiveDuration = (factor > 0) and (baseDuration * factor) or baseDuration
             end
-            DebuffRuntime.AddCachedAura(destGUID, spellId, GetTime() + effectiveDuration, 1, sourceGUID, texture, nil, spellName)
+            DebuffRuntime.AddCachedAura(destGUID, spellId, GetTime() + effectiveDuration, 1, sourceGUID, texture, GetStaticDebuffType(spellId), spellName, effectiveDuration, isBuff)
             changed = true
         end
     elseif event == "SPELL_AURA_APPLIED_DOSE" then
         local count = tonumber(select(2, ...)) or 1
         local _, _, texture = GetSpellInfo(spellId)
-        local duration = NP.state.AuraDurationCache[spellId]
+        local duration = GetBaseAuraDuration(spellId, sourceGUID)
         if duration and duration > 0 then
-            DebuffRuntime.AddCachedAura(destGUID, spellId, GetTime() + duration, count, sourceGUID, texture, nil, spellName)
+            DebuffRuntime.AddCachedAura(destGUID, spellId, GetTime() + duration, count, sourceGUID, texture, GetStaticDebuffType(spellId), spellName, duration, isBuff)
             changed = true
         end
     elseif event == "SPELL_AURA_REMOVED" or event == "SPELL_AURA_BROKEN" or event == "SPELL_AURA_BROKEN_SPELL" then

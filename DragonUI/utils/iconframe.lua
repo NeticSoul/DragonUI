@@ -9,6 +9,8 @@
 local addon = select(2, ...)
 
 local FRAME_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe.tga"
+-- Same frame in white: the gold one muddies any SetVertexColor tint.
+local FRAME_TEXTURE_WHITE = addon._dir .. "ActionBars\\uiactionbariconframe_white.tga"
 
 local BAR_REF = 37 -- buttons.lua styles 37px buttons; its 2.2px overhang is tuned for that
 local OVERHANG = 2.2
@@ -34,6 +36,12 @@ function addon.CreateIconFrameTexture(host, layer, sublayer)
     tex:SetTexture(FRAME_TEXTURE)
     tex:Hide()
     return tex
+end
+
+function addon.SetIconFrameTextureTinted(tex, tinted)
+    if not tex or tex._duiTinted == tinted then return end
+    tex._duiTinted = tinted
+    tex:SetTexture(tinted and FRAME_TEXTURE_WHITE or FRAME_TEXTURE)
 end
 
 function addon.LayoutIconFrameTexture(tex, icon, size)

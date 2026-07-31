@@ -1545,6 +1545,21 @@ function Controls:AddSpellFilterList(parent, opts)
     listLabel:SetText(LO["Click an entry to remove it."])
     parent:AddChild(listLabel)
 
+    -- Long lists get their own scroll box; a curated list of 20+ would otherwise own the panel.
+    local rowHost = parent
+    local maxRows = opts.maxRows or 6
+    if #ids > maxRows then
+        local box = AceGUI:Create("SimpleGroup")
+        box:SetFullWidth(true)
+        box:SetLayout("Fill")
+        box:SetHeight(opts.listHeight or 150)
+        local scroller = AceGUI:Create("ScrollFrame")
+        scroller:SetLayout("List")
+        box:AddChild(scroller)
+        parent:AddChild(box)
+        rowHost = scroller
+    end
+
     for index, spellID in ipairs(ids) do
         local name, _, icon = GetSpellInfo(spellID)
         name = name or LO["Unknown"]
@@ -1576,7 +1591,7 @@ function Controls:AddSpellFilterList(parent, opts)
             row:SetDisabled(true)
         end
         RegisterWidget(row)
-        parent:AddChild(row)
+        rowHost:AddChild(row)
     end
 
     return listLabel

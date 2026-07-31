@@ -919,10 +919,39 @@ local defaults = {
                 debuffCooldownTextAnchor = "center", -- "center" | "topleft" | "topright" | "bottomleft" | "bottomright"
                 debuffOnlyTargetFocus = false, -- only show debuffs on target/focus plates
                 debuffOnlyMine = false, -- only show debuffs the player applied
+                debuffIncludeOtherCC = true, -- let anyone's crowd control through the "only mine" filter
                 debuffFilterMode = "all", -- "all" | "whitelist" | "blacklist"
                 debuffFilterList = "", -- comma-separated spell IDs for whitelist/blacklist
                 debuffModernIconBorder = true, -- action-bar style frame around debuff icons
-                debuffHighlightCC = false, -- colored border for crowd-control/lockout debuffs (curated spell list)
+                debuffHighlightCC = true, -- colored border by aura category (crowd control, defensive, dispel type)
+                showBuffs = false, -- show enemy buffs in the same row as debuffs, ordered by rank
+                buffFilterMode = "purgeable", -- "purgeable" | "all" | "whitelist" | "blacklist"
+                buffFilterList = "", -- comma-separated spell IDs for whitelist/blacklist
+                -- Editable so the panel can show exactly which buffs count as defensive.
+                defensiveBuffList = "642,1022,5599,10278,498,5573,45438,48707,48792,31224,5277,19263,23920,871,12975,22812,61336,33206,47585,46924,8178,51690,1719,12292,47788,6940,64205,70940,3411,55694,30823,55233,49222,19574,34471,53480,45182,66,5384",
+                ccExtraList = "", -- extra spell IDs treated as crowd control on top of the built-in list
+                showFriendlyAuras = false, -- show auras on friendly plates (never "all", always a criterion)
+                friendlyIncludeCC = true, -- also show crowd control on allies, listed or not
+                friendlyIncludeDefensive = true, -- also show the defensive cooldowns from defensiveBuffList
+                friendlyIncludeAllDebuffs = false, -- show every debuff on allies, not just the curated ones
+                -- Battleground flags and support cooldowns: what you want to spot on an ally at a glance.
+                friendlyAuraFilterList = "23333,23335,34976,29166,10060,2825,32182,53563,1044,6940,47788,64843,31821",
+                auraSortMode = "priority", -- "priority" (own CC first) | "chronological" (expiration only)
+                auraHighlightMode = "cc", -- which auras draw larger: "cc" | "list" | "ccAndList" | "none"
+                auraHighlightList = "", -- extra spell IDs drawn at the highlight size
+                auraHighlightScale = 1.35, -- size multiplier for highlighted auras
+                auraColorCCEnabled = false, -- give crowd control its own color instead of its dispel type
+                -- Blizzard's DebuffTypeColor values, editable. "none" is what a debuff with no dispel type uses.
+                auraColors = {
+                    none = { r = 0.80, g = 0, b = 0 },
+                    Magic = { r = 0.20, g = 0.60, b = 1.00 },
+                    Curse = { r = 0.60, g = 0.00, b = 1.00 },
+                    Disease = { r = 0.60, g = 0.40, b = 0 },
+                    Poison = { r = 0.00, g = 0.60, b = 0 },
+                    Enrage = { r = 1.00, g = 0.55, b = 0.15 },
+                    Buff = { r = 0.35, g = 0.70, b = 1.00 },
+                    CrowdControl = { r = 1.00, g = 0.25, b = 0.25 },
+                },
                 debuffOffsetX = 0, -- horizontal offset for the debuff icon row
                 debuffOffsetY = 0, -- vertical offset for the debuff icon row
                 showDebuffPositionDebug = false, -- persistent debug box showing debuff row bounds

@@ -9,6 +9,8 @@ NP.state.GUIDToPlate = setmetatable({}, { __mode = "k" })
 NP.state.PlateAuraCache = {}
 -- Swapped for the saved table on init; the combat log needs a learned duration to render.
 NP.state.AuraDurationCache = {}
+-- [casterGUID][spellId]: talents and glyphs make the same spell last differently per caster.
+NP.state.AuraDurationByCaster = {}
 
 function NP.state.BindPersistentAuraDurations()
     local db = addon.db

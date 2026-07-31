@@ -916,30 +916,47 @@ end
 
 -- Group cache: GUID → party/raid unit (party castbar / aura lookup).
 identity.GroupGUIDToUnit = identity.GroupGUIDToUnit or {}
+-- Plates carry a name and nothing else, so allies are only reachable by it.
+identity.GroupNameToUnit = identity.GroupNameToUnit or {}
 
 function identity.UpdateGroupCache()
     local map = identity.GroupGUIDToUnit
+    local byName = identity.GroupNameToUnit
     for k in pairs(map) do
         map[k] = nil
     end
+    for k in pairs(byName) do
+        byName[k] = nil
+    end
     local numRaid = GetNumRaidMembers() or 0
+    local prefix, count = "party", GetNumPartyMembers() or 0
     if numRaid > 0 then
-        for i = 1, numRaid do
-            local unit = "raid" .. i
-            local guid = UnitExists(unit) and UnitGUID(unit)
-            if guid then
-                map[guid] = unit
-            end
-        end
-    else
-        for i = 1, GetNumPartyMembers() or 0 do
-            local unit = "party" .. i
-            local guid = UnitExists(unit) and UnitGUID(unit)
-            if guid then
-                map[guid] = unit
+        prefix, count = "raid", numRaid
+    end
+    for i = 1, count do
+        local unit = prefix .. i
+        local guid = UnitExists(unit) and UnitGUID(unit)
+        if guid then
+            map[guid] = unit
+            local name = UnitName(unit)
+            if name then
+                byName[name] = unit
             end
         end
     end
+end
+
+function identity.GetGroupUnitByName(name)
+    local unit = name and identity.GroupNameToUnit[name]
+    if unit and UnitExists(unit) and UnitName(unit) == name then
+        return unit
+    end
+    return nil
+end
+
+function identity.GetGroupGUIDByName(name)
+    local unit = identity.GetGroupUnitByName(name)
+    return unit and UnitGUID(unit) or nil
 end
 
 function identity.GetGroupUnitByGUID(guid)
@@ -959,7 +976,15 @@ function identity.FriendlyPlateMayUseGUID(plateData, guid)
     if NP.native_style.GetPlateReaction(plateData) ~= "FRIENDLY" then
         return true
     end
-    return identity.GetGroupUnitByGUID(guid) ~= nil
+    if identity.GetGroupUnitByGUID(guid) then
+        return true
+    end
+    -- Outside the group only the name proves it, and player names are unique per realm.
+    if not NP.config.GetCfg().showFriendlyAuras then
+        return false
+    end
+    local name = plateData.plateName
+    return name ~= nil and NP.state.AuraGUIDByName[name] == guid
 end
 
 -- Group member plate: GUID map first, then unique name (ambiguous → nil).

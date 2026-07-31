@@ -52,6 +52,7 @@
     
     <!-- Nameplates (custom stack on 30300 Blizzard plates) -->
     <Script file="..\data\npc_rare_ranks.lua"/>
+    <Script file="..\data\aura_durations.lua"/>
     <Include file="nameplates\nameplates.xml"/>
     
     <!-- Item Quality Borders module -->

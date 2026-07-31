@@ -736,6 +736,17 @@ local function EngineOnEvent(_, event, unit, ...)
             if owner then
                 E.QueuePlate(owner, CB.OnUpdateAuras)
             end
+        elseif unit then
+            -- Any token mapping to a visible plate: nameplateN with awesome_wotlk, or a group member.
+            local guid = UnitGUID(unit)
+            local owner = guid and NP.state.GUIDToPlate[guid]
+            if not owner and guid and NP.identity.GetGroupUnitByGUID(guid) then
+                owner = NP.identity.FindPlateForGroupGUID(guid, UnitName(unit))
+            end
+            if owner then
+                NP.auras.DebuffRuntime.UpdateAuraCacheFromUnit(unit)
+                E.QueuePlate(owner, CB.OnUpdateAuras)
+            end
         end
         return
     end
