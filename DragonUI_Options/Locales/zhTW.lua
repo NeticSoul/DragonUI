@@ -79,7 +79,7 @@ L["Profiles"] = "配置檔案"
 L["Unit Frames"] = "單位框架"
 L["XP & Rep Bars"] = "經驗值 & 聲望條"
 L["Chat"] = "聊天"
-L["Appearance"] = "\u5916\u89c0"
+L["Appearance"] = "外觀"
 
 
 -- ============================================================================
@@ -343,15 +343,15 @@ L["Chat Style Opacity"] = "聊天樣式透明度"
 L["Minimum opacity of the custom chat background. At 0 it fades with tabs; above 0 it stays partially visible when idle."] = "自訂聊天背景的最小透明度。0時與標籤同步淡出；超出0則閒置時仍部分可見。"
 L["Text Box Min Opacity"] = "輸入框最小透明度"
 L["Minimum opacity of the text input box when idle. At 0 it fades with tabs; above 0 it stays partially visible."] = "閒置時文字輸入框的最小透明度。0時與標籤同步淡出；超出0則仍部分可見。"
-L["Chat Style"] = "\u804a\u5929\u6a23\u5f0f"
-L["Visual style for the chat frame background."] = "\u804a\u5929\u6846\u80cc\u666f\u7684\u8996\u89ba\u6a23\u5f0f\u3002"
+L["Chat Style"] = "聊天樣式"
+L["Visual style for the chat frame background."] = "聊天框背景的視覺樣式。"
 L["Editbox Style"] = "輸入框樣式"
 L["Visual style for the chat input box background."] = "聊天輸入框背景的視覺樣式。"
 L["Vanilla Editbox"] = "原版輸入框"
 L["Use the default chat input appearance."] = "使用預設聊天輸入框外觀。"
-L["Dark"] = "\u6697\u8272"
-L["DragonUI Style"] = "DragonUI \u6a23\u5f0f"
-L["Nocturne"] = "\u591c\u66f2"
+L["Dark"] = "暗色"
+L["DragonUI Style"] = "DragonUI 樣式"
+L["Nocturne"] = "夜曲"
 
 
 -- 揹包整合 (Bagster)

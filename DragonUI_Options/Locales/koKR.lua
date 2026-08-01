@@ -85,7 +85,7 @@ L["Profiles"] = "프로필"
 L["Unit Frames"] = "유닛 프레임"
 L["XP & Rep Bars"] = "경험치 및 평판 바"
 L["Chat"] = "채팅"
-L["Appearance"] = "\uc678\ud615"
+L["Appearance"] = "외형"
 
 -- ============================================================================
 -- MODULES TAB
@@ -375,15 +375,15 @@ L["Chat Style Opacity"] = "채팅 스타일 불투명도"
 L["Minimum opacity of the custom chat background. At 0 it fades with tabs; above 0 it stays partially visible when idle."] = "사용자 지정 채팅 배경의 최소 불투명도. 0이면 탭과 함께 사라짐; 그 이상이면 유휴 시에도 부분적으로 표시됩니다."
 L["Text Box Min Opacity"] = "입력란 최소 불투명도"
 L["Minimum opacity of the text input box when idle. At 0 it fades with tabs; above 0 it stays partially visible."] = "유휴 시 텍스트 입력란의 최소 불투명도. 0이면 탭과 함께 사라짐; 그 이상이면 부분적으로 표시됩니다."
-L["Chat Style"] = "\ucc44\ud305 \uc2a4\ud0c0\uc77c"
-L["Visual style for the chat frame background."] = "\ucc44\ud305 \ud504\ub808\uc784 \ubc30\uacbd\uc758 \uc2dc\uac01\uc801 \uc2a4\ud0c0\uc77c."
+L["Chat Style"] = "채팅 스타일"
+L["Visual style for the chat frame background."] = "채팅 프레임 배경의 시각적 스타일."
 L["Editbox Style"] = "입력 스타일"
 L["Visual style for the chat input box background."] = "입력란 배경의 시각적 스타일."
 L["Vanilla Editbox"] = "기본 입력창"
 L["Use the default chat input appearance."] = "기본 채팅 입력창 모양을 사용합니다."
-L["Dark"] = "\uc5b4\ub450\uc6b4"
-L["DragonUI Style"] = "DragonUI \uc2a4\ud0c0\uc77c"
-L["Nocturne"] = "\ub179\ud134"
+L["Dark"] = "어두운"
+L["DragonUI Style"] = "DragonUI 스타일"
+L["Nocturne"] = "나이트"
 
 
 -- Bagster
