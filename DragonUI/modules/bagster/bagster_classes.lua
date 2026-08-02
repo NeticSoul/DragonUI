@@ -443,15 +443,15 @@ do
 
         if not cfg or cfg.glow_quest ~= false then
             local isQuestItem, isQuestStarter = self:IsQuestItem()
-            if isQuestItem then
-                qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BORDER)
+            if isQuestStarter then
+                qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BANG)
                 qBorder:SetAlpha(1)
                 qBorder:Show()
                 border:Hide()
                 return
             end
-            if isQuestStarter then
-                qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BANG)
+            if isQuestItem then
+                qBorder:SetTexture(mod.TEXTURE_ITEM_QUEST_BORDER)
                 qBorder:SetAlpha(1)
                 qBorder:Show()
                 border:Hide()
