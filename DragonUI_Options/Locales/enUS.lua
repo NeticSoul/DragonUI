@@ -12,7 +12,7 @@ When adding new strings:
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI_Options", "enUS", true)
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "enUS", true)
 if not L then return end
 
 -- ============================================================================
@@ -44,6 +44,11 @@ L["Switch micro menu icons between colored and grayscale style."] = true
 L["About"] = true
 L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = true
 L["Created and maintained by Neticsoul, with community contributions."] = true
+
+-- Language
+L["Language"] = true
+L["Choose the language used by the DragonUI interface."] = true
+L["Follow the client language"] = true
 
 L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = true
 L["GitHub (select and Ctrl+C to copy):"] = true

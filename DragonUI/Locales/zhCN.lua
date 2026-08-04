@@ -11,7 +11,7 @@ DragonUI - 简体中文本地化文件
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI", "zhCN")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI", "zhCN")
 if not L then return end
 
 -- ============================================================================

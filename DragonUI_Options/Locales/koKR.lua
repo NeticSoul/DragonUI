@@ -12,7 +12,7 @@ When adding new strings:
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI_Options", "koKR")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "koKR")
 if not L then return end
 
 L["Collector"] = "수집기"
@@ -53,6 +53,9 @@ L["Switch micro menu icons between colored and grayscale style."] = "마이크�
 L["About"] = "정보"
 L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = "Dragonflight UI에서 영감을 받아 3.3.5a에 리테일 WoW 느낌을 구현합니다."
 L["Created and maintained by Neticsoul, with community contributions."] = "Neticsoul이 제작 및 유지하며, 커뮤니티가 기여합니다."
+L["Language"] = "언어"
+L["Choose the language used by the DragonUI interface."] = "DragonUI 인터페이스에서 사용할 언어를 선택하세요."
+L["Follow the client language"] = "클라이언트 언어 따르기"
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "명령어: /dragonui, /dui, /pi — /dragonui edit (편집) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (선택 후 Ctrl+C로 복사):"

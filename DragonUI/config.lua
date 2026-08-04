@@ -7,7 +7,10 @@
 local addon = select(2,...);
 
 -- Localization (must load before any core/ file that references addon.L)
-addon.L = LibStub("AceLocale-3.0"):GetLocale("DragonUI")
+-- Uses the DragonUI AceLocale fork: all locales are always registered, and the
+-- user's preferred locale (General tab dropdown) is selected via GetActiveLocale().
+addon.L = LibStub("AceLocale-3.0-DragonUI"):GetLocale("DragonUI", addon.GetActiveLocale())
+addon.LO = addon.L -- Backwards-compatible alias used by options panels
 
 addon._dir = [[Interface\AddOns\DragonUI\Textures\]];
 

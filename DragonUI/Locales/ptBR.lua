@@ -10,7 +10,7 @@
  - Keep color codes |cff...|r outside of L[] strings
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI", "ptBR")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI", "ptBR")
 if not L then return end
 
 -- Example:

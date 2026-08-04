@@ -9,7 +9,7 @@
  - Keep color codes |cff...|r outside of L[] strings
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI_Options", "ptBR")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "ptBR")
 if not L then return end
 
 L["Collector"] = "Coletor"
@@ -715,6 +715,10 @@ L["Square"] = "Quadrado"
 L["Out of Range Color"] = "Cor fora de alcance"
 L["Not Enough Mana Color"] = "Cor de mana insuficiente"
 
+-- Language
+L["Language"] = "Idioma"
+L["Choose the language used by the DragonUI interface."] = "Escolha o idioma usado pela interface do DragonUI."
+L["Follow the client language"] = "Seguir o idioma do cliente"
 -- Quest nameplate icons (loot providers + Questie coexistence)
 L["Resolve By Name"] = "Resolver por nome"
 L["Match plate names to your active objectives so icons show on every plate without awesome_wotlk. Kill objectives work on their own; loot needs a quest addon below."] = "Combina os nomes das placas com seus objetivos ativos para mostrar ícones em todas as placas sem o awesome_wotlk. Objetivos de matar funcionam sozinhos; saque precisa de um addon de missões (abaixo)."
