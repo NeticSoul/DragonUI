@@ -1034,7 +1034,7 @@ function NP.gather.RefreshPlateCastbar(plateData, reason)
         return
     end
     local ownershipValid = NP.identity.ValidatePlateGUIDOwnership(plateData)
-    NP.identity.UpdatePlateGroupTargetMatch(plateData, false)
+    NP.identity.UpdatePlateGroupTargetMatch(plateData)
     NP.identity.UpdatePlateUnitToken(plateData)
     local cfg = NP.config.GetCfg()
     local showCastbar = cfg.showCastBar ~= false

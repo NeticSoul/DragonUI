@@ -1034,22 +1034,7 @@ local function ForEachGroupTargetUnit(callback)
     end
 end
 
--- Inlined group-target scan with early exit (matches ForEachGroupTargetUnit order).
-local function FindGroupTargetUnitForPlate(plateData)
-    for i = 1, GetNumPartyMembers() do
-        local unit = GROUP_TARGET_TOKENS_PARTY[i] or ("party" .. i .. "target")
-        if UnitExists(unit) and identity.FindPlateForUnit(unit) == plateData then
-            return unit
-        end
-    end
-    for i = 1, GetNumRaidMembers() do
-        local unit = GROUP_TARGET_TOKENS_RAID[i] or ("raid" .. i .. "target")
-        if UnitExists(unit) and identity.FindPlateForUnit(unit) == plateData then
-            return unit
-        end
-    end
-    return nil
-end
+local GROUP_TARGET_REFRESH_INTERVAL = 0.2
 
 function identity.FindPlateForUnit(unit, allowFullHealthNPC)
     if not unit or not UnitExists(unit) then
@@ -1070,7 +1055,8 @@ function identity.FindPlateForUnit(unit, allowFullHealthNPC)
     return found
 end
 
-function identity.UpdatePlateGroupTargetMatch(plateData, force)
+-- One roster pass resolves every plate at once; a per-plate probe only re-derives that map.
+function identity.UpdatePlateGroupTargetMatch(plateData)
     if not plateData then
         return nil
     end
@@ -1078,29 +1064,24 @@ function identity.UpdatePlateGroupTargetMatch(plateData, force)
         plateData._matchedCastUnit = nil
         return nil
     end
-    if not force then
-        local now = GetTime and GetTime() or 0
-        local nextProbe = plateData._nextGroupTargetProbeAt or 0
-        if now < nextProbe then
-            return plateData._matchedCastUnit
-        end
-        plateData._nextGroupTargetProbeAt = now + 0.2
+    local now = GetTime and GetTime() or 0
+    if now >= (NP.module._groupTargetMatchAt or 0) + GROUP_TARGET_REFRESH_INTERVAL then
+        identity.RequestGroupTargetRefresh()
     end
-    local match = FindGroupTargetUnitForPlate(plateData)
-    plateData._matchedCastUnit = match
-    if match and not NP.state.GetPlateGUID(plateData) then
-        local guid = UnitGUID(match)
-        if guid then
-            NP.state.SetPlateGUID(plateData, guid, {
-                source = "GROUP_TARGET",
-                confidence = C.GUID_CONFIDENCE.GROUP_TARGET,
-            })
-        end
+    return plateData._matchedCastUnit
+end
+
+-- Coalesce requests into one roster pass per tick, drained before the queues that ask for it.
+function identity.RequestGroupTargetRefresh()
+    if NP.engine and NP.engine.QueueFunction then
+        NP.engine.QueueFunction(identity.RefreshGroupTargetMatches)
+    else
+        identity.RefreshGroupTargetMatches()
     end
-    return match
 end
 
 function identity.RefreshGroupTargetMatches()
+    NP.module._groupTargetMatchAt = GetTime and GetTime() or 0
     for _, plateData in pairs(NP.module.plates) do
         if plateData then
             plateData._matchedCastUnit = nil

@@ -231,15 +231,12 @@ end
 function NP.lifecycle.OnShowNameplate(plateData, reason)
     plateData._isVisible = true
     NP.lifecycle.PrepareNameplate(plateData)
-    NP.identity.UpdatePlateGroupTargetMatch(plateData, true)
+    NP.identity.RequestGroupTargetRefresh()
     if NP.module.inArena and NP.identity.UpdateArenaCastBindingForPlate then
         NP.identity.UpdateArenaCastBindingForPlate(plateData)
     end
     if NP.clickbox and NP.clickbox.OnPlateShown then
         NP.clickbox.OnPlateShown(plateData)
-    end
-    if plateData._matchedCastUnit then
-        NP.engine.QueuePlate(plateData, NP.engine.Callbacks.OnUpdateCastbar)
     end
     -- Defer full refresh to queue (avoid re-entrancy in OnShow).
     NP.engine.QueuePlate(plateData, NP.engine.Callbacks.OnUpdateNameplate)

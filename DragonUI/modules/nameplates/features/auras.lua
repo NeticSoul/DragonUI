@@ -664,6 +664,9 @@ for i = 1, 4 do
     PARTY_TARGET_TOKENS[i] = "party" .. i .. "target"
 end
 
+-- GUID scanned by the caller still on the stack; the client's aura table cannot change inside one.
+local freshScanGUID
+
 function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     if not unit or not UnitExists(unit) then
         return nil
@@ -676,6 +679,9 @@ function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     local guid = UnitGUID(unit)
     if not guid then
         return nil
+    end
+    if guid == freshScanGUID then
+        return guid
     end
     local destIsPlayer = UnitIsPlayer(unit)
 
@@ -743,23 +749,24 @@ function DebuffRuntime.UpdateAuraCacheFromUnit(unit)
     return guid
 end
 
+-- Returns the GUID actually rescanned from a live unit, so callers can skip a second scan.
 function DebuffRuntime.UpdateAuraCacheByLookup(guid)
     if not guid then
-        return false
+        return nil
     end
     -- Group tokens give exact durations, so they beat the target/mouseover probes for allies.
     local groupUnit = NP.identity.GetGroupUnitByGUID and NP.identity.GetGroupUnitByGUID(guid)
     if groupUnit then
-        return DebuffRuntime.UpdateAuraCacheFromUnit(groupUnit) ~= nil
+        return DebuffRuntime.UpdateAuraCacheFromUnit(groupUnit)
     end
     if guid == UnitGUID("target") then
-        return DebuffRuntime.UpdateAuraCacheFromUnit("target") ~= nil
+        return DebuffRuntime.UpdateAuraCacheFromUnit("target")
     end
     if guid == UnitGUID("mouseover") then
-        return DebuffRuntime.UpdateAuraCacheFromUnit("mouseover") ~= nil
+        return DebuffRuntime.UpdateAuraCacheFromUnit("mouseover")
     end
     if guid == UnitGUID("focus") then
-        return DebuffRuntime.UpdateAuraCacheFromUnit("focus") ~= nil
+        return DebuffRuntime.UpdateAuraCacheFromUnit("focus")
     end
     -- Group-target lookup: in raids prefer raidN (partyN ⊆ raidN; probing both doubles API calls).
     local numRaid = GetNumRaidMembers() or 0
@@ -767,18 +774,18 @@ function DebuffRuntime.UpdateAuraCacheByLookup(guid)
         for i = 1, numRaid do
             local targetUnit = RAID_TARGET_TOKENS[i] or ("raid" .. i .. "target")
             if UnitExists(targetUnit) and UnitGUID(targetUnit) == guid then
-                return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit) ~= nil
+                return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit)
             end
         end
     else
         for i = 1, GetNumPartyMembers() do
             local targetUnit = PARTY_TARGET_TOKENS[i] or ("party" .. i .. "target")
             if UnitExists(targetUnit) and UnitGUID(targetUnit) == guid then
-                return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit) ~= nil
+                return DebuffRuntime.UpdateAuraCacheFromUnit(targetUnit)
             end
         end
     end
-    return false
+    return nil
 end
 
 -- Aura widget render and per-icon expiration polling
@@ -1643,7 +1650,8 @@ function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sour
         end
     end
     local changed
-    if DebuffRuntime.UpdateAuraCacheByLookup(destGUID) then
+    local scannedGUID = DebuffRuntime.UpdateAuraCacheByLookup(destGUID)
+    if scannedGUID then
         changed = true
     elseif event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH" then
         local _, _, texture = GetSpellInfo(spellId)
@@ -1686,7 +1694,9 @@ function NP.auras.HandleCombatLog(timestamp, event, sourceGUID, sourceName, sour
     if changed then
         local plateData = NP.state.GUIDToPlate[destGUID] or NP.auras.FindFallbackPlateForGUID(destGUID)
         if plateData then
+            freshScanGUID = scannedGUID
             NP.gather.RefreshPlateAuras(plateData, nil, "combat_log_aura")
+            freshScanGUID = nil
         end
     end
 end
