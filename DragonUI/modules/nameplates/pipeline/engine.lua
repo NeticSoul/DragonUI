@@ -394,7 +394,8 @@ local function EngineOnUpdate(_, elapsed)
         end
     end
 
-    -- 2. Deferred queues.
+    -- 2. Deferred queues. Roster map first: it queues plates, so it cannot run inside a drain.
+    NP.identity.TickGroupTargetMatches()
     E.ProcessQueues()
 
     if NP.module._deferredTargetResolveFrames and NP.module._deferredTargetResolveFrames > 0 then

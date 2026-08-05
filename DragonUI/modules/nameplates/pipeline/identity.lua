@@ -1071,16 +1071,20 @@ function identity.UpdatePlateGroupTargetMatch(plateData)
     return plateData._matchedCastUnit
 end
 
--- Coalesce requests into one roster pass per tick, drained before the queues that ask for it.
+-- Flag only: callers can be mid-drain, and touching a queue there breaks its pairs() traversal.
 function identity.RequestGroupTargetRefresh()
-    if NP.engine and NP.engine.QueueFunction then
-        NP.engine.QueueFunction(identity.RefreshGroupTargetMatches)
-    else
+    NP.module._groupTargetMatchDirty = true
+end
+
+-- Engine tick, before the queues drain: the pass queues plates, so it must run outside them.
+function identity.TickGroupTargetMatches()
+    if NP.module._groupTargetMatchDirty then
         identity.RefreshGroupTargetMatches()
     end
 end
 
 function identity.RefreshGroupTargetMatches()
+    NP.module._groupTargetMatchDirty = nil
     NP.module._groupTargetMatchAt = GetTime and GetTime() or 0
     for _, plateData in pairs(NP.module.plates) do
         if plateData then
