@@ -659,6 +659,8 @@ end
 
 -- Restore all vehicle buttons to normal state when exiting vehicle
 local function RestoreVehicleButtons()
+    -- Seat swaps fire EXITED while still mounted; restoring there re-lights the empty slots.
+    if UnitHasVehicleUI('player') then return end
     local inCombat = InCombatLockdown()
     for index = 1, VEHICLE_MAX_ACTIONBUTTONS do
         local button = _G['VehicleMenuBarActionButton'..index]
@@ -715,6 +717,11 @@ local function ApplyFullVehicleArtLayout()
 end
 
 local function OnVehicleEvent(self, event, ...)
+    local unit = ...
+    -- These fire for every unit in range; a stray copy re-runs the player's whole layout.
+    if (event == 'UNIT_ENTERED_VEHICLE' or event == 'UNIT_EXITED_VEHICLE') and unit ~= 'player' then
+        return
+    end
     if event == 'UNIT_ENTERED_VEHICLE' then
         if InCombatLockdown() then
             -- MID-COMBAT VEHICLE ENTRY (e.g., Malygos Phase 3 drakes):
