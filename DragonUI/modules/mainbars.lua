@@ -30,8 +30,8 @@ addon.MainbarsModule = MainbarsModule  -- Expose globally for external access
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("mainbars", MainbarsModule,
-        (addon.L and addon.L["Main Bars"]) or "Main Bars",
-        (addon.L and addon.L["Main action bars, status bars, scaling and positioning"]) or "Main action bars, status bars, scaling and positioning")
+        addon.L["Main Bars"],
+        addon.L["Main action bars, status bars, scaling and positioning"])
 end
 
 -- ============================================================================
@@ -295,10 +295,6 @@ function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, r
     end
 end
 
-local function GetModuleConfig()
-    return addon:GetModuleConfig("mainbars")
-end
-
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("mainbars")
 end
@@ -408,6 +404,1851 @@ end
 -- ============================================================================
 
 -- Check if module is enabled when addon loads
+-- ============================================================================
+-- MAIN BAR INTERNALS
+-- ============================================================================
+-- Frames and per-login state are created by InitializeMainbars(); these are
+-- declared here so the functions below close over them at file scope.
+
+local config = addon.config;
+local event = addon.package;
+local do_action = addon.functions;
+local select = select;
+local pairs = pairs;
+local ipairs = ipairs;
+local format = string.format;
+local UIParent = UIParent;
+local hooksecurefunc = hooksecurefunc;
+local UnitFactionGroup = UnitFactionGroup;
+local _G = getfenv(0);
+local MainMenuBarMixin = {};
+local IsWidgetAtDefaultPosition
+local defaultBottomPositions = {
+    mainbar         = { posX = 0,    posY = 22  },
+    bottombarleft   = { posX = 0,    posY = 64  },
+    bottombarright  = { posX = 0,    posY = 102 },
+    petbar          = { posX = 1,    posY = 143 },
+    vehicleExit     = { posX = -251, posY = 145 },
+    xpbar           = { posX = 1,    posY = 7   },
+    repbar          = { posX = 1,    posY = 23  },
+}
+local dfXpBar = nil   -- custom XP bar frame
+local dfRepBar = nil  -- custom Rep bar frame
+local pUiMainBar, pUiMainBarArt, UpdateGryphonStyle, xpRepEventFrame, mainbarsEventFrame
+
+-- Container frames, filled in by InitializeMainbars. Declared here because the functions below run from
+-- the module registry, which can refresh before initialization on a profile load.
+addon.ActionBarFrames = addon.ActionBarFrames or {
+    mainbar = nil,
+    rightbar = nil,
+    leftbar = nil,
+    bottombarleft = nil,
+    bottombarright = nil,
+    xpbar = nil,
+    repbar = nil
+}
+
+local function SetupMainBarPageDriver(mainBar)
+    mainBar = mainBar or addon.pUiMainBar or _G.pUiMainBar
+    if not mainBar then return end
+
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("mainbars_page_driver", SetupMainBarPageDriver, mainBar)
+        end
+        return
+    end
+
+    -- Init-once behavior: keep the page driver
+    -- stable and avoid repeated RegisterStateDriver churn.
+    if MainbarsModule.pageDriverInstalled and MainbarsModule.pageDriverFrame == mainBar then
+        return
+    end
+
+    -- If the driver was previously attached to a different frame, detach it
+    -- before reattaching. This path is rare but keeps ownership explicit.
+    if MainbarsModule.pageDriverInstalled and MainbarsModule.pageDriverFrame and MainbarsModule.pageDriverFrame ~= mainBar then
+        pcall(UnregisterStateDriver, MainbarsModule.pageDriverFrame, 'page')
+        MainbarsModule.pageDriverInstalled = false
+        MainbarsModule.pageDriverFrame = nil
+        MainbarsModule.stateDrivers.page = nil
+    end
+
+    for i = 1, 12 do
+        local actionButton = _G['ActionButton' .. i]
+        if actionButton then
+            mainBar:SetFrameRef('ActionButton' .. i, actionButton)
+        end
+    end
+
+    mainBar:Execute([[
+            buttons = newtable()
+            for i = 1, 12 do
+                local button = self:GetFrameRef('ActionButton'..i)
+                if button then
+                    table.insert(buttons, button)
+                end
+            end
+        ]])
+
+    mainBar:SetAttribute('_onstate-page', [[
+            for i, button in ipairs(buttons) do
+                button:SetAttribute('actionpage', tonumber(newstate))
+            end
+        ]])
+
+    RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
+    MainbarsModule.stateDrivers.page = { frame = mainBar, state = 'page' }
+    MainbarsModule.pageDriverInstalled = true
+    MainbarsModule.pageDriverFrame = mainBar
+end
+
+-- GetBonusBarOffset() is still 0 at ADDON_LOADED; re-registering re-parses the condition on the spot.
+-- Re-registering forces SecureStateDriverManager to re-evaluate now; it otherwise only polls every 0.2s,
+-- which is why a reload inside a vehicle drew one frame of page 1 before settling on page 11.
+local function RefreshMainBarPageState()
+    if InCombatLockdown() then return end
+
+    if not MainbarsModule.pageDriverInstalled then
+        SetupMainBarPageDriver()
+    end
+
+    local mainBar = MainbarsModule.pageDriverFrame
+    if not mainBar then return end
+
+    RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
+end
+
+function MainMenuBarMixin:actionbutton_setup()
+-- Phase 3D: Defensive combat guard — secure frame operations must not run in combat
+if InCombatLockdown() then return end
+for _, obj in ipairs({MainMenuBar:GetChildren(), MainMenuBarArtFrame:GetChildren()}) do
+    obj:SetParent(pUiMainBar)
+end
+
+for index = 1, NUM_ACTIONBAR_BUTTONS do
+    pUiMainBar:SetFrameRef('ActionButton' .. index, _G['ActionButton' .. index])
+end
+
+-- Apply SetThreeSlice only if the background is NOT hidden
+local shouldHideBackground = addon.db and addon.db.profile and addon.db.profile.buttons and 
+                            addon.db.profile.buttons.hide_main_bar_background
+
+-- Store divider textures for bar-size management
+addon.MainBarDividers = addon.MainBarDividers or {}
+
+if not shouldHideBackground then
+    for index = 1, NUM_ACTIONBAR_BUTTONS - 1 do
+        local ActionButtons = _G['ActionButton' .. index]
+        do_action.SetThreeSlice(ActionButtons);
+        -- Tag divider textures so update_main_bar_background skips them
+        if pUiMainBar.divider_top then pUiMainBar.divider_top._isDragonUIDivider = true end
+        if pUiMainBar.divider_mid then pUiMainBar.divider_mid._isDragonUIDivider = true end
+        if pUiMainBar.divider_bottom then pUiMainBar.divider_bottom._isDragonUIDivider = true end
+        -- Store reference to dividers created on pUiMainBar
+        addon.MainBarDividers[index] = {
+            top = pUiMainBar.divider_top,
+            mid = pUiMainBar.divider_mid,
+            bottom = pUiMainBar.divider_bottom,
+        }
+    end
+end
+
+local mainbarsDb = addon.db and addon.db.profile and addon.db.profile.mainbars
+local playerSpacing = GetBarSpacing(mainbarsDb, "player")
+local blSpacing = GetBarSpacing(mainbarsDb, "bottom_left")
+local brSpacing = GetBarSpacing(mainbarsDb, "bottom_right")
+
+for index = 2, NUM_ACTIONBAR_BUTTONS do
+    local ActionButtons = _G['ActionButton' .. index]
+    ActionButtons:SetParent(pUiMainBar)
+    ActionButtons:SetClearPoint('LEFT', _G['ActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
+
+    local BottomLeftButtons = _G['MultiBarBottomLeftButton' .. index]
+    BottomLeftButtons:SetClearPoint('LEFT', _G['MultiBarBottomLeftButton' .. (index - 1)], 'RIGHT', blSpacing, 0)
+
+    local BottomRightButtons = _G['MultiBarBottomRightButton' .. index]
+    BottomRightButtons:SetClearPoint('LEFT', _G['MultiBarBottomRightButton' .. (index - 1)], 'RIGHT', brSpacing, 0)
+
+    local BonusActionButtons = _G['BonusActionButton' .. index]
+    BonusActionButtons:SetClearPoint('LEFT', _G['BonusActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
+end
+end
+
+function MainMenuBarMixin:actionbar_art_setup()
+    -- setup art frames - FIXED
+    MainMenuBarArtFrame:SetParent(pUiMainBarArt)  -- Goes to the art container
+    
+    -- CRITICAL: Gryphons must go to pUiMainBarArt, NOT pUiMainBar
+    for _, art in pairs({MainMenuBarLeftEndCap, MainMenuBarRightEndCap}) do
+        art:SetParent(pUiMainBarArt)  -- To the correct art container
+        art:SetDrawLayer('OVERLAY', 7)  -- Higher layer than ARTWORK
+    end
+
+    -- apply background settings
+    self:update_main_bar_background()
+
+    -- apply gryphon styling
+    UpdateGryphonStyle()
+end
+
+function MainMenuBarMixin:update_main_bar_background()
+    if addon.RefreshActionBarVisibility then
+        addon.RefreshActionBarVisibility()
+    end
+end
+
+function MainMenuBarMixin:actionbar_setup()
+    ActionButton1:SetParent(pUiMainBar)
+    ActionButton1:SetClearPoint('BOTTOMLEFT', pUiMainBar, 2, 2)
+
+    if config.buttons.pages.show then
+        do_action.SetNumPagesButton(ActionBarUpButton, pUiMainBarArt, 'pageuparrow', 8)
+        do_action.SetNumPagesButton(ActionBarDownButton, pUiMainBarArt, 'pagedownarrow', -14)
+
+        MainMenuBarPageNumber:SetParent(pUiMainBarArt)
+        MainMenuBarPageNumber:SetClearPoint('CENTER', ActionBarDownButton, -1, 12)
+        local pagesFont = config.buttons.pages.font
+        MainMenuBarPageNumber:SetFont(pagesFont[1], pagesFont[2], pagesFont[3])
+        MainMenuBarPageNumber:SetShadowColor(0, 0, 0, 1)
+        MainMenuBarPageNumber:SetShadowOffset(1.2, -1.2)
+        MainMenuBarPageNumber:SetDrawLayer('OVERLAY', 7)
+    else
+        ActionBarUpButton:Hide();
+        ActionBarDownButton:Hide();
+        MainMenuBarPageNumber:Hide();
+    end
+
+    MultiBarBottomRight:EnableMouse(false)
+    MultiBarRight:SetScale(config.mainbars.scale_rightbar)
+    MultiBarLeft:SetScale(config.mainbars.scale_leftbar)
+    if MultiBarBottomLeft then
+        MultiBarBottomLeft:SetScale(config.mainbars.scale_bottomleft or 0.9)
+    end
+    if MultiBarBottomRight then
+        MultiBarBottomRight:SetScale(config.mainbars.scale_bottomright or 0.9)
+    end
+end
+
+local function PositionSideBarButtons(barPrefix, barFrame, containerFrame, count, columns, spacing, buttonOrder)
+    if not barFrame then return end
+
+    count   = math.max(1, math.min(12, count or 12))
+    columns = math.max(1, math.min(12, columns or 1))
+    spacing = spacing or ACTION_BUTTON_SPACING
+    if not VALID_BUTTON_ORDERS[buttonOrder] then
+        buttonOrder = "top_left"
+    end
+    local step = ACTION_BUTTON_SIZE + spacing
+
+    -- Position visible buttons in a grid
+    -- Side bars are always multibars — do NOT call :Show() on their
+    -- buttons.  Blizzard’s ActionButton_Update handles visibility via
+    -- the showgrid attribute and the "Always Show Action Bars" CVar.
+    for index = 1, NUM_ACTIONBAR_BUTTONS do
+        local button = _G[barPrefix .. index]
+        if button then
+            if index <= count then
+                local gridIndex = index - 1
+                local row = math.floor(gridIndex / columns)
+                local col = gridIndex % columns
+                SetBarGridButtonPoint(button, barFrame, row, col, buttonOrder, 0, 0, step)
+                -- NOT calling button:Show() — let ActionButton_Update decide
+            else
+                button:ClearAllPoints()
+                button:SetPoint("CENTER", UIParent, "BOTTOM", 0, -666)
+                button:Hide()
+            end
+        end
+    end
+
+    -- Resize barFrame to fit the button grid (prevents invisible overhang on orientation change).
+    local effectiveCols = math.min(columns, count)
+    local rows = math.ceil(count / columns)
+    local w = effectiveCols * ACTION_BUTTON_SIZE + (effectiveCols - 1) * spacing
+    local h = rows       * ACTION_BUTTON_SIZE + (rows       - 1) * spacing
+    barFrame:SetSize(w, h)
+
+    if containerFrame then
+        barFrame:ClearAllPoints()
+        barFrame:SetPoint("TOPLEFT", containerFrame, "TOPLEFT", 0, 0)
+    end
+end
+
+local function StabilizeSecondaryBarLayering()
+    if InCombatLockdown() then
+        return
+    end
+
+    local secondaryBars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
+    for _, bar in ipairs(secondaryBars) do
+        if bar and bar.SetToplevel then
+            bar:SetToplevel(false)
+        end
+    end
+
+    local secondaryPrefixes = {"MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton", "MultiBarLeftButton"}
+    for _, prefix in ipairs(secondaryPrefixes) do
+        for index = 1, NUM_ACTIONBAR_BUTTONS do
+            local button = _G[prefix .. index]
+            if button and button.SetToplevel then
+                button:SetToplevel(false)
+            end
+        end
+    end
+end
+
+function addon.PositionActionBars()
+    if InCombatLockdown() then
+        return
+    end
+
+    local db = addon.db and addon.db.profile and addon.db.profile.mainbars
+    if not db then
+        return
+    end
+
+    -- Right bar: grid layout using columns (horizontal = 12 cols, vertical = 1 col)
+    if MultiBarRight then
+        local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.rightbar
+        local rightCfg = db.right or {}
+        local rightCount = rightCfg.buttons_shown or 12
+        local rightCols = rightCfg.columns or 1
+        local rightRows = math.ceil(rightCount / rightCols)
+        PositionSideBarButtons("MultiBarRightButton", MultiBarRight, containerFrame,
+            rightCount, rightCols, GetBarSpacing(db, "right"),
+            ResolveBarButtonOrder(rightCfg, "top_left", rightRows))
+    end
+
+    -- Left bar: grid layout using columns
+    if MultiBarLeft then
+        local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.leftbar
+        local leftCfg = db.left or {}
+        local leftCount = leftCfg.buttons_shown or 12
+        local leftCols = leftCfg.columns or 1
+        local leftRows = math.ceil(leftCount / leftCols)
+        PositionSideBarButtons("MultiBarLeftButton", MultiBarLeft, containerFrame,
+            leftCount, leftCols, GetBarSpacing(db, "left"),
+            ResolveBarButtonOrder(leftCfg, "top_left", leftRows))
+    end
+end
+
+local function ResizeContainerStable(container, newW, newH)
+    if not container then return end
+    local oldW, oldH = container:GetWidth(), container:GetHeight()
+    if oldW == newW and oldH == newH then return end -- nothing to do
+
+    -- Remember the visual center of the container in screen pixels
+    local cx, cy = container:GetCenter()
+    if not cx or not cy then
+        -- Frame not yet shown; just resize without compensation
+        container:SetSize(newW, newH)
+        return
+    end
+
+    -- Resize
+    container:SetSize(newW, newH)
+
+    -- After resize the anchor point is the same but the visual center
+    -- shifted because the frame grew/shrank around its anchor.  Read
+    -- the NEW center and calculate the delta.
+    local cx2, cy2 = container:GetCenter()
+    if not cx2 or not cy2 then return end
+
+    local dx = cx - cx2
+    local dy = cy - cy2
+    if math.abs(dx) < 0.5 and math.abs(dy) < 0.5 then return end
+
+    -- Shift the anchor to cancel the visual movement
+    local point, rel, relPoint, px, py = container:GetPoint(1)
+    if point then
+        container:SetPoint(point, rel, relPoint, (px or 0) + dx, (py or 0) + dy)
+    end
+end
+
+local function BarContainerSize(cols, count, spacing)
+    cols  = math.max(1, cols or 1)
+    count = math.max(1, count or 12)
+    spacing = spacing or ACTION_BUTTON_SPACING
+    local effectiveCols = math.min(cols, count)
+    local rows = math.ceil(count / cols)
+    local w = effectiveCols * ACTION_BUTTON_SIZE + (effectiveCols - 1) * spacing
+    local h = rows * ACTION_BUTTON_SIZE + (rows - 1) * spacing
+    return w, h
+end
+
+local function GetMainBarButtonCenterOffsetY()
+    local edgePad = 2
+    return (DEFAULT_HEIGHT_PADDING / 2) - edgePad
+end
+
+function addon.UpdateOverlaySizes()
+    local db = addon.db and addon.db.profile and addon.db.profile.mainbars
+    if not db then return end
+
+    if addon.ActionBarFrames.mainbar and addon.pUiMainBar then
+        local w, h = addon.pUiMainBar:GetSize()
+        local scale = db.scale_actionbar or 0.9
+        ResizeContainerStable(addon.ActionBarFrames.mainbar, w * scale, h * scale)
+        if not InCombatLockdown() then
+            local oy = GetMainBarButtonCenterOffsetY() * scale
+            addon.pUiMainBar:ClearAllPoints()
+            addon.pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
+        end
+    end
+
+    if addon.ActionBarFrames.rightbar then
+        local cfg = db.right or {}
+        local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "right"))
+        local scale = db.scale_rightbar or 0.9
+        ResizeContainerStable(addon.ActionBarFrames.rightbar, w * scale, h * scale)
+    end
+
+    if addon.ActionBarFrames.leftbar then
+        local cfg = db.left or {}
+        local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "left"))
+        local scale = db.scale_leftbar or 0.9
+        ResizeContainerStable(addon.ActionBarFrames.leftbar, w * scale, h * scale)
+    end
+
+    if addon.ActionBarFrames.bottombarleft then
+        local cfg = db.bottom_left or {}
+        local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
+        local scale = db.scale_bottomleft or 0.9
+        ResizeContainerStable(addon.ActionBarFrames.bottombarleft, w * scale, h * scale)
+    end
+
+    if addon.ActionBarFrames.bottombarright then
+        local cfg = db.bottom_right or {}
+        local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
+        local scale = db.scale_bottomright or 0.9
+        ResizeContainerStable(addon.ActionBarFrames.bottombarright, w * scale, h * scale)
+    end
+end
+
+local function GetXpRepConfig()
+    return addon.db and addon.db.profile and addon.db.profile.xprepbar
+end
+
+local function GetXpBarStyle()
+    local cfg = GetXpRepConfig()
+    return cfg and cfg.style or "dragonflightui"
+end
+
+local function GetXpBarHeight(styleOverride)
+    local cfg = GetXpRepConfig() or {}
+    local s = styleOverride or GetXpBarStyle()
+    if s == "retailui" then
+        return cfg.bar_height_retailui or 9
+    else
+        return cfg.bar_height_dfui or 14
+    end
+end
+
+local function IsXpBarVisible()
+    local maxXP = UnitXPMax("player")
+    if not maxXP or maxXP <= 0 then return false end
+    local currXP = UnitXP("player") or 0
+    return currXP < maxXP
+end
+
+local function AreBothXpRepBarsVisible()
+    if not IsXpBarVisible() then return false end
+    local hasWatchedFaction = GetWatchedFactionInfo() ~= nil
+    return hasWatchedFaction
+end
+
+local function GetDualBarVerticalOffset()
+    if not AreBothXpRepBarsVisible() then return 0 end
+    if not IsWidgetAtDefaultPosition("xpbar") or not IsWidgetAtDefaultPosition("repbar") then return 0 end
+    local barH = GetXpBarHeight()
+    return barH + 2 -- bar height + 2px gap
+end
+
+function MainMenuBarMixin:statusbar_setup()
+    if PetActionBarFrame then
+        local db = addon.db and addon.db.profile and addon.db.profile.mainbars
+        if db and db.scale_petbar then
+            PetActionBarFrame:SetScale(db.scale_petbar)
+        elseif config.mainbars.scale_petbar then
+            PetActionBarFrame:SetScale(config.mainbars.scale_petbar)
+        end
+
+            local petbarModuleEnabled = addon.IsModuleEnabled and addon:IsModuleEnabled("petbar")
+            if petbarModuleEnabled then
+                PetActionBarFrame:EnableMouse(false)
+                PetActionBarFrame:SetAlpha(0)
+                PetActionBarFrame:Hide()
+            else
+                PetActionBarFrame:EnableMouse(true)
+            end
+    end
+
+    -- Hide Blizzard XP/Rep text by default (both styles manage their own)
+    if MainMenuBarExpText then MainMenuBarExpText:Hide() end
+    if ReputationWatchBarText then ReputationWatchBarText:Hide() end
+end
+
+local function CreateDragonflightUIXPBar()
+    if dfXpBar then return dfXpBar end
+
+    local cfg = GetXpRepConfig() or {}
+    local sizeX = cfg.bar_width or 466
+    local sizeY = GetXpBarHeight("dragonflightui")
+
+    local f = CreateFrame("Frame", "DragonUI_XPBar", UIParent)
+    f:SetSize(sizeX, sizeY)
+    f:SetFrameLevel(2)
+
+    -- Background layer
+    f.Background = f:CreateTexture(nil, "BACKGROUND")
+    f.Background:SetAllPoints()
+    f.Background:SetTexture(addon._dir .. "XP\\Background")
+    f.Background:SetTexCoord(0, 0.55517578, 0, 1)
+
+    -- Rested XP background bar (shows the TOTAL rested range behind main fill)
+    f.RestedBar = CreateFrame("StatusBar", nil, f)
+    f.RestedBar:SetPoint("TOPLEFT", 0, 0)
+    f.RestedBar:SetPoint("BOTTOMRIGHT", 0, 0)
+    f.RestedBar.Texture = f.RestedBar:CreateTexture(nil, "ARTWORK")
+    f.RestedBar.Texture:SetTexture(addon._dir .. "XP\\RestedBackground")
+    f.RestedBar.Texture:SetAllPoints()
+    f.RestedBar.Texture:SetDrawLayer("ARTWORK", 0)
+    f.RestedBar:SetStatusBarTexture(f.RestedBar.Texture)
+    f.RestedBar:SetFrameLevel(3)
+    f.RestedBar:SetAlpha(0.69)
+
+    -- Rested mark tick (small indicator at the end of rested range)
+    local markSizeX, markSizeY = 14, sizeY + 6
+    f.RestedBarMark = CreateFrame("Frame", nil, f)
+    f.RestedBarMark:SetSize(markSizeX, markSizeY)
+    f.RestedBarMark.Texture = f.RestedBarMark:CreateTexture(nil, "OVERLAY")
+    f.RestedBarMark.Texture:SetTexture(addon._dir .. "XP\\uiexperiencebar")
+    f.RestedBarMark.Texture:SetTexCoord(1170 / 2048, 1192 / 2048, 201 / 256, 231 / 256)
+    f.RestedBarMark.Texture:SetAllPoints()
+
+    -- Main XP progress bar
+    f.Bar = CreateFrame("StatusBar", nil, f)
+    f.Bar:SetPoint("TOPLEFT", 0, 0)
+    f.Bar:SetPoint("BOTTOMRIGHT", 0, 0)
+    f.Bar.Texture = f.Bar:CreateTexture(nil, "ARTWORK")
+    f.Bar.Texture:SetTexture(addon._dir .. "XP\\Main")
+    f.Bar.Texture:SetAllPoints()
+    f.Bar:SetStatusBarTexture(f.Bar.Texture)
+    f.Bar.Texture:SetDrawLayer("ARTWORK", 1)
+    f.Bar:SetFrameLevel(4)
+    f.Bar:EnableMouse(true)
+
+    -- Border overlay
+    f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
+    f.Border:SetTexture(addon._dir .. "XP\\Overlay")
+    f.Border:SetTexCoord(0, 0.55517578, 0, 1)
+    f.Border:SetPoint("TOPLEFT", 0, 1)
+    f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
+
+    -- Text (shown on hover via HIGHLIGHT, or always via OVERLAY)
+    f.Text = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
+    f.Text:SetTextColor(1, 1, 1, 1)
+    f.Text:SetPoint("CENTER", 0, 1)
+
+    f.TextPercent = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
+    f.TextPercent:SetTextColor(1, 1, 1, 1)
+    f.TextPercent:SetPoint("LEFT", f.Text, "RIGHT", 0, 0)
+
+    -- Compatibility: forward right-click to Blizzard XP bar handler
+    -- so server-side XP rate dropdowns still work when using custom DFUI bar.
+    f.Bar:SetScript("OnMouseDown", function(self, button)
+        if button ~= "RightButton" or not MainMenuExpBar then return end
+        local handler = MainMenuExpBar:GetScript("OnMouseDown")
+        if handler then
+            handler(MainMenuExpBar, button)
+        end
+    end)
+
+    -- Tooltip (borrowed from DragonflightUI)
+    f.Bar:SetScript("OnEnter", function(self)
+        GameTooltip_AddNewbieTip(self, XPBAR_LABEL, 1.0, 1.0, 1.0, NEWBIE_TOOLTIP_XPBAR, 1)
+        GameTooltip.canAddRestStateLine = 1
+        ExhaustionToolTipText()
+        local currXP = UnitXP("player")
+        local maxXP = UnitXPMax("player")
+        local pct = (maxXP > 0) and (100 * currXP / maxXP) or 0
+        local left = maxXP - currXP
+        local leftPct = 100 - pct
+        local restedXP = GetXPExhaustion() or 0
+        local restedMax = maxXP * 1.5
+        local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddDoubleLine(L["XP: "], format("|cFFFFFFFF%s/%s (%.1f%%)", currXP, maxXP, pct))
+        GameTooltip:AddDoubleLine(L["Remaining: "], format("|cFFFFFFFF%s (%.1f%%)", left, leftPct))
+        GameTooltip:AddDoubleLine(L["Rested: "], format("|cFFFFFFFF%s (%.1f%%)", restedXP, restedPct))
+        GameTooltip:Show()
+    end)
+    f.Bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    dfXpBar = f
+    return f
+end
+
+local function CreateDragonflightUIRepBar()
+    if dfRepBar then return dfRepBar end
+
+    local cfg = GetXpRepConfig() or {}
+    local sizeX = cfg.bar_width or 466
+    local sizeY = GetXpBarHeight("dragonflightui")
+
+    local f = CreateFrame("Frame", "DragonUI_RepBar", UIParent)
+    f:SetSize(sizeX, sizeY)
+    f:SetFrameLevel(2)
+
+    -- Background
+    f.Background = f:CreateTexture(nil, "BACKGROUND")
+    f.Background:SetAllPoints()
+    f.Background:SetTexture(addon._dir .. "XP\\Background")
+    f.Background:SetTexCoord(0, 0.55517578, 0, 1)
+
+    -- Main rep progress bar
+    f.Bar = CreateFrame("StatusBar", nil, f)
+    f.Bar:SetPoint("TOPLEFT", 0, 0)
+    f.Bar:SetPoint("BOTTOMRIGHT", 0, 0)
+    f.Bar.Texture = f.Bar:CreateTexture(nil, "ARTWORK")
+    f.Bar.Texture:SetTexture(addon._dir .. "Reputation\\Rep")
+    f.Bar.Texture:SetAllPoints()
+    f.Bar:SetStatusBarTexture(f.Bar.Texture)
+    f.Bar:EnableMouse(true)
+
+    -- Border overlay
+    f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
+    f.Border:SetTexture(addon._dir .. "XP\\Overlay")
+    f.Border:SetTexCoord(0, 0.55517578, 0, 1)
+    f.Border:SetPoint("TOPLEFT", 0, 1)
+    f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
+
+    -- Text (hover by default)
+    f.Text = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
+    f.Text:SetTextColor(1, 1, 1, 1)
+    f.Text:SetPoint("CENTER", 0, 1)
+
+    -- Click to open reputation panel
+    f.Bar:SetScript("OnMouseDown", function(self, button)
+        if button == "LeftButton" and not InCombatLockdown() then
+            ToggleCharacter("ReputationFrame")
+        end
+    end)
+
+    -- Tooltip
+    f.Bar:SetScript("OnEnter", function(self)
+        local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
+        if name then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine(name, 1, 1, 1)
+            local standingLabel = _G["FACTION_STANDING_LABEL" .. standing] or ""
+            GameTooltip:AddLine(standingLabel, NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+            GameTooltip:AddDoubleLine(L["Reputation: "], format("|cFFFFFFFF%s / %s", value - minRep, maxRep - minRep))
+            GameTooltip:Show()
+        end
+    end)
+    f.Bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+    dfRepBar = f
+    return f
+end
+
+local function UpdateDfuiExhaustionTick()
+    if not ExhaustionTick or not dfXpBar then return end
+
+    local cfg = GetXpRepConfig() or {}
+    local showTick = addon.db and addon.db.profile and addon.db.profile.style
+        and addon.db.profile.style.exhaustion_tick
+    local exhaustionThreshold = GetXPExhaustion()
+    local currXP = UnitXP("player")
+    local maxXP = UnitXPMax("player")
+    if not maxXP or maxXP == 0 then maxXP = 1 end
+    local remainingXP = maxXP - currXP
+    local isFullyRested = exhaustionThreshold and exhaustionThreshold >= remainingXP
+
+    if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
+        local barW = dfXpBar:GetWidth()
+        if not barW or barW == 0 then barW = cfg.bar_width or 466 end
+        ExhaustionTick:SetParent(dfXpBar)
+        ExhaustionTick:SetFrameStrata("HIGH")
+        ExhaustionTick:SetFrameLevel(20)
+        local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
+        tickPos = math.max(tickPos, 0)
+        ExhaustionTick:ClearAllPoints()
+        ExhaustionTick:SetPoint("CENTER", dfXpBar, "LEFT", tickPos, 0)
+        ExhaustionTick:SetScript("OnUpdate", function(self, elapsed)
+            if not self.timer then return end
+            self.timer = self.timer - elapsed
+            if self.timer > 0 then return end
+            self.timer = 1
+            local et = GetXPExhaustion()
+            if not et or et <= 0 then self:Hide() return end
+            local cx = UnitXP("player")
+            local mx = UnitXPMax("player")
+            if not mx or mx == 0 then return end
+            if et >= (mx - cx) then self:Hide() return end
+            local bw = dfXpBar:GetWidth()
+            if not bw or bw == 0 then return end
+            local tp = math.min(((cx + et) / mx) * bw, bw)
+            tp = math.max(tp, 0)
+            self:ClearAllPoints()
+            self:SetPoint("CENTER", dfXpBar, "LEFT", tp, 0)
+        end)
+        ExhaustionTick.timer = 0
+        ExhaustionTick:Show()
+    else
+        ExhaustionTick:Hide()
+        ExhaustionTick:SetScript("OnUpdate", nil)
+    end
+end
+
+local function UpdateDragonflightUIXPBar()
+    if not dfXpBar then return end
+
+    local cfg = GetXpRepConfig() or {}
+    local sizeX = cfg.bar_width or 466
+    local sizeY = GetXpBarHeight("dragonflightui")
+    local markSizeX = 14
+
+    -- Hide the custom XP bar when there's no XP to gain (max level,
+    -- XP disabled, etc.).  Uses UnitXPMax — works on any server.
+    if not IsXpBarVisible() then
+        dfXpBar:Hide()
+        return
+    end
+    dfXpBar:Show()
+
+    local exhaustionStateID = GetRestState()
+    local currXP = UnitXP("player")
+    local maxXP = UnitXPMax("player")
+    if maxXP == 0 then maxXP = 1 end
+    local restedXP = GetXPExhaustion() or 0
+    local pct = 100 * currXP / maxXP
+
+    -- Set main bar texture based on rested state
+    if exhaustionStateID == 1 then
+        dfXpBar.Bar.Texture:SetTexture(addon._dir .. "XP\\Rested")
+    else
+        dfXpBar.Bar.Texture:SetTexture(addon._dir .. "XP\\Main")
+    end
+    dfXpBar.Bar:SetMinMaxValues(0, maxXP)
+    dfXpBar.Bar:SetValue(currXP)
+
+    -- Rested XP background bar
+    local showRested = cfg.show_rested_bar ~= false
+    if showRested and restedXP and restedXP > 0 then
+        dfXpBar.RestedBar:Show()
+        dfXpBar.RestedBar:SetMinMaxValues(0, maxXP)
+        if (currXP + restedXP) > maxXP then
+            dfXpBar.RestedBar:SetValue(maxXP)
+            dfXpBar.RestedBarMark:Hide()
+        else
+            dfXpBar.RestedBar:SetValue(currXP + restedXP)
+            local showMark = cfg.show_rested_mark ~= false
+            if showMark then
+                local bw = dfXpBar:GetWidth()
+                if not bw or bw == 0 then bw = sizeX end
+                dfXpBar.RestedBarMark:Show()
+                dfXpBar.RestedBarMark:ClearAllPoints()
+                dfXpBar.RestedBarMark:SetPoint("LEFT", dfXpBar, "LEFT",
+                    (currXP + restedXP) / maxXP * bw - markSizeX / 2, 0)
+            else
+                dfXpBar.RestedBarMark:Hide()
+            end
+        end
+    else
+        dfXpBar.RestedBar:Hide()
+        dfXpBar.RestedBarMark:Hide()
+    end
+
+    -- Text
+    local alwaysText = cfg.always_show_text
+    if alwaysText then
+        dfXpBar.Text:SetDrawLayer("OVERLAY")
+        dfXpBar.TextPercent:SetDrawLayer("OVERLAY")
+    else
+        dfXpBar.Text:SetDrawLayer("HIGHLIGHT")
+        dfXpBar.TextPercent:SetDrawLayer("HIGHLIGHT")
+    end
+
+    dfXpBar.Text:SetText(string.format(L["XP: %d/%d"], currXP, maxXP))
+
+    local showPercent = cfg.show_xp_percent ~= false
+    if showPercent then
+        local restedMax = maxXP * 1.5
+        local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
+        local percentText = " = " .. format("%.1f%%", pct)
+        if restedPct > 0 then
+            percentText = percentText .. " (" .. format("%.1f%%", restedPct) .. " Rested)"
+        end
+        dfXpBar.TextPercent:SetText(percentText)
+        dfXpBar.TextPercent:Show()
+        -- Offset main text left by half the percent text width so the combined visual is centered
+        local percentWidth = dfXpBar.TextPercent:GetStringWidth() or 0
+        dfXpBar.Text:ClearAllPoints()
+        dfXpBar.Text:SetPoint("CENTER", 0 - percentWidth / 2, 1)
+    else
+        dfXpBar.TextPercent:Hide()
+        -- Reset to normal centering when percentage is off
+        dfXpBar.Text:ClearAllPoints()
+        dfXpBar.Text:SetPoint("CENTER", 0, 1)
+    end
+end
+
+local function UpdateDragonflightUIRepBar()
+    if not dfRepBar then return end
+
+    local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
+    if not name then
+        dfRepBar:Hide()
+        return
+    end
+    dfRepBar:Show()
+
+    local cfg = GetXpRepConfig() or {}
+
+    -- Standing-based texture color
+    if standing == 1 or standing == 2 then
+        dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepRed")
+    elseif standing == 3 then
+        dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepOrange")
+    elseif standing == 4 then
+        dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepYellow")
+    else
+        dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepGreen")
+    end
+
+    dfRepBar.Bar:SetMinMaxValues(0, maxRep - minRep)
+    dfRepBar.Bar:SetValue(value - minRep)
+
+    -- Text
+    local alwaysText = cfg.always_show_text
+    if alwaysText then
+        dfRepBar.Text:SetDrawLayer("OVERLAY")
+    else
+        dfRepBar.Text:SetDrawLayer("HIGHLIGHT")
+    end
+    dfRepBar.Text:SetText(name .. " " .. (value - minRep) .. " / " .. (maxRep - minRep))
+end
+
+local function ApplyRetailUIExpRepBarStyling()
+    local cfg = GetXpRepConfig() or {}
+    local barW = cfg.bar_width or 466
+    local barH = GetXpBarHeight("retailui")
+    local ExperienceBarAsset = addon._dir .. "XP\\uiexperiencebar"
+
+    -- === XP BAR ===
+    -- NOTE: Do NOT ClearAllPoints here — positioning is handled by
+    -- ConnectBarsToEditor() and UpdateBarPositions(). Clearing anchors
+    -- here would leave the bar floating at 0,0 between function calls.
+    if MainMenuExpBar then
+        MainMenuExpBar:SetSize(barW, barH)
+        MainMenuExpBar:SetFrameLevel(1)
+
+        -- Replace all BACKGROUND textures in-place with ExperienceBar-Background atlas
+        -- Clear original anchors first so our sizing takes effect (2-point anchors override SetSize)
+        -- Extend 1px left, 2px right so background fully covers the area inside the border
+        local bgFound = false
+        for _, region in pairs({MainMenuExpBar:GetRegions()}) do
+            if region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
+                if not bgFound then
+                    -- Use the first BACKGROUND texture as our single full-width background
+                    region:ClearAllPoints()
+                    region:SetPoint("TOPLEFT", MainMenuExpBar, "TOPLEFT", -1, 0)
+                    region:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 2, 0)
+                    region:SetTexture(ExperienceBarAsset)
+                    region:SetTexCoord(0.00088878125 / 2048, 570 / 2048, 20 / 64, 29 / 64)
+                    region:SetAlpha(1) -- RemoveBlizzardFrames sets alpha 0, must restore
+                    region:Show()
+                    bgFound = true
+                else
+                    -- Hide extra BACKGROUND textures (only need one)
+                    region:Hide()
+                end
+            end
+        end
+
+        -- Clean up old custom background from previous approach
+        if MainMenuExpBar._dragonuiBg then
+            MainMenuExpBar._dragonuiBg:Hide()
+        end
+
+        -- ExhaustionLevelFillBar: match reference (set height, keep visible for rested display)
+        if ExhaustionLevelFillBar then
+            ExhaustionLevelFillBar:SetHeight(barH)
+            ExhaustionLevelFillBar:Show()
+        end
+
+        -- Border: MainMenuXPBarTexture0 (noop.lua clears with SetTexture(nil), we re-apply)
+        -- Reference: SetAllPoints first, then override with offset anchors, then set_atlas
+        local borderTex = MainMenuXPBarTexture0
+        if borderTex then
+            borderTex:ClearAllPoints()
+            borderTex:SetPoint("TOPLEFT", MainMenuExpBar, "TOPLEFT", -3, 3)
+            borderTex:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 3, -6)
+            borderTex:SetDrawLayer("OVERLAY", 1)
+            borderTex:SetTexture(ExperienceBarAsset)
+            borderTex:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
+            borderTex:Show()
+        end
+
+        -- DON'T change the StatusBar fill texture — reference leaves Blizzard default intact
+        -- Clean up old custom fill texture if it exists from previous approach
+        if MainMenuExpBar._dragonuiTex then
+            MainMenuExpBar._dragonuiTex:Hide()
+        end
+
+        -- Clean up old custom rested overlay if it exists from previous approach
+        if MainMenuExpBar._restedOverlay then
+            MainMenuExpBar._restedOverlay:Hide()
+        end
+
+        -- XP text: handle visibility (always show vs hover only)
+        if MainMenuBarExpText then
+            MainMenuBarExpText:SetParent(MainMenuExpBar)
+            MainMenuBarExpText:ClearAllPoints()
+            MainMenuBarExpText:SetPoint("CENTER", MainMenuExpBar, "CENTER", 0, 2)
+
+            -- Visibility: OVERLAY = always visible, HIGHLIGHT = hover only
+            local alwaysText = cfg.always_show_text
+            if alwaysText then
+                MainMenuBarExpText:SetDrawLayer("OVERLAY", 3)
+            else
+                MainMenuBarExpText:SetDrawLayer("HIGHLIGHT")
+            end
+            -- Must Show() to undo the explicit Hide() from init
+            MainMenuBarExpText:Show()
+        end
+
+        -- Exhaustion tick (safe handler replaces Blizzard's crash-prone OnUpdate)
+        if ExhaustionTick then
+            local showTick = addon.db and addon.db.profile and addon.db.profile.style
+                and addon.db.profile.style.exhaustion_tick
+            local exhaustionThreshold = GetXPExhaustion()
+            local currXP = UnitXP("player")
+            local maxXP = UnitXPMax("player")
+            if not maxXP or maxXP == 0 then maxXP = 1 end
+
+            -- Hide tick if rested XP fills the entire remaining bar
+            local remainingXP = maxXP - currXP
+            local isFullyRested = exhaustionThreshold and exhaustionThreshold >= remainingXP
+
+            if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
+                -- Re-parent to MainMenuExpBar and ensure it renders above everything
+                ExhaustionTick:SetParent(MainMenuExpBar)
+                ExhaustionTick:SetFrameStrata("HIGH")
+                ExhaustionTick:SetFrameLevel(20)
+                -- Position immediately
+                local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
+                tickPos = math.max(tickPos, 0)
+                ExhaustionTick:ClearAllPoints()
+                ExhaustionTick:SetPoint("CENTER", MainMenuExpBar, "LEFT", tickPos, 0)
+                -- Install a nil-safe OnUpdate for continuous tracking
+                ExhaustionTick:SetScript("OnUpdate", function(self, elapsed)
+                    if not self.timer then return end
+                    self.timer = self.timer - elapsed
+                    if self.timer > 0 then return end
+                    self.timer = 1
+                    local et = GetXPExhaustion()
+                    if not et or et <= 0 then
+                        self:Hide()
+                        return
+                    end
+                    local cx = UnitXP("player")
+                    local mx = UnitXPMax("player")
+                    if not mx or mx == 0 then return end
+                    -- Hide if fully rested
+                    if et >= (mx - cx) then
+                        self:Hide()
+                        return
+                    end
+                    local bw = MainMenuExpBar:GetWidth()
+                    if not bw or bw == 0 then return end
+                    local tp = math.min(((cx + et) / mx) * bw, bw)
+                    tp = math.max(tp, 0)
+                    self:ClearAllPoints()
+                    self:SetPoint("CENTER", MainMenuExpBar, "LEFT", tp, 0)
+                end)
+                ExhaustionTick.timer = 0
+                ExhaustionTick:Show()
+            else
+                ExhaustionTick:Hide()
+                ExhaustionTick:SetScript("OnUpdate", nil)
+            end
+        end
+
+        -- Hide the status overlay if it was created before (cleanup from old code)
+        if MainMenuExpBar.status then
+            MainMenuExpBar.status:Hide()
+        end
+
+        -- Explicitly set XP bar values: noop kills Blizzard's MainMenuBar
+        -- events, so MainMenuExpBar_Update() never runs automatically.
+        -- Without this the StatusBar fill is empty (0/0).
+        local currXP = UnitXP("player")
+        local maxXP = UnitXPMax("player")
+        if maxXP and maxXP > 0 then
+            MainMenuExpBar:SetMinMaxValues(math.min(0, currXP), maxXP)
+            MainMenuExpBar:SetValue(currXP)
+        end
+
+        MainMenuExpBar:Show()
+    end
+
+    -- === REP BAR ===
+    -- Reference: ReplaceBlizzardRepExpBarFrame — rep bar section
+    -- NOTE: Do NOT ClearAllPoints here — positioning handled by UpdateBarPositions()
+    if ReputationWatchBar and ReputationWatchStatusBar then
+        ReputationWatchBar:SetSize(barW, barH)
+        ReputationWatchBar:SetFrameLevel(1)
+        ReputationWatchStatusBar:SetAllPoints(ReputationWatchBar)
+        ReputationWatchStatusBar:SetSize(barW, barH)
+        -- Enable mouse on the StatusBar so HIGHLIGHT draw layer and OnEnter work.
+        -- The StatusBar covers the full area via SetAllPoints, so it receives
+        -- mouse events instead of the parent ReputationWatchBar.
+        ReputationWatchStatusBar:EnableMouse(true)
+        -- DON'T change rep StatusBar fill texture — leave Blizzard default
+
+        -- Background: use named background texture per reference pattern
+        -- Reference: _G[repStatusBar:GetName() .. "Background"]
+        -- Extend 1px left, 2px right so background fully covers the area inside the border
+        local repBgTex = ReputationWatchStatusBarBackground
+        if repBgTex then
+            repBgTex:ClearAllPoints()
+            repBgTex:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -1, 0)
+            repBgTex:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 2, 0)
+            repBgTex:SetTexture(ExperienceBarAsset)
+            repBgTex:SetTexCoord(0.00088878125 / 2048, 570 / 2048, 20 / 64, 29 / 64)
+            repBgTex:SetAlpha(1) -- RemoveBlizzardFrames may set alpha 0, must restore
+        end
+
+        -- Border: ReputationXPBarTexture0 (noop.lua clears, we re-apply)
+        local repBorder = ReputationXPBarTexture0
+        if repBorder then
+            repBorder:ClearAllPoints()
+            repBorder:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -3, 2)
+            repBorder:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
+            repBorder:SetDrawLayer("OVERLAY", 1)
+            repBorder:SetTexture(ExperienceBarAsset)
+            repBorder:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
+            repBorder:Show()
+        end
+
+        local repBorder2 = ReputationWatchBarTexture0
+        if repBorder2 then
+            repBorder2:ClearAllPoints()
+            repBorder2:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -3, 2)
+            repBorder2:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
+            repBorder2:SetDrawLayer("OVERLAY", 1)
+            repBorder2:SetTexture(ExperienceBarAsset)
+            repBorder2:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
+            repBorder2:Show()
+        end
+
+        -- Hide the status overlay if it was created before (cleanup from old code)
+        if ReputationWatchStatusBar.status then
+            ReputationWatchStatusBar.status:Hide()
+        end
+
+        -- Explicitly set rep bar values: noop kills Blizzard's MainMenuBar
+        -- events, so ReputationWatchBar_Update() never runs automatically.
+        local fName, _, fMin, fMax, fValue = GetWatchedFactionInfo()
+        if fName and fMax and fMax > fMin then
+            ReputationWatchStatusBar:SetMinMaxValues(fMin, fMax)
+            ReputationWatchStatusBar:SetValue(fValue)
+        end
+
+        -- Rep text: handle visibility (always show vs hover only)
+        if ReputationWatchStatusBarText then
+            ReputationWatchStatusBarText:SetParent(ReputationWatchStatusBar)
+            ReputationWatchStatusBarText:ClearAllPoints()
+            ReputationWatchStatusBarText:SetPoint("CENTER", ReputationWatchStatusBar, "CENTER", 0, 1)
+            local alwaysText = cfg.always_show_text
+            if alwaysText then
+                ReputationWatchStatusBarText:SetDrawLayer("OVERLAY", 3)
+                -- Set the text explicitly with faction name for "always show" mode
+                local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
+                if name then
+                    local current = value - minRep
+                    local maximum = maxRep - minRep
+                    ReputationWatchStatusBarText:SetText(format("%s: %d / %d", name, current, maximum))
+                end
+            else
+                ReputationWatchStatusBarText:SetDrawLayer("HIGHLIGHT")
+            end
+            ReputationWatchStatusBarText:Show()
+        end
+    end
+
+    -- Re-apply dark mode tint — SetTexture() above resets vertex colors
+    if addon.RefreshDarkModeXPRepBars then
+        addon.RefreshDarkModeXPRepBars()
+    end
+end
+
+local function ConnectBarsToEditor()
+    if not addon.ActionBarFrames.xpbar or not addon.ActionBarFrames.repbar then return end
+
+    local cfg = GetXpRepConfig() or {}
+    local style = GetXpBarStyle()
+
+    if style == "dragonflightui" then
+        -- Hide Blizzard bars, show custom bars
+        if MainMenuExpBar then
+            MainMenuExpBar:SetParent(UIParent)
+            MainMenuExpBar:ClearAllPoints()
+            MainMenuExpBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, -500)
+            MainMenuExpBar:SetAlpha(0)
+        end
+        if ReputationWatchBar then
+            ReputationWatchBar:SetParent(UIParent)
+            ReputationWatchBar:ClearAllPoints()
+            ReputationWatchBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, -500)
+            ReputationWatchBar:SetAlpha(0)
+        end
+        if ExhaustionTick then
+            -- In DFUI, ExhaustionTick is managed by the tick logic below (if enabled)
+            -- Always hide initially; the style-specific tick code will show if needed
+            ExhaustionTick:Hide()
+            ExhaustionTick:SetScript("OnUpdate", nil)
+        end
+        if ExhaustionLevelFillBar then ExhaustionLevelFillBar:Hide() end
+
+        -- Create and parent custom bars to their own editor frames
+        local xpBar = CreateDragonflightUIXPBar()
+        local repBar = CreateDragonflightUIRepBar()
+
+        -- Store references on addon table so dark mode can find them reliably
+        addon.DfuiXpBar = xpBar
+        addon.DfuiRepBar = repBar
+
+        xpBar:SetParent(addon.ActionBarFrames.xpbar)
+        xpBar:SetScale(cfg.expbar_scale or 1.0)
+        xpBar:SetFrameStrata("MEDIUM")
+
+        repBar:SetParent(addon.ActionBarFrames.repbar)
+        repBar:SetScale(cfg.repbar_scale or 1.0)
+        repBar:SetFrameStrata("MEDIUM")
+
+        -- Exhaustion tick for DragonflightUI: delegated to UpdateDfuiExhaustionTick()
+        UpdateDfuiExhaustionTick()
+
+        -- Re-apply dark mode tint to newly created bar borders
+        if addon.RefreshDarkModeXPRepBars then
+            addon.RefreshDarkModeXPRepBars()
+        end
+
+    else -- retailui
+        -- Hide custom bars if they exist
+        if dfXpBar then dfXpBar:Hide() end
+        if dfRepBar then dfRepBar:Hide() end
+
+        -- Parent Blizzard XP bar to its own editor frame
+        if MainMenuExpBar then
+            MainMenuExpBar:SetAlpha(1)
+            MainMenuExpBar:ClearAllPoints()
+            MainMenuExpBar:SetParent(addon.ActionBarFrames.xpbar)
+            MainMenuExpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
+            MainMenuExpBar:SetScale(cfg.expbar_scale or 1.0)
+            MainMenuExpBar:SetFrameStrata("MEDIUM")
+            MainMenuExpBar:SetFrameLevel(1)
+            MainMenuExpBar:Show()
+        end
+        -- Parent Blizzard Rep bar to its own editor frame
+        if ReputationWatchBar then
+            ReputationWatchBar:SetAlpha(1)
+            ReputationWatchBar:ClearAllPoints()
+            ReputationWatchBar:SetParent(addon.ActionBarFrames.repbar)
+            ReputationWatchBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
+            ReputationWatchBar:SetScale(cfg.repbar_scale or 1.0)
+            ReputationWatchBar:SetFrameStrata("MEDIUM")
+            ReputationWatchBar:SetFrameLevel(1)
+        end
+
+        -- Re-apply styling since noop may have cleared textures
+        ApplyRetailUIExpRepBarStyling()
+    end
+end
+
+local function NudgeStatusBarFill(bar)
+    if not bar then return end
+    local v = bar:GetValue()
+    local vmin, vmax = bar:GetMinMaxValues()
+    if not vmax or vmax <= vmin then return end
+    bar:SetValue(vmin)
+    bar:SetValue(v)
+end
+
+local function UpdateBarPositions()
+    local cfg = GetXpRepConfig() or {}
+    local style = GetXpBarStyle()
+    local barW = cfg.bar_width or 466
+    local barH = GetXpBarHeight()
+
+    -- Resize editor frames to match bar dimensions
+    if addon.ActionBarFrames.xpbar then
+        addon.ActionBarFrames.xpbar:SetSize(barW, barH)
+    end
+    if addon.ActionBarFrames.repbar then
+        addon.ActionBarFrames.repbar:SetSize(barW, barH)
+    end
+
+    if style == "dragonflightui" then
+        -- Resize root; fixed UV so chrome stretches with SetSize (no UV∝width).
+        if dfXpBar then
+            dfXpBar:SetSize(barW, barH)
+            dfXpBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
+            dfXpBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
+            dfXpBar:ClearAllPoints()
+            dfXpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
+        end
+        if dfRepBar then
+            dfRepBar:SetSize(barW, barH)
+            dfRepBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
+            dfRepBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
+            dfRepBar:ClearAllPoints()
+            dfRepBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
+        end
+
+        UpdateDragonflightUIXPBar()
+        UpdateDragonflightUIRepBar()
+        if dfXpBar then
+            NudgeStatusBarFill(dfXpBar.Bar)
+            NudgeStatusBarFill(dfXpBar.RestedBar)
+        end
+        NudgeStatusBarFill(dfRepBar and dfRepBar.Bar)
+
+    else -- retailui
+        -- Position Blizzard XP bar centered in its editor frame
+        if MainMenuExpBar then
+            MainMenuExpBar:ClearAllPoints()
+            MainMenuExpBar:SetSize(barW, barH)
+            MainMenuExpBar:SetScale(cfg.expbar_scale or 1.0)
+            MainMenuExpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
+            NudgeStatusBarFill(MainMenuExpBar)
+        end
+
+        -- Position Blizzard Rep bar centered in its editor frame
+        if ReputationWatchBar then
+            ReputationWatchBar:ClearAllPoints()
+            ReputationWatchBar:SetSize(barW, barH)
+            ReputationWatchBar:SetScale(cfg.repbar_scale or 1.0)
+            ReputationWatchBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
+            if ReputationWatchStatusBar then
+                ReputationWatchStatusBar:SetAllPoints(ReputationWatchBar)
+                ReputationWatchStatusBar:SetSize(barW, barH)
+                NudgeStatusBarFill(ReputationWatchStatusBar)
+            end
+        end
+    end
+
+    -- ========== XP BAR VISIBILITY ==========
+    -- Show/hide the editor container based on whether the player can
+    -- gain XP (UnitXPMax > 0).  This works on any server regardless
+    -- of the configured level cap.
+    if addon.ActionBarFrames.xpbar then
+        if IsXpBarVisible() then
+            addon.ActionBarFrames.xpbar:Show()
+        else
+            addon.ActionBarFrames.xpbar:Hide()
+        end
+    end
+end
+
+local function GetXpRepHoverFrames()
+    local frames = {}
+    if MainMenuExpBar then table.insert(frames, MainMenuExpBar) end
+    if ReputationWatchStatusBar then table.insert(frames, ReputationWatchStatusBar) end
+    if dfXpBar and dfXpBar.Bar then table.insert(frames, dfXpBar.Bar) end
+    if dfRepBar and dfRepBar.Bar then table.insert(frames, dfRepBar.Bar) end
+    return frames
+end
+
+local function RegisterXpRepVisibility()
+    if not (addon.VisibilityFade and addon.ActionBarFrames.xpbar and addon.ActionBarFrames.repbar) then return end
+    addon.VisibilityFade.Register("xprepbar", addon.ActionBarFrames.xpbar, {
+        frames = { addon.ActionBarFrames.repbar },
+        dbTable = GetXpRepConfig,
+        hoverFrames = GetXpRepHoverFrames(),
+        enableMouse = false,
+        -- Plain StatusBars, not secure action buttons — EnableMouse can react live in combat.
+        clickThrough = true,
+        mouseSafeInCombat = true,
+    })
+end
+
+local function RefreshXpRepBars()
+    local style = GetXpBarStyle()
+    ConnectBarsToEditor()
+    if style == "dragonflightui" then
+        UpdateDragonflightUIXPBar()
+        UpdateDragonflightUIRepBar()
+    else
+        ApplyRetailUIExpRepBarStyling()
+    end
+    UpdateBarPositions()
+    RegisterXpRepVisibility()
+    if addon.VisibilityFade then
+        addon.VisibilityFade.Update("xprepbar")
+    end
+end
+
+local function DisableMaxLevelBar()
+    if MainMenuBarMaxLevelBar then
+        MainMenuBarMaxLevelBar:Hide()
+        MainMenuBarMaxLevelBar:EnableMouse(false)
+        MainMenuBarMaxLevelBar:SetAlpha(0)
+        -- Ensure it never interferes
+        MainMenuBarMaxLevelBar:SetFrameLevel(0)
+    end
+end
+
+local function RemoveBlizzardFrames()
+    -- Disable MainMenuBarMaxLevelBar immediately
+    DisableMaxLevelBar()
+    
+    local blizzFrames = {MainMenuBarPerformanceBar, MainMenuBarTexture0, MainMenuBarTexture1, MainMenuBarTexture2,
+                         MainMenuBarTexture3, MainMenuBarMaxLevelBar, ReputationXPBarTexture1,
+                         ReputationXPBarTexture2, ReputationXPBarTexture3, ReputationWatchBarTexture1,
+                         ReputationWatchBarTexture2, ReputationWatchBarTexture3, MainMenuXPBarTexture1,
+                         MainMenuXPBarTexture2, MainMenuXPBarTexture3, SlidingActionBarTexture0,
+                         SlidingActionBarTexture1, BonusActionBarTexture0, BonusActionBarTexture1,
+                         ShapeshiftBarLeft, ShapeshiftBarMiddle, ShapeshiftBarRight, PossessBackground1,
+                         PossessBackground2}
+
+    for _, frame in pairs(blizzFrames) do
+        if frame then
+            frame:SetAlpha(0)
+            if frame == MainMenuBarMaxLevelBar then
+                frame:EnableMouse(false)
+                frame:Hide()
+                frame:SetFrameLevel(0)
+            end
+        end
+    end
+end
+
+function MainMenuBarMixin:initialize()
+    self:actionbutton_setup();
+    self:actionbar_setup();
+    self:actionbar_art_setup();
+    self:statusbar_setup();
+end
+
+local function CreateActionBarFrames()
+    local db = addon.db and addon.db.profile and addon.db.profile.mainbars
+
+    -- Main bar - create a NEW container frame scaled to match the visible bar
+    local mainScale = db and db.scale_actionbar or 0.9
+    addon.ActionBarFrames.mainbar = addon.CreateUIFrame(
+        pUiMainBar:GetWidth()  * mainScale,
+        pUiMainBar:GetHeight() * mainScale,
+        "MainBar")
+
+    local rightCfg = db and db.right or {}
+    local leftCfg  = db and db.left or {}
+    local blCfg    = db and db.bottom_left or {}
+    local brCfg    = db and db.bottom_right or {}
+
+    local rW, rH  = BarContainerSize(rightCfg.columns or 1,  rightCfg.buttons_shown or 12, GetBarSpacing(db, "right"))
+    local lW, lH  = BarContainerSize(leftCfg.columns or 1,   leftCfg.buttons_shown or 12, GetBarSpacing(db, "left"))
+    local blW, blH = BarContainerSize(blCfg.columns or 12,   blCfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
+    local brW, brH = BarContainerSize(brCfg.columns or 12,   brCfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
+
+    local rScale  = db and db.scale_rightbar     or 0.9
+    local lScale  = db and db.scale_leftbar      or 0.9
+    local blScale = db and db.scale_bottomleft   or 0.9
+    local brScale = db and db.scale_bottomright   or 0.9
+
+    addon.ActionBarFrames.rightbar       = addon.CreateUIFrame(rW * rScale,  rH * rScale,  "RightBar")
+    addon.ActionBarFrames.leftbar        = addon.CreateUIFrame(lW * lScale,  lH * lScale,  "LeftBar")
+    addon.ActionBarFrames.bottombarleft  = addon.CreateUIFrame(blW * blScale, blH * blScale, "BottomBarLeft")
+    addon.ActionBarFrames.bottombarright = addon.CreateUIFrame(brW * brScale, brH * brScale, "BottomBarRight")
+
+    -- Separate XP and Rep bar editor frames (allows independent movement)
+    local xpRepWidth = addon.ActionBarFrames.mainbar:GetWidth()
+    local cfg = GetXpRepConfig() or {}
+    local barH = GetXpBarHeight()
+    addon.ActionBarFrames.xpbar = addon.CreateUIFrame(xpRepWidth, barH, "XPBar")
+    addon.ActionBarFrames.repbar = addon.CreateUIFrame(xpRepWidth, barH, "RepBar")
+end
+
+local function PositionActionBarsToContainers_Initial()
+    local mb = addon.db and addon.db.profile and addon.db.profile.mainbars
+
+    if pUiMainBar and addon.ActionBarFrames.mainbar then
+        local scale = (mb and mb.scale_actionbar) or 0.9
+        local oy = GetMainBarButtonCenterOffsetY() * scale
+        pUiMainBar:SetParent(UIParent)
+        pUiMainBar:ClearAllPoints()
+        pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
+    end
+
+    if MultiBarRight and addon.ActionBarFrames.rightbar then
+        MultiBarRight:SetParent(UIParent)
+        MultiBarRight:ClearAllPoints()
+        MultiBarRight:SetPoint("TOPLEFT", addon.ActionBarFrames.rightbar, "TOPLEFT", 0, 0)
+    end
+
+    if MultiBarLeft and addon.ActionBarFrames.leftbar then
+        MultiBarLeft:SetParent(UIParent)
+        MultiBarLeft:ClearAllPoints()
+        MultiBarLeft:SetPoint("TOPLEFT", addon.ActionBarFrames.leftbar, "TOPLEFT", 0, 0)
+    end
+
+    if MultiBarBottomLeft and addon.ActionBarFrames.bottombarleft then
+        MultiBarBottomLeft:SetParent(UIParent)
+        MultiBarBottomLeft:ClearAllPoints()
+        MultiBarBottomLeft:SetPoint("CENTER", addon.ActionBarFrames.bottombarleft, "CENTER", 0, 0)
+    end
+
+    if MultiBarBottomRight and addon.ActionBarFrames.bottombarright then
+        MultiBarBottomRight:SetParent(UIParent)
+        MultiBarBottomRight:ClearAllPoints()
+        MultiBarBottomRight:SetPoint("CENTER", addon.ActionBarFrames.bottombarright, "CENTER", 0, 0)
+    end
+end
+
+local function PositionActionBarsToContainers()
+    -- Only proceed if not in combat to avoid taint
+    if InCombatLockdown() then
+        return
+    end
+
+    -- Use the initial function for runtime positioning
+    PositionActionBarsToContainers_Initial()
+end
+
+local function ApplyActionBarPositions()
+    -- CRITICAL: Don't touch secure frames during combat to avoid taint
+    -- XP/Rep bars are custom frames and can be positioned any time
+    local inCombat = InCombatLockdown()
+
+    if not addon.db or not addon.db.profile or not addon.db.profile.widgets then
+        return
+    end
+
+    local widgets = addon.db.profile.widgets
+
+    -- Calculate vertical offset when both XP and Rep bars are visible
+    local dualBarOffset = GetDualBarVerticalOffset()
+
+    -- Apply mainbar container position (with dual-bar offset if at default)
+    -- Skip secure frames (mainbar, action bars) during combat to avoid taint
+    if not inCombat and widgets.mainbar and addon.ActionBarFrames.mainbar then
+        local config = widgets.mainbar
+        if config.anchor then
+            local extraY = 0
+            if IsWidgetAtDefaultPosition("mainbar") then
+                extraY = dualBarOffset
+            end
+            addon.ActionBarFrames.mainbar:ClearAllPoints()
+            addon.ActionBarFrames.mainbar:SetPoint(config.anchor, config.posX, config.posY + extraY)
+        end
+    end
+
+    -- Apply other bar positions
+    -- Secure frames (action bars) are skipped during combat; custom frames
+    -- (xpbar, repbar) are always safe to reposition.
+    local secureFrames = {
+        rightbar = true,
+        leftbar = true,
+        bottombarleft = true,
+        bottombarright = true,
+    }
+
+    local barConfigs = {{
+        name = "rightbar",
+        frame = addon.ActionBarFrames.rightbar,
+        config = widgets.rightbar,
+        default = {"RIGHT", -10, -70}
+    }, {
+        name = "leftbar",
+        frame = addon.ActionBarFrames.leftbar,
+        config = widgets.leftbar,
+        default = {"RIGHT", -45, -70}
+    }, {
+        name = "bottombarleft",
+        frame = addon.ActionBarFrames.bottombarleft,
+        config = widgets.bottombarleft,
+        default = {"BOTTOM", 0, 120}
+    }, {
+        name = "bottombarright",
+        frame = addon.ActionBarFrames.bottombarright,
+        config = widgets.bottombarright,
+        default = {"BOTTOM", 0, 160}
+    }, -- Separate XP and Rep bar positioning
+    {
+        name = "xpbar",
+        frame = addon.ActionBarFrames.xpbar,
+        config = widgets.xpbar,
+        default = {"BOTTOM", 0, 7}
+    },
+    {
+        name = "repbar",
+        frame = addon.ActionBarFrames.repbar,
+        config = widgets.repbar,
+        -- When XP bar is hidden (max level, etc.), default to XP bar's slot (Y=7)
+        default = {"BOTTOM", 0, IsXpBarVisible() and 23 or 7}
+    }}
+
+    -- Frames that should receive the dual-bar vertical offset
+    local dualBarOffsetFrames = {
+        mainbar = true,  -- already handled above, but listed for clarity
+        bottombarleft = true,
+        bottombarright = true,
+        petbar = true,   -- handled by petbar.lua via addon.UpdatePetbarPosition
+        vehicleExit = true, -- handled by vehicle.lua via addon.UpdateVehicleExitPosition
+    }
+    -- Export so SaveUIFramePosition can strip offset before saving
+    addon._dualBarOffsetWidgets = dualBarOffsetFrames
+
+    for _, barData in ipairs(barConfigs) do
+        -- Skip secure frames during combat to avoid taint
+        if inCombat and secureFrames[barData.name] then
+            -- skip this frame
+        else
+            -- Calculate extra Y for this frame (only if at default position)
+            local extraY = 0
+            if dualBarOffsetFrames[barData.name] and IsWidgetAtDefaultPosition(barData.name) then
+                extraY = dualBarOffset
+            end
+
+            -- When XP bar is hidden (max level on any server, etc.),
+            -- drop the rep bar to the XP bar's Y slot so it doesn't
+            -- float above the action bar.
+            local xpHiddenRepOverrideY = nil
+            if barData.name == "repbar" and not IsXpBarVisible() and IsWidgetAtDefaultPosition("repbar") then
+                xpHiddenRepOverrideY = 7  -- XP bar's default Y position
+            end
+
+            if barData.frame and barData.config and barData.config.anchor then
+                local config = barData.config
+                local finalY = xpHiddenRepOverrideY or config.posY
+                barData.frame:ClearAllPoints()
+                barData.frame:SetPoint(config.anchor, config.posX, finalY + extraY)
+            elseif barData.frame then
+                -- Apply default position
+                local default = barData.default
+                local finalY = xpHiddenRepOverrideY or default[3]
+                barData.frame:ClearAllPoints()
+                barData.frame:SetPoint(default[1], UIParent, default[1], default[2], finalY + extraY)
+            end
+        end
+    end
+end
+
+local function NotifyDualBarOffsetChanged()
+    -- Re-apply action bar positions (mainbar, bottombarleft, bottombarright)
+    ApplyActionBarPositions()
+    -- Notify stance bar to update its position
+    if addon.UpdateStanceBarPosition then
+        addon.UpdateStanceBarPosition()
+    end
+    -- Notify vehicle exit button to update its position
+    if addon.UpdateVehicleExitPosition then
+        addon.UpdateVehicleExitPosition()
+    end
+    -- Notify petbar to update its position
+    if addon.UpdatePetbarPosition then
+        addon.UpdatePetbarPosition()
+    end
+end
+
+local function RegisterActionBarFrames()
+    -- Register all action bar frames
+    local frameRegistrations = {{
+        name = "mainbar",
+        frame = addon.ActionBarFrames.mainbar,
+        blizzardFrame = MainMenuBar,
+        configPath = {"widgets", "mainbar"}
+    }, {
+        name = "rightbar",
+        frame = addon.ActionBarFrames.rightbar,
+        blizzardFrame = MultiBarRight,
+        configPath = {"widgets", "rightbar"}
+    }, {
+        name = "leftbar",
+        frame = addon.ActionBarFrames.leftbar,
+        blizzardFrame = MultiBarLeft,
+        configPath = {"widgets", "leftbar"}
+    }, {
+        name = "bottombarleft",
+        frame = addon.ActionBarFrames.bottombarleft,
+        blizzardFrame = MultiBarBottomLeft,
+        configPath = {"widgets", "bottombarleft"}
+    }, {
+        name = "bottombarright",
+        frame = addon.ActionBarFrames.bottombarright,
+        blizzardFrame = MultiBarBottomRight,
+        configPath = {"widgets", "bottombarright"}
+    }, -- Separate XP and Rep bar registration with visibility-aware editor
+    {
+        name = "xpbar",
+        frame = addon.ActionBarFrames.xpbar,
+        blizzardFrame = nil,
+        configPath = {"widgets", "xpbar"},
+        editorVisible = function()
+            -- Always editable in editor mode, regardless of current XP state
+            return true
+        end
+    },
+    {
+        name = "repbar",
+        frame = addon.ActionBarFrames.repbar,
+        blizzardFrame = nil,
+        configPath = {"widgets", "repbar"},
+        editorVisible = function()
+            -- Always editable in editor mode, regardless of current reputation state
+            return true
+        end
+    }}
+
+    for _, registration in ipairs(frameRegistrations) do
+        if registration.frame then
+            addon:RegisterEditableFrame({
+                name = registration.name,
+                frame = registration.frame,
+                blizzardFrame = registration.blizzardFrame,
+                configPath = registration.configPath,
+                editorVisible = registration.editorVisible,
+                module = addon.MainBars
+            })
+        end
+    end
+end
+
+local function SetupActionBarDragHandlers()
+    -- Add drag end handlers to reposition action bars
+    for name, frame in pairs(addon.ActionBarFrames) do
+        -- Exclude bars that don't need repositioning after drag
+        if frame and name ~= "mainbar" then
+            frame:HookScript("OnDragStop", function(self)
+                -- RetailUI Pattern: Only reposition if not in combat
+                PositionActionBarsToContainers()
+            end)
+        end
+    end
+end
+
+function addon.RefreshUpperActionBarsPosition()
+    if not MultiBarBottomLeftButton1 or not MultiBarBottomRight then
+        return
+    end
+
+    -- calculate offset based on background visibility
+    local yOffset1, yOffset2
+    if addon.db and addon.db.profile.buttons.hide_main_bar_background then
+        -- values when background is hidden
+        yOffset1 = 45
+        yOffset2 = 8
+    else
+        -- default values when background is visible
+        yOffset1 = 48
+        yOffset2 = 8
+    end
+end
+
+local function ApplyMainbarsSystem()
+    if MainbarsModule.applied then
+        return
+    end
+
+    -- CRITICAL: Disable MainMenuBarMaxLevelBar IMMEDIATELY
+    if MainMenuBarMaxLevelBar then
+        MainMenuBarMaxLevelBar:Hide()
+        MainMenuBarMaxLevelBar:EnableMouse(false)
+        MainMenuBarMaxLevelBar:SetAlpha(0)
+        MainMenuBarMaxLevelBar:SetFrameLevel(0)
+    end
+
+    MainMenuBarMixin:initialize()
+    addon.pUiMainBar = pUiMainBar
+    SetupMainBarPageDriver(pUiMainBar)
+    EnsureBonusButtonsClickThrough()
+
+    CreateActionBarFrames()
+    ApplyActionBarPositions()
+    RegisterActionBarFrames()
+
+    -- Temporarily hide secondary bars to prevent position flash on reload.
+    -- They'll be restored in PLAYER_ENTERING_WORLD after final positioning.
+    local barsToStabilize = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
+    for _, bar in ipairs(barsToStabilize) do
+        if bar then bar:SetAlpha(0) end
+    end
+
+    -- Note: Gryphon frame levels will be set after all positioning is complete
+
+    -- Set up XP/Rep bar system
+    ConnectBarsToEditor()
+
+    -- Force Blizzard bar updates so values/textures are properly initialized
+    if MainMenuExpBar_Update then MainMenuExpBar_Update() end
+    if ReputationWatchBar_Update then ReputationWatchBar_Update() end
+
+    -- Hook MainMenuBarExpText:SetText to append XP percentage in RetailUI mode.
+    -- This intercepts ALL text updates (hover, XP gain, etc.) so percentage
+    -- is always present regardless of what Blizzard's TextStatusBar system does.
+    if MainMenuBarExpText then
+        local updatingXpText = false
+        hooksecurefunc(MainMenuBarExpText, "SetText", function(self, text)
+            if updatingXpText then return end
+            if GetXpBarStyle() ~= "retailui" then return end
+            local cfg = GetXpRepConfig() or {}
+            if cfg.show_xp_percent == false then return end
+            if not text or text == "" then return end
+
+            local currXP = UnitXP("player")
+            local maxXP = UnitXPMax("player")
+            if not maxXP or maxXP == 0 then return end
+
+            local pct = 100 * currXP / maxXP
+            local restedXP = GetXPExhaustion() or 0
+            local restedMax = maxXP * 1.5
+            local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
+            local percentText = format(" (%.1f%%", pct)
+            if restedPct > 0 then
+                percentText = percentText .. format(", %.1f%% Rested", restedPct)
+            end
+            percentText = percentText .. ")"
+
+            updatingXpText = true
+            self:SetText(text .. percentText)
+            updatingXpText = false
+        end)
+
+        -- Prevent Blizzard's TextStatusBar OnLeave from hiding XP text
+        -- when "always show text" is enabled. Blizzard calls :Hide() on
+        -- the FontString directly, so we must intercept that.
+        hooksecurefunc(MainMenuBarExpText, "Hide", function(self)
+            if GetXpBarStyle() ~= "retailui" then return end
+            local cfg = GetXpRepConfig() or {}
+            if cfg.always_show_text then
+                self:Show()
+            end
+        end)
+    end
+
+    -- Same fix for rep bar text: prevent Blizzard's OnLeave from hiding it
+    if ReputationWatchStatusBarText then
+        hooksecurefunc(ReputationWatchStatusBarText, "Hide", function(self)
+            if GetXpBarStyle() ~= "retailui" then return end
+            local cfg = GetXpRepConfig() or {}
+            if cfg.always_show_text then
+                self:Show()
+            end
+        end)
+    end
+
+    -- Fix RetailUI rep bar hover text: ensure reputation values are shown on hover.
+    -- Hook OnEnter on the StatusBar (not the parent ReputationWatchBar) because
+    -- the StatusBar covers the full area via SetAllPoints and receives mouse events.
+    --
+    -- Text format is always "Faction Name: current / max".
+    -- When "always show text" is ON, hover does nothing (text is already visible).
+    -- When OFF, hover temporarily shows the text via OVERLAY draw layer.
+    if ReputationWatchStatusBar then
+        ReputationWatchStatusBar:HookScript("OnEnter", function(self)
+            if GetXpBarStyle() ~= "retailui" then return end
+            if not ReputationWatchStatusBarText then return end
+            local cfg = GetXpRepConfig() or {}
+            if cfg.always_show_text then return end -- already visible, no change needed
+            local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
+            if name then
+                local current = value - minRep
+                local maximum = maxRep - minRep
+                ReputationWatchStatusBarText:SetText(format("%s: %d / %d", name, current, maximum))
+                ReputationWatchStatusBarText:SetDrawLayer("OVERLAY", 3)
+                ReputationWatchStatusBarText:Show()
+            end
+        end)
+        ReputationWatchStatusBar:HookScript("OnLeave", function(self)
+            if GetXpBarStyle() ~= "retailui" then return end
+            if not ReputationWatchStatusBarText then return end
+            local cfg = GetXpRepConfig() or {}
+            if cfg.always_show_text then return end -- always visible, no change needed
+            ReputationWatchStatusBarText:SetDrawLayer("HIGHLIGHT")
+        end)
+    end
+
+    -- Hook Blizzard bar updates to re-apply styling and keep positioning in sync
+    -- CRITICAL: MainMenuExpBar_Update resets textures — must re-apply our styling
+    hooksecurefunc('MainMenuExpBar_Update', function()
+        local style = GetXpBarStyle()
+        if style == "retailui" then
+            ApplyRetailUIExpRepBarStyling()
+        end
+        UpdateBarPositions()
+    end)
+    hooksecurefunc('ReputationWatchBar_Update', function()
+        local style = GetXpBarStyle()
+        if style == "retailui" then
+            ApplyRetailUIExpRepBarStyling()
+        end
+        UpdateBarPositions()
+    end)
+
+    -- Position action bars immediately
+    PositionActionBarsToContainers_Initial()
+
+    -- Prevent click-only layer promotion on secondary bars.
+    StabilizeSecondaryBarLayering()
+    
+    -- Apply button positioning based on horizontal settings (RetailUI pattern)
+    -- This ensures buttons are positioned correctly when horizontal mode is enabled on reload
+    if addon.PositionActionBars then
+        addon.PositionActionBars()
+    elseif addon.PositionActionBarsToContainers then
+        addon.PositionActionBarsToContainers()
+    end
+
+    -- Set up drag handlers - Execute immediately
+    SetupActionBarDragHandlers()
+
+    -- CRITICAL: Ensure gryphons are above all action bars after everything is positioned
+    local function EnsureGryphonsOnTop()
+        if pUiMainBarArt then
+            -- Get the highest frame level from all action bars including containers
+            local maxLevel = 1
+            local bars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarLeft, MultiBarRight, pUiMainBar}
+            for _, bar in pairs(bars) do
+                if bar then
+                    maxLevel = math.max(maxLevel, bar:GetFrameLevel())
+                end
+            end
+            
+            -- Check container frame levels too
+            for _, frame in pairs(addon.ActionBarFrames) do
+                if frame and frame.GetFrameLevel then
+                    maxLevel = math.max(maxLevel, frame:GetFrameLevel())
+                end
+            end
+
+            -- Set gryphon art frame level significantly higher than all bars
+            pUiMainBarArt:SetFrameLevel(maxLevel + 15)
+            
+            -- Also ensure individual gryphons have high draw layers
+            if MainMenuBarLeftEndCap then
+                MainMenuBarLeftEndCap:SetDrawLayer('OVERLAY', 7)
+            end
+            if MainMenuBarRightEndCap then
+                MainMenuBarRightEndCap:SetDrawLayer('OVERLAY', 7)
+            end
+        end
+    end
+    
+    -- Execute immediately to ensure gryphons are on top
+    EnsureGryphonsOnTop()
+
+    -- Store module state
+    MainbarsModule.frames.pUiMainBar = pUiMainBar
+    MainbarsModule.frames.pUiMainBarArt = pUiMainBarArt
+    MainbarsModule.actionBarFrames = addon.ActionBarFrames
+    MainbarsModule.applied = true
+end
+
 local function InitializeMainbars()
     if not IsModuleEnabled() then
         return -- DO NOTHING if disabled
@@ -423,96 +2264,18 @@ local function InitializeMainbars()
     -- ============================================================================
 
     -- CORE COMPONENTS
-    local config = addon.config;
-    local event = addon.package;
-    local do_action = addon.functions;
-    local select = select;
-    local pairs = pairs;
-    local ipairs = ipairs;
-    local format = string.format;
-    local UIParent = UIParent;
-    local hooksecurefunc = hooksecurefunc;
-    local UnitFactionGroup = UnitFactionGroup;
-    local _G = getfenv(0);
 
     -- constants
-    local faction = UnitFactionGroup('player');
-    local MainMenuBarMixin = {};
     addon.MainMenuBarMixin = MainMenuBarMixin;  -- Store globally for access
-    local pUiMainBar = CreateFrame('Frame', 'pUiMainBar', UIParent, 'MainMenuBarUiTemplate');
+    pUiMainBar = CreateFrame('Frame', 'pUiMainBar', UIParent, 'MainMenuBarUiTemplate');
     addon.pUiMainBar = pUiMainBar;  -- Store globally for access
 
-    local pUiMainBarArt = CreateFrame('Frame', 'pUiMainBarArt', pUiMainBar);
+    pUiMainBarArt = CreateFrame('Frame', 'pUiMainBarArt', pUiMainBar);
 
     -- Main bar page driver owner (bug #251): keep bonus/stance page switching
     -- available even when the vehicle module is disabled.
-    local function SetupMainBarPageDriver(mainBar)
-        mainBar = mainBar or addon.pUiMainBar or _G.pUiMainBar
-        if not mainBar then return end
-
-        if InCombatLockdown() then
-            if addon.CombatQueue then
-                addon.CombatQueue:Add("mainbars_page_driver", SetupMainBarPageDriver, mainBar)
-            end
-            return
-        end
-
-        -- Init-once behavior: keep the page driver
-        -- stable and avoid repeated RegisterStateDriver churn.
-        if MainbarsModule.pageDriverInstalled and MainbarsModule.pageDriverFrame == mainBar then
-            return
-        end
-
-        -- If the driver was previously attached to a different frame, detach it
-        -- before reattaching. This path is rare but keeps ownership explicit.
-        if MainbarsModule.pageDriverInstalled and MainbarsModule.pageDriverFrame and MainbarsModule.pageDriverFrame ~= mainBar then
-            pcall(UnregisterStateDriver, MainbarsModule.pageDriverFrame, 'page')
-            MainbarsModule.pageDriverInstalled = false
-            MainbarsModule.pageDriverFrame = nil
-            MainbarsModule.stateDrivers.page = nil
-        end
-
-        for i = 1, 12 do
-            local actionButton = _G['ActionButton' .. i]
-            if actionButton then
-                mainBar:SetFrameRef('ActionButton' .. i, actionButton)
-            end
-        end
-
-        mainBar:Execute([[
-            buttons = newtable()
-            for i = 1, 12 do
-                local button = self:GetFrameRef('ActionButton'..i)
-                if button then
-                    table.insert(buttons, button)
-                end
-            end
-        ]])
-
-        mainBar:SetAttribute('_onstate-page', [[
-            for i, button in ipairs(buttons) do
-                button:SetAttribute('actionpage', tonumber(newstate))
-            end
-        ]])
-
-        RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
-        MainbarsModule.stateDrivers.page = { frame = mainBar, state = 'page' }
-        MainbarsModule.pageDriverInstalled = true
-        MainbarsModule.pageDriverFrame = mainBar
-    end
 
     addon.SetupMainBarPageDriver = SetupMainBarPageDriver
-
-    -- ACTION BAR SYSTEM
-    addon.ActionBarFrames = {
-        mainbar = nil,
-        rightbar = nil,
-        leftbar = nil,
-        bottombarleft = nil,
-        bottombarright = nil,
-        xpbar = nil,
-        repbar = nil
-    }
 
     -- Set initial scale and properties
     pUiMainBar:SetScale(config.mainbars.scale_actionbar);
@@ -527,168 +2290,18 @@ local function InitializeMainbars()
     -- ============================================================================
 
     -- Use the global UpdateGryphonStyle function
-    local UpdateGryphonStyle = addon.UpdateGryphonStyle
+    UpdateGryphonStyle = addon.UpdateGryphonStyle
 
     -- ============================================================================
     -- ORIGINAL STATE STORAGE
     -- ============================================================================
 
-    local function StoreOriginalMainbarStates()
-        -- Store MainMenuBar state
-        if MainMenuBar then
-            MainbarsModule.originalStates.MainMenuBar = {
-                parent = MainMenuBar:GetParent(),
-                scale = MainMenuBar:GetScale(),
-                points = {},
-                mouseEnabled = MainMenuBar:IsMouseEnabled(),
-                movable = MainMenuBar:IsMovable(),
-                userPlaced = MainMenuBar:IsUserPlaced()
-            }
-            for i = 1, MainMenuBar:GetNumPoints() do
-                local point, relativeTo, relativePoint, xOfs, yOfs = MainMenuBar:GetPoint(i)
-                table.insert(MainbarsModule.originalStates.MainMenuBar.points,
-                    {point, relativeTo, relativePoint, xOfs, yOfs})
-            end
-        end
-
-        -- Store other action bars states
-        local bars = {MultiBarRight, MultiBarLeft, MultiBarBottomLeft, MultiBarBottomRight, PetActionBarFrame}
-        for _, bar in pairs(bars) do
-            if bar then
-                local name = bar:GetName()
-                MainbarsModule.originalStates[name] = {
-                    parent = bar:GetParent(),
-                    scale = bar:GetScale(),
-                    points = {},
-                    mouseEnabled = bar:IsMouseEnabled(),
-                    movable = bar:IsMovable(),
-                    userPlaced = bar:IsUserPlaced()
-                }
-                for i = 1, bar:GetNumPoints() do
-                    local point, relativeTo, relativePoint, xOfs, yOfs = bar:GetPoint(i)
-                    table.insert(MainbarsModule.originalStates[name].points,
-                        {point, relativeTo, relativePoint, xOfs, yOfs})
-                end
-            end
-        end
-    end
-
     -- ============================================================================
     -- CORE MAINBAR FUNCTIONS
     -- ============================================================================
 
-   function MainMenuBarMixin:actionbutton_setup()
-    -- Phase 3D: Defensive combat guard — secure frame operations must not run in combat
-    if InCombatLockdown() then return end
-    for _, obj in ipairs({MainMenuBar:GetChildren(), MainMenuBarArtFrame:GetChildren()}) do
-        obj:SetParent(pUiMainBar)
-    end
-
-    for index = 1, NUM_ACTIONBAR_BUTTONS do
-        pUiMainBar:SetFrameRef('ActionButton' .. index, _G['ActionButton' .. index])
-    end
-
-    -- Apply SetThreeSlice only if the background is NOT hidden
-    local shouldHideBackground = addon.db and addon.db.profile and addon.db.profile.buttons and 
-                                addon.db.profile.buttons.hide_main_bar_background
-    
-    -- Store divider textures for bar-size management
-    addon.MainBarDividers = addon.MainBarDividers or {}
-
-    if not shouldHideBackground then
-        for index = 1, NUM_ACTIONBAR_BUTTONS - 1 do
-            local ActionButtons = _G['ActionButton' .. index]
-            do_action.SetThreeSlice(ActionButtons);
-            -- Tag divider textures so update_main_bar_background skips them
-            if pUiMainBar.divider_top then pUiMainBar.divider_top._isDragonUIDivider = true end
-            if pUiMainBar.divider_mid then pUiMainBar.divider_mid._isDragonUIDivider = true end
-            if pUiMainBar.divider_bottom then pUiMainBar.divider_bottom._isDragonUIDivider = true end
-            -- Store reference to dividers created on pUiMainBar
-            addon.MainBarDividers[index] = {
-                top = pUiMainBar.divider_top,
-                mid = pUiMainBar.divider_mid,
-                bottom = pUiMainBar.divider_bottom,
-            }
-        end
-    end
-
-    local mainbarsDb = addon.db and addon.db.profile and addon.db.profile.mainbars
-    local playerSpacing = GetBarSpacing(mainbarsDb, "player")
-    local blSpacing = GetBarSpacing(mainbarsDb, "bottom_left")
-    local brSpacing = GetBarSpacing(mainbarsDb, "bottom_right")
-
-    for index = 2, NUM_ACTIONBAR_BUTTONS do
-        local ActionButtons = _G['ActionButton' .. index]
-        ActionButtons:SetParent(pUiMainBar)
-        ActionButtons:SetClearPoint('LEFT', _G['ActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
-
-        local BottomLeftButtons = _G['MultiBarBottomLeftButton' .. index]
-        BottomLeftButtons:SetClearPoint('LEFT', _G['MultiBarBottomLeftButton' .. (index - 1)], 'RIGHT', blSpacing, 0)
-
-        local BottomRightButtons = _G['MultiBarBottomRightButton' .. index]
-        BottomRightButtons:SetClearPoint('LEFT', _G['MultiBarBottomRightButton' .. (index - 1)], 'RIGHT', brSpacing, 0)
-
-        local BonusActionButtons = _G['BonusActionButton' .. index]
-        BonusActionButtons:SetClearPoint('LEFT', _G['BonusActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
-    end
-end
-
-    function MainMenuBarMixin:actionbar_art_setup()
-        -- setup art frames - FIXED
-        MainMenuBarArtFrame:SetParent(pUiMainBarArt)  -- Goes to the art container
-        
-        -- CRITICAL: Gryphons must go to pUiMainBarArt, NOT pUiMainBar
-        for _, art in pairs({MainMenuBarLeftEndCap, MainMenuBarRightEndCap}) do
-            art:SetParent(pUiMainBarArt)  -- To the correct art container
-            art:SetDrawLayer('OVERLAY', 7)  -- Higher layer than ARTWORK
-        end
-
-        -- apply background settings
-        self:update_main_bar_background()
-
-        -- apply gryphon styling
-        UpdateGryphonStyle()
-    end
-
     -- Delegates to the fade system instead of setting alpha directly — doing it here used to stomp
     -- the hover/combat hidden state whenever this ran, popping the background back in after a reload.
-    function MainMenuBarMixin:update_main_bar_background()
-        if addon.RefreshActionBarVisibility then
-            addon.RefreshActionBarVisibility()
-        end
-    end
-
-    function MainMenuBarMixin:actionbar_setup()
-        ActionButton1:SetParent(pUiMainBar)
-        ActionButton1:SetClearPoint('BOTTOMLEFT', pUiMainBar, 2, 2)
-
-        if config.buttons.pages.show then
-            do_action.SetNumPagesButton(ActionBarUpButton, pUiMainBarArt, 'pageuparrow', 8)
-            do_action.SetNumPagesButton(ActionBarDownButton, pUiMainBarArt, 'pagedownarrow', -14)
-
-            MainMenuBarPageNumber:SetParent(pUiMainBarArt)
-            MainMenuBarPageNumber:SetClearPoint('CENTER', ActionBarDownButton, -1, 12)
-            local pagesFont = config.buttons.pages.font
-            MainMenuBarPageNumber:SetFont(pagesFont[1], pagesFont[2], pagesFont[3])
-            MainMenuBarPageNumber:SetShadowColor(0, 0, 0, 1)
-            MainMenuBarPageNumber:SetShadowOffset(1.2, -1.2)
-            MainMenuBarPageNumber:SetDrawLayer('OVERLAY', 7)
-        else
-            ActionBarUpButton:Hide();
-            ActionBarDownButton:Hide();
-            MainMenuBarPageNumber:Hide();
-        end
-
-        MultiBarBottomRight:EnableMouse(false)
-        MultiBarRight:SetScale(config.mainbars.scale_rightbar)
-        MultiBarLeft:SetScale(config.mainbars.scale_leftbar)
-        if MultiBarBottomLeft then
-            MultiBarBottomLeft:SetScale(config.mainbars.scale_bottomleft or 0.9)
-        end
-        if MultiBarBottomRight then
-            MultiBarBottomRight:SetScale(config.mainbars.scale_bottomright or 0.9)
-        end
-    end
 
     -- Register event to update page number when action bar page changes
     event:RegisterEvents(function()
@@ -703,209 +2316,18 @@ end
     -- Helper: position side bar (left/right) buttons in a grid layout using columns.
     -- buttonOrder sets which corner slot 1 grows from (see SetBarGridButtonPoint).
     -- Overlay model matches Extra Bar: grid size × SetScale, TOPLEFT 0,0 (no chrome padding).
-    local function PositionSideBarButtons(barPrefix, barFrame, containerFrame, count, columns, spacing, buttonOrder)
-        if not barFrame then return end
-
-        count   = math.max(1, math.min(12, count or 12))
-        columns = math.max(1, math.min(12, columns or 1))
-        spacing = spacing or ACTION_BUTTON_SPACING
-        if not VALID_BUTTON_ORDERS[buttonOrder] then
-            buttonOrder = "top_left"
-        end
-        local step = ACTION_BUTTON_SIZE + spacing
-
-        -- Position visible buttons in a grid
-        -- Side bars are always multibars — do NOT call :Show() on their
-        -- buttons.  Blizzard’s ActionButton_Update handles visibility via
-        -- the showgrid attribute and the "Always Show Action Bars" CVar.
-        for index = 1, NUM_ACTIONBAR_BUTTONS do
-            local button = _G[barPrefix .. index]
-            if button then
-                if index <= count then
-                    local gridIndex = index - 1
-                    local row = math.floor(gridIndex / columns)
-                    local col = gridIndex % columns
-                    SetBarGridButtonPoint(button, barFrame, row, col, buttonOrder, 0, 0, step)
-                    -- NOT calling button:Show() — let ActionButton_Update decide
-                else
-                    button:ClearAllPoints()
-                    button:SetPoint("CENTER", UIParent, "BOTTOM", 0, -666)
-                    button:Hide()
-                end
-            end
-        end
-
-        -- Resize barFrame to fit the button grid (prevents invisible overhang on orientation change).
-        local effectiveCols = math.min(columns, count)
-        local rows = math.ceil(count / columns)
-        local w = effectiveCols * ACTION_BUTTON_SIZE + (effectiveCols - 1) * spacing
-        local h = rows       * ACTION_BUTTON_SIZE + (rows       - 1) * spacing
-        barFrame:SetSize(w, h)
-
-        if containerFrame then
-            barFrame:ClearAllPoints()
-            barFrame:SetPoint("TOPLEFT", containerFrame, "TOPLEFT", 0, 0)
-        end
-    end
 
     -- Keep secondary bars/buttons from auto-raising on mouse click.
     -- In 3.3.5a, top-level frames promote to the highest frame level when clicked.
-    local function StabilizeSecondaryBarLayering()
-        if InCombatLockdown() then
-            return
-        end
-
-        local secondaryBars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
-        for _, bar in ipairs(secondaryBars) do
-            if bar and bar.SetToplevel then
-                bar:SetToplevel(false)
-            end
-        end
-
-        local secondaryPrefixes = {"MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton", "MultiBarLeftButton"}
-        for _, prefix in ipairs(secondaryPrefixes) do
-            for index = 1, NUM_ACTIONBAR_BUTTONS do
-                local button = _G[prefix .. index]
-                if button and button.SetToplevel then
-                    button:SetToplevel(false)
-                end
-            end
-        end
-    end
-
-    function addon.PositionActionBars()
-        if InCombatLockdown() then
-            return
-        end
-
-        local db = addon.db and addon.db.profile and addon.db.profile.mainbars
-        if not db then
-            return
-        end
-
-        -- Right bar: grid layout using columns (horizontal = 12 cols, vertical = 1 col)
-        if MultiBarRight then
-            local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.rightbar
-            local rightCfg = db.right or {}
-            local rightCount = rightCfg.buttons_shown or 12
-            local rightCols = rightCfg.columns or 1
-            local rightRows = math.ceil(rightCount / rightCols)
-            PositionSideBarButtons("MultiBarRightButton", MultiBarRight, containerFrame,
-                rightCount, rightCols, GetBarSpacing(db, "right"),
-                ResolveBarButtonOrder(rightCfg, "top_left", rightRows))
-        end
-
-        -- Left bar: grid layout using columns
-        if MultiBarLeft then
-            local containerFrame = addon.ActionBarFrames and addon.ActionBarFrames.leftbar
-            local leftCfg = db.left or {}
-            local leftCount = leftCfg.buttons_shown or 12
-            local leftCols = leftCfg.columns or 1
-            local leftRows = math.ceil(leftCount / leftCols)
-            PositionSideBarButtons("MultiBarLeftButton", MultiBarLeft, containerFrame,
-                leftCount, leftCols, GetBarSpacing(db, "left"),
-                ResolveBarButtonOrder(leftCfg, "top_left", leftRows))
-        end
-    end
 
     -- Resize a container frame to a new size while keeping the bar anchored to it
     -- in the SAME screen position.  Uses GetCenter() before/after to compensate.
-    local function ResizeContainerStable(container, newW, newH)
-        if not container then return end
-        local oldW, oldH = container:GetWidth(), container:GetHeight()
-        if oldW == newW and oldH == newH then return end -- nothing to do
-
-        -- Remember the visual center of the container in screen pixels
-        local cx, cy = container:GetCenter()
-        if not cx or not cy then
-            -- Frame not yet shown; just resize without compensation
-            container:SetSize(newW, newH)
-            return
-        end
-
-        -- Resize
-        container:SetSize(newW, newH)
-
-        -- After resize the anchor point is the same but the visual center
-        -- shifted because the frame grew/shrank around its anchor.  Read
-        -- the NEW center and calculate the delta.
-        local cx2, cy2 = container:GetCenter()
-        if not cx2 or not cy2 then return end
-
-        local dx = cx - cx2
-        local dy = cy - cy2
-        if math.abs(dx) < 0.5 and math.abs(dy) < 0.5 then return end
-
-        -- Shift the anchor to cancel the visual movement
-        local point, rel, relPoint, px, py = container:GetPoint(1)
-        if point then
-            container:SetPoint(point, rel, relPoint, (px or 0) + dx, (py or 0) + dy)
-        end
-    end
 
     -- Button hit-rect grid only (Extra Bar model). NormalTexture ±2.2 is skin, not overlay size.
-    local function BarContainerSize(cols, count, spacing)
-        cols  = math.max(1, cols or 1)
-        count = math.max(1, count or 12)
-        spacing = spacing or ACTION_BUTTON_SPACING
-        local effectiveCols = math.min(cols, count)
-        local rows = math.ceil(count / cols)
-        local w = effectiveCols * ACTION_BUTTON_SIZE + (effectiveCols - 1) * spacing
-        local h = rows * ACTION_BUTTON_SIZE + (rows - 1) * spacing
-        return w, h
-    end
 
     -- Main bar: heightPadding=6 with edgePad=2 → 2px bottom / 4px top, so the button
     -- block center sits 1 logical px below the art-frame center. Overlay uses the art
     -- frame size; shift the bar up by that delta so buttons (not empty pad) sit on center.
-    local function GetMainBarButtonCenterOffsetY()
-        local edgePad = 2
-        return (DEFAULT_HEIGHT_PADDING / 2) - edgePad
-    end
-
-    function addon.UpdateOverlaySizes()
-        local db = addon.db and addon.db.profile and addon.db.profile.mainbars
-        if not db then return end
-
-        if addon.ActionBarFrames.mainbar and addon.pUiMainBar then
-            local w, h = addon.pUiMainBar:GetSize()
-            local scale = db.scale_actionbar or 0.9
-            ResizeContainerStable(addon.ActionBarFrames.mainbar, w * scale, h * scale)
-            if not InCombatLockdown() then
-                local oy = GetMainBarButtonCenterOffsetY() * scale
-                addon.pUiMainBar:ClearAllPoints()
-                addon.pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
-            end
-        end
-
-        if addon.ActionBarFrames.rightbar then
-            local cfg = db.right or {}
-            local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "right"))
-            local scale = db.scale_rightbar or 0.9
-            ResizeContainerStable(addon.ActionBarFrames.rightbar, w * scale, h * scale)
-        end
-
-        if addon.ActionBarFrames.leftbar then
-            local cfg = db.left or {}
-            local w, h = BarContainerSize(cfg.columns or 1, cfg.buttons_shown or 12, GetBarSpacing(db, "left"))
-            local scale = db.scale_leftbar or 0.9
-            ResizeContainerStable(addon.ActionBarFrames.leftbar, w * scale, h * scale)
-        end
-
-        if addon.ActionBarFrames.bottombarleft then
-            local cfg = db.bottom_left or {}
-            local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
-            local scale = db.scale_bottomleft or 0.9
-            ResizeContainerStable(addon.ActionBarFrames.bottombarleft, w * scale, h * scale)
-        end
-
-        if addon.ActionBarFrames.bottombarright then
-            local cfg = db.bottom_right or {}
-            local w, h = BarContainerSize(cfg.columns or 12, cfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
-            local scale = db.scale_bottomright or 0.9
-            ResizeContainerStable(addon.ActionBarFrames.bottombarright, w * scale, h * scale)
-        end
-    end
 
     -- ============================================================================
     -- XP & REPUTATION BAR SYSTEM
@@ -914,26 +2336,10 @@ end
     -- All state is managed here; options callbacks are exported via addon.*
 
     -- Helper: get xprepbar config from database
-    local function GetXpRepConfig()
-        return addon.db and addon.db.profile and addon.db.profile.xprepbar
-    end
 
     -- Helper: get the current style
-    local function GetXpBarStyle()
-        local cfg = GetXpRepConfig()
-        return cfg and cfg.style or "dragonflightui"
-    end
 
     -- Helper: get height for current (or specified) style
-    local function GetXpBarHeight(styleOverride)
-        local cfg = GetXpRepConfig() or {}
-        local s = styleOverride or GetXpBarStyle()
-        if s == "retailui" then
-            return cfg.bar_height_retailui or 9
-        else
-            return cfg.bar_height_dfui or 14
-        end
-    end
 
     -- Helper: check if XP bar should be visible.
     -- Instead of hardcoding level caps (which break on custom servers),
@@ -943,44 +2349,17 @@ end
     --   • Normal leveling:               UnitXPMax returns e.g. 10000, UnitXP < 10000 → shown
     -- We don't rely on MainMenuExpBar:IsShown() because noop kills the
     -- Blizzard events that manage that state.
-    local function IsXpBarVisible()
-        local maxXP = UnitXPMax("player")
-        if not maxXP or maxXP <= 0 then return false end
-        local currXP = UnitXP("player") or 0
-        return currXP < maxXP
-    end
 
     -- Helper: check if both XP and Rep bars are visible simultaneously
-    local function AreBothXpRepBarsVisible()
-        if not IsXpBarVisible() then return false end
-        local hasWatchedFaction = GetWatchedFactionInfo() ~= nil
-        return hasWatchedFaction
-    end
 
     -- Forward declaration so GetDualBarVerticalOffset can reference it before its definition
-    local IsWidgetAtDefaultPosition
 
     -- Helper: get the vertical offset that bars above XP/Rep need when both are visible.
     -- Returns 0 when only one bar (or none) is shown.
-    local function GetDualBarVerticalOffset()
-        if not AreBothXpRepBarsVisible() then return 0 end
-        if not IsWidgetAtDefaultPosition("xpbar") or not IsWidgetAtDefaultPosition("repbar") then return 0 end
-        local barH = GetXpBarHeight()
-        return barH + 2 -- bar height + 2px gap
-    end
 
     -- Known default positions for BOTTOM-anchored frames.
     -- Used to detect if user moved a frame via editor mode.
     -- IMPORTANT: Keep these in sync with addon.defaults (database.lua → widgets).
-    local defaultBottomPositions = {
-        mainbar         = { posX = 0,    posY = 22  },
-        bottombarleft   = { posX = 0,    posY = 64  },
-        bottombarright  = { posX = 0,    posY = 102 },
-        petbar          = { posX = 1,    posY = 143 },
-        vehicleExit     = { posX = -251, posY = 145 },
-        xpbar           = { posX = 1,    posY = 7   },
-        repbar          = { posX = 1,    posY = 23  },
-    }
 
     -- Check if a widget is still at its default BOTTOM position (not moved by editor)
     -- Also accepts positions saved with the dual-bar offset baked in, so that
@@ -1011,386 +2390,23 @@ end
     addon.AreBothXpRepBarsVisible = AreBothXpRepBarsVisible
 
     -- DragonflightUI custom bar frames (created once, shown/hidden per style)
-    local dfXpBar = nil   -- custom XP bar frame
-    local dfRepBar = nil  -- custom Rep bar frame
 
     -- ========== PET BAR SETUP (unchanged) ==========
-    function MainMenuBarMixin:statusbar_setup()
-        if PetActionBarFrame then
-            local db = addon.db and addon.db.profile and addon.db.profile.mainbars
-            if db and db.scale_petbar then
-                PetActionBarFrame:SetScale(db.scale_petbar)
-            elseif config.mainbars.scale_petbar then
-                PetActionBarFrame:SetScale(config.mainbars.scale_petbar)
-            end
-
-                local petbarModuleEnabled = addon.IsModuleEnabled and addon:IsModuleEnabled("petbar")
-                if petbarModuleEnabled then
-                    PetActionBarFrame:EnableMouse(false)
-                    PetActionBarFrame:SetAlpha(0)
-                    PetActionBarFrame:Hide()
-                else
-                    PetActionBarFrame:EnableMouse(true)
-                end
-        end
-
-        -- Hide Blizzard XP/Rep text by default (both styles manage their own)
-        if MainMenuBarExpText then MainMenuBarExpText:Hide() end
-        if ReputationWatchBarText then ReputationWatchBarText:Hide() end
-    end
 
     -- ========== DRAGONFLIGHTUI STYLE: CUSTOM BARS ==========
 
     -- Create the DragonflightUI-style XP bar (custom StatusBar with rested background)
-    local function CreateDragonflightUIXPBar()
-        if dfXpBar then return dfXpBar end
-
-        local cfg = GetXpRepConfig() or {}
-        local sizeX = cfg.bar_width or 466
-        local sizeY = GetXpBarHeight("dragonflightui")
-
-        local f = CreateFrame("Frame", "DragonUI_XPBar", UIParent)
-        f:SetSize(sizeX, sizeY)
-        f:SetFrameLevel(2)
-
-        -- Background layer
-        f.Background = f:CreateTexture(nil, "BACKGROUND")
-        f.Background:SetAllPoints()
-        f.Background:SetTexture(addon._dir .. "XP\\Background")
-        f.Background:SetTexCoord(0, 0.55517578, 0, 1)
-
-        -- Rested XP background bar (shows the TOTAL rested range behind main fill)
-        f.RestedBar = CreateFrame("StatusBar", nil, f)
-        f.RestedBar:SetPoint("TOPLEFT", 0, 0)
-        f.RestedBar:SetPoint("BOTTOMRIGHT", 0, 0)
-        f.RestedBar.Texture = f.RestedBar:CreateTexture(nil, "ARTWORK")
-        f.RestedBar.Texture:SetTexture(addon._dir .. "XP\\RestedBackground")
-        f.RestedBar.Texture:SetAllPoints()
-        f.RestedBar.Texture:SetDrawLayer("ARTWORK", 0)
-        f.RestedBar:SetStatusBarTexture(f.RestedBar.Texture)
-        f.RestedBar:SetFrameLevel(3)
-        f.RestedBar:SetAlpha(0.69)
-
-        -- Rested mark tick (small indicator at the end of rested range)
-        local markSizeX, markSizeY = 14, sizeY + 6
-        f.RestedBarMark = CreateFrame("Frame", nil, f)
-        f.RestedBarMark:SetSize(markSizeX, markSizeY)
-        f.RestedBarMark.Texture = f.RestedBarMark:CreateTexture(nil, "OVERLAY")
-        f.RestedBarMark.Texture:SetTexture(addon._dir .. "XP\\uiexperiencebar")
-        f.RestedBarMark.Texture:SetTexCoord(1170 / 2048, 1192 / 2048, 201 / 256, 231 / 256)
-        f.RestedBarMark.Texture:SetAllPoints()
-
-        -- Main XP progress bar
-        f.Bar = CreateFrame("StatusBar", nil, f)
-        f.Bar:SetPoint("TOPLEFT", 0, 0)
-        f.Bar:SetPoint("BOTTOMRIGHT", 0, 0)
-        f.Bar.Texture = f.Bar:CreateTexture(nil, "ARTWORK")
-        f.Bar.Texture:SetTexture(addon._dir .. "XP\\Main")
-        f.Bar.Texture:SetAllPoints()
-        f.Bar:SetStatusBarTexture(f.Bar.Texture)
-        f.Bar.Texture:SetDrawLayer("ARTWORK", 1)
-        f.Bar:SetFrameLevel(4)
-        f.Bar:EnableMouse(true)
-
-        -- Border overlay
-        f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
-        f.Border:SetTexture(addon._dir .. "XP\\Overlay")
-        f.Border:SetTexCoord(0, 0.55517578, 0, 1)
-        f.Border:SetPoint("TOPLEFT", 0, 1)
-        f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
-
-        -- Text (shown on hover via HIGHLIGHT, or always via OVERLAY)
-        f.Text = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
-        f.Text:SetTextColor(1, 1, 1, 1)
-        f.Text:SetPoint("CENTER", 0, 1)
-
-        f.TextPercent = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
-        f.TextPercent:SetTextColor(1, 1, 1, 1)
-        f.TextPercent:SetPoint("LEFT", f.Text, "RIGHT", 0, 0)
-
-        -- Compatibility: forward right-click to Blizzard XP bar handler
-        -- so server-side XP rate dropdowns still work when using custom DFUI bar.
-        f.Bar:SetScript("OnMouseDown", function(self, button)
-            if button ~= "RightButton" or not MainMenuExpBar then return end
-            local handler = MainMenuExpBar:GetScript("OnMouseDown")
-            if handler then
-                handler(MainMenuExpBar, button)
-            end
-        end)
-
-        -- Tooltip (borrowed from DragonflightUI)
-        f.Bar:SetScript("OnEnter", function(self)
-            GameTooltip_AddNewbieTip(self, XPBAR_LABEL, 1.0, 1.0, 1.0, NEWBIE_TOOLTIP_XPBAR, 1)
-            GameTooltip.canAddRestStateLine = 1
-            ExhaustionToolTipText()
-            local currXP = UnitXP("player")
-            local maxXP = UnitXPMax("player")
-            local pct = (maxXP > 0) and (100 * currXP / maxXP) or 0
-            local left = maxXP - currXP
-            local leftPct = 100 - pct
-            local restedXP = GetXPExhaustion() or 0
-            local restedMax = maxXP * 1.5
-            local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
-            GameTooltip:AddLine(" ")
-            GameTooltip:AddDoubleLine(L["XP: "], format("|cFFFFFFFF%s/%s (%.1f%%)", currXP, maxXP, pct))
-            GameTooltip:AddDoubleLine(L["Remaining: "], format("|cFFFFFFFF%s (%.1f%%)", left, leftPct))
-            GameTooltip:AddDoubleLine(L["Rested: "], format("|cFFFFFFFF%s (%.1f%%)", restedXP, restedPct))
-            GameTooltip:Show()
-        end)
-        f.Bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-        dfXpBar = f
-        return f
-    end
 
     -- Create the DragonflightUI-style Rep bar (custom StatusBar with standing colors)
-    local function CreateDragonflightUIRepBar()
-        if dfRepBar then return dfRepBar end
-
-        local cfg = GetXpRepConfig() or {}
-        local sizeX = cfg.bar_width or 466
-        local sizeY = GetXpBarHeight("dragonflightui")
-
-        local f = CreateFrame("Frame", "DragonUI_RepBar", UIParent)
-        f:SetSize(sizeX, sizeY)
-        f:SetFrameLevel(2)
-
-        -- Background
-        f.Background = f:CreateTexture(nil, "BACKGROUND")
-        f.Background:SetAllPoints()
-        f.Background:SetTexture(addon._dir .. "XP\\Background")
-        f.Background:SetTexCoord(0, 0.55517578, 0, 1)
-
-        -- Main rep progress bar
-        f.Bar = CreateFrame("StatusBar", nil, f)
-        f.Bar:SetPoint("TOPLEFT", 0, 0)
-        f.Bar:SetPoint("BOTTOMRIGHT", 0, 0)
-        f.Bar.Texture = f.Bar:CreateTexture(nil, "ARTWORK")
-        f.Bar.Texture:SetTexture(addon._dir .. "Reputation\\Rep")
-        f.Bar.Texture:SetAllPoints()
-        f.Bar:SetStatusBarTexture(f.Bar.Texture)
-        f.Bar:EnableMouse(true)
-
-        -- Border overlay
-        f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
-        f.Border:SetTexture(addon._dir .. "XP\\Overlay")
-        f.Border:SetTexCoord(0, 0.55517578, 0, 1)
-        f.Border:SetPoint("TOPLEFT", 0, 1)
-        f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
-
-        -- Text (hover by default)
-        f.Text = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
-        f.Text:SetTextColor(1, 1, 1, 1)
-        f.Text:SetPoint("CENTER", 0, 1)
-
-        -- Click to open reputation panel
-        f.Bar:SetScript("OnMouseDown", function(self, button)
-            if button == "LeftButton" and not InCombatLockdown() then
-                ToggleCharacter("ReputationFrame")
-            end
-        end)
-
-        -- Tooltip
-        f.Bar:SetScript("OnEnter", function(self)
-            local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
-            if name then
-                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:AddLine(name, 1, 1, 1)
-                local standingLabel = _G["FACTION_STANDING_LABEL" .. standing] or ""
-                GameTooltip:AddLine(standingLabel, NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
-                GameTooltip:AddDoubleLine(L["Reputation: "], format("|cFFFFFFFF%s / %s", value - minRep, maxRep - minRep))
-                GameTooltip:Show()
-            end
-        end)
-        f.Bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-        dfRepBar = f
-        return f
-    end
 
     -- Refresh ExhaustionTick for DragonflightUI style
     -- Extracted so it can be called from ConnectBarsToEditor AND on level-up /
     -- XP-change events (the tick self-hides when fully rested but never
     -- re-shows on its own because OnUpdate gets nilled out).
-    local function UpdateDfuiExhaustionTick()
-        if not ExhaustionTick or not dfXpBar then return end
-
-        local cfg = GetXpRepConfig() or {}
-        local showTick = addon.db and addon.db.profile and addon.db.profile.style
-            and addon.db.profile.style.exhaustion_tick
-        local exhaustionThreshold = GetXPExhaustion()
-        local currXP = UnitXP("player")
-        local maxXP = UnitXPMax("player")
-        if not maxXP or maxXP == 0 then maxXP = 1 end
-        local remainingXP = maxXP - currXP
-        local isFullyRested = exhaustionThreshold and exhaustionThreshold >= remainingXP
-
-        if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
-            local barW = dfXpBar:GetWidth()
-            if not barW or barW == 0 then barW = cfg.bar_width or 466 end
-            ExhaustionTick:SetParent(dfXpBar)
-            ExhaustionTick:SetFrameStrata("HIGH")
-            ExhaustionTick:SetFrameLevel(20)
-            local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
-            tickPos = math.max(tickPos, 0)
-            ExhaustionTick:ClearAllPoints()
-            ExhaustionTick:SetPoint("CENTER", dfXpBar, "LEFT", tickPos, 0)
-            ExhaustionTick:SetScript("OnUpdate", function(self, elapsed)
-                if not self.timer then return end
-                self.timer = self.timer - elapsed
-                if self.timer > 0 then return end
-                self.timer = 1
-                local et = GetXPExhaustion()
-                if not et or et <= 0 then self:Hide() return end
-                local cx = UnitXP("player")
-                local mx = UnitXPMax("player")
-                if not mx or mx == 0 then return end
-                if et >= (mx - cx) then self:Hide() return end
-                local bw = dfXpBar:GetWidth()
-                if not bw or bw == 0 then return end
-                local tp = math.min(((cx + et) / mx) * bw, bw)
-                tp = math.max(tp, 0)
-                self:ClearAllPoints()
-                self:SetPoint("CENTER", dfXpBar, "LEFT", tp, 0)
-            end)
-            ExhaustionTick.timer = 0
-            ExhaustionTick:Show()
-        else
-            ExhaustionTick:Hide()
-            ExhaustionTick:SetScript("OnUpdate", nil)
-        end
-    end
 
     -- Update the DragonflightUI XP bar values and visuals
-    local function UpdateDragonflightUIXPBar()
-        if not dfXpBar then return end
-
-        local cfg = GetXpRepConfig() or {}
-        local sizeX = cfg.bar_width or 466
-        local sizeY = GetXpBarHeight("dragonflightui")
-        local markSizeX = 14
-
-        -- Hide the custom XP bar when there's no XP to gain (max level,
-        -- XP disabled, etc.).  Uses UnitXPMax — works on any server.
-        if not IsXpBarVisible() then
-            dfXpBar:Hide()
-            return
-        end
-        dfXpBar:Show()
-
-        local exhaustionStateID = GetRestState()
-        local currXP = UnitXP("player")
-        local maxXP = UnitXPMax("player")
-        if maxXP == 0 then maxXP = 1 end
-        local restedXP = GetXPExhaustion() or 0
-        local pct = 100 * currXP / maxXP
-
-        -- Set main bar texture based on rested state
-        if exhaustionStateID == 1 then
-            dfXpBar.Bar.Texture:SetTexture(addon._dir .. "XP\\Rested")
-        else
-            dfXpBar.Bar.Texture:SetTexture(addon._dir .. "XP\\Main")
-        end
-        dfXpBar.Bar:SetMinMaxValues(0, maxXP)
-        dfXpBar.Bar:SetValue(currXP)
-
-        -- Rested XP background bar
-        local showRested = cfg.show_rested_bar ~= false
-        if showRested and restedXP and restedXP > 0 then
-            dfXpBar.RestedBar:Show()
-            dfXpBar.RestedBar:SetMinMaxValues(0, maxXP)
-            if (currXP + restedXP) > maxXP then
-                dfXpBar.RestedBar:SetValue(maxXP)
-                dfXpBar.RestedBarMark:Hide()
-            else
-                dfXpBar.RestedBar:SetValue(currXP + restedXP)
-                local showMark = cfg.show_rested_mark ~= false
-                if showMark then
-                    local bw = dfXpBar:GetWidth()
-                    if not bw or bw == 0 then bw = sizeX end
-                    dfXpBar.RestedBarMark:Show()
-                    dfXpBar.RestedBarMark:ClearAllPoints()
-                    dfXpBar.RestedBarMark:SetPoint("LEFT", dfXpBar, "LEFT",
-                        (currXP + restedXP) / maxXP * bw - markSizeX / 2, 0)
-                else
-                    dfXpBar.RestedBarMark:Hide()
-                end
-            end
-        else
-            dfXpBar.RestedBar:Hide()
-            dfXpBar.RestedBarMark:Hide()
-        end
-
-        -- Text
-        local alwaysText = cfg.always_show_text
-        if alwaysText then
-            dfXpBar.Text:SetDrawLayer("OVERLAY")
-            dfXpBar.TextPercent:SetDrawLayer("OVERLAY")
-        else
-            dfXpBar.Text:SetDrawLayer("HIGHLIGHT")
-            dfXpBar.TextPercent:SetDrawLayer("HIGHLIGHT")
-        end
-
-        dfXpBar.Text:SetText(string.format(L["XP: %d/%d"], currXP, maxXP))
-
-        local showPercent = cfg.show_xp_percent ~= false
-        if showPercent then
-            local restedMax = maxXP * 1.5
-            local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
-            local percentText = " = " .. format("%.1f%%", pct)
-            if restedPct > 0 then
-                percentText = percentText .. " (" .. format("%.1f%%", restedPct) .. " Rested)"
-            end
-            dfXpBar.TextPercent:SetText(percentText)
-            dfXpBar.TextPercent:Show()
-            -- Offset main text left by half the percent text width so the combined visual is centered
-            local percentWidth = dfXpBar.TextPercent:GetStringWidth() or 0
-            dfXpBar.Text:ClearAllPoints()
-            dfXpBar.Text:SetPoint("CENTER", 0 - percentWidth / 2, 1)
-        else
-            dfXpBar.TextPercent:Hide()
-            -- Reset to normal centering when percentage is off
-            dfXpBar.Text:ClearAllPoints()
-            dfXpBar.Text:SetPoint("CENTER", 0, 1)
-        end
-    end
 
     -- Update the DragonflightUI Rep bar values and visuals
-    local function UpdateDragonflightUIRepBar()
-        if not dfRepBar then return end
-
-        local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
-        if not name then
-            dfRepBar:Hide()
-            return
-        end
-        dfRepBar:Show()
-
-        local cfg = GetXpRepConfig() or {}
-
-        -- Standing-based texture color
-        if standing == 1 or standing == 2 then
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepRed")
-        elseif standing == 3 then
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepOrange")
-        elseif standing == 4 then
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepYellow")
-        else
-            dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepGreen")
-        end
-
-        dfRepBar.Bar:SetMinMaxValues(0, maxRep - minRep)
-        dfRepBar.Bar:SetValue(value - minRep)
-
-        -- Text
-        local alwaysText = cfg.always_show_text
-        if alwaysText then
-            dfRepBar.Text:SetDrawLayer("OVERLAY")
-        else
-            dfRepBar.Text:SetDrawLayer("HIGHLIGHT")
-        end
-        dfRepBar.Text:SetText(name .. " " .. (value - minRep) .. " / " .. (maxRep - minRep))
-    end
 
     -- ========== RETAILUI STYLE: ATLAS-BASED BLIZZARD RESKIN ==========
 
@@ -1401,480 +2417,24 @@ end
     --   2. DON'T change the StatusBar fill texture (leave Blizzard default)
     --   3. Re-use MainMenuXPBarTexture0 as border (noop clears it, we re-apply)
     --   4. Let ExhaustionLevelFillBar handle rested display (just set height)
-    local function ApplyRetailUIExpRepBarStyling()
-        local cfg = GetXpRepConfig() or {}
-        local barW = cfg.bar_width or 466
-        local barH = GetXpBarHeight("retailui")
-        local ExperienceBarAsset = addon._dir .. "XP\\uiexperiencebar"
-
-        -- === XP BAR ===
-        -- NOTE: Do NOT ClearAllPoints here — positioning is handled by
-        -- ConnectBarsToEditor() and UpdateBarPositions(). Clearing anchors
-        -- here would leave the bar floating at 0,0 between function calls.
-        if MainMenuExpBar then
-            MainMenuExpBar:SetSize(barW, barH)
-            MainMenuExpBar:SetFrameLevel(1)
-
-            -- Replace all BACKGROUND textures in-place with ExperienceBar-Background atlas
-            -- Clear original anchors first so our sizing takes effect (2-point anchors override SetSize)
-            -- Extend 1px left, 2px right so background fully covers the area inside the border
-            local bgFound = false
-            for _, region in pairs({MainMenuExpBar:GetRegions()}) do
-                if region:GetObjectType() == "Texture" and region:GetDrawLayer() == "BACKGROUND" then
-                    if not bgFound then
-                        -- Use the first BACKGROUND texture as our single full-width background
-                        region:ClearAllPoints()
-                        region:SetPoint("TOPLEFT", MainMenuExpBar, "TOPLEFT", -1, 0)
-                        region:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 2, 0)
-                        region:SetTexture(ExperienceBarAsset)
-                        region:SetTexCoord(0.00088878125 / 2048, 570 / 2048, 20 / 64, 29 / 64)
-                        region:SetAlpha(1) -- RemoveBlizzardFrames sets alpha 0, must restore
-                        region:Show()
-                        bgFound = true
-                    else
-                        -- Hide extra BACKGROUND textures (only need one)
-                        region:Hide()
-                    end
-                end
-            end
-
-            -- Clean up old custom background from previous approach
-            if MainMenuExpBar._dragonuiBg then
-                MainMenuExpBar._dragonuiBg:Hide()
-            end
-
-            -- ExhaustionLevelFillBar: match reference (set height, keep visible for rested display)
-            if ExhaustionLevelFillBar then
-                ExhaustionLevelFillBar:SetHeight(barH)
-                ExhaustionLevelFillBar:Show()
-            end
-
-            -- Border: MainMenuXPBarTexture0 (noop.lua clears with SetTexture(nil), we re-apply)
-            -- Reference: SetAllPoints first, then override with offset anchors, then set_atlas
-            local borderTex = MainMenuXPBarTexture0
-            if borderTex then
-                borderTex:ClearAllPoints()
-                borderTex:SetPoint("TOPLEFT", MainMenuExpBar, "TOPLEFT", -3, 3)
-                borderTex:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 3, -6)
-                borderTex:SetDrawLayer("OVERLAY", 1)
-                borderTex:SetTexture(ExperienceBarAsset)
-                borderTex:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
-                borderTex:Show()
-            end
-
-            -- DON'T change the StatusBar fill texture — reference leaves Blizzard default intact
-            -- Clean up old custom fill texture if it exists from previous approach
-            if MainMenuExpBar._dragonuiTex then
-                MainMenuExpBar._dragonuiTex:Hide()
-            end
-
-            -- Clean up old custom rested overlay if it exists from previous approach
-            if MainMenuExpBar._restedOverlay then
-                MainMenuExpBar._restedOverlay:Hide()
-            end
-
-            -- XP text: handle visibility (always show vs hover only)
-            if MainMenuBarExpText then
-                MainMenuBarExpText:SetParent(MainMenuExpBar)
-                MainMenuBarExpText:ClearAllPoints()
-                MainMenuBarExpText:SetPoint("CENTER", MainMenuExpBar, "CENTER", 0, 2)
-
-                -- Visibility: OVERLAY = always visible, HIGHLIGHT = hover only
-                local alwaysText = cfg.always_show_text
-                if alwaysText then
-                    MainMenuBarExpText:SetDrawLayer("OVERLAY", 3)
-                else
-                    MainMenuBarExpText:SetDrawLayer("HIGHLIGHT")
-                end
-                -- Must Show() to undo the explicit Hide() from init
-                MainMenuBarExpText:Show()
-            end
-
-            -- Exhaustion tick (safe handler replaces Blizzard's crash-prone OnUpdate)
-            if ExhaustionTick then
-                local showTick = addon.db and addon.db.profile and addon.db.profile.style
-                    and addon.db.profile.style.exhaustion_tick
-                local exhaustionThreshold = GetXPExhaustion()
-                local currXP = UnitXP("player")
-                local maxXP = UnitXPMax("player")
-                if not maxXP or maxXP == 0 then maxXP = 1 end
-
-                -- Hide tick if rested XP fills the entire remaining bar
-                local remainingXP = maxXP - currXP
-                local isFullyRested = exhaustionThreshold and exhaustionThreshold >= remainingXP
-
-                if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
-                    -- Re-parent to MainMenuExpBar and ensure it renders above everything
-                    ExhaustionTick:SetParent(MainMenuExpBar)
-                    ExhaustionTick:SetFrameStrata("HIGH")
-                    ExhaustionTick:SetFrameLevel(20)
-                    -- Position immediately
-                    local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
-                    tickPos = math.max(tickPos, 0)
-                    ExhaustionTick:ClearAllPoints()
-                    ExhaustionTick:SetPoint("CENTER", MainMenuExpBar, "LEFT", tickPos, 0)
-                    -- Install a nil-safe OnUpdate for continuous tracking
-                    ExhaustionTick:SetScript("OnUpdate", function(self, elapsed)
-                        if not self.timer then return end
-                        self.timer = self.timer - elapsed
-                        if self.timer > 0 then return end
-                        self.timer = 1
-                        local et = GetXPExhaustion()
-                        if not et or et <= 0 then
-                            self:Hide()
-                            return
-                        end
-                        local cx = UnitXP("player")
-                        local mx = UnitXPMax("player")
-                        if not mx or mx == 0 then return end
-                        -- Hide if fully rested
-                        if et >= (mx - cx) then
-                            self:Hide()
-                            return
-                        end
-                        local bw = MainMenuExpBar:GetWidth()
-                        if not bw or bw == 0 then return end
-                        local tp = math.min(((cx + et) / mx) * bw, bw)
-                        tp = math.max(tp, 0)
-                        self:ClearAllPoints()
-                        self:SetPoint("CENTER", MainMenuExpBar, "LEFT", tp, 0)
-                    end)
-                    ExhaustionTick.timer = 0
-                    ExhaustionTick:Show()
-                else
-                    ExhaustionTick:Hide()
-                    ExhaustionTick:SetScript("OnUpdate", nil)
-                end
-            end
-
-            -- Hide the status overlay if it was created before (cleanup from old code)
-            if MainMenuExpBar.status then
-                MainMenuExpBar.status:Hide()
-            end
-
-            -- Explicitly set XP bar values: noop kills Blizzard's MainMenuBar
-            -- events, so MainMenuExpBar_Update() never runs automatically.
-            -- Without this the StatusBar fill is empty (0/0).
-            local currXP = UnitXP("player")
-            local maxXP = UnitXPMax("player")
-            if maxXP and maxXP > 0 then
-                MainMenuExpBar:SetMinMaxValues(math.min(0, currXP), maxXP)
-                MainMenuExpBar:SetValue(currXP)
-            end
-
-            MainMenuExpBar:Show()
-        end
-
-        -- === REP BAR ===
-        -- Reference: ReplaceBlizzardRepExpBarFrame — rep bar section
-        -- NOTE: Do NOT ClearAllPoints here — positioning handled by UpdateBarPositions()
-        if ReputationWatchBar and ReputationWatchStatusBar then
-            ReputationWatchBar:SetSize(barW, barH)
-            ReputationWatchBar:SetFrameLevel(1)
-            ReputationWatchStatusBar:SetAllPoints(ReputationWatchBar)
-            ReputationWatchStatusBar:SetSize(barW, barH)
-            -- Enable mouse on the StatusBar so HIGHLIGHT draw layer and OnEnter work.
-            -- The StatusBar covers the full area via SetAllPoints, so it receives
-            -- mouse events instead of the parent ReputationWatchBar.
-            ReputationWatchStatusBar:EnableMouse(true)
-            -- DON'T change rep StatusBar fill texture — leave Blizzard default
-
-            -- Background: use named background texture per reference pattern
-            -- Reference: _G[repStatusBar:GetName() .. "Background"]
-            -- Extend 1px left, 2px right so background fully covers the area inside the border
-            local repBgTex = ReputationWatchStatusBarBackground
-            if repBgTex then
-                repBgTex:ClearAllPoints()
-                repBgTex:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -1, 0)
-                repBgTex:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 2, 0)
-                repBgTex:SetTexture(ExperienceBarAsset)
-                repBgTex:SetTexCoord(0.00088878125 / 2048, 570 / 2048, 20 / 64, 29 / 64)
-                repBgTex:SetAlpha(1) -- RemoveBlizzardFrames may set alpha 0, must restore
-            end
-
-            -- Border: ReputationXPBarTexture0 (noop.lua clears, we re-apply)
-            local repBorder = ReputationXPBarTexture0
-            if repBorder then
-                repBorder:ClearAllPoints()
-                repBorder:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -3, 2)
-                repBorder:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
-                repBorder:SetDrawLayer("OVERLAY", 1)
-                repBorder:SetTexture(ExperienceBarAsset)
-                repBorder:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
-                repBorder:Show()
-            end
-
-            local repBorder2 = ReputationWatchBarTexture0
-            if repBorder2 then
-                repBorder2:ClearAllPoints()
-                repBorder2:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -3, 2)
-                repBorder2:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
-                repBorder2:SetDrawLayer("OVERLAY", 1)
-                repBorder2:SetTexture(ExperienceBarAsset)
-                repBorder2:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
-                repBorder2:Show()
-            end
-
-            -- Hide the status overlay if it was created before (cleanup from old code)
-            if ReputationWatchStatusBar.status then
-                ReputationWatchStatusBar.status:Hide()
-            end
-
-            -- Explicitly set rep bar values: noop kills Blizzard's MainMenuBar
-            -- events, so ReputationWatchBar_Update() never runs automatically.
-            local fName, fStanding, fMin, fMax, fValue = GetWatchedFactionInfo()
-            if fName and fMax and fMax > fMin then
-                ReputationWatchStatusBar:SetMinMaxValues(fMin, fMax)
-                ReputationWatchStatusBar:SetValue(fValue)
-            end
-
-            -- Rep text: handle visibility (always show vs hover only)
-            if ReputationWatchStatusBarText then
-                ReputationWatchStatusBarText:SetParent(ReputationWatchStatusBar)
-                ReputationWatchStatusBarText:ClearAllPoints()
-                ReputationWatchStatusBarText:SetPoint("CENTER", ReputationWatchStatusBar, "CENTER", 0, 1)
-                local alwaysText = cfg.always_show_text
-                if alwaysText then
-                    ReputationWatchStatusBarText:SetDrawLayer("OVERLAY", 3)
-                    -- Set the text explicitly with faction name for "always show" mode
-                    local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
-                    if name then
-                        local current = value - minRep
-                        local maximum = maxRep - minRep
-                        ReputationWatchStatusBarText:SetText(format("%s: %d / %d", name, current, maximum))
-                    end
-                else
-                    ReputationWatchStatusBarText:SetDrawLayer("HIGHLIGHT")
-                end
-                ReputationWatchStatusBarText:Show()
-            end
-        end
-
-        -- Re-apply dark mode tint — SetTexture() above resets vertex colors
-        if addon.RefreshDarkModeXPRepBars then
-            addon.RefreshDarkModeXPRepBars()
-        end
-    end
 
     -- ========== SHARED: CONNECT BARS TO EDITOR & POSITIONING ==========
 
     -- Connect bars to their individual editor frames (XP and Rep are separate)
-    local function ConnectBarsToEditor()
-        if not addon.ActionBarFrames.xpbar or not addon.ActionBarFrames.repbar then return end
-
-        local cfg = GetXpRepConfig() or {}
-        local style = GetXpBarStyle()
-
-        if style == "dragonflightui" then
-            -- Hide Blizzard bars, show custom bars
-            if MainMenuExpBar then
-                MainMenuExpBar:SetParent(UIParent)
-                MainMenuExpBar:ClearAllPoints()
-                MainMenuExpBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, -500)
-                MainMenuExpBar:SetAlpha(0)
-            end
-            if ReputationWatchBar then
-                ReputationWatchBar:SetParent(UIParent)
-                ReputationWatchBar:ClearAllPoints()
-                ReputationWatchBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, -500)
-                ReputationWatchBar:SetAlpha(0)
-            end
-            if ExhaustionTick then
-                -- In DFUI, ExhaustionTick is managed by the tick logic below (if enabled)
-                -- Always hide initially; the style-specific tick code will show if needed
-                ExhaustionTick:Hide()
-                ExhaustionTick:SetScript("OnUpdate", nil)
-            end
-            if ExhaustionLevelFillBar then ExhaustionLevelFillBar:Hide() end
-
-            -- Create and parent custom bars to their own editor frames
-            local xpBar = CreateDragonflightUIXPBar()
-            local repBar = CreateDragonflightUIRepBar()
-
-            -- Store references on addon table so dark mode can find them reliably
-            addon.DfuiXpBar = xpBar
-            addon.DfuiRepBar = repBar
-
-            xpBar:SetParent(addon.ActionBarFrames.xpbar)
-            xpBar:SetScale(cfg.expbar_scale or 1.0)
-            xpBar:SetFrameStrata("MEDIUM")
-
-            repBar:SetParent(addon.ActionBarFrames.repbar)
-            repBar:SetScale(cfg.repbar_scale or 1.0)
-            repBar:SetFrameStrata("MEDIUM")
-
-            -- Exhaustion tick for DragonflightUI: delegated to UpdateDfuiExhaustionTick()
-            UpdateDfuiExhaustionTick()
-
-            -- Re-apply dark mode tint to newly created bar borders
-            if addon.RefreshDarkModeXPRepBars then
-                addon.RefreshDarkModeXPRepBars()
-            end
-
-        else -- retailui
-            -- Hide custom bars if they exist
-            if dfXpBar then dfXpBar:Hide() end
-            if dfRepBar then dfRepBar:Hide() end
-
-            -- Parent Blizzard XP bar to its own editor frame
-            if MainMenuExpBar then
-                MainMenuExpBar:SetAlpha(1)
-                MainMenuExpBar:ClearAllPoints()
-                MainMenuExpBar:SetParent(addon.ActionBarFrames.xpbar)
-                MainMenuExpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
-                MainMenuExpBar:SetScale(cfg.expbar_scale or 1.0)
-                MainMenuExpBar:SetFrameStrata("MEDIUM")
-                MainMenuExpBar:SetFrameLevel(1)
-                MainMenuExpBar:Show()
-            end
-            -- Parent Blizzard Rep bar to its own editor frame
-            if ReputationWatchBar then
-                ReputationWatchBar:SetAlpha(1)
-                ReputationWatchBar:ClearAllPoints()
-                ReputationWatchBar:SetParent(addon.ActionBarFrames.repbar)
-                ReputationWatchBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
-                ReputationWatchBar:SetScale(cfg.repbar_scale or 1.0)
-                ReputationWatchBar:SetFrameStrata("MEDIUM")
-                ReputationWatchBar:SetFrameLevel(1)
-            end
-
-            -- Re-apply styling since noop may have cleared textures
-            ApplyRetailUIExpRepBarStyling()
-        end
-    end
 
     -- 3.3.5a StatusBar fill width sticks after SetSize unless SetValue actually changes.
-    local function NudgeStatusBarFill(bar)
-        if not bar then return end
-        local v = bar:GetValue()
-        local vmin, vmax = bar:GetMinMaxValues()
-        if not vmax or vmax <= vmin then return end
-        bar:SetValue(vmin)
-        bar:SetValue(v)
-    end
 
     -- Position bars centered within their individual editor frames
-    local function UpdateBarPositions()
-        local cfg = GetXpRepConfig() or {}
-        local style = GetXpBarStyle()
-        local barW = cfg.bar_width or 466
-        local barH = GetXpBarHeight()
-
-        -- Resize editor frames to match bar dimensions
-        if addon.ActionBarFrames.xpbar then
-            addon.ActionBarFrames.xpbar:SetSize(barW, barH)
-        end
-        if addon.ActionBarFrames.repbar then
-            addon.ActionBarFrames.repbar:SetSize(barW, barH)
-        end
-
-        if style == "dragonflightui" then
-            -- Resize root; fixed UV so chrome stretches with SetSize (no UV∝width).
-            if dfXpBar then
-                dfXpBar:SetSize(barW, barH)
-                dfXpBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
-                dfXpBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
-                dfXpBar:ClearAllPoints()
-                dfXpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
-            end
-            if dfRepBar then
-                dfRepBar:SetSize(barW, barH)
-                dfRepBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
-                dfRepBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
-                dfRepBar:ClearAllPoints()
-                dfRepBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
-            end
-
-            UpdateDragonflightUIXPBar()
-            UpdateDragonflightUIRepBar()
-            if dfXpBar then
-                NudgeStatusBarFill(dfXpBar.Bar)
-                NudgeStatusBarFill(dfXpBar.RestedBar)
-            end
-            NudgeStatusBarFill(dfRepBar and dfRepBar.Bar)
-
-        else -- retailui
-            -- Position Blizzard XP bar centered in its editor frame
-            if MainMenuExpBar then
-                MainMenuExpBar:ClearAllPoints()
-                MainMenuExpBar:SetSize(barW, barH)
-                MainMenuExpBar:SetScale(cfg.expbar_scale or 1.0)
-                MainMenuExpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
-                NudgeStatusBarFill(MainMenuExpBar)
-            end
-
-            -- Position Blizzard Rep bar centered in its editor frame
-            if ReputationWatchBar then
-                ReputationWatchBar:ClearAllPoints()
-                ReputationWatchBar:SetSize(barW, barH)
-                ReputationWatchBar:SetScale(cfg.repbar_scale or 1.0)
-                ReputationWatchBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
-                if ReputationWatchStatusBar then
-                    ReputationWatchStatusBar:SetAllPoints(ReputationWatchBar)
-                    ReputationWatchStatusBar:SetSize(barW, barH)
-                    NudgeStatusBarFill(ReputationWatchStatusBar)
-                end
-            end
-        end
-
-        -- ========== XP BAR VISIBILITY ==========
-        -- Show/hide the editor container based on whether the player can
-        -- gain XP (UnitXPMax > 0).  This works on any server regardless
-        -- of the configured level cap.
-        if addon.ActionBarFrames.xpbar then
-            if IsXpBarVisible() then
-                addon.ActionBarFrames.xpbar:Show()
-            else
-                addon.ActionBarFrames.xpbar:Hide()
-            end
-        end
-    end
 
     -- ========== HOVER/COMBAT VISIBILITY (core/visibility_fade.lua) ==========
 
     -- Never hover-trigger on the containers: their higher frame level would steal OnEnter from
     -- these already-mouse-enabled bar widgets, breaking the bars' own hover-to-show-text.
-    local function GetXpRepHoverFrames()
-        local frames = {}
-        if MainMenuExpBar then table.insert(frames, MainMenuExpBar) end
-        if ReputationWatchStatusBar then table.insert(frames, ReputationWatchStatusBar) end
-        if dfXpBar and dfXpBar.Bar then table.insert(frames, dfXpBar.Bar) end
-        if dfRepBar and dfRepBar.Bar then table.insert(frames, dfRepBar.Bar) end
-        return frames
-    end
-
-    local function RegisterXpRepVisibility()
-        if not (addon.VisibilityFade and addon.ActionBarFrames.xpbar and addon.ActionBarFrames.repbar) then return end
-        addon.VisibilityFade.Register("xprepbar", addon.ActionBarFrames.xpbar, {
-            frames = { addon.ActionBarFrames.repbar },
-            dbTable = GetXpRepConfig,
-            hoverFrames = GetXpRepHoverFrames(),
-            enableMouse = false,
-            -- Plain StatusBars, not secure action buttons — EnableMouse can react live in combat.
-            clickThrough = true,
-            mouseSafeInCombat = true,
-        })
-    end
 
     -- ========== EXPORTED REFRESH / CALLBACK FUNCTIONS ==========
     -- These are called from options.lua and tab_xprepbars.lua
 
     -- Full refresh of XP/Rep bar system (style, sizing, positioning)
-    local function RefreshXpRepBars()
-        local style = GetXpBarStyle()
-        ConnectBarsToEditor()
-        if style == "dragonflightui" then
-            UpdateDragonflightUIXPBar()
-            UpdateDragonflightUIRepBar()
-        else
-            ApplyRetailUIExpRepBarStyling()
-        end
-        UpdateBarPositions()
-        RegisterXpRepVisibility()
-        if addon.VisibilityFade then
-            addon.VisibilityFade.Update("xprepbar")
-        end
-    end
 
     -- Export functions for options callbacks
     addon.RefreshXpRepBarPosition = RefreshXpRepBars
@@ -1913,573 +2473,28 @@ end
         end
     end
    -- Specific function to disable MainMenuBarMaxLevelBar
-    local function DisableMaxLevelBar()
-        if MainMenuBarMaxLevelBar then
-            MainMenuBarMaxLevelBar:Hide()
-            MainMenuBarMaxLevelBar:EnableMouse(false)
-            MainMenuBarMaxLevelBar:SetAlpha(0)
-            -- Ensure it never interferes
-            MainMenuBarMaxLevelBar:SetFrameLevel(0)
-        end
-    end
-
-    local function RemoveBlizzardFrames()
-        -- Disable MainMenuBarMaxLevelBar immediately
-        DisableMaxLevelBar()
-        
-        local blizzFrames = {MainMenuBarPerformanceBar, MainMenuBarTexture0, MainMenuBarTexture1, MainMenuBarTexture2,
-                             MainMenuBarTexture3, MainMenuBarMaxLevelBar, ReputationXPBarTexture1,
-                             ReputationXPBarTexture2, ReputationXPBarTexture3, ReputationWatchBarTexture1,
-                             ReputationWatchBarTexture2, ReputationWatchBarTexture3, MainMenuXPBarTexture1,
-                             MainMenuXPBarTexture2, MainMenuXPBarTexture3, SlidingActionBarTexture0,
-                             SlidingActionBarTexture1, BonusActionBarTexture0, BonusActionBarTexture1,
-                             ShapeshiftBarLeft, ShapeshiftBarMiddle, ShapeshiftBarRight, PossessBackground1,
-                             PossessBackground2}
-
-        for _, frame in pairs(blizzFrames) do
-            if frame then
-                frame:SetAlpha(0)
-                if frame == MainMenuBarMaxLevelBar then
-                    frame:EnableMouse(false)
-                    frame:Hide()
-                    frame:SetFrameLevel(0)
-                end
-            end
-        end
-    end
-
-    function MainMenuBarMixin:initialize()
-        self:actionbutton_setup();
-        self:actionbar_setup();
-        self:actionbar_art_setup();
-        self:statusbar_setup();
-    end
 
     -- Create action bar container frames (RetailUI pattern)
     -- Uses BarContainerSize() for consistent column-based sizing.
     -- Overlay sizes are multiplied by the bar's scale so they match the
     -- visible (scaled) bar rather than the unscaled logical size.
-    local function CreateActionBarFrames()
-        local db = addon.db and addon.db.profile and addon.db.profile.mainbars
-
-        -- Main bar - create a NEW container frame scaled to match the visible bar
-        local mainScale = db and db.scale_actionbar or 0.9
-        addon.ActionBarFrames.mainbar = addon.CreateUIFrame(
-            pUiMainBar:GetWidth()  * mainScale,
-            pUiMainBar:GetHeight() * mainScale,
-            "MainBar")
-
-        local rightCfg = db and db.right or {}
-        local leftCfg  = db and db.left or {}
-        local blCfg    = db and db.bottom_left or {}
-        local brCfg    = db and db.bottom_right or {}
-
-        local rW, rH  = BarContainerSize(rightCfg.columns or 1,  rightCfg.buttons_shown or 12, GetBarSpacing(db, "right"))
-        local lW, lH  = BarContainerSize(leftCfg.columns or 1,   leftCfg.buttons_shown or 12, GetBarSpacing(db, "left"))
-        local blW, blH = BarContainerSize(blCfg.columns or 12,   blCfg.buttons_shown or 12, GetBarSpacing(db, "bottom_left"))
-        local brW, brH = BarContainerSize(brCfg.columns or 12,   brCfg.buttons_shown or 12, GetBarSpacing(db, "bottom_right"))
-
-        local rScale  = db and db.scale_rightbar     or 0.9
-        local lScale  = db and db.scale_leftbar      or 0.9
-        local blScale = db and db.scale_bottomleft   or 0.9
-        local brScale = db and db.scale_bottomright   or 0.9
-
-        addon.ActionBarFrames.rightbar       = addon.CreateUIFrame(rW * rScale,  rH * rScale,  "RightBar")
-        addon.ActionBarFrames.leftbar        = addon.CreateUIFrame(lW * lScale,  lH * lScale,  "LeftBar")
-        addon.ActionBarFrames.bottombarleft  = addon.CreateUIFrame(blW * blScale, blH * blScale, "BottomBarLeft")
-        addon.ActionBarFrames.bottombarright = addon.CreateUIFrame(brW * brScale, brH * brScale, "BottomBarRight")
-
-        -- Separate XP and Rep bar editor frames (allows independent movement)
-        local xpRepWidth = addon.ActionBarFrames.mainbar:GetWidth()
-        local cfg = GetXpRepConfig() or {}
-        local barH = GetXpBarHeight()
-        addon.ActionBarFrames.xpbar = addon.CreateUIFrame(xpRepWidth, barH, "XPBar")
-        addon.ActionBarFrames.repbar = addon.CreateUIFrame(xpRepWidth, barH, "RepBar")
-    end
 
     -- Extra Bar model: sides TOPLEFT 0,0; bottoms CENTER; main CENTER with pad-derived Y offset.
-    local function PositionActionBarsToContainers_Initial()
-        local mb = addon.db and addon.db.profile and addon.db.profile.mainbars
-
-        if pUiMainBar and addon.ActionBarFrames.mainbar then
-            local scale = (mb and mb.scale_actionbar) or 0.9
-            local oy = GetMainBarButtonCenterOffsetY() * scale
-            pUiMainBar:SetParent(UIParent)
-            pUiMainBar:ClearAllPoints()
-            pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
-        end
-
-        if MultiBarRight and addon.ActionBarFrames.rightbar then
-            MultiBarRight:SetParent(UIParent)
-            MultiBarRight:ClearAllPoints()
-            MultiBarRight:SetPoint("TOPLEFT", addon.ActionBarFrames.rightbar, "TOPLEFT", 0, 0)
-        end
-
-        if MultiBarLeft and addon.ActionBarFrames.leftbar then
-            MultiBarLeft:SetParent(UIParent)
-            MultiBarLeft:ClearAllPoints()
-            MultiBarLeft:SetPoint("TOPLEFT", addon.ActionBarFrames.leftbar, "TOPLEFT", 0, 0)
-        end
-
-        if MultiBarBottomLeft and addon.ActionBarFrames.bottombarleft then
-            MultiBarBottomLeft:SetParent(UIParent)
-            MultiBarBottomLeft:ClearAllPoints()
-            MultiBarBottomLeft:SetPoint("CENTER", addon.ActionBarFrames.bottombarleft, "CENTER", 0, 0)
-        end
-
-        if MultiBarBottomRight and addon.ActionBarFrames.bottombarright then
-            MultiBarBottomRight:SetParent(UIParent)
-            MultiBarBottomRight:ClearAllPoints()
-            MultiBarBottomRight:SetPoint("CENTER", addon.ActionBarFrames.bottombarright, "CENTER", 0, 0)
-        end
-    end
 
     -- Position action bars to their container frames
-    local function PositionActionBarsToContainers()
-        -- Only proceed if not in combat to avoid taint
-        if InCombatLockdown() then
-            return
-        end
-
-        -- Use the initial function for runtime positioning
-        PositionActionBarsToContainers_Initial()
-    end
 
     -- Apply saved positions from database (RetailUI pattern)
-    local function ApplyActionBarPositions()
-        -- CRITICAL: Don't touch secure frames during combat to avoid taint
-        -- XP/Rep bars are custom frames and can be positioned any time
-        local inCombat = InCombatLockdown()
-
-        if not addon.db or not addon.db.profile or not addon.db.profile.widgets then
-            return
-        end
-
-        local widgets = addon.db.profile.widgets
-
-        -- Calculate vertical offset when both XP and Rep bars are visible
-        local dualBarOffset = GetDualBarVerticalOffset()
-
-        -- Apply mainbar container position (with dual-bar offset if at default)
-        -- Skip secure frames (mainbar, action bars) during combat to avoid taint
-        if not inCombat and widgets.mainbar and addon.ActionBarFrames.mainbar then
-            local config = widgets.mainbar
-            if config.anchor then
-                local extraY = 0
-                if IsWidgetAtDefaultPosition("mainbar") then
-                    extraY = dualBarOffset
-                end
-                addon.ActionBarFrames.mainbar:ClearAllPoints()
-                addon.ActionBarFrames.mainbar:SetPoint(config.anchor, config.posX, config.posY + extraY)
-            end
-        end
-
-        -- Apply other bar positions
-        -- Secure frames (action bars) are skipped during combat; custom frames
-        -- (xpbar, repbar) are always safe to reposition.
-        local secureFrames = {
-            rightbar = true,
-            leftbar = true,
-            bottombarleft = true,
-            bottombarright = true,
-        }
-
-        local barConfigs = {{
-            name = "rightbar",
-            frame = addon.ActionBarFrames.rightbar,
-            config = widgets.rightbar,
-            default = {"RIGHT", -10, -70}
-        }, {
-            name = "leftbar",
-            frame = addon.ActionBarFrames.leftbar,
-            config = widgets.leftbar,
-            default = {"RIGHT", -45, -70}
-        }, {
-            name = "bottombarleft",
-            frame = addon.ActionBarFrames.bottombarleft,
-            config = widgets.bottombarleft,
-            default = {"BOTTOM", 0, 120}
-        }, {
-            name = "bottombarright",
-            frame = addon.ActionBarFrames.bottombarright,
-            config = widgets.bottombarright,
-            default = {"BOTTOM", 0, 160}
-        }, -- Separate XP and Rep bar positioning
-        {
-            name = "xpbar",
-            frame = addon.ActionBarFrames.xpbar,
-            config = widgets.xpbar,
-            default = {"BOTTOM", 0, 7}
-        },
-        {
-            name = "repbar",
-            frame = addon.ActionBarFrames.repbar,
-            config = widgets.repbar,
-            -- When XP bar is hidden (max level, etc.), default to XP bar's slot (Y=7)
-            default = {"BOTTOM", 0, IsXpBarVisible() and 23 or 7}
-        }}
-
-        -- Frames that should receive the dual-bar vertical offset
-        local dualBarOffsetFrames = {
-            mainbar = true,  -- already handled above, but listed for clarity
-            bottombarleft = true,
-            bottombarright = true,
-            petbar = true,   -- handled by petbar.lua via addon.UpdatePetbarPosition
-            vehicleExit = true, -- handled by vehicle.lua via addon.UpdateVehicleExitPosition
-        }
-        -- Export so SaveUIFramePosition can strip offset before saving
-        addon._dualBarOffsetWidgets = dualBarOffsetFrames
-
-        for _, barData in ipairs(barConfigs) do
-            -- Skip secure frames during combat to avoid taint
-            if inCombat and secureFrames[barData.name] then
-                -- skip this frame
-            else
-                -- Calculate extra Y for this frame (only if at default position)
-                local extraY = 0
-                if dualBarOffsetFrames[barData.name] and IsWidgetAtDefaultPosition(barData.name) then
-                    extraY = dualBarOffset
-                end
-
-                -- When XP bar is hidden (max level on any server, etc.),
-                -- drop the rep bar to the XP bar's Y slot so it doesn't
-                -- float above the action bar.
-                local xpHiddenRepOverrideY = nil
-                if barData.name == "repbar" and not IsXpBarVisible() and IsWidgetAtDefaultPosition("repbar") then
-                    xpHiddenRepOverrideY = 7  -- XP bar's default Y position
-                end
-
-                if barData.frame and barData.config and barData.config.anchor then
-                    local config = barData.config
-                    local finalY = xpHiddenRepOverrideY or config.posY
-                    barData.frame:ClearAllPoints()
-                    barData.frame:SetPoint(config.anchor, config.posX, finalY + extraY)
-                elseif barData.frame then
-                    -- Apply default position
-                    local default = barData.default
-                    local finalY = xpHiddenRepOverrideY or default[3]
-                    barData.frame:ClearAllPoints()
-                    barData.frame:SetPoint(default[1], UIParent, default[1], default[2], finalY + extraY)
-                end
-            end
-        end
-    end
 
     -- Notify external modules (stance, multicast, vehicle) that the dual-bar offset may have changed.
     -- Must be defined AFTER ApplyActionBarPositions (Lua local scoping).
-    local function NotifyDualBarOffsetChanged()
-        -- Re-apply action bar positions (mainbar, bottombarleft, bottombarright)
-        ApplyActionBarPositions()
-        -- Notify stance bar to update its position
-        if addon.UpdateStanceBarPosition then
-            addon.UpdateStanceBarPosition()
-        end
-        -- Notify vehicle exit button to update its position
-        if addon.UpdateVehicleExitPosition then
-            addon.UpdateVehicleExitPosition()
-        end
-        -- Notify petbar to update its position
-        if addon.UpdatePetbarPosition then
-            addon.UpdatePetbarPosition()
-        end
-    end
 
     -- Register action bar frames with the centralized system (RetailUI pattern)
-    local function RegisterActionBarFrames()
-        -- Register all action bar frames
-        local frameRegistrations = {{
-            name = "mainbar",
-            frame = addon.ActionBarFrames.mainbar,
-            blizzardFrame = MainMenuBar,
-            configPath = {"widgets", "mainbar"}
-        }, {
-            name = "rightbar",
-            frame = addon.ActionBarFrames.rightbar,
-            blizzardFrame = MultiBarRight,
-            configPath = {"widgets", "rightbar"}
-        }, {
-            name = "leftbar",
-            frame = addon.ActionBarFrames.leftbar,
-            blizzardFrame = MultiBarLeft,
-            configPath = {"widgets", "leftbar"}
-        }, {
-            name = "bottombarleft",
-            frame = addon.ActionBarFrames.bottombarleft,
-            blizzardFrame = MultiBarBottomLeft,
-            configPath = {"widgets", "bottombarleft"}
-        }, {
-            name = "bottombarright",
-            frame = addon.ActionBarFrames.bottombarright,
-            blizzardFrame = MultiBarBottomRight,
-            configPath = {"widgets", "bottombarright"}
-        }, -- Separate XP and Rep bar registration with visibility-aware editor
-        {
-            name = "xpbar",
-            frame = addon.ActionBarFrames.xpbar,
-            blizzardFrame = nil,
-            configPath = {"widgets", "xpbar"},
-            editorVisible = function()
-                -- Always editable in editor mode, regardless of current XP state
-                return true
-            end
-        },
-        {
-            name = "repbar",
-            frame = addon.ActionBarFrames.repbar,
-            blizzardFrame = nil,
-            configPath = {"widgets", "repbar"},
-            editorVisible = function()
-                -- Always editable in editor mode, regardless of current reputation state
-                return true
-            end
-        }}
-
-        for _, registration in ipairs(frameRegistrations) do
-            if registration.frame then
-                addon:RegisterEditableFrame({
-                    name = registration.name,
-                    frame = registration.frame,
-                    blizzardFrame = registration.blizzardFrame,
-                    configPath = registration.configPath,
-                    editorVisible = registration.editorVisible,
-                    module = addon.MainBars
-                })
-            end
-        end
-    end
 
     -- Hook drag events to ensure action bars follow their containers
-    local function SetupActionBarDragHandlers()
-        -- Add drag end handlers to reposition action bars
-        for name, frame in pairs(addon.ActionBarFrames) do
-            -- Exclude bars that don't need repositioning after drag
-            if frame and name ~= "mainbar" then
-                frame:HookScript("OnDragStop", function(self)
-                    -- RetailUI Pattern: Only reposition if not in combat
-                    PositionActionBarsToContainers()
-                end)
-            end
-        end
-    end
 
     -- update position for secondary action bars - LEGACY FUNCTION
-    function addon.RefreshUpperActionBarsPosition()
-        if not MultiBarBottomLeftButton1 or not MultiBarBottomRight then
-            return
-        end
-
-        -- calculate offset based on background visibility
-        local yOffset1, yOffset2
-        if addon.db and addon.db.profile.buttons.hide_main_bar_background then
-            -- values when background is hidden
-            yOffset1 = 45
-            yOffset2 = 8
-        else
-            -- default values when background is visible
-            yOffset1 = 48
-            yOffset2 = 8
-        end
-    end
 
     -- Apply the mainbars system
-    local function ApplyMainbarsSystem()
-        if MainbarsModule.applied then
-            return
-        end
-
-        -- CRITICAL: Disable MainMenuBarMaxLevelBar IMMEDIATELY
-        if MainMenuBarMaxLevelBar then
-            MainMenuBarMaxLevelBar:Hide()
-            MainMenuBarMaxLevelBar:EnableMouse(false)
-            MainMenuBarMaxLevelBar:SetAlpha(0)
-            MainMenuBarMaxLevelBar:SetFrameLevel(0)
-        end
-
-        MainMenuBarMixin:initialize()
-        addon.pUiMainBar = pUiMainBar
-        SetupMainBarPageDriver(pUiMainBar)
-        EnsureBonusButtonsClickThrough()
-
-        CreateActionBarFrames()
-        ApplyActionBarPositions()
-        RegisterActionBarFrames()
-
-        -- Temporarily hide secondary bars to prevent position flash on reload.
-        -- They'll be restored in PLAYER_ENTERING_WORLD after final positioning.
-        local barsToStabilize = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
-        for _, bar in ipairs(barsToStabilize) do
-            if bar then bar:SetAlpha(0) end
-        end
-
-        -- Note: Gryphon frame levels will be set after all positioning is complete
-
-        -- Set up XP/Rep bar system
-        ConnectBarsToEditor()
-
-        -- Force Blizzard bar updates so values/textures are properly initialized
-        if MainMenuExpBar_Update then MainMenuExpBar_Update() end
-        if ReputationWatchBar_Update then ReputationWatchBar_Update() end
-
-        -- Hook MainMenuBarExpText:SetText to append XP percentage in RetailUI mode.
-        -- This intercepts ALL text updates (hover, XP gain, etc.) so percentage
-        -- is always present regardless of what Blizzard's TextStatusBar system does.
-        if MainMenuBarExpText then
-            local updatingXpText = false
-            hooksecurefunc(MainMenuBarExpText, "SetText", function(self, text)
-                if updatingXpText then return end
-                if GetXpBarStyle() ~= "retailui" then return end
-                local cfg = GetXpRepConfig() or {}
-                if cfg.show_xp_percent == false then return end
-                if not text or text == "" then return end
-
-                local currXP = UnitXP("player")
-                local maxXP = UnitXPMax("player")
-                if not maxXP or maxXP == 0 then return end
-
-                local pct = 100 * currXP / maxXP
-                local restedXP = GetXPExhaustion() or 0
-                local restedMax = maxXP * 1.5
-                local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
-                local percentText = format(" (%.1f%%", pct)
-                if restedPct > 0 then
-                    percentText = percentText .. format(", %.1f%% Rested", restedPct)
-                end
-                percentText = percentText .. ")"
-
-                updatingXpText = true
-                self:SetText(text .. percentText)
-                updatingXpText = false
-            end)
-
-            -- Prevent Blizzard's TextStatusBar OnLeave from hiding XP text
-            -- when "always show text" is enabled. Blizzard calls :Hide() on
-            -- the FontString directly, so we must intercept that.
-            hooksecurefunc(MainMenuBarExpText, "Hide", function(self)
-                if GetXpBarStyle() ~= "retailui" then return end
-                local cfg = GetXpRepConfig() or {}
-                if cfg.always_show_text then
-                    self:Show()
-                end
-            end)
-        end
-
-        -- Same fix for rep bar text: prevent Blizzard's OnLeave from hiding it
-        if ReputationWatchStatusBarText then
-            hooksecurefunc(ReputationWatchStatusBarText, "Hide", function(self)
-                if GetXpBarStyle() ~= "retailui" then return end
-                local cfg = GetXpRepConfig() or {}
-                if cfg.always_show_text then
-                    self:Show()
-                end
-            end)
-        end
-
-        -- Fix RetailUI rep bar hover text: ensure reputation values are shown on hover.
-        -- Hook OnEnter on the StatusBar (not the parent ReputationWatchBar) because
-        -- the StatusBar covers the full area via SetAllPoints and receives mouse events.
-        --
-        -- Text format is always "Faction Name: current / max".
-        -- When "always show text" is ON, hover does nothing (text is already visible).
-        -- When OFF, hover temporarily shows the text via OVERLAY draw layer.
-        if ReputationWatchStatusBar then
-            ReputationWatchStatusBar:HookScript("OnEnter", function(self)
-                if GetXpBarStyle() ~= "retailui" then return end
-                if not ReputationWatchStatusBarText then return end
-                local cfg = GetXpRepConfig() or {}
-                if cfg.always_show_text then return end -- already visible, no change needed
-                local name, standing, minRep, maxRep, value = GetWatchedFactionInfo()
-                if name then
-                    local current = value - minRep
-                    local maximum = maxRep - minRep
-                    ReputationWatchStatusBarText:SetText(format("%s: %d / %d", name, current, maximum))
-                    ReputationWatchStatusBarText:SetDrawLayer("OVERLAY", 3)
-                    ReputationWatchStatusBarText:Show()
-                end
-            end)
-            ReputationWatchStatusBar:HookScript("OnLeave", function(self)
-                if GetXpBarStyle() ~= "retailui" then return end
-                if not ReputationWatchStatusBarText then return end
-                local cfg = GetXpRepConfig() or {}
-                if cfg.always_show_text then return end -- always visible, no change needed
-                ReputationWatchStatusBarText:SetDrawLayer("HIGHLIGHT")
-            end)
-        end
-
-        -- Hook Blizzard bar updates to re-apply styling and keep positioning in sync
-        -- CRITICAL: MainMenuExpBar_Update resets textures — must re-apply our styling
-        hooksecurefunc('MainMenuExpBar_Update', function()
-            local style = GetXpBarStyle()
-            if style == "retailui" then
-                ApplyRetailUIExpRepBarStyling()
-            end
-            UpdateBarPositions()
-        end)
-        hooksecurefunc('ReputationWatchBar_Update', function()
-            local style = GetXpBarStyle()
-            if style == "retailui" then
-                ApplyRetailUIExpRepBarStyling()
-            end
-            UpdateBarPositions()
-        end)
-
-        -- Position action bars immediately
-        PositionActionBarsToContainers_Initial()
-
-        -- Prevent click-only layer promotion on secondary bars.
-        StabilizeSecondaryBarLayering()
-        
-        -- Apply button positioning based on horizontal settings (RetailUI pattern)
-        -- This ensures buttons are positioned correctly when horizontal mode is enabled on reload
-        if addon.PositionActionBars then
-            addon.PositionActionBars()
-        elseif addon.PositionActionBarsToContainers then
-            addon.PositionActionBarsToContainers()
-        end
-
-        -- Set up drag handlers - Execute immediately
-        SetupActionBarDragHandlers()
-
-        -- CRITICAL: Ensure gryphons are above all action bars after everything is positioned
-        local function EnsureGryphonsOnTop()
-            if pUiMainBarArt then
-                -- Get the highest frame level from all action bars including containers
-                local maxLevel = 1
-                local bars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarLeft, MultiBarRight, pUiMainBar}
-                for _, bar in pairs(bars) do
-                    if bar then
-                        maxLevel = math.max(maxLevel, bar:GetFrameLevel())
-                    end
-                end
-                
-                -- Check container frame levels too
-                for _, frame in pairs(addon.ActionBarFrames) do
-                    if frame and frame.GetFrameLevel then
-                        maxLevel = math.max(maxLevel, frame:GetFrameLevel())
-                    end
-                end
-
-                -- Set gryphon art frame level significantly higher than all bars
-                pUiMainBarArt:SetFrameLevel(maxLevel + 15)
-                
-                -- Also ensure individual gryphons have high draw layers
-                if MainMenuBarLeftEndCap then
-                    MainMenuBarLeftEndCap:SetDrawLayer('OVERLAY', 7)
-                end
-                if MainMenuBarRightEndCap then
-                    MainMenuBarRightEndCap:SetDrawLayer('OVERLAY', 7)
-                end
-            end
-        end
-        
-        -- Execute immediately to ensure gryphons are on top
-        EnsureGryphonsOnTop()
-
-        -- Store module state
-        MainbarsModule.frames.pUiMainBar = pUiMainBar
-        MainbarsModule.frames.pUiMainBarArt = pUiMainBarArt
-        MainbarsModule.actionBarFrames = addon.ActionBarFrames
-        MainbarsModule.applied = true
-    end
 
     -- Store functions globally for RefreshMainbarsSystem access
     addon.ApplyActionBarPositions = ApplyActionBarPositions
@@ -2489,7 +2504,7 @@ end
     ApplyMainbarsSystem()
 
     -- ========== EVENT HANDLERS FOR XP/REP BARS ==========
-    local xpRepEventFrame = CreateFrame("Frame")
+    xpRepEventFrame = CreateFrame("Frame")
     xpRepEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
     xpRepEventFrame:RegisterEvent("UPDATE_EXHAUSTION")
     xpRepEventFrame:RegisterEvent("PLAYER_XP_UPDATE")
@@ -2551,23 +2566,25 @@ end
     end)
 
     -- Single event handler for addon initialization
-    local initFrame = CreateFrame("Frame")
-    initFrame:RegisterEvent("ADDON_LOADED")
-    initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    initFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-    initFrame:RegisterEvent("PET_BAR_UPDATE")
-    initFrame:RegisterEvent("PET_BAR_UPDATE_COOLDOWN")
-    initFrame:RegisterEvent("UNIT_PET")
-    initFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
-    initFrame:RegisterEvent("UNIT_ENTERED_VEHICLE")
-    initFrame:RegisterEvent("PLAYER_LOGIN")
-    initFrame:SetScript("OnEvent", function(self, event, addonName)
-        if event == "ADDON_LOADED" and addonName == "DragonUI" then
+    mainbarsEventFrame = CreateFrame("Frame")
+    mainbarsEventFrame:RegisterEvent("ADDON_LOADED")
+    mainbarsEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    mainbarsEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+    mainbarsEventFrame:RegisterEvent("PET_BAR_UPDATE")
+    mainbarsEventFrame:RegisterEvent("PET_BAR_UPDATE_COOLDOWN")
+    mainbarsEventFrame:RegisterEvent("UNIT_PET")
+    mainbarsEventFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
+    mainbarsEventFrame:RegisterEvent("UNIT_ENTERED_VEHICLE")
+    mainbarsEventFrame:RegisterEvent("PLAYER_LOGIN")
+    mainbarsEventFrame:SetScript("OnEvent", function(self, event, unitOrAddon)
+        if event == "ADDON_LOADED" and unitOrAddon == "DragonUI" then
             if IsModuleEnabled() then
                 ApplyMainbarsSystem()
             end
 
         elseif event == "PLAYER_ENTERING_WORLD" then
+            RefreshMainBarPageState()
+
             if IsModuleEnabled() then
                 -- Remove interfering Blizzard textures
                 RemoveBlizzardFrames()
@@ -2672,13 +2689,13 @@ end
 
         elseif event == "PET_BAR_UPDATE" or event == "PET_BAR_UPDATE_COOLDOWN" or event == "UNIT_PET" then
             -- Handle pet bar visibility and updates - Execute immediately
-            if IsModuleEnabled() and (arg1 == "player" or not arg1) then
+            if IsModuleEnabled() and (unitOrAddon == "player" or not unitOrAddon) then
                 addon.UpdatePetBarVisibility()
             end
 
         elseif event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE" then
             -- Handle vehicle events that affect pet bar - Execute immediately
-            if IsModuleEnabled() and arg1 == "player" then
+            if IsModuleEnabled() and unitOrAddon == "player" then
                 addon.UpdatePetBarVisibility()
             end
         end

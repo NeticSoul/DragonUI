@@ -3,7 +3,6 @@
 -- ===============================================================
 local addon = select(2, ...)
 local UF = addon.UF
-local L = addon.L
 
 -- ===============================================================
 -- EARLY EXIT CHECK
@@ -364,11 +363,6 @@ local function GetSettings()
 end
 
 -- Format numbers helper — delegates to shared TextSystem
-local function FormatNumber(value)
-    if not value or value == 0 then return "0" end
-    return addon.TextSystem.AbbreviateLargeNumbers(value) or tostring(value)
-end
-
 -- Text formatting — delegates to shared TextSystem
 local function GetFormattedText(current, max, textFormat, breakUpLargeNumbers)
     return addon.TextSystem.FormatStatusText(current, max, textFormat, breakUpLargeNumbers)
@@ -398,20 +392,6 @@ end
 
 
 -- Get class color helper
-local function GetClassColor(unit)
-    if not unit or not UnitExists(unit) then
-        return 1, 1, 1
-    end
-
-    local _, class = UnitClass(unit)
-    if class and RAID_CLASS_COLORS[class] then
-        local color = RAID_CLASS_COLORS[class]
-        return color.r, color.g, color.b
-    end
-
-    return 1, 1, 1
-end
-
 -- Get texture coordinates for party frame elements
 local function GetPartyCoords(type)
     if type == "background" then
@@ -825,193 +805,122 @@ end
 -- TEXT AND COLOR UPDATE FUNCTIONS
 -- ===============================================================
 
--- Health text update function (taint-free)
-UpdateHealthText = function(statusBar, forceShow)
+local BAR_TEXT_KINDS = {
+    health = {
+        center = "DragonUI_HealthText",
+        left = "DragonUI_HealthTextLeft",
+        right = "DragonUI_HealthTextRight",
+        hoverKey = "health",
+        alwaysKey = "showHealthTextAlways",
+        GetValues = function(unit) return UnitHealth(unit), UnitHealthMax(unit) end,
+    },
+    mana = {
+        center = "DragonUI_ManaText",
+        left = "DragonUI_ManaTextLeft",
+        right = "DragonUI_ManaTextRight",
+        hoverKey = "mana",
+        alwaysKey = "showManaTextAlways",
+        GetValues = function(unit) return UnitPower(unit), UnitPowerMax(unit) end,
+    },
+}
+
+local function HidePartyBarText(frame, spec)
+    local center, left, right = frame[spec.center], frame[spec.left], frame[spec.right]
+    if center then center:Hide() end
+    if left then left:Hide() end
+    if right then right:Hide() end
+end
+
+-- Taint-free health/mana text update
+local function UpdatePartyBarText(kind, statusBar, forceShow)
     if not statusBar then return end
-    
+
+    local spec = BAR_TEXT_KINDS[kind]
     local frame = statusBar:GetParent()
     local frameIndex = frame:GetName():match("PartyMemberFrame(%d+)")
     if not frameIndex then return end
-    
+
     local partyUnit = "party" .. frameIndex
     if not UnitExists(partyUnit) then return end
-    
-    -- Don't show health numbers when player is disconnected
+
     if not UnitIsConnected(partyUnit) then
-        if frame.DragonUI_HealthText then frame.DragonUI_HealthText:Hide() end
-        if frame.DragonUI_HealthTextLeft then frame.DragonUI_HealthTextLeft:Hide() end
-        if frame.DragonUI_HealthTextRight then frame.DragonUI_HealthTextRight:Hide() end
+        HidePartyBarText(frame, spec)
         return
     end
-    
-    -- Ensure our custom text exists
+
     CreateCustomTexts(frame)
-    
-    local healthText = frame.DragonUI_HealthText
-    if not healthText then return end
-    
+
+    local centerText = frame[spec.center]
+    if not centerText then return end
+
     local settings = GetSettings()
 
-    -- If unitframe_layers missing-health mode is enabled, party health text
-    -- from this system must stay hidden to avoid overlap/redundancy.
-    local uflCfg = addon.GetModuleConfig and addon:GetModuleConfig("unitframe_layers")
-    if uflCfg and uflCfg.missing_health == true then
-        if healthText then healthText:Hide() end
-        if frame.DragonUI_HealthTextLeft then frame.DragonUI_HealthTextLeft:Hide() end
-        if frame.DragonUI_HealthTextRight then frame.DragonUI_HealthTextRight:Hide() end
-        return
+    -- unitframe_layers missing-health mode draws its own numbers; ours would overlap.
+    if kind == "health" then
+        local uflCfg = addon.GetModuleConfig and addon:GetModuleConfig("unitframe_layers")
+        if uflCfg and uflCfg.missing_health == true then
+            HidePartyBarText(frame, spec)
+            return
+        end
     end
-    
-    -- Check visibility logic with hover state (new structure)
-    local frameIndexNum = tonumber(frameIndex)
-    local hoverState = hoverStates[frameIndexNum]
+
+    local hoverState = hoverStates[tonumber(frameIndex)]
     local isHovering = false
-    
+
     if hoverState then
-        isHovering = hoverState.portrait or hoverState.health
+        isHovering = hoverState.portrait or hoverState[spec.hoverKey]
     end
-    
+
     local shouldShow = false
-    
+
     if forceShow or isHovering then
-        shouldShow = true -- Force show during hover or explicit force
-    elseif settings and settings.showHealthTextAlways then
-        shouldShow = true -- Always show if enabled
+        shouldShow = true
+    elseif settings and settings[spec.alwaysKey] then
+        shouldShow = true
     end
-    
+
     if not shouldShow then
-        -- Hide ALL text elements (including both format)
-        if healthText then healthText:Hide() end
-        if frame.DragonUI_HealthTextLeft then frame.DragonUI_HealthTextLeft:Hide() end
-        if frame.DragonUI_HealthTextRight then frame.DragonUI_HealthTextRight:Hide() end
+        HidePartyBarText(frame, spec)
         return
     end
-    
-    local current = UnitHealth(partyUnit)
-    local max = UnitHealthMax(partyUnit)
-    
+
+    local current, max = spec.GetValues(partyUnit)
+
     if current and max and max > 0 then
         local textFormat = settings and settings.textFormat or "formatted"
         local breakUp = settings and settings.breakUpLargeNumbers
         local finalText = GetFormattedText(current, max, textFormat, breakUp)
-        
-        -- Dual system: table for "both", string for other formats
+        local leftText, rightText = frame[spec.left], frame[spec.right]
+
         if textFormat == "both" and type(finalText) == "table" then
-            -- Dual format: use left and right, hide center
-            if frame.DragonUI_HealthText then frame.DragonUI_HealthText:Hide() end
-            if EnsurePartyTextFont(frame.DragonUI_HealthTextLeft) then
-                frame.DragonUI_HealthTextLeft:SetText(finalText.left or "")
-                frame.DragonUI_HealthTextLeft:Show()
+            centerText:Hide()
+            if EnsurePartyTextFont(leftText) then
+                leftText:SetText(finalText.left or "")
+                leftText:Show()
             end
-            if EnsurePartyTextFont(frame.DragonUI_HealthTextRight) then
-                frame.DragonUI_HealthTextRight:SetText(finalText.right or "")
-                frame.DragonUI_HealthTextRight:Show()
+            if EnsurePartyTextFont(rightText) then
+                rightText:SetText(finalText.right or "")
+                rightText:Show()
             end
         else
-            -- Simple format: use center, hide left and right
-            if frame.DragonUI_HealthTextLeft then frame.DragonUI_HealthTextLeft:Hide() end
-            if frame.DragonUI_HealthTextRight then frame.DragonUI_HealthTextRight:Hide() end
-            if EnsurePartyTextFont(healthText) then
-                healthText:SetText(finalText or "")
-                healthText:Show()
+            if leftText then leftText:Hide() end
+            if rightText then rightText:Hide() end
+            if EnsurePartyTextFont(centerText) then
+                centerText:SetText(finalText or "")
+                centerText:Show()
             end
         end
     else
-        -- Hide all texts if no valid data
-        if healthText then healthText:Hide() end
-        if frame.DragonUI_HealthTextLeft then frame.DragonUI_HealthTextLeft:Hide() end
-        if frame.DragonUI_HealthTextRight then frame.DragonUI_HealthTextRight:Hide() end
+        HidePartyBarText(frame, spec)
     end
 end
 
--- Mana text update function (taint-free)
+UpdateHealthText = function(statusBar, forceShow)
+    UpdatePartyBarText("health", statusBar, forceShow)
+end
+
 UpdateManaText = function(statusBar, forceShow)
-    if not statusBar then return end
-    
-    local frameName = statusBar:GetParent():GetName()
-    local frameIndex = frameName:match("PartyMemberFrame(%d+)")
-    if not frameIndex then return end
-    
-    local partyUnit = "party" .. frameIndex
-    if not UnitExists(partyUnit) then return end
-    
-    -- Don't show mana numbers when player is disconnected
-    local frame = statusBar:GetParent()
-    if not UnitIsConnected(partyUnit) then
-        if frame.DragonUI_ManaText then frame.DragonUI_ManaText:Hide() end
-        if frame.DragonUI_ManaTextLeft then frame.DragonUI_ManaTextLeft:Hide() end
-        if frame.DragonUI_ManaTextRight then frame.DragonUI_ManaTextRight:Hide() end
-        return
-    end
-    
-    -- Create custom text if it doesn't exist - look in the frame, not statusbar!
-    CreateCustomTexts(frame)
-    local customText = frame.DragonUI_ManaText
-    
-    if not customText then return end
-    
-    local settings = GetSettings()
-    
-    -- Check visibility logic with hover state (new structure)
-    local frameIndexNum = tonumber(frameIndex)
-    local hoverState = hoverStates[frameIndexNum]
-    local isHovering = false
-    
-    if hoverState then
-        isHovering = hoverState.portrait or hoverState.mana
-    end
-    
-    local shouldShow = false
-    
-    if forceShow or isHovering then
-        shouldShow = true -- Force show during hover or explicit force
-    elseif settings and settings.showManaTextAlways then
-        shouldShow = true -- Always show if enabled
-    end
-    
-    if not shouldShow then
-        -- Hide ALL text elements (including both format)
-        if customText then customText:Hide() end
-        if frame.DragonUI_ManaTextLeft then frame.DragonUI_ManaTextLeft:Hide() end
-        if frame.DragonUI_ManaTextRight then frame.DragonUI_ManaTextRight:Hide() end
-        return
-    end
-    
-    local current = UnitPower(partyUnit)
-    local max = UnitPowerMax(partyUnit)
-    
-    if current and max and max > 0 then
-        local textFormat = settings and settings.textFormat or "formatted"
-        local breakUp = settings and settings.breakUpLargeNumbers
-        local finalText = GetFormattedText(current, max, textFormat, breakUp)
-        
-        -- Dual system: table for "both", string for other formats
-        if textFormat == "both" and type(finalText) == "table" then
-            -- Dual format: use left and right, hide center
-            if customText then customText:Hide() end
-            if EnsurePartyTextFont(frame.DragonUI_ManaTextLeft) then
-                frame.DragonUI_ManaTextLeft:SetText(finalText.left or "")
-                frame.DragonUI_ManaTextLeft:Show()
-            end
-            if EnsurePartyTextFont(frame.DragonUI_ManaTextRight) then
-                frame.DragonUI_ManaTextRight:SetText(finalText.right or "")
-                frame.DragonUI_ManaTextRight:Show()
-            end
-        else
-            -- Simple format: use center, hide left and right
-            if frame.DragonUI_ManaTextLeft then frame.DragonUI_ManaTextLeft:Hide() end
-            if frame.DragonUI_ManaTextRight then frame.DragonUI_ManaTextRight:Hide() end
-            if EnsurePartyTextFont(customText) then
-                customText:SetText(finalText or "")
-                customText:Show()
-            end
-        end
-    else
-        -- Hide all texts if no valid data
-        if customText then customText:Hide() end
-        if frame.DragonUI_ManaTextLeft then frame.DragonUI_ManaTextLeft:Hide() end
-        if frame.DragonUI_ManaTextRight then frame.DragonUI_ManaTextRight:Hide() end
-    end
+    UpdatePartyBarText("mana", statusBar, forceShow)
 end
 
 -- Create invisible hover frames for independent health/mana text display
@@ -1199,28 +1108,6 @@ end
 -- (UpdateHealthText and UpdateManaText functions moved above before CreateHoverFrames)
 
 -- Update party colors function
-local function UpdatePartyColors(frame)
-    if not frame then
-        return
-    end
-
-    local settings = GetSettings()
-    if not settings then
-        return
-    end
-
-    local unit = "party" .. frame:GetID()
-    if not UnitExists(unit) then
-        return
-    end
-
-    local healthbar = frame.DragonUI_HealthBar
-    if healthbar and settings.classcolor then
-        local r, g, b = GetClassColor(unit)
-        healthbar:SetStatusBarColor(r, g, b)
-    end
-end
-
 -- New function: Update mana bar texture
 local function UpdateManaBarTexture(frame)
     if not frame then
@@ -1746,7 +1633,6 @@ local function SetupPartyHooks()
             if frame.DragonUI_IconContainer then
                 local pvpIcon = _G[frame:GetName() .. 'PVPIcon']
                 local leaderIcon = _G[frame:GetName() .. 'LeaderIcon']
-                local masterIcon = _G[frame:GetName() .. 'MasterIcon']
                 local statusIcon = _G[frame:GetName() .. 'StatusIcon']
                 local guideIcon = _G[frame:GetName() .. 'GuideIcon']
                 local roleIcon = _G[frame:GetName() .. 'RoleIcon']
@@ -1955,14 +1841,6 @@ end
 -- EXPORTS FOR OPTIONS.LUA
 -- ===============================================================
 
--- Export for options.lua refresh functions
-addon.RefreshPartyFrames = function()
-    if PartyFrames.UpdateSettings then
-        PartyFrames:UpdateSettings()
-    end
-end
-
--- New function: Refresh called from core.lua
 function addon:RefreshPartyFrames()
     if PartyFrames and PartyFrames.UpdateSettings then
         PartyFrames:UpdateSettings()

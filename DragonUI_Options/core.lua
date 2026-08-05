@@ -46,7 +46,7 @@ StaticPopupDialogs["DRAGONUI_DELETE_PROFILE"] = {
         local profileName = self.data
         if profileName and addon.db then
             addon.db:DeleteProfile(profileName, true)
-            print("|cFF00FF00[DragonUI]|r " .. (LO["Deleted profile: "] or "Deleted profile: ") .. profileName)
+            addon:Print((LO["Deleted profile: "] or "Deleted profile: ") .. profileName)
             if addon.OptionsPanel then
                 addon.OptionsPanel:SelectTab("profiles")
             end

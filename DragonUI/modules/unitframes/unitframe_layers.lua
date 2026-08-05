@@ -22,8 +22,8 @@ local UnitFrameLayersModule = {
 -- Register with ModuleRegistry
 if addon.RegisterModule then
 	addon:RegisterModule("unitframe_layers", UnitFrameLayersModule,
-		(addon.L and addon.L["Unit Frame Layers"]) or "Unit Frame Layers",
-		(addon.L and addon.L["Heal prediction, absorb shields, and animated health loss on unit frames"]) or "Heal prediction, absorb shields, and animated health loss on unit frames")
+		addon.L["Unit Frame Layers"],
+		addon.L["Heal prediction, absorb shields, and animated health loss on unit frames"])
 end
 
 -- ============================================================================
@@ -359,7 +359,7 @@ end
 -- ============================================================================
 
 local function LibEventCallback(self, event, ...)
-	local arg1, arg2, arg3, arg4, arg5 = ...;
+	local arg1, _, arg3, _, arg5 = ...;
 	if ( not self.unit ) then return end
 
 	local unitGUID = UnitGUID(self.unit);
@@ -822,7 +822,7 @@ local function ApplyUnitFrameLayersSystem()
 				or event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_SUCCEEDED" ) then
 				local unit = ...;
 				if ( unit and self.unit and UnitIsUnit(unit, self.unit) ) then
-					local name, text, texture, startTime, endTime = UnitCastingInfo(unit);
+					local name, text, _, startTime, endTime = UnitCastingInfo(unit);
 					UnitFrameManaCostPredictionBars_Update(self, event == "UNIT_SPELLCAST_START", startTime, endTime, name);
 				end
 			end
@@ -865,13 +865,7 @@ end
 local function RestoreUnitFrameLayersSystem()
 	if not UnitFrameLayersModule.applied then return end
 
-	-- Restore original global functions
-	if orig_UnitFrameHealthBar_OnUpdate and UnitFrameLayersModule.hooks["UnitFrameHealthBar_OnUpdate_override"] then
-		_G.UnitFrameHealthBar_OnUpdate = orig_UnitFrameHealthBar_OnUpdate;
-	end
-	if orig_UnitFrameManaBar_OnUpdate and UnitFrameLayersModule.hooks["UnitFrameManaBar_OnUpdate_override"] then
-		_G.UnitFrameManaBar_OnUpdate = orig_UnitFrameManaBar_OnUpdate;
-	end
+	-- Reassigning the Blizzard globals here would re-taint them (see the apply-path note) and drop the hook.
 
 	-- Hide all prediction bars on tracked frames
 	for _, frame in pairs(UnitFrameLayersModule.frames) do
@@ -927,7 +921,6 @@ addon.DiagnoseUnitFrameLayers = function()
 	local P = function(msg) print("|cFF00FF00[DragonUI UFL]|r " .. msg) end
 	local OK = "|cFF00FF00OK|r"
 	local FAIL = "|cFFFF0000FAIL|r"
-	local WARN = "|cFFFFFF00WARN|r"
 
 	P("=== UnitFrameLayers Diagnostic ===")
 

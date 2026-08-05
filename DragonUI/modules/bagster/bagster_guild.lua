@@ -3,7 +3,7 @@ local addon = select(2, ...)
 local mod = addon.BagsterModule
 
 local format = string.format
-local floor, ceil, min, max, sqrt = math.floor, math.ceil, math.min, math.max, math.sqrt
+local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
 
 local MAX_SLOTS = MAX_GUILDBANK_SLOTS_PER_TAB or 98
 local MAX_TABS = MAX_GUILDBANK_TABS or 6

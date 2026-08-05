@@ -21,8 +21,8 @@ local DarkModeModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("darkmode", DarkModeModule,
-        (addon.L and addon.L["Dark Mode"]) or "Dark Mode",
-        (addon.L and addon.L["Darken UI borders and chrome"]) or "Darken UI borders and chrome")
+        addon.L["Dark Mode"],
+        addon.L["Darken UI borders and chrome"])
 end
 
 -- ============================================================================
@@ -57,32 +57,38 @@ local function IsTargetFocusNameBackgroundTexture(region)
         or region == _G["FocusFrameNameBackground"]
 end
 
+-- Tint tables are rebuilt in place: values depend only on config, so aliasing between callers is safe.
+local tintCache = { 1, 1, 1 }
+local ufTintCache = { 1, 1, 1 }
+local nameBgTintCache = { 1, 1, 1 }
+local auraTintCache = { 1, 1, 1 }
+
 local function GetTargetFocusNameBackgroundTint(ufTint)
     local factor = TARGET_FOCUS_NAME_BG_DARKEN_FACTOR or 0
     if factor <= 0 then
-        return { 1, 1, 1 }
+        nameBgTintCache[1], nameBgTintCache[2], nameBgTintCache[3] = 1, 1, 1
+    elseif factor >= 1 then
+        nameBgTintCache[1], nameBgTintCache[2], nameBgTintCache[3] = ufTint[1], ufTint[2], ufTint[3]
+    else
+        -- Blend from neutral white to UF tint using the configured factor.
+        nameBgTintCache[1] = 1 - ((1 - ufTint[1]) * factor)
+        nameBgTintCache[2] = 1 - ((1 - ufTint[2]) * factor)
+        nameBgTintCache[3] = 1 - ((1 - ufTint[3]) * factor)
     end
-    if factor >= 1 then
-        return { ufTint[1], ufTint[2], ufTint[3] }
-    end
-
-    -- Blend from neutral white to UF tint using the configured factor.
-    return {
-        1 - ((1 - ufTint[1]) * factor),
-        1 - ((1 - ufTint[2]) * factor),
-        1 - ((1 - ufTint[3]) * factor),
-    }
+    return nameBgTintCache
 end
 
 local function GetTintValues()
     local config = GetModuleConfig()
     if config and config.use_custom_color and config.custom_color then
         local c = config.custom_color
-        return { c.r or 0.15, c.g or 0.15, c.b or 0.15 }
+        tintCache[1], tintCache[2], tintCache[3] = c.r or 0.15, c.g or 0.15, c.b or 0.15
+        return tintCache
     end
     local preset = config and config.intensity_preset or 3
     local intensity = INTENSITY_PRESETS[preset] or INTENSITY_PRESETS[3]
-    return { intensity, intensity, intensity }
+    tintCache[1], tintCache[2], tintCache[3] = intensity, intensity, intensity
+    return tintCache
 end
 
 -- Unit frames need to be noticeably darker than other UI chrome
@@ -92,22 +98,36 @@ local function GetUFTintValues()
     if config and config.use_custom_color and config.custom_color then
         local c = config.custom_color
         -- UF borders get 60% of the custom color (darker)
-        return { (c.r or 0.15) * 0.6, (c.g or 0.15) * 0.6, (c.b or 0.15) * 0.6 }
+        ufTintCache[1] = (c.r or 0.15) * 0.6
+        ufTintCache[2] = (c.g or 0.15) * 0.6
+        ufTintCache[3] = (c.b or 0.15) * 0.6
+        return ufTintCache
     end
     local preset = config and config.intensity_preset or 3
     local intensity = INTENSITY_PRESETS[preset] or INTENSITY_PRESETS[3]
     -- UF borders get 60% of the normal intensity (darker)
     local ufIntensity = intensity * 0.6
-    return { ufIntensity, ufIntensity, ufIntensity }
+    ufTintCache[1], ufTintCache[2], ufTintCache[3] = ufIntensity, ufIntensity, ufIntensity
+    return ufTintCache
 end
 
 -- ============================================================================
 -- CORE TEXTURE HELPERS
 -- ============================================================================
 
+local abs = math.abs
+local TINT_EPSILON = 0.01
+
 local function DarkenTexture(texture, tint)
     if not texture then return end
     local pr, pg, pb, pa = texture:GetVertexColor()
+    -- Sweeps re-apply a static tint at high frequency; skip the C calls when it is already in place.
+    if pr and DarkModeModule.darkenedTextures[texture]
+        and abs(pr - tint[1]) < TINT_EPSILON
+        and abs(pg - tint[2]) < TINT_EPSILON
+        and abs(pb - tint[3]) < TINT_EPSILON then
+        return
+    end
     if not texture.__DragonUI_OrigColor then
         texture.__DragonUI_OrigColor = { pr, pg, pb, pa }
     end
@@ -156,7 +176,9 @@ end
 -- ACTION BAR BUTTONS: darken NormalTexture (border frame) and background,
 -- but NEVER the Icon (ability texture)
 -- -----------------------------------------------------------------------
-local function DarkenActionButtonBorders(tint)
+-- Flat [buttonName, normalTextureName] pairs, built once: the sweep runs far too often to rebuild strings.
+local ACTION_BUTTON_NAMES = {}
+do
     local prefixes = {
         "ActionButton",
         "MultiBarBottomLeftButton",
@@ -166,21 +188,30 @@ local function DarkenActionButtonBorders(tint)
         "BonusActionButton",
         "DragonUI_ExtraBarButton",
     }
+    local n = 0
     for _, prefix in ipairs(prefixes) do
         for i = 1, 12 do
-            local button = _G[prefix .. i]
-            if button then
-                -- Darken NormalTexture (the border frame around the icon)
-                local normal = _G[prefix .. i .. "NormalTexture"] or (button.GetNormalTexture and button:GetNormalTexture())
-                if normal and normal.GetObjectType and normal:GetObjectType() == "Texture" then
-                    DarkenTexture(normal, tint)
-                end
-                -- Darken background slot texture (created by DragonUI buttons module)
-                if button.background and button.background.GetObjectType and button.background:GetObjectType() == "Texture" then
-                    DarkenTexture(button.background, tint)
-                end
-                -- DO NOT touch _G[prefix..i.."Icon"] — that's the ability icon
+            ACTION_BUTTON_NAMES[n + 1] = prefix .. i
+            ACTION_BUTTON_NAMES[n + 2] = prefix .. i .. "NormalTexture"
+            n = n + 2
+        end
+    end
+end
+
+local function DarkenActionButtonBorders(tint)
+    for n = 1, #ACTION_BUTTON_NAMES, 2 do
+        local button = _G[ACTION_BUTTON_NAMES[n]]
+        if button then
+            -- Darken NormalTexture (the border frame around the icon)
+            local normal = _G[ACTION_BUTTON_NAMES[n + 1]] or (button.GetNormalTexture and button:GetNormalTexture())
+            if normal and normal.GetObjectType and normal:GetObjectType() == "Texture" then
+                DarkenTexture(normal, tint)
             end
+            -- Darken background slot texture (created by DragonUI buttons module)
+            if button.background and button.background.GetObjectType and button.background:GetObjectType() == "Texture" then
+                DarkenTexture(button.background, tint)
+            end
+            -- DO NOT touch the "Icon" texture — that's the ability icon
         end
     end
 end
@@ -385,47 +416,47 @@ local function DarkenNestedPartyArt(frame, tint, depth)
     end
 end
 
-local function DarkenUnitFrameBorders(tint)
-    local nameBgTint = GetTargetFocusNameBackgroundTint(tint)
+-- Classification is a pure function of the texture path, so memoise it and recompute only on path change.
+local function ClassifyUnitFrameRegion(region)
+    local texPath = region.GetTexture and region:GetTexture()
+    if type(texPath) ~= "string" then texPath = "" end
+    if region.__DragonUI_DarkPath ~= texPath then
+        local upper = texPath:upper()
+        region.__DragonUI_DarkPath = texPath
+        region.__DragonUI_DarkNameBg = upper:find("NAMEBACKGROUND") and true or false
+        region.__DragonUI_DarkBorder = (upper:find("BORDER") or upper:find("BACKGROUND")
+                                        or upper:find("INCOMBAT") or upper:find("THREAT")
+                                        or upper:find("UIUNITFRAME")) and true or false
+    end
+    return region.__DragonUI_DarkNameBg, region.__DragonUI_DarkBorder
+end
 
-    -- Helper: darken only textures whose path contains BORDER or BACKGROUND keywords
-    local function DarkenFrameBorderTextures(frame)
-        if not frame or not frame.GetRegions then return end
-        local regions = { frame:GetRegions() }
-        for _, region in ipairs(regions) do
-            if region and region.GetObjectType and region:GetObjectType() == "Texture" then
-                if IsTargetFocusNameBackgroundTexture(region) then
-                    DarkenTexture(region, nameBgTint)
-                else
-                    local texPath = region.GetTexture and region:GetTexture() or ""
-                    if type(texPath) == "string" then
-                        texPath = texPath:upper()
-                    else
-                        texPath = ""
-                    end
-
-                    -- Skip other NameBackground textures (non target/focus).
-                    if texPath:find("NAMEBACKGROUND") then
-                        -- do nothing
-                    else
-                        local isBorder = texPath:find("BORDER") or texPath:find("BACKGROUND")
-                                         or texPath:find("INCOMBAT") or texPath:find("THREAT")
-                                         or texPath:find("UIUNITFRAME")
-
-                        local layer = region:GetDrawLayer()
-                        local isOverlay = (layer == "OVERLAY")
-
-                        if isBorder or isOverlay then
-                            DarkenTexture(region, tint)
-                        end
+-- Darken only textures whose path contains BORDER or BACKGROUND keywords
+local function DarkenFrameBorderTextures(frame, tint, nameBgTint)
+    if not frame or not frame.GetRegions then return end
+    local regions = { frame:GetRegions() }
+    for _, region in ipairs(regions) do
+        if region and region.GetObjectType and region:GetObjectType() == "Texture" then
+            if IsTargetFocusNameBackgroundTexture(region) then
+                DarkenTexture(region, nameBgTint)
+            else
+                -- Skip other NameBackground textures (non target/focus).
+                local isNameBg, isBorder = ClassifyUnitFrameRegion(region)
+                if not isNameBg then
+                    if isBorder or region:GetDrawLayer() == "OVERLAY" then
+                        DarkenTexture(region, tint)
                     end
                 end
             end
         end
     end
+end
+
+local function DarkenUnitFrameBorders(tint)
+    local nameBgTint = GetTargetFocusNameBackgroundTint(tint)
 
     -- Player frame (Blizzard)
-    DarkenFrameBorderTextures(_G["PlayerFrame"])
+    DarkenFrameBorderTextures(_G["PlayerFrame"], tint, nameBgTint)
     local playerTex = _G["PlayerFrameTexture"]
     if playerTex then DarkenTexture(playerTex, tint) end
     local playerStatus = _G["PlayerStatusTexture"]
@@ -469,7 +500,7 @@ local function DarkenUnitFrameBorders(tint)
     if vehicleTex then DarkenTexture(vehicleTex, tint) end
 
     -- Target frame
-    DarkenFrameBorderTextures(_G["TargetFrame"])
+    DarkenFrameBorderTextures(_G["TargetFrame"], tint, nameBgTint)
     local targetTex = _G["TargetFrameTexture"]
     if targetTex then DarkenTexture(targetTex, tint) end
     -- DragonUI custom target border/background (target_style factory puts the
@@ -481,7 +512,7 @@ local function DarkenUnitFrameBorders(tint)
     local dragonTargetElite = _G["DragonUI_TargetElite"]
     if dragonTargetElite then DarkenTexture(dragonTargetElite, tint) end
 
-    DarkenFrameBorderTextures(_G["TargetFrameToT"])
+    DarkenFrameBorderTextures(_G["TargetFrameToT"], tint, nameBgTint)
 
     -- DragonUI custom ToT border/background (created by small_frame factory)
     local totBorder = _G["ToTBorder"]
@@ -490,7 +521,7 @@ local function DarkenUnitFrameBorders(tint)
     if totBg then DarkenTexture(totBg, tint) end
 
     -- Focus frame
-    DarkenFrameBorderTextures(_G["FocusFrame"])
+    DarkenFrameBorderTextures(_G["FocusFrame"], tint, nameBgTint)
     local focusTex = _G["FocusFrameTexture"]
     if focusTex then DarkenTexture(focusTex, tint) end
     -- DragonUI custom focus border/background (same child-frame issue as target)
@@ -501,7 +532,7 @@ local function DarkenUnitFrameBorders(tint)
     local dragonFocusElite = _G["DragonUI_FocusElite"]
     if dragonFocusElite then DarkenTexture(dragonFocusElite, tint) end
 
-    DarkenFrameBorderTextures(_G["FocusFrameToT"])
+    DarkenFrameBorderTextures(_G["FocusFrameToT"], tint, nameBgTint)
 
     -- DragonUI custom ToF border/background (created by small_frame factory)
     local tofBorder = _G["ToFBorder"]
@@ -510,7 +541,7 @@ local function DarkenUnitFrameBorders(tint)
     if tofBg then DarkenTexture(tofBg, tint) end
 
     -- Pet frame
-    DarkenFrameBorderTextures(_G["PetFrame"])
+    DarkenFrameBorderTextures(_G["PetFrame"], tint, nameBgTint)
     local petTex = _G["PetFrameTexture"]
     if petTex then DarkenTexture(petTex, tint) end
 
@@ -522,7 +553,7 @@ local function DarkenUnitFrameBorders(tint)
 
     -- Party frames
     for i = 1, 4 do
-        DarkenFrameBorderTextures(_G["PartyMemberFrame" .. i])
+        DarkenFrameBorderTextures(_G["PartyMemberFrame" .. i], tint, nameBgTint)
         local partyTex = _G["PartyMemberFrame" .. i .. "Texture"]
         if partyTex then DarkenTexture(partyTex, tint) end
         local frame = _G["PartyMemberFrame" .. i]
@@ -530,7 +561,7 @@ local function DarkenUnitFrameBorders(tint)
             DarkenTexture(frame.DragonUI_BorderFrame.texture, tint)
         end
         local petFrame = _G["PartyMemberFrame" .. i .. "PetFrame"]
-        DarkenFrameBorderTextures(petFrame)
+        DarkenFrameBorderTextures(petFrame, tint, nameBgTint)
         DarkenNestedPartyArt(petFrame, tint, 0)
     end
 end
@@ -854,7 +885,8 @@ local RestoreDarkMode
 -- White aura mask reads lighter than action-bar chrome at the same vertex color; crush toward black.
 local function GetAuraBorderTintValues()
     local tint = GetTintValues()
-    return { tint[1] * tint[1], tint[2] * tint[2], tint[3] * tint[3] }
+    auraTintCache[1], auraTintCache[2], auraTintCache[3] = tint[1] * tint[1], tint[2] * tint[2], tint[3] * tint[3]
+    return auraTintCache
 end
 
 -- force=true: enable / intensity / custom color change (overwrites Auras color).
@@ -1099,22 +1131,15 @@ end
 
 local function InstallVertexColorGuards()
     -- Idempotent: Extra Bar buttons may not exist on the first PEW pass.
-    local prefixes = {
-        "ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton",
-        "MultiBarRightButton", "MultiBarLeftButton", "BonusActionButton",
-        "DragonUI_ExtraBarButton",
-    }
-    for _, prefix in ipairs(prefixes) do
-        for i = 1, 12 do
-            local normal = _G[prefix .. i .. "NormalTexture"]
-            if not normal then
-                local btn = _G[prefix .. i]
-                if btn and btn.GetNormalTexture then normal = btn:GetNormalTexture() end
-            end
-            if normal and not normal.__DragonUI_VCGuard then
-                hooksecurefunc(normal, "SetVertexColor", GuardSetVertexColor)
-                normal.__DragonUI_VCGuard = true
-            end
+    for n = 1, #ACTION_BUTTON_NAMES, 2 do
+        local normal = _G[ACTION_BUTTON_NAMES[n + 1]]
+        if not normal then
+            local btn = _G[ACTION_BUTTON_NAMES[n]]
+            if btn and btn.GetNormalTexture then normal = btn:GetNormalTexture() end
+        end
+        if normal and not normal.__DragonUI_VCGuard then
+            hooksecurefunc(normal, "SetVertexColor", GuardSetVertexColor)
+            normal.__DragonUI_VCGuard = true
         end
     end
 

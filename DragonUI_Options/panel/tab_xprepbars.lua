@@ -4,7 +4,6 @@
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 local Panel = addon.OptionsPanel
 local C = addon.PanelControls

@@ -29,15 +29,11 @@ addon.MinimapModule = MinimapModule;
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("minimap", MinimapModule,
-        (L and L["Minimap"]) or "Minimap",
-        (L and L["Custom minimap styling, positioning, tracking icons and calendar"]) or "Custom minimap styling, positioning, tracking icons and calendar")
+        L["Minimap"],
+        L["Custom minimap styling, positioning, tracking icons and calendar"])
 end
 
 -- Module config helpers (centralized in api.lua)
-local function GetModuleConfig()
-    return addon:GetModuleConfig("minimap")
-end
-
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("minimap")
 end
@@ -1029,12 +1025,6 @@ local function ReplaceBlizzardFrame(frame)
         end)
 
         --  HOOK TO RESET ICON POSITION AFTER CLICKS
-        local function ResetTrackingIconPosition()
-            if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
-                MiniMapTrackingIcon:ClearAllPoints()
-                MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
-            end
-        end
     end -- not isHybridMode (tracking button scripts)
 
     -- Setup secure hooks after frame modifications (handles CloseDropDownMenus)
@@ -1559,13 +1549,6 @@ local function RefreshIntegratedMinimapCollector()
     end
 end
 
-local function ToggleIntegratedMinimapCollector()
-    local collector = GetConfiguredMinimapCollector()
-    if collector and collector.Toggle then
-        collector:Toggle()
-    end
-end
-
 local function HideIntegratedAddonMinimapButtons()
     local collector = GetConfiguredMinimapCollector()
     if collector and collector.HideIntegratedAddonButtons then
@@ -2048,51 +2031,6 @@ function MinimapModule:UpdateTrackingIcon()
     -- Always hide overlay
     if MiniMapTrackingIconOverlay then
         MiniMapTrackingIconOverlay:SetAlpha(0)
-    end
-end
-
-local function MiniMapInstanceDifficulty_OnEvent(self)
-    local _, instanceType, difficulty, _, maxPlayers, playerDifficulty, isDynamicInstance = GetInstanceInfo()
-    if (instanceType == "party" or instanceType == "raid") and not (difficulty == 1 and maxPlayers == 5) then
-        local isHeroic = false
-        if instanceType == "party" and difficulty == 2 then
-            isHeroic = true
-        elseif instanceType == "raid" then
-            if isDynamicInstance then
-                selectedRaidDifficulty = difficulty
-                if playerDifficulty == 1 then
-                    if selectedRaidDifficulty <= 2 then
-                        selectedRaidDifficulty = selectedRaidDifficulty + 2
-                    end
-                    isHeroic = true
-                end
-                -- if modified difficulty is normal then you are allowed to select heroic, and vice-versa
-                if selectedRaidDifficulty == 1 then
-                    allowedRaidDifficulty = 3
-                elseif selectedRaidDifficulty == 2 then
-                    allowedRaidDifficulty = 4
-                elseif selectedRaidDifficulty == 3 then
-                    allowedRaidDifficulty = 1
-                elseif selectedRaidDifficulty == 4 then
-                    allowedRaidDifficulty = 2
-                end
-                allowedRaidDifficulty = "RAID_DIFFICULTY" .. allowedRaidDifficulty
-            elseif difficulty > 2 then
-                isHeroic = true
-            end
-        end
-
-        MiniMapInstanceDifficultyText:SetText(maxPlayers)
-
-        -- Position text: slightly to the left and downward (scale 0.85 handles the size)
-        MiniMapInstanceDifficultyText:ClearAllPoints()
-        MiniMapInstanceDifficultyText:SetPoint("CENTER", self, "CENTER", -1, -8)
-
-        local minimapInstanceTexture = MiniMapInstanceDifficultyTexture
-        self:SetScale(0.85) -- Fixed scale for difficulty icon
-        self:Show()
-    else
-        self:Hide()
     end
 end
 
@@ -2966,23 +2904,11 @@ function addon:RefreshMinimapSystem()
 end
 
 -- Clean all skinned minimap button borders
-local function CleanAllMinimapButtons()
-    local buttons = GetAllMinimapButtons()
-    for _, child in ipairs(buttons) do
-        if child.circle then
-            -- Clean the border from oldminimapcore.lua style
-            child.circle:Hide()
-            child.circle = nil
-        end
-    end
-end
-
 -- Debug utility for minimap button inspection
 function addon:DebugMinimapButtons()
     local buttons = GetAllMinimapButtons()
     for _, child in ipairs(buttons) do
         local name = child:GetName() or "Unnamed"
-        local hasBorder = child.circle and "YES" or "NO"
         local width, height = child:GetSize()
     end
 end

@@ -3,7 +3,7 @@ local addon = select(2, ...)
 local mod = addon.BagsterModule
 
 local format = string.format
-local floor, ceil, min, max, sqrt = math.floor, math.ceil, math.min, math.max, math.sqrt
+local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
 
 -- ============================================================================
 -- TEMPLATE HELPERS (moved from core: used by SideTab and BottomTab)
@@ -294,7 +294,7 @@ do
     function ItemSlot:Update()
         if not self:IsVisible() then return end
 
-        local texture, count, locked, quality, readable, lootable, link = self:GetItemSlotInfo()
+        local texture, count, locked, quality, readable, _, link = self:GetItemSlotInfo()
         self:SetItem(link)
         self:SetTexture(texture)
         self:SetCount(count)
@@ -1542,7 +1542,6 @@ do
             self.textFull:Hide()
             self.btnText:Hide()
 
-            -- Gold: solo se muestra si hay > 0
             if gold > 0 then
                 self.iconGold:Show(); self.amtGold:Show(); self.btnGold:Show()
                 self.amtGold:SetText(FormatThousands(gold))
@@ -1550,7 +1549,6 @@ do
                 self.iconGold:Hide(); self.amtGold:Hide(); self.btnGold:Hide()
             end
 
-            -- Silver: se muestra si hay gold O si hay silver
             if gold > 0 or silver > 0 then
                 self.iconSilver:Show(); self.amtSilver:Show(); self.btnSilver:Show()
                 self.amtSilver:SetText(silver)
@@ -1558,7 +1556,6 @@ do
                 self.iconSilver:Hide(); self.amtSilver:Hide(); self.btnSilver:Hide()
             end
 
-            -- Copper: siempre se muestra
             self.iconCopper:Show(); self.amtCopper:Show(); self.btnCopper:Show()
             self.amtCopper:SetText(copper)
         end

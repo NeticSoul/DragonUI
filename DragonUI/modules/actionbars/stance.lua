@@ -25,17 +25,13 @@ local StanceModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("stance", StanceModule,
-        (addon.L and addon.L["Stance Bar"]) or "Stance Bar",
-        (addon.L and addon.L["Stance/shapeshift bar positioning and styling"]) or "Stance/shapeshift bar positioning and styling")
+        addon.L["Stance Bar"],
+        addon.L["Stance/shapeshift bar positioning and styling"])
 end
 
 -- ============================================================================
 -- CONFIGURATION FUNCTIONS
 -- ============================================================================
-
-local function GetModuleConfig()
-    return addon:GetModuleConfig("stance")
-end
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("stance")

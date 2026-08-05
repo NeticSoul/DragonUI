@@ -37,8 +37,8 @@ addon.MulticastModule = MulticastModule
 
 if addon.RegisterModule then
     addon:RegisterModule("multicast", MulticastModule,
-        (L and L["Multicast"]) or "Multicast",
-        (L and L["Shaman totem bar positioning and styling"]) or "Shaman totem bar positioning and styling", {
+        L["Multicast"],
+        L["Shaman totem bar positioning and styling"], {
         refresh = "RefreshMulticast",
         loadOnce = true,
     })
@@ -264,7 +264,6 @@ local function CreateMulticastFrames()
                 -- Get current anchor position relative to screen
                 local anchorCenterX, anchorCenterY = anchor:GetCenter()
                 local screenWidth = UIParent:GetWidth()
-                local screenHeight = UIParent:GetHeight()
                 
                 -- Calculate position relative to BOTTOM center of UIParent
                 local base_y = 200  -- Base Y for manual positioning

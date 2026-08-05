@@ -49,8 +49,8 @@ BossModule.configured = false
 
 if addon.RegisterModule then
     addon:RegisterModule("boss", BossModule,
-        (L and L["Boss Frames"]) or "Boss Frames",
-        (L and L["Dragonflight-styled boss target frames"]) or "Dragonflight-styled boss target frames")
+        L["Boss Frames"],
+        L["Dragonflight-styled boss target frames"])
 end
 
 -- ============================================================================
@@ -68,7 +68,35 @@ local CLASSIFICATION_ATLAS = {
     rareelite = "TargetFrame-TextureFrame-RareElite",
     rare      = "TargetFrame-TextureFrame-Rare",
 }
-local DEFAULT_BOSS_ATLAS = "TargetFrame-TextureFrame-Elite"
+
+local function ApplyEliteDecoration(bossFrame, portrait)
+    local elite = bossFrame.DragonUI_Elite
+    if not elite or not portrait then return end
+    local unit = bossFrame.unit or bossFrame:GetAttribute("unit")
+    local classification
+    if unit and UnitExists(unit) then
+        classification = UnitClassification(unit)
+    end
+    local coords
+    if classification == "worldboss" then
+        coords = BOSS_COORDS.rareelite
+    elseif classification == "elite" then
+        coords = BOSS_COORDS.elite
+    elseif classification == "rareelite" then
+        coords = BOSS_COORDS.rareelite
+    elseif classification == "rare" then
+        coords = BOSS_COORDS.rare
+    else
+        coords = BOSS_COORDS.rareelite -- boss frames default to the winged dragon
+    end
+    if not coords then return end
+    elite:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+    elite:SetSize(coords[5], coords[6])
+    elite:ClearAllPoints()
+    elite:SetPoint("CENTER", portrait, "CENTER", coords[7], coords[8])
+    elite:SetDrawLayer("OVERLAY", 6)
+    elite:Show()
+end
 
 -- Blizzard can re-anchor TextureFrame back to its default screen position; lock it.
 local function HookTextureFrameSetPoint(textureFrame, bossFrame)
@@ -299,34 +327,7 @@ local function ReskinBossFrame(wrapperFrame, bossFrame, bossIndex)
         bossFrame.DragonUI_Elite:SetTexture(TEXTURES.BOSS)
         bossFrame.DragonUI_Elite:Hide()
     end
-    -- Apply classification decoration
-    if bossFrame.DragonUI_Elite and portrait then
-        local unit = bossFrame.unit or bossFrame:GetAttribute("unit")
-        local classification
-        if unit and UnitExists(unit) then
-            classification = UnitClassification(unit)
-        end
-        local coords
-        if classification == "worldboss" then
-            coords = BOSS_COORDS.rareelite
-        elseif classification == "elite" then
-            coords = BOSS_COORDS.elite
-        elseif classification == "rareelite" then
-            coords = BOSS_COORDS.rareelite
-        elseif classification == "rare" then
-            coords = BOSS_COORDS.rare
-        else
-            -- Boss frames default to winged dragon (rareelite)
-            coords = BOSS_COORDS.rareelite
-        end
-        if coords then
-            bossFrame.DragonUI_Elite:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-            bossFrame.DragonUI_Elite:SetSize(coords[5], coords[6])
-            bossFrame.DragonUI_Elite:ClearAllPoints()
-            bossFrame.DragonUI_Elite:SetPoint("CENTER", portrait, "CENTER", coords[7], coords[8])
-            bossFrame.DragonUI_Elite:Show()
-        end
-    end
+    ApplyEliteDecoration(bossFrame, portrait)
 
     -- ---- Health bar (anchored to portrait like target_style) ----
     local healthBar = _G[frameName .. "HealthBar"]
@@ -677,33 +678,7 @@ local function HookClassification()
 
         -- Re-enforce elite decoration on decoFrame
         local portrait = _G[frameName .. "Portrait"]
-        if self.DragonUI_Elite and portrait then
-            local unit = self.unit or self:GetAttribute("unit")
-            local classification
-            if unit and UnitExists(unit) then
-                classification = UnitClassification(unit)
-            end
-            local coords
-            if classification == "worldboss" then
-                coords = BOSS_COORDS.rareelite
-            elseif classification == "elite" then
-                coords = BOSS_COORDS.elite
-            elseif classification == "rareelite" then
-                coords = BOSS_COORDS.rareelite
-            elseif classification == "rare" then
-                coords = BOSS_COORDS.rare
-            else
-                coords = BOSS_COORDS.rareelite
-            end
-            if coords then
-                self.DragonUI_Elite:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-                self.DragonUI_Elite:SetSize(coords[5], coords[6])
-                self.DragonUI_Elite:ClearAllPoints()
-                self.DragonUI_Elite:SetPoint("CENTER", portrait, "CENTER", coords[7], coords[8])
-                self.DragonUI_Elite:SetDrawLayer("OVERLAY", 6)
-                self.DragonUI_Elite:Show()
-            end
-        end
+        ApplyEliteDecoration(self, portrait)
 
         -- Re-enforce flash after classification change
         local flashTex = _G[frameName .. "Flash"]
@@ -825,33 +800,7 @@ local function HookTargetFrameUpdate()
         UpdateBossFrameBorder(self)
 
         -- Re-enforce elite decoration on decoFrame
-        if self.DragonUI_Elite and portrait then
-            local unit = self.unit or self:GetAttribute("unit")
-            local classification
-            if unit and UnitExists(unit) then
-                classification = UnitClassification(unit)
-            end
-            local coords
-            if classification == "worldboss" then
-                coords = BOSS_COORDS.rareelite
-            elseif classification == "elite" then
-                coords = BOSS_COORDS.elite
-            elseif classification == "rareelite" then
-                coords = BOSS_COORDS.rareelite
-            elseif classification == "rare" then
-                coords = BOSS_COORDS.rare
-            else
-                coords = BOSS_COORDS.rareelite
-            end
-            if coords then
-                self.DragonUI_Elite:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-                self.DragonUI_Elite:SetSize(coords[5], coords[6])
-                self.DragonUI_Elite:ClearAllPoints()
-                self.DragonUI_Elite:SetPoint("CENTER", portrait, "CENTER", coords[7], coords[8])
-                self.DragonUI_Elite:SetDrawLayer("OVERLAY", 6)
-                self.DragonUI_Elite:Show()
-            end
-        end
+        ApplyEliteDecoration(self, portrait)
 
         -- Re-enforce name background
         local nameBG = _G[frameName .. "NameBackground"]
@@ -1012,33 +961,7 @@ local function InitializeBossFrames()
                     local flashTex = _G[fn .. "Flash"]
                     EnforceFlashStyle(flashTex, self)
                     -- Re-enforce elite decoration on show
-                    if self.DragonUI_Elite and portrait then
-                        local unit = self.unit or self:GetAttribute("unit")
-                        local classification
-                        if unit and UnitExists(unit) then
-                            classification = UnitClassification(unit)
-                        end
-                        local coords
-                        if classification == "worldboss" then
-                            coords = BOSS_COORDS.rareelite
-                        elseif classification == "elite" then
-                            coords = BOSS_COORDS.elite
-                        elseif classification == "rareelite" then
-                            coords = BOSS_COORDS.rareelite
-                        elseif classification == "rare" then
-                            coords = BOSS_COORDS.rare
-                        else
-                            coords = BOSS_COORDS.rareelite
-                        end
-                        if coords then
-                            self.DragonUI_Elite:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
-                            self.DragonUI_Elite:SetSize(coords[5], coords[6])
-                            self.DragonUI_Elite:ClearAllPoints()
-                            self.DragonUI_Elite:SetPoint("CENTER", portrait, "CENTER", coords[7], coords[8])
-                            self.DragonUI_Elite:SetDrawLayer("OVERLAY", 6)
-                            self.DragonUI_Elite:Show()
-                        end
-                    end
+                    ApplyEliteDecoration(self, portrait)
                     -- Re-enforce raid target icon draw layer on show
                     local raidTargetIcon = _G[fn .. "TextureFrameRaidTargetIcon"]
                     if raidTargetIcon then

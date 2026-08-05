@@ -25,7 +25,7 @@ function NP.threat.GetAggroStatus(threat)
     if threat.IsShown and not threat:IsShown() then
         return 0
     end
-    local r, g, b = threat:GetVertexColor()
+    local r, g, _ = threat:GetVertexColor()
     if not r or r == 0 then
         return 0
     end

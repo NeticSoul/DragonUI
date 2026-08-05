@@ -9,7 +9,6 @@ Bagster settings: enable/disable, category tabs, left/right side filter.
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel
@@ -30,19 +29,6 @@ local SET_EQUIPMENT = "Equipment"
 local SET_USABLE = "Usable"
 local SET_NORMAL = "Normal"
 local SET_TRADE = "Trade"
-
-local function GetLocalizedBagsterSetName(name)
-    if name == SET_EQUIPMENT then
-        return LO["Equipment"] or name
-    elseif name == SET_USABLE then
-        return LO["Usable"] or name
-    elseif name == SET_NORMAL then
-        return LO["Normal"] or name
-    elseif name == SET_TRADE then
-        return LO["Trade Bags"] or name
-    end
-    return name
-end
 
 local function NormalizeBagsterSetName(name)
     if not name then return name end

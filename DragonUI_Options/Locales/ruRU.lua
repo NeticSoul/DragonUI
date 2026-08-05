@@ -71,7 +71,6 @@ L["No"] = "Нет"
 -- TAB NAMES
 -- ============================================================================
 
-L["General"] = "Общие"
 L["Modules"] = "Модули"
 L["Action Bars"] = "Панели действий"
 L["Additional Bars"] = "Доп. панели"
@@ -151,8 +150,6 @@ L["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can d
 L["Positions"] = "Позиции"
 L["Player Buffs & Debuffs"] = "Баффы и дебаффы игрока"
 L["Layout settings for the player buff and debuff bar. These do not affect target or focus auras."] = "Настройки расположения панели баффов и дебаффов игрока. Не влияют на ауры цели или фокуса."
-L["Buffs"] = "Баффы"
-L["Debuffs"] = "Дебаффы"
 L["Buff Order"] = "Порядок баффов"
 L["Default (Blizzard)"] = "По умолчанию (Blizzard)"
 L["How to sort player buff icons on the buff bar."] = "Как сортировать иконки баффов игрока на панели."
@@ -230,14 +227,6 @@ L["Buff Stack Font Size"] = "Размер шрифта стаков баффа"
 L["Debuff Icon Size"] = "Размер иконки дебаффа"
 L["Debuff Icon Scale"] = "Масштаб иконки дебаффа"
 L["Debuff Stack Font Size"] = "Размер шрифта стаков дебаффа"
-L["Background Plates Opacity"] = "Background Plates Opacity"
-L["Controls the opacity of non-target nameplates while fade is active (0.0 - 1.0)."] = "Controls the opacity of non-target nameplates while fade is active (0.0 - 1.0)."
-L["No Target: Full Opacity"] = "No Target: Full Opacity"
-L["When you have no target, show all nameplates at full opacity."] = "When you have no target, show all nameplates at full opacity."
-L["Level Format"] = "Level Format"
-L["Size of debuff icons on nameplates."] = "Size of debuff icons on nameplates."
-L["Show Debuff Cooldown Text"] = "Show Debuff Cooldown Text"
-L["Show remaining debuff time on each debuff icon."] = "Show remaining debuff time on each debuff icon."
 L["Show Debuff Cooldown Swipe"] = "Показывать анимацию перезарядки дебаффа"
 L["Also show a radial cooldown sweep on each debuff icon."] = "Также показывать круговую анимацию перезарядки на каждой иконке дебаффа."
 L["Debuff Horizontal Offset"] = "Горизонтальное смещение дебаффов"
@@ -251,10 +240,6 @@ L["Choose the visual style of the cooldown sweep. These texture-based styles sta
 L["Shade Fill"] = "Затемнение"
 L["Quadrant Sweep"] = "Секторная анимация"
 L["Square Radial Sweep"] = "Квадратная круговая анимация"
-L["Debuff Cooldown Font Size"] = "Debuff Cooldown Font Size"
-L["Font size for debuff remaining time text."] = "Font size for debuff remaining time text."
-L["Debuff Cooldown Text Position"] = "Debuff Cooldown Text Position"
-L["Choose where the debuff cooldown text is anchored on the icon."] = "Choose where the debuff cooldown text is anchored on the icon."
 L["Reset Aura Customization"] = "Сбросить настройку аур"
 L["Reset Aura Timers"] = "Сбросить таймеры аур"
 L["Aura timer settings reset."] = "Настройки таймеров аур сброшены."
@@ -442,7 +427,6 @@ L["Bank"] = "Банк"
 L["Choose which category tabs appear on the bag frame. Changes require closing and reopening bags to take effect."] = "Выбрать, какие вкладки категорий отображаются в окне сумок. Для применения необходимо закрыть и заново открыть сумки."
 L["Choose which category tabs appear on the inventory bag frame."] = "Выбрать, какие вкладки категорий отображаются в окне инвентаря."
 L["Choose which category tabs appear on the bank frame."] = "Выбрать, какие вкладки категорий отображаются в окне банка."
-L["Display"] = "Отображение"
 L["Gold Display"] = "Отображение золота"
 L["Text Only"] = "Только текст"
 L["Gold Icons"] = "Значки золота"
@@ -502,7 +486,6 @@ L["All-in-one bag replacement with filtering and search"] = "Универсал�
 -- ============================================================================
 
 -- Sub-tabs
-L["Layout"] = "Раскладка"
 L["Visibility"] = "Видимость"
 
 -- Scales section
@@ -547,7 +530,6 @@ L["Show Count Text"] = "Показать текст количества"
 L["Hotkey Text"] = "Текст горячих клавиш"
 L["Show Hotkey"] = "Показать горячую клавишу"
 L["Show Hotkey Text"] = "Показать текст горячих клавиш"
-L["Show Empty Slots"] = "Показывать пустые ячейки"
 L["Show the button frame on pet slots with no ability assigned."] = "Показывает рамку кнопки в ячейках питомца без назначенного умения."
 L["Range Indicator"] = "Индикатор дальности"
 L["Show small range indicator point on buttons"] = "Показать маленькую точку индикатора дальности на кнопках"
@@ -610,10 +592,6 @@ L["Columns"] = "Столбцы"
 L["Buttons Shown"] = "Кнопок показано"
 L["Change Button Order"] = "Изменить порядок кнопок"
 L["Button Order"] = "Порядок кнопок"
-L["Top Left"] = "Сверху слева"
-L["Bottom Left"] = "Снизу слева"
-L["Top Right"] = "Сверху справа"
-L["Bottom Right"] = "Снизу справа"
 L["Quick Presets"] = "Быстрые пресеты"
 L["Apply layout presets to multiple bars at once."] = "Применить пресеты раскладки сразу к нескольким панелям."
 L["Both 1x12"] = "Обе 1x12"
@@ -695,7 +673,6 @@ L["Focus Castbar"] = "Полоса заклинаний фокуса"
 
 -- Sub-tabs
 L["Player"] = "Игрок"
-L["Target"] = "Цель"
 L["Focus"] = "Фокус"
 
 -- Common options
@@ -841,7 +818,6 @@ L["Enable Animated Border"] = "Включить анимированную ра�
 L["Enable Minimap Decorations"] = "Включить декорации миникарты"
 L["Animated Effects"] = "Анимированные эффекты"
 L["Rotate preset layers when the selected preset includes animation."] = "Вращает слои шаблона, если выбранный шаблон содержит анимацию."
-L["Opacity"] = "Непрозрачность"
 L["Hide DragonUI Border"] = "Скрыть рамку DragonUI"
 
 -- Time & Calendar
@@ -889,7 +865,6 @@ L["Center"] = "Центр"
 L["Horizontal position offset"] = "Горизонтальное смещение"
 L["Vertical position offset"] = "Вертикальное смещение"
 L["Reset quest tracker to default position"] = "Сбросить позицию трекера заданий по умолчанию"
-L["Font Size"] = "Размер шрифта"
 L["Font size for quest tracker text"] = "Размер шрифта текста трекера заданий"
 
 -- ============================================================================
@@ -1083,7 +1058,6 @@ L["A UI reload is required to apply this change."] = "Для применени�
 
 -- Size & Scale
 L["Size & Scale"] = "Размер и масштаб"
-L["Bar Height"] = "Высота полосы"
 L["Height of the XP and Reputation bars (in pixels)."] = "Высота полос опыта и репутации (в пикселях)."
 L["Width of the XP and Reputation bars (in pixels)."] = "Ширина полос опыта и репутации (в пикселях)."
 L["Experience Bar Scale"] = "Масштаб полосы опыта"
@@ -1388,8 +1362,6 @@ L["Show combo points on the current target nameplate."] = "Показывать 
 L["Show Totem Icons"] = "Иконки тотемов"
 L["Totem Icon Only"] = "Только иконка тотема"
 L["Hide the totem's nameplate entirely and show only its icon."] = "Полностью скрыть полоску тотема и показывать только его иконку."
-L["Totem Icon Position"] = "Totem Icon Position"
-L["Choose where the totem icon is anchored around the nameplate."] = "Choose where the totem icon is anchored around the nameplate."
 L["Show totem icon on shaman totem nameplates."] = "Показывать иконку тотема на индикаторах тотемов шамана."
 L["Name and health percent font scale (1-10, default 2)."] = "Масштаб шрифта имени и здоровья (1-10, по умолчанию 2)."
 L["Size & Position"] = "Размер и позиция"
@@ -1420,7 +1392,6 @@ L["Inverts threat colors for a tank: green means you hold aggro, red means you l
 L["DPS Mode"] = "Режим ДПС"
 L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "В бою окрашивает по угрозе для ДПС: зелёный = нет агро, жёлтый = переход, красный = у вас агро."
 L["Keep all nameplates fully opaque when you have a target."] = "Все индикаторы непрозрачны при наличии цели."
-L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "Прозрачность не-целей при затухании (0.1 - 1.0)."
 L["Show enemy cast bar on the targeted nameplate."] = "Показывать вражескую полосу каста на индикаторе цели."
 L["Name Font"] = "Шрифт имени"
 

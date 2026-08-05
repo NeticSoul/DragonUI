@@ -26,8 +26,8 @@ local Module = {
 
 if addon.RegisterModule then
     addon:RegisterModule("player", Module,
-        (L and L["Player Frame"]) or "Player Frame",
-        (L and L["Dragonflight-styled player unit frame"]) or "Dragonflight-styled player unit frame")
+        L["Player Frame"],
+        L["Dragonflight-styled player unit frame"])
 end
 -- Animation variables for Combat Flash pulse effect
 local combatPulseTimer = 0
@@ -902,7 +902,7 @@ local function UpdateGroupIndicator()
     end
 
     for i = 1, numRaidMembers do
-        local name, rank, subgroup = GetRaidRosterInfo(i)
+        local name, _, subgroup = GetRaidRosterInfo(i)
         if name and name == UnitName("player") then
             local groupFormat = _G.GROUP_NUMBER or "Group %d"
             groupText:SetText(string.format(groupFormat, subgroup))
@@ -2271,6 +2271,12 @@ local function SetCombatFlashVisible(visible)
     SetEliteCombatFlashVisible(visible) -- Use unified system
 end
 
+-- Vehicle transition slide, same feel as Blizzard's PlayerFrameAnimTable (0.3s / 140px up)
+local PLAYER_SLIDE_TIME = 0.3
+local PLAYER_SLIDE_DIST = 140
+local slideOffset = 0
+local slideDriver, slideStart, slideReverse
+
 -- Apply saved widget position to the player frame
 local function ApplyWidgetPosition()
     -- COMBAT GUARD: Do NOT touch ANY frame during combat.
@@ -2278,6 +2284,10 @@ local function ApplyWidgetPosition()
     -- a secure context (AnimationSystem, vehicle transitions). Defer everything.
     if InCombatLockdown() then
         deferredPositionUpdate = true
+        return
+    end
+
+    if not Module.playerFrame then
         return
     end
 
@@ -2291,20 +2301,88 @@ local function ApplyWidgetPosition()
     end
 
     -- Position the auxiliary frame
-    if Module.playerFrame then
-        Module.playerFrame:ClearAllPoints()
-        Module.playerFrame:SetPoint(widgetConfig.anchor or "TOPLEFT", UIParent, widgetConfig.anchor or "TOPLEFT",
-            widgetConfig.posX or -19, widgetConfig.posY or -4)
-    end
+    Module.playerFrame:ClearAllPoints()
+    Module.playerFrame:SetPoint(widgetConfig.anchor or "TOPLEFT", UIParent, widgetConfig.anchor or "TOPLEFT",
+        widgetConfig.posX or -19, widgetConfig.posY or -4)
 
     -- Anchor PlayerFrame to auxiliary frame
     PlayerFrame:ClearAllPoints()
     local hasVehicleUI = UnitHasVehicleUI("player")
     if hasVehicleUI then
-        PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", -20, -5)
+        PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", -20, -5 + slideOffset)
     else
-        PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", -15, -7)
+        PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", -15, -7 + slideOffset)
     end
+end
+
+local function PlayerSlide_Stop()
+    slideStart = nil
+    if slideDriver then
+        slideDriver:SetScript("OnUpdate", nil)
+    end
+end
+
+local function PlayerSlide_IsRunning()
+    return slideDriver ~= nil and slideDriver:GetScript("OnUpdate") ~= nil
+end
+
+-- Returns false when combat blocks the move; PlayerFrame:SetPoint is protected there.
+local function PlayerSlide_Place(fraction)
+    if InCombatLockdown() then
+        PlayerSlide_Stop()
+        slideOffset = 0
+        deferredPositionUpdate = true
+        return false
+    end
+    slideOffset = fraction * PLAYER_SLIDE_DIST
+    ApplyWidgetPosition()
+    return true
+end
+
+local function PlayerSlide_OnUpdate()
+    local now = GetTime()
+    if not slideStart then
+        slideStart = now
+    end
+    local fraction = (now - slideStart) / PLAYER_SLIDE_TIME
+    if fraction >= 1 then
+        PlayerSlide_Stop()
+        PlayerSlide_Place(slideReverse and 0 or 1)
+        return
+    end
+    PlayerSlide_Place(slideReverse and (1 - fraction) or fraction)
+end
+
+-- reverse = slide back down into the configured position, otherwise slide up and out
+local function PlayerSlide_Start(reverse)
+    if not Module.playerFrame then
+        return
+    end
+    -- Blizzard re-applies art several times during load; restarting would re-park and never let it land.
+    if PlayerSlide_IsRunning() and slideReverse == reverse then
+        return
+    end
+    PlayerSlide_Stop()
+    slideReverse = reverse
+    if not PlayerSlide_Place(reverse and 1 or 0) then
+        return
+    end
+    if not slideDriver then
+        slideDriver = CreateFrame("Frame")
+    end
+    -- t0 comes from the first tick we receive; SetUpAnimation's shared clock eats a whole slide after a reload
+    slideStart = nil
+    slideDriver:SetScript("OnUpdate", PlayerSlide_OnUpdate)
+end
+
+local function PlayerSlide_Out()
+    PlayerSlide_Start(false)
+    -- An aborted vehicle entry never sends the event that brings the frame back; never leave it off screen
+    addon:After(2, function()
+        if slideOffset ~= 0 and not PlayerSlide_IsRunning() then
+            PlayerSlide_Start(true)
+        end
+    end)
 end
 
 -- Apply configuration settings
@@ -2685,6 +2763,33 @@ local function UpdateBothBars()
     UpdateManaBarColor(PlayerFrameManaBar)
 end
 
+-- Re-skin for whatever art Blizzard just installed; only ever called while the frame is slid away
+local function ApplyPlayerArtState()
+    local inVehicle = IsInVehicle()
+
+    if InCombatLockdown() then
+        deferredPositionUpdate = true
+    else
+        ApplyWidgetPosition()
+    end
+
+    HandleRuneFrameVehicleTransition(inVehicle)
+
+    local config = GetPlayerConfig()
+    local decorationType = config.dragon_decoration or "none"
+    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+    UpdateDragonVisibilityForVehicle(inVehicle, isEliteMode)
+
+    UpdateGlowVisibility()
+    ChangePlayerframe()
+    UpdatePlayerDragonDecoration()
+
+    -- Blizzard owns these anchors while the vehicle art is up; ours only fit the normal frame
+    if not inVehicle then
+        UpdateLeadershipIcons()
+    end
+end
+
 -- Setup event handling system
 local function SetupPlayerEvents()
     if Module.eventsFrame then
@@ -2757,6 +2862,12 @@ local function SetupPlayerEvents()
             HideBlizzardPlayerTexts()
             -- Update textSystem unit in case of reload while in vehicle
             UpdateTextSystemUnit()
+
+            -- Applying the art inside this dispatch is what kills the restyle flash; sliding during load is
+            -- not, and frame pacing there is too erratic to time it, so land it at rest like Blizzard does.
+            if UnitHasVehicleUI("player") then
+                ApplyPlayerArtState()
+            end
         end,
 
         RUNE_TYPE_UPDATE = function(runeIndex)
@@ -2799,6 +2910,18 @@ local function SetupPlayerEvents()
         end,
 
         -- Vehicle events for proper unit switching
+        UNIT_ENTERING_VEHICLE = function(unit, showVehicleFrame)
+            if unit == "player" and (showVehicleFrame or PlayerFrame.state == "vehicle") then
+                PlayerSlide_Out()
+            end
+        end,
+
+        UNIT_EXITING_VEHICLE = function(unit)
+            if unit == "player" and PlayerFrame.state == "vehicle" then
+                PlayerSlide_Out()
+            end
+        end,
+
         UNIT_ENTERED_VEHICLE = function(unit)
             if unit == "player" then
                 UpdateTextSystemUnit()
@@ -2905,121 +3028,61 @@ SetupPlayerClassColorHooks()
 -- Hide Blizzard texts after initialization
 HideBlizzardPlayerTexts()
 
+-- Druid alternate mana bar: Blizzard updates the bar but never our text on it
+hooksecurefunc("UnitFrameManaBar_Update", function(statusbar, unit)
+    if unit ~= "player" then
+        return
+    end
+    local _, playerClass = UnitClass("player")
+    if playerClass ~= "DRUID" then
+        return
+    end
+
+    local config = GetPlayerConfig()
+    if config and config.alwaysShowAlternateManaText then
+        UpdateAlternateManaText()
+        return
+    end
+
+    local alternateManaBar = _G.PlayerFrameAlternateManaBar
+    if alternateManaBar and alternateManaBar:IsMouseOver() then
+        UpdateAlternateManaText()
+    end
+end)
+
 -- ===============================================================
 -- HOOKS TO MAINTAIN POSITION DURING VEHICLE TRANSITIONS
 -- ===============================================================
 
--- Hook PlayerFrame_ToPlayerArt (exiting vehicle)
-hooksecurefunc("PlayerFrame_ToPlayerArt", function()
-    -- Mark deferred for position (PlayerFrame:SetPoint is protected)
-    if InCombatLockdown() then
-        deferredPositionUpdate = true
-    else
-        ApplyWidgetPosition()
+-- Blizzard swaps art only while the frame is animated away, so this is where the slide turns around.
+-- After a reload its AnimationSystem clock is frozen, so the swap can land before our outbound slide has
+-- moved at all; testing the driver too (not just the offset) is what stops the frame parking off screen.
+local function OnBlizzardArtApplied()
+    ApplyPlayerArtState()
+    if slideOffset ~= 0 or (PlayerSlide_IsRunning() and not slideReverse) then
+        PlayerSlide_Start(true)
     end
-    
-    -- Non-secure visual operations — safe even in combat
-    HandleRuneFrameVehicleTransition(false)
-    
-    -- Restore dragon decoration visibility
-    local config = GetPlayerConfig()
-    local decorationType = config.dragon_decoration or "none"
-    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
-    UpdateDragonVisibilityForVehicle(false, isEliteMode)
-    
-    -- Update glow state (switches from vehicle to normal glow frames)
-    UpdateGlowVisibility()
-    
-    -- Full layout re-apply (child frame positioning is non-secure and works in combat)
-    ChangePlayerframe()
-    UpdatePlayerDragonDecoration()
-    UpdateLeadershipIcons()
-    
-    -- Delayed retry for robustness (decorations need a frame or two to settle)
-    if not Module.vehicleDelayFrame then
-        Module.vehicleDelayFrame = CreateFrame("Frame")
-    end
-    Module.vehicleDelayAttempts = 0
-    Module.vehicleDelayFrame:SetScript("OnUpdate", function(self, elapsed)
-        Module.vehicleDelayAttempts = (Module.vehicleDelayAttempts or 0) + 1
-        if Module.vehicleDelayAttempts >= 3 then -- After 3 frames (~0.1s)
-            ChangePlayerframe()
-            UpdatePlayerDragonDecoration()
-            UpdateLeadershipIcons()
-            if not InCombatLockdown() then
-                ApplyWidgetPosition()
-            end
-            self:SetScript("OnUpdate", nil)
-        end
-    end)
-end)
+end
 
--- Hook PlayerFrame_ToVehicleArt (entering vehicle)
-hooksecurefunc("PlayerFrame_ToVehicleArt", function()
-    -- Mark deferred for position (PlayerFrame:SetPoint is protected)
-    if InCombatLockdown() then
-        deferredPositionUpdate = true
-    else
-        ApplyWidgetPosition()
-    end
+hooksecurefunc("PlayerFrame_ToPlayerArt", OnBlizzardArtApplied)
+hooksecurefunc("PlayerFrame_ToVehicleArt", OnBlizzardArtApplied)
 
-    -- Non-secure visual operations — safe even in combat
-    HandleRuneFrameVehicleTransition(true)
-
-    local config = GetPlayerConfig()
-    local decorationType = config.dragon_decoration or "none"
-    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
-    UpdateDragonVisibilityForVehicle(true, isEliteMode)
-
-    -- Update glow state for vehicle (dedicated vehicle glow frames don't require secure access)
-    UpdateGlowVisibility()
-
-    -- Full layout re-apply (child frame positioning is non-secure and works in combat)
-    ChangePlayerframe()
-    UpdatePlayerDragonDecoration()
-end)
-
--- Hook to update alternate mana bar text when power changes
-hooksecurefunc("UnitFrameManaBar_Update", function(statusbar, unit)
-    if unit == "player" then
-        local _, playerClass = UnitClass("player")
-        if playerClass == "DRUID" then
-            local config = GetPlayerConfig()
-            if config and config.alwaysShowAlternateManaText then
-                -- Always visible mode: update immediately
-                UpdateAlternateManaText()
-            else
-                -- Hover mode: only update if currently showing (mouse over)
-                local alternateManaBar = _G.PlayerFrameAlternateManaBar
-                if alternateManaBar and alternateManaBar:IsMouseOver() then
-                    UpdateAlternateManaText()
-                end
-            end
-        end
-    end
-end)
-
--- Hook PlayerFrame_SequenceFinished (end of animations)
 if PlayerFrame_SequenceFinished then
     hooksecurefunc("PlayerFrame_SequenceFinished", function()
-        -- ApplyWidgetPosition already guards against combat internally
-        ApplyWidgetPosition()
+        ApplyPlayerArtState()
     end)
 end
 
--- ANTI-FLICKER: Hook SetPoint on PlayerFrame to intercept unwanted Blizzard repositioning
--- Uses hooksecurefunc — fires AFTER Blizzard's SetPoint, immediately re-applies our position
--- This eliminates the single-frame "teleport" flash during vehicle enter/exit
+-- hooksecurefunc fires after Blizzard's SetPoint, so our position is restored in the same frame.
 hooksecurefunc(PlayerFrame, "SetPoint", function(self, point, relativeTo, relativePoint, x, y)
-    -- Skip if in combat (cannot modify secure frames)
-    if InCombatLockdown() then return end
-    -- Skip if this is our own call (prevent infinite loop)
     if self.DragonUI_SettingPoint then return end
-    
-    -- Only intercept Blizzard auto-repositioning (vehicle transitions, level-up, etc.)
-    -- Blizzard anchors PlayerFrame to UIParent with TOPLEFT or CENTER
+    if InCombatLockdown() then
+        deferredPositionUpdate = true
+        return
+    end
+
+    -- Blizzard only auto-anchors to UIParent TOPLEFT/CENTER; anything else is ours or another addon's.
     if point and relativeTo == UIParent and (point == "TOPLEFT" or point == "CENTER") then
-        -- Immediately re-apply our position in the same frame (no defer = no flicker)
         self.DragonUI_SettingPoint = true
         local ok, err = pcall(ApplyWidgetPosition)
         if not ok and addon.Debug then addon:Debug("ApplyWidgetPosition error:", err) end
@@ -3027,7 +3090,6 @@ hooksecurefunc(PlayerFrame, "SetPoint", function(self, point, relativeTo, relati
     end
 end)
 
--- Profile change callbacks for configuration updates
 local function OnProfileChanged()
     if not IsPlayerModuleEnabled() then
         addon:ShouldDeferModuleDisable("player", Module)
@@ -3038,14 +3100,12 @@ local function OnProfileChanged()
     SetupAlternateManaBarAlwaysVisible()
 end
 
--- Register profile callbacks
 if addon.db and addon.db.RegisterCallback then
     addon.db.RegisterCallback(Module, "OnProfileChanged", OnProfileChanged)
     addon.db.RegisterCallback(Module, "OnProfileCopied", OnProfileChanged)
     addon.db.RegisterCallback(Module, "OnProfileReset", OnProfileChanged)
 end
 
--- Expose public API
 addon.PlayerFrame = {
     Refresh = RefreshPlayerFrame,
     RefreshPlayerFrame = RefreshPlayerFrame,
@@ -3058,4 +3118,3 @@ addon.PlayerFrame = {
     UpdatePlayerHealthBarColor = UpdatePlayerHealthBarColor,
     UpdatePlayerClassPortrait = UpdatePlayerClassPortrait
 }
-

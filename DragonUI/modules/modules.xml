@@ -23,11 +23,11 @@
     <Script file="keypress.lua"/>
     
     <!-- Buffs, Minimap & Quest Tracker modules -->
-    <Script file="BuffFrame.lua"/>
+    <Script file="buff_frame.lua"/>
     <Script file="auraborders.lua"/>
     <Script file="minimap_collector.lua"/>
     <Script file="minimap.lua"/>
-    <Script file="MinimapDecorations.lua"/>
+    <Script file="minimap_decorations.lua"/>
     <Script file="questtracker.lua"/>   
     <Script file="lootroll.lua"/>
 
@@ -64,6 +64,9 @@
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>
     
+    <!-- Bag item usability tint (shared by bagster and bags_skin; must load before both) -->
+    <Script file="bags_usability.lua"/>
+
     <!-- Bagster bag replacement module -->
     <Include file="bagster\bagster.xml"/>
 

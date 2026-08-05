@@ -247,7 +247,7 @@ local function OpenDragonUIConfig()
         return
     end
 
-    print("|cFFFF0000[DragonUI]|r " .. L["Unable to open configuration"])
+    addon:Error(L["Unable to open configuration"])
 end
 
 -- ============================================================================
@@ -263,8 +263,6 @@ CreateDragonUIButton = function()
 
     -- Swap to nil to disable and fall back to the solid-color path.
     local TEX_CUSTOM_NORMAL = addon._dir .. "Micromenu\\gamemenu_btn.tga"
-    local TEX_CUSTOM_HOVER  = nil
-    local TEX_CUSTOM_PUSHED = nil
 
     local FONT      = (addon.Fonts and addon.Fonts.PRIMARY) or "Fonts\\FRIZQT__.TTF"
     local FONT_SIZE = 12

@@ -19,8 +19,8 @@ local TooltipModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("tooltip", TooltipModule,
-        (addon.L and addon.L["Tooltip"]) or "Tooltip",
-        (addon.L and addon.L["Enhanced tooltip styling with class colors and health bars"]) or "Enhanced tooltip styling with class colors and health bars")
+        addon.L["Tooltip"],
+        addon.L["Enhanced tooltip styling with class colors and health bars"])
 end
 
 -- ============================================================================

@@ -12,7 +12,6 @@ if not addon then return end
 local AceGUI = LibStub("AceGUI-3.0")
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel
-local L = addon.L
 local LO = addon.LO
 
 -- ============================================================================
@@ -253,7 +252,7 @@ StaticPopupDialogs["DRAGONUI_PRESET_NAME"] = {
             data = SnapshotProfile(),
             date = date("%Y-%m-%d %H:%M"),
         }
-        print("|cFF00FF00[DragonUI]|r " .. (LO["Preset saved: "] or "Preset saved: ") .. name)
+        addon:Print((LO["Preset saved: "] or "Preset saved: ") .. name)
         -- Refresh the General tab to show the new preset
         if Panel.currentTab == "general" then
             Panel:SelectTab("general")
@@ -282,7 +281,7 @@ StaticPopupDialogs["DRAGONUI_PRESET_LOAD"] = {
         local presets = GetPresets()
         if presets[name] and presets[name].data then
             RestoreSnapshot(presets[name].data)
-            print("|cFF00FF00[DragonUI]|r " .. (LO["Preset loaded: "] or "Preset loaded: ") .. name)
+            addon:Print((LO["Preset loaded: "] or "Preset loaded: ") .. name)
             ReloadUI()
         end
     end,
@@ -301,7 +300,7 @@ StaticPopupDialogs["DRAGONUI_PRESET_DELETE"] = {
         local presets = GetPresets()
         if presets[name] then
             presets[name] = nil
-            print("|cFF00FF00[DragonUI]|r " .. (LO["Preset deleted: "] or "Preset deleted: ") .. name)
+            addon:Print((LO["Preset deleted: "] or "Preset deleted: ") .. name)
             if Panel.currentTab == "general" then
                 Panel:SelectTab("general")
             end
@@ -344,7 +343,7 @@ StaticPopupDialogs["DRAGONUI_PRESET_IMPORT_NAME"] = {
             data = addon.DeepCopy(importedData),
             date = date("%Y-%m-%d %H:%M"),
         }
-        print("|cFF00FF00[DragonUI]|r " .. (LO["Preset imported: "] or "Preset imported: ") .. name)
+        addon:Print((LO["Preset imported: "] or "Preset imported: ") .. name)
         if Panel.currentTab == "general" then
             Panel:SelectTab("general")
         end
@@ -563,7 +562,7 @@ local function BuildGeneralTab(scroll)
                         data = addon.DeepCopy(presetData[value].data),
                         date = date("%Y-%m-%d %H:%M"),
                     }
-                    print("|cFF00FF00[DragonUI]|r " .. (LO["Preset duplicated: "] or "Preset duplicated: ") .. newName)
+                    addon:Print((LO["Preset duplicated: "] or "Preset duplicated: ") .. newName)
                     Panel:SelectTab("general")
                 end
             end,

@@ -9,7 +9,6 @@ Scales, positions, button appearance, bar size for action bars.
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel
@@ -172,7 +171,7 @@ local function BuildGeneralTab(scroll)
             RefreshBars()
             RefreshExtrabar()
             Panel:SelectTab("actionbars")
-            print("|cFF00FF00[DragonUI]|r " .. LO["All action bar scales reset to 0.9"])
+            addon:Print(LO["All action bar scales reset to 0.9"])
         end,
     })
 
@@ -727,7 +726,7 @@ local function BuildLayoutTab(scroll)
             C:SetDBValue("mainbars.left.button_order", "top_left")
             RefreshBars()
             Panel:SelectTab("actionbars")
-            print("|cFF00FF00[DragonUI]|r " .. LO["All bar layouts reset to defaults."])
+            addon:Print(LO["All bar layouts reset to defaults."])
         end,
     })
 

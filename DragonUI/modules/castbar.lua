@@ -8,8 +8,8 @@ local L = addon.L
 
 local _G = _G
 local pairs, ipairs = pairs, ipairs
-local min, max, abs, floor, ceil = math.min, math.max, math.abs, math.floor, math.ceil
-local format, gsub = string.format, string.gsub
+local min, max, abs, floor = math.min, math.max, math.abs, math.floor
+local format = string.format
 local GetTime = GetTime
 local UnitExists, UnitGUID = UnitExists, UnitGUID
 local UnitCastingInfo, UnitChannelInfo = UnitCastingInfo, UnitChannelInfo
@@ -98,8 +98,8 @@ addon.CastbarModule = CastbarModule
 if addon.RegisterModule then
     local L = addon.L
     addon:RegisterModule("castbar", CastbarModule,
-        (L and L["Cast Bar"]) or "Cast Bar",
-        (L and L["Custom player, target, and focus cast bars"]) or "Custom player, target, and focus cast bars", {
+        L["Cast Bar"],
+        L["Custom player, target, and focus cast bars"], {
         refresh = "RefreshCastbar",
         loadOnce = true,
         isEnabled = function()

@@ -73,7 +73,7 @@ local function SetupErrorMessagesMover()
     end)
 
     if errorMessagesMover.editorText then
-        errorMessagesMover.editorText:SetText((L and L["Error Messages"]) or "Error Messages")
+        errorMessagesMover.editorText:SetText(L["Error Messages"])
     end
 
     addon:RegisterEditableFrame({
@@ -114,7 +114,7 @@ local function SetupErrorMessagesMover()
 end
 
 -- StaticPopup to reload UI after exiting editor mode
-StaticPopupDialogs["DRAGONUI_RELOAD_UI"] = {
+StaticPopupDialogs["DRAGONUI_EDITOR_RELOAD_UI"] = {
     text = L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"],
     button1 = L["Reload Now"],
     button2 = L["Later"],
@@ -243,8 +243,6 @@ local function createGridOverlay()
     local actualCellHeight = screenHeight / totalVerticalCells
     
     -- Exact center position
-    local centerX = screenWidth / 2
-    local centerY = screenHeight / 2
     
     gridOverlay = CreateFrame('Frame', "DragonUIGridOverlay", UIParent)
     gridOverlay:SetAllPoints(UIParent)
@@ -388,7 +386,7 @@ function EditorMode:Hide(showReloadPopup)
     
     -- Only show reload UI popup if not coming from reset positions
     if showReloadPopup ~= false then
-        StaticPopup_Show("DRAGONUI_RELOAD_UI")
+        StaticPopup_Show("DRAGONUI_EDITOR_RELOAD_UI")
     end
     
     

@@ -36,17 +36,13 @@ local ButtonsModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("buttons", ButtonsModule,
-        (addon.L and addon.L["Buttons"]) or "Buttons",
-        (addon.L and addon.L["Action button styling and enhancements"]) or "Action button styling and enhancements")
+        addon.L["Buttons"],
+        addon.L["Action button styling and enhancements"])
 end
 
 -- ============================================================================
 -- CONFIGURATION FUNCTIONS
 -- ============================================================================
-
-local function GetModuleConfig()
-    return addon:GetModuleConfig("buttons")
-end
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("buttons")
@@ -788,7 +784,14 @@ end
 
 local function ApplyButtonStyling()
     if ButtonsModule.applied then return end
-    
+
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("buttons_apply_styling", ApplyButtonStyling)
+        end
+        return
+    end
+
     -- Setup main action buttons
     for button in addon.buttons_iterator() do
         if button then

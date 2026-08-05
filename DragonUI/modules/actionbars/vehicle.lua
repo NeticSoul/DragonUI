@@ -24,6 +24,8 @@ local VehicleModule = {
     initialized = false,
     applied = false,
     pendingApply = false,
+    firstEnteringWorld = true,
+    slideNeedsSnap = false,
     stateDrivers = {},
     events = {},
     hooks = {},
@@ -33,8 +35,8 @@ local VehicleModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("vehicle", VehicleModule,
-        (addon.L and addon.L["Vehicle"]) or "Vehicle",
-        (addon.L and addon.L["Vehicle interface enhancements"]) or "Vehicle interface enhancements")
+        addon.L["Vehicle"],
+        addon.L["Vehicle interface enhancements"])
 end
 
 -- Frame variables
@@ -46,10 +48,6 @@ local vehicleExitButton = nil
 -- ============================================================================
 -- CONFIGURATION
 -- ============================================================================
-
-local function GetModuleConfig()
-    return addon:GetModuleConfig("vehicle")
-end
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("vehicle")
@@ -70,6 +68,135 @@ local function CheckDependencies()
     end
     return true
 end
+
+-- Slide transition: Blizzard's MainMenuBar feel (0.30s / 130px), driven locally. FrameXML's SetUpAnimation
+-- stamps its start from a shared clock, and the inflated `elapsed` of the first post-reload tick consumes the
+-- whole slide at once; taking t0 from the first tick we actually receive avoids that entirely.
+
+local SLIDE_TIME = 0.30
+local SLIDE_GONEYPOS = 130
+local slideDriver = CreateFrame('Frame')
+local slideReverse, slideStart
+
+local function VehicleSlide_SetAnchor(frame, point, relativeTo, relativePoint, x, y)
+    if not frame then return end
+    if not point then
+        point, relativeTo, relativePoint, x, y = frame:GetPoint(1)
+        if not point then return end
+    end
+    frame.dragonSlideAnchor = {
+        point,
+        relativeTo or frame:GetParent() or UIParent,
+        relativePoint or point,
+        x or 0,
+        y or 0
+    }
+end
+
+local function VehicleSlide_QueueSnap()
+    VehicleModule.slideNeedsSnap = true
+    if addon.CombatQueue then
+        addon.CombatQueue:Add('vehicle_slide_snap', function()
+            if not VehicleModule.slideNeedsSnap then return end
+            VehicleModule.slideNeedsSnap = false
+            if VehicleModule.SlideSnapAll then VehicleModule.SlideSnapAll() end
+        end)
+    end
+end
+
+-- fraction 0 = configured resting anchor, fraction 1 = fully off screen below
+local function VehicleSlide_Place(frame, fraction)
+    if not frame then return end
+    if not frame.dragonSlideAnchor then VehicleSlide_SetAnchor(frame) end
+    local a = frame.dragonSlideAnchor
+    if not a then return end
+    frame:SetPoint(a[1], a[2], a[3], a[4], a[5] + (sin(fraction * 90 + 90) - 1) * SLIDE_GONEYPOS)
+end
+
+-- Returns false when combat blocks the move; these frames are secure so SetPoint is protected.
+local function VehicleSlide_PlaceAll(fraction)
+    if InCombatLockdown() then
+        VehicleModule.slideNeedsSnap = true
+        return false
+    end
+    VehicleSlide_Place(vehicleBarBackground, fraction)
+    VehicleSlide_Place(vehicleExitButton, fraction)
+    return true
+end
+
+local function VehicleSlide_Stop()
+    slideStart = nil
+    slideDriver:SetScript('OnUpdate', nil)
+end
+
+local function VehicleSlide_SnapAll()
+    VehicleSlide_Stop()
+    if not VehicleSlide_PlaceAll(0) then VehicleSlide_QueueSnap() end
+end
+VehicleModule.SlideSnapAll = VehicleSlide_SnapAll
+
+local function VehicleSlide_OnUpdate()
+    local now = GetTime()
+    if not slideStart then slideStart = now end
+    local fraction = (now - slideStart) / SLIDE_TIME
+    if fraction >= 1 then
+        VehicleSlide_Stop()
+        -- A finished slide always rests at the configured anchor, even the outbound one (hidden by then).
+        if not VehicleSlide_PlaceAll(0) then VehicleSlide_QueueSnap() end
+            return
+    end
+    if not VehicleSlide_PlaceAll(slideReverse and (1 - fraction) or fraction) then VehicleSlide_Stop() end
+end
+
+local function VehicleSlide_Start(reverse)
+    if not VehicleModule.applied then return end
+    VehicleSlide_Stop()
+    slideReverse = reverse
+    if not VehicleSlide_PlaceAll(reverse and 1 or 0) then
+        VehicleSlide_QueueSnap()
+        return
+    end
+    slideDriver:SetScript('OnUpdate', VehicleSlide_OnUpdate)
+end
+
+local function VehicleSlide_IsAnimating()
+    return slideDriver:GetScript('OnUpdate') ~= nil
+end
+
+local slideFrame = CreateFrame('Frame')
+VehicleModule.slideFrame = slideFrame
+slideFrame:RegisterEvent('UNIT_ENTERING_VEHICLE')
+slideFrame:RegisterEvent('UNIT_ENTERED_VEHICLE')
+slideFrame:RegisterEvent('UNIT_EXITING_VEHICLE')
+slideFrame:RegisterEvent('UNIT_EXITED_VEHICLE')
+slideFrame:RegisterEvent('PLAYER_REGEN_ENABLED')
+slideFrame:SetScript('OnEvent', function(_, event, unit)
+    if event == 'PLAYER_REGEN_ENABLED' then
+        if VehicleModule.slideNeedsSnap then
+            VehicleModule.slideNeedsSnap = false
+            VehicleSlide_SnapAll()
+        end
+        return
+    end
+    if unit ~= 'player' then return end
+    -- Only the art bar slides; with artstyle off the lone exit button popping in is the stock look.
+    if not VehicleModule.applied or not config.additional.vehicle.artstyle then
+        VehicleSlide_SnapAll()
+        return
+    end
+    -- ENTERING/EXITING fire before [vehicleui] flips, so the start position lands before the driver Shows
+    if event == 'UNIT_ENTERING_VEHICLE' then
+        -- Skin the art before the slide, or the decorations pop in only once the buttons have arrived
+        if VehicleModule.ApplyArtLayout and not InCombatLockdown() then
+            pcall(VehicleModule.ApplyArtLayout)
+        end
+        VehicleSlide_Start(true)
+    elseif event == 'UNIT_EXITING_VEHICLE' then
+        VehicleSlide_Start(false)
+    elseif not VehicleSlide_IsAnimating() then
+        VehicleSlide_SnapAll()
+    end
+end)
 
 -- ============================================================================
 -- STANCE/BONUS BAR PAGE HANDLING
@@ -123,6 +250,7 @@ local function PositionVehicleExitButton()
 
     vehicleExitButton:ClearAllPoints()
     vehicleExitButton:SetPoint(cfg.anchor, UIParent, cfg.anchor, cfg.posX, cfg.posY + extraY)
+    VehicleSlide_SetAnchor(vehicleExitButton, cfg.anchor, UIParent, cfg.anchor, cfg.posX, cfg.posY + extraY)
 end
 
 local function CreateVehicleExitButton()
@@ -268,6 +396,7 @@ local function CreateVehicleArtFrames()
     )
     vehicleBarBackground:SetScale(config.mainbars.scale_vehicle or 1)
     vehicleBarBackground:Hide()
+    VehicleSlide_SetAnchor(vehicleBarBackground)
 
     -- vehiclebar: content container (buttons, health, power go here)
     -- Inherits visibility from parent — do NOT explicitly Hide() it
@@ -435,13 +564,18 @@ local function vehiclebar_organic_setup()
     VehicleMenuBarPowerBarOverlay:SetTexCoord(0.46484375, 0.66015625, 0.0390625, 0.9375)
 end
 
+-- Skin and pitch are independent: only UnitVehicleSkin picks the art ("Natural" = organic, else mechanical,
+-- matching PlayerFrame_ToVehicleArt). IsVehicleAimAngleAdjustable only governs the pitch controls.
 local function vehiclebar_layout_setup()
-    if IsVehicleAimAngleAdjustable() then
-        vehiclebar_mechanical_setup()
-    else
+    if UnitVehicleSkin('player') == 'Natural' then
         vehiclebar_organic_setup()
+    else
+        vehiclebar_mechanical_setup()
     end
 end
+
+-- Exposed so the slide handler (declared earlier) can skin the art before the transition starts.
+VehicleModule.ApplyArtLayout = vehiclebar_layout_setup
 
 local function vehiclebutton_position()
     if not vehiclebar then return end
@@ -891,14 +1025,8 @@ local function ApplyVehicleSystem()
         CreateVehicleArtFrames()
         vehiclebar_power_setup()
 
-        -- Pre-parent and pre-position vehicle action buttons on vehiclebar.
-        -- This ensures buttons are visible when [vehicleui] state driver shows
-        -- vehicleBarBackground during mid-combat vehicle entry (e.g., Malygos
-        -- Phase 3 drakes). Default organic layout is used; correct layout
-        -- (organic/mechanical) is applied by UNIT_ENTERED_VEHICLE handler when
-        -- not in combat, or deferred to PLAYER_REGEN_ENABLED otherwise.
-        -- (MCP Ch.25: secure snippets can Show()/Hide() in combat, but
-        --  SetParent/SetPoint on secure frames cannot be called in combat.)
+        -- Pre-parent now: SetParent/SetPoint on secure frames are blocked in combat, and the [vehicleui]
+        -- driver can Show the bar mid-combat (Malygos drakes). The skin is applied on UNIT_ENTERING_VEHICLE.
         vehiclebutton_position()
 
         -- Pre-style vehicle buttons NOW so they already have Dragonflight
@@ -1283,6 +1411,7 @@ VehicleModule.eventFrame = initFrame
 
 initFrame:RegisterEvent("ADDON_LOADED")
 initFrame:RegisterEvent("PLAYER_LOGIN")
+initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 initFrame:SetScript("OnEvent", function(self, event, addonName)
     if event == "ADDON_LOADED" and addonName == "DragonUI" then
         VehicleModule.initialized = true
@@ -1313,6 +1442,24 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         end
 
         self:UnregisterEvent("PLAYER_LOGIN")
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        local reloadInVehicle = false
+        if VehicleModule.firstEnteringWorld then
+            VehicleModule.firstEnteringWorld = false
+            if IsModuleEnabled() and not VehicleModule.applied and CheckDependencies() then
+                ApplyVehicleSystem()
+            end
+            reloadInVehicle = VehicleModule.applied and config.additional.vehicle.artstyle
+                and UnitHasVehicleUI('player') and not InCombatLockdown()
+        end
+        if reloadInVehicle then
+            -- The state driver already showed the bar at rest and the entry events only arrive later,
+            -- so park it here or the first frames draw it in place before the slide.
+            if VehicleModule.ApplyArtLayout then pcall(VehicleModule.ApplyArtLayout) end
+            VehicleSlide_Start(true)
+        else
+            VehicleSlide_SnapAll()
+        end
     elseif event == "PLAYER_REGEN_ENABLED" then
         self:UnregisterEvent("PLAYER_REGEN_ENABLED")
         if VehicleModule.pendingApply and IsModuleEnabled() then

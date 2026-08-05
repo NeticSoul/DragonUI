@@ -19,9 +19,8 @@ local RageIndicatorModule = {
 
 if addon.RegisterModule then
     addon:RegisterModule("rage_indicator", RageIndicatorModule,
-    (addon.L and addon.L["Range Indicator"]) or "Range Indicator",
-    (addon.L and addon.L["Color action button icons when target is out of range or ability is unusable."])
-        or "Color action button icons when target is out of range or ability is unusable.")
+    addon.L["Range Indicator"],
+    addon.L["Color action button icons when target is out of range or ability is unusable."])
 end
 
 local updateInterval = 0.2
@@ -34,6 +33,16 @@ local IsSystemActive
 local DEFAULT_OOR_COLOR = { r = 0.8, g = 0.2, b = 0.2 }
 local DEFAULT_OOM_COLOR = { r = 0.5, g = 0.5, b = 1.0 }
 
+local MULTIBAR_PREFIXES = {
+    "MultiBarBottomLeftButton",
+    "MultiBarBottomRightButton",
+    "MultiBarRightButton",
+    "MultiBarLeftButton",
+}
+
+local iconCache = {}
+local lastColor = {}
+
 local function GetModuleConfig()
     return addon:GetModuleConfig("rage_indicator")
 end
@@ -45,33 +54,50 @@ local function GetIconColor(key, fallback)
     return fallback.r, fallback.g, fallback.b
 end
 
-local function IsModuleEnabled()
-    return addon:IsModuleEnabled("rage_indicator")
-end
-
 local function IsButtonsModuleEnabled()
     return addon:IsModuleEnabled("buttons")
 end
 
-local function ResetButtonColor(button)
+local function GetButtonIcon(button)
+    local icon = iconCache[button]
+    if icon then return icon end
+    icon = button.icon or _G[button:GetName() .. "Icon"]
+    if icon then iconCache[button] = icon end
+    return icon
+end
+
+-- FrameXML only tints action icons from ActionButton_UpdateUsable, which we hook with force=true.
+local function ApplyColor(button, icon, r, g, b, force)
+    local last = lastColor[button]
+    if last then
+        if not force and last[1] == r and last[2] == g and last[3] == b then return end
+        last[1], last[2], last[3] = r, g, b
+    else
+        lastColor[button] = { r, g, b }
+    end
+    icon:SetVertexColor(r, g, b)
+end
+
+local function ResetButtonColor(button, force)
     if not button then return end
-    local icon = button.icon or _G[button:GetName() .. "Icon"]
+    local icon = GetButtonIcon(button)
     if icon then
-        icon:SetVertexColor(1.0, 1.0, 1.0)
+        ApplyColor(button, icon, 1.0, 1.0, 1.0, force)
     end
 end
 
 local function RestoreDefaultButtonState(button)
     if not button then return end
 
+    lastColor[button] = nil
     if type(ActionButton_UpdateUsable) == "function" then
         ActionButton_UpdateUsable(button)
     else
-        ResetButtonColor(button)
+        ResetButtonColor(button, true)
     end
 end
 
-local function UpdateButtonColor(button)
+local function UpdateButtonColor(button, force)
     if not button then return end
 
     local actionID
@@ -82,15 +108,15 @@ local function UpdateButtonColor(button)
     end
 
     if not actionID then
-        ResetButtonColor(button)
+        ResetButtonColor(button, force)
         return
     end
 
-    local icon = button.icon or _G[button:GetName() .. "Icon"]
+    local icon = GetButtonIcon(button)
     if not icon then return end
 
     if not HasAction(actionID) then
-        ResetButtonColor(button)
+        ApplyColor(button, icon, 1.0, 1.0, 1.0, force)
         return
     end
 
@@ -98,21 +124,23 @@ local function UpdateButtonColor(button)
 
     -- Out-of-mana has priority over range (prevents red/blue flicker).
     if notEnoughMana then
-        icon:SetVertexColor(GetIconColor("oom_color", DEFAULT_OOM_COLOR))
+        local r, g, b = GetIconColor("oom_color", DEFAULT_OOM_COLOR)
+        ApplyColor(button, icon, r, g, b, force)
         return
     end
 
     -- Gray for unusable actions that are not mana-related.
     if not isUsable then
-        icon:SetVertexColor(0.4, 0.4, 0.4)
+        ApplyColor(button, icon, 0.4, 0.4, 0.4, force)
         return
     end
 
     -- Red only applies to usable actions that are out of range.
     if IsActionInRange(actionID) == 0 then
-        icon:SetVertexColor(GetIconColor("oor_color", DEFAULT_OOR_COLOR))
+        local r, g, b = GetIconColor("oor_color", DEFAULT_OOR_COLOR)
+        ApplyColor(button, icon, r, g, b, force)
     else
-        icon:SetVertexColor(1.0, 1.0, 1.0)
+        ApplyColor(button, icon, 1.0, 1.0, 1.0, force)
     end
 end
 
@@ -121,13 +149,13 @@ local function SetupHooks()
 
     hooksecurefunc("ActionButton_UpdateUsable", function(button)
         if not IsSystemActive() then return end
-        UpdateButtonColor(button)
+        UpdateButtonColor(button, true)
     end)
 
     if type(ActionButton_UpdateRangeIndicator) == "function" then
         hooksecurefunc("ActionButton_UpdateRangeIndicator", function(button)
             if not IsSystemActive() then return end
-            UpdateButtonColor(button)
+            UpdateButtonColor(button, true)
         end)
     end
 
@@ -137,8 +165,13 @@ end
 local function UpdateAllButtons()
     if not indicatorFrame or not indicatorFrame.buttonList then return end
 
-    for _, button in ipairs(indicatorFrame.buttonList) do
-        UpdateButtonColor(button)
+    local list = indicatorFrame.buttonList
+    for i = 1, #list do
+        local button = list[i]
+        -- Hidden bars can't show a tint; ActionButton_UpdateUsable re-tints them when they come back.
+        if button:IsVisible() then
+            UpdateButtonColor(button)
+        end
     end
 end
 
@@ -153,27 +186,21 @@ end
 local function RebuildButtonList()
     if not indicatorFrame then return end
 
-    wipe(indicatorFrame.buttonList)
+    local list = indicatorFrame.buttonList
+    wipe(list)
 
     for i = 1, 12 do
         local button = _G["ActionButton" .. i]
         if button then
-            table.insert(indicatorFrame.buttonList, button)
+            list[#list + 1] = button
         end
     end
 
-    local multiBarPrefixes = {
-        "MultiBarBottomLeftButton",
-        "MultiBarBottomRightButton",
-        "MultiBarRightButton",
-        "MultiBarLeftButton",
-    }
-
-    for _, prefix in ipairs(multiBarPrefixes) do
+    for _, prefix in ipairs(MULTIBAR_PREFIXES) do
         for i = 1, 12 do
             local button = _G[prefix .. i]
             if button then
-                table.insert(indicatorFrame.buttonList, button)
+                list[#list + 1] = button
             end
         end
     end
@@ -181,7 +208,7 @@ local function RebuildButtonList()
     for i = 1, VEHICLE_MAX_ACTIONBUTTONS do
         local button = _G["VehicleMenuBarActionButton" .. i]
         if button then
-            table.insert(indicatorFrame.buttonList, button)
+            list[#list + 1] = button
         end
     end
 end
@@ -253,6 +280,8 @@ local function Initialize()
             return
         end
 
+        if #self.buttonList == 0 then return end
+
         UpdateAllButtons()
     end)
 
@@ -261,7 +290,8 @@ local function Initialize()
     RegisterTrackedEvent(eventFrame, "PLAYER_TARGET_CHANGED")
     RegisterTrackedEvent(eventFrame, "ACTIONBAR_SLOT_CHANGED")
     eventFrame:SetScript("OnEvent", function(_, event)
-        if event == "ACTIONBAR_SLOT_CHANGED" then
+        -- The button frames themselves never change, so only re-scan _G on world entry.
+        if event == "PLAYER_ENTERING_WORLD" then
             RebuildButtonList()
         end
 

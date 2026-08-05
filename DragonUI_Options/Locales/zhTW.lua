@@ -70,7 +70,6 @@ L["No"] = "否"
 -- 標籤頁名稱
 -- ============================================================================
 
-L["General"] = "通用"
 L["Modules"] = "模組"
 L["Action Bars"] = "動作條"
 L["Additional Bars"] = "附加動作條"
@@ -149,8 +148,6 @@ L["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can d
 L["Positions"] = "位置"
 L["Player Buffs & Debuffs"] = "玩家增益與減益"
 L["Layout settings for the player buff and debuff bar. These do not affect target or focus auras."] = "玩家增益與減益列的版面設定。不影響目標或焦點光環。"
-L["Buffs"] = "增益"
-L["Debuffs"] = "減益"
 L["Buff Order"] = "增益排序"
 L["Default (Blizzard)"] = "預設（暴雪）"
 L["How to sort player buff icons on the buff bar."] = "玩家增益列圖示的排序方式。"
@@ -228,14 +225,6 @@ L["Buff Stack Font Size"] = "增益層數字型大小"
 L["Debuff Icon Size"] = "減益圖示大小"
 L["Debuff Icon Scale"] = "減益圖示縮放"
 L["Debuff Stack Font Size"] = "減益層數字型大小"
-L["Background Plates Opacity"] = "Background Plates Opacity"
-L["Controls the opacity of non-target nameplates while fade is active (0.0 - 1.0)."] = "Controls the opacity of non-target nameplates while fade is active (0.0 - 1.0)."
-L["No Target: Full Opacity"] = "No Target: Full Opacity"
-L["When you have no target, show all nameplates at full opacity."] = "When you have no target, show all nameplates at full opacity."
-L["Level Format"] = "Level Format"
-L["Size of debuff icons on nameplates."] = "Size of debuff icons on nameplates."
-L["Show Debuff Cooldown Text"] = "Show Debuff Cooldown Text"
-L["Show remaining debuff time on each debuff icon."] = "Show remaining debuff time on each debuff icon."
 L["Show Debuff Cooldown Swipe"] = "顯示減益冷卻掃描"
 L["Also show a radial cooldown sweep on each debuff icon."] = "在每個減益圖示上額外顯示放射狀冷卻掃描效果。"
 L["Debuff Horizontal Offset"] = "減益水平偏移"
@@ -249,10 +238,6 @@ L["Choose the visual style of the cooldown sweep. These texture-based styles sta
 L["Shade Fill"] = "陰影填充"
 L["Quadrant Sweep"] = "象限掃描"
 L["Square Radial Sweep"] = "方形放射掃描"
-L["Debuff Cooldown Font Size"] = "Debuff Cooldown Font Size"
-L["Font size for debuff remaining time text."] = "Font size for debuff remaining time text."
-L["Debuff Cooldown Text Position"] = "Debuff Cooldown Text Position"
-L["Choose where the debuff cooldown text is anchored on the icon."] = "Choose where the debuff cooldown text is anchored on the icon."
 L["Reset Aura Customization"] = "重置光環自訂"
 L["Reset Aura Timers"] = "重置光環計時器"
 L["Aura timer settings reset."] = "光環計時器設定已重置。"
@@ -418,7 +403,6 @@ L["Bank"] = "銀行"
 L["Choose which category tabs appear on the bag frame. Changes require closing and reopening bags to take effect."] = "選擇在揹包視窗上顯示哪些分類標籤頁。更改需要關閉並重新開啟揹包才能生效。"
 L["Choose which category tabs appear on the inventory bag frame."] = "選擇在揹包視窗上顯示哪些分類標籤頁。"
 L["Choose which category tabs appear on the bank frame."] = "選擇在銀行視窗上顯示哪些分類標籤頁。"
-L["Display"] = "顯示"
 L["Gold Display"] = "金幣顯示"
 L["Text Only"] = "僅文字"
 L["Gold Icons"] = "金幣圖標"
@@ -478,7 +462,6 @@ L["All-in-one bag replacement with filtering and search"] = "具有過濾和搜�
 -- ============================================================================
 
 -- 子標籤頁
-L["Layout"] = "佈局"
 L["Visibility"] = "可見性"
 
 -- 縮放比例部分
@@ -523,7 +506,6 @@ L["Show Count Text"] = "顯示疊加次數文字"
 L["Hotkey Text"] = "按鍵文字"
 L["Show Hotkey"] = "顯示按鍵"
 L["Show Hotkey Text"] = "顯示按鍵文字"
-L["Show Empty Slots"] = "顯示空欄位"
 L["Show the button frame on pet slots with no ability assigned."] = "在未指定技能的寵物欄位上顯示按鈕邊框。"
 L["Range Indicator"] = "距離指示器"
 L["Show small range indicator point on buttons"] = "在按鈕上顯示小的距離指示點"
@@ -586,10 +568,6 @@ L["Columns"] = "列數"
 L["Buttons Shown"] = "顯示的按鈕數"
 L["Change Button Order"] = "變更按鈕順序"
 L["Button Order"] = "按鈕順序"
-L["Top Left"] = "左上"
-L["Bottom Left"] = "左下"
-L["Top Right"] = "右上"
-L["Bottom Right"] = "右下"
 L["Quick Presets"] = "快速預設"
 L["Apply layout presets to multiple bars at once."] = "將佈局預設同時應用於多個動作條。"
 L["Both 1x12"] = "均為 1x12"
@@ -671,7 +649,6 @@ L["Focus Castbar"] = "焦點施法條"
 
 -- 子標籤頁
 L["Player"] = "玩家"
-L["Target"] = "目標"
 L["Focus"] = "焦點"
 
 -- 通用選項
@@ -817,7 +794,6 @@ L["Enable Animated Border"] = "啟用動畫邊框"
 L["Enable Minimap Decorations"] = "啟用小地圖裝飾"
 L["Animated Effects"] = "動畫效果"
 L["Rotate preset layers when the selected preset includes animation."] = "當選取的預設包含動畫時，旋轉預設圖層。"
-L["Opacity"] = "不透明度"
 L["Hide DragonUI Border"] = "隱藏 DragonUI 邊框"
 
 -- 時間與日曆
@@ -865,7 +841,6 @@ L["Center"] = "中央"
 L["Horizontal position offset"] = "水平位置偏移量"
 L["Vertical position offset"] = "垂直位置偏移量"
 L["Reset quest tracker to default position"] = "將任務追蹤器重置為預設位置"
-L["Font Size"] = "字型大小"
 L["Font size for quest tracker text"] = "任務追蹤器文字的字型大小設定"
 
 -- ============================================================================
@@ -1058,7 +1033,6 @@ L["A UI reload is required to apply this change."] = "需要重新載入介面�
 
 -- 大小和縮放
 L["Size & Scale"] = "大小和縮放"
-L["Bar Height"] = "條高度"
 L["Height of the XP and Reputation bars (in pixels)."] = "經驗值和聲望條的高度（以畫素為單位）。"
 L["Width of the XP and Reputation bars (in pixels)."] = "經驗值和聲望條的寬度（以畫素為單位）。"
 L["Experience Bar Scale"] = "經驗條縮放"
@@ -1363,8 +1337,6 @@ L["Show combo points on the current target nameplate."] = "在目前目標名牌
 L["Show Totem Icons"] = "顯示圖騰圖示"
 L["Totem Icon Only"] = "僅顯示圖騰圖示"
 L["Hide the totem's nameplate entirely and show only its icon."] = "完全隱藏圖騰的名牌，只顯示其圖示。"
-L["Totem Icon Position"] = "Totem Icon Position"
-L["Choose where the totem icon is anchored around the nameplate."] = "Choose where the totem icon is anchored around the nameplate."
 L["Show totem icon on shaman totem nameplates."] = "在薩滿圖騰名牌上顯示圖騰圖示。"
 L["Name and health percent font scale (1-10, default 2)."] = "名字和生命百分比字型縮放 (1-10，預設 2)。"
 L["Size & Position"] = "大小和位置"
@@ -1395,7 +1367,6 @@ L["Inverts threat colors for a tank: green means you hold aggro, red means you l
 L["DPS Mode"] = "DPS模式"
 L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "戰鬥中依仇恨為DPS著色：綠色=無仇恨，黃色=過渡，紅色=你有仇恨。"
 L["Keep all nameplates fully opaque when you have a target."] = "有目標時保持所有名牌不透明。"
-L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "啟用淡出時非目標名牌的透明度 (0.1 - 1.0)。"
 L["Show enemy cast bar on the targeted nameplate."] = "在目標名牌上顯示敵方施法條。"
 L["Name Font"] = "名字字型"
 

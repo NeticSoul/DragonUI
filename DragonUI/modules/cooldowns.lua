@@ -19,8 +19,8 @@ addon.CooldownsModule = CooldownsModule
 
 if addon.RegisterModule then
     addon:RegisterModule("cooldowns", CooldownsModule,
-        (L and L["Cooldown Text"]) or "Cooldown Text",
-        (L and L["Cooldown text on action buttons"]) or "Cooldown text on action buttons")
+        L["Cooldown Text"],
+        L["Cooldown text on action buttons"])
 end
 
 -- Create a table within the main addon object to hold our functions

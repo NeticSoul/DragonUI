@@ -140,7 +140,6 @@ L["Keybinding mode deactivated."] = true
 -- GAME MENU
 -- ============================================================================
 
-L["DragonUI"] = true
 
 -- ============================================================================
 -- MINIMAP MODULE
@@ -226,7 +225,6 @@ L["DragonUI Conflict Warning"] = true
 L["The addon |cFFFFFF00%s|r conflicts with DragonUI."] = true
 L["Reason:"] = true
 L["Disable the conflicting addon now?"] = true
-L["Disable"] = true
 L["Keep Both"] = true
 L["DragonUI - D3D9Ex Warning"] = true
 L["DragonUI detected that your client is using D3D9Ex."] = true
@@ -265,7 +263,6 @@ L["Which minimap do you want to use?"] = true
 L["SexyMap"] = true
 L["DragonUI"] = true
 L["Hybrid"] = true
-L["Recommended"] = true
 
 -- SexyMap options panel
 L["SexyMap Compatibility"] = true

@@ -773,6 +773,13 @@ function UF.TargetStyle.Create(opts)
         if Module.configured then return end
         if not BlizzFrame then return end
 
+        if InCombatLockdown() then
+            if addon.CombatQueue then
+                addon.CombatQueue:Add(configKey .. "_init_frame", InitializeFrame)
+            end
+            return
+        end
+
         -- ---- Create editor overlay ----
         if not Module.overlay then
             Module.overlay = addon.CreateUIFrame(

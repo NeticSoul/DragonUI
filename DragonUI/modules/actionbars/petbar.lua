@@ -18,10 +18,6 @@ local UIParent = UIParent;
 local hooksecurefunc = hooksecurefunc;
 
 -- DragonUI Configuration Functions
-local function GetModuleConfig()
-    return addon:GetModuleConfig("petbar")
-end
-
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("petbar")
 end
@@ -46,8 +42,8 @@ local PetbarModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("petbar", PetbarModule,
-        (addon.L and addon.L["Pet Bar"]) or "Pet Bar",
-        (addon.L and addon.L["Pet action bar positioning and styling"]) or "Pet action bar positioning and styling")
+        addon.L["Pet Bar"],
+        addon.L["Pet action bar positioning and styling"])
 end
 
 -- ============================================================================

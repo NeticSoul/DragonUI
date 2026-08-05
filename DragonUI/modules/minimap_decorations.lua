@@ -45,8 +45,8 @@ addon.MinimapDecorations = MinimapDecorationsModule
 
 if addon.RegisterModule then
     addon:RegisterModule("MinimapDecorations", MinimapDecorationsModule,
-        (addon.L and addon.L["Minimap Decorations"]) or "Minimap Decorations",
-        (addon.L and addon.L["Native animated minimap decoration effects for DragonUI."]) or "Native animated minimap decoration effects for DragonUI.")
+        addon.L["Minimap Decorations"],
+        addon.L["Native animated minimap decoration effects for DragonUI."])
 end
 
 local PRESET_ORDER = {

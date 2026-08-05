@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: |cff1784d1DragonUI|r |cffffffffOptions|r
-## Notes: Configuration UI for DragonUI
-## Author: DragonUI Team
+## Notes: |cffcaf7faConfiguration UI for DragonUI|r
+## Author: NeticSoul
 ## Version: 2.5
 ## LoadOnDemand: 1
 ## Dependencies: DragonUI

@@ -1127,13 +1127,12 @@ local function OnSettingsEnter(self)
     else
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     end
-    GameTooltip:SetText((L and L["Minimap Buttons"]) or "Minimap Buttons")
+    GameTooltip:SetText(L["Minimap Buttons"])
     GameTooltip:AddLine((L and L["Left-click to show or hide minimap addon buttons."])
         or "Left-Click to open minimap buttons.", 1, 0.82, 0, true)
-    GameTooltip:AddLine((L and L["Right-click to open DragonUI settings."])
-        or "Right-click to open DragonUI settings.", 1, 0.82, 0, true)
+    GameTooltip:AddLine(L["Right-click to open DragonUI settings."], 1, 0.82, 0, true)
     if style == STYLE_DUI then
-        GameTooltip:AddLine((L and L["Drag to move"]) or "Drag to move", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine(L["Drag to move"], 0.7, 0.7, 0.7, true)
     end
     GameTooltip:Show()
 end

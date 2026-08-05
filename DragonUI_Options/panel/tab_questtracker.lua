@@ -9,7 +9,6 @@ Quest tracker position and behavior.
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel

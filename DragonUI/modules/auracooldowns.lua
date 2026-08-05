@@ -26,8 +26,8 @@ addon.AuraCooldownsModule = AuraCooldownsModule
 
 if addon.RegisterModule then
     addon:RegisterModule("auracooldowns", AuraCooldownsModule,
-    (addon.L and addon.L["Target & Focus Aura Customization"]) or "Target & Focus Aura Customization",
-    (addon.L and addon.L["Customize target/focus aura icons and timers."]) or "Customize target/focus aura icons and timers.",
+    addon.L["Target & Focus Aura Customization"],
+    addon.L["Customize target/focus aura icons and timers."],
         { lifecyclePrefix = "AuraCooldownText" })
 end
 
@@ -417,12 +417,11 @@ local function GetAuraTiming(unitToken, index, isDebuff)
         return 0, 0
     end
 
-    local duration
-    local expirationTime
+    local duration, expirationTime
     if isDebuff then
-        _, _, _, _, _, duration, expirationTime = UnitDebuff(unitToken, index, "INCLUDE_NAME_PLATE_ONLY")
+        duration, expirationTime = select(6, UnitDebuff(unitToken, index, "INCLUDE_NAME_PLATE_ONLY"))
     else
-        _, _, _, _, _, duration, expirationTime = UnitBuff(unitToken, index)
+        duration, expirationTime = select(6, UnitBuff(unitToken, index))
     end
 
     duration = duration or 0

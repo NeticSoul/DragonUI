@@ -727,7 +727,7 @@ local function TintBagButtonUnusable(itemButton, bag, slot)
     if not texture or locked then
         return
     end
-    local start, duration, enable = GetContainerItemCooldown(bag, slot)
+    local _, duration, enable = GetContainerItemCooldown(bag, slot)
     if duration and duration > 0 and enable == 0 then
         return
     end

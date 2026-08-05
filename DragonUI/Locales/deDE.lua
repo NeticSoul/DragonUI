@@ -259,7 +259,6 @@ L["Which minimap do you want to use?"] = "Welche Minikarte möchtest du verwende
 L["SexyMap"] = "SexyMap"
 L["DragonUI"] = "DragonUI"
 L["Hybrid"] = "Hybrid"
-L["Recommended"] = "Empfohlen"
 
 -- SexyMap options panel
 L["SexyMap Compatibility"] = "SexyMap-Kompatibilität"

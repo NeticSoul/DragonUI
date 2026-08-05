@@ -86,7 +86,6 @@ local moduleState = {
 -- ===============================================================
 -- UTILITY FUNCTIONS
 -- ===============================================================
-local function noop() end
 -- Persistently hides the vanilla PetFrame texts (health/power)
 local function HideBlizzardPetTexts()
     local petTexts = {
@@ -655,7 +654,6 @@ end
 
 -- Always visible in editor mode, not filtered by class
 local function ShouldPetFrameBeVisible()
-    -- RetailUI siempre permite editar el PET frame independientemente de la clase
     return true
 end
 

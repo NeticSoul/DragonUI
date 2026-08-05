@@ -29,6 +29,6 @@ NP.module = NP.module or {
 
 if addon.RegisterModule then
     addon:RegisterModule("nameplates", NP.module,
-        (addon.L and addon.L["Nameplates"]) or "Nameplates",
+        addon.L["Nameplates"],
         (addon.L and addon.L["Apply DragonUI nameplate styling."]) or "Custom health stack on 30300 Blizzard nameplates")
 end

@@ -10,7 +10,6 @@ Individual controls still use AceGUI widgets (skinned by controls.lua).
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 
 local AceGUI = LibStub("AceGUI-3.0")
@@ -702,7 +701,7 @@ end
 
 function Panel:Open(selectTab)
     if InCombatLockdown() then
-        print("|cFFFF0000[DragonUI]|r " .. LO["Cannot open options during combat."])
+        addon:Error(LO["Cannot open options during combat."])
         return
     end
 

@@ -17,8 +17,8 @@ local NoopModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("noop", NoopModule,
-        (addon.L and addon.L["Hide Blizzard"]) or "Hide Blizzard",
-        (addon.L and addon.L["Hide default Blizzard UI elements"]) or "Hide default Blizzard UI elements")
+        addon.L["Hide Blizzard"],
+        addon.L["Hide default Blizzard UI elements"])
 end
 
 -- Forward declare the apply function

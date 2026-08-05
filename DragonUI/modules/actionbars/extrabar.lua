@@ -18,7 +18,8 @@ local LibKeyBound = LibStub("LibKeyBound-1.0", true) -- same short labels as key
 local bars = {}
 
 -- ============================================================================
--- Store: db.char.extrabar[bar.id][i] = spell{spell,spellID?}|item{item}|macro{macrotext,texture,macro}.
+-- Store: db.char.extrabar[bar.id][i] = spell{spell,spellID?}|item{item}|macro{macrotext,texture,macro}
+-- |companion{companionType,creatureID,spell,spellID,texture}.
 -- ============================================================================
 
 -- Slider 7 must match MultiBars@7. Users who dialed 6 for the old visual mismatch → 7 once.
@@ -46,6 +47,9 @@ local function CopySlotData(data)
         return { type = "item", item = data.item }
     elseif data.type == "macro" then
         return { type = "macro", macrotext = data.macrotext, texture = data.texture, macro = data.macro }
+    elseif data.type == "companion" then
+        return { type = "companion", companionType = data.companionType, creatureID = data.creatureID,
+            spell = data.spell, spellID = data.spellID, texture = data.texture }
     end
     return nil
 end
@@ -296,6 +300,53 @@ local function HealSpellName(data)
     end
 end
 
+-- ============================================================================
+-- Companions (mounts / non-combat pets)
+-- ============================================================================
+
+-- Indices shift when companions are learned/unlearned; creatureID/spellID are the stable keys.
+local companionIndexCache = {}
+local function InvalidateCompanionIndexCache()
+    wipe(companionIndexCache)
+end
+
+local function CompanionMatches(data, index)
+    local creatureID, _, spellID = GetCompanionInfo(data.companionType, index)
+    if not creatureID then return false end
+    if data.creatureID then return creatureID == data.creatureID end
+    return data.spellID ~= nil and spellID == data.spellID
+end
+
+local function FindCompanionIndex(data)
+    if not data or not data.companionType then return nil end
+    local key = data.companionType .. ":" .. tostring(data.creatureID or data.spellID)
+    local cached = companionIndexCache[key]
+    if cached == false then return nil end
+    if cached then
+        if CompanionMatches(data, cached) then return cached end
+        companionIndexCache[key] = nil
+    end
+    for i = 1, (GetNumCompanions(data.companionType) or 0) do
+        if CompanionMatches(data, i) then
+            companionIndexCache[key] = i
+            return i
+        end
+    end
+    companionIndexCache[key] = false
+    return nil
+end
+
+-- Snapshot enough to rebuild the button after /reload without the companion list being open.
+local function CompanionSlotData(companionType, index)
+    if not index or (companionType ~= "MOUNT" and companionType ~= "CRITTER") then return false end
+    local creatureID, creatureName, spellID, icon = GetCompanionInfo(companionType, index)
+    if not spellID then return false end
+    local name = GetSpellInfo(spellID) or creatureName
+    if not name then return false end
+    return { type = "companion", companionType = companionType, creatureID = creatureID,
+        spell = name, spellID = spellID, texture = icon }
+end
+
 -- GetActionTexture swaps to the lit icon while its form/stance is active; emulate for non-slot buttons.
 local function GetActiveShapeshiftTexture(data)
     local numForms = GetNumShapeshiftForms() or 0
@@ -499,6 +550,12 @@ local function SpellIsCurrent(spellName)
 end
 
 local function IsButtonCurrent(button)
+    local companion = button:GetSlotData()
+    if companion and companion.type == "companion" then
+        local index = FindCompanionIndex(companion)
+        local active = index and select(5, GetCompanionInfo(companion.companionType, index))
+        return active and true or nil
+    end
     local slotType = button:GetAttribute("type1")
     if slotType == "spell" then
         return SpellIsCurrent(button:GetAttribute("spell1"))
@@ -619,6 +676,17 @@ end
 
 local function SetExtrabarTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    local companion = self:GetSlotData()
+    if companion and companion.type == "companion" then
+        if companion.spellID then
+            GameTooltip:SetHyperlink("spell:" .. companion.spellID)
+        else
+            GameTooltip:SetText(companion.spell or "")
+        end
+        GameTooltip:Show()
+        self.UpdateTooltip = SetExtrabarTooltip
+        return
+    end
     local t = self:GetAttribute("type1")
     local rankToEnsure
     if t == "spell" then
@@ -662,7 +730,7 @@ local function SetExtrabarTooltip(self)
             GameTooltip:SetText(name or MACRO or "Macro")
         end
     else
-        GameTooltip:SetText((addon.L and addon.L["Drag a spell, item or macro here."]) or "Drag a spell, item or macro here.")
+        GameTooltip:SetText(addon.L["Drag a spell, item or macro here."])
     end
     GameTooltip:Show()
     if rankToEnsure then
@@ -678,6 +746,13 @@ end
 
 local Secure = {}
 
+-- 3.3.5a SECURE_ACTIONS has no "companion" and CallCompanion is protected: cast the summon spell.
+local function SecureTypeFor(data)
+    if not data then return nil end
+    if data.type == "companion" then return "spell" end
+    return data.type
+end
+
 function Secure.Apply(button, data)
     if InCombatLockdown() then
         addon.CombatQueue:Add(button.bar.id .. "_apply_" .. button:GetID(), Secure.Apply, button, data)
@@ -690,8 +765,8 @@ function Secure.Apply(button, data)
     button:SetAttribute("macrotext1", nil)
 
     if data then
-        button:SetAttribute("type1", data.type)
-        if data.type == "spell" then
+        button:SetAttribute("type1", SecureTypeFor(data))
+        if data.type == "spell" or data.type == "companion" then
             button:SetAttribute("spell1", data.spell)
         elseif data.type == "item" then
             button:SetAttribute("item1", "item:" .. data.item)
@@ -720,6 +795,9 @@ local function PutDataOnCursor(data)
         PickupItem(data.item)
     elseif data.type == "macro" and data.macro then
         PickupMacro(data.macro)
+    elseif data.type == "companion" then
+        local index = FindCompanionIndex(data)
+        if index then PickupCompanion(data.companionType, index) end
     end
 end
 
@@ -740,6 +818,9 @@ local function CursorToData()
     elseif kind == "macro" then
         local _, texture, body = GetMacroInfo(a)
         return { type = "macro", macrotext = body, texture = texture, macro = a }
+    elseif kind == "companion" then
+        -- ("companion", index, "MOUNT"|"CRITTER")
+        return CompanionSlotData(b, a)
     elseif kind == "action" then
         -- Native bar drag: GetCursorInfo is ("action", slot).
         local actionType, id, subType, actionSpellID = GetActionInfo(a)
@@ -758,6 +839,8 @@ local function CursorToData()
         elseif actionType == "macro" then
             local _, texture, body = GetMacroInfo(id)
             return { type = "macro", macrotext = body, texture = texture, macro = id }
+        elseif actionType == "companion" then
+            return CompanionSlotData(subType, id)
         end
         return false
     end
@@ -891,6 +974,8 @@ function ButtonProto:UpdateIcon(data)
         texture = GetItemIcon(data.item) or select(10, GetItemInfo(data.item))
     elseif data.type == "macro" then
         texture = data.texture
+    elseif data.type == "companion" then
+        texture = data.texture or (data.spellID and select(3, GetSpellInfo(data.spellID)))
     end
     if texture then
         self.icon:SetTexture(texture)
@@ -991,6 +1076,16 @@ function ButtonProto:UpdateGridVisibility()
 end
 
 function ButtonProto:UpdateCooldown()
+    local companion = self:GetSlotData()
+    if companion and companion.type == "companion" then
+        local index = FindCompanionIndex(companion)
+        if index then
+            ApplyCooldown(self.cooldown, GetCompanionCooldown(companion.companionType, index))
+        else
+            ApplyCooldown(self.cooldown, 0, 0, 0)
+        end
+        return
+    end
     local t = self:GetAttribute("type1")
     if t == "spell" then
         local data = self:GetSlotData()
@@ -1041,6 +1136,12 @@ function ButtonProto:UpdateCount()
 end
 
 function ButtonProto:UpdateUsable()
+    local companion = self:GetSlotData()
+    if companion and companion.type == "companion" then
+        self.icon:SetVertexColor(1, 1, 1)
+        ApplyRangeIndicator(self, nil)
+        return
+    end
     local t = self:GetAttribute("type1")
     local spellName, itemId
     if t == "spell" then
@@ -1163,7 +1264,7 @@ local function Button_PostClick(self)
     if self._extrabarRestoreType and not InCombatLockdown() then
         self._extrabarRestoreType = nil
         local data = self:GetSlotData()
-        if data then Secure.SetType1(self, data.type) end
+        if data then Secure.SetType1(self, SecureTypeFor(data)) end
     end
     self:UpdateChecked()
 end
@@ -1688,8 +1789,8 @@ local ExtraBar1 = CreateExtraBar({
     buttonNamePrefix = "DragonUI_ExtraBarButton",
     bindingLabel = "DragonUI Extra Bar - Button ",
     numButtons = 12,
-    displayName = (addon.L and addon.L["Extra Bar"]) or "Extra Bar",
-    description = (addon.L and addon.L["A standalone action bar, independent of any class bonus bar"]) or "A standalone action bar, independent of any class bonus bar",
+    displayName = addon.L["Extra Bar"],
+    description = addon.L["A standalone action bar, independent of any class bonus bar"],
 })
 
 function addon.RefreshExtrabarSystem()
@@ -1774,6 +1875,9 @@ initFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 initFrame:RegisterEvent("ACTIONBAR_SHOWGRID")
 initFrame:RegisterEvent("ACTIONBAR_HIDEGRID")
 initFrame:RegisterEvent("SPELLS_CHANGED")
+initFrame:RegisterEvent("COMPANION_UPDATE")
+initFrame:RegisterEvent("COMPANION_LEARNED")
+initFrame:RegisterEvent("COMPANION_UNLEARNED")
 initFrame:RegisterEvent("START_AUTOREPEAT_SPELL")
 initFrame:RegisterEvent("STOP_AUTOREPEAT_SPELL")
 initFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
@@ -1817,6 +1921,7 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
         end
     elseif event == "PLAYER_ENTERING_WORLD" then
         InvalidateActionSlotCache()
+        InvalidateCompanionIndexCache()
         RequestRefreshAll()
         ForAppliedBars("UpdateAllGridVisibility")
     elseif event == "ACTIONBAR_SHOWGRID" then
@@ -1828,6 +1933,9 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
         RequestRefreshAll()
     elseif event == "SPELLS_CHANGED" then
         InvalidateBookSlotCache()
+        RequestRefreshAll()
+    elseif event == "COMPANION_LEARNED" or event == "COMPANION_UNLEARNED" or event == "COMPANION_UPDATE" then
+        InvalidateCompanionIndexCache()
         RequestRefreshAll()
     elseif event == "UPDATE_BINDINGS" then
         for _, bar in ipairs(bars) do

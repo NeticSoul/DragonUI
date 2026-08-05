@@ -11,7 +11,6 @@ if not addon then return end
 
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel
-local L = addon.L
 local LO = addon.LO
 
 -- ============================================================================

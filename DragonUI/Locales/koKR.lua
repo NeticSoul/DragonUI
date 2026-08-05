@@ -259,7 +259,6 @@ L["Which minimap do you want to use?"] = "ì–´ë–¤ ë¯¸ë‹ˆë§µì
 L["SexyMap"] = "SexyMap"
 L["DragonUI"] = "DragonUI"
 L["Hybrid"] = "í•˜ì´ë¸Œë¦¬ë“œ"
-L["Recommended"] = "ê¶Œìž¥"
 
 -- SexyMap options panel
 L["SexyMap Compatibility"] = "SexyMap í˜¸í™˜ì„±"

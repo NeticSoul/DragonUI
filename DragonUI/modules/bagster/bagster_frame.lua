@@ -28,9 +28,9 @@ local function SetupIconButton(btn, parentFrame)
     btn.icon:ClearAllPoints()
     btn.icon:SetPoint("CENTER", btn)
 
-    btn:SetScript("OnEvent", function(self, event, ...)
-        if self:IsShown() and arg1 == "player" then
-            SetPortraitTexture(self.icon, arg1)
+    btn:SetScript("OnEvent", function(self, event, unit)
+        if self:IsShown() and unit == "player" then
+            SetPortraitTexture(self.icon, unit)
         end
     end)
     btn:SetScript("OnShow", function(self)

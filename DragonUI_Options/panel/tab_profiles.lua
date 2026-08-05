@@ -10,7 +10,6 @@ Provides: select profile, copy, delete, reset.
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 local AceGUI = LibStub("AceGUI-3.0")
 local C = addon.PanelControls
@@ -91,7 +90,7 @@ local function BuildProfilesTab(scroll)
         setFunc = function(val)
             if val then
                 db:CopyProfile(val)
-                print("|cFF00FF00[DragonUI]|r " .. LO["Copied profile: "] .. val)
+                addon:Print(LO["Copied profile: "] .. val)
                 Panel:SelectTab("profiles")
                 StaticPopup_Show("DRAGONUI_RELOAD_UI")
             end
@@ -148,7 +147,7 @@ local function BuildProfilesTab(scroll)
                 if extraMessage and extraMessage ~= "" then
                     msg = msg .. " " .. extraMessage
                 end
-                print("|cFF00FF00[DragonUI]|r " .. msg)
+                addon:Print(msg)
                 ReloadUI()
             end
 

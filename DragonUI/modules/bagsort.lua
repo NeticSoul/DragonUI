@@ -1387,8 +1387,6 @@ local function SortBankBags()
         DEFAULT_CHAT_FRAME:AddMessage(string.format("|cff00cc66=== %d MOVES ===|r", #moves))
         for i = #moves, 1, -1 do
             local s, t = decode_move(moves[i])
-            local sid = bag_ids[s] or 0
-            local tid = bag_ids[t] or 0
             DEFAULT_CHAT_FRAME:AddMessage(string.format("  move: [%d]->  [%d]", s, t))
         end
     end
@@ -1675,7 +1673,6 @@ local function AttachBagsterButtons(frame, sortRef, clearRef, sellScrapRef, sort
     local frameName = frame:GetName()
     local searchBox = _G[frameName .. "Search"]
     local bagToggle = _G[frameName .. "BagToggle"]
-    local resetBtn = _G[frameName .. "Reset"]
 
     local sortBtn = sortRef or CreateSortButton(sortBtnName, frame, sortFunc, tooltipText, 0.55)
     local clearBtn = clearRef or CreateClearLocksButton(clearBtnName, frame, 0.55)

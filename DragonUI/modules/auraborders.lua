@@ -18,9 +18,8 @@ addon.AuraBordersModule = AuraBordersModule
 
 if addon.RegisterModule then
     addon:RegisterModule("auraborders", AuraBordersModule,
-        (addon.L and addon.L["Aura Borders"]) or "Aura Borders",
-        (addon.L and addon.L["Modern borders on buff and debuff icons."])
-            or "Modern borders on buff and debuff icons.",
+        addon.L["Aura Borders"],
+        addon.L["Modern borders on buff and debuff icons."],
         { lifecyclePrefix = "AuraBorders" })
 end
 

@@ -34,17 +34,13 @@ local MicromenuModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("micromenu", MicromenuModule,
-        (addon.L and addon.L["Micro Menu"]) or "Micro Menu",
-        (addon.L and addon.L["Micro menu and bags system styling and positioning"]) or "Micro menu and bags system styling and positioning")
+        addon.L["Micro Menu"],
+        addon.L["Micro menu and bags system styling and positioning"])
 end
 
 -- ============================================================================
 -- CONFIGURATION FUNCTIONS
 -- ============================================================================
-
-local function GetModuleConfig()
-    return addon:GetModuleConfig("micromenu")
-end
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("micromenu")
@@ -129,7 +125,6 @@ local bagslots = {_G.CharacterBag0Slot, _G.CharacterBag1Slot, _G.CharacterBag2Sl
 
 -- State tracking
 local originalBlizzardHandlers = {}
-local bags_initialized = false
 local MainMenuMicroButtonMixin = {};
 
 -- ============================================================================
@@ -1013,6 +1008,1561 @@ end
 
 
 
+-- ============================================================================
+-- MICRO MENU INTERNALS
+-- ============================================================================
+-- Frames and per-login state are created by ApplyMicromenuSystem(); they are declared
+-- here so the functions below close over them at file scope.
+
+local hidePendingTime = nil
+local charPushHooksRegistered = false
+local MICRO_LAYOUT_BASE_Y = 55
+local hideFramesScheduler, pUiBagsBar, eventFrame3
+
+local function HideUnwantedBagFrames()
+    -- Process all secondary bag slots
+    for i, bags in pairs(bagslots) do
+        local bagName = bags:GetName()
+
+        local possibleFrames = {bagName .. "Background", bagName .. "Border", bagName .. "Frame",
+                                bagName .. "Texture", bagName .. "NormalTexture", bagName .. "Highlight", bagName .. "Glow", bagName .. "Green",
+                                bagName .. "NormalTexture2", bagName .. "IconBorder", bagName .. "Flash",
+                                bagName .. "NewItemTexture", bagName .. "Shine", bagName .. "NewItemGlow"}
+
+        for _, frameName in pairs(possibleFrames) do
+            local frame = _G[frameName]
+            if frame and frame.Hide then
+                frame:Hide()
+                if frame.SetAlpha then
+                    frame:SetAlpha(0)
+                end
+            end
+        end
+
+        local normalTexture = bags:GetNormalTexture()
+        if normalTexture then
+            normalTexture:SetAlpha(0)
+            normalTexture:Hide()
+        end
+
+        -- Hide problematic texture regions
+        local numRegions = bags:GetNumRegions()
+        for j = 1, numRegions do
+            local region = select(j, bags:GetRegions())
+            if region and region:GetObjectType() == "Texture" then
+                -- Keep DragonUI managed textures visible; only suppress
+                -- Blizzard default layers.
+                if region == bags.customBorder or region == bags.background then
+                    region:Show()
+                    if region.SetAlpha then
+                        region:SetAlpha(1)
+                    end
+                else
+                local texture = region:GetTexture()
+                if texture then
+                    local textureLower = tostring(texture):lower()
+                    
+                    -- Skip item icons - don't hide them
+                    if textureLower:find("interface\\icons\\") then
+                        -- This is an item icon - don't hide it
+                    else
+                        -- Hide only UI elements, not icons
+                        if textureLower:find("background") or textureLower:find("border") or textureLower:find("frame") or
+                            textureLower:find("highlight") or textureLower:find("green") or textureLower:find("glow") or
+                            textureLower:find("flash") or textureLower:find("shine") then
+                            region:Hide()
+                            if region.SetAlpha then
+                                region:SetAlpha(0)
+                            end
+                        end
+                    end
+                end
+                end
+            end
+        end
+    end
+
+    -- Handle KeyRing with same approach
+    if KeyRingButton then
+        local keyRingName = KeyRingButton:GetName()
+        local possibleFrames = {keyRingName .. "Background", keyRingName .. "Border", keyRingName .. "Frame",
+                                keyRingName .. "Texture", keyRingName .. "Highlight", keyRingName .. "Glow",
+                                keyRingName .. "Green", keyRingName .. "NormalTexture2",
+                                keyRingName .. "IconBorder", keyRingName .. "Flash", keyRingName .. "Shine",
+                                keyRingName .. "NewItemGlow"}
+
+        for _, frameName in pairs(possibleFrames) do
+            local frame = _G[frameName]
+            if frame and frame.Hide then
+                frame:Hide()
+                if frame.SetAlpha then
+                    frame:SetAlpha(0)
+                end
+            end
+        end
+    end
+end
+
+local function ScheduleHideFrames(delay)
+    local target = GetTime() + (delay or 0)
+    if hidePendingTime and hidePendingTime <= target then
+        return -- an earlier execution is already pending
+    end
+    hidePendingTime = target
+
+    if not hideFramesScheduler:GetScript("OnUpdate") then
+        hideFramesScheduler:SetScript("OnUpdate", function(self)
+            if hidePendingTime and GetTime() >= hidePendingTime then
+                HideUnwantedBagFrames()
+                hidePendingTime = nil
+                self:SetScript("OnUpdate", nil)
+            end
+        end)
+    end
+end
+
+local function SetupPVPButton(button)
+    -- Mirror the Character button pattern:
+    -- Instead of fighting WoW's internal NormalTexture alpha management,
+    -- we create our own ARTWORK texture (DragonUIPVPIcon) that we control
+    -- exclusively, just like Character uses MicroButtonPortrait.
+    local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\micropvp'
+    local englishFaction = UnitFactionGroup('player')
+    local backgroundTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
+    local buttonWidth, buttonHeight = button:GetSize()
+    local dx, dy = -1, 1
+    local offX, offY = button:GetPushedTextOffset()
+    local sizeX, sizeY = buttonWidth, buttonHeight
+
+    -- ---- Icon layer: our own ARTWORK texture, never touched by WoW's button system ----
+    if not button.DragonUIPVPIcon then
+        local icon = button:CreateTexture(nil, 'ARTWORK')
+        button.DragonUIPVPIcon = icon
+    end
+
+    local icon = button.DragonUIPVPIcon
+    if englishFaction == 'Alliance' then
+        icon:SetTexture(microTexture)
+        icon:SetTexCoord(0, 118 / 256, 0, 151 / 256)
+    elseif englishFaction == 'Horde' then
+        icon:SetTexture(microTexture)
+        icon:SetTexCoord(118 / 256, 236 / 256, 0, 151 / 256)
+    else
+        -- Faction unknown: use atlas grayscale fallback
+        icon:set_atlas('ui-hud-micromenu-pvp-up-2x')
+    end
+    icon:ClearAllPoints()
+    icon:SetPoint('CENTER', button, 'CENTER', 0, 0)
+    icon:SetSize(buttonWidth, buttonHeight)
+    icon:SetAlpha(1.0)
+    icon:Show()
+
+    -- ---- Hover highlight: reuse GetHighlightTexture() with faction texture + BlendMode ADD
+    -- WoW shows/hides this automatically on mouse enter/leave.
+    local highlightTexture = button:GetHighlightTexture()
+    if highlightTexture then
+        if englishFaction == 'Alliance' then
+            highlightTexture:SetTexture(microTexture)
+            highlightTexture:SetTexCoord(0, 118 / 256, 0, 151 / 256)
+        elseif englishFaction == 'Horde' then
+            highlightTexture:SetTexture(microTexture)
+            highlightTexture:SetTexCoord(118 / 256, 236 / 256, 0, 151 / 256)
+        else
+            highlightTexture:set_atlas('ui-hud-micromenu-pvp-mouseover-2x')
+        end
+        highlightTexture:ClearAllPoints()
+        highlightTexture:SetAllPoints(button)
+        highlightTexture:SetBlendMode('ADD')
+        highlightTexture:SetAlpha(0.5)
+    end
+
+    -- ---- Background slot texture ----
+    if not button.DragonUIBackground then
+        local bg = button:CreateTexture(nil, 'BACKGROUND')
+        bg:SetTexture(backgroundTexture)
+        bg:SetSize(sizeX, sizeY + 1)
+        bg:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
+        bg:SetPoint('CENTER', dx, dy)
+        button.DragonUIBackground = bg
+
+        local bgPushed = button:CreateTexture(nil, 'BACKGROUND')
+        bgPushed:SetTexture(backgroundTexture)
+        bgPushed:SetSize(sizeX, sizeY + 1)
+        bgPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
+        bgPushed:SetPoint('CENTER', dx + offX, dy + offY)
+        bgPushed:Hide()
+        button.DragonUIBackgroundPushed = bgPushed
+    else
+        button.DragonUIBackground:SetTexture(backgroundTexture)
+        button.DragonUIBackground:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
+        button.DragonUIBackground:ClearAllPoints()
+        button.DragonUIBackground:SetPoint('CENTER', dx, dy)
+        button.DragonUIBackground:SetSize(sizeX, sizeY + 1)
+
+        if button.DragonUIBackgroundPushed then
+            button.DragonUIBackgroundPushed:SetTexture(backgroundTexture)
+            button.DragonUIBackgroundPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
+            button.DragonUIBackgroundPushed:ClearAllPoints()
+            button.DragonUIBackgroundPushed:SetPoint('CENTER', dx + offX, dy + offY)
+            button.DragonUIBackgroundPushed:SetSize(sizeX, sizeY + 1)
+        end
+    end
+
+    -- ---- State tracking ----
+    button.dragonUIState = button.dragonUIState or {}
+    button.dragonUIState.pushed = IsSpecialMicroButtonActive(button, "PVP")
+    button.dragonUILastState = button.dragonUIState.pushed
+
+    -- ---- State handler: only manipulates DragonUIPVPIcon ----
+    button.HandleDragonUIState = function()
+        local pvpIcon = button.DragonUIPVPIcon
+        local state = button.dragonUIState
+        local hlTex = button:GetHighlightTexture()
+        if state and state.pushed then
+            if pvpIcon then
+                pvpIcon:ClearAllPoints()
+                pvpIcon:SetPoint('CENTER', button, 'CENTER', offX, offY)
+                pvpIcon:SetAlpha(0.7)
+            end
+            if button.DragonUIBackground then
+                button.DragonUIBackground:Hide()
+            end
+            if button.DragonUIBackgroundPushed then
+                button.DragonUIBackgroundPushed:Show()
+            end
+            -- Shift highlight to match icon pushed displacement
+            if hlTex then
+                hlTex:ClearAllPoints()
+                hlTex:SetPoint('TOPLEFT', button, 'TOPLEFT', offX, offY)
+                hlTex:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', offX, offY)
+            end
+        else
+            if pvpIcon then
+                pvpIcon:ClearAllPoints()
+                pvpIcon:SetPoint('CENTER', button, 'CENTER', 0, 0)
+                pvpIcon:SetAlpha(1.0)
+            end
+            if button.DragonUIBackground then
+                button.DragonUIBackground:Show()
+            end
+            if button.DragonUIBackgroundPushed then
+                button.DragonUIBackgroundPushed:Hide()
+            end
+            if hlTex then
+                hlTex:ClearAllPoints()
+                hlTex:SetAllPoints(button)
+            end
+        end
+    end
+
+    -- ---- Mouse feedback (immediate response on click) ----
+    if not button.DragonUIStateHooks then
+        button:HookScript('OnMouseDown', function(self)
+            if self.dragonUIState then
+                self.dragonUIState.pushed = true
+            end
+            if self.HandleDragonUIState then
+                self.HandleDragonUIState()
+            end
+        end)
+        button:HookScript('OnMouseUp', function(self)
+            local currentState = IsSpecialMicroButtonActive(self, "PVP")
+            self.dragonUILastState = currentState
+            if self.dragonUIState then
+                self.dragonUIState.pushed = currentState
+            end
+            if self.HandleDragonUIState then
+                self.HandleDragonUIState()
+            end
+        end)
+        button.DragonUIStateHooks = true
+    end
+
+    -- Apply initial state
+    button.HandleDragonUIState()
+end
+
+local function SetupCharacterButton(button)
+    -- STEP 1: Use Blizzard's native portrait (like RetailUI)
+    local portraitTexture = MicroButtonPortrait
+    if not portraitTexture then
+        return
+    end
+    portraitTexture:ClearAllPoints()
+    portraitTexture:SetPoint('CENTER', button, 'CENTER', 0, -0.5)
+    portraitTexture:SetSize(18, 24)
+    portraitTexture:SetAlpha(1)
+
+    -- Hide Blizzard's native normal/pushed/highlight textures so they
+    -- don't bleed through as a background after /reload.  We use our
+    -- own DragonUIBackground/BackgroundPushed instead.
+    local nt = button:GetNormalTexture()
+    if nt then nt:SetTexture(nil) end
+    local pt = button:GetPushedTexture()
+    if pt then pt:SetTexture(nil) end
+    local ht = button:GetHighlightTexture()
+    if ht then ht:SetTexture(nil) end
+    local dt = button:GetDisabledTexture()
+    if dt then dt:SetTexture(nil) end
+
+    -- STEP 2: Hover highlight — OVERLAY with ADD blend.
+    -- Uses SetPortraitTexture directly (not GetTexture clone, which returns
+    -- nil for 3D portrait renders). SetAllPoints(portraitTexture) guarantees
+    -- identical position/size — same technique as DragonUIPortraitDim.
+    local function RefreshCharHighlight(btn)
+        local hl = btn.DragonUICharHighlight
+        if not hl then return end
+        SetPortraitTexture(hl, "player")
+        hl:SetTexCoord(MicroButtonPortrait:GetTexCoord())
+        hl:SetBlendMode('ADD')
+        hl:SetAlpha(1)
+        hl:SetAllPoints(MicroButtonPortrait)
+    end
+
+    if not button.DragonUICharHighlight then
+        local hl = button:CreateTexture(nil, 'OVERLAY')
+        hl:SetAllPoints(portraitTexture)
+        hl:Hide()
+        button.DragonUICharHighlight = hl
+
+        button:HookScript('OnEnter', function(self)
+            if self.DragonUICharHighlight then
+                RefreshCharHighlight(self)
+                self.DragonUICharHighlight:Show()
+            end
+        end)
+        button:HookScript('OnLeave', function(self)
+            if self.DragonUICharHighlight then
+                self.DragonUICharHighlight:Hide()
+            end
+        end)
+    end
+
+    -- Global function hooks: must re-register every reload (Lua state resets).
+    -- Sync highlight TexCoord and force portrait alpha=1 so Blizzard's
+    -- SetPushed/SetNormal don't darken the portrait.
+    if not charPushHooksRegistered then
+        hooksecurefunc('CharacterMicroButton_SetPushed', function()
+            if not MicromenuModule.applied or not IsModuleEnabled() then
+                return
+            end
+
+            local isGS = addon and addon.db and addon.db.profile
+                and addon.db.profile.micromenu and addon.db.profile.micromenu.grayscale_icons
+            if isGS then return end
+            MicroButtonPortrait:SetAlpha(0.7)
+            local nt = button:GetNormalTexture()
+            if nt then nt:SetTexture(nil) end
+            local pt = button:GetPushedTexture()
+            if pt then pt:SetTexture(nil) end
+            local hl = button.DragonUICharHighlight
+            if hl and hl:IsShown() then
+                hl:SetTexCoord(MicroButtonPortrait:GetTexCoord())
+            end
+        end)
+        hooksecurefunc('CharacterMicroButton_SetNormal', function()
+            if not MicromenuModule.applied or not IsModuleEnabled() then
+                return
+            end
+
+            local isGS = addon and addon.db and addon.db.profile
+                and addon.db.profile.micromenu and addon.db.profile.micromenu.grayscale_icons
+            if isGS then return end
+            MicroButtonPortrait:SetAlpha(1)
+            local nt = button:GetNormalTexture()
+            if nt then nt:SetTexture(nil) end
+            local pt = button:GetPushedTexture()
+            if pt then pt:SetTexture(nil) end
+            local hl = button.DragonUICharHighlight
+            if hl and hl:IsShown() then
+                hl:SetTexCoord(MicroButtonPortrait:GetTexCoord())
+            end
+        end)
+        charPushHooksRegistered = true
+    end
+    RefreshCharHighlight(button)
+    button.DragonUICharHighlight:Hide()
+
+    -- Keep highlight in sync when portrait model updates (first login).
+    if not button.DragonUIPortraitEventRegistered then
+        button:RegisterEvent("UNIT_PORTRAIT_UPDATE")
+        button:HookScript("OnEvent", function(self, event, unit)
+            if event == "UNIT_PORTRAIT_UPDATE" and unit == "player" then
+                local isGrayscale = addon and addon.db and addon.db.profile
+                    and addon.db.profile.micromenu and addon.db.profile.micromenu.grayscale_icons
+                if isGrayscale then return end
+                RefreshCharHighlight(self)
+            end
+        end)
+        button.DragonUIPortraitEventRegistered = true
+    end
+
+    -- STEP 3: Background only (like other buttons)
+    if not button.DragonUIBackground then
+        local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
+        local dx, dy = -1, 1
+        local offX, offY = button:GetPushedTextOffset()
+        local sizeX, sizeY = button:GetSize()
+
+        local bg = button:CreateTexture(nil, 'BACKGROUND')
+        bg:SetTexture(microTexture)
+        bg:SetSize(sizeX, sizeY + 1)
+        bg:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
+        bg:SetPoint('CENTER', dx, dy)
+        button.DragonUIBackground = bg
+
+        local bgPushed = button:CreateTexture(nil, 'BACKGROUND')
+        bgPushed:SetTexture(microTexture)
+        bgPushed:SetSize(sizeX, sizeY + 1)
+        bgPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
+        bgPushed:SetPoint('CENTER', dx + offX, dy + offY)
+        bgPushed:Hide()
+        button.DragonUIBackgroundPushed = bgPushed
+
+        -- STEP 3: Initialize state tracking properties
+        button.dragonUIState = {
+            pushed = IsSpecialMicroButtonActive(button, "Character")
+        }
+        button.dragonUILastState = button.dragonUIState.pushed
+
+        button.HandleDragonUIState = function()
+            local state = button.dragonUIState
+            if state and state.pushed then
+                MicroButtonPortrait:SetAlpha(0.7)
+                bg:Hide()
+                bgPushed:Show()
+            else
+                MicroButtonPortrait:SetAlpha(1)
+                bg:Show()
+                bgPushed:Hide()
+            end
+        end
+
+        button.HandleDragonUIState()
+    else
+        -- Re-apply geometry/visibility every pass to survive late Blizzard updates.
+        local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
+        local dx, dy = -1, 1
+        local offX, offY = button:GetPushedTextOffset()
+        local sizeX, sizeY = button:GetSize()
+
+        button.DragonUIBackground:SetTexture(microTexture)
+        button.DragonUIBackground:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
+        button.DragonUIBackground:ClearAllPoints()
+        button.DragonUIBackground:SetPoint('CENTER', dx, dy)
+        button.DragonUIBackground:SetSize(sizeX, sizeY + 1)
+
+        if button.DragonUIBackgroundPushed then
+            button.DragonUIBackgroundPushed:SetTexture(microTexture)
+            button.DragonUIBackgroundPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
+            button.DragonUIBackgroundPushed:ClearAllPoints()
+            button.DragonUIBackgroundPushed:SetPoint('CENTER', dx + offX, dy + offY)
+            button.DragonUIBackgroundPushed:SetSize(sizeX, sizeY + 1)
+        end
+
+        button.dragonUIState = button.dragonUIState or { pushed = false }
+
+        -- Delegate to the existing handler for consistent state application
+        if button.HandleDragonUIState then
+            button.HandleDragonUIState()
+        end
+    end
+end
+
+function MainMenuMicroButtonMixin:bagbuttons_setup()
+    MicromenuModule.hooks = MicromenuModule.hooks or {}
+
+    -- Setup main backpack button
+    MainMenuBarBackpackButton:SetSize(50, 50)
+    MainMenuBarBackpackButton:SetNormalTexture(nil)
+    MainMenuBarBackpackButton:SetPushedTexture(nil)
+    MainMenuBarBackpackButton:SetHighlightTexture ''
+    MainMenuBarBackpackButton:SetCheckedTexture ''
+    do
+        local ht = MainMenuBarBackpackButton:GetHighlightTexture()
+        ht:SetAllPoints()
+        ht:SetBlendMode('ADD')
+        ht:set_atlas('bag-main-highlight-2x')
+        local ct = MainMenuBarBackpackButton:GetCheckedTexture()
+        ct:SetAllPoints()
+        ct:SetBlendMode('ADD')
+        ct:SetDrawLayer('OVERLAY', 7)
+        ct:set_atlas('bag-main-highlight-2x')
+    end
+    MainMenuBarBackpackButtonIconTexture:set_atlas('bag-main-2x')
+
+    -- Backpack position is owned by the overlay; anchoring it here would fight it.
+    MainMenuBarBackpackButtonCount:SetClearPoint('CENTER', MainMenuBarBackpackButton, 'BOTTOM', 0, 14)
+    CharacterBag0Slot:SetClearPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
+
+    -- Setup KeyRingButton
+    KeyRingButton:SetSize(34, 34)
+    KeyRingButton:SetClearPoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
+    KeyRingButton:SetNormalTexture ''
+    KeyRingButton:SetPushedTexture(nil)
+    KeyRingButton:SetHighlightTexture ''
+    KeyRingButton:SetCheckedTexture ''
+
+    local highlight = KeyRingButton:GetHighlightTexture();
+    highlight:SetAllPoints();
+    highlight:SetBlendMode('ADD');
+    highlight:SetAlpha(.4);
+    highlight:set_atlas('bag-border-highlight-2x', true)
+    KeyRingButton:GetNormalTexture():set_atlas('bag-reagent-border-2x')
+    do
+        local ct = KeyRingButton:GetCheckedTexture()
+        ct:SetAllPoints()
+        ct:SetBlendMode('ADD')
+        ct:SetDrawLayer('OVERLAY', 7)
+        ct:set_atlas('bag-border-highlight-2x')
+    end
+    -- Bagster replaces ContainerFrame_OnShow checked sync; highlight backpack/bag slots instead
+    local function SyncKeyRingButton()
+        if addon.BagsterModule and addon.BagsterModule.BagsterModule
+            and addon.BagsterModule.BagsterModule.applied
+            and addon.BagsterHighlightMainMenuBags then
+            addon.BagsterHighlightMainMenuBags()
+            return
+        end
+        if KeyRingButton then
+            KeyRingButton:SetChecked(IsBagOpen(-2) and 1 or nil)
+        end
+    end
+
+    if not MicromenuModule.hooks.KeyRingSyncHooks then
+        hooksecurefunc("ToggleKeyRing", SyncKeyRingButton)
+        hooksecurefunc("CloseAllBags", function()
+            if addon.BagsterModule and addon.BagsterModule.BagsterModule
+                and addon.BagsterModule.BagsterModule.applied
+                and addon.BagsterHighlightMainMenuBags then
+                addon.BagsterHighlightMainMenuBags()
+                return
+            end
+            if KeyRingButton then
+                KeyRingButton:SetChecked(nil)
+            end
+        end)
+        hooksecurefunc("ContainerFrame_OnHide", SyncKeyRingButton)
+        MicromenuModule.hooks.KeyRingSyncHooks = true
+    end
+
+    local keyringIcon = KeyRingButtonIconTexture
+    if keyringIcon then
+        keyringIcon:ClearAllPoints()
+        keyringIcon:SetPoint('TOPRIGHT', KeyRingButton, 'TOPRIGHT', -5, -2.9);
+        keyringIcon:SetPoint('BOTTOMLEFT', KeyRingButton, 'BOTTOMLEFT', 2.9, 5);
+        pcall(function()
+            keyringIcon:SetTexCoord(.08, .92, .08, .92)
+        end)
+    end
+
+    if KeyRingButtonCount then
+        KeyRingButtonCount:SetClearPoint('CENTER', KeyRingButton, 'CENTER', 0, -10);
+        KeyRingButtonCount:SetDrawLayer('OVERLAY')
+    end
+
+    -- Setup individual bag slots
+    for _, bags in pairs(bagslots) do
+        bags:SetHighlightTexture ''
+        bags:SetCheckedTexture ''
+        bags:SetPushedTexture(nil)
+        bags:SetNormalTexture ''
+        bags:SetSize(28, 28)
+
+        local normalTexture = bags:GetNormalTexture()
+        if normalTexture then
+            normalTexture:SetAlpha(0)
+            normalTexture:Hide()
+        end
+
+        bags:GetCheckedTexture():SetAllPoints()
+        bags:GetCheckedTexture():SetBlendMode('ADD')
+        bags:GetCheckedTexture():SetDrawLayer('OVERLAY', 7)
+        bags:GetCheckedTexture():set_atlas('bag-border-highlight-2x')
+
+        local highlight = bags:GetHighlightTexture();
+        highlight:SetAllPoints();
+        highlight:SetBlendMode('ADD');
+        highlight:SetAlpha(.4);
+        highlight:set_atlas('bag-border-highlight-2x', true)
+
+        local icon = _G[bags:GetName() .. 'IconTexture']
+        if icon then
+            icon:ClearAllPoints()
+            icon:SetPoint('TOPRIGHT', bags, 'TOPRIGHT', -5, -2.9);
+            icon:SetPoint('BOTTOMLEFT', bags, 'BOTTOMLEFT', 2.9, 5);
+            pcall(function()
+                icon:SetTexCoord(.08, .92, .08, .92)
+            end)
+        end
+
+        if not bags.customBorder then
+            bags.customBorder = bags:CreateTexture(nil, 'OVERLAY')
+            bags.customBorder:SetPoint('CENTER')
+            bags.customBorder:set_atlas('bag-border-2x', true)
+        end
+        bags.customBorder:Show()
+        bags.customBorder:SetAlpha(1)
+
+        local w, h = bags.customBorder:GetSize()
+        if not bags.background then
+            bags.background = bags:CreateTexture(nil, 'BACKGROUND')
+            bags.background:SetSize(w, h)
+            bags.background:SetPoint('CENTER')
+            bags.background:SetTexture(addon._dir .. 'Bags\\bagslots2x')
+            bags.background:SetTexCoord(295 / 512, 356 / 512, 64 / 128, 125 / 128)
+        end
+        bags.background:Show()
+        bags.background:SetAlpha(1)
+
+        local count = _G[bags:GetName() .. 'Count']
+        count:SetClearPoint('CENTER', 0, -10);
+        count:SetDrawLayer('OVERLAY')
+    end
+
+    if not pUiBagsBar.registeredInEditor then
+        -- Calculate overlay size to exactly match the visible bag elements.
+        -- Layout (right to left from backpack right edge):
+        --   Backpack(50) + gap(14) + 4xBag(28)+3xgap(4) = 188
+        --   + KeyRing gap(4) + KeyRing(34) = 226
+        -- Keep the editor frame at max width so gaining the keyring after
+        -- a reload does not shift center-anchored saved positions.
+        local bagsOverlayWidth = 226
+        local bagsOverlayHeight = 54
+
+        -- Create container frame using the standard system
+        local bagsFrame = addon.CreateUIFrame(bagsOverlayWidth, bagsOverlayHeight, "BagsBar")
+
+        -- Apply position from database or use default
+        local bagsConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.bagsbar
+        if bagsConfig and bagsConfig.anchor then
+            bagsFrame:SetPoint(bagsConfig.anchor or "BOTTOMRIGHT", UIParent, bagsConfig.anchor or "BOTTOMRIGHT",
+                bagsConfig.posX or -3, bagsConfig.posY or 45)
+        else
+            bagsFrame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -3, 45)
+        end
+
+        -- Anchor backpack to the RIGHT edge of the overlay.
+        -- The backpack is 50px wide; anchoring its RIGHT to the frame's
+        -- RIGHT edge aligns it flush.  All other bags chain LEFT of the
+        -- backpack, so the whole row fits perfectly inside the frame.
+        MainMenuBarBackpackButton:SetParent(UIParent)
+        MainMenuBarBackpackButton:ClearAllPoints()
+        MainMenuBarBackpackButton:SetPoint("RIGHT", bagsFrame, "RIGHT", 0, 0)
+
+        -- Hook so bags follow the container when it moves
+        bagsFrame:HookScript("OnDragStop", function(self)
+            MainMenuBarBackpackButton:ClearAllPoints()
+            MainMenuBarBackpackButton:SetPoint("RIGHT", self, "RIGHT", 0, 0)
+        end)
+
+        bagsFrame:HookScript("OnShow", function(self)
+            MainMenuBarBackpackButton:ClearAllPoints()
+            MainMenuBarBackpackButton:SetPoint("RIGHT", self, "RIGHT", 0, 0)
+        end)
+
+        -- Defensive maintenance hook. Throttled to avoid per-frame work when the
+        -- backpack button is already anchored correctly.
+        bagsFrame._duiBackpackCheckElapsed = 0
+        bagsFrame:HookScript("OnUpdate", function(self, elapsed)
+            self._duiBackpackCheckElapsed = self._duiBackpackCheckElapsed + elapsed
+            if self._duiBackpackCheckElapsed < 0.2 then
+                return
+            end
+
+            self._duiBackpackCheckElapsed = 0
+            if not MainMenuBarBackpackButton:GetPoint() then
+                MainMenuBarBackpackButton:ClearAllPoints()
+                MainMenuBarBackpackButton:SetPoint("RIGHT", self, "RIGHT", 0, 0)
+            end
+        end)
+
+        addon:RegisterEditableFrame({
+            name = "bagsbar",
+            frame = bagsFrame,
+            blizzardFrame = MainMenuBarBackpackButton,
+            configPath = {"widgets", "bagsbar"},
+            module = addon.BagsModule or {}
+        })
+
+        pUiBagsBar.registeredInEditor = true
+
+    end
+
+    EnsureLootAnimationToMainBag()
+    HideUnwantedBagFrames()
+    -- A single deferred pass handles any late-created child textures
+    -- (e.g. addons styling bag slots after us). The debounced scheduler
+    -- collapses any additional calls to a single execution.
+    ScheduleHideFrames(1.0)
+end
+
+function MainMenuMicroButtonMixin:bagbuttons_reposition()
+    local bagScale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale or 1.0
+    MainMenuBarBackpackButton:SetScale(bagScale)
+
+    CharacterBag0Slot:SetClearPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
+
+    if not GetBagCollapseState() then
+        StopCollapsedSecondaryFade()
+        -- Expanded state
+        for i, bags in pairs(bagslots) do
+            bags:Show()
+            bags:SetAlpha(1)
+            bags:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel())
+            bags:SetScale(1.0)
+            bags:SetSize(28, 28)
+
+            if i == 1 then
+                -- Already positioned above
+            elseif i == 2 then
+                bags:SetClearPoint('RIGHT', CharacterBag0Slot, 'LEFT', -4, 0)
+            elseif i == 3 then
+                bags:SetClearPoint('RIGHT', CharacterBag1Slot, 'LEFT', -4, 0)
+            elseif i == 4 then
+                bags:SetClearPoint('RIGHT', CharacterBag2Slot, 'LEFT', -4, 0)
+            end
+
+            if bags.customBorder then
+                bags.customBorder:SetAlpha(1)
+            end
+            if bags.background then
+                bags.background:SetAlpha(1)
+            end
+        end
+
+        if KeyRingButton then
+            KeyRingButton:SetClearPoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
+            KeyRingButton:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel())
+            KeyRingButton:SetScale(1.0)
+            KeyRingButton:SetSize(34, 34)
+        end
+    else
+        -- Collapsed state - bags behind main bag
+        local forceHideCollapsed = ShouldForceCollapsedSecondaryInvisible()
+        if forceHideCollapsed then
+            StopCollapsedSecondaryFade()
+        end
+        for i, bags in pairs(bagslots) do
+            bags:Show()
+            bags:SetAlpha(forceHideCollapsed and 0 or 1)
+            bags:ClearAllPoints()
+            bags:SetPoint('CENTER', MainMenuBarBackpackButton, 'CENTER', 0, 0)
+            bags:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel() - 1)
+
+            if bags.customBorder then
+                bags.customBorder:SetAlpha(forceHideCollapsed and 0 or 1)
+            end
+            if bags.background then
+                bags.background:SetAlpha(forceHideCollapsed and 0 or 1)
+            end
+
+            local icon = _G[bags:GetName() .. 'IconTexture']
+            if icon then
+                icon:SetAlpha(forceHideCollapsed and 0 or 1)
+            end
+        end
+
+        if KeyRingButton then
+            KeyRingButton:ClearAllPoints()
+            KeyRingButton:SetPoint('CENTER', MainMenuBarBackpackButton, 'CENTER', 0, 0)
+            KeyRingButton:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel() - 1)
+        end
+
+        if not forceHideCollapsed and addon.RefreshCollapsedSecondaryBagsVisibility and _G.pUiBagsBar then
+            addon.RefreshCollapsedSecondaryBagsVisibility((_G.pUiBagsBar:GetAlpha() or 1) > 0.01)
+        end
+    end
+
+end
+
+function MainMenuMicroButtonMixin:bagbuttons_refresh()
+    if _G.pUiBagsBar then
+        for _, bags in pairs(bagslots) do
+            if bags:GetParent() ~= _G.pUiBagsBar then
+                bags:SetParent(_G.pUiBagsBar);
+            end
+        end
+    end
+
+    self:bagbuttons_setup();
+
+    if HasKey() then
+        KeyRingButton:Show();
+    else
+        KeyRingButton:Hide();
+    end
+
+    -- Update bag slot icons with delayed stabilization for reload timing.
+    ScheduleBagSlotIconRefreshes()
+
+    HideUnwantedBagFrames()
+end
+
+local function MigrateMicroIconSpacingToPadding()
+    local mm = addon.db and addon.db.profile and addon.db.profile.micromenu
+    if not mm or mm.spacing_is_padding then
+        return
+    end
+    mm.spacing_is_padding = true
+    -- Old values were origin-to-origin stride; convert once to edge padding.
+    if mm.grayscale and mm.grayscale.icon_spacing ~= nil then
+        mm.grayscale.icon_spacing = mm.grayscale.icon_spacing - 14
+    end
+    if mm.normal and mm.normal.icon_spacing ~= nil then
+        mm.normal.icon_spacing = mm.normal.icon_spacing - 32
+    end
+end
+
+local function CollectPresentMicroButtons()
+    local list = {}
+    for i = 1, #MICRO_BUTTONS do
+        if MICRO_BUTTONS[i] then
+            list[#list + 1] = MICRO_BUTTONS[i]
+        end
+    end
+    return list
+end
+
+local function GetMicroLayoutMetrics(config, useGrayscale, numButtons)
+    local buttonWidth = useGrayscale and 14 or 32
+    local buttonHeight = useGrayscale and 19 or 40
+    local pad = tonumber(config.icon_spacing)
+    if pad == nil then
+        pad = useGrayscale and 1 or -6
+    end
+    local hStep = buttonWidth + pad
+    local vStep = buttonHeight + pad
+    local columns = math.floor(tonumber(config.columns) or 12)
+    if columns < 1 then
+        columns = 1
+    end
+    if numButtons < 1 then
+        return buttonWidth, buttonHeight, hStep, vStep, 1, 1, buttonWidth, buttonHeight
+    end
+    if columns > numButtons then
+        columns = numButtons
+    end
+    local rows = math.ceil(numButtons / columns)
+    local totalWidth = columns * buttonWidth + (columns - 1) * pad
+    local totalHeight = rows * buttonHeight + (rows - 1) * pad
+    return buttonWidth, buttonHeight, hStep, vStep, columns, rows, totalWidth, totalHeight
+end
+
+local function LayoutMicroButtons()
+    local menu = _G.pUiMicroMenu
+    if not menu or not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
+        return
+    end
+
+    MigrateMicroIconSpacingToPadding()
+
+    local useGrayscale = addon.db.profile.micromenu.grayscale_icons
+    local config = addon.db.profile.micromenu[useGrayscale and "grayscale" or "normal"]
+    if not config then
+        return
+    end
+
+    local buttons = CollectPresentMicroButtons()
+    local numButtons = #buttons
+    if config.invert_order and numButtons > 1 then
+        local reversed = {}
+        for i = numButtons, 1, -1 do
+            reversed[#reversed + 1] = buttons[i]
+        end
+        buttons = reversed
+    end
+
+    local _, _, hStep, vStep, columns, _, totalWidth, totalHeight =
+        GetMicroLayoutMetrics(config, useGrayscale, numButtons)
+
+    for i = 1, numButtons do
+        local button = buttons[i]
+        local idx = i - 1
+        local x = (idx % columns) * hStep
+        local y = MICRO_LAYOUT_BASE_Y + math.floor(idx / columns) * vStep
+
+        if button.SetPoint == addon._noop then
+            button.SetPoint = UIParent.SetPoint
+        end
+        button:ClearAllPoints()
+        button:SetPoint("BOTTOMLEFT", menu, "BOTTOMRIGHT", x, y)
+        button.SetPoint = addon._noop
+    end
+
+    local menuScale = config.scale_menu or 1
+    local overlayWidth = (totalWidth + 10) * menuScale
+    local overlayHeight = (totalHeight + 10) * menuScale
+    local menuOffX = -(totalWidth / 2)
+    local menuOffY = -(MICRO_LAYOUT_BASE_Y + totalHeight / 2)
+
+    menu.editorOffX = menuOffX
+    menu.editorOffY = menuOffY
+
+    if menu.editorFrame and not InCombatLockdown() then
+        menu.editorFrame:SetSize(overlayWidth, overlayHeight)
+        menu:ClearAllPoints()
+        menu:SetPoint("BOTTOMRIGHT", menu.editorFrame, "CENTER", menuOffX, menuOffY)
+    end
+end
+
+local function setupMicroButtons(xOffset)
+    MigrateMicroIconSpacingToPadding()
+
+    local useGrayscale = addon.db.profile.micromenu.grayscale_icons
+    local configMode = useGrayscale and "grayscale" or "normal"
+    local config = addon.db.profile.micromenu[configMode]
+
+    local menuScale = config.scale_menu
+
+    local menu = _G.pUiMicroMenu
+    if not menu then
+        menu = CreateFrame('Frame', 'pUiMicroMenu', UIParent)
+    end
+    menu:SetScale(menuScale)
+    menu:SetSize(10, 10)
+
+    local presentButtons = CollectPresentMicroButtons()
+    local numButtons = #presentButtons
+    local _, _, _, _, _, _, totalWidth, totalHeight =
+        GetMicroLayoutMetrics(config, useGrayscale, numButtons)
+
+    local overlayWidth = (totalWidth + 10) * menuScale
+    local overlayHeight = (totalHeight + 10) * menuScale
+
+    -- Offsets must stay unscaled: WoW multiplies SetPoint by the frame's own scale.
+    local menuOffX = -(totalWidth / 2)
+    local menuOffY = -(MICRO_LAYOUT_BASE_Y + totalHeight / 2)
+
+    if not menu.registeredInEditor then
+        -- PATTERN: Overlay = position anchor, real UI anchored TO overlay
+        -- Same as PlayerFrame, TargetFrame, CastBar, etc.
+        local microMenuFrame = addon.CreateUIFrame(overlayWidth, overlayHeight, "MicroMenu")
+
+        -- Position the OVERLAY from saved config or defaults
+        local microMenuConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.micromenu
+        if microMenuConfig and microMenuConfig.posX and microMenuConfig.posY then
+            microMenuFrame:SetPoint(microMenuConfig.anchor or "BOTTOMRIGHT", UIParent,
+                microMenuConfig.anchor or "BOTTOMRIGHT",
+                microMenuConfig.posX, microMenuConfig.posY)
+        else
+            microMenuFrame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
+                xOffset + config.x_position, config.y_position)
+        end
+
+        -- Anchor the REAL menu TO the overlay (fixed offset based on button geometry)
+        menu:SetParent(UIParent)
+        menu:ClearAllPoints()
+        menu:SetPoint("BOTTOMRIGHT", microMenuFrame, "CENTER", menuOffX, menuOffY)
+
+        -- Store reference and offsets for re-anchoring
+        menu.editorFrame = microMenuFrame
+        menu.editorOffX = menuOffX
+        menu.editorOffY = menuOffY
+
+        addon:RegisterEditableFrame({
+            name = "micromenu",
+            frame = microMenuFrame,
+            blizzardFrame = menu,
+            configPath = {"widgets", "micromenu"},
+            module = addon.MicroMenuModule or {},
+            onHide = function()
+                -- Re-anchor menu when leaving editor mode (overlay may have been dragged)
+                menu:ClearAllPoints()
+                menu:SetPoint("BOTTOMRIGHT", microMenuFrame, "CENTER",
+                    menu.editorOffX or menuOffX, menu.editorOffY or menuOffY)
+            end
+        })
+
+        menu.registeredInEditor = true
+    else
+        -- Subsequent calls: re-anchor to existing overlay
+        if menu.editorFrame then
+            menu:ClearAllPoints()
+            menu:SetPoint("BOTTOMRIGHT", menu.editorFrame, "CENTER", menuOffX, menuOffY)
+            menu.editorFrame:SetSize(overlayWidth, overlayHeight)
+            menu.editorOffX = menuOffX
+            menu.editorOffY = menuOffY
+        end
+    end
+
+    for i = 1, #MICRO_BUTTONS do
+        local button = MICRO_BUTTONS[i]
+        if button then
+            local buttonName = button:GetName():gsub('MicroButton', '')
+            local name = string.lower(buttonName);
+
+            CaptureOriginalHandlers(button)
+
+            local wasEnabled = button.IsEnabled and button:IsEnabled() or true
+            local wasVisible = button.IsVisible and button:IsVisible() or true
+
+            button:texture_strip()
+            CharacterMicroButton:SetDisabledTexture ''
+
+            button:SetParent(menu)
+
+            if useGrayscale then
+                button:SetSize(14, 19)
+            else
+                button:SetSize(32, 40)
+            end
+
+            button.SetPoint = addon._noop
+            button:SetHitRectInsets(0, 0, 0, 0)
+
+            button:EnableMouse(true)
+            if button.SetEnabled and wasEnabled then
+                button:SetEnabled(true)
+            end
+            if wasVisible then
+                button:Show()
+            end
+
+            local isCharacterButton = (buttonName == "Character")
+            local isPVPButton = (buttonName == "PVP")
+
+            local upCoords = not isCharacterButton and not isPVPButton and GetColoredTextureCoords(name, "Up") or nil
+            local shouldUseGrayscale = useGrayscale or (not isPVPButton and not upCoords and not isCharacterButton)
+
+            if shouldUseGrayscale then
+                -- Grayscale icons
+                local normalTexture = button:GetNormalTexture()
+                local pushedTexture = button:GetPushedTexture()
+                local disabledTexture = button:GetDisabledTexture()
+                local highlightTexture = button:GetHighlightTexture()
+
+                -- Ensure colored-only backgrounds do not bleed into grayscale mode.
+                if button.DragonUIBackground then
+                    button.DragonUIBackground:Hide()
+                end
+                if button.DragonUIBackgroundPushed then
+                    button.DragonUIBackgroundPushed:Hide()
+                end
+                if button.DragonUIHover then
+                    button.DragonUIHover:Hide()
+                end
+
+                if normalTexture then
+                    normalTexture:set_atlas('ui-hud-micromenu-' .. name .. '-up-2x')
+                end
+                if pushedTexture then
+                    pushedTexture:set_atlas('ui-hud-micromenu-' .. name .. '-down-2x')
+                end
+                if disabledTexture then
+                    disabledTexture:set_atlas('ui-hud-micromenu-' .. name .. '-disabled-2x')
+                end
+                if highlightTexture then
+                    highlightTexture:set_atlas('ui-hud-micromenu-' .. name .. '-mouseover-2x')
+                end
+            elseif isPVPButton then
+                SetupPVPButton(button)
+            elseif isCharacterButton then
+                SetupCharacterButton(button)
+            else
+                -- Colored icons
+                local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
+
+                local downCoords = GetColoredTextureCoords(name, "Down")
+                local disabledCoords = GetColoredTextureCoords(name, "Disabled")
+                local mouseoverCoords = GetColoredTextureCoords(name, "Mouseover")
+
+                if upCoords and #upCoords >= 4 then
+                    local tex = button:GetNormalTexture()
+                    tex:SetTexture(microTexture)
+                    tex:SetTexCoord(upCoords[1], upCoords[2], upCoords[3], upCoords[4])
+                    tex:ClearAllPoints()
+                    tex:SetAllPoints(button)
+                end
+
+                if downCoords and #downCoords >= 4 then
+                    local tex = button:GetPushedTexture()
+                    tex:SetTexture(microTexture)
+                    tex:SetTexCoord(downCoords[1], downCoords[2], downCoords[3], downCoords[4])
+                    tex:ClearAllPoints()
+                    tex:SetAllPoints(button)
+                end
+
+                if disabledCoords and #disabledCoords >= 4 then
+                    local tex = button:GetDisabledTexture()
+                    tex:SetTexture(microTexture)
+                    tex:SetTexCoord(disabledCoords[1], disabledCoords[2], disabledCoords[3], disabledCoords[4])
+                    tex:ClearAllPoints()
+                    tex:SetAllPoints(button)
+                end
+
+                if mouseoverCoords and #mouseoverCoords >= 4 then
+                    local tex = button:GetHighlightTexture()
+                    tex:SetTexture(microTexture)
+                    tex:SetTexCoord(mouseoverCoords[1], mouseoverCoords[2], mouseoverCoords[3], mouseoverCoords[4])
+                    tex:ClearAllPoints()
+                    tex:SetAllPoints(button)
+                end
+
+                -- Add/update background (colored mode only)
+                if not button.DragonUIBackground then
+                    local backgroundTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
+                    local dx, dy = -1, 1
+                    local offX, offY = button:GetPushedTextOffset()
+                    local sizeX, sizeY = button:GetSize()
+
+                    -- Use anonymous textures; named globals collide across buttons.
+                    local bg = button:CreateTexture(nil, 'BACKGROUND')
+                    bg:SetTexture(backgroundTexture)
+                    bg:SetSize(sizeX, sizeY + 1)
+                    bg:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
+                    bg:SetPoint('CENTER', dx, dy)
+                    button.DragonUIBackground = bg
+
+                    local bgPushed = button:CreateTexture(nil, 'BACKGROUND')
+                    bgPushed:SetTexture(backgroundTexture)
+                    bgPushed:SetSize(sizeX, sizeY + 1)
+                    bgPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
+                    bgPushed:SetPoint('CENTER', dx + offX, dy + offY)
+                    bgPushed:Hide()
+                    button.DragonUIBackgroundPushed = bgPushed
+
+                    local pushedNow = button:GetButtonState() == "PUSHED"
+                    button.dragonUIState = {
+                        pushed = pushedNow
+                    }
+                    button.dragonUILastState = pushedNow
+                    -- Panel-open state from SetButtonState; mouse-hold is transient on the C side.
+                    button.dragonUIPanelPushed = pushedNow
+
+                    button.HandleDragonUIState = function()
+                        local state = button.dragonUIState
+                        local hlTex = button:GetHighlightTexture()
+                        if state and state.pushed then
+                            button.DragonUIBackground:Hide()
+                            button.DragonUIBackgroundPushed:Show()
+                            if hlTex then
+                                hlTex:ClearAllPoints()
+                                hlTex:SetPoint('TOPLEFT', button, 'TOPLEFT', offX, offY)
+                                hlTex:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', offX, offY)
+                            end
+                        else
+                            button.DragonUIBackground:Show()
+                            button.DragonUIBackgroundPushed:Hide()
+                            if hlTex then
+                                hlTex:ClearAllPoints()
+                                hlTex:SetAllPoints(button)
+                            end
+                        end
+                    end
+                    button.HandleDragonUIState()
+
+                    -- MainMenu Blizzard OnUpdate must keep running; re-skin only if art drifts.
+                    local origOnUpdate = button:GetScript('OnUpdate')
+                    if buttonName == "MainMenu" and origOnUpdate then
+                        local normalTexture = button:GetNormalTexture()
+                        local guardPath = normalTexture and normalTexture:GetTexture()
+
+                        local function ReapplyColoredArt(self)
+                            local nt = self:GetNormalTexture()
+                            if nt and upCoords then
+                                nt:SetTexture(microTexture)
+                                nt:SetTexCoord(upCoords[1], upCoords[2], upCoords[3], upCoords[4])
+                                guardPath = nt:GetTexture()
+                            end
+                            local pt = self:GetPushedTexture()
+                            if pt and downCoords then
+                                pt:SetTexture(microTexture)
+                                pt:SetTexCoord(downCoords[1], downCoords[2], downCoords[3], downCoords[4])
+                            end
+                            local dt = self:GetDisabledTexture()
+                            if dt and disabledCoords then
+                                dt:SetTexture(microTexture)
+                                dt:SetTexCoord(disabledCoords[1], disabledCoords[2], disabledCoords[3], disabledCoords[4])
+                            end
+                            local ht = self:GetHighlightTexture()
+                            if ht and mouseoverCoords then
+                                ht:SetTexture(microTexture)
+                                ht:SetTexCoord(mouseoverCoords[1], mouseoverCoords[2], mouseoverCoords[3], mouseoverCoords[4])
+                            end
+                        end
+
+                        button:SetScript('OnUpdate', function(self, elapsed)
+                            origOnUpdate(self, elapsed)
+
+                            local nt = self:GetNormalTexture()
+                            if not guardPath or not nt or nt:GetTexture() ~= guardPath then
+                                ReapplyColoredArt(self)
+                            end
+                        end)
+                    end
+
+                    if not button.DragonUIStateHooks then
+                        button:HookScript("OnMouseDown", function(self)
+                            ApplyMicroButtonPushed(self, true)
+                        end)
+                        button:HookScript("OnMouseUp", function(self)
+                            ApplyMicroButtonPushed(self, self.dragonUIPanelPushed and true or false)
+                        end)
+                        button.DragonUIStateHooks = true
+                    end
+
+                    if not button.DragonUISetButtonStateHooked then
+                        hooksecurefunc(button, "SetButtonState", function(self, state)
+                            self.dragonUIPanelPushed = (state == "PUSHED")
+                            ApplyMicroButtonPushed(self, self.dragonUIPanelPushed)
+                        end)
+                        button.DragonUISetButtonStateHooked = true
+                    end
+                else
+                    -- Re-apply size/position/visibility in case a late Blizzard pass altered regions.
+                    local backgroundTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
+                    local dx, dy = -1, 1
+                    local offX, offY = button:GetPushedTextOffset()
+                    local sizeX, sizeY = button:GetSize()
+                    button.DragonUIBackground:SetTexture(backgroundTexture)
+                    button.DragonUIBackground:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
+                    button.DragonUIBackground:ClearAllPoints()
+                    button.DragonUIBackground:SetPoint('CENTER', dx, dy)
+                    button.DragonUIBackground:SetSize(sizeX, sizeY + 1)
+                    button.DragonUIBackground:Show()
+
+                    button.DragonUIBackgroundPushed:SetTexture(backgroundTexture)
+                    button.DragonUIBackgroundPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
+                    button.DragonUIBackgroundPushed:ClearAllPoints()
+                    button.DragonUIBackgroundPushed:SetPoint('CENTER', dx + offX, dy + offY)
+                    button.DragonUIBackgroundPushed:SetSize(sizeX, sizeY + 1)
+                    if button.dragonUIState and button.dragonUIState.pushed then
+                        button.DragonUIBackground:Hide()
+                        button.DragonUIBackgroundPushed:Show()
+                    else
+                        button.DragonUIBackgroundPushed:Hide()
+                    end
+                end
+            end
+
+            local highlightTexture = button:GetHighlightTexture()
+            if highlightTexture then
+                highlightTexture:SetBlendMode('ADD')
+                highlightTexture:SetAlpha(1)
+            end
+
+            button:EnableMouse(true)
+            if button.SetEnabled and wasEnabled then
+                button:SetEnabled(true)
+            end
+
+            if buttonName ~= "Character" then
+                RestoreOriginalHandlers(button)
+            end
+        end
+    end
+    LayoutMicroButtons()
+    UpdateCharacterPortraitVisibility()
+
+    -- Latency strip on HelpMicroButton: green / yellow / red from GetNetStats.
+    local showLatency = addon.db.profile.micromenu.show_latency_indicator
+    if showLatency and HelpMicroButton then
+        if not MicromenuModule.frames.latencyIndicator then
+            local latencyBar = CreateFrame("StatusBar", "DragonUIPerformanceBar", HelpMicroButton)
+
+            latencyBar:SetStatusBarTexture(addon._dir .. "Micromenu\\ui-mainmenubar-performancebar")
+            latencyBar:SetStatusBarColor(0, 1, 0)
+            latencyBar:GetStatusBarTexture():SetBlendMode("ADD")
+            latencyBar:GetStatusBarTexture():SetDrawLayer("OVERLAY")
+
+            latencyBar:EnableMouse(true)
+            latencyBar:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_TOP")
+                local _, _, latency = GetNetStats()
+                latency = latency or 0
+                GameTooltip:AddLine(L and L["Network"] or "Network", 1, 1, 1)
+                GameTooltip:AddDoubleLine(L and L["Latency"] or "Latency", latency .. " ms", 1, 1, 1, 1, 1, 0)
+                GameTooltip:Show()
+            end)
+            latencyBar:SetScript("OnLeave", function()
+                GameTooltip:Hide()
+            end)
+
+            local function UpdateLatencyColor(self)
+                local _, _, latency = GetNetStats()
+                latency = latency or 0
+                if latency > PERFORMANCEBAR_MEDIUM_LATENCY then
+                    self:SetStatusBarColor(1, 0, 0)
+                elseif latency > PERFORMANCEBAR_LOW_LATENCY then
+                    self:SetStatusBarColor(1, 1, 0)
+                else
+                    self:SetStatusBarColor(0, 1, 0)
+                end
+            end
+
+            latencyBar:SetScript("OnShow", function(self)
+                UpdateLatencyColor(self)
+                if not self.duiLatencyTimer and addon.core then
+                    self.duiLatencyTimer = addon.core:ScheduleRepeatingTimer(UpdateLatencyColor,
+                        PERFORMANCEBAR_UPDATE_INTERVAL or 10, self)
+                end
+            end)
+            latencyBar:SetScript("OnHide", function(self)
+                if self.duiLatencyTimer and addon.core then
+                    addon.core:CancelTimer(self.duiLatencyTimer, true)
+                    self.duiLatencyTimer = nil
+                end
+            end)
+
+            -- Created shown; Hide so the Show() below fires OnShow and starts the timer.
+            latencyBar:Hide()
+
+            MicromenuModule.frames.latencyIndicator = latencyBar
+        end
+
+        local bar = MicromenuModule.frames.latencyIndicator
+        bar:SetParent(HelpMicroButton)
+        bar:SetFrameStrata(HelpMicroButton:GetFrameStrata())
+        bar:SetFrameLevel(math.max(1, HelpMicroButton:GetFrameLevel() - 1))
+
+        local barW, barH, offX, offY
+        if useGrayscale then
+            barW, barH = 13, 36
+            offX, offY = 0, -3
+        else
+            barW, barH = 22, 60
+            offX, offY = 1, -6.5
+        end
+
+        bar:ClearAllPoints()
+        bar:SetSize(barW, barH)
+        bar:SetPoint("BOTTOM", HelpMicroButton, "BOTTOM", offX, offY)
+
+        bar:Show()
+    elseif MicromenuModule.frames.latencyIndicator then
+        MicromenuModule.frames.latencyIndicator:Hide()
+    end
+end
+
+local function updateMicroButtonSpacing()
+    LayoutMicroButtons()
+end
+
+function addon.RefreshMicromenuSpacing()
+    updateMicroButtonSpacing()
+end
+
+function addon.RefreshMicromenuPosition()
+if not _G.pUiMicroMenu then
+    return
+end
+
+local menu = _G.pUiMicroMenu
+local frameInfo = addon:GetEditableFrameInfo("micromenu")
+if frameInfo and frameInfo.frame then
+    -- Position the OVERLAY from saved config or defaults
+    local microMenuConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.micromenu
+
+    if microMenuConfig and microMenuConfig.posX and microMenuConfig.posY then
+        frameInfo.frame:ClearAllPoints()
+        frameInfo.frame:SetPoint(microMenuConfig.anchor or "BOTTOMRIGHT", UIParent,
+            microMenuConfig.anchor or "BOTTOMRIGHT",
+            microMenuConfig.posX, microMenuConfig.posY)
+    else
+        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
+        local configMode = useGrayscale and "grayscale" or "normal"
+        local config = addon.db.profile.micromenu[configMode]
+        local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
+
+        frameInfo.frame:ClearAllPoints()
+        frameInfo.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
+            xOffset + config.x_position, config.y_position)
+    end
+
+    -- Re-anchor menu TO the overlay using stored offsets (unscaled; WoW applies frame scale automatically)
+    local offX = menu.editorOffX or -(159)
+    local offY = menu.editorOffY or -(75)
+    menu:ClearAllPoints()
+    menu:SetPoint("BOTTOMRIGHT", frameInfo.frame, "CENTER", offX, offY)
+else
+    -- Fallback: no editor frame registered yet
+    local useGrayscale = addon.db.profile.micromenu.grayscale_icons
+    local configMode = useGrayscale and "grayscale" or "normal"
+    local config = addon.db.profile.micromenu[configMode]
+
+    menu:SetScale(config.scale_menu)
+    local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
+    menu:ClearAllPoints()
+    menu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT',
+        xOffset + config.x_position, config.y_position)
+end
+
+updateMicroButtonSpacing()
+end
+
+function addon.RefreshBagsPosition()
+    if not _G.pUiBagsBar then
+        return
+    end
+
+    local scale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale
+    if scale then
+        _G.pUiBagsBar:SetScale(scale)
+        MainMenuBarBackpackButton:SetScale(scale)
+    end
+
+    local frameInfo = addon:GetEditableFrameInfo("bagsbar")
+    if frameInfo and frameInfo.frame then
+        -- Apply position from database or use default
+        local bagsConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.bagsbar
+        if bagsConfig and bagsConfig.anchor then
+            frameInfo.frame:ClearAllPoints()
+            frameInfo.frame:SetPoint(bagsConfig.anchor or "BOTTOMRIGHT", UIParent,
+                bagsConfig.anchor or "BOTTOMRIGHT", bagsConfig.posX or -3, bagsConfig.posY or 45)
+        else
+            frameInfo.frame:ClearAllPoints()
+            frameInfo.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -3, 45)
+        end
+
+        -- Ensure bags follow the container — backpack flush to the
+        -- RIGHT edge, all other bags chain leftward from it.
+        MainMenuBarBackpackButton:ClearAllPoints()
+        MainMenuBarBackpackButton:SetPoint("RIGHT", frameInfo.frame, "RIGHT", 0, 0)
+    else
+        -- Fallback to previous method if no container
+        if not addon.db or not addon.db.profile or not addon.db.profile.bags then
+            return
+        end
+
+        local bagsConfig = addon.db.profile.bags
+        _G.pUiBagsBar:SetScale(bagsConfig.scale)
+
+        local originalSetPoint = MainMenuBarBackpackButton.SetPoint
+        if MainMenuBarBackpackButton.SetPoint == addon._noop then
+            MainMenuBarBackpackButton.SetPoint = UIParent.SetPoint
+        end
+
+        MainMenuBarBackpackButton:ClearAllPoints()
+        MainMenuBarBackpackButton:SetPoint('BOTTOMRIGHT', UIParent, 'BOTTOMRIGHT', bagsConfig.x_position,
+            bagsConfig.y_position)
+
+        if originalSetPoint == addon._noop then
+            MainMenuBarBackpackButton.SetPoint = originalSetPoint
+        end
+    end
+end
+
+function addon.RefreshMicromenuVehicle()
+    if not _G.pUiMicroMenu then
+        return
+    end
+
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("micromenu_refresh_vehicle", addon.RefreshMicromenuVehicle)
+        end
+        return
+    end
+
+    if addon.db.profile.micromenu.hide_on_vehicle then
+        RegisterStateDriver(_G.pUiMicroMenu, 'visibility', '[vehicleui] hide;show')
+    else
+        UnregisterStateDriver(_G.pUiMicroMenu, 'visibility')
+    end
+end
+
+function addon.RefreshBagsVehicle()
+    if not _G.pUiBagsBar then
+        return
+    end
+
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("micromenu_refresh_bags_vehicle", addon.RefreshBagsVehicle)
+        end
+        return
+    end
+
+    if addon.db.profile.micromenu.hide_on_vehicle then
+        RegisterStateDriver(_G.pUiBagsBar, 'visibility', '[vehicleui] hide;show')
+    else
+        UnregisterStateDriver(_G.pUiBagsBar, 'visibility')
+    end
+end
+
+function addon.RefreshMicromenuIcons()
+    -- Icon refresh handled in main setup
+end
+
+function addon.RefreshMicromenu()
+if not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
+    return
+end
+
+if not _G.pUiMicroMenu then
+    return
+end
+
+local useGrayscale = addon.db.profile.micromenu.grayscale_icons
+local configMode = useGrayscale and "grayscale" or "normal"
+local config = addon.db.profile.micromenu[configMode]
+
+-- FIXED: Only apply scale, NOT position (editor handles that)
+_G.pUiMicroMenu:SetScale(config.scale_menu)
+
+-- REMOVED: Don't overwrite editor position
+-- _G.pUiMicroMenu:ClearAllPoints()
+-- _G.pUiMicroMenu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT', xOffset + config.x_position, config.y_position)
+
+addon.RefreshMicromenuIcons()
+
+LayoutMicroButtons()
+
+addon.RefreshMicromenuVehicle()
+UpdateCharacterPortraitVisibility()
+end
+
+function addon.RefreshBags()
+    if not _G.pUiBagsBar then
+        return
+    end
+
+    addon.RefreshBagsPosition();
+
+    if MainMenuMicroButtonMixin.bagbuttons_refresh then
+        MainMenuMicroButtonMixin:bagbuttons_refresh();
+    end
+
+    if addon.pUiArrowManager then
+        local arrow = addon.pUiArrowManager
+        local isCollapsed = GetBagCollapseState()
+        local normal = arrow:GetNormalTexture()
+        local pushed = arrow:GetPushedTexture()
+        local highlight = arrow:GetHighlightTexture()
+
+        if isCollapsed then
+            normal:set_atlas('bag-arrow-2x')
+            pushed:set_atlas('bag-arrow-2x')
+            highlight:set_atlas('bag-arrow-2x')
+            arrow:SetChecked(true)
+        else
+            normal:set_atlas('bag-arrow-invert-2x')
+            pushed:set_atlas('bag-arrow-invert-2x')
+            highlight:set_atlas('bag-arrow-invert-2x')
+            arrow:SetChecked(nil)
+        end
+    end
+
+    MainMenuMicroButtonMixin:bagbuttons_reposition()
+    addon.RefreshBagsVehicle();
+end
+
+local function ApplyLFGFrameStyle()
+    MiniMapLFGFrameIcon:SetScale(1.5)
+    MiniMapLFGFrameBorder:SetTexture(nil)
+    MiniMapLFGFrame.eye.texture:SetTexture(addon._dir .. 'Micromenu\\uigroupfinderflipbookeye.tga')
+end
+
+local function ReanchorLFDStatus()
+    if not LFDSearchStatus or not MiniMapLFGFrame then
+        return
+    end
+    local point, relativePoint, xOff, yOff = GetLFDStatusAnchorSpec(GetLFGTooltipPosition())
+    LFDSearchStatus:ClearAllPoints()
+    LFDSearchStatus:SetPoint(point, MiniMapLFGFrame, relativePoint, xOff, yOff)
+end
+
 local function ApplyMicromenuSystem()
     if MicromenuModule.applied or not IsModuleEnabled() then
         return
@@ -1025,469 +2575,18 @@ local function ApplyMicromenuSystem()
     -- SECTION 4: BAG FRAME CLEANUP
     -- ============================================================================
 
-    local function HideUnwantedBagFrames()
-        -- Process all secondary bag slots
-        for i, bags in pairs(bagslots) do
-            local bagName = bags:GetName()
-
-            local possibleFrames = {bagName .. "Background", bagName .. "Border", bagName .. "Frame",
-                                    bagName .. "Texture", bagName .. "NormalTexture", bagName .. "Highlight", bagName .. "Glow", bagName .. "Green",
-                                    bagName .. "NormalTexture2", bagName .. "IconBorder", bagName .. "Flash",
-                                    bagName .. "NewItemTexture", bagName .. "Shine", bagName .. "NewItemGlow"}
-
-            for _, frameName in pairs(possibleFrames) do
-                local frame = _G[frameName]
-                if frame and frame.Hide then
-                    frame:Hide()
-                    if frame.SetAlpha then
-                        frame:SetAlpha(0)
-                    end
-                end
-            end
-
-            local normalTexture = bags:GetNormalTexture()
-            if normalTexture then
-                normalTexture:SetAlpha(0)
-                normalTexture:Hide()
-            end
-
-            -- Hide problematic texture regions
-            local numRegions = bags:GetNumRegions()
-            for j = 1, numRegions do
-                local region = select(j, bags:GetRegions())
-                if region and region:GetObjectType() == "Texture" then
-                    -- Keep DragonUI managed textures visible; only suppress
-                    -- Blizzard default layers.
-                    if region == bags.customBorder or region == bags.background then
-                        region:Show()
-                        if region.SetAlpha then
-                            region:SetAlpha(1)
-                        end
-                    else
-                    local texture = region:GetTexture()
-                    if texture then
-                        local textureLower = tostring(texture):lower()
-                        
-                        -- Skip item icons - don't hide them
-                        if textureLower:find("interface\\icons\\") then
-                            -- This is an item icon - don't hide it
-                        else
-                            -- Hide only UI elements, not icons
-                            if textureLower:find("background") or textureLower:find("border") or textureLower:find("frame") or
-                                textureLower:find("highlight") or textureLower:find("green") or textureLower:find("glow") or
-                                textureLower:find("flash") or textureLower:find("shine") then
-                                region:Hide()
-                                if region.SetAlpha then
-                                    region:SetAlpha(0)
-                                end
-                            end
-                        end
-                    end
-                    end
-                end
-            end
-        end
-
-        -- Handle KeyRing with same approach
-        if KeyRingButton then
-            local keyRingName = KeyRingButton:GetName()
-            local possibleFrames = {keyRingName .. "Background", keyRingName .. "Border", keyRingName .. "Frame",
-                                    keyRingName .. "Texture", keyRingName .. "Highlight", keyRingName .. "Glow",
-                                    keyRingName .. "Green", keyRingName .. "NormalTexture2",
-                                    keyRingName .. "IconBorder", keyRingName .. "Flash", keyRingName .. "Shine",
-                                    keyRingName .. "NewItemGlow"}
-
-            for _, frameName in pairs(possibleFrames) do
-                local frame = _G[frameName]
-                if frame and frame.Hide then
-                    frame:Hide()
-                    if frame.SetAlpha then
-                        frame:SetAlpha(0)
-                    end
-                end
-            end
-        end
-    end
-
     -- Frame cleanup scheduler (debounced).
     -- Collapses multiple calls within a burst into a single execution at the
     -- earliest requested time. Prevents redundant region scans when several
     -- callers schedule cleanup in quick succession.
-    local hideFramesScheduler = CreateFrame("Frame")
-    local hidePendingTime = nil
-
-    local function ScheduleHideFrames(delay)
-        local target = GetTime() + (delay or 0)
-        if hidePendingTime and hidePendingTime <= target then
-            return -- an earlier execution is already pending
-        end
-        hidePendingTime = target
-
-        if not hideFramesScheduler:GetScript("OnUpdate") then
-            hideFramesScheduler:SetScript("OnUpdate", function(self)
-                if hidePendingTime and GetTime() >= hidePendingTime then
-                    HideUnwantedBagFrames()
-                    hidePendingTime = nil
-                    self:SetScript("OnUpdate", nil)
-                end
-            end)
-        end
-    end
+    hideFramesScheduler = CreateFrame("Frame")
 
     -- ============================================================================
     -- SECTION 5: SPECIALIZED BUTTON SETUP
     -- ============================================================================
-    local function SetupPVPButton(button)
-        -- Mirror the Character button pattern:
-        -- Instead of fighting WoW's internal NormalTexture alpha management,
-        -- we create our own ARTWORK texture (DragonUIPVPIcon) that we control
-        -- exclusively, just like Character uses MicroButtonPortrait.
-        local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\micropvp'
-        local englishFaction = UnitFactionGroup('player')
-        local backgroundTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
-        local buttonWidth, buttonHeight = button:GetSize()
-        local dx, dy = -1, 1
-        local offX, offY = button:GetPushedTextOffset()
-        local sizeX, sizeY = buttonWidth, buttonHeight
-
-        -- ---- Icon layer: our own ARTWORK texture, never touched by WoW's button system ----
-        if not button.DragonUIPVPIcon then
-            local icon = button:CreateTexture(nil, 'ARTWORK')
-            button.DragonUIPVPIcon = icon
-        end
-
-        local icon = button.DragonUIPVPIcon
-        if englishFaction == 'Alliance' then
-            icon:SetTexture(microTexture)
-            icon:SetTexCoord(0, 118 / 256, 0, 151 / 256)
-        elseif englishFaction == 'Horde' then
-            icon:SetTexture(microTexture)
-            icon:SetTexCoord(118 / 256, 236 / 256, 0, 151 / 256)
-        else
-            -- Faction unknown: use atlas grayscale fallback
-            icon:set_atlas('ui-hud-micromenu-pvp-up-2x')
-        end
-        icon:ClearAllPoints()
-        icon:SetPoint('CENTER', button, 'CENTER', 0, 0)
-        icon:SetSize(buttonWidth, buttonHeight)
-        icon:SetAlpha(1.0)
-        icon:Show()
-
-        -- ---- Hover highlight: reuse GetHighlightTexture() with faction texture + BlendMode ADD
-        -- WoW shows/hides this automatically on mouse enter/leave.
-        local highlightTexture = button:GetHighlightTexture()
-        if highlightTexture then
-            if englishFaction == 'Alliance' then
-                highlightTexture:SetTexture(microTexture)
-                highlightTexture:SetTexCoord(0, 118 / 256, 0, 151 / 256)
-            elseif englishFaction == 'Horde' then
-                highlightTexture:SetTexture(microTexture)
-                highlightTexture:SetTexCoord(118 / 256, 236 / 256, 0, 151 / 256)
-            else
-                highlightTexture:set_atlas('ui-hud-micromenu-pvp-mouseover-2x')
-            end
-            highlightTexture:ClearAllPoints()
-            highlightTexture:SetAllPoints(button)
-            highlightTexture:SetBlendMode('ADD')
-            highlightTexture:SetAlpha(0.5)
-        end
-
-        -- ---- Background slot texture ----
-        if not button.DragonUIBackground then
-            local bg = button:CreateTexture(nil, 'BACKGROUND')
-            bg:SetTexture(backgroundTexture)
-            bg:SetSize(sizeX, sizeY + 1)
-            bg:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
-            bg:SetPoint('CENTER', dx, dy)
-            button.DragonUIBackground = bg
-
-            local bgPushed = button:CreateTexture(nil, 'BACKGROUND')
-            bgPushed:SetTexture(backgroundTexture)
-            bgPushed:SetSize(sizeX, sizeY + 1)
-            bgPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
-            bgPushed:SetPoint('CENTER', dx + offX, dy + offY)
-            bgPushed:Hide()
-            button.DragonUIBackgroundPushed = bgPushed
-        else
-            button.DragonUIBackground:SetTexture(backgroundTexture)
-            button.DragonUIBackground:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
-            button.DragonUIBackground:ClearAllPoints()
-            button.DragonUIBackground:SetPoint('CENTER', dx, dy)
-            button.DragonUIBackground:SetSize(sizeX, sizeY + 1)
-
-            if button.DragonUIBackgroundPushed then
-                button.DragonUIBackgroundPushed:SetTexture(backgroundTexture)
-                button.DragonUIBackgroundPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
-                button.DragonUIBackgroundPushed:ClearAllPoints()
-                button.DragonUIBackgroundPushed:SetPoint('CENTER', dx + offX, dy + offY)
-                button.DragonUIBackgroundPushed:SetSize(sizeX, sizeY + 1)
-            end
-        end
-
-        -- ---- State tracking ----
-        button.dragonUIState = button.dragonUIState or {}
-        button.dragonUIState.pushed = IsSpecialMicroButtonActive(button, "PVP")
-        button.dragonUILastState = button.dragonUIState.pushed
-
-        -- ---- State handler: only manipulates DragonUIPVPIcon ----
-        button.HandleDragonUIState = function()
-            local pvpIcon = button.DragonUIPVPIcon
-            local state = button.dragonUIState
-            local hlTex = button:GetHighlightTexture()
-            if state and state.pushed then
-                if pvpIcon then
-                    pvpIcon:ClearAllPoints()
-                    pvpIcon:SetPoint('CENTER', button, 'CENTER', offX, offY)
-                    pvpIcon:SetAlpha(0.7)
-                end
-                if button.DragonUIBackground then
-                    button.DragonUIBackground:Hide()
-                end
-                if button.DragonUIBackgroundPushed then
-                    button.DragonUIBackgroundPushed:Show()
-                end
-                -- Shift highlight to match icon pushed displacement
-                if hlTex then
-                    hlTex:ClearAllPoints()
-                    hlTex:SetPoint('TOPLEFT', button, 'TOPLEFT', offX, offY)
-                    hlTex:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', offX, offY)
-                end
-            else
-                if pvpIcon then
-                    pvpIcon:ClearAllPoints()
-                    pvpIcon:SetPoint('CENTER', button, 'CENTER', 0, 0)
-                    pvpIcon:SetAlpha(1.0)
-                end
-                if button.DragonUIBackground then
-                    button.DragonUIBackground:Show()
-                end
-                if button.DragonUIBackgroundPushed then
-                    button.DragonUIBackgroundPushed:Hide()
-                end
-                if hlTex then
-                    hlTex:ClearAllPoints()
-                    hlTex:SetAllPoints(button)
-                end
-            end
-        end
-
-        -- ---- Mouse feedback (immediate response on click) ----
-        if not button.DragonUIStateHooks then
-            button:HookScript('OnMouseDown', function(self)
-                if self.dragonUIState then
-                    self.dragonUIState.pushed = true
-                end
-                if self.HandleDragonUIState then
-                    self.HandleDragonUIState()
-                end
-            end)
-            button:HookScript('OnMouseUp', function(self)
-                local currentState = IsSpecialMicroButtonActive(self, "PVP")
-                self.dragonUILastState = currentState
-                if self.dragonUIState then
-                    self.dragonUIState.pushed = currentState
-                end
-                if self.HandleDragonUIState then
-                    self.HandleDragonUIState()
-                end
-            end)
-            button.DragonUIStateHooks = true
-        end
-
-        -- Apply initial state
-        button.HandleDragonUIState()
-    end
 
     -- Local flag: reset on every /reload (Lua state is wiped).
     -- Frame properties survive reload, but hooksecurefunc on globals don't.
-    local charPushHooksRegistered = false
-
-    local function SetupCharacterButton(button)
-        -- STEP 1: Use Blizzard's native portrait (like RetailUI)
-        local portraitTexture = MicroButtonPortrait
-        if not portraitTexture then
-            return
-        end
-        portraitTexture:ClearAllPoints()
-        portraitTexture:SetPoint('CENTER', button, 'CENTER', 0, -0.5)
-        portraitTexture:SetSize(18, 24)
-        portraitTexture:SetAlpha(1)
-
-        -- Hide Blizzard's native normal/pushed/highlight textures so they
-        -- don't bleed through as a background after /reload.  We use our
-        -- own DragonUIBackground/BackgroundPushed instead.
-        local nt = button:GetNormalTexture()
-        if nt then nt:SetTexture(nil) end
-        local pt = button:GetPushedTexture()
-        if pt then pt:SetTexture(nil) end
-        local ht = button:GetHighlightTexture()
-        if ht then ht:SetTexture(nil) end
-        local dt = button:GetDisabledTexture()
-        if dt then dt:SetTexture(nil) end
-
-        -- STEP 2: Hover highlight — OVERLAY with ADD blend.
-        -- Uses SetPortraitTexture directly (not GetTexture clone, which returns
-        -- nil for 3D portrait renders). SetAllPoints(portraitTexture) guarantees
-        -- identical position/size — same technique as DragonUIPortraitDim.
-        local function RefreshCharHighlight(btn)
-            local hl = btn.DragonUICharHighlight
-            if not hl then return end
-            SetPortraitTexture(hl, "player")
-            hl:SetTexCoord(MicroButtonPortrait:GetTexCoord())
-            hl:SetBlendMode('ADD')
-            hl:SetAlpha(1)
-            hl:SetAllPoints(MicroButtonPortrait)
-        end
-
-        if not button.DragonUICharHighlight then
-            local hl = button:CreateTexture(nil, 'OVERLAY')
-            hl:SetAllPoints(portraitTexture)
-            hl:Hide()
-            button.DragonUICharHighlight = hl
-
-            button:HookScript('OnEnter', function(self)
-                if self.DragonUICharHighlight then
-                    RefreshCharHighlight(self)
-                    self.DragonUICharHighlight:Show()
-                end
-            end)
-            button:HookScript('OnLeave', function(self)
-                if self.DragonUICharHighlight then
-                    self.DragonUICharHighlight:Hide()
-                end
-            end)
-        end
-
-        -- Global function hooks: must re-register every reload (Lua state resets).
-        -- Sync highlight TexCoord and force portrait alpha=1 so Blizzard's
-        -- SetPushed/SetNormal don't darken the portrait.
-        if not charPushHooksRegistered then
-            hooksecurefunc('CharacterMicroButton_SetPushed', function()
-                if not MicromenuModule.applied or not IsModuleEnabled() then
-                    return
-                end
-
-                local isGS = addon and addon.db and addon.db.profile
-                    and addon.db.profile.micromenu and addon.db.profile.micromenu.grayscale_icons
-                if isGS then return end
-                MicroButtonPortrait:SetAlpha(0.7)
-                local nt = button:GetNormalTexture()
-                if nt then nt:SetTexture(nil) end
-                local pt = button:GetPushedTexture()
-                if pt then pt:SetTexture(nil) end
-                local hl = button.DragonUICharHighlight
-                if hl and hl:IsShown() then
-                    hl:SetTexCoord(MicroButtonPortrait:GetTexCoord())
-                end
-            end)
-            hooksecurefunc('CharacterMicroButton_SetNormal', function()
-                if not MicromenuModule.applied or not IsModuleEnabled() then
-                    return
-                end
-
-                local isGS = addon and addon.db and addon.db.profile
-                    and addon.db.profile.micromenu and addon.db.profile.micromenu.grayscale_icons
-                if isGS then return end
-                MicroButtonPortrait:SetAlpha(1)
-                local nt = button:GetNormalTexture()
-                if nt then nt:SetTexture(nil) end
-                local pt = button:GetPushedTexture()
-                if pt then pt:SetTexture(nil) end
-                local hl = button.DragonUICharHighlight
-                if hl and hl:IsShown() then
-                    hl:SetTexCoord(MicroButtonPortrait:GetTexCoord())
-                end
-            end)
-            charPushHooksRegistered = true
-        end
-        RefreshCharHighlight(button)
-        button.DragonUICharHighlight:Hide()
-
-        -- Keep highlight in sync when portrait model updates (first login).
-        if not button.DragonUIPortraitEventRegistered then
-            button:RegisterEvent("UNIT_PORTRAIT_UPDATE")
-            button:HookScript("OnEvent", function(self, event, unit)
-                if event == "UNIT_PORTRAIT_UPDATE" and unit == "player" then
-                    local isGrayscale = addon and addon.db and addon.db.profile
-                        and addon.db.profile.micromenu and addon.db.profile.micromenu.grayscale_icons
-                    if isGrayscale then return end
-                    RefreshCharHighlight(self)
-                end
-            end)
-            button.DragonUIPortraitEventRegistered = true
-        end
-
-        -- STEP 3: Background only (like other buttons)
-        if not button.DragonUIBackground then
-            local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
-            local dx, dy = -1, 1
-            local offX, offY = button:GetPushedTextOffset()
-            local sizeX, sizeY = button:GetSize()
-
-            local bg = button:CreateTexture(nil, 'BACKGROUND')
-            bg:SetTexture(microTexture)
-            bg:SetSize(sizeX, sizeY + 1)
-            bg:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
-            bg:SetPoint('CENTER', dx, dy)
-            button.DragonUIBackground = bg
-
-            local bgPushed = button:CreateTexture(nil, 'BACKGROUND')
-            bgPushed:SetTexture(microTexture)
-            bgPushed:SetSize(sizeX, sizeY + 1)
-            bgPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
-            bgPushed:SetPoint('CENTER', dx + offX, dy + offY)
-            bgPushed:Hide()
-            button.DragonUIBackgroundPushed = bgPushed
-
-            -- STEP 3: Initialize state tracking properties
-            button.dragonUIState = {
-                pushed = IsSpecialMicroButtonActive(button, "Character")
-            }
-            button.dragonUILastState = button.dragonUIState.pushed
-
-            button.HandleDragonUIState = function()
-                local state = button.dragonUIState
-                if state and state.pushed then
-                    MicroButtonPortrait:SetAlpha(0.7)
-                    bg:Hide()
-                    bgPushed:Show()
-                else
-                    MicroButtonPortrait:SetAlpha(1)
-                    bg:Show()
-                    bgPushed:Hide()
-                end
-            end
-
-            button.HandleDragonUIState()
-        else
-            -- Re-apply geometry/visibility every pass to survive late Blizzard updates.
-            local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
-            local dx, dy = -1, 1
-            local offX, offY = button:GetPushedTextOffset()
-            local sizeX, sizeY = button:GetSize()
-
-            button.DragonUIBackground:SetTexture(microTexture)
-            button.DragonUIBackground:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
-            button.DragonUIBackground:ClearAllPoints()
-            button.DragonUIBackground:SetPoint('CENTER', dx, dy)
-            button.DragonUIBackground:SetSize(sizeX, sizeY + 1)
-
-            if button.DragonUIBackgroundPushed then
-                button.DragonUIBackgroundPushed:SetTexture(microTexture)
-                button.DragonUIBackgroundPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
-                button.DragonUIBackgroundPushed:ClearAllPoints()
-                button.DragonUIBackgroundPushed:SetPoint('CENTER', dx + offX, dy + offY)
-                button.DragonUIBackgroundPushed:SetSize(sizeX, sizeY + 1)
-            end
-
-            button.dragonUIState = button.dragonUIState or { pushed = false }
-
-            -- Delegate to the existing handler for consistent state application
-            if button.HandleDragonUIState then
-                button.HandleDragonUIState()
-            end
-        end
-    end
 
     -- ============================================================================
     -- SECTION 6: MAIN SETUP FUNCTIONS
@@ -1495,1098 +2594,15 @@ local function ApplyMicromenuSystem()
 
     -- Create global bags bar
     _G.pUiBagsBar = CreateFrame('Frame', 'pUiBagsBar', UIParent);
-    local pUiBagsBar = _G.pUiBagsBar;
+    pUiBagsBar = _G.pUiBagsBar;
     -- DON'T parent automatically - will be done in setup when necessary
     KeyRingButton:SetParent(_G.CharacterBag3Slot);
 
-    function MainMenuMicroButtonMixin:bagbuttons_setup()
-        MicromenuModule.hooks = MicromenuModule.hooks or {}
-
-        -- Setup main backpack button
-        MainMenuBarBackpackButton:SetSize(50, 50)
-        MainMenuBarBackpackButton:SetNormalTexture(nil)
-        MainMenuBarBackpackButton:SetPushedTexture(nil)
-        MainMenuBarBackpackButton:SetHighlightTexture ''
-        MainMenuBarBackpackButton:SetCheckedTexture ''
-        do
-            local ht = MainMenuBarBackpackButton:GetHighlightTexture()
-            ht:SetAllPoints()
-            ht:SetBlendMode('ADD')
-            ht:set_atlas('bag-main-highlight-2x')
-            local ct = MainMenuBarBackpackButton:GetCheckedTexture()
-            ct:SetAllPoints()
-            ct:SetBlendMode('ADD')
-            ct:SetDrawLayer('OVERLAY', 7)
-            ct:set_atlas('bag-main-highlight-2x')
-        end
-        MainMenuBarBackpackButtonIconTexture:set_atlas('bag-main-2x')
-
-        -- DON'T position MainMenuBarBackpackButton here if using overlay - will be positioned by the overlay
-        -- MainMenuBarBackpackButton:ClearAllPoints()
-        -- MainMenuBarBackpackButton:SetPoint('BOTTOMRIGHT', UIParent, 'BOTTOMRIGHT', 1, 41)
-
-        MainMenuBarBackpackButtonCount:SetClearPoint('CENTER', MainMenuBarBackpackButton, 'BOTTOM', 0, 14)
-        CharacterBag0Slot:SetClearPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
-
-        -- Setup KeyRingButton
-        KeyRingButton:SetSize(34, 34)
-        KeyRingButton:SetClearPoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
-        KeyRingButton:SetNormalTexture ''
-        KeyRingButton:SetPushedTexture(nil)
-        KeyRingButton:SetHighlightTexture ''
-        KeyRingButton:SetCheckedTexture ''
-
-        local highlight = KeyRingButton:GetHighlightTexture();
-        highlight:SetAllPoints();
-        highlight:SetBlendMode('ADD');
-        highlight:SetAlpha(.4);
-        highlight:set_atlas('bag-border-highlight-2x', true)
-        KeyRingButton:GetNormalTexture():set_atlas('bag-reagent-border-2x')
-        do
-            local ct = KeyRingButton:GetCheckedTexture()
-            ct:SetAllPoints()
-            ct:SetBlendMode('ADD')
-            ct:SetDrawLayer('OVERLAY', 7)
-            ct:set_atlas('bag-border-highlight-2x')
-        end
-        -- Bagster replaces ContainerFrame_OnShow checked sync; highlight backpack/bag slots instead
-        local function SyncKeyRingButton()
-            if addon.BagsterModule and addon.BagsterModule.BagsterModule
-                and addon.BagsterModule.BagsterModule.applied
-                and addon.BagsterHighlightMainMenuBags then
-                addon.BagsterHighlightMainMenuBags()
-                return
-            end
-            if KeyRingButton then
-                KeyRingButton:SetChecked(IsBagOpen(-2) and 1 or nil)
-            end
-        end
-
-        if not MicromenuModule.hooks.KeyRingSyncHooks then
-            hooksecurefunc("ToggleKeyRing", SyncKeyRingButton)
-            hooksecurefunc("CloseAllBags", function()
-                if addon.BagsterModule and addon.BagsterModule.BagsterModule
-                    and addon.BagsterModule.BagsterModule.applied
-                    and addon.BagsterHighlightMainMenuBags then
-                    addon.BagsterHighlightMainMenuBags()
-                    return
-                end
-                if KeyRingButton then
-                    KeyRingButton:SetChecked(nil)
-                end
-            end)
-            hooksecurefunc("ContainerFrame_OnHide", SyncKeyRingButton)
-            MicromenuModule.hooks.KeyRingSyncHooks = true
-        end
-
-        local keyringIcon = KeyRingButtonIconTexture
-        if keyringIcon then
-            keyringIcon:ClearAllPoints()
-            keyringIcon:SetPoint('TOPRIGHT', KeyRingButton, 'TOPRIGHT', -5, -2.9);
-            keyringIcon:SetPoint('BOTTOMLEFT', KeyRingButton, 'BOTTOMLEFT', 2.9, 5);
-            pcall(function()
-                keyringIcon:SetTexCoord(.08, .92, .08, .92)
-            end)
-        end
-
-        if KeyRingButtonCount then
-            KeyRingButtonCount:SetClearPoint('CENTER', KeyRingButton, 'CENTER', 0, -10);
-            KeyRingButtonCount:SetDrawLayer('OVERLAY')
-        end
-
-        -- Setup individual bag slots
-        for _, bags in pairs(bagslots) do
-            bags:SetHighlightTexture ''
-            bags:SetCheckedTexture ''
-            bags:SetPushedTexture(nil)
-            bags:SetNormalTexture ''
-            bags:SetSize(28, 28)
-
-            local normalTexture = bags:GetNormalTexture()
-            if normalTexture then
-                normalTexture:SetAlpha(0)
-                normalTexture:Hide()
-            end
-
-            bags:GetCheckedTexture():SetAllPoints()
-            bags:GetCheckedTexture():SetBlendMode('ADD')
-            bags:GetCheckedTexture():SetDrawLayer('OVERLAY', 7)
-            bags:GetCheckedTexture():set_atlas('bag-border-highlight-2x')
-
-            local highlight = bags:GetHighlightTexture();
-            highlight:SetAllPoints();
-            highlight:SetBlendMode('ADD');
-            highlight:SetAlpha(.4);
-            highlight:set_atlas('bag-border-highlight-2x', true)
-
-            local icon = _G[bags:GetName() .. 'IconTexture']
-            if icon then
-                icon:ClearAllPoints()
-                icon:SetPoint('TOPRIGHT', bags, 'TOPRIGHT', -5, -2.9);
-                icon:SetPoint('BOTTOMLEFT', bags, 'BOTTOMLEFT', 2.9, 5);
-                pcall(function()
-                    icon:SetTexCoord(.08, .92, .08, .92)
-                end)
-            end
-
-            if not bags.customBorder then
-                bags.customBorder = bags:CreateTexture(nil, 'OVERLAY')
-                bags.customBorder:SetPoint('CENTER')
-                bags.customBorder:set_atlas('bag-border-2x', true)
-            end
-            bags.customBorder:Show()
-            bags.customBorder:SetAlpha(1)
-
-            local w, h = bags.customBorder:GetSize()
-            if not bags.background then
-                bags.background = bags:CreateTexture(nil, 'BACKGROUND')
-                bags.background:SetSize(w, h)
-                bags.background:SetPoint('CENTER')
-                bags.background:SetTexture(addon._dir .. 'Bags\\bagslots2x')
-                bags.background:SetTexCoord(295 / 512, 356 / 512, 64 / 128, 125 / 128)
-            end
-            bags.background:Show()
-            bags.background:SetAlpha(1)
-
-            local count = _G[bags:GetName() .. 'Count']
-            count:SetClearPoint('CENTER', 0, -10);
-            count:SetDrawLayer('OVERLAY')
-        end
-
-        if not pUiBagsBar.registeredInEditor then
-            -- Calculate overlay size to exactly match the visible bag elements.
-            -- Layout (right to left from backpack right edge):
-            --   Backpack(50) + gap(14) + 4xBag(28)+3xgap(4) = 188
-            --   + KeyRing gap(4) + KeyRing(34) = 226
-            -- Keep the editor frame at max width so gaining the keyring after
-            -- a reload does not shift center-anchored saved positions.
-            local bagsOverlayWidth = 226
-            local bagsOverlayHeight = 54
-
-            -- Create container frame using the standard system
-            local bagsFrame = addon.CreateUIFrame(bagsOverlayWidth, bagsOverlayHeight, "BagsBar")
-
-            -- Apply position from database or use default
-            local bagsConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.bagsbar
-            if bagsConfig and bagsConfig.anchor then
-                bagsFrame:SetPoint(bagsConfig.anchor or "BOTTOMRIGHT", UIParent, bagsConfig.anchor or "BOTTOMRIGHT",
-                    bagsConfig.posX or -3, bagsConfig.posY or 45)
-            else
-                bagsFrame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -3, 45)
-            end
-
-            -- Anchor backpack to the RIGHT edge of the overlay.
-            -- The backpack is 50px wide; anchoring its RIGHT to the frame's
-            -- RIGHT edge aligns it flush.  All other bags chain LEFT of the
-            -- backpack, so the whole row fits perfectly inside the frame.
-            MainMenuBarBackpackButton:SetParent(UIParent)
-            MainMenuBarBackpackButton:ClearAllPoints()
-            MainMenuBarBackpackButton:SetPoint("RIGHT", bagsFrame, "RIGHT", 0, 0)
-
-            -- Hook so bags follow the container when it moves
-            bagsFrame:HookScript("OnDragStop", function(self)
-                MainMenuBarBackpackButton:ClearAllPoints()
-                MainMenuBarBackpackButton:SetPoint("RIGHT", self, "RIGHT", 0, 0)
-            end)
-
-            bagsFrame:HookScript("OnShow", function(self)
-                MainMenuBarBackpackButton:ClearAllPoints()
-                MainMenuBarBackpackButton:SetPoint("RIGHT", self, "RIGHT", 0, 0)
-            end)
-
-            -- Defensive maintenance hook. Throttled to avoid per-frame work when the
-            -- backpack button is already anchored correctly.
-            bagsFrame._duiBackpackCheckElapsed = 0
-            bagsFrame:HookScript("OnUpdate", function(self, elapsed)
-                self._duiBackpackCheckElapsed = self._duiBackpackCheckElapsed + elapsed
-                if self._duiBackpackCheckElapsed < 0.2 then
-                    return
-                end
-
-                self._duiBackpackCheckElapsed = 0
-                if not MainMenuBarBackpackButton:GetPoint() then
-                    MainMenuBarBackpackButton:ClearAllPoints()
-                    MainMenuBarBackpackButton:SetPoint("RIGHT", self, "RIGHT", 0, 0)
-                end
-            end)
-
-            addon:RegisterEditableFrame({
-                name = "bagsbar",
-                frame = bagsFrame,
-                blizzardFrame = MainMenuBarBackpackButton,
-                configPath = {"widgets", "bagsbar"},
-                module = addon.BagsModule or {}
-            })
-
-            pUiBagsBar.registeredInEditor = true
-
-        end
-
-        EnsureLootAnimationToMainBag()
-        HideUnwantedBagFrames()
-        -- A single deferred pass handles any late-created child textures
-        -- (e.g. addons styling bag slots after us). The debounced scheduler
-        -- collapses any additional calls to a single execution.
-        ScheduleHideFrames(1.0)
-    end
-
-    function MainMenuMicroButtonMixin:bagbuttons_reposition()
-        local bagScale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale or 1.0
-        MainMenuBarBackpackButton:SetScale(bagScale)
-
-        CharacterBag0Slot:SetClearPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
-
-        if not GetBagCollapseState() then
-            StopCollapsedSecondaryFade()
-            -- Expanded state
-            for i, bags in pairs(bagslots) do
-                bags:Show()
-                bags:SetAlpha(1)
-                bags:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel())
-                bags:SetScale(1.0)
-                bags:SetSize(28, 28)
-
-                if i == 1 then
-                    -- Already positioned above
-                elseif i == 2 then
-                    bags:SetClearPoint('RIGHT', CharacterBag0Slot, 'LEFT', -4, 0)
-                elseif i == 3 then
-                    bags:SetClearPoint('RIGHT', CharacterBag1Slot, 'LEFT', -4, 0)
-                elseif i == 4 then
-                    bags:SetClearPoint('RIGHT', CharacterBag2Slot, 'LEFT', -4, 0)
-                end
-
-                if bags.customBorder then
-                    bags.customBorder:SetAlpha(1)
-                end
-                if bags.background then
-                    bags.background:SetAlpha(1)
-                end
-            end
-
-            if KeyRingButton then
-                KeyRingButton:SetClearPoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
-                KeyRingButton:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel())
-                KeyRingButton:SetScale(1.0)
-                KeyRingButton:SetSize(34, 34)
-            end
-        else
-            -- Collapsed state - bags behind main bag
-            local forceHideCollapsed = ShouldForceCollapsedSecondaryInvisible()
-            if forceHideCollapsed then
-                StopCollapsedSecondaryFade()
-            end
-            for i, bags in pairs(bagslots) do
-                bags:Show()
-                bags:SetAlpha(forceHideCollapsed and 0 or 1)
-                bags:ClearAllPoints()
-                bags:SetPoint('CENTER', MainMenuBarBackpackButton, 'CENTER', 0, 0)
-                bags:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel() - 1)
-
-                if bags.customBorder then
-                    bags.customBorder:SetAlpha(forceHideCollapsed and 0 or 1)
-                end
-                if bags.background then
-                    bags.background:SetAlpha(forceHideCollapsed and 0 or 1)
-                end
-
-                local icon = _G[bags:GetName() .. 'IconTexture']
-                if icon then
-                    icon:SetAlpha(forceHideCollapsed and 0 or 1)
-                end
-            end
-
-            if KeyRingButton then
-                KeyRingButton:ClearAllPoints()
-                KeyRingButton:SetPoint('CENTER', MainMenuBarBackpackButton, 'CENTER', 0, 0)
-                KeyRingButton:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel() - 1)
-            end
-
-            if not forceHideCollapsed and addon.RefreshCollapsedSecondaryBagsVisibility and _G.pUiBagsBar then
-                addon.RefreshCollapsedSecondaryBagsVisibility((_G.pUiBagsBar:GetAlpha() or 1) > 0.01)
-            end
-        end
-
-    end
-
-    function MainMenuMicroButtonMixin:bagbuttons_refresh()
-        if _G.pUiBagsBar then
-            for _, bags in pairs(bagslots) do
-                if bags:GetParent() ~= _G.pUiBagsBar then
-                    bags:SetParent(_G.pUiBagsBar);
-                end
-            end
-        end
-
-        self:bagbuttons_setup();
-
-        if HasKey() then
-            KeyRingButton:Show();
-        else
-            KeyRingButton:Hide();
-        end
-
-        -- Update bag slot icons with delayed stabilization for reload timing.
-        ScheduleBagSlotIconRefreshes()
-
-        HideUnwantedBagFrames()
-    end
-
     -- Buttons layout as a grid; hover/combat visibility stays on pUiMicroMenu.
-    local MICRO_LAYOUT_BASE_Y = 55
-
-    local function MigrateMicroIconSpacingToPadding()
-        local mm = addon.db and addon.db.profile and addon.db.profile.micromenu
-        if not mm or mm.spacing_is_padding then
-            return
-        end
-        mm.spacing_is_padding = true
-        -- Old values were origin-to-origin stride; convert once to edge padding.
-        if mm.grayscale and mm.grayscale.icon_spacing ~= nil then
-            mm.grayscale.icon_spacing = mm.grayscale.icon_spacing - 14
-        end
-        if mm.normal and mm.normal.icon_spacing ~= nil then
-            mm.normal.icon_spacing = mm.normal.icon_spacing - 32
-        end
-    end
-
-    local function CollectPresentMicroButtons()
-        local list = {}
-        for i = 1, #MICRO_BUTTONS do
-            if MICRO_BUTTONS[i] then
-                list[#list + 1] = MICRO_BUTTONS[i]
-            end
-        end
-        return list
-    end
-
-    local function GetMicroLayoutMetrics(config, useGrayscale, numButtons)
-        local buttonWidth = useGrayscale and 14 or 32
-        local buttonHeight = useGrayscale and 19 or 40
-        local pad = tonumber(config.icon_spacing)
-        if pad == nil then
-            pad = useGrayscale and 1 or -6
-        end
-        local hStep = buttonWidth + pad
-        local vStep = buttonHeight + pad
-        local columns = math.floor(tonumber(config.columns) or 12)
-        if columns < 1 then
-            columns = 1
-        end
-        if numButtons < 1 then
-            return buttonWidth, buttonHeight, hStep, vStep, 1, 1, buttonWidth, buttonHeight
-        end
-        if columns > numButtons then
-            columns = numButtons
-        end
-        local rows = math.ceil(numButtons / columns)
-        local totalWidth = columns * buttonWidth + (columns - 1) * pad
-        local totalHeight = rows * buttonHeight + (rows - 1) * pad
-        return buttonWidth, buttonHeight, hStep, vStep, columns, rows, totalWidth, totalHeight
-    end
-
-    local function LayoutMicroButtons()
-        local menu = _G.pUiMicroMenu
-        if not menu or not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
-            return
-        end
-
-        MigrateMicroIconSpacingToPadding()
-
-        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-        local config = addon.db.profile.micromenu[useGrayscale and "grayscale" or "normal"]
-        if not config then
-            return
-        end
-
-        local buttons = CollectPresentMicroButtons()
-        local numButtons = #buttons
-        if config.invert_order and numButtons > 1 then
-            local reversed = {}
-            for i = numButtons, 1, -1 do
-                reversed[#reversed + 1] = buttons[i]
-            end
-            buttons = reversed
-        end
-
-        local _, _, hStep, vStep, columns, _, totalWidth, totalHeight =
-            GetMicroLayoutMetrics(config, useGrayscale, numButtons)
-
-        for i = 1, numButtons do
-            local button = buttons[i]
-            local idx = i - 1
-            local x = (idx % columns) * hStep
-            local y = MICRO_LAYOUT_BASE_Y + math.floor(idx / columns) * vStep
-
-            if button.SetPoint == addon._noop then
-                button.SetPoint = UIParent.SetPoint
-            end
-            button:ClearAllPoints()
-            button:SetPoint("BOTTOMLEFT", menu, "BOTTOMRIGHT", x, y)
-            button.SetPoint = addon._noop
-        end
-
-        local menuScale = config.scale_menu or 1
-        local overlayWidth = (totalWidth + 10) * menuScale
-        local overlayHeight = (totalHeight + 10) * menuScale
-        local menuOffX = -(totalWidth / 2)
-        local menuOffY = -(MICRO_LAYOUT_BASE_Y + totalHeight / 2)
-
-        menu.editorOffX = menuOffX
-        menu.editorOffY = menuOffY
-
-        if menu.editorFrame and not InCombatLockdown() then
-            menu.editorFrame:SetSize(overlayWidth, overlayHeight)
-            menu:ClearAllPoints()
-            menu:SetPoint("BOTTOMRIGHT", menu.editorFrame, "CENTER", menuOffX, menuOffY)
-        end
-    end
-
-    local function setupMicroButtons(xOffset)
-        MigrateMicroIconSpacingToPadding()
-
-        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-        local configMode = useGrayscale and "grayscale" or "normal"
-        local config = addon.db.profile.micromenu[configMode]
-
-        local menuScale = config.scale_menu
-
-        local menu = _G.pUiMicroMenu
-        if not menu then
-            menu = CreateFrame('Frame', 'pUiMicroMenu', UIParent)
-        end
-        menu:SetScale(menuScale)
-        menu:SetSize(10, 10)
-
-        local presentButtons = CollectPresentMicroButtons()
-        local numButtons = #presentButtons
-        local _, _, _, _, _, _, totalWidth, totalHeight =
-            GetMicroLayoutMetrics(config, useGrayscale, numButtons)
-
-        local overlayWidth = (totalWidth + 10) * menuScale
-        local overlayHeight = (totalHeight + 10) * menuScale
-
-        -- Offsets must stay unscaled: WoW multiplies SetPoint by the frame's own scale.
-        local menuOffX = -(totalWidth / 2)
-        local menuOffY = -(MICRO_LAYOUT_BASE_Y + totalHeight / 2)
-
-        if not menu.registeredInEditor then
-            -- PATTERN: Overlay = position anchor, real UI anchored TO overlay
-            -- Same as PlayerFrame, TargetFrame, CastBar, etc.
-            local microMenuFrame = addon.CreateUIFrame(overlayWidth, overlayHeight, "MicroMenu")
-
-            -- Position the OVERLAY from saved config or defaults
-            local microMenuConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.micromenu
-            if microMenuConfig and microMenuConfig.posX and microMenuConfig.posY then
-                microMenuFrame:SetPoint(microMenuConfig.anchor or "BOTTOMRIGHT", UIParent,
-                    microMenuConfig.anchor or "BOTTOMRIGHT",
-                    microMenuConfig.posX, microMenuConfig.posY)
-            else
-                microMenuFrame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
-                    xOffset + config.x_position, config.y_position)
-            end
-
-            -- Anchor the REAL menu TO the overlay (fixed offset based on button geometry)
-            menu:SetParent(UIParent)
-            menu:ClearAllPoints()
-            menu:SetPoint("BOTTOMRIGHT", microMenuFrame, "CENTER", menuOffX, menuOffY)
-
-            -- Store reference and offsets for re-anchoring
-            menu.editorFrame = microMenuFrame
-            menu.editorOffX = menuOffX
-            menu.editorOffY = menuOffY
-
-            addon:RegisterEditableFrame({
-                name = "micromenu",
-                frame = microMenuFrame,
-                blizzardFrame = menu,
-                configPath = {"widgets", "micromenu"},
-                module = addon.MicroMenuModule or {},
-                onHide = function()
-                    -- Re-anchor menu when leaving editor mode (overlay may have been dragged)
-                    menu:ClearAllPoints()
-                    menu:SetPoint("BOTTOMRIGHT", microMenuFrame, "CENTER",
-                        menu.editorOffX or menuOffX, menu.editorOffY or menuOffY)
-                end
-            })
-
-            menu.registeredInEditor = true
-        else
-            -- Subsequent calls: re-anchor to existing overlay
-            if menu.editorFrame then
-                menu:ClearAllPoints()
-                menu:SetPoint("BOTTOMRIGHT", menu.editorFrame, "CENTER", menuOffX, menuOffY)
-                menu.editorFrame:SetSize(overlayWidth, overlayHeight)
-                menu.editorOffX = menuOffX
-                menu.editorOffY = menuOffY
-            end
-        end
-
-        for i = 1, #MICRO_BUTTONS do
-            local button = MICRO_BUTTONS[i]
-            if button then
-                local buttonName = button:GetName():gsub('MicroButton', '')
-                local name = string.lower(buttonName);
-
-                CaptureOriginalHandlers(button)
-
-                local wasEnabled = button.IsEnabled and button:IsEnabled() or true
-                local wasVisible = button.IsVisible and button:IsVisible() or true
-
-                button:texture_strip()
-                CharacterMicroButton:SetDisabledTexture ''
-
-                button:SetParent(menu)
-
-                if useGrayscale then
-                    button:SetSize(14, 19)
-                else
-                    button:SetSize(32, 40)
-                end
-
-                button.SetPoint = addon._noop
-                button:SetHitRectInsets(0, 0, 0, 0)
-
-                button:EnableMouse(true)
-                if button.SetEnabled and wasEnabled then
-                    button:SetEnabled(true)
-                end
-                if wasVisible then
-                    button:Show()
-                end
-
-                local isCharacterButton = (buttonName == "Character")
-                local isPVPButton = (buttonName == "PVP")
-
-                local upCoords = not isCharacterButton and not isPVPButton and GetColoredTextureCoords(name, "Up") or nil
-                local shouldUseGrayscale = useGrayscale or (not isPVPButton and not upCoords and not isCharacterButton)
-
-                if shouldUseGrayscale then
-                    -- Grayscale icons
-                    local normalTexture = button:GetNormalTexture()
-                    local pushedTexture = button:GetPushedTexture()
-                    local disabledTexture = button:GetDisabledTexture()
-                    local highlightTexture = button:GetHighlightTexture()
-
-                    -- Ensure colored-only backgrounds do not bleed into grayscale mode.
-                    if button.DragonUIBackground then
-                        button.DragonUIBackground:Hide()
-                    end
-                    if button.DragonUIBackgroundPushed then
-                        button.DragonUIBackgroundPushed:Hide()
-                    end
-                    if button.DragonUIHover then
-                        button.DragonUIHover:Hide()
-                    end
-
-                    if normalTexture then
-                        normalTexture:set_atlas('ui-hud-micromenu-' .. name .. '-up-2x')
-                    end
-                    if pushedTexture then
-                        pushedTexture:set_atlas('ui-hud-micromenu-' .. name .. '-down-2x')
-                    end
-                    if disabledTexture then
-                        disabledTexture:set_atlas('ui-hud-micromenu-' .. name .. '-disabled-2x')
-                    end
-                    if highlightTexture then
-                        highlightTexture:set_atlas('ui-hud-micromenu-' .. name .. '-mouseover-2x')
-                    end
-                elseif isPVPButton then
-                    SetupPVPButton(button)
-                elseif isCharacterButton then
-                    SetupCharacterButton(button)
-                else
-                    -- Colored icons
-                    local microTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
-
-                    local downCoords = GetColoredTextureCoords(name, "Down")
-                    local disabledCoords = GetColoredTextureCoords(name, "Disabled")
-                    local mouseoverCoords = GetColoredTextureCoords(name, "Mouseover")
-
-                    if upCoords and #upCoords >= 4 then
-                        local tex = button:GetNormalTexture()
-                        tex:SetTexture(microTexture)
-                        tex:SetTexCoord(upCoords[1], upCoords[2], upCoords[3], upCoords[4])
-                        tex:ClearAllPoints()
-                        tex:SetAllPoints(button)
-                    end
-
-                    if downCoords and #downCoords >= 4 then
-                        local tex = button:GetPushedTexture()
-                        tex:SetTexture(microTexture)
-                        tex:SetTexCoord(downCoords[1], downCoords[2], downCoords[3], downCoords[4])
-                        tex:ClearAllPoints()
-                        tex:SetAllPoints(button)
-                    end
-
-                    if disabledCoords and #disabledCoords >= 4 then
-                        local tex = button:GetDisabledTexture()
-                        tex:SetTexture(microTexture)
-                        tex:SetTexCoord(disabledCoords[1], disabledCoords[2], disabledCoords[3], disabledCoords[4])
-                        tex:ClearAllPoints()
-                        tex:SetAllPoints(button)
-                    end
-
-                    if mouseoverCoords and #mouseoverCoords >= 4 then
-                        local tex = button:GetHighlightTexture()
-                        tex:SetTexture(microTexture)
-                        tex:SetTexCoord(mouseoverCoords[1], mouseoverCoords[2], mouseoverCoords[3], mouseoverCoords[4])
-                        tex:ClearAllPoints()
-                        tex:SetAllPoints(button)
-                    end
-
-                    -- Add/update background (colored mode only)
-                    if not button.DragonUIBackground then
-                        local backgroundTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
-                        local dx, dy = -1, 1
-                        local offX, offY = button:GetPushedTextOffset()
-                        local sizeX, sizeY = button:GetSize()
-
-                        -- Use anonymous textures; named globals collide across buttons.
-                        local bg = button:CreateTexture(nil, 'BACKGROUND')
-                        bg:SetTexture(backgroundTexture)
-                        bg:SetSize(sizeX, sizeY + 1)
-                        bg:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
-                        bg:SetPoint('CENTER', dx, dy)
-                        button.DragonUIBackground = bg
-
-                        local bgPushed = button:CreateTexture(nil, 'BACKGROUND')
-                        bgPushed:SetTexture(backgroundTexture)
-                        bgPushed:SetSize(sizeX, sizeY + 1)
-                        bgPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
-                        bgPushed:SetPoint('CENTER', dx + offX, dy + offY)
-                        bgPushed:Hide()
-                        button.DragonUIBackgroundPushed = bgPushed
-
-                        local pushedNow = button:GetButtonState() == "PUSHED"
-                        button.dragonUIState = {
-                            pushed = pushedNow
-                        }
-                        button.dragonUILastState = pushedNow
-                        -- Panel-open state from SetButtonState; mouse-hold is transient on the C side.
-                        button.dragonUIPanelPushed = pushedNow
-
-                        button.HandleDragonUIState = function()
-                            local state = button.dragonUIState
-                            local hlTex = button:GetHighlightTexture()
-                            if state and state.pushed then
-                                button.DragonUIBackground:Hide()
-                                button.DragonUIBackgroundPushed:Show()
-                                if hlTex then
-                                    hlTex:ClearAllPoints()
-                                    hlTex:SetPoint('TOPLEFT', button, 'TOPLEFT', offX, offY)
-                                    hlTex:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', offX, offY)
-                                end
-                            else
-                                button.DragonUIBackground:Show()
-                                button.DragonUIBackgroundPushed:Hide()
-                                if hlTex then
-                                    hlTex:ClearAllPoints()
-                                    hlTex:SetAllPoints(button)
-                                end
-                            end
-                        end
-                        button.HandleDragonUIState()
-
-                        -- MainMenu Blizzard OnUpdate must keep running; re-skin only if art drifts.
-                        local origOnUpdate = button:GetScript('OnUpdate')
-                        if buttonName == "MainMenu" and origOnUpdate then
-                            local normalTexture = button:GetNormalTexture()
-                            local guardPath = normalTexture and normalTexture:GetTexture()
-
-                            local function ReapplyColoredArt(self)
-                                local nt = self:GetNormalTexture()
-                                if nt and upCoords then
-                                    nt:SetTexture(microTexture)
-                                    nt:SetTexCoord(upCoords[1], upCoords[2], upCoords[3], upCoords[4])
-                                    guardPath = nt:GetTexture()
-                                end
-                                local pt = self:GetPushedTexture()
-                                if pt and downCoords then
-                                    pt:SetTexture(microTexture)
-                                    pt:SetTexCoord(downCoords[1], downCoords[2], downCoords[3], downCoords[4])
-                                end
-                                local dt = self:GetDisabledTexture()
-                                if dt and disabledCoords then
-                                    dt:SetTexture(microTexture)
-                                    dt:SetTexCoord(disabledCoords[1], disabledCoords[2], disabledCoords[3], disabledCoords[4])
-                                end
-                                local ht = self:GetHighlightTexture()
-                                if ht and mouseoverCoords then
-                                    ht:SetTexture(microTexture)
-                                    ht:SetTexCoord(mouseoverCoords[1], mouseoverCoords[2], mouseoverCoords[3], mouseoverCoords[4])
-                                end
-                            end
-
-                            button:SetScript('OnUpdate', function(self, elapsed)
-                                origOnUpdate(self, elapsed)
-
-                                local nt = self:GetNormalTexture()
-                                if not guardPath or not nt or nt:GetTexture() ~= guardPath then
-                                    ReapplyColoredArt(self)
-                                end
-                            end)
-                        end
-
-                        if not button.DragonUIStateHooks then
-                            button:HookScript("OnMouseDown", function(self)
-                                ApplyMicroButtonPushed(self, true)
-                            end)
-                            button:HookScript("OnMouseUp", function(self)
-                                ApplyMicroButtonPushed(self, self.dragonUIPanelPushed and true or false)
-                            end)
-                            button.DragonUIStateHooks = true
-                        end
-
-                        if not button.DragonUISetButtonStateHooked then
-                            hooksecurefunc(button, "SetButtonState", function(self, state)
-                                self.dragonUIPanelPushed = (state == "PUSHED")
-                                ApplyMicroButtonPushed(self, self.dragonUIPanelPushed)
-                            end)
-                            button.DragonUISetButtonStateHooked = true
-                        end
-                    else
-                        -- Re-apply size/position/visibility in case a late Blizzard pass altered regions.
-                        local backgroundTexture = 'Interface\\AddOns\\DragonUI\\Textures\\Micromenu\\uimicromenu2x'
-                        local dx, dy = -1, 1
-                        local offX, offY = button:GetPushedTextOffset()
-                        local sizeX, sizeY = button:GetSize()
-                        button.DragonUIBackground:SetTexture(backgroundTexture)
-                        button.DragonUIBackground:SetTexCoord(0.0654297, 0.12793, 0.330078, 0.490234)
-                        button.DragonUIBackground:ClearAllPoints()
-                        button.DragonUIBackground:SetPoint('CENTER', dx, dy)
-                        button.DragonUIBackground:SetSize(sizeX, sizeY + 1)
-                        button.DragonUIBackground:Show()
-
-                        button.DragonUIBackgroundPushed:SetTexture(backgroundTexture)
-                        button.DragonUIBackgroundPushed:SetTexCoord(0.0654297, 0.12793, 0.494141, 0.654297)
-                        button.DragonUIBackgroundPushed:ClearAllPoints()
-                        button.DragonUIBackgroundPushed:SetPoint('CENTER', dx + offX, dy + offY)
-                        button.DragonUIBackgroundPushed:SetSize(sizeX, sizeY + 1)
-                        if button.dragonUIState and button.dragonUIState.pushed then
-                            button.DragonUIBackground:Hide()
-                            button.DragonUIBackgroundPushed:Show()
-                        else
-                            button.DragonUIBackgroundPushed:Hide()
-                        end
-                    end
-                end
-
-                local highlightTexture = button:GetHighlightTexture()
-                if highlightTexture then
-                    highlightTexture:SetBlendMode('ADD')
-                    highlightTexture:SetAlpha(1)
-                end
-
-                button:EnableMouse(true)
-                if button.SetEnabled and wasEnabled then
-                    button:SetEnabled(true)
-                end
-
-                if buttonName ~= "Character" then
-                    RestoreOriginalHandlers(button)
-                end
-            end
-        end
-        LayoutMicroButtons()
-        UpdateCharacterPortraitVisibility()
-
-        -- Latency strip on HelpMicroButton: green / yellow / red from GetNetStats.
-        local showLatency = addon.db.profile.micromenu.show_latency_indicator
-        if showLatency and HelpMicroButton then
-            if not MicromenuModule.frames.latencyIndicator then
-                local latencyBar = CreateFrame("StatusBar", "DragonUIPerformanceBar", HelpMicroButton)
-
-                latencyBar:SetStatusBarTexture(addon._dir .. "Micromenu\\ui-mainmenubar-performancebar")
-                latencyBar:SetStatusBarColor(0, 1, 0)
-                latencyBar:GetStatusBarTexture():SetBlendMode("ADD")
-                latencyBar:GetStatusBarTexture():SetDrawLayer("OVERLAY")
-
-                latencyBar:EnableMouse(true)
-                latencyBar:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                    local _, _, latency = GetNetStats()
-                    latency = latency or 0
-                    GameTooltip:AddLine(L and L["Network"] or "Network", 1, 1, 1)
-                    GameTooltip:AddDoubleLine(L and L["Latency"] or "Latency", latency .. " ms", 1, 1, 1, 1, 1, 0)
-                    GameTooltip:Show()
-                end)
-                latencyBar:SetScript("OnLeave", function()
-                    GameTooltip:Hide()
-                end)
-
-                local function UpdateLatencyColor(self)
-                    local _, _, latency = GetNetStats()
-                    latency = latency or 0
-                    if latency > PERFORMANCEBAR_MEDIUM_LATENCY then
-                        self:SetStatusBarColor(1, 0, 0)
-                    elseif latency > PERFORMANCEBAR_LOW_LATENCY then
-                        self:SetStatusBarColor(1, 1, 0)
-                    else
-                        self:SetStatusBarColor(0, 1, 0)
-                    end
-                end
-
-                latencyBar:SetScript("OnShow", function(self)
-                    UpdateLatencyColor(self)
-                    if not self.duiLatencyTimer and addon.core then
-                        self.duiLatencyTimer = addon.core:ScheduleRepeatingTimer(UpdateLatencyColor,
-                            PERFORMANCEBAR_UPDATE_INTERVAL or 10, self)
-                    end
-                end)
-                latencyBar:SetScript("OnHide", function(self)
-                    if self.duiLatencyTimer and addon.core then
-                        addon.core:CancelTimer(self.duiLatencyTimer, true)
-                        self.duiLatencyTimer = nil
-                    end
-                end)
-
-                -- Created shown; Hide so the Show() below fires OnShow and starts the timer.
-                latencyBar:Hide()
-
-                MicromenuModule.frames.latencyIndicator = latencyBar
-            end
-
-            local bar = MicromenuModule.frames.latencyIndicator
-            bar:SetParent(HelpMicroButton)
-            bar:SetFrameStrata(HelpMicroButton:GetFrameStrata())
-            bar:SetFrameLevel(math.max(1, HelpMicroButton:GetFrameLevel() - 1))
-
-            local barW, barH, offX, offY
-            if useGrayscale then
-                barW, barH = 13, 36
-                offX, offY = 0, -3
-            else
-                barW, barH = 22, 60
-                offX, offY = 1, -6.5
-            end
-
-            bar:ClearAllPoints()
-            bar:SetSize(barW, barH)
-            bar:SetPoint("BOTTOM", HelpMicroButton, "BOTTOM", offX, offY)
-
-            bar:Show()
-        elseif MicromenuModule.frames.latencyIndicator then
-            MicromenuModule.frames.latencyIndicator:Hide()
-        end
-    end
 
     -- ============================================================================
     -- SECTION 7: REFRESH FUNCTIONS
     -- ============================================================================
-
-    local function updateMicroButtonSpacing()
-        LayoutMicroButtons()
-    end
-
-    function addon.RefreshMicromenuSpacing()
-        updateMicroButtonSpacing()
-    end
-
-    function addon.RefreshMicromenuPosition()
-    if not _G.pUiMicroMenu then
-        return
-    end
-
-    local menu = _G.pUiMicroMenu
-    local frameInfo = addon:GetEditableFrameInfo("micromenu")
-    if frameInfo and frameInfo.frame then
-        -- Position the OVERLAY from saved config or defaults
-        local microMenuConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.micromenu
-
-        if microMenuConfig and microMenuConfig.posX and microMenuConfig.posY then
-            frameInfo.frame:ClearAllPoints()
-            frameInfo.frame:SetPoint(microMenuConfig.anchor or "BOTTOMRIGHT", UIParent,
-                microMenuConfig.anchor or "BOTTOMRIGHT",
-                microMenuConfig.posX, microMenuConfig.posY)
-        else
-            local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-            local configMode = useGrayscale and "grayscale" or "normal"
-            local config = addon.db.profile.micromenu[configMode]
-            local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
-
-            frameInfo.frame:ClearAllPoints()
-            frameInfo.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
-                xOffset + config.x_position, config.y_position)
-        end
-
-        -- Re-anchor menu TO the overlay using stored offsets (unscaled; WoW applies frame scale automatically)
-        local offX = menu.editorOffX or -(159)
-        local offY = menu.editorOffY or -(75)
-        menu:ClearAllPoints()
-        menu:SetPoint("BOTTOMRIGHT", frameInfo.frame, "CENTER", offX, offY)
-    else
-        -- Fallback: no editor frame registered yet
-        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-        local configMode = useGrayscale and "grayscale" or "normal"
-        local config = addon.db.profile.micromenu[configMode]
-
-        menu:SetScale(config.scale_menu)
-        local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
-        menu:ClearAllPoints()
-        menu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT',
-            xOffset + config.x_position, config.y_position)
-    end
-
-    updateMicroButtonSpacing()
-end
-
-    function addon.RefreshBagsPosition()
-        if not _G.pUiBagsBar then
-            return
-        end
-
-        local scale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale
-        if scale then
-            _G.pUiBagsBar:SetScale(scale)
-            MainMenuBarBackpackButton:SetScale(scale)
-        end
-
-        local frameInfo = addon:GetEditableFrameInfo("bagsbar")
-        if frameInfo and frameInfo.frame then
-            -- Apply position from database or use default
-            local bagsConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.bagsbar
-            if bagsConfig and bagsConfig.anchor then
-                frameInfo.frame:ClearAllPoints()
-                frameInfo.frame:SetPoint(bagsConfig.anchor or "BOTTOMRIGHT", UIParent,
-                    bagsConfig.anchor or "BOTTOMRIGHT", bagsConfig.posX or -3, bagsConfig.posY or 45)
-            else
-                frameInfo.frame:ClearAllPoints()
-                frameInfo.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -3, 45)
-            end
-
-            -- Ensure bags follow the container — backpack flush to the
-            -- RIGHT edge, all other bags chain leftward from it.
-            MainMenuBarBackpackButton:ClearAllPoints()
-            MainMenuBarBackpackButton:SetPoint("RIGHT", frameInfo.frame, "RIGHT", 0, 0)
-        else
-            -- Fallback to previous method if no container
-            if not addon.db or not addon.db.profile or not addon.db.profile.bags then
-                return
-            end
-
-            local bagsConfig = addon.db.profile.bags
-            _G.pUiBagsBar:SetScale(bagsConfig.scale)
-
-            local originalSetPoint = MainMenuBarBackpackButton.SetPoint
-            if MainMenuBarBackpackButton.SetPoint == addon._noop then
-                MainMenuBarBackpackButton.SetPoint = UIParent.SetPoint
-            end
-
-            MainMenuBarBackpackButton:ClearAllPoints()
-            MainMenuBarBackpackButton:SetPoint('BOTTOMRIGHT', UIParent, 'BOTTOMRIGHT', bagsConfig.x_position,
-                bagsConfig.y_position)
-
-            if originalSetPoint == addon._noop then
-                MainMenuBarBackpackButton.SetPoint = originalSetPoint
-            end
-        end
-    end
-
-    function addon.RefreshMicromenuVehicle()
-        if not _G.pUiMicroMenu then
-            return
-        end
-
-        if InCombatLockdown() then
-            if addon.CombatQueue then
-                addon.CombatQueue:Add("micromenu_refresh_vehicle", addon.RefreshMicromenuVehicle)
-            end
-            return
-        end
-
-        if addon.db.profile.micromenu.hide_on_vehicle then
-            RegisterStateDriver(_G.pUiMicroMenu, 'visibility', '[vehicleui] hide;show')
-        else
-            UnregisterStateDriver(_G.pUiMicroMenu, 'visibility')
-        end
-    end
-
-    function addon.RefreshBagsVehicle()
-        if not _G.pUiBagsBar then
-            return
-        end
-
-        if InCombatLockdown() then
-            if addon.CombatQueue then
-                addon.CombatQueue:Add("micromenu_refresh_bags_vehicle", addon.RefreshBagsVehicle)
-            end
-            return
-        end
-
-        if addon.db.profile.micromenu.hide_on_vehicle then
-            RegisterStateDriver(_G.pUiBagsBar, 'visibility', '[vehicleui] hide;show')
-        else
-            UnregisterStateDriver(_G.pUiBagsBar, 'visibility')
-        end
-    end
-
-    function addon.RefreshMicromenuIcons()
-        -- Icon refresh handled in main setup
-    end
-
-    function addon.RefreshMicromenu()
-    if not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
-        return
-    end
-
-    if not _G.pUiMicroMenu then
-        return
-    end
-
-    local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-    local configMode = useGrayscale and "grayscale" or "normal"
-    local config = addon.db.profile.micromenu[configMode]
-
-    -- FIXED: Only apply scale, NOT position (editor handles that)
-    _G.pUiMicroMenu:SetScale(config.scale_menu)
-
-    -- REMOVED: Don't overwrite editor position
-    -- _G.pUiMicroMenu:ClearAllPoints()
-    -- _G.pUiMicroMenu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT', xOffset + config.x_position, config.y_position)
-
-    addon.RefreshMicromenuIcons()
-
-    LayoutMicroButtons()
-
-    addon.RefreshMicromenuVehicle()
-    UpdateCharacterPortraitVisibility()
-end
-
-    function addon.RefreshBags()
-        if not _G.pUiBagsBar then
-            return
-        end
-
-        addon.RefreshBagsPosition();
-
-        if MainMenuMicroButtonMixin.bagbuttons_refresh then
-            MainMenuMicroButtonMixin:bagbuttons_refresh();
-        end
-
-        if addon.pUiArrowManager then
-            local arrow = addon.pUiArrowManager
-            local isCollapsed = GetBagCollapseState()
-            local normal = arrow:GetNormalTexture()
-            local pushed = arrow:GetPushedTexture()
-            local highlight = arrow:GetHighlightTexture()
-
-            if isCollapsed then
-                normal:set_atlas('bag-arrow-2x')
-                pushed:set_atlas('bag-arrow-2x')
-                highlight:set_atlas('bag-arrow-2x')
-                arrow:SetChecked(true)
-            else
-                normal:set_atlas('bag-arrow-invert-2x')
-                pushed:set_atlas('bag-arrow-invert-2x')
-                highlight:set_atlas('bag-arrow-invert-2x')
-                arrow:SetChecked(nil)
-            end
-        end
-
-        MainMenuMicroButtonMixin:bagbuttons_reposition()
-        addon.RefreshBagsVehicle();
-    end
 
     -- ============================================================================
     -- SECTION 8: SPECIAL UI ELEMENTS
@@ -2628,16 +2644,11 @@ end
     end
 
     -- LFG Frame customization
-    local function ApplyLFGFrameStyle()
-        MiniMapLFGFrameIcon:SetScale(1.5)
-        MiniMapLFGFrameBorder:SetTexture(nil)
-        MiniMapLFGFrame.eye.texture:SetTexture(addon._dir .. 'Micromenu\\uigroupfinderflipbookeye.tga')
-    end
 
     ApplyLFGFrameStyle()
 
     MiniMapLFGFrame:SetScript('OnClick', function(self, button)
-        local mode, submode = GetLFGMode();
+        local mode, _ = GetLFGMode();
         if (button == "RightButton" or mode == "lfgparty" or mode == "abandonedInDungeon") then
             PlaySound("igMainMenuOpen");
             local yOffset;
@@ -2665,14 +2676,6 @@ end
 
     -- Keep Blizzard's LFD status text/layout ownership intact. We only
     -- re-anchor around the eye and avoid reparenting to prevent text regressions.
-    local function ReanchorLFDStatus()
-        if not LFDSearchStatus or not MiniMapLFGFrame then
-            return
-        end
-        local point, relativePoint, xOff, yOff = GetLFDStatusAnchorSpec(GetLFGTooltipPosition())
-        LFDSearchStatus:ClearAllPoints()
-        LFDSearchStatus:SetPoint(point, MiniMapLFGFrame, relativePoint, xOff, yOff)
-    end
 
     addon.ReanchorLFDSearchStatus = ReanchorLFDStatus
 
@@ -2811,7 +2814,7 @@ end
     -- for the same event is intentionally omitted here to avoid duplicate
     -- work per inventory event.
 
-    local eventFrame3 = MicromenuModule.eventFrames.playerEquipmentChanged or CreateFrame("Frame")
+    eventFrame3 = MicromenuModule.eventFrames.playerEquipmentChanged or CreateFrame("Frame")
     MicromenuModule.eventFrames.playerEquipmentChanged = eventFrame3
     addon.package:RegisterEvents(function(self, event, slotID)
         if not IsModuleEnabled() then return end

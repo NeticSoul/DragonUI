@@ -21,8 +21,8 @@ local ItemQualityModule = {
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("itemquality", ItemQualityModule,
-        (addon.L and addon.L["Item Quality"]) or "Item Quality",
-        (addon.L and addon.L["Color item borders by quality in bags, character panel, bank, and merchant"]) or "Color item borders by quality in bags, character panel, bank, and merchant")
+        addon.L["Item Quality"],
+        addon.L["Color item borders by quality in bags, character panel, bank, and merchant"])
 end
 
 -- ============================================================================
@@ -323,10 +323,10 @@ end
 -- Debug: dump bank quality state to chat
 local function DebugBankSlots()
     if not addon.debugMode then return end
-    addon:Print((addon.L and addon.L["=== BANK QUALITY DEBUG ==="]) or "=== BANK QUALITY DEBUG ===")
-    addon:Print((addon.L and addon.L["Module enabled:"]) or "Module enabled:", IsModuleEnabled())
-    addon:Print((addon.L and addon.L["BankFrame exists:"]) or "BankFrame exists:", BankFrame ~= nil)
-    addon:Print((addon.L and addon.L["BankFrame shown:"]) or "BankFrame shown:", BankFrame and BankFrame:IsShown() or false)
+    addon:Print(addon.L["=== BANK QUALITY DEBUG ==="])
+    addon:Print(addon.L["Module enabled:"], IsModuleEnabled())
+    addon:Print(addon.L["BankFrame exists:"], BankFrame ~= nil)
+    addon:Print(addon.L["BankFrame shown:"], BankFrame and BankFrame:IsShown() or false)
     local found = 0
     for i = 1, NUM_BANKGENERIC_SLOTS do
         local button = _G["BankFrameItem" .. i]

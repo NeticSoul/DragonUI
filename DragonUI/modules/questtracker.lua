@@ -15,8 +15,8 @@ addon.QuestTrackerModule = QuestTrackerModule
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("questtracker", QuestTrackerModule,
-        (addon.L and addon.L["Quest Tracker"]) or "Quest Tracker",
-        (addon.L and addon.L["Quest tracker positioning and styling"]) or "Quest tracker positioning and styling")
+        addon.L["Quest Tracker"],
+        addon.L["Quest tracker positioning and styling"])
 end
 
 QuestTrackerModule.questTrackerFrame = nil
@@ -24,10 +24,6 @@ QuestTrackerModule.questTrackerFrame = nil
 -- =============================================================================
 -- MODULE ENABLED CHECK
 -- =============================================================================
-local function GetModuleConfig()
-    return addon:GetModuleConfig("questtracker")
-end
-
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("questtracker")
 end
@@ -222,7 +218,7 @@ local function ApplyQuestTrackerStyling()
     watchFrame.background = watchFrame.background or watchFrame:CreateTexture(nil, 'BACKGROUND')
     local background = watchFrame.background
 
-    local success, err = pcall(background.set_atlas, background, 'QuestTracker-Header', true)
+    local success, _ = pcall(background.set_atlas, background, 'QuestTracker-Header', true)
     if not success then
         return
     end
@@ -484,6 +480,18 @@ local function SyncQuestTrackerHitRect()
     if WatchFrameHeader and WatchFrameHeader:IsShown() then
         contentBottom = WatchFrameHeader:GetBottom()
     end
+
+    -- Collapsed hides WatchFrameLines, but each line keeps its own shown flag, so IsShown() still reports true.
+    if WatchFrame.collapsed then
+        if not contentBottom then
+            ExcludeEntireFrame()
+        else
+            WatchFrame:SetHitRectInsets(0, 0, 0, math.max(0, (contentBottom - frameBottom) - 4))
+            lastContentBottom = contentBottom
+        end
+        return
+    end
+
     local function considerLines(lineSet)
         if not lineSet then return end
         for _, line in pairs(lineSet) do
@@ -606,6 +614,8 @@ local function InstallQuestTrackerHooks()
             end
             if IsModuleEnabled() then
                 ApplyCollapseExpandButtonArt()
+                -- WatchFrame_Collapse never calls WatchFrame_Update, so nothing else reshrinks the hit rect.
+                SyncQuestTrackerHitRect()
             end
         end)
     end
@@ -614,6 +624,7 @@ local function InstallQuestTrackerHooks()
         hooksecurefunc('WatchFrame_Expand', function()
             if IsModuleEnabled() then
                 ApplyCollapseExpandButtonArt()
+                SyncQuestTrackerHitRect()
             end
         end)
     end

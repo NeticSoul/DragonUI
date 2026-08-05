@@ -17,6 +17,7 @@ local defaults = {
         auraDurations = {} -- Observed debuff durations for nameplates: [spellId] = seconds
     },
     profile = {
+        -- Keep at 1: version-less legacy profiles read this default and must still run migrations.
         version = 1,
         -- Widgets
         widgets = {
@@ -608,16 +609,6 @@ local defaults = {
                 anchorParent = 'BOTTOM',
                 showTicks = false
             }
-        },
-
-        -- CHAT SETTINGS
-        chat = {
-            enabled = true, -- Disabled by default to avoid interfering with the original chat
-            scale = 1.0,
-            x_position = 42, -- X relative to BOTTOM LEFT
-            y_position = 35, -- Y relative to BOTTOM LEFT
-            size_x = 295, -- Chat width
-            size_y = 120 -- Chat height
         },
 
         -- UNIT FRAMES SETTINGS

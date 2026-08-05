@@ -34,8 +34,8 @@ addon.KeyBindingModule = KeyBindingModule
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("keybinding", KeyBindingModule,
-        (addon.L and addon.L["Key Binding"]) or "Key Binding",
-        (addon.L and addon.L["LibKeyBound integration for intuitive keybinding"]) or "LibKeyBound integration for intuitive keybinding")
+        addon.L["Key Binding"],
+        addon.L["LibKeyBound integration for intuitive keybinding"])
 end
 
 -- ============================================================================

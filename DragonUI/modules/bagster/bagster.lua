@@ -9,9 +9,8 @@ if _G.Combuctor then return end -- Don't load if standalone Combuctor is present
 
 local _G = _G
 local pairs, ipairs, next, select = pairs, ipairs, next, select
-local format, strsplit = string.format, strsplit
-local tinsert, tremove, tsort = table.insert, table.remove, table.sort
-local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
+local strsplit = strsplit
+local tinsert = table.insert
 local tonumber, tostring, type = tonumber, tostring, type
 local GetItemInfo, GetItemIcon = GetItemInfo, GetItemIcon
 local GetContainerItemInfo, GetContainerItemLink = GetContainerItemInfo, GetContainerItemLink
@@ -63,8 +62,8 @@ local BagsterModule = {
 -- Register with ModuleRegistry
 if addon.RegisterModule then
     addon:RegisterModule("bagster", BagsterModule,
-        (addon.L and addon.L["Bagster"]) or "Bagster",
-        (addon.L and addon.L["All-in-one bag replacement with filtering and search"]) or "All-in-one bag replacement with filtering and search")
+        addon.L["Bagster"],
+        addon.L["All-in-one bag replacement with filtering and search"])
 end
 
 
@@ -321,7 +320,6 @@ addon.BagsterModule = mod
 -- ============================================================================
 
 local DB
-local SET_ALL = ALL or "All"
 local SET_EQUIPMENT = "Equipment"
 local SET_USABLE = "Usable"
 local SET_NORMAL = "Normal"
@@ -360,21 +358,21 @@ local defaults = {
 
 -- Localization strings
 local L = {}
-L.InventoryTitle = (addon.L and addon.L["%s's Inventory"]) or "%s's Inventory"
-L.BankTitle = (addon.L and addon.L["%s's Bank"]) or "%s's Bank"
-L.Inventory = (addon.L and addon.L["Inventory"]) or "Inventory"
-L.Bank = (addon.L and addon.L["Bank"]) or "Bank"
-L.Bags = (addon.L and addon.L["Bags"]) or "Bags"
-L.BagToggle = (addon.L and addon.L["|cff00ff00Left-Click|r to toggle bag display"]) or "|cff00ff00Left-Click|r to toggle bag display"
-L.InventoryToggle = (addon.L and addon.L["|cff00ff00Right-Click|r to toggle inventory"]) or "|cff00ff00Right-Click|r to toggle inventory"
-L.BankToggle = (addon.L and addon.L["|cff00ff00Right-Click|r to toggle bank"]) or "|cff00ff00Right-Click|r to toggle bank"
-L.MoveTip = (addon.L and addon.L["|cff00ff00Drag|r to move"]) or "|cff00ff00Drag|r to move"
-L.ResetPositionTip = (addon.L and addon.L["|cff00ff00Alt+Right-Click|r to reset position"]) or "|cff00ff00Alt+Right-Click|r to reset position"
-L.ToggleInventory = (addon.L and addon.L["Toggle Inventory"]) or "Toggle Inventory"
-L.ToggleBank = (addon.L and addon.L["Toggle Bank"]) or "Toggle Bank"
-L.ShowBag = (addon.L and addon.L["|cff00ff00Left-Click|r to show this bag's items"]) or "|cff00ff00Left-Click|r to show this bag's items"
-L.HideBag = (addon.L and addon.L["|cff00ff00Left-Click|r to hide this bag's items"]) or "|cff00ff00Left-Click|r to hide this bag's items"
-L.DragBag = (addon.L and addon.L["|cff00ff00Drag|r to move this bag"]) or "|cff00ff00Drag|r to move this bag"
+L.InventoryTitle = addon.L["%s's Inventory"]
+L.BankTitle = addon.L["%s's Bank"]
+L.Inventory = addon.L["Inventory"]
+L.Bank = addon.L["Bank"]
+L.Bags = addon.L["Bags"]
+L.BagToggle = addon.L["|cff00ff00Left-Click|r to toggle bag display"]
+L.InventoryToggle = addon.L["|cff00ff00Right-Click|r to toggle inventory"]
+L.BankToggle = addon.L["|cff00ff00Right-Click|r to toggle bank"]
+L.MoveTip = addon.L["|cff00ff00Drag|r to move"]
+L.ResetPositionTip = addon.L["|cff00ff00Alt+Right-Click|r to reset position"]
+L.ToggleInventory = addon.L["Toggle Inventory"]
+L.ToggleBank = addon.L["Toggle Bank"]
+L.ShowBag = addon.L["|cff00ff00Left-Click|r to show this bag's items"]
+L.HideBag = addon.L["|cff00ff00Left-Click|r to hide this bag's items"]
+L.DragBag = addon.L["|cff00ff00Drag|r to move this bag"]
 
 local function GetSetDisplayName(name)
     if name == SET_EQUIPMENT then

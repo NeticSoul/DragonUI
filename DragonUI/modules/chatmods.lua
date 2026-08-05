@@ -78,8 +78,8 @@
     -- Register with ModuleRegistry
     if addon.RegisterModule then
         addon:RegisterModule("chatmods", ChatModsModule,
-            (addon.L and addon.L["Chat Mods"]) or "Chat Mods",
-            (addon.L and addon.L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"]) or "Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target")
+            addon.L["Chat Mods"],
+            addon.L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"])
     end
 
     -- ============================================================================
@@ -1003,7 +1003,7 @@ local function ApplyURLDetection()
     _G.ChatFrame_OnHyperlinkShow = function(self, link, text, button)
         if not StaticPopupDialogs["DRAGONUI_URLCOPY_DIALOG"] then
             StaticPopupDialogs["DRAGONUI_URLCOPY_DIALOG"] = {
-                text = (addon.L and addon.L["URL"]) or "URL",
+                text = addon.L["URL"],
                 button2 = CLOSE or "Close",
                 hasEditBox = 1,
                 hasWideEditBox = 1,
@@ -1175,7 +1175,7 @@ local function ApplyChatCopy()
         CreateCopyFrame()
     end
 
-    local copyLabel = (addon.L and addon.L["Copy Text"]) or "Copy Text"
+    local copyLabel = addon.L["Copy Text"]
 
     if not ChatModsModule.hooks.chatTabMenuCopyText then
         hooksecurefunc("FCF_Tab_OnClick", function(tab, button)

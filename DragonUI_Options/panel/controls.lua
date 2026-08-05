@@ -10,7 +10,6 @@ Post-skins AceGUI widgets for a clean, dark look.
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 
 local AceGUI = LibStub("AceGUI-3.0")

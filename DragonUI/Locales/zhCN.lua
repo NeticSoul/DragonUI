@@ -135,7 +135,6 @@ L["Keybinding mode deactivated."] = "按键绑定模式已停用。"
 -- 游戏菜单
 -- ============================================================================
 
-L["DragonUI"] = "DragonUI"
 
 -- ============================================================================
 -- 小地图模块
@@ -216,7 +215,6 @@ L["DragonUI Conflict Warning"] = "DragonUI 冲突警告"
 L["The addon |cFFFFFF00%s|r conflicts with DragonUI."] = "插件 |cFFFFFF00%s|r 与 DragonUI 冲突。"
 L["Reason:"] = "原因："
 L["Disable the conflicting addon now?"] = "现在禁用冲突插件吗？"
-L["Disable"] = "禁用"
 L["Keep Both"] = "保留两者"
 L["DragonUI - D3D9Ex Warning"] = "DragonUI - D3D9Ex 警告"
 L["DragonUI detected that your client is using D3D9Ex."] = "DragonUI 检测到你的客户端正在使用 D3D9Ex。"
@@ -252,7 +250,6 @@ L["Which minimap do you want to use?"] = "你想使用哪种小地图？"
 L["SexyMap"] = "SexyMap"
 L["DragonUI"] = "DragonUI"
 L["Hybrid"] = "混合"
-L["Recommended"] = "推荐"
 
 L["SexyMap Compatibility"] = "SexyMap 兼容性"
 L["Minimap Mode"] = "小地图模式"

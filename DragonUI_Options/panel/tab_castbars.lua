@@ -9,7 +9,6 @@ Player, target, and focus castbar options with sub-tab navigation.
 local addon = DragonUI
 if not addon then return end
 
-local L = addon.L
 local LO = addon.LO
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel
@@ -192,7 +191,7 @@ local function BuildPlayerCastbar(scroll)
             if addon.ResetCastbarPosition then
                 addon.ResetCastbarPosition()
             end
-            print("|cFF00FF00[DragonUI]|r " .. LO["Player castbar position reset."])
+            addon:Print(LO["Player castbar position reset."])
         end,
     })
 

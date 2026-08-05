@@ -22,8 +22,8 @@ local ItemLevelModule = {
 
 if addon.RegisterModule then
     addon:RegisterModule("itemlevel", ItemLevelModule,
-        (addon.L and addon.L["Item Level"]) or "Item Level",
-        (addon.L and addon.L["Show item level on gear icons in bags, character panel, bank, and more"]) or "Show item level on gear icons in bags, character panel, bank, and more",
+        addon.L["Item Level"],
+        addon.L["Show item level on gear icons in bags, character panel, bank, and more"],
         { lifecyclePrefix = "ItemLevel" })
 end
 
@@ -563,7 +563,7 @@ local function UpdateAverageFor(key, context, unit, parent, modelFrame, useToolt
         return
     end
 
-    fontString:SetFormattedText((addon.L and addon.L["Item Level: %d"]) or "Item Level: %d", average)
+    fontString:SetFormattedText(addon.L["Item Level: %d"], average)
     fontString:Show()
 end
 

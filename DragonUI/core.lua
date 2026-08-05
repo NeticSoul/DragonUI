@@ -70,7 +70,7 @@ end
 
 function addon:ToggleOptionsUI(msg)
     if InCombatLockdown() then
-        print("|cFFFF0000[DragonUI]|r " .. L["Cannot open options in combat."])
+        addon:Error(L["Cannot open options in combat."])
         return
     end
 
@@ -92,7 +92,7 @@ function addon:ToggleOptionsUI(msg)
         end
 
         if noConfig then
-            print("|cFFFF0000[DragonUI]|r " .. L["Error -- Addon 'DragonUI_Options' not found or is disabled."])
+            addon:Error(L["Error -- Addon 'DragonUI_Options' not found or is disabled."])
             return
         end
     end
@@ -101,12 +101,15 @@ function addon:ToggleOptionsUI(msg)
     if addon.OptionsPanel then
         addon.OptionsPanel:Toggle(msg)
     else
-        print("|cFFFF0000[DragonUI]|r " .. L["Options panel not available. Try /reload."])
+        addon:Error(L["Options panel not available. Try /reload."])
     end
 end
 
 -- Callback function that refreshes all modules when configuration changes
 function addon:RefreshConfig()
+    -- Also runs on profile switch: the newly-activated profile may be older than the current schema.
+    addon:ApplyDatabaseMigrations()
+
     -- Initialize cooldown system if it hasn't been already
     if addon.InitializeCooldowns then
         addon.InitializeCooldowns()
@@ -147,10 +150,10 @@ function addon.core:SlashCommand(input)
             if addon.EditorMode then
                 addon.EditorMode:Toggle()
             else
-                print("|cFFFF0000[DragonUI]|r " .. L["Editor mode not available."])
+                addon:Error(L["Editor mode not available."])
             end
         else
-            print("|cFF00FF00[DragonUI]|r " .. L["Commands: /dragonui config, /dragonui edit"])
+            addon:Print(L["Commands: /dragonui config, /dragonui edit"])
         end
     end
 end

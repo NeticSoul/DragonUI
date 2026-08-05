@@ -76,7 +76,6 @@ L["No"] = "아니요"
 -- TAB NAMES
 -- ============================================================================
 
-L["General"] = "일반"
 L["Modules"] = "모듈"
 L["Action Bars"] = "행동 단축바"
 L["Additional Bars"] = "추가 단축바"
@@ -156,8 +155,6 @@ L["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can d
 L["Positions"] = "위치"
 L["Player Buffs & Debuffs"] = "플레이어 버프 및 디버프"
 L["Layout settings for the player buff and debuff bar. These do not affect target or focus auras."] = "플레이어 버프/디버프 바 레이아웃 설정입니다. 대상 또는 주시 대상 오라에는 영향을 주지 않습니다."
-L["Buffs"] = "버프"
-L["Debuffs"] = "디버프"
 L["Buff Order"] = "버프 정렬"
 L["Default (Blizzard)"] = "기본값 (Blizzard)"
 L["How to sort player buff icons on the buff bar."] = "플레이어 버프 바 아이콘 정렬 방식입니다."
@@ -235,14 +232,6 @@ L["Buff Stack Font Size"] = "버프 중첩 글꼴 크기"
 L["Debuff Icon Size"] = "디버프 아이콘 크기"
 L["Debuff Icon Scale"] = "디버프 아이콘 배율"
 L["Debuff Stack Font Size"] = "디버프 중첩 글꼴 크기"
-L["Background Plates Opacity"] = "Background Plates Opacity"
-L["Controls the opacity of non-target nameplates while fade is active (0.0 - 1.0)."] = "Controls the opacity of non-target nameplates while fade is active (0.0 - 1.0)."
-L["No Target: Full Opacity"] = "No Target: Full Opacity"
-L["When you have no target, show all nameplates at full opacity."] = "When you have no target, show all nameplates at full opacity."
-L["Level Format"] = "Level Format"
-L["Size of debuff icons on nameplates."] = "Size of debuff icons on nameplates."
-L["Show Debuff Cooldown Text"] = "Show Debuff Cooldown Text"
-L["Show remaining debuff time on each debuff icon."] = "Show remaining debuff time on each debuff icon."
 L["Show Debuff Cooldown Swipe"] = "디버프 재사용 스윕 표시"
 L["Also show a radial cooldown sweep on each debuff icon."] = "각 디버프 아이콘에 원형 재사용 스윕도 함께 표시합니다."
 L["Debuff Horizontal Offset"] = "디버프 가로 오프셋"
@@ -256,10 +245,6 @@ L["Choose the visual style of the cooldown sweep. These texture-based styles sta
 L["Shade Fill"] = "음영 채우기"
 L["Quadrant Sweep"] = "분할 스윕"
 L["Square Radial Sweep"] = "사각 방사형 스윕"
-L["Debuff Cooldown Font Size"] = "Debuff Cooldown Font Size"
-L["Font size for debuff remaining time text."] = "Font size for debuff remaining time text."
-L["Debuff Cooldown Text Position"] = "Debuff Cooldown Text Position"
-L["Choose where the debuff cooldown text is anchored on the icon."] = "Choose where the debuff cooldown text is anchored on the icon."
 L["Reset Aura Customization"] = "오라 사용자 설정 초기화"
 L["Reset Aura Timers"] = "오라 타이머 초기화"
 L["Aura timer settings reset."] = "오라 타이머 설정이 초기화되었습니다."
@@ -450,7 +435,6 @@ L["Bank"] = "은행"
 L["Choose which category tabs appear on the bag frame. Changes require closing and reopening bags to take effect."] = "가방 프레임에 표시할 카테고리 탭을 선택합니다. 변경 사항은 가방을 닫았다가 다시 열어야 적용됩니다."
 L["Choose which category tabs appear on the inventory bag frame."] = "소지품 가방 프레임에 표시할 카테고리 탭 선택"
 L["Choose which category tabs appear on the bank frame."] = "은행 프레임에 표시할 카테고리 탭 선택"
-L["Display"] = "표시"
 L["Gold Display"] = "골드 표시"
 L["Text Only"] = "텍스트만"
 L["Gold Icons"] = "골드 아이콘"
@@ -510,7 +494,6 @@ L["All-in-one bag replacement with filtering and search"] = "필터 및 검색 �
 -- ============================================================================
 
 -- Sub-tabs
-L["Layout"] = "레이아웃"
 L["Visibility"] = "표시 설정"
 
 -- Scales section
@@ -555,7 +538,6 @@ L["Show Count Text"] = "중첩 횟수 문자 표시"
 L["Hotkey Text"] = "단축키 텍스트"
 L["Show Hotkey"] = "단축키 표시"
 L["Show Hotkey Text"] = "단축키 문자 표시"
-L["Show Empty Slots"] = "빈 슬롯 표시"
 L["Show the button frame on pet slots with no ability assigned."] = "능력이 지정되지 않은 펫 슬롯에 버튼 테두리를 표시합니다."
 L["Range Indicator"] = "거리 표시기"
 L["Show small range indicator point on buttons"] = "버튼에 작은 사거리 표시점을 표시합니다"
@@ -618,10 +600,6 @@ L["Columns"] = "칸 수"
 L["Buttons Shown"] = "표시될 버튼 수"
 L["Change Button Order"] = "버튼 순서 변경"
 L["Button Order"] = "버튼 순서"
-L["Top Left"] = "왼쪽 위"
-L["Bottom Left"] = "왼쪽 아래"
-L["Top Right"] = "오른쪽 위"
-L["Bottom Right"] = "오른쪽 아래"
 L["Quick Presets"] = "빠른 프리셋"
 L["Apply layout presets to multiple bars at once."] = "여러 단축바에 레이아웃 프리셋 일괄 적용"
 L["Both 1x12"] = "모두 1x12"
@@ -703,7 +681,6 @@ L["Focus Castbar"] = "주시 대상 시전바"
 
 -- Sub-tabs
 L["Player"] = "플레이어"
-L["Target"] = "대상"
 L["Focus"] = "주시 대상"
 
 -- Common options
@@ -849,7 +826,6 @@ L["Enable Animated Border"] = "애니메이션 테두리 활성화"
 L["Enable Minimap Decorations"] = "미니맵 장식 활성화"
 L["Animated Effects"] = "애니메이션 효과"
 L["Rotate preset layers when the selected preset includes animation."] = "선택한 프리셋에 애니메이션이 포함되어 있으면 프리셋 레이어를 회전합니다."
-L["Opacity"] = "불투명도"
 L["Hide DragonUI Border"] = "DragonUI 테두리 숨기기"
 
 -- Time & Calendar
@@ -897,7 +873,6 @@ L["Center"] = "중앙"
 L["Horizontal position offset"] = "가로 위치 오프셋"
 L["Vertical position offset"] = "세로 위치 오프셋"
 L["Reset quest tracker to default position"] = "퀘스트 추적기를 기본 위치로 초기화합니다"
-L["Font Size"] = "글꼴 크기"
 L["Font size for quest tracker text"] = "퀘스트 추적기 문자 글꼴 크기 설정"
 
 -- ============================================================================
@@ -1091,7 +1066,6 @@ L["A UI reload is required to apply this change."] = "이 변경 사항을 적�
 
 -- Size & Scale
 L["Size & Scale"] = "크기 및 비율"
-L["Bar Height"] = "바 높이"
 L["Height of the XP and Reputation bars (in pixels)."] = "경험치 및 평판 바의 높이(픽셀 단위)입니다."
 L["Width of the XP and Reputation bars (in pixels)."] = "경험치 및 평판 바의 너비(픽셀 단위)입니다."
 L["Experience Bar Scale"] = "경험치 바 크기 비율"
@@ -1391,8 +1365,6 @@ L["Show combo points on the current target nameplate."] = "현재 대상 이름�
 L["Show Totem Icons"] = "토템 아이콘 표시"
 L["Totem Icon Only"] = "토템 아이콘만 표시"
 L["Hide the totem's nameplate entirely and show only its icon."] = "토템의 이름표를 완전히 숨기고 아이콘만 표시합니다."
-L["Totem Icon Position"] = "Totem Icon Position"
-L["Choose where the totem icon is anchored around the nameplate."] = "Choose where the totem icon is anchored around the nameplate."
 L["Show totem icon on shaman totem nameplates."] = "주술사 토템 이름표에 토템 아이콘 표시."
 L["Name and health percent font scale (1-10, default 2)."] = "이름 및 생명력 글꼴 배율 (1-10, 기본값 2)."
 L["Size & Position"] = "크기 및 위치"
@@ -1423,7 +1395,6 @@ L["Inverts threat colors for a tank: green means you hold aggro, red means you l
 L["DPS Mode"] = "DPS 모드"
 L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = "전투 중 DPS 위협 색상: 초록=어그로 없음, 노랑=전환, 빨강=어그로 보유."
 L["Keep all nameplates fully opaque when you have a target."] = "대상이 있을 때 모든 이름표를 불투명하게 유지."
-L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "페이드 활성화 시 비대상 이름표 투명도 (0.1 - 1.0)."
 L["Show enemy cast bar on the targeted nameplate."] = "대상 이름표에 적 시전 바 표시."
 L["Name Font"] = "이름 글꼴"
 

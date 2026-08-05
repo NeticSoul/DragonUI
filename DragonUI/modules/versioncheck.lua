@@ -16,8 +16,8 @@ local VersionCheckModule = {}
 -- Register with ModuleRegistry (if available)
 if addon.RegisterModule then
     addon:RegisterModule("versioncheck", VersionCheckModule,
-        (addon.L and addon.L["Version Check"]) or "Version Check",
-        (addon.L and addon.L["Broadcast and detect addon version updates across group members"]) or "Broadcast and detect addon version updates across group members")
+        addon.L["Version Check"],
+        addon.L["Broadcast and detect addon version updates across group members"])
 end
 
 -- ============================================================================

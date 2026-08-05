@@ -342,7 +342,7 @@ function UF.SetupHealthBarHook(healthBar, statusTexture, useClassColor)
     if not healthBar then return end
 
     hooksecurefunc(healthBar, "SetValue", function(self)
-        local min, max = self:GetMinMaxValues()
+        local _, max = self:GetMinMaxValues()
         local val = self:GetValue()
         if max > 0 and val > 0 then
             local pct = val / max
