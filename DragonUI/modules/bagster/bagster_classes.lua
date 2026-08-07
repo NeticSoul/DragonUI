@@ -5,6 +5,10 @@ local mod = addon.BagsterModule
 local format = string.format
 local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
 
+local GOLD_SYMBOL = GOLD_AMOUNT_SYMBOL or "g"
+local SILVER_SYMBOL = SILVER_AMOUNT_SYMBOL or "s"
+local COPPER_SYMBOL = COPPER_AMOUNT_SYMBOL or "c"
+
 -- ============================================================================
 -- TEMPLATE HELPERS (moved from core: used by SideTab and BottomTab)
 -- ============================================================================
@@ -1538,7 +1542,7 @@ do
             self.iconCopper:Hide(); self.amtCopper:Hide(); self.btnCopper:Hide()
 
             self.textFull:SetText(format("|cffffd700%s %s |r|cffc7c7cf%d %s |r|cffeda55f%d %s|r",
-                FormatThousands(gold), "g", silver, "s", copper, "c"))
+                FormatThousands(gold), GOLD_SYMBOL, silver, SILVER_SYMBOL, copper, COPPER_SYMBOL))
             self.textFull:Show()
             self.btnText:Show()
         else
