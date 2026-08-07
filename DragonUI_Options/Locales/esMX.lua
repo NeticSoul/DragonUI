@@ -456,6 +456,7 @@ L["Choose which category tabs appear on the bank frame."] = "Elige qué pestaña
 L["Gold Display"] = "Mostrar Oro"
 L["Text Only"] = "Solo Texto"
 L["Gold Icons"] = "Iconos de Oro"
+L["(disabled by Colorblind Mode)"] = "(desactivado por el Modo Daltónico)"
 L["Item Scale"] = "Escala de Objetos"
 L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = "Tamaño máximo de las casillas de objeto. La rejilla las reduce para caber en la ventana."
 L["Item Spacing"] = "Espaciado de Objetos"

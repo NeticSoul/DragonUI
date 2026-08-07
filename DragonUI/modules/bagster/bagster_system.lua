@@ -388,6 +388,7 @@ end
 local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("ADDON_LOADED")
 initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+initFrame:RegisterEvent("CVAR_UPDATE")
 
 initFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == "DragonUI" then
@@ -404,6 +405,11 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
     elseif event == "PLAYER_ENTERING_WORLD" then
         if not mod.IsModuleEnabled() then return end
         ApplyBagsterSystem()
+
+    elseif event == "CVAR_UPDATE" and arg1 == "colorblindMode" then
+        if mod.IsModuleEnabled() then
+            RefreshBagsterFrames()
+        end
     end
 end)
 

@@ -485,6 +485,7 @@ L["Choose which category tabs appear on the bank frame."] = true
 L["Gold Display"] = true
 L["Text Only"] = true
 L["Gold Icons"] = true
+L["(disabled by Colorblind Mode)"] = true
 L["Item Scale"] = true
 L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = true
 L["Item Spacing"] = true

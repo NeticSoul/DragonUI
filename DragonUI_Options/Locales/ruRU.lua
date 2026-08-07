@@ -433,6 +433,7 @@ L["Choose which category tabs appear on the bank frame."] = "Выбрать, к�
 L["Gold Display"] = "Отображение золота"
 L["Text Only"] = "Только текст"
 L["Gold Icons"] = "Значки золота"
+L["(disabled by Colorblind Mode)"] = "(отключено режимом для дальтоников)"
 L["Item Scale"] = "Масштаб предметов"
 L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = "Максимальный размер ячеек. Сетка уменьшает их, чтобы уместиться в окне."
 L["Item Spacing"] = "Отступ предметов"

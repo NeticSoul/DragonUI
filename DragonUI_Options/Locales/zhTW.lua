@@ -409,6 +409,7 @@ L["Choose which category tabs appear on the bank frame."] = "選擇在銀行視�
 L["Gold Display"] = "金幣顯示"
 L["Text Only"] = "僅文字"
 L["Gold Icons"] = "金幣圖標"
+L["(disabled by Colorblind Mode)"] = "(已被色盲模式停用)"
 L["Item Scale"] = "物品縮放"
 L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = "物品格子的最大尺寸。網格會縮小它們以適應視窗。"
 L["Item Spacing"] = "物品間距"

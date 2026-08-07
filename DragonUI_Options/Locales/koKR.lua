@@ -441,6 +441,7 @@ L["Choose which category tabs appear on the bank frame."] = "은행 프레임에
 L["Gold Display"] = "골드 표시"
 L["Text Only"] = "텍스트만"
 L["Gold Icons"] = "골드 아이콘"
+L["(disabled by Colorblind Mode)"] = "(색맹 모드에 의해 비활성화됨)"
 L["Item Scale"] = "아이템 크기"
 L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = "아이템 칸의 최대 크기입니다. 격자가 창에 맞게 줄입니다."
 L["Item Spacing"] = "아이템 간격"

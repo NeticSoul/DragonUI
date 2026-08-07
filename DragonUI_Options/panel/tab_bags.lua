@@ -574,8 +574,13 @@ local function BuildBagsTab(scroll)
         text = (LO["Text Only"]) or "Text Only",
         icons = (LO["Gold Icons"]) or "Gold Icons",
     }
+    local goldDisplayLabel = LO["Gold Display"] or "Gold Display"
+    if GetCVar("colorblindMode") == "1" then
+        goldDisplayLabel = goldDisplayLabel .. " |cff888888" ..
+            ((LO["(disabled by Colorblind Mode)"]) or "(disabled by Colorblind Mode)") .. "|r"
+    end
     C:AddDropdown(displaySection, {
-        label = LO["Gold Display"] or "Gold Display",
+        label = goldDisplayLabel,
         values = moneyValues,
         getFunc = function()
             local mc = addon.db.profile.modules and addon.db.profile.modules.bagster
@@ -587,9 +592,10 @@ local function BuildBagsTab(scroll)
             addon.db.profile.modules.bagster.money_display = val
             if addon.RefreshBagsterFrames then addon.RefreshBagsterFrames() end
         end,
-        disabled = function() return not IsBagsterEnabled() end,
+        disabled = function() return not IsBagsterEnabled() or GetCVar("colorblindMode") == "1" end,
         width = 180,
     })
+    C:AddSpacer(displaySection)
 
     local function GetBagsterConfig(create)
         if create then

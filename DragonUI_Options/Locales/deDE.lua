@@ -428,6 +428,7 @@ L["Choose which category tabs appear on the bank frame."] = "Wähle aus, welche 
 L["Gold Display"] = "Gold-Anzeige"
 L["Text Only"] = "Nur Text"
 L["Gold Icons"] = "Gold-Icons"
+L["(disabled by Colorblind Mode)"] = "(deaktiviert durch Farbenblind-Modus)"
 L["Item Scale"] = "Gegenstands-Skalierung"
 L["Maximum size of item slots. The grid still shrinks them to fit the frame."] = "Maximale Größe der Gegenstandsfelder. Das Raster verkleinert sie bei Bedarf."
 L["Item Spacing"] = "Gegenstandsabstand"
