@@ -493,6 +493,9 @@ local function ModernizeCoinIcons(frame)
     if not IsActive() then
         return
     end
+    if GetCVar("colorblindMode") == "1" then
+        return -- Blizzard blanks the coin texture and shows text instead; don't paint over it.
+    end
     if type(frame) ~= "table" then
         frame = frame and _G[frame]
     end

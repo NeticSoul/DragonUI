@@ -1412,6 +1412,9 @@ do
     end
 
     function MoneyFrame:GetDisplayMode()
+        if GetCVar("colorblindMode") == "1" then
+            return "text"
+        end
         local mc = addon.db and addon.db.profile and addon.db.profile.modules and addon.db.profile.modules.bagster
         return (mc and mc.money_display) or "icons"
     end

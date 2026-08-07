@@ -97,7 +97,8 @@ local COPPER_SYMBOL = COPPER_AMOUNT_SYMBOL or "c"
 
 local function FormatMoney(copper)
     copper = copper or 0
-    if GetCoinTextureString then
+    -- GetCoinTextureString always embeds coin icons; it doesn't check colorblindMode itself.
+    if GetCoinTextureString and GetCVar("colorblindMode") ~= "1" then
         return GetCoinTextureString(copper)
     end
     return format("|cffffd700%d%s|r |cffc7c7cf%d%s|r |cffeda55f%d%s|r",
