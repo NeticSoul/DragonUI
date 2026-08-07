@@ -30,6 +30,9 @@ function addon.core:OnInitialize()
     -- Replace the temporary addon.db with the real AceDB
     addon.db = LibStub("AceDB-3.0"):New("DragonUIDB", addon.defaults);
 
+    -- First point where the stored language override is readable; UI is built later (PLAYER_LOGIN).
+    addon.RefreshLocale()
+
     addon:ApplyDatabaseMigrations()
 
     -- Force defaults to be written to profile (check for specific key that should always exist)

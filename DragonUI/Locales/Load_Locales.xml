@@ -14,7 +14,6 @@
 	<Script file="zhTW.lua"/>
 	<Script file="koKR.lua"/>
 
-	<!-- Locale override bootstrap (defines addon.GetActiveLocale, must load after
-	     the AceLocale fork in the TOC but before DragonUI.xml/config.lua) -->
+	<!-- Defines addon.GetActiveLocale, which config.lua calls from DragonUI.xml right after this -->
 	<Script file="locale_override.lua"/>
 </Ui>

@@ -7,10 +7,16 @@
 local addon = select(2,...);
 
 -- Localization (must load before any core/ file that references addon.L)
--- Uses the DragonUI AceLocale fork: all locales are always registered, and the
--- user's preferred locale (General tab dropdown) is selected via GetActiveLocale().
-addon.L = LibStub("AceLocale-3.0-DragonUI"):GetLocale("DragonUI", addon.GetActiveLocale())
-addon.LO = addon.L -- Backwards-compatible alias used by options panels
+local _acl = LibStub("AceLocale-3.0-DragonUI")
+
+-- Stable proxy table: 25 files capture `local L = addon.L` at file scope, so the identity must
+-- survive RefreshLocale re-pointing the active locale once SavedVariables are available.
+local _localeMeta = { __index = _acl:GetLocale("DragonUI", addon.GetActiveLocale()) }
+addon.L = setmetatable({}, _localeMeta)
+
+function addon.RefreshLocale()
+    _localeMeta.__index = _acl:GetLocale("DragonUI", addon.GetActiveLocale())
+end
 
 addon._dir = [[Interface\AddOns\DragonUI\Textures\]];
 

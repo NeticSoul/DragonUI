@@ -1,30 +1,5 @@
---[[
-================================================================================
-DragonUI - Locale Override Bootstrap
-================================================================================
-Reads the user's locale preference from the DragonUIDB SavedVariable BEFORE
-AceDB:New() runs (AceDB initializes in core.lua:OnInitialize, which fires on
-PLAYER_LOGIN — long after the locale files have been evaluated).
-
-The override is stored in the AceDB **global** namespace
-(_G.DragonUIDB.global.locale), so it persists across characters and profiles
-and is available in raw SavedVar form whenever this file is evaluated.
-
-Resolution order:
-  1. _G.DragonUIDB.global.locale  (user override from the General tab dropdown)
-  2. GetLocale()                  (client language, "enGB" normalised to "enUS")
-
-A value of "auto" (or nil/empty) means "follow the client language".
-================================================================================
-]]
-
 local addon = select(2, ...)
 if not addon then return end
-
-local CLIENT_LOCALE = GetLocale()
-if CLIENT_LOCALE == "enGB" then
-    CLIENT_LOCALE = "enUS"
-end
 
 -- Set of locales DragonUI ships translations for.
 local SUPPORTED = {
@@ -33,10 +8,27 @@ local SUPPORTED = {
     zhCN = true, zhTW = true, koKR = true,
 }
 
+local CLIENT_LOCALE = GetLocale()
+if CLIENT_LOCALE == "enGB" then
+    CLIENT_LOCALE = "enUS"
+end
+-- Private-server clients report locales we ship nothing for (enCN, enTW, itIT); without this
+-- GetLocale would resolve to nil and every addon.L lookup would error.
+if not SUPPORTED[CLIENT_LOCALE] then
+    CLIENT_LOCALE = "enUS"
+end
+
+-- SavedVariables load *after* the addon's files (see ADDON_LOADED), so at file scope this can only
+-- return the client locale; addon.RefreshLocale() re-resolves it from AceDB in OnInitialize.
 function addon.GetActiveLocale()
-    local sv = _G.DragonUIDB
-    local pref = sv and sv.global and sv.global.locale
-    if type(pref) == "string" and pref ~= "" and pref ~= "auto" and SUPPORTED[pref] then
+    local pref
+    if addon.db and addon.db.global then
+        pref = addon.db.global.locale
+    else
+        local sv = _G.DragonUIDB
+        pref = sv and sv.global and sv.global.locale
+    end
+    if type(pref) == "string" and SUPPORTED[pref] then
         return pref
     end
     return CLIENT_LOCALE

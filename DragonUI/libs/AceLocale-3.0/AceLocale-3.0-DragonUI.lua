@@ -5,7 +5,7 @@
 -- @class file
 -- @name AceLocale-3.0-DragonUI
 -- @release forked from AceLocale-3.0.lua r895
-local MAJOR,MINOR = "AceLocale-3.0-DragonUI", 1
+local MAJOR,MINOR = "AceLocale-3.0-DragonUI", 2
 
 local AceLocale, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
@@ -24,8 +24,9 @@ if gameLocale == "enGB" then
 	gameLocale = "enUS"
 end
 
-AceLocale.apps = AceLocale.apps or {}          -- array of ["AppName"]=localetableref
-AceLocale.appnames = AceLocale.appnames or {}  -- array of [localetableref]="AppName"
+AceLocale.apps = AceLocale.apps or {}                    -- array of ["AppName"]=localetableref
+AceLocale.appnames = AceLocale.appnames or {}            -- array of [localetableref]="AppName"
+AceLocale.defaultlocales = AceLocale.defaultlocales or {} -- array of ["AppName"]="enUS"
 
 -- This metatable is used on all tables returned from GetLocale
 local readmeta = {
@@ -59,10 +60,10 @@ local writeproxy = setmetatable({}, {
 	__index = assertfalse
 })
 
--- This metatable proxy is used when registering the default locale. 
+-- This metatable proxy is used when registering the default locale.
 -- It refuses to overwrite existing values
 -- Reason 1: Allows loading locales in any order
--- Reason 2: If 2 modules have the same string, but only the first one to be 
+-- Reason 2: If 2 modules have the same string, but only the first one to be
 --           loaded has a translation for the current locale, the translation
 --           doesn't get overwritten.
 --
@@ -76,8 +77,8 @@ local writedefaultproxy = setmetatable({}, {
 })
 
 --- Register a new locale (or extend an existing one) for the specified application.
--- :NewLocale will return a table you can fill your locale into, or nil if the locale isn't needed for the players
--- game locale.
+-- :NewLocale will return a table you can fill your locale into. Unlike stock AceLocale it never
+-- returns nil, since every locale is kept so the user can switch language at runtime.
 -- @paramsig application, locale[, isDefault[, silent]]
 -- @param application Unique name of addon / module
 -- @param locale Name of the locale to register, e.g. "enUS", "deDE", etc.
@@ -92,7 +93,7 @@ local writedefaultproxy = setmetatable({}, {
 -- local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI", "deDE")
 -- if not L then return end
 -- L["string1"] = "Zeichenkette1"
--- @return Locale Table to add localizations to, or nil if the current locale is not required.
+-- @return Locale Table to add localizations to.
 function AceLocale:NewLocale(application, locale, isDefault, silent)
 	local app = AceLocale.apps[application]
 
@@ -106,14 +107,17 @@ function AceLocale:NewLocale(application, locale, isDefault, silent)
 		AceLocale.appnames[app] = application
 	end
 
-	-- DragonUI block (ElvUI-style): always register every locale, no GAME_LOCALE gating.
-	-- NOTE: use rawget (not app[locale]) — the app table carries the noisy readmeta
-	-- metatable, so indexing an unregistered locale would fire "Missing entry" errors.
+	-- DragonUI block (ElvUI-style): keep every locale in its own subtable, no GAME_LOCALE gating.
+	-- NOTE: rawget/rawset throughout — the app table carries readmeta, so a plain index would
+	-- fire "Missing entry" errors for locales that aren't registered yet.
 	if type(rawget(app, locale)) ~= "table" then
-		app[locale] = setmetatable({}, readmetasilent)
+		rawset(app, locale, {})
+	end
+	if isDefault then
+		AceLocale.defaultlocales[application] = locale
 	end
 
-	registering = app[locale] -- remember globally for writeproxy and writedefaultproxy
+	registering = rawget(app, locale) -- remember globally for writeproxy and writedefaultproxy
 	-- end block
 
 	if isDefault then
@@ -123,27 +127,51 @@ function AceLocale:NewLocale(application, locale, isDefault, silent)
 	return writeproxy
 end
 
---- Returns localizations for the current locale (or default locale if translations are missing).
+--- Returns localizations for the requested locale (or the default locale if translations are missing).
 -- Errors if nothing is registered (spank developer, not just a missing translation)
 -- @param application Unique name of addon / module
--- @param locale Optional locale name (e.g. "esES"). Falls back to the client gameLocale if omitted or not registered.
+-- @param locale Optional locale name (e.g. "esES"). Falls back to the client locale, then the default locale.
 -- @param silent If true, the locale is optional, silently return nil if it's not found (defaults to false, optional)
 -- @return The locale table for the requested (or current) language.
 --- Modified by DragonUI to add `locale` as second arg
 function AceLocale:GetLocale(application, locale, silent)
 	if type(locale) == "boolean" then
 		silent = locale
-		locale = gameLocale
-	end
-
-	if not silent and not AceLocale.apps[application] then
-		error("Usage: GetLocale(application[, locale[, silent]]): 'application' - No locales registered for '"..tostring(application).."'", 2)
+		locale = nil
 	end
 
 	local app = AceLocale.apps[application]
-	local tbl = app and rawget(app, locale)
-	if type(tbl) ~= "table" then
-		tbl = app and rawget(app, gameLocale)
+	if not app then
+		if silent then return nil end
+		error("Usage: GetLocale(application[, locale[, silent]]): 'application' - No locales registered for '"..tostring(application).."'", 2)
 	end
+
+	local defaulttbl = rawget(app, AceLocale.defaultlocales[application] or "enUS")
+
+	local tbl = locale and rawget(app, locale)
+	if type(tbl) ~= "table" then tbl = rawget(app, gameLocale) end
+	if type(tbl) ~= "table" then tbl = defaulttbl end
+	if type(tbl) ~= "table" then return nil end
+
+	-- The default locale keeps the app's own silent/noisy setting, so a key missing from *every*
+	-- locale still reports "Missing entry" the way stock AceLocale did.
+	if defaulttbl and not getmetatable(defaulttbl) then
+		AceLocale.appnames[defaulttbl] = application
+		setmetatable(defaulttbl, getmetatable(app) or readmetasilent)
+	end
+
+	-- Partial translations must fall through to the default locale; many keys are symbolic ids
+	-- ("MainBar", "LFGFrame"), so surfacing the raw key would leak them into the UI.
+	if tbl ~= defaulttbl and not getmetatable(tbl) then
+		setmetatable(tbl, {
+			__index = function(self, key)
+				local value = defaulttbl and defaulttbl[key]
+				if value == nil then value = key end
+				rawset(self, key, value)
+				return value
+			end,
+		})
+	end
+
 	return tbl
 end

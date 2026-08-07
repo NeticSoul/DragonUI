@@ -357,22 +357,32 @@ local defaults = {
 }
 
 -- Localization strings
-local L = {}
-L.InventoryTitle = addon.L["%s's Inventory"]
-L.BankTitle = addon.L["%s's Bank"]
-L.Inventory = addon.L["Inventory"]
-L.Bank = addon.L["Bank"]
-L.Bags = addon.L["Bags"]
-L.BagToggle = addon.L["|cff00ff00Left-Click|r to toggle bag display"]
-L.InventoryToggle = addon.L["|cff00ff00Right-Click|r to toggle inventory"]
-L.BankToggle = addon.L["|cff00ff00Right-Click|r to toggle bank"]
-L.MoveTip = addon.L["|cff00ff00Drag|r to move"]
-L.ResetPositionTip = addon.L["|cff00ff00Alt+Right-Click|r to reset position"]
-L.ToggleInventory = addon.L["Toggle Inventory"]
-L.ToggleBank = addon.L["Toggle Bank"]
-L.ShowBag = addon.L["|cff00ff00Left-Click|r to show this bag's items"]
-L.HideBag = addon.L["|cff00ff00Left-Click|r to hide this bag's items"]
-L.DragBag = addon.L["|cff00ff00Drag|r to move this bag"]
+local LKEYS = {
+    InventoryTitle = "%s's Inventory",
+    BankTitle = "%s's Bank",
+    Inventory = "Inventory",
+    Bank = "Bank",
+    Bags = "Bags",
+    BagToggle = "|cff00ff00Left-Click|r to toggle bag display",
+    InventoryToggle = "|cff00ff00Right-Click|r to toggle inventory",
+    BankToggle = "|cff00ff00Right-Click|r to toggle bank",
+    MoveTip = "|cff00ff00Drag|r to move",
+    ResetPositionTip = "|cff00ff00Alt+Right-Click|r to reset position",
+    ToggleInventory = "Toggle Inventory",
+    ToggleBank = "Toggle Bank",
+    ShowBag = "|cff00ff00Left-Click|r to show this bag's items",
+    HideBag = "|cff00ff00Left-Click|r to hide this bag's items",
+    DragBag = "|cff00ff00Drag|r to move this bag",
+}
+
+-- Resolved lazily: this file runs before SavedVariables load, so baking the strings here would
+-- pin them to the client locale and ignore the language override.
+local L = setmetatable({}, {
+    __index = function(_, key)
+        local k = LKEYS[key]
+        return k and addon.L[k] or nil
+    end,
+})
 
 local function GetSetDisplayName(name)
     if name == SET_EQUIPMENT then

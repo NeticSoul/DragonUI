@@ -11,7 +11,8 @@ Based on ElvUI_OptionsUI pattern - accesses DragonUI addon via global.
 local addon = DragonUI
 
 -- Initialize localization before any fallback/error path uses it.
-local activeLocale = addon.GetActiveLocale and addon.GetActiveLocale()
+-- Load-on-demand, so unlike DragonUI/config.lua this always sees the stored override.
+local activeLocale = addon and addon.GetActiveLocale and addon.GetActiveLocale()
 local L = LibStub("AceLocale-3.0-DragonUI"):GetLocale("DragonUI", activeLocale)
 local LO = LibStub("AceLocale-3.0-DragonUI"):GetLocale("DragonUI_Options", activeLocale)
 
