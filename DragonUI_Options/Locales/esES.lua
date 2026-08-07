@@ -12,7 +12,7 @@ When adding new strings:
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI_Options", "esES")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "esES")
 if not L then return end
 
 -- ============================================================================
@@ -43,6 +43,9 @@ L["Switch micro menu icons between colored and grayscale style."] = "Alternar lo
 L["About"] = "Acerca de"
 L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = "Trayendo el aspecto del WoW retail a 3.3.5a, inspirado en Dragonflight UI."
 L["Created and maintained by Neticsoul, with community contributions."] = "Creado y mantenido por Neticsoul, con contribuciones de la comunidad."
+L["Language"] = "Idioma"
+L["Choose the language used by the DragonUI interface."] = "Elige el idioma que usará la interfaz de DragonUI."
+L["Follow the client language"] = "Seguir el idioma del cliente"
 
 L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = "Comandos: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (selecciona y Ctrl+C para copiar):"

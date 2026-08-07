@@ -11,7 +11,7 @@ DragonUI_Options - 简体中文本地化文件
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI_Options", "zhCN")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "zhCN")
 if not L then return end
 
 L["Collector"] = "收集器"
@@ -47,6 +47,9 @@ L["Switch micro menu icons between colored and grayscale style."] = "在彩色�
 L["About"] = "关于"
 L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = "受巨龙时代UI启发，为3.3.5a版本带来正式服《魔兽世界》的外观。"
 L["Created and maintained by Neticsoul, with community contributions."] = "由Neticsoul创建和维护，并有社区贡献。"
+L["Language"] = "语言"
+L["Choose the language used by the DragonUI interface."] = "选择DragonUI界面使用的语言。"
+L["Follow the client language"] = "跟随客户端语言"
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "命令：/dragonui, /dui, /pi — /dragonui edit (编辑) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (选中后按Ctrl+C复制)："

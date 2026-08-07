@@ -11,8 +11,9 @@ Based on ElvUI_OptionsUI pattern - accesses DragonUI addon via global.
 local addon = DragonUI
 
 -- Initialize localization before any fallback/error path uses it.
-local L = LibStub("AceLocale-3.0"):GetLocale("DragonUI")
-local LO = LibStub("AceLocale-3.0"):GetLocale("DragonUI_Options")
+local activeLocale = addon.GetActiveLocale and addon.GetActiveLocale()
+local L = LibStub("AceLocale-3.0-DragonUI"):GetLocale("DragonUI", activeLocale)
+local LO = LibStub("AceLocale-3.0-DragonUI"):GetLocale("DragonUI_Options", activeLocale)
 
 if not addon then
     print("|cFFFF0000[DragonUI_Options]|r " .. ((LO and LO["Error: DragonUI addon not found!"]) or "Error: DragonUI addon not found!"))

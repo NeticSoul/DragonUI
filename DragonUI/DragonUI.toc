@@ -18,6 +18,7 @@ libs\AceBucket-3.0\AceBucket-3.0.xml
 libs\AceHook-3.0\AceHook-3.0.xml
 libs\AceDB-3.0\AceDB-3.0.xml
 libs\AceLocale-3.0\AceLocale-3.0.xml
+libs\AceLocale-3.0\AceLocale-3.0-DragonUI.lua
 libs\AceConsole-3.0\AceConsole-3.0.xml
 libs\AceComm-3.0\AceComm-3.0.xml
 libs\AceTab-3.0\AceTab-3.0.xml

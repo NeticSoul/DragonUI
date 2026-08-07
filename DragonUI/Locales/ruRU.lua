@@ -11,7 +11,7 @@ When adding new strings:
 ================================================================================
 ]]
 
-local L = LibStub("AceLocale-3.0"):NewLocale("DragonUI", "ruRU")
+local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI", "ruRU")
 if not L then return end
 
 -- ============================================================================
