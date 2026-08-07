@@ -1320,7 +1320,6 @@ L["Hide Pet Casts Desc"] = "Скрывает полосы каста питом�
 L["Show Enemy Player Cast Bars in PvP"] = "Показывать полосы каста вражеских игроков в PvP"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "В PvP показывает полосы каста вражеских игроков без цели и наведения."
 L["Off-Target Cast Bars"] = "Касты вне цели"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "Использует журнал боя для кастов вне цели. Менее точно, чем цель, фокус и наведение."
 L["Off-Target Combat Log Mode"] = "Режим журнала боя вне цели"
 L["Off-Target Mode Off"] = "Выключено"
 L["Off-Target Mode Hybrid"] = "Гибридный (Рекомендуется)"

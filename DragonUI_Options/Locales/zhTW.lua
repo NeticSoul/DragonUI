@@ -1295,7 +1295,6 @@ L["Hide Pet Casts Desc"] = "隱藏玩家寵物和守護者（水元素、鏡像�
 L["Show Enemy Player Cast Bars in PvP"] = "在PvP中顯示敵方玩家施法條"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "在PvP中，無需目標或滑鼠停留即可顯示敵方玩家施法條。"
 L["Off-Target Cast Bars"] = "非目標施法條"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "透過戰鬥紀錄推測非目標單位的施法。不如目標、專注和滑鼠停留準確。"
 L["Off-Target Combat Log Mode"] = "非目標戰鬥紀錄模式"
 L["Off-Target Mode Off"] = "關閉"
 L["Off-Target Mode Hybrid"] = "混合（推薦）"

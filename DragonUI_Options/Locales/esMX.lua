@@ -1458,7 +1458,6 @@ L["Hide Pet Casts Desc"] = "Oculta las barras de casteo de mascotas y guardianes
 L["Show Enemy Player Cast Bars in PvP"] = "Mostrar barras de casteo de jugadores enemigos en PvP"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "En PvP, muestra las barras de casteo de jugadores enemigos sin necesidad de objetivo ni mouseover."
 L["Off-Target Cast Bars"] = "Barras de casteo fuera de objetivo"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "Usa el registro de combate para inferir casteos en unidades que no tienes como objetivo. Menos preciso que objetivo, foco y mouseover."
 L["Off-Target Combat Log Mode"] = "Modo registro de combate fuera de objetivo"
 L["Off-Target Mode Off"] = "Desactivado"
 L["Off-Target Mode Hybrid"] = "Híbrido (Recomendado)"

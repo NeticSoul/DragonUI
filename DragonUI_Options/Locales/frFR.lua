@@ -460,7 +460,6 @@ L["Hide Pet Casts Desc"] = "Masque les barres de cast des familiers et gardiens 
 L["Show Enemy Player Cast Bars in PvP"] = "Afficher les barres de cast des joueurs ennemis en JcJ"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "En JcJ, affiche les barres de cast des joueurs ennemis sans cible ni survol."
 L["Off-Target Cast Bars"] = "Barres de cast hors cible"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "Utilise le journal de combat pour deviner les incantations hors cible. Moins precis que cible, focus et survol."
 L["Off-Target Combat Log Mode"] = "Mode journal de combat hors cible"
 L["Off-Target Mode Off"] = "Desactive"
 L["Off-Target Mode Hybrid"] = "Hybride (Recommande)"

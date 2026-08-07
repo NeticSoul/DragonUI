@@ -1316,7 +1316,6 @@ L["Hide Pet Casts Desc"] = "Blendet Zauberbalken von Begleitern und Wächtern de
 L["Show Enemy Player Cast Bars in PvP"] = "Zauberbalken feindlicher Spieler im PvP anzeigen"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "Im PvP werden Zauberbalken feindlicher Spieler auch ohne Ziel oder Mouseover angezeigt."
 L["Off-Target Cast Bars"] = "Zauberbalken ohne Ziel"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "Nutzt das Kampflog für Zauber auf Einheiten ohne Ziel. Weniger genau als Ziel, Fokus und Mouseover."
 L["Off-Target Combat Log Mode"] = "Kampflog-Modus ohne Ziel"
 L["Off-Target Mode Off"] = "Deaktiviert"
 L["Off-Target Mode Hybrid"] = "Hybrid (Empfohlen)"

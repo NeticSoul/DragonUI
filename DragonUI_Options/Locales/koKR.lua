@@ -1323,7 +1323,6 @@ L["Hide Pet Casts Desc"] = "플레이어의 펫과 가디언(물의 정령, 미�
 L["Show Enemy Player Cast Bars in PvP"] = "PvP에서 적 플레이어 시전 바 표시"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "PvP에서 대상이나 마우스오버 없이 적 플레이어 시전 바를 표시합니다."
 L["Off-Target Cast Bars"] = "비대상 시전 바"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "대상이 아닌 유닛의 시전을 전투 로그로 추정합니다. 대상, 주시, 마우스오버보다 정확도가 낮습니다."
 L["Off-Target Combat Log Mode"] = "비대상 전투 로그 모드"
 L["Off-Target Mode Off"] = "사용 안 함"
 L["Off-Target Mode Hybrid"] = "하이브리드 (권장)"

@@ -457,7 +457,6 @@ L["Hide Pet Casts Desc"] = "Oculta as barras de conjuracao de mascotes e guardio
 L["Show Enemy Player Cast Bars in PvP"] = "Mostrar barras de cast de jogadores inimigos no PvP"
 L["In PvP, show enemy player cast bars without needing target or mouseover."] = "No PvP, mostra barras de cast de jogadores inimigos sem precisar de alvo ou mouseover."
 L["Off-Target Cast Bars"] = "Barras de cast fora do alvo"
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, and mouseover above."] = "Usa o log de combate para adivinhar casts fora do alvo. Menos preciso que alvo, foco e mouseover."
 L["Off-Target Combat Log Mode"] = "Modo log de combate fora do alvo"
 L["Off-Target Mode Off"] = "Desativado"
 L["Off-Target Mode Hybrid"] = "Hibrido (Recomendado)"
