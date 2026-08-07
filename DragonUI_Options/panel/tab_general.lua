@@ -393,8 +393,7 @@ local function BuildGeneralTab(scroll)
 
     C:AddDescription(language, LO["Choose the language used by the DragonUI interface."])
 
-    local localeValues = {
-        auto = LO["Follow the client language"],
+    local localeNames = {
         enUS = "English",
         esES = "Español",
         esMX = "Español (México)",
@@ -406,6 +405,14 @@ local function BuildGeneralTab(scroll)
         zhTW = "繁體中文",
         koKR = "한국어",
     }
+
+    -- Hide languages the client font cannot draw; their names would already show as "?" here.
+    local localeValues = { auto = LO["Follow the client language"] }
+    for code, name in pairs(localeNames) do
+        if not addon.CanRenderLocale or addon.CanRenderLocale(code) then
+            localeValues[code] = name
+        end
+    end
 
     C:AddDropdown(language, {
         label = LO["Language"],
