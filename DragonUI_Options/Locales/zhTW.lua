@@ -318,6 +318,8 @@ L["Show the caster's name (class-colored) and spell ID on buff and debuff toolti
 -- 聊天修改
 L["Enable Chat Mods"] = "啟用聊天功能修改"
 L["Enables or disables Chat Mods."] = "啟用或停用聊天功能修改。"
+L["Show Link Tooltips on Hover"] = "滑鼠移上連結時顯示提示"
+L["Show tooltips for supported chat links without holding Alt."] = "無需按住 Alt 鍵即可顯示支援的聊天連結提示。"
 L["Editbox Position"] = "輸入框位置"
 L["Choose where the chat editbox is positioned."] = "選擇聊天輸入框的擺放位置。"
 L["Top"] = "頂部"
