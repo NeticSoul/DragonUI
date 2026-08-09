@@ -61,6 +61,9 @@
     <!-- Item Level on gear icons -->
     <Script file="itemlevel.lua"/>
 
+    <!-- Retail-style character window reskin -->
+    <Include file="characterpanel\characterpanel.xml"/>
+
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>
     

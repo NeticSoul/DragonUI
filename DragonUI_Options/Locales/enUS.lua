@@ -116,6 +116,15 @@ L["Minimap System"] = true
 L["Buff Frame System"] = true
 L["Dark Mode"] = true
 L["Item Quality Borders"] = true
+-- Character Panel
+L["Character Panel"] = true
+L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = true
+L["Enable Character Panel"] = true
+L["Apply the DragonUI reskin to the character window."] = true
+L["Class Portrait"] = true
+L["Show your class icon in the portrait instead of your character's face."] = true
+L["Class-Colored Level Text"] = true
+L["Color the class name in the \"Level X Race Class\" line."] = true
 L["Enable Enhanced Tooltips"] = true
 L["KeyBind Mode"] = true
 L["Quest Tracker"] = true

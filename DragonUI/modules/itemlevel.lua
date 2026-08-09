@@ -573,7 +573,25 @@ local function HideAllAverages()
     end
 end
 
+-- The character panel shows the average as a stat row instead of floating it over the model, so
+-- it suppresses this copy rather than having both on screen.
+local suppressCharacterAverage = false
+
+function addon.SetCharacterAverageSuppressed(value)
+    suppressCharacterAverage = value and true or false
+    if suppressCharacterAverage and averageTexts["player"] then
+        averageTexts["player"]:Hide()
+    end
+end
+
+-- Exposed so the character panel can reuse the number instead of rescanning the same 16 slots.
+addon.GetAverageItemLevel = CalculateAverage
+
 local function UpdateCharacterAverage()
+    if suppressCharacterAverage then
+        if averageTexts["player"] then averageTexts["player"]:Hide() end
+        return
+    end
     UpdateAverageFor("player", "character", "player", PaperDollFrame, CharacterModelFrame)
 end
 

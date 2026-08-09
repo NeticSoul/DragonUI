@@ -184,6 +184,25 @@ local function SlashCommandHandler(input)
         SetDebugMode(arg)
     elseif cmd == "kb" or cmd == "keybind" or cmd == "keybinds" then
         ToggleKeybindMode()
+    elseif cmd == "cp" or cmd == "charpanel" then
+        if not addon.DumpCharacterPanel then
+            addon:Print("Character panel diagnostics not loaded (module disabled or file missing).")
+        else
+            local ok, err = pcall(addon.DumpCharacterPanel)
+            if not ok then addon:Print("Character panel dump failed: " .. tostring(err)) end
+        end
+    elseif cmd == "cpbg" then
+        if not addon.DumpPanelGrounds then
+            addon:Print("Character panel diagnostics not loaded (module disabled or file missing).")
+        else
+            addon.DumpPanelGrounds()
+        end
+    elseif cmd == "cpbtn" then
+        if not addon.DumpModelControls then
+            addon:Print("Character panel diagnostics not loaded (module disabled or file missing).")
+        else
+            addon.DumpModelControls()
+        end
     elseif cmd == "version" or cmd == "ver" then
         ShowVersion()
     elseif cmd == "debugvehicle" then

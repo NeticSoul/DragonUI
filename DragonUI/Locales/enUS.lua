@@ -452,6 +452,7 @@ L["Color item borders by quality in bags, character panel, bank, and merchant"] 
 L["Item Level"] = true
 L["Show item level on gear icons in bags, character panel, bank, and more"] = true
 L["Item Level: %d"] = true
+L["Unranked"] = true
 L["Key Binding"] = true
 L["LibKeyBound integration for intuitive keybinding"] = true
 L["Buff Frame"] = true
@@ -473,6 +474,11 @@ L["Bagster"] = true
 L["All-in-one bag replacement with filtering and search"] = true
 L["Alt Gold"] = true
 L["Show the gold of your other characters when hovering the money in your bags"] = true
+-- Character Panel
+L["Character Panel"] = true
+L["Retail-style character window with a modern frame, class portrait and stats sidebar"] = true
+L["Character Panel restored. Reload the UI for a fully clean state."] = true
+L["Average item level of your equipped gear."] = true
 L["Character Gold"] = true
 L["No other characters recorded yet"] = true
 L["(current)"] = true
@@ -557,3 +563,19 @@ L["Rect: left=%.1f bottom=%.1f w=%.1f h=%.1f"] = true
 L["Point1: %s -> %s %s (%.1f, %.1f)"] = true
 L["NumPoints: %d"] = true
 L["TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"] = true
+-- Equipment manager pane
+L["Equip"] = true
+L["New Equipment Set"] = true
+L["Rename or change the icon"] = true
+L["Panel settings"] = true
+L["Background"] = true
+L["Stone"] = true
+L["Dark"] = true
+L["Model backdrop"] = true
+L["Greyscale"] = true
+L["Full colour"] = true
+L["You have not earned any titles yet."] = true
+L["This client can only re-save a set, so the gear you are wearing now replaces its contents."] = true
+L["A set with that name already exists."] = true
+L["Delete the equipment set '%s'?"] = true
+L["Overwrite '%s' with your currently equipped items?"] = true

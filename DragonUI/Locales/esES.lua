@@ -438,6 +438,7 @@ L["Color item borders by quality in bags, character panel, bank, and merchant"] 
 L["Item Level"] = "Nivel de Objeto"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "Mostrar el nivel de objeto en los iconos del equipo en bolsas, panel de personaje, banco y más"
 L["Item Level: %d"] = "Nivel de objeto: %d"
+L["Unranked"] = "Sin rango"
 
 L["Key Binding"] = "Atajos de Teclado"
 L["LibKeyBound integration for intuitive keybinding"] = "Integración con LibKeyBound para asignación de teclas intuitiva"
@@ -511,6 +512,12 @@ L["Reload"] = "Recargar"
 -- Alt Gold
 L["Alt Gold"] = "Oro de otros personajes"
 L["Show the gold of your other characters when hovering the money in your bags"] = "Muestra el oro de tus otros personajes al pasar el ratón por el dinero de las bolsas"
+
+-- Character Panel
+L["Character Panel"] = "Panel de personaje"
+L["Retail-style character window with a modern frame, class portrait and stats sidebar"] = "Ventana de personaje al estilo retail con marco moderno, retrato de clase y panel lateral de estadísticas"
+L["Character Panel restored. Reload the UI for a fully clean state."] = "Panel de personaje restaurado. Recarga la interfaz para dejarlo completamente limpio."
+L["Average item level of your equipped gear."] = "Nivel de objeto medio de tu equipo."
 L["Character Gold"] = "Oro de personajes"
 L["No other characters recorded yet"] = "Aún no hay otros personajes registrados"
 L["(current)"] = "(actual)"
@@ -543,3 +550,20 @@ L["|cff00ff00Alt+Right-Click|r to reset position"] = "|cff00ff00Alt+Clic derecho
 L["Toggle Inventory"] = "Alternar inventario"
 L["Toggle Bank"] = "Alternar banco"
 L["Double-Click to Copy"] = "Doble clic para copiar"
+
+-- Equipment manager pane
+L["Equip"] = "Equipar"
+L["New Equipment Set"] = "Nuevo conjunto de equipo"
+L["Rename or change the icon"] = "Renombrar o cambiar el icono"
+L["Panel settings"] = "Ajustes del panel"
+L["Background"] = "Fondo"
+L["Stone"] = "Piedra"
+L["Dark"] = "Oscuro"
+L["Model backdrop"] = "Fondo del modelo"
+L["Greyscale"] = "Escala de grises"
+L["Full colour"] = "A todo color"
+L["You have not earned any titles yet."] = "Todavía no has conseguido ningún título."
+L["This client can only re-save a set, so the gear you are wearing now replaces its contents."] = "Este cliente solo puede volver a guardar un conjunto, así que el equipo que llevas puesto ahora reemplazará su contenido."
+L["A set with that name already exists."] = "Ya existe un conjunto con ese nombre."
+L["Delete the equipment set '%s'?"] = "¿Eliminar el conjunto de equipo '%s'?"
+L["Overwrite '%s' with your currently equipped items?"] = "¿Sobrescribir '%s' con el equipo que llevas puesto?"

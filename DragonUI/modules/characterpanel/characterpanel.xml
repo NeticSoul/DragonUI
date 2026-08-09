@@ -1,0 +1,43 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+	<!-- core.lua first: it owns the namespace and the builder registry the rest append to. -->
+	<Script file="core.lua"/>
+	<!-- insets before chrome: the interior background anchors to CharacterFrame.Inset. -->
+	<Script file="insets.lua"/>
+	<Script file="chrome.lua"/>
+	<!-- after chrome.lua: the cog toggles the body background it owns. -->
+	<Script file="settingscog.lua"/>
+	<Script file="tabs.lua"/>
+	<Script file="portrait.lua"/>
+	<Script file="leveltext.lua"/>
+	<!-- slots before model/innerborder: both frame the column geometry it establishes. -->
+	<Script file="slots.lua"/>
+	<Script file="model.lua"/>
+	<!-- after model.lua: the controls anchor to the resized viewport. -->
+	<Script file="modelcontrols.lua"/>
+	<Script file="innerborder.lua"/>
+	<Script file="paneborder.lua"/>
+	<!-- scrollbar before the panes that reskin their bars with it. -->
+	<Script file="scrollbar.lua"/>
+	<Script file="sidebar.lua"/>
+	<!-- panes before sidebartabs: selecting a tab on build needs the pane switcher to exist, and
+	     the switcher needs the panes it drives. -->
+	<Script file="titlespane.lua"/>
+	<Script file="equipmentpane.lua"/>
+	<Script file="panes.lua"/>
+	<Script file="sidebartabs.lua"/>
+	<!-- reveal before listpane: the shared paint queues its fades. -->
+	<Script file="reveal.lua"/>
+	<!-- listpane before the tabs that build on it. -->
+	<Script file="listpane.lua"/>
+	<Script file="reputationpane.lua"/>
+	<Script file="skillspane.lua"/>
+	<Script file="currencypane.lua"/>
+	<!-- after tabs.lua: it adds a sixth tab and rechains the strip through CP.RechainTabs. -->
+	<Script file="honorpane.lua"/>
+	<!-- after chrome.lua: reuses its close button helper. -->
+	<Script file="reputationdetail.lua"/>
+	<Script file="equipment.lua"/>
+	<Script file="titles.lua"/>
+	<Script file="diagnostics.lua"/>
+</Ui>
