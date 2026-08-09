@@ -72,10 +72,10 @@ L["=== DragonUI Status ==="] = "=== DragonUI-Status ==="
 L["Detected Modules:"] = "Erkannte Module:"
 L["Loaded"] = "Geladen"
 L["Not Loaded"] = "Nicht geladen"
-L["Target Frame"] = true
-L["Focus Frame"] = true
-L["Party Frames"] = true
-L["Cooldowns"] = true
+L["Target Frame"] = "Zielfenster"
+L["Focus Frame"] = "Fokusfenster"
+L["Party Frames"] = "Gruppenfenster"
+L["Cooldowns"] = "Abklingzeiten"
 L["Editable Frames: "] = "Bearbeitbare Frames: "
 L["DragonUI Version: "] = "DragonUI-Version: "
 
@@ -344,48 +344,48 @@ L["Enable debug mode first with /dragonui debug on"] = "Aktiviere zuerst den Deb
 L["Debug mode is %s"] = "Debug-Modus ist %s"
 L["Debug mode enabled"] = "Debug-Modus aktiviert"
 L["Debug mode disabled"] = "Debug-Modus deaktiviert"
-L["enabled"] = true
-L["disabled"] = true
+L["enabled"] = "aktiviert"
+L["disabled"] = "deaktiviert"
 L["Enabled"] = "Aktiviert"
 L["Disabled"] = "Deaktiviert"
-L["Legacy refresh failed for"] = true
-L["Bonus Action Button %d"] = true
-L["Stance Button %d"] = true
-L["Pet Action Button %d"] = true
-L["Multicast Button %d"] = true
-L["Totem Call Button"] = true
-L["Totem Recall Button"] = true
-L["Bottom Left Button"] = true
-L["Bottom Right Button"] = true
-L["Right Button"] = true
-L["Left Button"] = true
-L["Totem Bar"] = true
-L["Test Pet"] = true
-L["=== TargetFrame children (depth 3) ==="] = true
-L["=== FocusFrame children (depth 3) ==="] = true
-L["BG texture not found"] = true
-L["BG tinted RED"] = true
-L["BG tinted GREEN"] = true
-L["BG color reset"] = true
-L["=== BANK SCAN DEBUG ==="] = true
-L["=== BANK QUALITY DEBUG ==="] = true
-L["Module enabled:"] = true
-L["BankFrame exists:"] = true
-L["BankFrame shown:"] = true
-L["Usage: /dui shadowcolor red|green|reset|info"] = true
-L["Usage: /dui shadowcrop <bottom_px> [right_px]"] = true
-L["  e.g. /dui shadowcrop 90 - show top 90 of 128 px height"] = true
-L["  e.g. /dui shadowcrop 90 200 - crop both bottom and right"] = true
-L["  /dui shadowcrop reset - restore full texture"] = true
-L["BG reset to 256x128 full texture"] = true
-L["Crop applied: showing %dx%d of 256x128 (texcoord 0-%.3f, 0-%.3f)"] = true
-L["Invalid values. Height 1-128, Width 1-256"] = true
-L["=== TargetFrame elements (use /dui shadowtest N to toggle) ==="] = true
-L["Total elements: %d"] = true
-L["HIDDEN: %d. %s [%s]"] = true
-L["SHOWN: %d. %s [%s]"] = true
-L["Invalid element number. Use /dui shadowtest to list."] = true
-L["DragonUI Compatibility:"] = true
+L["Legacy refresh failed for"] = "Alt-Aktualisierung fehlgeschlagen für"
+L["Bonus Action Button %d"] = "Bonus-Aktionsknopf %d"
+L["Stance Button %d"] = "Haltungsknopf %d"
+L["Pet Action Button %d"] = "Begleiter-Aktionsknopf %d"
+L["Multicast Button %d"] = "Multicast-Knopf %d"
+L["Totem Call Button"] = "Totemruf-Knopf"
+L["Totem Recall Button"] = "Totemrückruf-Knopf"
+L["Bottom Left Button"] = "Knopf unten links"
+L["Bottom Right Button"] = "Knopf unten rechts"
+L["Right Button"] = "Rechter Knopf"
+L["Left Button"] = "Linker Knopf"
+L["Totem Bar"] = "Totemleiste"
+L["Test Pet"] = "Test-Begleiter"
+L["=== TargetFrame children (depth 3) ==="] = "=== TargetFrame-Kinder (Tiefe 3) ==="
+L["=== FocusFrame children (depth 3) ==="] = "=== FocusFrame-Kinder (Tiefe 3) ==="
+L["BG texture not found"] = "Hintergrundtextur nicht gefunden"
+L["BG tinted RED"] = "Hintergrund ROT eingefärbt"
+L["BG tinted GREEN"] = "Hintergrund GRÜN eingefärbt"
+L["BG color reset"] = "Hintergrundfarbe zurückgesetzt"
+L["=== BANK SCAN DEBUG ==="] = "=== BANK-SCAN-DEBUG ==="
+L["=== BANK QUALITY DEBUG ==="] = "=== BANK-QUALITÄTS-DEBUG ==="
+L["Module enabled:"] = "Modul aktiviert:"
+L["BankFrame exists:"] = "BankFrame vorhanden:"
+L["BankFrame shown:"] = "BankFrame sichtbar:"
+L["Usage: /dui shadowcolor red|green|reset|info"] = "Verwendung: /dui shadowcolor red|green|reset|info"
+L["Usage: /dui shadowcrop <bottom_px> [right_px]"] = "Verwendung: /dui shadowcrop <bottom_px> [right_px]"
+L["  e.g. /dui shadowcrop 90 - show top 90 of 128 px height"] = "  z. B. /dui shadowcrop 90 - zeigt die oberen 90 von 128 px"
+L["  e.g. /dui shadowcrop 90 200 - crop both bottom and right"] = "  z. B. /dui shadowcrop 90 200 - unten und rechts beschneiden"
+L["  /dui shadowcrop reset - restore full texture"] = "  /dui shadowcrop reset - vollständige Textur wiederherstellen"
+L["BG reset to 256x128 full texture"] = "Hintergrund auf volle 256x128-Textur zurückgesetzt"
+L["Crop applied: showing %dx%d of 256x128 (texcoord 0-%.3f, 0-%.3f)"] = "Zuschnitt aktiv: zeigt %dx%d von 256x128 (texcoord 0-%.3f, 0-%.3f)"
+L["Invalid values. Height 1-128, Width 1-256"] = "Ungültige Werte. Höhe 1-128, Breite 1-256"
+L["=== TargetFrame elements (use /dui shadowtest N to toggle) ==="] = "=== TargetFrame-Elemente (mit /dui shadowtest N umschalten) ==="
+L["Total elements: %d"] = "Elemente insgesamt: %d"
+L["HIDDEN: %d. %s [%s]"] = "VERSTECKT: %d. %s [%s]"
+L["SHOWN: %d. %s [%s]"] = "SICHTBAR: %d. %s [%s]"
+L["Invalid element number. Use /dui shadowtest to list."] = "Ungültige Elementnummer. /dui shadowtest listet sie auf."
+L["DragonUI Compatibility:"] = "DragonUI-Kompatibilität:"
 L["Registered Modules:"] = "Registrierte Module:"
 L["No modules registered in ModuleRegistry"] = "Keine Module in der ModuleRegistry registriert"
 L["load-once"] = "einmal laden"
@@ -539,3 +539,89 @@ L["|cff00ff00Alt+Right-Click|r to reset position"] = "|cff00ff00Alt+Rechtsklick|
 L["Toggle Inventory"] = "Inventar umschalten"
 L["Toggle Bank"] = "Bank umschalten"
 L["Double-Click to Copy"] = "Doppelklick zum Kopieren"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["URL"] = "URL"
+L["Normal"] = "Normal"
+L["Unranked"] = "Kein Rang"
+L["Alt"] = "Alt"
+L["Ctrl"] = "Strg"
+L["Shift"] = "Umschalt"
+L["Character Panel"] = "Charakterfenster"
+L["Retail-style character window with a modern frame, class portrait and stats sidebar"] = "Charakterfenster im Retail-Stil mit modernem Rahmen, Klassenporträt und Werteleiste"
+L["Character Panel restored. Reload the UI for a fully clean state."] = "Charakterfenster zurückgesetzt. Lade die Oberfläche neu für einen ganz sauberen Zustand."
+L["Pets & Mounts"] = "Haustiere & Reittiere"
+L["Dedicated window for your mounts and companion pets, opened from the micro menu"] = "Eigenes Fenster für Reittiere und Begleiter, über das Mikromenü zu öffnen"
+L["Pets & Mounts disabled. Reload the UI to remove its micro menu button."] = "Haustiere & Reittiere deaktiviert. Lade die Oberfläche neu, um die Mikromenü-Schaltfläche zu entfernen."
+L["Favorite"] = "Favorit"
+L["Remove Favorite"] = "Favorit entfernen"
+L["Favorites"] = "Favoriten"
+L["Keeps this at the front of the list."] = "Hält diesen Eintrag am Anfang der Liste."
+L["Summon Random Favorite"] = "Zufälligen Favoriten rufen"
+L["Picks a favorite you can actually use here, or any of them if none are favorited."] = "Wählt einen Favoriten, der hier auch nutzbar ist, oder irgendeinen, falls keiner markiert ist."
+L["Right-click for more options"] = "Rechtsklick für weitere Optionen"
+L["Nothing collected yet."] = "Noch nichts gesammelt."
+L["Not collected yet"] = "Noch nicht gesammelt"
+L["Collected"] = "Gesammelt"
+L["Not Collected"] = "Nicht gesammelt"
+L["Drag to place it on an action bar."] = "Ziehen, um es auf eine Aktionsleiste zu legen."
+L["No free macro slot for the random favorite button."] = "Kein freier Makroplatz für die Zufalls-Favoriten-Schaltfläche."
+L["Unusable here"] = "Hier nicht nutzbar"
+L["Ground"] = "Boden"
+L["Flying"] = "Flug"
+L["Aquatic"] = "Wasser"
+L["Sources"] = "Quellen"
+L["Source"] = "Quelle"
+L["Check All"] = "Alle auswählen"
+L["Uncheck All"] = "Alle abwählen"
+L["Drop"] = "Beute"
+L["Quest"] = "Quest"
+L["Vendor"] = "Händler"
+L["Profession"] = "Beruf"
+L["Achievement"] = "Erfolg"
+L["World Event"] = "Weltereignis"
+L["Promotion"] = "Promotion"
+L["Trading Card Game"] = "Sammelkartenspiel"
+L["In-Game Shop"] = "Ingame-Shop"
+L["Discovery"] = "Entdeckung"
+L["/dragonui collections - Open the Pets & Mounts window"] = "/dragonui collections - Öffnet das Fenster Haustiere & Reittiere"
+L["Average item level of your equipped gear."] = "Durchschnittliche Gegenstandsstufe deiner angelegten Ausrüstung."
+L["Bank"] = "Bank"
+L["Equip"] = "Anlegen"
+L["New Equipment Set"] = "Neues Ausrüstungsset"
+L["Rename or change the icon"] = "Umbenennen oder Symbol ändern"
+L["Panel settings"] = "Fenstereinstellungen"
+L["Background"] = "Hintergrund"
+L["Stone"] = "Stein"
+L["Dark"] = "Dunkel"
+L["Model backdrop"] = "Modellhintergrund"
+L["Greyscale"] = "Graustufen"
+L["Full colour"] = "Volle Farbe"
+L["You have not earned any titles yet."] = "Du hast noch keine Titel verdient."
+L["This client can only re-save a set, so the gear you are wearing now replaces its contents."] = "Dieser Client kann ein Set nur neu speichern: die gerade getragene Ausrüstung ersetzt seinen Inhalt."
+L["A set with that name already exists."] = "Ein Set mit diesem Namen existiert bereits."
+L["Delete the equipment set '%s'?"] = "Ausrüstungsset '%s' löschen?"
+L["Overwrite '%s' with your currently equipped items?"] = "'%s' mit der aktuell angelegten Ausrüstung überschreiben?"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["UFL diagnostic not available"] = "UFL-Diagnose nicht verfügbar"
+L["(unnamed)"] = "(unbenannt)"
+L["(unnamed_frame)"] = "(unbenannter_Frame)"
+L["SHOWN"] = "SICHTBAR"
+L["hidden"] = "versteckt"
+L["VISIBLE"] = "SICHTBAR"
+L["invisible"] = "unsichtbar"
+L["VIS"] = "SICHT"
+L["inv"] = "unsicht"
+L["Rect: left=%.1f bottom=%.1f w=%.1f h=%.1f"] = "Rect: left=%.1f bottom=%.1f w=%.1f h=%.1f"
+L["Point1: %s -> %s %s (%.1f, %.1f)"] = "Point1: %s -> %s %s (%.1f, %.1f)"
+L["NumPoints: %d"] = "NumPoints: %d"
+L["TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"] = "TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["CharacterFrame does not exist."] = "CharacterFrame existiert nicht."
+L["Open the character panel first: sizes are meaningless while hidden."] = "Öffne zuerst das Charakterfenster: versteckt sind die Größen bedeutungslos."
+L["(paperdoll-only rows below are skipped on this tab)"] = "(die reinen Paperdoll-Zeilen unten werden auf diesem Reiter übersprungen)"
+L["Put the cursor on the 3D model, capturing in 5 seconds."] = "Zeiger auf das 3D-Modell setzen, Aufnahme in 5 Sekunden."
+L["Ground dump failed: "] = "Hintergrund-Dump fehlgeschlagen: "
+L["Model control dump failed: "] = "Dump der Modellsteuerung fehlgeschlagen: "

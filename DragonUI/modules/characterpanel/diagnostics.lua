@@ -46,11 +46,11 @@ end
 local function dump()
     local cf = _G.CharacterFrame
     if not cf then
-        addon:Print("CharacterFrame does not exist.")
+        addon:Print(addon.L["CharacterFrame does not exist."])
         return
     end
     if not cf:IsShown() then
-        addon:Print("|cffff5555Open the character panel first — sizes are meaningless while hidden.|r")
+        addon:Print("|cffff5555" .. addon.L["Open the character panel first: sizes are meaningless while hidden."] .. "|r")
         return
     end
 
@@ -66,7 +66,7 @@ local function dump()
     local active = CP.ActiveTabName and CP.ActiveTabName()
     if active and active ~= "PaperDollFrame" then
         describe(active, _G[active])
-        addon:Print("|cff00ff00(paperdoll-only rows below are skipped on this tab)|r")
+        addon:Print("|cff00ff00" .. addon.L["(paperdoll-only rows below are skipped on this tab)"] .. "|r")
         return
     end
 
@@ -208,10 +208,8 @@ local function dumpGrounds()
     addon:Print(string.format("dark_background=%s  grey_model_backdrop=%s",
         tostring(CP:Config().dark_background), tostring(CP:Config().grey_model_backdrop)))
 
-    -- Walk the WHOLE tree under the frame rather than a list chosen up front, and report every
-    -- visible texture that actually paints the strip under the model. Seven hand-picked dumps came
-    -- back identical while the strip rendered differently, which can only mean the thing doing it
-    -- was never on the list.
+    -- Walk the WHOLE tree rather than a list chosen up front: seven hand-picked dumps came back
+    -- identical while the strip rendered differently, so the culprit was never on the list.
     addon:Print("|cff00ff00--- everything painting the strip ---|r")
 
     local floor = cf.Inset and cf.Inset:GetBottom()
@@ -264,14 +262,14 @@ end
 
 function addon.DumpPanelGrounds()
     local ok, err = pcall(dumpGrounds)
-    if not ok then addon:Print("Ground dump failed: " .. tostring(err)) end
+    if not ok then addon:Print(addon.L["Ground dump failed: "] .. tostring(err)) end
 end
 
 -- Delayed so the cursor can be parked on the model: typing the command necessarily moves it away.
 function addon.DumpModelControls()
-    addon:Print("|cff00ff00Put the cursor on the 3D model — capturing in 5 seconds.|r")
+    addon:Print("|cff00ff00" .. addon.L["Put the cursor on the 3D model, capturing in 5 seconds."] .. "|r")
     addon:After(5, function()
         local ok, err = pcall(dumpControls)
-        if not ok then addon:Print("Model control dump failed: " .. tostring(err)) end
+        if not ok then addon:Print(addon.L["Model control dump failed: "] .. tostring(err)) end
     end)
 end
