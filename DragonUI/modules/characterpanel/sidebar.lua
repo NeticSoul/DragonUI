@@ -39,9 +39,18 @@ local defaultOrder = {}
 local HEADER_HL_ALPHA = 0.35
 
 -- Reorder arrows, revealed only while the cursor is over their header: two chevrons on every bar at
--- rest would read as decoration and compete with the section names.
-local MOVE_W, MOVE_H = 11, 7
+-- rest would read as decoration and compete with the section names. Drawn from the action bar's
+-- page arrows, cut from a 2x sheet: the scrollbar's are 17x11 of source art and came out chewed.
+local MOVE_W, MOVE_H = 14, 12
 local MOVE_X, MOVE_OFFSET = 165, 5
+-- That art ships gold; the rest of the pane's small furniture is steel. Desaturated first, because
+-- a cool vertex colour multiplied over gold only muddies it.
+local MOVE_TINT = { 0.82, 0.85, 0.90 }
+-- One arrow for both directions, flipped for the down one: the sheet's own down arrow is a separate
+-- cut whose glyph does not sit at the same offset inside the cell, so the pair read as misaligned.
+local MOVE_ATLAS = "ui-hud-actionbar-pageuparrow"
+-- Present but faint until the cursor is actually on one, so the pair never shouts over the label.
+local MOVE_ALPHA, MOVE_ALPHA_OVER = 0.45, 1
 
 -- One texture sized outright: the viewport is always the art's native width, so slicing bought
 -- nothing and cost a three-deep anchor chain that re-resolved on every frame of every collapse.
@@ -58,11 +67,24 @@ end
 local function refreshHover(header)
     local over = header:IsMouseOver()
     for _, btn in ipairs(header.Move) do
-        if over and btn._duiUsable then btn:Show() else btn:Hide() end
+        if over and btn._duiUsable then
+            btn:SetAlpha(btn:IsMouseOver() and MOVE_ALPHA_OVER or MOVE_ALPHA)
+            btn:Show()
+        else
+            btn:Hide()
+        end
     end
 end
 
-local function buildMoveButton(header, atlas, delta, y)
+local function applyArrow(tex, atlas, flip)
+    tex:set_atlas(atlas)
+    if not flip then return end
+    local _, _, _, left, right, top, bottom = addon.functions.atlas_unpack(atlas)
+    -- Swapping top and bottom mirrors the cell, so both directions are the very same glyph.
+    if left then tex:SetTexCoord(left, right, bottom, top) end
+end
+
+local function buildMoveButton(header, delta, y, flip)
     local btn = CreateFrame("Button", nil, header)
     btn:SetSize(MOVE_W, MOVE_H)
     btn:SetPoint("LEFT", header, "LEFT", MOVE_X, y)
@@ -70,12 +92,17 @@ local function buildMoveButton(header, atlas, delta, y)
     btn:Hide()
 
     local icon = btn:CreateTexture(nil, "OVERLAY")
-    icon:set_atlas(atlas)
+    applyArrow(icon, MOVE_ATLAS .. "-normal", flip)
     icon:SetAllPoints(btn)
+    icon:SetDesaturated(true)
+    icon:SetVertexColor(unpack(MOVE_TINT))
 
+    -- Its own glow rather than the same art blended over itself, which is what the sheet ships it for.
     local hl = btn:CreateTexture(nil, "HIGHLIGHT")
-    hl:set_atlas(atlas)
+    applyArrow(hl, MOVE_ATLAS .. "-highlight", flip)
     hl:SetAllPoints(btn)
+    hl:SetDesaturated(true)
+    hl:SetVertexColor(unpack(MOVE_TINT))
     hl:SetBlendMode("ADD")
 
     btn:SetScript("OnClick", function()
@@ -108,8 +135,8 @@ local function buildHeader(parent, key, text)
     end)
 
     header.key = key
-    header.MoveUp = buildMoveButton(header, "minimal-scrollbar-arrow-top", -1, MOVE_OFFSET)
-    header.MoveDown = buildMoveButton(header, "minimal-scrollbar-arrow-bottom", 1, -MOVE_OFFSET)
+    header.MoveUp = buildMoveButton(header, -1, MOVE_OFFSET, false)
+    header.MoveDown = buildMoveButton(header, 1, -MOVE_OFFSET, true)
     header.Move = { header.MoveUp, header.MoveDown }
 
     header:SetScript("OnEnter", function(self) refreshHover(self) end)
