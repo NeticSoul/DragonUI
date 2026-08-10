@@ -99,7 +99,6 @@ local function childRange(flat, headerIndex)
     return headerIndex + 1, tail
 end
 
--- Expanding: the run has already appeared, so fade it up.
 function CP.RevealChildrenOf(flat, headerIndex, repaint)
     local from, to = childRange(flat, headerIndex)
     if from then CP.StartListReveal(from, to, repaint) end

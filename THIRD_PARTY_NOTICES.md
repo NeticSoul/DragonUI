@@ -22,7 +22,7 @@ The retail-style bag window textures under `DragonUI/assets/`, and the filigree 
 resampled), are derived from DragonflightUI. Copyright (c) 2022 Karl-HeinzSchneider. The full
 license is included in `LICENSES/MIT-DragonflightUI.txt`.
 
-## EZCollections — Pets & Mounts artwork and mount trait data
+## EZCollections — Pets & Mounts artwork
 
 The retail-style Collections textures under `DragonUI/Textures/Collections/` (row plates, favourite
 star, model backdrop, faction crests, search glyph, journal portraits) are taken from EZCollections

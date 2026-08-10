@@ -11,8 +11,8 @@ local ICON_SIZE = 38
 local SEARCH_H = 20
 local INFO_ICON = 40
 
--- Cut from DragonflightUI's Spellbook-Parts atlas and upscaled. The opening is measured where the
--- ring turns solid: the fully transparent core is far smaller than the gold bars actually enclose.
+-- The opening is measured where the ring turns solid: its fully transparent core is far smaller
+-- than the gold bars actually enclose, and its centre sits high and left of the art.
 local INFO_FRAME_TEX = addon._dir .. "Collections\\IconFrameGold"
 local INFO_FRAME_OPEN, INFO_FRAME_CX, INFO_FRAME_CY = 0.4922, 0.4727, 0.4336
 local INFO_FRAME_SIZE = INFO_ICON / INFO_FRAME_OPEN

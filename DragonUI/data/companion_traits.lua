@@ -4,7 +4,7 @@ local addon = select(2, ...)
 -- 78, companions those summoning a SummonProperties row of type 5. Numbers only, so no locale.
 
 -- [spellID] = { type, flags, source }. Type 0x1 flying-only, 0x2 shallow water, 0x4 hybrid; flags
--- 0x10/0x20 aquatic; source indexes addon.Collections source labels. Ported from EZCollections.
+-- 0x10/0x20 aquatic; source indexes addon.Collections source labels.
 addon.MountTraits = {
     [458]={2,0,3},[459]={2,64,3},[468]={2,64,3},[470]={2,0,3},[471]={0,0,12},[472]={2,0,3},
     [578]={2,64,3},[579]={2,64,3},[580]={2,0,3},[581]={2,64,3},[3363]={1,0,12},[5784]={2,0,2},

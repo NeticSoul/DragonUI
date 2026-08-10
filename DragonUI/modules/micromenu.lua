@@ -121,8 +121,7 @@ else
 end
 
 
--- The strip's default anchor allows for an eleventh button. ezCollections used to be the only thing
--- that ever supplied one; DragonUI's own Pets & Mounts window now does too.
+-- The strip's default anchor allows for an eleventh button, which Pets & Mounts now supplies.
 local function HasCollectionsButton()
     return _G.CollectionsMicroButton ~= nil
 end

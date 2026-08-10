@@ -6,7 +6,6 @@ local CP = addon.CharacterPanel
 local BAR_W = 8
 -- Keeps the track clear of the pane trim at both ends.
 local TRACK_INSET = 7
--- Clear of the pane's border without hugging it.
 local BAR_X_INSET = -1
 
 local function stripRegions(frame)

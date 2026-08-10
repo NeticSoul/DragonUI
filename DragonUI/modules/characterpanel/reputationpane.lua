@@ -6,7 +6,6 @@ local CP = addon.CharacterPanel
 
 local ROW_H = 24
 local BAR_W, BAR_H = 132, 13
--- Point size of the faction description in the detail popup.
 local DETAIL_FONT_SIZE = 11
 local CHILD_INDENT = 12
 local FILL = "Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar"

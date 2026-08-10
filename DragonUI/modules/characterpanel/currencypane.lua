@@ -14,7 +14,6 @@ local CHECK_OFF_ALPHA = 0.15
 local CHECK_HOVER_ALPHA = 0.5
 -- Room at the foot of the pane for Blizzard's money readout, which is 13 tall.
 local MONEY_H = 20
--- How far right the money sits. Raise it to push the coins further right, lower it to pull them in.
 local MONEY_RIGHT_PAD = 5
 
 local ARENA_ICON = "Interface\\PVPFrame\\PVP-ArenaPoints-Icon"

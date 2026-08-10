@@ -6,7 +6,6 @@ local CP = addon.CharacterPanel
 
 CP.LIST_ROW_H = 24
 
--- How far in from the pane's right edge the scrollbar sits. More negative moves it further left.
 CP.LIST_SCROLLBAR_X = -4
 
 -- Right edge of the viewport with and without a scrollbar to leave room for.

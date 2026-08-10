@@ -12,7 +12,6 @@ local TITLE_H = 22
 local MARGIN = 8
 -- What the three stacked checkboxes need under the text.
 local CHECKBOX_BLOCK = 84
--- Where the description sits inside the paper: side margin, and how far below its top edge.
 local DESCRIPTION_INSET = 10
 local DESCRIPTION_TOP = 12
 

@@ -4,7 +4,6 @@ local CP = addon.CharacterPanel
 local ROCK = addon._dir .. "UI\\ui-background-rock"
 local REDBUTTON = addon._dir .. "UI\\redbutton2x"
 
--- Where the streak band sits and how tall it is; both are the reference's values.
 local STREAK_Y, STREAK_H = 21, 43
 
 -- Every 4-corner chrome family the five 3.3.5a subframes declare, verified against FrameXML.
