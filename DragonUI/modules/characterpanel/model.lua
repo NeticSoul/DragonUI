@@ -2,6 +2,8 @@ local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
 local MODEL_W, MODEL_H = 231, 320
+local VANILLA_W, VANILLA_H = 233, 215
+local VANILLA_X, VANILLA_Y = 65, -78
 
 -- Blizzard's own DressUpTexturePath applies this same fallback: the 3.3.5a client ships no
 -- Gnome or Troll backdrop art.
@@ -101,13 +103,32 @@ local function applyRaceBackground()
     for suffix, tex in pairs(model._duiRaceBg) do
         tex:SetTexture(base .. suffix)
         tex:SetDesaturated(grey)
+        tex:Show()
     end
     if model._duiRaceBgOverlay then
         model._duiRaceBgOverlay:SetAlpha(grey and overlayAlpha() or 0)
+        model._duiRaceBgOverlay:Show()
     end
 end
 
 CP.ApplyModelBackdrop = applyRaceBackground
+
+-- Blizzard anchors the viewport in XML only, so a disable that does not reload leaves the model
+-- sitting where the retail inset used to be.
+function CP.RestoreModel()
+    local model = _G.CharacterModelFrame
+    if not model then return end
+    model._duiResized = nil
+
+    model:SetSize(VANILLA_W, VANILLA_H)
+    model:ClearAllPoints()
+    model:SetPoint("TOPLEFT", model:GetParent(), "TOPLEFT", VANILLA_X, VANILLA_Y)
+
+    if model._duiRaceBg then
+        for _, tex in pairs(model._duiRaceBg) do tex:Hide() end
+    end
+    if model._duiRaceBgOverlay then model._duiRaceBgOverlay:Hide() end
+end
 
 local function build()
     resizeModel()

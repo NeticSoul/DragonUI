@@ -118,7 +118,7 @@ L["Dark Mode"] = true
 L["Item Quality Borders"] = true
 -- Character Panel
 L["Character Panel"] = true
-L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = true
+L["Modern reskin of the Blizzard character window."] = true
 L["Enable Character Panel"] = true
 L["Apply the DragonUI reskin to the character window."] = true
 L["Class Portrait"] = true
@@ -127,7 +127,7 @@ L["Class-Colored Level Text"] = true
 L["Color the class name in the \"Level X Race Class\" line."] = true
 -- Pets & Mounts
 L["Pets & Mounts"] = true
-L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."] = true
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = true
 L["Enable Pets & Mounts"] = true
 L["Add the Pets & Mounts micro menu button and its window."] = true
 L["Enable Enhanced Tooltips"] = true
@@ -1745,3 +1745,20 @@ L["Debuffs on the Ally"] = true
 L["Buffs the Ally Carries"] = true
 L["Also Show These Spells"] = true
 L["Listed spells always show, buff or debuff, on top of everything above."] = true
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = true
+L["Character"] = true
+L["Stats Sidebar"] = true
+L["The headline numbers above the stat categories."] = true
+L["Show Item Level"] = true
+L["Show the average item level of your equipped gear."] = true
+L["Show GearScore"] = true
+L["Show the GearScore of your equipped gear."] = true
+L["Opens the window without the micro menu."] = true
+L["Toggle Pets & Mounts"] = true
+L["Click, then press the key to bind. Press Escape to clear it."] = true
+L["Key bindings cannot be changed in combat."] = true

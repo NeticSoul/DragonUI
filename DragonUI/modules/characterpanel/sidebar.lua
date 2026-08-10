@@ -26,15 +26,22 @@ local SECTIONS = {
 
 local RESIST_SCHOOLS = { 2, 3, 4, 5, 6 }
 
-local pane, scrollChild, ilvlRow
+local pane, scrollChild, ilvlRow, gsRow
 local resistRows = {}
 
 -- Sections in draw order, each owning its header and rows so collapsing one can re-flow the rest.
 local layout = {}
 local collapsed = {}
+-- Snapshotted at build time, before any saved order is applied: what "default" resets back to.
+local defaultOrder = {}
 
 -- No +/- glyph: swapping the art made the header look like it shifted, and the glow says enough.
 local HEADER_HL_ALPHA = 0.35
+
+-- Reorder arrows, revealed only while the cursor is over their header: two chevrons on every bar at
+-- rest would read as decoration and compete with the section names.
+local MOVE_W, MOVE_H = 11, 7
+local MOVE_X, MOVE_OFFSET = 165, 5
 
 -- One texture sized outright: the viewport is always the art's native width, so slicing bought
 -- nothing and cost a three-deep anchor chain that re-resolved on every frame of every collapse.
@@ -44,6 +51,39 @@ local function buildBar(parent, layer, sublevel)
     tex:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
     tex:set_atlas("UI-Character-Info-Title")
     return tex
+end
+
+-- Geometric, so it stays true over the arrows the header owns: their own OnLeave fires instead of
+-- the header's, and hiding on that one would flicker the pair away under the cursor.
+local function refreshHover(header)
+    local over = header:IsMouseOver()
+    for _, btn in ipairs(header.Move) do
+        if over and btn._duiUsable then btn:Show() else btn:Hide() end
+    end
+end
+
+local function buildMoveButton(header, atlas, delta, y)
+    local btn = CreateFrame("Button", nil, header)
+    btn:SetSize(MOVE_W, MOVE_H)
+    btn:SetPoint("LEFT", header, "LEFT", MOVE_X, y)
+    btn:SetFrameLevel(header:GetFrameLevel() + 1)
+    btn:Hide()
+
+    local icon = btn:CreateTexture(nil, "OVERLAY")
+    icon:set_atlas(atlas)
+    icon:SetAllPoints(btn)
+
+    local hl = btn:CreateTexture(nil, "HIGHLIGHT")
+    hl:set_atlas(atlas)
+    hl:SetAllPoints(btn)
+    hl:SetBlendMode("ADD")
+
+    btn:SetScript("OnClick", function()
+        if CP.MoveSidebarSection then CP.MoveSidebarSection(header.key, delta) end
+    end)
+    btn:SetScript("OnEnter", function() refreshHover(header) end)
+    btn:SetScript("OnLeave", function() refreshHover(header) end)
+    return btn
 end
 
 local function buildHeader(parent, key, text)
@@ -68,6 +108,12 @@ local function buildHeader(parent, key, text)
     end)
 
     header.key = key
+    header.MoveUp = buildMoveButton(header, "minimal-scrollbar-arrow-top", -1, MOVE_OFFSET)
+    header.MoveDown = buildMoveButton(header, "minimal-scrollbar-arrow-bottom", 1, -MOVE_OFFSET)
+    header.Move = { header.MoveUp, header.MoveDown }
+
+    header:SetScript("OnEnter", function(self) refreshHover(self) end)
+    header:SetScript("OnLeave", function(self) refreshHover(self) end)
     return header
 end
 
@@ -119,8 +165,8 @@ local function averageQuality()
 end
 
 -- A headline block rather than a label:value row: just the number, large and centred.
-local function buildItemLevelRow(parent)
-    local row = CreateFrame("Frame", "DragonUIStatItemLevel", parent)
+local function buildHeadlineRow(parent, name)
+    local row = CreateFrame("Frame", name, parent)
     row:SetSize(ROW_W, 22)
 
     local value = row:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
@@ -151,6 +197,35 @@ local function openness(key)
     return collapsed[key] and 0 or 1
 end
 
+-- Blizzard hides the 6th Ranged row itself, and the headline blocks are taller than a stat row.
+local function sectionBlockHeight(section)
+    local h = 0
+    for _, row in ipairs(section.rows) do
+        if not row._duiBlizzHidden then h = h + (row:GetHeight() or ROW_H) end
+    end
+    return h
+end
+
+-- Pixels each swapped section still has to travel back to its slot, and the rate that closes it.
+-- Both halves share one duration whatever the distance; that is what reads as an exchange.
+local slide, slideRate = {}, {}
+local SLIDE_DURATION = 0.18
+local raised
+
+-- Same-level bars cross in creation order, which makes a swap look arbitrary; the section the
+-- player clicked passes in front of the one it trades with.
+local RAISE = 4
+
+local function setSectionRaised(section, on)
+    if not scrollChild then return end
+    local base = scrollChild:GetFrameLevel()
+    local lift = on and RAISE or 0
+    section.header:SetFrameLevel(base + 2 + lift)
+    for _, row in ipairs(section.rows) do
+        row:SetFrameLevel(base + 1 + lift)
+    end
+end
+
 local function stepAnimation(_, elapsed)
     local step = (elapsed or 0) / ANIM_DURATION
     local moving = false
@@ -164,8 +239,47 @@ local function stepAnimation(_, elapsed)
             if p ~= target then moving = true end
         end
     end
+
+    for key, offset in pairs(slide) do
+        local delta = (slideRate[key] or 0) * (elapsed or 0)
+        offset = (offset > 0) and math.max(0, offset - delta) or math.min(0, offset + delta)
+        if offset == 0 then
+            slide[key], slideRate[key] = nil, nil
+        else
+            slide[key] = offset
+            moving = true
+        end
+    end
+
+    if raised and not slide[raised.key] then
+        setSectionRaised(raised, false)
+        raised = nil
+    end
+
     if CP.RelayoutSidebar then CP.RelayoutSidebar() end
     if not moving then animator:Hide() end
+end
+
+local function startAnimator()
+    if not animator then
+        animator = CreateFrame("Frame")
+        animator:SetScript("OnUpdate", stepAnimation)
+    end
+    animator:Show()
+end
+
+local function saveCollapsed()
+    local store = {}
+    for _, section in ipairs(layout) do
+        if collapsed[section.key] then store[section.key] = true end
+    end
+    CP:Config().stats_collapsed = store
+end
+
+local function saveOrder()
+    local order = {}
+    for i, section in ipairs(layout) do order[i] = section.key end
+    CP:Config().stats_order = order
 end
 
 -- Freeze the openness before flipping the flag: otherwise the default openness IS the new target
@@ -173,12 +287,172 @@ end
 function CP.ToggleSidebarSectionAnimated(key)
     progress[key] = openness(key)
     collapsed[key] = not collapsed[key]
+    saveCollapsed()
+    startAnimator()
+end
 
-    if not animator then
-        animator = CreateFrame("Frame")
-        animator:SetScript("OnUpdate", stepAnimation)
+-- The ends of the list have nowhere to go, so their arrow is withheld rather than drawn dead. The
+-- ends are the outermost SHOWN sections: a hidden one is not somewhere a section can be moved to.
+local function refreshMoveButtons()
+    local first, last
+    for i, section in ipairs(layout) do
+        if not section.hidden then
+            first = first or i
+            last = i
+        end
     end
-    animator:Show()
+    for i, section in ipairs(layout) do
+        local header = section.header
+        if header and header.Move then
+            header.MoveUp._duiUsable = first ~= nil and i > first
+            header.MoveDown._duiUsable = last ~= nil and i < last
+            refreshHover(header)
+        end
+    end
+end
+
+-- Mirrors the accumulation in flowSection; the two must agree or a swap animates to the wrong slot.
+local function restingOffsets()
+    local out, y = {}, 0
+    for _, section in ipairs(layout) do
+        if not section.hidden then
+            out[section.key] = y
+            y = y + HEADER_H + sectionBlockHeight(section) * openness(section.key) + SECTION_GAP
+        end
+    end
+    return out
+end
+
+-- Where the sections are DRAWN, not where they rest, so a second click mid-slide carries on from
+-- the current position instead of snapping back to the slot first.
+local function drawnOffsets()
+    local out = restingOffsets()
+    for key, offset in pairs(slide) do
+        if out[key] then out[key] = out[key] + offset end
+    end
+    return out
+end
+
+-- Walks every section, not just a swapped pair: a reset moves several at once, and one that did
+-- not move comes out with a zero shift and is skipped anyway.
+local function startSlide(before, lift)
+    local after = restingOffsets()
+    for _, section in ipairs(layout) do
+        local key = section.key
+        local shift = (before[key] or 0) - (after[key] or 0)
+        if shift ~= 0 then
+            slide[key] = shift
+            slideRate[key] = math.abs(shift) / SLIDE_DURATION
+        end
+    end
+
+    if raised then setSectionRaised(raised, false) end
+    raised = lift
+    if lift then setSectionRaised(lift, true) end
+    startAnimator()
+end
+
+function CP.MoveSidebarSection(key, delta)
+    local from
+    for i, section in ipairs(layout) do
+        if section.key == key then from = i break end
+    end
+    if not from then return end
+
+    -- Steps over anything hidden, or a click beside a switched-off section would read as a no-op.
+    local to = from + delta
+    while layout[to] and layout[to].hidden do to = to + delta end
+    if not layout[to] then return end
+
+    -- Captured before the swap: the pair animates from where it was to where it now belongs.
+    local before = drawnOffsets()
+    local moved = layout[from]
+
+    layout[from], layout[to] = layout[to], layout[from]
+    saveOrder()
+    refreshMoveButtons()
+    startSlide(before, moved)
+    CP.RelayoutSidebar()
+end
+
+-- Clearing the setting rather than storing the default order back: nothing stale is left to
+-- reapply, and a later version that adds a category still gets to place it itself.
+function CP.ResetSidebarOrder()
+    if #defaultOrder == 0 then return end
+    CP:Config().stats_order = nil
+
+    local before = drawnOffsets()
+    local byKey = {}
+    for _, section in ipairs(layout) do byKey[section.key] = section end
+
+    local sorted = {}
+    for _, key in ipairs(defaultOrder) do
+        if byKey[key] then
+            sorted[#sorted + 1] = byKey[key]
+            byKey[key] = nil
+        end
+    end
+    for _, section in ipairs(layout) do
+        if byKey[section.key] then sorted[#sorted + 1] = section end
+    end
+    layout = sorted
+
+    refreshMoveButtons()
+    -- Nothing lifted: a whole list re-flowing reads as a reset, not as one section being carried.
+    startSlide(before)
+    CP.RelayoutSidebar()
+end
+
+-- A saved order is a hint, never the list itself: an unknown key is dropped and a section the saved
+-- order predates keeps its build position, so a future section can never go missing.
+local function applySavedOrder()
+    local order = CP:Config().stats_order
+    if type(order) ~= "table" then return end
+
+    local byKey = {}
+    for _, section in ipairs(layout) do byKey[section.key] = section end
+
+    local sorted, taken = {}, {}
+    for _, key in ipairs(order) do
+        if byKey[key] and not taken[key] then
+            taken[key] = true
+            sorted[#sorted + 1] = byKey[key]
+        end
+    end
+    for _, section in ipairs(layout) do
+        if not taken[section.key] then sorted[#sorted + 1] = section end
+    end
+    layout = sorted
+end
+
+-- Seeded straight into `progress` as well: restored sections have to start at their resting state,
+-- or every collapsed one would animate open on the first paint of the session.
+local function applySavedCollapsed()
+    local store = CP:Config().stats_collapsed
+    if type(store) ~= "table" then return end
+    for _, section in ipairs(layout) do
+        collapsed[section.key] = store[section.key] and true or nil
+        progress[section.key] = collapsed[section.key] and 0 or 1
+    end
+end
+
+-- Item level reads `~= false` and GearScore reads plainly: the panel has always led with the item
+-- level, so only the opt-in number defaults to off.
+local function sectionVisible(key)
+    local cfg = CP:Config()
+    if key == "itemlevel" then return cfg.show_item_level ~= false end
+    if key == "gearscore" then return cfg.show_gear_score and true or false end
+    return true
+end
+
+function CP.ApplyGearSummaryVisibility()
+    for _, section in ipairs(layout) do
+        section.hidden = not sectionVisible(section.key)
+    end
+    refreshMoveButtons()
+    -- A number that was hidden holds whatever it last read, so it is filled before it is revealed.
+    if CP.RefreshSidebar then CP.RefreshSidebar() end
+    CP.RelayoutSidebar()
 end
 
 -- Re-flows every section from the top. Widths come from the viewport rather than a constant: when
@@ -195,23 +469,22 @@ function CP.RelayoutSidebar()
     if width <= 0 then width = HEADER_W end
     local rowWidth = width - ROW_INSET * 2
 
-    local y = 0
-    for _, section in ipairs(layout) do
+    -- Laid out one section at a time so a section the settings have switched off can drop out of the
+    -- flow entirely rather than reserving its bar's height.
+    local function flowSection(section, y)
         local open = openness(section.key)
         local header = section.header
+        -- A section mid-swap is drawn away from its slot while everything below it stays put.
+        local drawY = y + (slide[section.key] or 0)
+
+        header:Show()
         header:SetSize(width, HEADER_H)
         if header.Bg then header.Bg:SetSize(width, HEADER_H) end
         if header.Hl then header.Hl:SetSize(width, HEADER_H) end
         header:ClearAllPoints()
-        header:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
-        y = y + HEADER_H
+        header:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -drawY)
 
-        -- Blizzard hides the 6th Ranged row itself; honour that so we do not re-flow a blank.
-        local blockH = 0
-        for _, row in ipairs(section.rows) do
-            -- The item level block is taller than a stat row, so read the real height.
-            if not row._duiBlizzHidden then blockH = blockH + (row:GetHeight() or ROW_H) end
-        end
+        local blockH = sectionBlockHeight(section)
 
         -- Rows never move; they are uncovered as the block's edge sweeps past, each fading over its
         -- own height. Sliding the stack made rows surface above the bar before disappearing.
@@ -229,14 +502,25 @@ function CP.RelayoutSidebar()
                     row:Hide()
                 else
                     row:ClearAllPoints()
-                    row:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -ROW_INSET, -(y + offset))
+                    row:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", -ROW_INSET,
+                                 -(drawY + HEADER_H + offset))
                     row:SetAlpha(math.min(1, (revealed - offset) / h))
                     row:Show()
                 end
                 offset = offset + h
             end
         end
-        y = y + revealed + SECTION_GAP
+        return y + HEADER_H + revealed + SECTION_GAP
+    end
+
+    local y = 0
+    for _, section in ipairs(layout) do
+        if section.hidden then
+            section.header:Hide()
+            for _, row in ipairs(section.rows) do row:Hide() end
+        else
+            y = flowSection(section, y)
+        end
     end
     scrollChild:SetHeight(math.max(1, y))
     if CP.SyncScrollThumb then CP.SyncScrollThumb(_G.DragonUICharacterStatsScroll) end
@@ -314,9 +598,13 @@ local function buildSidebar()
         layout[#layout + 1] = { key = key, header = header, rows = rows }
     end
 
-    -- Item level leads the list as its own headline stat, the way retail does.
-    ilvlRow = buildItemLevelRow(scrollChild)
+    -- Item level leads the list as its own headline stat, the way retail does. GearScore is the
+    -- same block under its own header, so either can be switched off or reordered on its own.
+    ilvlRow = buildHeadlineRow(scrollChild, "DragonUIStatItemLevel")
     addSection("itemlevel", addon.L["Item Level"], { ilvlRow })
+
+    gsRow = buildHeadlineRow(scrollChild, "DragonUIStatGearScore")
+    addSection("gearscore", addon.L["GearScore"], { gsRow })
 
     for _, section in ipairs(SECTIONS) do
         local rows = {}
@@ -331,6 +619,12 @@ local function buildSidebar()
         resists[i] = buildResistRow(scrollChild, i, school, i % 2 == 0)
     end
     addSection("resistance", RESISTANCE_LABEL, resists)
+
+    for _, section in ipairs(layout) do defaultOrder[#defaultOrder + 1] = section.key end
+
+    applySavedOrder()
+    applySavedCollapsed()
+    CP.ApplyGearSummaryVisibility()
 
     CP.RelayoutSidebar()
     CP._sidebar = pane
@@ -378,27 +672,46 @@ local function refreshResistances()
     end
 end
 
-local function refreshItemLevel()
-    if not ilvlRow then return end
-
-    local average = addon.GetAverageItemLevel and addon.GetAverageItemLevel("player")
-    ilvlRow.Value:SetText(average and tostring(average) or "--")
-
+local function colorByAverageQuality(fontString)
     local quality = averageQuality()
     local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
     if color then
-        ilvlRow.Value:SetTextColor(color.r, color.g, color.b)
+        fontString:SetTextColor(color.r, color.g, color.b)
     else
-        ilvlRow.Value:SetTextColor(1, 0.82, 0)
+        fontString:SetTextColor(1, 0.82, 0)
     end
+end
+
+-- Both refreshes walk every equipped slot, and the stat events behind them fire throughout a fight,
+-- so a switched-off number is skipped rather than computed into a hidden row.
+local function refreshItemLevel()
+    if not ilvlRow or CP:Config().show_item_level == false then return end
+
+    local average = addon.GetAverageItemLevel and addon.GetAverageItemLevel("player")
+    ilvlRow.Value:SetText(average and tostring(average) or "--")
+    colorByAverageQuality(ilvlRow.Value)
 
     ilvlRow.tooltip = addon.L["Item Level"]
     ilvlRow.tooltip2 = addon.L["Average item level of your equipped gear."]
 end
 
+-- Shares the item level's colour rather than GearScore's own ramp: two different scales sitting one
+-- above the other read as a contradiction when they disagree on the same gear.
+local function refreshGearScore()
+    if not gsRow or not CP:Config().show_gear_score then return end
+
+    local score = CP.GetGearScore and CP.GetGearScore("player") or 0
+    gsRow.Value:SetText(score > 0 and tostring(score) or "--")
+    colorByAverageQuality(gsRow.Value)
+
+    gsRow.tooltip = addon.L["GearScore"]
+    gsRow.tooltip2 = addon.L["Weighted score of your equipped gear."]
+end
+
 local function refresh()
     if not pane then return end
     refreshItemLevel()
+    refreshGearScore()
 
     for _, section in ipairs(SECTIONS) do
         UpdatePaperdollStats(section.prefix, section.index)
@@ -413,9 +726,11 @@ local function refresh()
     CP.RelayoutSidebar()
 end
 
+-- PaperDollFrame's OnShow hook outlives a disable, and re-widening CharacterFrame for a sidebar the
+-- restore has already put away is what left the window stretched with nothing in the gap.
 local function expand()
     local cf = _G.CharacterFrame
-    if not cf or InCombatLockdown() then return end
+    if not cf or InCombatLockdown() or not CP:Enabled() then return end
     buildSidebar()
     if not pane then return end
     cf:SetWidth(EXPANDED_WIDTH)
@@ -431,10 +746,20 @@ end
 
 local function collapse(keepWidth)
     local cf = _G.CharacterFrame
-    if not cf or InCombatLockdown() then return end
+    if not cf or InCombatLockdown() or not CP:Enabled() then return end
     -- This runs after SetInsetForTab, so forcing the narrow width here would silently undo it.
     if not keepWidth then cf:SetWidth(CP.PANEL_WIDTH) end
     if cf.InsetRight then cf.InsetRight:Hide() end
+end
+
+-- Deliberately ungated, unlike collapse(): the module flag is already off by the time a restore
+-- runs, so anything that asks CP:Enabled() first would decline to clean up after itself.
+function CP.RestoreSidebar()
+    local cf = _G.CharacterFrame
+    if cf and cf.InsetRight then cf.InsetRight:Hide() end
+    -- Hand the average back to itemlevel.lua, which has been holding it hidden for us.
+    if addon.SetCharacterAverageSuppressed then addon.SetCharacterAverageSuppressed(false) end
+    if CP.SetSidebarTabsShown then CP.SetSidebarTabsShown(false) end
 end
 
 -- Only PaperDoll gets the stats pane; the list tabs manage their own width.

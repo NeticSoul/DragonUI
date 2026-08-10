@@ -1051,6 +1051,10 @@ local defaults = {
                 class_level_text = true, -- Class-colored "Level X Race Class" line
                 dark_background = false, -- Tint the panel's stone grounds down; the cog toggles it
                 grey_model_backdrop = true, -- Desaturate and dim the race backdrop behind the model
+                show_item_level = true, -- Headline average item level above the stat categories
+                show_gear_score = false, -- Headline GearScore above the stat categories
+                -- stats_collapsed / stats_order are written by the panel itself, never defaulted:
+                -- an empty default table would be shared by every profile that has not set one.
             },
             itemlevel = {
                 enabled = true, -- Show item level on gear icons

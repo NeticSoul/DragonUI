@@ -185,6 +185,15 @@ function CP.PaintListRows(scroll, content, flat, rowHeight, pools, paint)
 
     local visible = math.max(1, math.floor((scroll:GetHeight() or rowHeight) / rowHeight))
     FauxScrollFrame_Update(scroll, #flat, visible, rowHeight)
+
+    -- FauxScrollFrame_Update sizes the child to numItems*rowHeight while giving the slider a range
+    -- of (numItems - visible)*rowHeight, and the viewport is not a whole number of rows, so the
+    -- slider outruns what SetVerticalScroll accepts. The clamp then writes the slider back mid-drag
+    -- and the thumb fights the cursor. Sized so both ranges agree and nothing clamps.
+    local child = scroll:GetScrollChild()
+    if child and scroll:IsShown() then
+        child:SetHeight((scroll:GetHeight() or 0) + math.max(0, (#flat - visible) * rowHeight))
+    end
     -- Between deciding whether the bar is needed and reading the width that depends on it.
     if scroll._duiAnchorRight then scroll._duiAnchorRight() end
     if CP.SyncScrollThumb then CP.SyncScrollThumb(scroll) end

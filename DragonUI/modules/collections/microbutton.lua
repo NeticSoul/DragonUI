@@ -20,6 +20,10 @@ btn:SetDisabledTexture(ICON)
 btn:SetHighlightTexture(ICON)
 btn:GetHighlightTexture():SetBlendMode("ADD")
 
+-- The Key Bindings window reads BINDING_NAME_* globals, not AceLocale.
+local BINDING = "DRAGONUI_TOGGLE_COLLECTIONS"
+_G["BINDING_NAME_" .. BINDING] = addon.L["Pets & Mounts"]
+
 btn:RegisterForClicks("LeftButtonUp")
 btn:SetScript("OnClick", function()
     if addon.ToggleCollections then addon.ToggleCollections() end
@@ -29,6 +33,9 @@ end)
 btn.tooltipText = addon.L["Pets & Mounts"]
 btn.newbieText = addon.L["The mounts and pets you have collected."]
 btn:SetScript("OnEnter", function(self)
-    GameTooltip_AddNewbieTip(self, self.tooltipText, 1.0, 1.0, 1.0, self.newbieText)
+    -- Rebuilt per hover rather than cached: a rebind would otherwise show the old key until reload.
+    local text = self.tooltipText
+    if MicroButtonTooltipText then text = MicroButtonTooltipText(text, BINDING) end
+    GameTooltip_AddNewbieTip(self, text, 1.0, 1.0, 1.0, self.newbieText)
 end)
 btn:SetScript("OnLeave", function() GameTooltip:Hide() end)

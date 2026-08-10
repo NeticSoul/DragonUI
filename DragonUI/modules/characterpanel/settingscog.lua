@@ -39,6 +39,48 @@ local function addRadio(text, checked, onSelect, level)
     UIDropDownMenu_AddButton(info, level)
 end
 
+-- Kept open on click, unlike the radios: these two are independent, and closing after the first
+-- would make turning both on a two-trip job.
+local function addCheck(text, checked, onToggle, level)
+    local info = UIDropDownMenu_CreateInfo()
+    info.text = text
+    info.checked = checked
+    info.isNotRadio = true
+    info.keepShownOnClick = 1
+    info.func = onToggle
+    UIDropDownMenu_AddButton(info, level)
+end
+
+-- Never grey: disabled entries are grey, so a greyed action reads as unclickable.
+local ACTION_COLOR = "|cffd07070"
+
+local function addAction(text, colorCode, onClick, level)
+    local info = UIDropDownMenu_CreateInfo()
+    info.text = text
+    info.colorCode = colorCode
+    info.notCheckable = 1
+    info.func = onClick
+    UIDropDownMenu_AddButton(info, level)
+end
+
+local function setStatShown(key, shown)
+    CP:Config()[key] = shown and true or false
+    if CP.ApplyGearSummaryVisibility then CP.ApplyGearSummaryVisibility() end
+end
+
+StaticPopupDialogs["DRAGONUI_RESET_STAT_ORDER"] = {
+    text = addon.L["Restore the stat categories to their default order?"],
+    button1 = YES,
+    button2 = NO,
+    OnAccept = function()
+        if CP.ResetSidebarOrder then CP.ResetSidebarOrder() end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
 local function initMenu(_, level)
     local dark = CP:Config().dark_background
 
@@ -54,6 +96,21 @@ local function initMenu(_, level)
     addTitle(addon.L["Model backdrop"], level)
     addRadio(addon.L["Greyscale"], grey, function() setGreyBackdrop(true) end, level)
     addRadio(addon.L["Full colour"], not grey, function() setGreyBackdrop(false) end, level)
+
+    local cfg = CP:Config()
+    addTitle(addon.L["Gear summary"], level)
+    addCheck(addon.L["Item Level"], cfg.show_item_level ~= false, function()
+        setStatShown("show_item_level", CP:Config().show_item_level == false)
+    end, level)
+    addCheck(addon.L["GearScore"], cfg.show_gear_score and true or false, function()
+        setStatShown("show_gear_score", not CP:Config().show_gear_score)
+    end, level)
+
+    -- Only where the stats pane exists, which is the same tab that gates this whole block. Set
+    -- apart by colour, not a blank row: every entry costs a fixed 16px whatever is drawn in it.
+    addAction(addon.L["Reset stat order"], ACTION_COLOR, function()
+        StaticPopup_Show("DRAGONUI_RESET_STAT_ORDER")
+    end, level)
 end
 
 local function build()

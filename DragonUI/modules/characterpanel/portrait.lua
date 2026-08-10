@@ -5,6 +5,8 @@ local CP = addon.CharacterPanel
 -- TOPLEFT(-5,7), which is where the ring baked into our top-left chrome corner sits.
 local PORTRAIT_SIZE = 62
 local PORTRAIT_X, PORTRAIT_Y = -5, 7
+local VANILLA_SIZE = 60
+local VANILLA_X, VANILLA_Y = 7, -6
 
 -- 3.3.5a has no mask textures, so SQUARE art has to shrink until its corners clear the circular
 -- cutout. Blizzard's UI-Classes-Circles is exempt: that art is already circular.
@@ -65,11 +67,29 @@ local function setFacePortrait()
     p._duiMode = "face"
 end
 
+-- Gated here rather than at the builder: the event frame and the CharacterFrame_OnEvent hook below
+-- outlive a disable, and both kept dragging Blizzard's portrait onto the retail ring's offsets.
 local function reapply()
+    if not CP:Enabled() then return end
     if CP:Config().class_portrait then setClassPortrait() else setFacePortrait() end
 end
 
 CP.UpdatePortrait = reapply
+
+function CP.RestorePortrait()
+    local p = _G.CharacterFramePortrait
+    local cf = _G.CharacterFrame
+    if not p or not cf then return end
+    p._duiGeometry = nil
+    p._duiMode = nil
+
+    p:SetSize(VANILLA_SIZE, VANILLA_SIZE)
+    p:ClearAllPoints()
+    p:SetPoint("TOPLEFT", cf, "TOPLEFT", VANILLA_X, VANILLA_Y)
+    -- The class icon samples a sub-rect, and SetPortraitTexture does not reset it.
+    p:SetTexCoord(0, 1, 0, 1)
+    if SetPortraitTexture then SetPortraitTexture(p, "player") end
+end
 
 -- DISPLAY_SIZE_CHANGED drives Blizzard back through its own portrait setup without going through
 -- CharacterFrame_OnEvent, so the hook below never saw it and the class icon reverted to the face.

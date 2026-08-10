@@ -18,6 +18,8 @@ local PAN_LIMIT = 1.5
 local PAN_SPEED = 0.004
 -- Model_OnLoad's own starting rotation, so reset returns to exactly Blizzard's default.
 local DEFAULT_ROTATION = 0.61
+-- Matches the collections model, so both windows spin at the same rate under the same drag.
+local ROTATION_SPEED = 0.012
 
 local bar, faded, controls
 
@@ -140,6 +142,9 @@ end
 local panner = CreateFrame("Frame")
 panner:Hide()
 
+local rotator = CreateFrame("Frame")
+rotator:Hide()
+
 local function wireDrag(model)
     if model._duiDragWired then return end
     model._duiDragWired = true
@@ -155,14 +160,29 @@ local function wireDrag(model)
         applyPan(model, dx * PAN_SPEED, dy * PAN_SPEED)
     end)
 
-    model:HookScript("OnMouseDown", function(_, button)
-        if button ~= "RightButton" then return end
-        panner.x, panner.y = GetCursorPosition()
-        panner:Show()
+    -- Writes model.rotation, not just SetRotation: Model_OnUpdate reads that field to carry a held
+    -- rotate button on, so a drag that skipped it would be snapped away by the next button press.
+    rotator:SetScript("OnUpdate", function(self)
+        if not IsMouseButtonDown("LeftButton") then self:Hide(); return end
+        local cx = GetCursorPosition()
+        model.rotation = (model.rotation or DEFAULT_ROTATION) + (cx - (self.x or cx)) * ROTATION_SPEED
+        self.x = cx
+        model:SetRotation(model.rotation)
     end)
+
+    model:HookScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
+            rotator.x = GetCursorPosition()
+            rotator:Show()
+        elseif button == "RightButton" then
+            panner.x, panner.y = GetCursorPosition()
+            panner:Show()
+        end
+    end)
+    -- The XML OnMouseUp still runs first, so dropping an item on the model still equips it.
     model:HookScript("OnMouseUp", function(_, button)
-        if button ~= "RightButton" then return end
-        panner:Hide()
+        if button == "LeftButton" then rotator:Hide() end
+        if button == "RightButton" then panner:Hide() end
     end)
 end
 

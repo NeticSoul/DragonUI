@@ -1743,13 +1743,13 @@ L["Force one icon on all enemy nameplates so you can position and size it. Set t
 L["DragonUI (Custom)"] = "DragonUI (свой)"
 
 -- Character Panel, Pets & Mounts and diagnostics
-L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = "Оформляет окно персонажа Blizzard в современную металлическую рамку с портретом класса и панелью характеристик. Ячейки, модель и вкладки Blizzard остаются на месте, поэтому надевание по щелчку и все прочие функции продолжают работать."
+L["Modern reskin of the Blizzard character window."] = "Современное оформление окна персонажа Blizzard."
 L["Enable Character Panel"] = "Включить окно персонажа"
 L["Apply the DragonUI reskin to the character window."] = "Применяет оформление DragonUI к окну персонажа."
 L["Show your class icon in the portrait instead of your character's face."] = "Показывать в портрете значок класса вместо лица."
 L["Class-Colored Level Text"] = "Цвет класса в строке уровня"
 L["Pets & Mounts"] = "Спутники и транспорт"
-L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."] = "Отдельное окно для транспорта и спутников вместо старой вкладки питомца. Открывается своей кнопкой микроменю: поиск, избранное и просмотр модели."
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "Отдельное окно для транспорта и спутников вместо старой вкладки питомца."
 L["Enable Pets & Mounts"] = "Включить «Спутники и транспорт»"
 L["Add the Pets & Mounts micro menu button and its window."] = "Добавляет кнопку микроменю и само окно."
 
@@ -1762,3 +1762,20 @@ L["Detached \226\128\148 positioned freely via Editor Mode"] = "Отдельно
 L["Attached \226\128\148 follows Target frame"] = "Прикреплено — следует за рамкой цели"
 L["Attached \226\128\148 follows Focus frame"] = "Прикреплено — следует за рамкой фокуса"
 L["Power Bar \226\128\148 Players Only"] = "Полоса ресурса — только игроки"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "Панели"
+L["Character"] = "Персонаж"
+L["Stats Sidebar"] = "Боковая панель характеристик"
+L["The headline numbers above the stat categories."] = "Ключевые числа над категориями характеристик."
+L["Show Item Level"] = "Показывать уровень предметов"
+L["Show the average item level of your equipped gear."] = "Показывает средний уровень надетых предметов."
+L["Show GearScore"] = "Показывать GearScore"
+L["Show the GearScore of your equipped gear."] = "Показывает GearScore вашего снаряжения."
+L["Opens the window without the micro menu."] = "Открывает окно без микроменю."
+L["Toggle Pets & Mounts"] = "Открыть/закрыть Спутников и транспорт"
+L["Click, then press the key to bind. Press Escape to clear it."] = "Нажмите, затем нажмите нужную клавишу. Escape очищает назначение."
+L["Key bindings cannot be changed in combat."] = "Назначение клавиш нельзя изменить в бою."

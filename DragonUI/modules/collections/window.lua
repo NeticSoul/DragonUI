@@ -283,7 +283,9 @@ function CO.IsShown()
     return frame ~= nil and frame:IsShown()
 end
 
+-- Guarded here rather than at the micro button: the key binding reaches this with the button hidden.
 function CO.Toggle(kind)
+    if not CO:Enabled() then return end
     if frame and frame:IsShown() and (not kind or kind == CO.Kind) then
         CO.Close()
         return

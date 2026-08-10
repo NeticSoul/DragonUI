@@ -83,42 +83,120 @@ end
 
 local MIN_THUMB_H = 20
 
--- Blizzard's thumb is a fixed 24px whatever the list length; size it to the visible fraction.
-local function syncThumb(scroll, bar, thumb)
-    local grip = bar._duiGrip
-    if not thumb or not grip then return end
-    local child = scroll:GetScrollChild()
-    local viewport = scroll:GetHeight() or 0
-    local content = child and child:GetHeight() or 0
-    local trackH = bar:GetHeight() or 0
-    if viewport <= 0 or content <= 0 or trackH <= 0 then return end
+-- WoW maps a slider's value across (track - thumb), so a thumb that fills its track leaves nothing
+-- to divide by and the drag reads backwards. This is the travel the thumb always leaves behind.
+local MIN_TRAVEL = 12
 
-    -- Nothing to scroll: the grip fills the track. Anchored to the bar rather than the slider's
-    -- thumb, which WoW has hidden by now.
-    if content <= viewport then
+-- Blizzard's thumb is a fixed 24px whatever the list length; size it to the visible fraction.
+-- Places the grip from the slider's value rather than following the real thumb, so nothing depends
+-- on where WoW decided to put a texture we never show.
+local function syncThumb(scroll, bar)
+    local grip = bar._duiGrip
+    if not grip then return end
+    local viewport = scroll:GetHeight() or 0
+    local trackH = bar:GetHeight() or 0
+    if viewport <= 0 or trackH <= 0 then return end
+
+    local minV, maxV = bar:GetMinMaxValues()
+    minV, maxV = minV or 0, maxV or 0
+    local range = maxV - minV
+
+    -- Nothing to scroll: the grip fills the track.
+    if range <= 0 then
+        bar._duiTravel = 0
         grip:SetHeight(trackH)
         grip:ClearAllPoints()
         grip:SetPoint("TOP", bar, "TOP", 0, 0)
         return
     end
 
-    local h = trackH * (viewport / content)
-    if h < MIN_THUMB_H then h = MIN_THUMB_H end
-    if h > trackH then h = trackH end
+    local maxGrip = math.max(1, trackH - MIN_TRAVEL)
+    local h = trackH * (viewport / (viewport + range))
+    if h < math.min(MIN_THUMB_H, maxGrip) then h = math.min(MIN_THUMB_H, maxGrip) end
+    if h > maxGrip then h = maxGrip end
 
-    -- Only when it genuinely differs: this fires on every frame of a drag, and resizing the thumb
-    -- mid-drag makes WoW recompute the value-to-position mapping under the cursor.
-    if math.abs((thumb:GetHeight() or 0) - h) > 0.5 then thumb:SetHeight(h) end
+    local travel = trackH - h
+    bar._duiTravel = travel
+
     grip:SetHeight(h)
     grip:ClearAllPoints()
-    grip:SetPoint("CENTER", thumb, "CENTER", 0, 0)
+    grip:SetPoint("TOP", bar, "TOP", 0, -travel * ((bar:GetValue() - minV) / range))
 end
 
-local function hookThumbSync(scroll, bar, thumb)
-    local function sync() syncThumb(scroll, bar, thumb) end
+-- WoW maps a thumb drag through (track - thumb) inside C, and on short lists that mapping has come
+-- out backwards more than once. The grip is placed and driven straight from the slider's value
+-- instead, so the bar behaves identically whatever the list length.
+local dragger = CreateFrame("Frame")
+dragger:Hide()
+
+local function trackTopOf(bar)
+    local top = bar:GetTop()
+    if not top then return nil end
+    return top
+end
+
+local function cursorTopIn(bar)
+    local trackTop = trackTopOf(bar)
+    if not trackTop then return nil end
+    local _, cy = GetCursorPosition()
+    return trackTop - (cy / bar:GetEffectiveScale())
+end
+
+local function applyGripTop(bar, top)
+    local travel = bar._duiTravel or 0
+    local minV, maxV = bar:GetMinMaxValues()
+    if travel <= 0 or maxV <= minV then return end
+    local ratio = top / travel
+    if ratio < 0 then ratio = 0 elseif ratio > 1 then ratio = 1 end
+    bar:SetValue(minV + ratio * (maxV - minV))
+end
+
+-- Polled rather than taken from OnMouseUp: releasing with the cursor off the bar never delivers it.
+dragger:SetScript("OnUpdate", function(self)
+    if not IsMouseButtonDown("LeftButton") then self:Hide(); return end
+    local bar = self.bar
+    local cursorTop = bar and cursorTopIn(bar)
+    if not cursorTop then return end
+    applyGripTop(bar, cursorTop - (self.grab or 0))
+end)
+
+local function beginDrag(bar)
+    local grip = bar._duiGrip
+    local cursorTop = grip and cursorTopIn(bar)
+    if not cursorTop then return end
+
+    local gripTop = (bar:GetTop() or 0) - (grip:GetTop() or bar:GetTop() or 0)
+    local within = cursorTop - gripTop
+    local height = grip:GetHeight() or 0
+    -- Pressing the bare track picks the grip up by its middle instead of jumping by a page.
+    if within < 0 or within > height then within = height / 2 end
+
+    dragger.bar, dragger.grab = bar, within
+    dragger:Show()
+    applyGripTop(bar, cursorTop - within)
+end
+
+local function wireDrag(bar, host)
+    if bar._duiDrag then return end
+    bar._duiDrag = true
+    -- The slider keeps the value and the range; it just stops handling the mouse itself.
+    bar:EnableMouse(false)
+
+    local grabber = CreateFrame("Button", nil, host)
+    grabber:SetAllPoints(bar)
+    grabber:SetFrameLevel(bar:GetFrameLevel() + 2)
+    grabber:SetScript("OnMouseDown", function() beginDrag(bar) end)
+    bar._duiGrabber = grabber
+end
+
+local function hookThumbSync(scroll, bar)
+    local function sync() syncThumb(scroll, bar) end
     scroll:HookScript("OnScrollRangeChanged", sync)
     scroll:HookScript("OnVerticalScroll", sync)
     scroll:HookScript("OnShow", sync)
+    -- FauxScrollFrame_Update writes the range straight onto the slider, which never reaches the
+    -- scroll frame's own OnScrollRangeChanged.
+    bar:HookScript("OnMinMaxChanged", sync)
     bar._duiSync = sync
     sync()
 end
@@ -179,5 +257,6 @@ function CP.ReskinScrollBar(scroll, host, topInset, xInset, bottomInset)
     hideArrow(_G[name .. "ScrollBarScrollUpButton"])
     hideArrow(_G[name .. "ScrollBarScrollDownButton"])
 
-    hookThumbSync(scroll, bar, thumb)
+    wireDrag(bar, host)
+    hookThumbSync(scroll, bar)
 end

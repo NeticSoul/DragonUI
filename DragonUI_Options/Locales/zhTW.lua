@@ -1750,13 +1750,13 @@ L["Force one icon on all enemy nameplates so you can position and size it. Set t
 L["DragonUI (Custom)"] = "DragonUI（自訂）"
 
 -- Character Panel, Pets & Mounts and diagnostics
-L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = "將暴雪的角色視窗重繪為現代金屬邊框，帶職業頭像與屬性側邊欄。暴雪原有的裝備格、模型與標籤保持不變，點擊穿戴等功能照常使用。"
+L["Modern reskin of the Blizzard character window."] = "為暴雪的角色面板換上現代外觀。"
 L["Enable Character Panel"] = "啟用角色面板"
 L["Apply the DragonUI reskin to the character window."] = "對角色視窗套用 DragonUI 外觀。"
 L["Show your class icon in the portrait instead of your character's face."] = "在頭像處顯示職業圖示，而非角色臉孔。"
 L["Class-Colored Level Text"] = "職業色等級文字"
 L["Pets & Mounts"] = "寵物與坐騎"
-L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."] = "專門的坐騎與寵物視窗，取代角色視窗舊的寵物標籤。由專屬微選單按鈕開啟，支援搜尋、收藏與模型預覽。"
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "專門的坐騎與寵物視窗，取代角色視窗舊的寵物標籤。"
 L["Enable Pets & Mounts"] = "啟用寵物與坐騎"
 L["Add the Pets & Mounts micro menu button and its window."] = "新增寵物與坐騎的微選單按鈕及其視窗。"
 
@@ -1769,3 +1769,20 @@ L["Detached \226\128\148 positioned freely via Editor Mode"] = "分離 — 在�
 L["Attached \226\128\148 follows Target frame"] = "附著 — 跟隨目標框體"
 L["Attached \226\128\148 follows Focus frame"] = "附著 — 跟隨焦點框體"
 L["Power Bar \226\128\148 Players Only"] = "能量條 — 僅玩家"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "面板"
+L["Character"] = "角色"
+L["Stats Sidebar"] = "屬性側欄"
+L["The headline numbers above the stat categories."] = "屬性分類上方的主要數值。"
+L["Show Item Level"] = "顯示裝備等級"
+L["Show the average item level of your equipped gear."] = "顯示你已裝備物品的平均裝備等級。"
+L["Show GearScore"] = "顯示GearScore"
+L["Show the GearScore of your equipped gear."] = "顯示你已裝備物品的GearScore。"
+L["Opens the window without the micro menu."] = "無需微型選單即可開啟視窗。"
+L["Toggle Pets & Mounts"] = "開關寵物與坐騎"
+L["Click, then press the key to bind. Press Escape to clear it."] = "點擊後按下要繫結的按鍵。按Esc清除。"
+L["Key bindings cannot be changed in combat."] = "戰鬥中無法變更按鍵繫結。"

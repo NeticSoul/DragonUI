@@ -632,3 +632,13 @@ L["(paperdoll-only rows below are skipped on this tab)"] = "(die reinen Paperdol
 L["Put the cursor on the 3D model, capturing in 5 seconds."] = "Zeiger auf das 3D-Modell setzen, Aufnahme in 5 Sekunden."
 L["Ground dump failed: "] = "Hintergrund-Dump fehlgeschlagen: "
 L["Model control dump failed: "] = "Dump der Modellsteuerung fehlgeschlagen: "
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = "Ausrüstungsübersicht"
+L["GearScore"] = "GearScore"
+L["Weighted score of your equipped gear."] = "Gewichtete Wertung deiner angelegten Ausrüstung."
+L["Reset stat order"] = "Reihenfolge zurücksetzen"
+L["Restore the stat categories to their default order?"] = "Die Wertekategorien auf ihre Standardreihenfolge zurücksetzen?"

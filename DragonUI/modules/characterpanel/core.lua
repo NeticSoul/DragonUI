@@ -87,6 +87,11 @@ end
 
 local function RestoreCharacterPanelSystem()
     CharacterPanelModule.applied = false
+    -- Before RestoreChrome: putting the sidebar away frees the width that restore then settles.
+    if CP.RestoreSidebar then CP.RestoreSidebar() end
+    if CP.RestorePortrait then CP.RestorePortrait() end
+    if CP.RestoreLevelText then CP.RestoreLevelText() end
+    if CP.RestoreModel then CP.RestoreModel() end
     if CP.RestoreChrome then CP.RestoreChrome() end
     addon:Print(addon.L["Character Panel restored. Reload the UI for a fully clean state."])
 end

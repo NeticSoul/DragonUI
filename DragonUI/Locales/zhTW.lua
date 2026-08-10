@@ -563,3 +563,13 @@ L["(paperdoll-only rows below are skipped on this tab)"] = "（下方僅適用�
 L["Put the cursor on the 3D model, capturing in 5 seconds."] = "請把游標放在 3D 模型上，5 秒後開始擷取。"
 L["Ground dump failed: "] = "背景傾印失敗："
 L["Model control dump failed: "] = "模型控制項傾印失敗："
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = "裝備概覽"
+L["GearScore"] = "GearScore"
+L["Weighted score of your equipped gear."] = "你已裝備物品的加權評分。"
+L["Reset stat order"] = "重設排序"
+L["Restore the stat categories to their default order?"] = "將屬性分類恢復為預設順序？"

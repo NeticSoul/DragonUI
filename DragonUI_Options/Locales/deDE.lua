@@ -1739,13 +1739,13 @@ L["Force one icon on all enemy nameplates so you can position and size it. Set t
 L["DragonUI (Custom)"] = "DragonUI (benutzerdefiniert)"
 
 -- Character Panel, Pets & Mounts and diagnostics
-L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = "Gestaltet das Blizzard-Charakterfenster mit dem modernen Metallrahmen, einem Klassenporträt und einer Werteleiste neu. Blizzards eigene Plätze, das Modell und die Reiter bleiben erhalten, sodass Anlegen per Klick und alle übrigen Funktionen weiter arbeiten."
+L["Modern reskin of the Blizzard character window."] = "Moderne Überarbeitung des Blizzard-Charakterfensters."
 L["Enable Character Panel"] = "Charakterfenster aktivieren"
 L["Apply the DragonUI reskin to the character window."] = "Wendet die DragonUI-Gestaltung auf das Charakterfenster an."
 L["Show your class icon in the portrait instead of your character's face."] = "Zeigt im Porträt das Klassensymbol statt des Gesichts."
 L["Class-Colored Level Text"] = "Klassenfarbige Stufenzeile"
 L["Pets & Mounts"] = "Haustiere & Reittiere"
-L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."] = "Ein eigenes Fenster für Reittiere und Begleiter, das den alten Haustier-Reiter des Charakterfensters ersetzt. Öffnet sich über eine eigene Mikromenü-Schaltfläche, mit Suche, Favoriten und Modellvorschau."
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "Ein eigenes Fenster für Reittiere und Begleiter, das den alten Haustier-Reiter des Charakterfensters ersetzt."
 L["Enable Pets & Mounts"] = "Haustiere & Reittiere aktivieren"
 L["Add the Pets & Mounts micro menu button and its window."] = "Fügt die Mikromenü-Schaltfläche für Haustiere & Reittiere und ihr Fenster hinzu."
 L["Boss"] = "Boss"
@@ -1761,3 +1761,20 @@ L["Detached \226\128\148 positioned freely via Editor Mode"] = "Losgelöst — f
 L["Attached \226\128\148 follows Target frame"] = "Angeheftet — folgt dem Zielfenster"
 L["Attached \226\128\148 follows Focus frame"] = "Angeheftet — folgt dem Fokusfenster"
 L["Power Bar \226\128\148 Players Only"] = "Ressourcenleiste — nur Spieler"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "Fenster"
+L["Character"] = "Charakter"
+L["Stats Sidebar"] = "Werte-Seitenleiste"
+L["The headline numbers above the stat categories."] = "Die hervorgehobenen Zahlen über den Wertekategorien."
+L["Show Item Level"] = "Gegenstandsstufe anzeigen"
+L["Show the average item level of your equipped gear."] = "Zeigt die durchschnittliche Gegenstandsstufe deiner angelegten Ausrüstung."
+L["Show GearScore"] = "GearScore anzeigen"
+L["Show the GearScore of your equipped gear."] = "Zeigt den GearScore deiner angelegten Ausrüstung."
+L["Opens the window without the micro menu."] = "Öffnet das Fenster ohne das Mikromenü."
+L["Toggle Pets & Mounts"] = "Haustiere & Reittiere umschalten"
+L["Click, then press the key to bind. Press Escape to clear it."] = "Klicke und drücke dann die gewünschte Taste. Escape löscht die Belegung."
+L["Key bindings cannot be changed in combat."] = "Tastenbelegungen können im Kampf nicht geändert werden."

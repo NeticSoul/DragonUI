@@ -1558,13 +1558,13 @@ L["DragonUI (Custom)"] = "DragonUI (personnalisé)"
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["DragonUI"] = "DragonUI"
-L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = "Retexture la fenêtre de personnage de Blizzard avec le cadre métallique moderne, un portrait de classe et un panneau latéral de statistiques. Les emplacements, le modèle et les onglets de Blizzard restent en place : l'équipement au clic et toutes les autres fonctions continuent de marcher."
+L["Modern reskin of the Blizzard character window."] = "Refonte moderne de la fiche de personnage de Blizzard."
 L["Enable Character Panel"] = "Activer le panneau de personnage"
 L["Apply the DragonUI reskin to the character window."] = "Applique l'habillage DragonUI à la fenêtre de personnage."
 L["Show your class icon in the portrait instead of your character's face."] = "Affiche l'icône de votre classe dans le portrait au lieu du visage."
 L["Class-Colored Level Text"] = "Texte de niveau aux couleurs de classe"
 L["Pets & Mounts"] = "Mascottes et montures"
-L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."] = "Une fenêtre dédiée à vos montures et mascottes, qui remplace l'ancien onglet Familier de la fenêtre de personnage. S'ouvre depuis son propre bouton du micro-menu, avec recherche, favoris et aperçu du modèle."
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "Une fenêtre dédiée à vos montures et mascottes, qui remplace l'ancien onglet Familier de la fenêtre de personnage."
 L["Enable Pets & Mounts"] = "Activer Mascottes et montures"
 L["Add the Pets & Mounts micro menu button and its window."] = "Ajoute le bouton Mascottes et montures au micro-menu ainsi que sa fenêtre."
 L["Rare"] = "Rare"
@@ -1594,3 +1594,20 @@ L["Detached \226\128\148 positioned freely via Editor Mode"] = "Détachée — p
 L["Attached \226\128\148 follows Target frame"] = "Attachée — suit le cadre de cible"
 L["Attached \226\128\148 follows Focus frame"] = "Attachée — suit le cadre de focalisation"
 L["Power Bar \226\128\148 Players Only"] = "Barre de ressource — joueurs uniquement"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "Fenêtres"
+L["Character"] = "Personnage"
+L["Stats Sidebar"] = "Panneau latéral de statistiques"
+L["The headline numbers above the stat categories."] = "Les nombres mis en avant au-dessus des catégories de statistiques."
+L["Show Item Level"] = "Afficher le niveau d'objet"
+L["Show the average item level of your equipped gear."] = "Affiche le niveau d'objet moyen de votre équipement."
+L["Show GearScore"] = "Afficher le GearScore"
+L["Show the GearScore of your equipped gear."] = "Affiche le GearScore de votre équipement."
+L["Opens the window without the micro menu."] = "Ouvre la fenêtre sans le micro-menu."
+L["Toggle Pets & Mounts"] = "Afficher/masquer Mascottes et montures"
+L["Click, then press the key to bind. Press Escape to clear it."] = "Cliquez, puis appuyez sur la touche à assigner. Échap efface le raccourci."
+L["Key bindings cannot be changed in combat."] = "Les raccourcis clavier ne peuvent pas être modifiés en combat."

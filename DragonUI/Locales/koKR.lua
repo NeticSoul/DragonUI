@@ -630,3 +630,13 @@ L["(paperdoll-only rows below are skipped on this tab)"] = "(아래의 페이퍼
 L["Put the cursor on the 3D model, capturing in 5 seconds."] = "커서를 3D 모델 위에 올려두세요. 5초 후에 캡처합니다."
 L["Ground dump failed: "] = "배경 덤프 실패: "
 L["Model control dump failed: "] = "모델 컨트롤 덤프 실패: "
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = "장비 요약"
+L["GearScore"] = "GearScore"
+L["Weighted score of your equipped gear."] = "착용 중인 장비의 가중 점수입니다."
+L["Reset stat order"] = "순서 초기화"
+L["Restore the stat categories to their default order?"] = "능력치 분류를 기본 순서로 되돌릴까요?"

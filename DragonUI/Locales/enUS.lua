@@ -629,3 +629,13 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = true
 L["Delete the equipment set '%s'?"] = true
 L["Overwrite '%s' with your currently equipped items?"] = true
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = true
+L["GearScore"] = true
+L["Weighted score of your equipped gear."] = true
+L["Reset stat order"] = true
+L["Restore the stat categories to their default order?"] = true

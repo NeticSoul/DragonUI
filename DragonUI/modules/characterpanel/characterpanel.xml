@@ -19,6 +19,8 @@
 	<Script file="paneborder.lua"/>
 	<!-- scrollbar before the panes that reskin their bars with it. -->
 	<Script file="scrollbar.lua"/>
+	<!-- gearscore before sidebar.lua: the headline section reads its number on first build. -->
+	<Script file="gearscore.lua"/>
 	<Script file="sidebar.lua"/>
 	<!-- panes before sidebartabs: selecting a tab on build needs the pane switcher to exist, and
 	     the switcher needs the panes it drives. -->

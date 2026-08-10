@@ -563,3 +563,13 @@ L["(paperdoll-only rows below are skipped on this tab)"] = "(les lignes propres 
 L["Put the cursor on the 3D model, capturing in 5 seconds."] = "Placez le curseur sur le modèle 3D, capture dans 5 secondes."
 L["Ground dump failed: "] = "Échec du vidage des fonds : "
 L["Model control dump failed: "] = "Échec du vidage des contrôles du modèle : "
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = "Résumé de l'équipement"
+L["GearScore"] = "GearScore"
+L["Weighted score of your equipped gear."] = "Score pondéré de votre équipement."
+L["Reset stat order"] = "Réinitialiser l'ordre"
+L["Restore the stat categories to their default order?"] = "Rétablir l'ordre par défaut des catégories de statistiques ?"

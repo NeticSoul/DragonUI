@@ -1744,13 +1744,13 @@ L["Force one icon on all enemy nameplates so you can position and size it. Set t
 L["DragonUI (Custom)"] = "DragonUI(사용자 지정)"
 
 -- Character Panel, Pets & Mounts and diagnostics
-L["Reskins the Blizzard character window with the modern metal frame, a class portrait and a stats sidebar. Blizzard's own slots, model and tabs stay in place, so click-to-equip and every other panel feature keep working."] = "블리자드 캐릭터 창을 현대적인 금속 프레임과 직업 초상화, 능력치 사이드바로 바꿉니다. 블리자드의 칸과 모델, 탭은 그대로 남아 클릭 착용 등 모든 기능이 그대로 동작합니다."
+L["Modern reskin of the Blizzard character window."] = "블리자드 캐릭터 창의 현대적인 리스킨입니다."
 L["Enable Character Panel"] = "캐릭터 창 사용"
 L["Apply the DragonUI reskin to the character window."] = "캐릭터 창에 DragonUI 스킨을 적용합니다."
 L["Show your class icon in the portrait instead of your character's face."] = "초상화에 캐릭터 얼굴 대신 직업 아이콘을 표시합니다."
 L["Class-Colored Level Text"] = "직업 색상 레벨 텍스트"
 L["Pets & Mounts"] = "애완동물 및 탈것"
-L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."] = "탈것과 애완동물 전용 창으로, 캐릭터 창의 예전 애완동물 탭을 대체합니다. 자체 마이크로 메뉴 버튼으로 열리며 검색, 즐겨찾기, 모델 미리보기를 지원합니다."
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "탈것과 애완동물 전용 창으로, 캐릭터 창의 예전 애완동물 탭을 대체합니다."
 L["Enable Pets & Mounts"] = "애완동물 및 탈것 사용"
 L["Add the Pets & Mounts micro menu button and its window."] = "애완동물 및 탈것 마이크로 메뉴 버튼과 창을 추가합니다."
 
@@ -1763,3 +1763,20 @@ L["Detached \226\128\148 positioned freely via Editor Mode"] = "분리됨 — �
 L["Attached \226\128\148 follows Target frame"] = "부착됨 — 대상 프레임을 따라감"
 L["Attached \226\128\148 follows Focus frame"] = "부착됨 — 주시 대상 프레임을 따라감"
 L["Power Bar \226\128\148 Players Only"] = "기운 막대 — 플레이어 전용"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "창"
+L["Character"] = "캐릭터"
+L["Stats Sidebar"] = "능력치 사이드바"
+L["The headline numbers above the stat categories."] = "능력치 분류 위에 표시되는 대표 수치입니다."
+L["Show Item Level"] = "아이템 레벨 표시"
+L["Show the average item level of your equipped gear."] = "착용 중인 장비의 평균 아이템 레벨을 표시합니다."
+L["Show GearScore"] = "GearScore 표시"
+L["Show the GearScore of your equipped gear."] = "착용 중인 장비의 GearScore를 표시합니다."
+L["Opens the window without the micro menu."] = "마이크로 메뉴 없이 창을 엽니다."
+L["Toggle Pets & Mounts"] = "애완동물 및 탈것 열기/닫기"
+L["Click, then press the key to bind. Press Escape to clear it."] = "클릭한 뒤 지정할 키를 누르세요. Esc를 누르면 해제됩니다."
+L["Key bindings cannot be changed in combat."] = "전투 중에는 단축키를 변경할 수 없습니다."

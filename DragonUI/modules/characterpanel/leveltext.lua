@@ -22,7 +22,7 @@ end
 
 local function reposition()
     local fs = _G.CharacterLevelText
-    if not fs or not _G.PaperDollFrame then return end
+    if not fs or not _G.PaperDollFrame or not CP:Enabled() then return end
     fs:ClearAllPoints()
     fs:SetPoint("CENTER", _G.PaperDollFrame, "TOP", 0, levelY())
 end
@@ -34,12 +34,25 @@ local function rewriteGuild()
     PaperDollFrame_SetGuild()
 end
 
+-- Gated here, not at the builder: the hooks and the event frame below survive a disable, and both
+-- kept the guild line filled and the level line lifted on a window that no longer has room for it.
 local function rewrite()
     local fs = _G.CharacterLevelText
-    if not fs then return end
+    if not fs or not CP:Enabled() then return end
     if CP:Config().class_level_text then fs:SetText(levelString()) end
     rewriteGuild()
     reposition()
+end
+
+-- Blizzard anchors the pair in XML only, so nothing but this puts them back.
+function CP.RestoreLevelText()
+    local fs = _G.CharacterLevelText
+    if not fs or not _G.CharacterNameText then return end
+    fs:ClearAllPoints()
+    fs:SetPoint("TOP", _G.CharacterNameText, "BOTTOM", 0, -6)
+    if _G.PaperDollFrame_SetLevel then PaperDollFrame_SetLevel() end
+    -- Wrath never fills this; leaving our text behind would be the one line vanilla does not draw.
+    if _G.CharacterGuildText then _G.CharacterGuildText:SetText("") end
 end
 
 local setLevelHooked, setGuildHooked
