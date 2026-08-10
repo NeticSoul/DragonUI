@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- micromenu.lua captures MICRO_BUTTONS in a file-scope local, so a button that does not exist by

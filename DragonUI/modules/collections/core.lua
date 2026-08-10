@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- Mounts and companion pets over the pre-Cataclysm Companions API. It carries no mount type,

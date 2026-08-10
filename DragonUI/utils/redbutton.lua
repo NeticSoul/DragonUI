@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- Retail's red three-slice button ("128-RedButton"), for panel buttons that would otherwise show

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CO = addon.Collections
 
@@ -35,7 +37,7 @@ local ROTATION_SPEED = 0.012
 local frame, scroll, content, rows
 local searchBox, filterButton, filterMenu, rowMenu
 local countBox, countText, randomButton
-local infoIcon, infoFrame, infoName, infoSource, infoDesc, infoStar, model, actionButton
+local infoIcon, infoFrame, infoDrag, infoName, infoSource, infoDesc, infoStar, model, actionButton
 local emptyText, uncollectedHint
 
 local flat = {}
@@ -130,6 +132,7 @@ local function updateInfo()
     if not entry then
         infoIcon:Hide()
         infoFrame:Hide()
+        infoDrag:Hide()
         infoStar:Hide()
         infoName:SetText("")
         infoSource:SetText("")
@@ -144,6 +147,7 @@ local function updateInfo()
     infoIcon:SetTexture(entry.icon)
     infoIcon:Show()
     infoFrame:Show()
+    infoDrag:Show()
     infoName:SetText(entry.name)
 
     infoSource:SetFormattedText("|cffffd200%s:|r %s", addon.L["Source"],
@@ -200,6 +204,32 @@ local function buildInfo(host)
     infoIcon:SetSize(INFO_ICON, INFO_ICON)
     infoIcon:SetPoint("CENTER", infoFrame, "CENTER", -INFO_FRAME_X, -INFO_FRAME_Y)
     infoIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    -- The ornament is a texture, and textures take no input, so it cannot shadow this button: the
+    -- whole opening stays clickable even where the gold overlaps the icon.
+    infoDrag = CreateFrame("Button", nil, parent)
+    infoDrag:SetAllPoints(infoIcon)
+    infoDrag:RegisterForClicks("RightButtonUp")
+    infoDrag:RegisterForDrag("LeftButton")
+    infoDrag:SetScript("OnDragStart", function()
+        local entry = selectedEntry()
+        if entry and entry.index then PickupCompanion(kind(), entry.index) end
+    end)
+    infoDrag:SetScript("OnClick", function()
+        local entry = selectedEntry()
+        if not (entry and entry.index) then return end
+        menuEntry = entry
+        if rowMenu then ToggleDropDownMenu(1, nil, rowMenu, "cursor", 0, 0) end
+    end)
+    infoDrag:SetScript("OnEnter", function(self)
+        local entry = selectedEntry()
+        if not (entry and entry.spellID) then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetHyperlink("spell:" .. entry.spellID)
+        GameTooltip:AddLine(addon.L["Drag to place it on an action bar."], 0.6, 0.8, 1, true)
+        GameTooltip:Show()
+    end)
+    infoDrag:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     infoStar = CreateFrame("Button", nil, parent)
     infoStar:SetSize(24, 24)
