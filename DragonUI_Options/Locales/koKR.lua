@@ -1780,3 +1780,7 @@ L["Opens the window without the micro menu."] = "마이크로 메뉴 없이 창�
 L["Toggle Pets & Mounts"] = "애완동물 및 탈것 열기/닫기"
 L["Click, then press the key to bind. Press Escape to clear it."] = "클릭한 뒤 지정할 키를 누르세요. Esc를 누르면 해제됩니다."
 L["Key bindings cannot be changed in combat."] = "전투 중에는 단축키를 변경할 수 없습니다."
+L["Hide Model Controls"] = "모델 조작 버튼 숨기기"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "캐릭터 모델 위의 회전, 확대, 초기화 버튼을 숨깁니다."
+L["Keep the Reset Button"] = "초기화 버튼은 남기기"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "나머지 모델 조작 버튼은 숨긴 채 초기화 버튼만 남깁니다."

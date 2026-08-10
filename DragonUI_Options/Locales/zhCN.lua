@@ -1776,3 +1776,7 @@ L["Opens the window without the micro menu."] = "无需微型菜单即可打开�
 L["Toggle Pets & Mounts"] = "开关宠物与坐骑"
 L["Click, then press the key to bind. Press Escape to clear it."] = "点击后按下要绑定的按键。按Esc清除。"
 L["Key bindings cannot be changed in combat."] = "战斗中无法更改按键绑定。"
+L["Hide Model Controls"] = "隐藏模型控制按钮"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "隐藏角色模型上方的旋转、缩放和重置按钮。"
+L["Keep the Reset Button"] = "保留重置按钮"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "在其余模型控制按钮保持隐藏时，只留下重置按钮。"

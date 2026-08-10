@@ -1051,6 +1051,8 @@ local defaults = {
                 class_level_text = true, -- Class-colored "Level X Race Class" line
                 dark_background = false, -- Tint the panel's stone grounds down; the cog toggles it
                 grey_model_backdrop = true, -- Desaturate and dim the race backdrop behind the model
+                hide_model_controls = false, -- Drop the rotate/zoom/reset strip over the 3D model
+                model_controls_reset_only = false, -- ...except the reset button, when the above is on
                 show_item_level = true, -- Headline average item level above the stat categories
                 show_gear_score = false, -- Headline GearScore above the stat categories
                 -- stats_collapsed / stats_order are written by the panel itself, never defaulted:

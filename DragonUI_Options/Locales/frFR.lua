@@ -1611,3 +1611,7 @@ L["Opens the window without the micro menu."] = "Ouvre la fenêtre sans le micro
 L["Toggle Pets & Mounts"] = "Afficher/masquer Mascottes et montures"
 L["Click, then press the key to bind. Press Escape to clear it."] = "Cliquez, puis appuyez sur la touche à assigner. Échap efface le raccourci."
 L["Key bindings cannot be changed in combat."] = "Les raccourcis clavier ne peuvent pas être modifiés en combat."
+L["Hide Model Controls"] = "Masquer les commandes du modèle"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "Masque les boutons de rotation, de zoom et de réinitialisation au-dessus du modèle du personnage."
+L["Keep the Reset Button"] = "Conserver le bouton de réinitialisation"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "Laisse le bouton de réinitialisation seul tandis que le reste des commandes du modèle reste masqué."

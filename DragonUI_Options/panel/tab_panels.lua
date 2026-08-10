@@ -104,6 +104,46 @@ local function BuildCharacterSubTab(scroll)
         requiresReload = true,
     })
 
+    C:AddToggle(cpSection, {
+        label = LO["Hide Model Controls"],
+        desc = LO["Hide the rotate, zoom and reset buttons over the character model."],
+        getFunc = function()
+            return GetModuleField("characterpanel", "hide_model_controls") == true
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("characterpanel").hide_model_controls = val
+            -- Rebuilt so the sub-option below picks up its new disabled state.
+            Panel:SelectTab("panels")
+        end,
+        callback = function()
+            local CP = addon.CharacterPanel
+            if CP and CP.RefreshModelControls then CP.RefreshModelControls() end
+        end,
+        disabled = function() return not IsEnabled("characterpanel") end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(cpSection, {
+        label = LO["Keep the Reset Button"],
+        desc = LO["Leave the reset button on its own while the rest of the model controls stay hidden."],
+        indent = 18,
+        getFunc = function()
+            return GetModuleField("characterpanel", "model_controls_reset_only") == true
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("characterpanel").model_controls_reset_only = val
+        end,
+        callback = function()
+            local CP = addon.CharacterPanel
+            if CP and CP.RefreshModelControls then CP.RefreshModelControls() end
+        end,
+        disabled = function()
+            return not IsEnabled("characterpanel")
+                or GetModuleField("characterpanel", "hide_model_controls") ~= true
+        end,
+        requiresReload = false,
+    })
+
     -- ====================================================================
     -- STATS SIDEBAR
     -- ====================================================================

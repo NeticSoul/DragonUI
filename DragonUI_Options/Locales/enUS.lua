@@ -1762,3 +1762,7 @@ L["Opens the window without the micro menu."] = true
 L["Toggle Pets & Mounts"] = true
 L["Click, then press the key to bind. Press Escape to clear it."] = true
 L["Key bindings cannot be changed in combat."] = true
+L["Hide Model Controls"] = true
+L["Hide the rotate, zoom and reset buttons over the character model."] = true
+L["Keep the Reset Button"] = true
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = true

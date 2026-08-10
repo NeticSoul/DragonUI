@@ -21,7 +21,10 @@ local DEFAULT_ROTATION = 0.61
 -- Matches the collections model, so both windows spin at the same rate under the same drag.
 local ROTATION_SPEED = 0.012
 
-local bar, faded, controls
+local bar, faded, controls, buttons
+
+-- Draw order of the whole strip; the settings decide which of these actually stand.
+local STRIP_ORDER = { "left", "right", "zoomOut", "zoomIn", "reset" }
 
 local function position(model)
     if not model.GetPosition then return 0, 0, 0 end
@@ -99,6 +102,51 @@ local function releaseButtons()
     if not controls then return end
     for _, btn in ipairs(controls) do
         if btn:GetButtonState() == "PUSHED" then btn:SetButtonState("NORMAL") end
+    end
+end
+
+-- Rebuilt rather than toggled button by button: the strip is centred on the model, so dropping one
+-- has to re-measure the bar or whatever survives ends up sitting off-centre.
+local function layoutControls()
+    if not (bar and buttons) then return end
+    local cfg = CP:Config()
+
+    local order = {}
+    if not cfg.hide_model_controls then
+        for _, key in ipairs(STRIP_ORDER) do order[#order + 1] = buttons[key] end
+    elseif cfg.model_controls_reset_only then
+        order[1] = buttons.reset
+    end
+
+    local standing = {}
+    for _, btn in ipairs(order) do standing[btn] = true end
+
+    faded = {}
+    for _, btn in ipairs(order) do
+        if btn == buttons.left or btn == buttons.right then faded[#faded + 1] = btn end
+    end
+    controls = order
+
+    for _, key in ipairs(STRIP_ORDER) do
+        local btn = buttons[key]
+        -- Unlatched first: hiding a button between its down and its up strands it PUSHED for good.
+        if btn:GetButtonState() == "PUSHED" then btn:SetButtonState("NORMAL") end
+    end
+
+    -- The rotate pair are siblings of the strip and are shown only by the fade, so they stay down
+    -- here; the strip's own children each carry their own shown flag through a parent Show.
+    buttons.left:Hide()
+    buttons.right:Hide()
+    for _, key in ipairs({ "zoomOut", "zoomIn", "reset" }) do
+        local btn = buttons[key]
+        if standing[btn] then btn:Show() else btn:Hide() end
+    end
+
+    local step = BTN_SIZE - BTN_OVERLAP
+    bar:SetWidth(math.max(1, step * (#order - 1) + BTN_SIZE))
+    for i, btn in ipairs(order) do
+        btn:ClearAllPoints()
+        btn:SetPoint("LEFT", bar, "LEFT", (i - 1) * step, 0)
     end
 end
 
@@ -225,15 +273,8 @@ local function build()
     local reset = makeButton("DragonUIModelReset", "common-icon-undo",
                              function() resetModel(model) end)
 
-    local order = { left, right, zoomOut, zoomIn, reset }
-    controls = order
-    local step = BTN_SIZE - BTN_OVERLAP
-    bar:SetWidth(step * (#order - 1) + BTN_SIZE)
-
-    for i, btn in ipairs(order) do
-        btn:ClearAllPoints()
-        btn:SetPoint("LEFT", bar, "LEFT", (i - 1) * step, 0)
-    end
+    buttons = { left = left, right = right, zoomOut = zoomOut, zoomIn = zoomIn, reset = reset }
+    layoutControls()
 
     -- Closing the panel kills the ticker mid-fade, so reset rather than reopen at a frozen alpha.
     bar:SetScript("OnHide", function(self)
@@ -257,7 +298,11 @@ local function build()
     end)
 
     -- Revealed over the model OR the strip, so reaching for a button does not fade it out underneath.
-    local function show() startFade(1) end
+    -- Nothing standing means nothing to reveal; drag-rotate and wheel-zoom are not buttons and stay.
+    local function show()
+        if not controls or #controls == 0 then return end
+        startFade(1)
+    end
     local function hide()
         if bar:IsMouseOver() or model:IsMouseOver() then return end
         startFade(0)
@@ -270,5 +315,13 @@ local function build()
 end
 
 CP.BuildModelControls = build
+
+-- Always put the strip away after a re-layout: its own OnHide resets the alphas and unlatches
+-- anything left PUSHED, and the next hover brings back whichever buttons survived.
+function CP.RefreshModelControls()
+    if not bar then return end
+    layoutControls()
+    bar:Hide()
+end
 
 CP:RegisterBuilder("modelcontrols", build)

@@ -1779,3 +1779,7 @@ L["Opens the window without the micro menu."] = "Открывает окно б�
 L["Toggle Pets & Mounts"] = "Открыть/закрыть Спутников и транспорт"
 L["Click, then press the key to bind. Press Escape to clear it."] = "Нажмите, затем нажмите нужную клавишу. Escape очищает назначение."
 L["Key bindings cannot be changed in combat."] = "Назначение клавиш нельзя изменить в бою."
+L["Hide Model Controls"] = "Скрыть управление моделью"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "Скрывает кнопки поворота, масштаба и сброса над моделью персонажа."
+L["Keep the Reset Button"] = "Оставить кнопку сброса"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "Оставляет только кнопку сброса, пока остальное управление моделью скрыто."
