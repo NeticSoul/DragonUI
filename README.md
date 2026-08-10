@@ -126,7 +126,7 @@ DragonUI builds on original work and adapted ideas from these addon authors and 
 | Project | Author | Contribution |
 |---------|--------|-------------|
 | [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider) | Karl-HeinzSchneider | Primary design reference |
-| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset | Character panel art and layout reference |
+| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Character panel art and layout reference |
 | [pretty_actionbar / pretty_minimap](https://github.com/s0h2x) | s0h2x | Action bar and minimap patterns |
 | [RetailUI](https://github.com/a3st) | a3st (Dmitriy) | UI styling reference |
 | [KPack](https://github.com/bkader/KPack) | bkader | Utility patterns, GearScore reference implementation |
