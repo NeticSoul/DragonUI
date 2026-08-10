@@ -116,8 +116,27 @@ local function buildMasthead(host)
     return { block = block, ring = ring, crest = crest, rank = rank, who = who }
 end
 
+-- The ring is the masthead's own furniture, not part of the insignia, so it stays up with nothing
+-- to frame; only the badge inside it depends on having earned a rank.
+local function updateRing(m)
+    local faction = UnitFactionGroup("player")
+    local ring = faction and ("honorsystem-portrait-" .. faction:lower())
+    -- Only if the ring art is actually installed; the badge stands on its own without it.
+    if ring and addon.atlasinfo and addon.atlasinfo[ring] then
+        m.ring:set_atlas(ring, true)
+        -- After, always: set_atlas re-stamps the atlas's own 50x52 and would undo the size this
+        -- pane draws the ring at.
+        m.ring:SetSize(RING_W, RING_H)
+        m.ring:Show()
+    else
+        m.ring:Hide()
+    end
+end
+
 local function updateMasthead(m)
     if not m then return end
+
+    updateRing(m)
 
     local name, number = rankInfo()
     if name and number and number > 0 then
@@ -127,26 +146,12 @@ local function updateMasthead(m)
         if number <= MAX_RANK then
             m.crest:SetTexture(string.format(RANK_BADGE, number))
             m.crest:Show()
-            -- Only if the ring art is actually installed; the badge stands on its own without it.
-            local faction = UnitFactionGroup("player")
-            local ring = faction and ("honorsystem-portrait-" .. faction:lower())
-            if ring and addon.atlasinfo and addon.atlasinfo[ring] then
-                m.ring:set_atlas(ring, true)
-                -- After, always: set_atlas re-stamps the atlas's own 50x52 and would undo the size
-                -- this pane draws the ring at.
-                m.ring:SetSize(RING_W, RING_H)
-                m.ring:Show()
-            else
-                m.ring:Hide()
-            end
         else
             m.crest:Hide()
-            m.ring:Hide()
         end
     else
         m.rank:SetText(name or addon.L["Unranked"])
         m.crest:Hide()
-        m.ring:Hide()
     end
 
     -- The title bar already carries the character's name, but not the level, and on this tab there
