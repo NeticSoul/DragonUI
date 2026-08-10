@@ -13,6 +13,10 @@
     <!-- Action Bar Sub-modules (stance, vehicle, petbar, multicast) -->
     <Include file="actionbars\actionbars.xml"/>
     
+    <!-- Pets & Mounts window (its micro button must exist before micromenu.lua loads) -->
+    <Script file="..\data\companion_traits.lua"/>
+    <Include file="collections\collections.xml"/>
+
     <!-- Micro Menu & Bag module -->
     <Script file="micromenu.lua"/>
     

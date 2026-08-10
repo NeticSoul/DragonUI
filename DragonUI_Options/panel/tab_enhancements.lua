@@ -235,6 +235,29 @@ local function BuildEnhancementsTab(scroll)
     })
 
     -- ====================================================================
+    -- PETS & MOUNTS
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local colSection = C:AddSection(scroll, LO["Pets & Mounts"])
+
+    C:AddDescription(colSection, LO["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window. Opens from its own micro menu button, with search, favorites and a model preview."])
+
+    C:AddToggle(colSection, {
+        label = LO["Enable Pets & Mounts"],
+        desc = LO["Add the Pets & Mounts micro menu button and its window."],
+        getFunc = function() return IsEnabled("collections") end,
+        setFunc = function(val)
+            EnsureModuleTable("collections").enabled = val
+            if val then
+                if addon.ApplyCollectionsSystem then addon.ApplyCollectionsSystem() end
+            else
+                if addon.RestoreCollectionsSystem then addon.RestoreCollectionsSystem() end
+            end
+        end,
+        requiresReload = true,
+    })
+
+    -- ====================================================================
     -- ITEM QUALITY BORDERS
     -- ====================================================================
     C:AddSpacer(scroll)

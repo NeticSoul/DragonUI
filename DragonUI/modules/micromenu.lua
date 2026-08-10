@@ -121,6 +121,12 @@ else
 end
 
 
+-- The strip's default anchor allows for an eleventh button. ezCollections used to be the only thing
+-- that ever supplied one; DragonUI's own Pets & Mounts window now does too.
+local function HasCollectionsButton()
+    return _G.CollectionsMicroButton ~= nil
+end
+
 local bagslots = {_G.CharacterBag0Slot, _G.CharacterBag1Slot, _G.CharacterBag2Slot, _G.CharacterBag3Slot};
 
 -- State tracking
@@ -1814,10 +1820,12 @@ local function MigrateMicroIconSpacingToPadding()
     end
 end
 
+-- dragonUISuppressed marks a button whose own module has been switched off. Skipping it here as well
+-- as in the skin pass is what closes the gap it would otherwise leave in the strip.
 local function CollectPresentMicroButtons()
     local list = {}
     for i = 1, #MICRO_BUTTONS do
-        if MICRO_BUTTONS[i] then
+        if MICRO_BUTTONS[i] and not MICRO_BUTTONS[i].dragonUISuppressed then
             list[#list + 1] = MICRO_BUTTONS[i]
         end
     end
@@ -1988,7 +1996,7 @@ local function setupMicroButtons(xOffset)
 
     for i = 1, #MICRO_BUTTONS do
         local button = MICRO_BUTTONS[i]
-        if button then
+        if button and not button.dragonUISuppressed then
             local buttonName = button:GetName():gsub('MicroButton', '')
             local name = string.lower(buttonName);
 
@@ -2363,7 +2371,7 @@ if frameInfo and frameInfo.frame then
         local useGrayscale = addon.db.profile.micromenu.grayscale_icons
         local configMode = useGrayscale and "grayscale" or "normal"
         local config = addon.db.profile.micromenu[configMode]
-        local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
+        local xOffset = HasCollectionsButton() and -180 or -166
 
         frameInfo.frame:ClearAllPoints()
         frameInfo.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
@@ -2382,7 +2390,7 @@ else
     local config = addon.db.profile.micromenu[configMode]
 
     menu:SetScale(config.scale_menu)
-    local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
+    local xOffset = HasCollectionsButton() and -180 or -166
     menu:ClearAllPoints()
     menu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT',
         xOffset + config.x_position, config.y_position)
@@ -2729,7 +2737,7 @@ local function ApplyMicromenuSystem()
 
     addon.package:RegisterEvents(function()
         local xOffset
-        if IsAddOnLoaded('ezCollections') then
+        if HasCollectionsButton() then
             xOffset = -180
             if _G.CollectionsMicroButton then
                 _G.CollectionsMicroButton:UnregisterEvent('UPDATE_BINDINGS')
@@ -2766,7 +2774,7 @@ local function ApplyMicromenuSystem()
     -- Execute setup immediately only after login; pre-login passes can produce transient bad geometry.
     if IsLoggedIn() then
         local xOffset
-        if IsAddOnLoaded('ezCollections') then
+        if HasCollectionsButton() then
             xOffset = -180
             if _G.CollectionsMicroButton then
                 _G.CollectionsMicroButton:UnregisterEvent('UPDATE_BINDINGS')
@@ -2875,7 +2883,7 @@ local function LoadDefaultWidgetSettings()
         local config = addon.db.profile.micromenu and addon.db.profile.micromenu[configMode]
 
         if config then
-            local xOffset = IsAddOnLoaded('ezCollections') and -180 or -166
+            local xOffset = HasCollectionsButton() and -180 or -166
             addon.db.profile.widgets.micromenu = {
                 anchor = "BOTTOMRIGHT",
                 posX = xOffset + config.x_position,

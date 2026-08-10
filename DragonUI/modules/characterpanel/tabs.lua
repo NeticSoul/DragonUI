@@ -4,11 +4,10 @@ local CP = addon.CharacterPanel
 -- Six, not Blizzard's five: honorpane.lua adds a Honor tab at the end and retires the pet one.
 local NUM_TABS = 6
 
--- Blizzard's tab order is NOT CHARACTERFRAME_SUBFRAMES order: 3 is Reputation, 4 is Skills. Tab 2
--- stays mapped even though it is hidden, so the chain skips it by visibility rather than by index.
+-- Blizzard's tab order is NOT CHARACTERFRAME_SUBFRAMES order: 3 is Reputation, 4 is Skills. Slot 2
+-- is empty -- pets and mounts have their own window, so the chain skips tab 2 by visibility.
 local TAB_SUBFRAME = {
     [1] = "PaperDollFrame",
-    [2] = "PetPaperDollFrame",
     [3] = "ReputationFrame",
     [4] = "SkillFrame",
     [5] = "TokenFrame",
@@ -22,18 +21,12 @@ local TAB_GAP = 1
 -- the bag windows. Blizzard's CharacterFrameTabButtonTemplate already provides every region.
 local TAB_TEX = addon._dir .. "UI\\uiframetabs"
 
--- The template's button is 32 tall. Inactive art is 36 and hangs 4px below; the selected tab uses
--- the *Disabled* set, which is 42. Both anchor flush to the top so the extra 6px grow DOWNWARD —
--- the selected tab drops below the strip instead of poking up out of it.
+-- The button is 32 tall; inactive art is 36 and the selected *Disabled* set 42, both flush to the
+-- top, so the extra grows DOWNWARD and the selected tab drops below the strip.
 local TAB_H, ACTIVE_LIFT = 32, 0
 
--- Overhangs, chosen from where the art actually sits inside each rect rather than from the rect
--- itself. Measured transparent margins: inactive caps carry 1px on their outer edge each, so equal
--- overhangs centre them; the ACTIVE right cap carries 2px and its left none, so matching the two
--- sides needs different numbers. Equal overhangs everywhere is what left the selected tab sitting
--- 2px further left than right -- the gap to the next tab looked bigger than the gap to the last.
---
--- Both states end up spanning -4 .. W+4 of visible art, so a tab does not shift when selected.
+-- Overhangs read off where the art sits inside each rect: inactive caps carry 1px on their outer
+-- edge, the ACTIVE right cap 2px and its left none. Both states span -4 .. W+4 of visible art.
 local CAP_OVERHANG = 5
 local ACTIVE_OVERHANG_L, ACTIVE_OVERHANG_R = 4, 6
 local TAB_PIECES = {
@@ -43,24 +36,18 @@ local TAB_PIECES = {
     { key = "RightDisabled", w = 37, h = 42, tc = { 0.015625, 0.59375, 0.324219, 0.488281 }, p = "TOPRIGHT", x = ACTIVE_OVERHANG_R, y = ACTIVE_LIFT },
 }
 
--- PanelTemplates_TabResize bills 2 * Left:GetWidth() as padding, and our caps are 35 wide, so
--- letting it run would spread the strip far wider than the panel. We size to the text ourselves
--- and re-assert after Blizzard's OnShow resize.
+-- PanelTemplates_TabResize bills 2 * Left:GetWidth() as padding and our caps are 35 wide, so we
+-- size to the text ourselves and re-assert after Blizzard's OnShow resize.
 local TAB_TEXT_PAD = 30
--- The caps must not meet: Left is 35 wide at x=-5 so it ends at 30, Right is 37 wide ending at W+5
--- so it starts at W-32. At 62 they touch exactly; below that they overlap, and while that is
--- invisible on the opaque plate, the additive highlight sums the shared strip twice and draws a
--- brighter band down the tab.
+-- The caps must not meet: below 62 they overlap, and while that is invisible on the opaque plate
+-- the additive highlight sums the shared strip twice and draws a brighter band down the tab.
 local TAB_MIN_W = 62
 
--- The template's highlight is a single generic bar that lights a rectangle, not the tab. Retail
--- lights the tab's own silhouette by drawing the inactive art again, additively — so the highlight
--- is a 3-slice cut from the same rects as the tab itself.
+-- The template's highlight lights a rectangle, not the tab. Retail lights the tab's own silhouette
+-- by drawing the inactive art again additively, so this is a 3-slice from the same rects.
 local HL_ALPHA = 0.4
--- Cut to the tab's SOLID body, 30 of the art's 36 rows. The last six are a drop shadow, and adding
--- a shadow to itself stops it reading as shadow: on an unselected tab the doubled tail looked like
--- the background spilling out below the border. The selected tab never showed it because its
--- highlight is muted to zero.
+-- Cut to the tab's SOLID body, 30 of the art's 36 rows: the last six are a drop shadow, and adding
+-- a shadow to itself read as the background spilling out below the border.
 local HL_H = 30
 local HL_PIECES = {
     { key = "Left", w = 35, h = HL_H, tc = { 0.015625, 0.5625, 0.816406, 0.933594 }, p = "TOPLEFT" },
@@ -138,9 +125,7 @@ local function reskin(t)
             tex:SetTexture(TAB_TEX)
             tex:SetTexCoord(unpack(m.tc))
             -- Height only, never width: the strip spans between the caps by anchor, and a width on
-            -- top of that leaves the engine reconciling a 1px column against the span -- the same
-            -- over-constraint that kept shifting pieces elsewhere in this panel. Tiled rather than
-            -- stretched, which is what the 1px source is cut for.
+            -- top leaves the engine reconciling a 1px column against the span.
             tex:SetHorizTile(true)
             tex:SetHeight(m.h)
             tex:SetPoint("TOPLEFT", left, "TOPRIGHT")
@@ -158,11 +143,12 @@ local function reskin(t)
     t:SetDisabledFontObject(GameFontNormalSmall)
 end
 
--- The selected art is 42 tall against the inactive 36, both flush to the top, so its centre falls
--- 3px lower. PanelTemplates_SelectTab only swaps textures and never touches the label, and the
--- button itself never changes height — so without this every tab's text stays on one line and the
--- selected one floats above its own, lower, tab.
+-- The selected art is 42 tall against 36, both flush to the top, so its centre falls 3px lower --
+-- and PanelTemplates_SelectTab only swaps textures, never touching the label.
 local TEXT_ACTIVE_DROP = -7
+-- Tuned by eye: the label lands right of the tab's optical centre and neither the art extent nor
+-- PanelTemplates_TabResize nor the font accounts for it.
+local TEXT_NUDGE_X = -2
 local function syncState(t)
     local activeArt = _G[t:GetName() .. "MiddleDisabled"]
     local selected = activeArt and activeArt:IsShown()
@@ -170,7 +156,7 @@ local function syncState(t)
     local text = _G[t:GetName() .. "Text"]
     if text then
         text:ClearAllPoints()
-        text:SetPoint("CENTER", t, "CENTER", 0, selected and TEXT_ACTIVE_DROP or 0)
+        text:SetPoint("CENTER", t, "CENTER", TEXT_NUDGE_X, selected and TEXT_ACTIVE_DROP or 0)
     end
 
     -- Muted rather than hidden while selected: the highlight is cut for the 36px inactive body, so
@@ -181,21 +167,17 @@ local function syncState(t)
         end
     end
 
-    -- Adjacent tabs overlap by 7px of cap art, so which one draws on top decides where the seam
-    -- between them lands. Without a fixed order that came from creation order and changed with the
-    -- selection, and the tabs read as unevenly spaced even though every frame gap is the same 1px.
-    -- The selected tab goes above its neighbours -- it is the taller art and should not be cut by
-    -- them -- and the rest share one level, which resolves left to right and so looks uniform.
-    local cf = _G.CharacterFrame
-    if cf then t:SetFrameLevel(cf:GetFrameLevel() + (selected and 4 or 1)) end
+    -- Adjacent tabs overlap by 7px of cap art, so draw order decides where the seam lands. The
+    -- selected one goes above its neighbours; the rest share a level and resolve left to right.
+    local owner = t:GetParent()
+    if owner then t:SetFrameLevel(owner:GetFrameLevel() + (selected and 4 or 1)) end
 
     -- PanelTemplates_SelectTab swaps the disabled font to the highlight one, which is what turned
     -- the selected label white. White belongs to hover alone.
     t:SetDisabledFontObject(GameFontNormalSmall)
 
-    -- ...and it also disables the tab, which is why the selected label would not light on hover:
-    -- a disabled button receives no OnEnter, and 3.3.5a has no SetMotionScriptsWhileDisabled to
-    -- change that. Re-enabling costs nothing — clicking the active tab just reselects it.
+    -- SelectTab also disables the tab, and a disabled button gets no OnEnter -- 3.3.5a has no
+    -- SetMotionScriptsWhileDisabled. Re-enabling costs nothing: clicking the active tab reselects it.
     t:Enable()
 end
 
@@ -203,15 +185,11 @@ local function resize(t)
     local text = _G[t:GetName() .. "Text"]
     if not text then return end
 
-    -- GetStringWidth, not GetWidth, and the box cleared first. GetWidth reports the FontString's
-    -- box, and CharacterFrame_TabBoundsCheck walks every tab stamping an explicit width on the
-    -- labels it wants to fit -- so on those tabs GetWidth returned Blizzard's clamp rather than the
-    -- label, and they came out sized off. Which tabs got clamped depended on the strip's total
-    -- width, which is why the spacing looked uneven on some and not others.
+    -- GetStringWidth with the box cleared first: CharacterFrame_TabBoundsCheck stamps an explicit
+    -- width on the labels it wants to fit, so GetWidth returns Blizzard's clamp, not the label.
     text:SetWidth(0)
     local w = math.max(TAB_MIN_W, text:GetStringWidth() + TAB_TEXT_PAD)
-    -- Whole pixels: a fractional width puts a tab's edge between two, and the neighbour it chains
-    -- to inherits the fraction.
+    -- Whole pixels: a fractional width puts a tab's edge between two and the next tab inherits it.
     t:SetWidth(math.floor(w + 0.5))
     t:SetHeight(TAB_H)
     syncState(t)
@@ -288,7 +266,8 @@ local function hookBlizzardResize()
     hooksecurefunc("PanelTemplates_TabResize", function(t)
         if reasserting or not t or not t._duiReskinned then return end
         reasserting = true
-        rechain()
+        -- Tabs on a window of ours other than the character panel carry their own chain.
+        if t._duiRelayout then t._duiRelayout() else rechain() end
         reasserting = false
     end)
 end
@@ -322,5 +301,15 @@ end
 
 CP.RechainTabs = rechain
 CP.TAB_SUBFRAME = TAB_SUBFRAME
+
+-- Shared so a DragonUI window outside the character panel gets the same tab art. The hooks come
+-- with it: Blizzard's PanelTemplates applies the selected state, so a tab elsewhere needs re-syncing.
+function CP.ReskinTab(t)
+    if not t then return end
+    hookTabSelection()
+    hookBlizzardResize()
+    reskin(t)
+    resize(t)
+end
 
 CP:RegisterBuilder("tabs", build)

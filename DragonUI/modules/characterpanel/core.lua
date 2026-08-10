@@ -4,11 +4,10 @@ local CharacterPanelModule = { initialized = false, applied = false }
 addon.CharacterPanel = addon.CharacterPanel or {}
 local CP = addon.CharacterPanel
 
--- PetPaperDollFrame is still listed so it keeps being hidden with the rest; its tab is retired in
--- honorpane.lua and pets get their own window instead.
+-- No PetPaperDollFrame: honorpane.lua retires its tab and pins it shut, so it can never be the
+-- active tab. It stays in Blizzard's own CHARACTERFRAME_SUBFRAMES, which is what keeps it hidden.
 CP.SUBFRAMES = {
-    "PaperDollFrame", "PetPaperDollFrame", "SkillFrame", "ReputationFrame", "TokenFrame",
-    "DragonUIHonorFrame",
+    "PaperDollFrame", "SkillFrame", "ReputationFrame", "TokenFrame", "DragonUIHonorFrame",
 }
 
 -- Tabs whose contents we draw ourselves, so they get the retail frame and Blizzard's own widgets
@@ -21,9 +20,8 @@ CP.OWNED_TABS = {
     DragonUIHonorFrame = true,
 }
 
--- Retail PANEL_DEFAULT_WIDTH/HEIGHT. The weapon row sits beside the columns rather than under
--- them, so 424 fits once the Ammo slot is out of the row. Only PaperDoll uses these — the other
--- tabs keep Blizzard's dimensions, since their contents are still on Blizzard's layout.
+-- Retail PANEL_DEFAULT_WIDTH/HEIGHT. The weapon row sits beside the columns, so 424 fits once Ammo
+-- is out of the row. Only PaperDoll uses these; the other tabs keep Blizzard's dimensions.
 CP.PANEL_WIDTH = 338
 CP.PANEL_HEIGHT = 424
 -- The list tabs run full width with no sidebar. 338 is narrower than the tab strip itself, which

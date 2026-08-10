@@ -1119,6 +1119,9 @@ local defaults = {
             },
             versioncheck = {
                 enabled = true, -- Cross-player version broadcast and update detection
+            },
+            collections = {
+                enabled = true, -- Dedicated Pets & Mounts window opened from the micro menu
             }
         },
 

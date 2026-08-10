@@ -487,14 +487,21 @@ L["Model control dump failed: "] = true
 
 -- Pets & Mounts
 L["Pets & Mounts"] = true
-L["Dedicated window for your mounts and companion pets, opened from the micro menu"] = true
+L["The mounts and pets you have collected."] = true
+L["Dedicated window for your mounts and pets, opened from the micro menu"] = true
 L["Pets & Mounts disabled. Reload the UI to remove its micro menu button."] = true
 L["Favorite"] = true
 L["Remove Favorite"] = true
 L["Favorites"] = true
 L["Keeps this at the front of the list."] = true
 L["Summon Random Favorite"] = true
-L["Picks a favorite you can actually use here, or any of them if none are favorited."] = true
+L["Mount Random Favorite"] = true
+L["Random Mount"] = true
+L["Random Pet"] = true
+L["Picks one random mount from your favorites."] = true
+L["Picks one random pet from your favorites."] = true
+L["None of your favorites can be used here."] = true
+L["Mark some favorites first."] = true
 L["Right-click for more options"] = true
 L["Nothing collected yet."] = true
 L["Not collected yet"] = true
