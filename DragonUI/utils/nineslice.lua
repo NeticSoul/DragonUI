@@ -130,6 +130,34 @@ local layouts =
 		RightEdge = {atlas = "!%s-nineslice-edgeright"},
 		Center = {atlas = "%s-nineslice-center"}
 	},
+
+	-- Retail's PortraitFrameTemplate. The top-left corner carries the portrait cutout, so it
+	-- overhangs 13px left / 16px up; the bottom-left must match or LeftEdge joins two offsets.
+	PortraitFrameTemplate = {
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-PortraitMetal-CornerTopLeft", x = -13, y = 16},
+		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRight", x = 4, y = 16},
+		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -13, y = -3},
+		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
+		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = -4, y = 0, x1 = 4, y1 = 0},
+		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
+		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+	},
+
+	-- The metal frame without the portrait cutout. All four corners are the 32px pair, the top two
+	-- flipped: mixing them with the ornate 75px tops makes each side edge join two widths.
+	MetalFrameTemplate = {
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopLeft-Thin", x = -4, y = 3},
+		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRight-Thin", x = 4, y = 3},
+		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -4, y = -3},
+		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
+		-- Flush against both corners. The portrait layout insets the top edge because its left
+		-- corner overhangs 13px; with symmetric corners that inset just opens a gap at the join.
+		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = 0, y = 0, x1 = 0, y1 = 0},
+		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
+		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+	},
 }
 
 --------------------------------------------------

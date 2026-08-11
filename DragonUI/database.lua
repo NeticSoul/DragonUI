@@ -1045,6 +1045,19 @@ local defaults = {
                 enabled = true, -- Color item borders by quality in bags, character panel, bank, merchant
                 min_quality = 2 -- Minimum quality to show (2 = Uncommon/green)
             },
+            characterpanel = {
+                enabled = true, -- Retail-style reskin of the Blizzard character window
+                class_portrait = true, -- Class icon in the portrait instead of the player's face
+                class_level_text = true, -- Class-colored "Level X Race Class" line
+                dark_background = false, -- Tint the panel's stone grounds down; the cog toggles it
+                grey_model_backdrop = true, -- Desaturate and dim the race backdrop behind the model
+                hide_model_controls = false, -- Drop the rotate/zoom/reset strip over the 3D model
+                model_controls_reset_only = false, -- ...except the reset button, when the above is on
+                show_item_level = true, -- Headline average item level above the stat categories
+                show_gear_score = false, -- Headline GearScore above the stat categories
+                -- stats_collapsed / stats_order are written by the panel itself, never defaulted:
+                -- an empty default table would be shared by every profile that has not set one.
+            },
             itemlevel = {
                 enabled = true, -- Show item level on gear icons
                 font_size = 12,
@@ -1113,6 +1126,9 @@ local defaults = {
             },
             versioncheck = {
                 enabled = true, -- Cross-player version broadcast and update detection
+            },
+            collections = {
+                enabled = true, -- Dedicated Pets & Mounts window opened from the micro menu
             }
         },
 

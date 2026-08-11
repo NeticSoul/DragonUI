@@ -98,7 +98,9 @@ addon.api.set_atlas = function(self, atlas, size)
 	if size then
 		self:SetWidth(width)
 		self:SetHeight(height)
-	else
+	elseif origWidth and origWidth > 0 and origHeight and origHeight > 0 then
+		-- Only re-assert a size the texture actually had: stamping 0x0 on a fresh one sizes it to
+		-- nothing, and the engine then falls back to anchors or the sheet's size depending on the load.
 		self:SetWidth(origWidth)
 		self:SetHeight(origHeight)
 	end

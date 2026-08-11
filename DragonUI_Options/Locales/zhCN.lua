@@ -1740,3 +1740,45 @@ L["Test Preview"] = "测试预览"
 L["Preview Icon"] = "预览图标"
 L["Force one icon on all enemy nameplates so you can position and size it. Set to Off when done."] = "在所有敌方名条上强制显示一个图标，方便你调整位置与大小。完成后设为关闭。"
 L["DragonUI (Custom)"] = "DragonUI（自定义）"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Modern reskin of the Blizzard character window."] = "为暴雪的角色面板换上现代外观。"
+L["Enable Character Panel"] = "启用角色面板"
+L["Apply the DragonUI reskin to the character window."] = "对角色窗口应用 DragonUI 外观。"
+L["Show your class icon in the portrait instead of your character's face."] = "在头像处显示职业图标，而不是角色面容。"
+L["Class-Colored Level Text"] = "职业色等级文字"
+L["Pets & Mounts"] = "宠物与坐骑"
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "专门的坐骑与宠物窗口，取代角色窗口旧的宠物标签。"
+L["Enable Pets & Mounts"] = "启用宠物与坐骑"
+L["Add the Pets & Mounts micro menu button and its window."] = "添加宠物与坐骑的微菜单按钮及其窗口。"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = "命令：/dragonui、/dui、/pi — /dragonui edit（编辑器）— /dragonui help"
+L["Color the class name in the \"Level X Race Class\" line."] = "为\"等级 X 种族 职业\"一行中的职业名着色。"
+L["Auto-show bars: Stance (Warriors/Druids/DKs) \226\128\162 Pet (Hunters/Warlocks/DKs) \226\128\162 Vehicle (All classes) \226\128\162 Totem (Shamans)"] = "自动显示动作条：姿态（战士/德鲁伊/死骑）• 宠物（猎人/术士/死骑）• 载具（所有职业）• 图腾（萨满）"
+L["Visual enhancements that add Dragonflight-style polish to the UI. These are optional \226\128\148 disable any you don't want."] = "为界面增添 Dragonflight 风格的视觉优化。均为可选 — 不想要的可以关闭。"
+L["Detached \226\128\148 positioned freely via Editor Mode"] = "分离 — 在编辑模式中自由摆放"
+L["Attached \226\128\148 follows Target frame"] = "附着 — 跟随目标框体"
+L["Attached \226\128\148 follows Focus frame"] = "附着 — 跟随焦点框体"
+L["Power Bar \226\128\148 Players Only"] = "能量条 — 仅玩家"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "面板"
+L["Character"] = "角色"
+L["Stats Sidebar"] = "属性侧栏"
+L["The headline numbers above the stat categories."] = "属性分类上方的主要数值。"
+L["Show Item Level"] = "显示装备等级"
+L["Show the average item level of your equipped gear."] = "显示你已装备物品的平均装备等级。"
+L["Show GearScore"] = "显示GearScore"
+L["Show the GearScore of your equipped gear."] = "显示你已装备物品的GearScore。"
+L["Opens the window without the micro menu."] = "无需微型菜单即可打开窗口。"
+L["Toggle Pets & Mounts"] = "开关宠物与坐骑"
+L["Click, then press the key to bind. Press Escape to clear it."] = "点击后按下要绑定的按键。按Esc清除。"
+L["Key bindings cannot be changed in combat."] = "战斗中无法更改按键绑定。"
+L["Hide Model Controls"] = "隐藏模型控制按钮"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "隐藏角色模型上方的旋转、缩放和重置按钮。"
+L["Keep the Reset Button"] = "保留重置按钮"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "在其余模型控制按钮保持隐藏时，只留下重置按钮。"

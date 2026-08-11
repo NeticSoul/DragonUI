@@ -1744,3 +1744,45 @@ L["Test Preview"] = "미리 보기 테스트"
 L["Preview Icon"] = "미리 보기 아이콘"
 L["Force one icon on all enemy nameplates so you can position and size it. Set to Off when done."] = "위치와 크기를 조정할 수 있도록 모든 적 이름표에 아이콘 하나를 강제로 표시합니다. 끝나면 끄기로 설정하세요."
 L["DragonUI (Custom)"] = "DragonUI(사용자 지정)"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Modern reskin of the Blizzard character window."] = "블리자드 캐릭터 창의 현대적인 리스킨입니다."
+L["Enable Character Panel"] = "캐릭터 창 사용"
+L["Apply the DragonUI reskin to the character window."] = "캐릭터 창에 DragonUI 스킨을 적용합니다."
+L["Show your class icon in the portrait instead of your character's face."] = "초상화에 캐릭터 얼굴 대신 직업 아이콘을 표시합니다."
+L["Class-Colored Level Text"] = "직업 색상 레벨 텍스트"
+L["Pets & Mounts"] = "애완동물 및 탈것"
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "탈것과 애완동물 전용 창으로, 캐릭터 창의 예전 애완동물 탭을 대체합니다."
+L["Enable Pets & Mounts"] = "애완동물 및 탈것 사용"
+L["Add the Pets & Mounts micro menu button and its window."] = "애완동물 및 탈것 마이크로 메뉴 버튼과 창을 추가합니다."
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = "명령어: /dragonui, /dui, /pi — /dragonui edit (편집기) — /dragonui help"
+L["Color the class name in the \"Level X Race Class\" line."] = "\"레벨 X 종족 직업\" 줄의 직업 이름에 색을 입힙니다."
+L["Auto-show bars: Stance (Warriors/Druids/DKs) \226\128\162 Pet (Hunters/Warlocks/DKs) \226\128\162 Vehicle (All classes) \226\128\162 Totem (Shamans)"] = "자동 표시 막대: 태세(전사/드루이드/죽기) • 소환수(사냥꾼/흑마법사/죽기) • 탈것(모든 직업) • 토템(주술사)"
+L["Visual enhancements that add Dragonflight-style polish to the UI. These are optional \226\128\148 disable any you don't want."] = "인터페이스에 Dragonflight 스타일을 더하는 시각 기능입니다. 모두 선택 사항이므로 원하지 않는 것은 끄세요."
+L["Detached \226\128\148 positioned freely via Editor Mode"] = "분리됨 — 편집 모드에서 자유롭게 배치"
+L["Attached \226\128\148 follows Target frame"] = "부착됨 — 대상 프레임을 따라감"
+L["Attached \226\128\148 follows Focus frame"] = "부착됨 — 주시 대상 프레임을 따라감"
+L["Power Bar \226\128\148 Players Only"] = "기운 막대 — 플레이어 전용"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "창"
+L["Character"] = "캐릭터"
+L["Stats Sidebar"] = "능력치 사이드바"
+L["The headline numbers above the stat categories."] = "능력치 분류 위에 표시되는 대표 수치입니다."
+L["Show Item Level"] = "아이템 레벨 표시"
+L["Show the average item level of your equipped gear."] = "착용 중인 장비의 평균 아이템 레벨을 표시합니다."
+L["Show GearScore"] = "GearScore 표시"
+L["Show the GearScore of your equipped gear."] = "착용 중인 장비의 GearScore를 표시합니다."
+L["Opens the window without the micro menu."] = "마이크로 메뉴 없이 창을 엽니다."
+L["Toggle Pets & Mounts"] = "애완동물 및 탈것 열기/닫기"
+L["Click, then press the key to bind. Press Escape to clear it."] = "클릭한 뒤 지정할 키를 누르세요. Esc를 누르면 해제됩니다."
+L["Key bindings cannot be changed in combat."] = "전투 중에는 단축키를 변경할 수 없습니다."
+L["Hide Model Controls"] = "모델 조작 버튼 숨기기"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "캐릭터 모델 위의 회전, 확대, 초기화 버튼을 숨깁니다."
+L["Keep the Reset Button"] = "초기화 버튼은 남기기"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "나머지 모델 조작 버튼은 숨긴 채 초기화 버튼만 남깁니다."

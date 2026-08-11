@@ -154,6 +154,7 @@ local function ShowHelp()
     print("  " .. L["/dragonui status - Show module status"])
     print("  " .. L["/dragonui debug on|off|status - Toggle diagnostic logging"])
     print("  " .. L["/dragonui kb - Toggle keybind mode"])
+    print("  " .. L["/dragonui collections - Open the Pets & Mounts window"])
     print("  " .. L["/dragonui version - Show version info"])
     print("  " .. L["/dragonui help - Show this help"])
     print("  " .. L["/rl - Reload UI"])
@@ -184,6 +185,27 @@ local function SlashCommandHandler(input)
         SetDebugMode(arg)
     elseif cmd == "kb" or cmd == "keybind" or cmd == "keybinds" then
         ToggleKeybindMode()
+    elseif cmd == "collections" or cmd == "mounts" or cmd == "pets" then
+        if addon.ToggleCollections then addon.ToggleCollections() end
+    elseif cmd == "cp" or cmd == "charpanel" then
+        if not addon.DumpCharacterPanel then
+            addon:Print("Character panel diagnostics not loaded (module disabled or file missing).")
+        else
+            local ok, err = pcall(addon.DumpCharacterPanel)
+            if not ok then addon:Print("Character panel dump failed: " .. tostring(err)) end
+        end
+    elseif cmd == "cpbg" then
+        if not addon.DumpPanelGrounds then
+            addon:Print("Character panel diagnostics not loaded (module disabled or file missing).")
+        else
+            addon.DumpPanelGrounds()
+        end
+    elseif cmd == "cpbtn" then
+        if not addon.DumpModelControls then
+            addon:Print("Character panel diagnostics not loaded (module disabled or file missing).")
+        else
+            addon.DumpModelControls()
+        end
     elseif cmd == "version" or cmd == "ver" then
         ShowVersion()
     elseif cmd == "debugvehicle" then
