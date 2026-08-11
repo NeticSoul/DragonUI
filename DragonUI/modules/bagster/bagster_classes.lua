@@ -43,6 +43,25 @@ end
 
 -- Retail tab art layered over the stock tab template
 -- No SetScale here: fractional scaling breaks the seams between the three art pieces
+
+-- The character panel's measured overhangs: both states then span -3 .. W+3 of visible art, so the
+-- art centres on the button instead of leaning right the way hand-picked offsets did.
+local CAP_OVERHANG = 5
+local ACTIVE_OVERHANG_L, ACTIVE_OVERHANG_R = 4, 6
+
+-- Its highlight too: cut to the tab's solid body, since the last six rows of the art are a shadow
+-- and lighting a shadow with itself reads as the background spilling out below the border.
+local HL_ALPHA, HL_H = 0.4, 30
+local HL_LEFT_TC = { 0.015625, 0.5625, 0.816406, 0.933594 }
+local HL_RIGHT_TC = { 0.015625, 0.59375, 0.667969, 0.785156 }
+local HL_MIDDLE_TC = { 0, 0.015625, 0.175781, 0.292969 }
+
+-- The selected art is 42 tall against 36, both flush to the top, so its centre falls lower.
+local TEXT_ACTIVE_DROP, TEXT_NUDGE_X = -7, -2
+
+-- The caps overhang 5px each, so adjacent tabs overlap and read as one strip.
+local TAB_GAP = 1
+
 local function SetupBottomTabButton(btn)
     btn:SetFrameLevel(btn:GetFrameLevel() + 4)
     btn:SetNormalFontObject(GameFontNormal)
@@ -55,14 +74,14 @@ local function SetupBottomTabButton(btn)
     left:SetSize(35, 36)
     left:SetTexture(tex)
     left:SetTexCoord(0.015625, 0.5625, 0.816406, 0.957031)
-    left:SetPoint('TOPLEFT', -3, 0)
+    left:SetPoint('TOPLEFT', -CAP_OVERHANG, 0)
 
     local right = _G[name .. 'Right']
     right:ClearAllPoints()
     right:SetSize(37, 36)
     right:SetTexture(tex)
     right:SetTexCoord(0.015625, 0.59375, 0.667969, 0.808594)
-    right:SetPoint('TOPRIGHT', 7, 0)
+    right:SetPoint('TOPRIGHT', CAP_OVERHANG, 0)
 
     -- Retail atlas tiles this 1px strip; 3.3.5 has no SetHorizTile, stretching looks identical
     local middle = _G[name .. 'Middle']
@@ -78,14 +97,14 @@ local function SetupBottomTabButton(btn)
     leftD:SetSize(35, 42)
     leftD:SetTexture(tex)
     leftD:SetTexCoord(0.015625, 0.5625, 0.496094, 0.660156)
-    leftD:SetPoint('TOPLEFT', -1, 0)
+    leftD:SetPoint('TOPLEFT', -ACTIVE_OVERHANG_L, 0)
 
     local rightD = _G[name .. 'RightDisabled']
     rightD:ClearAllPoints()
     rightD:SetSize(37, 42)
     rightD:SetTexture(tex)
     rightD:SetTexCoord(0.015625, 0.59375, 0.324219, 0.488281)
-    rightD:SetPoint('TOPRIGHT', 8, 0)
+    rightD:SetPoint('TOPRIGHT', ACTIVE_OVERHANG_R, 0)
 
     local middleD = _G[name .. 'MiddleDisabled']
     middleD:ClearAllPoints()
@@ -94,6 +113,35 @@ local function SetupBottomTabButton(btn)
     middleD:SetTexCoord(0, 0.015625, 0.00390625, 0.167969)
     middleD:SetPoint('TOPLEFT', leftD, 'TOPRIGHT')
     middleD:SetPoint('TOPRIGHT', rightD, 'TOPLEFT')
+
+    -- The template's own highlight lights a plain rectangle over the tab; this lights the tab's
+    -- own shape instead, by drawing the inactive art again additively.
+    local stock = btn:GetHighlightTexture()
+    if stock then stock:SetTexture(nil) end
+
+    local function glow(tc, w, anchor)
+        local t = btn:CreateTexture(nil, 'HIGHLIGHT')
+        t:SetTexture(tex)
+        t:SetTexCoord(unpack(tc))
+        t:SetSize(w, HL_H)
+        t:SetPoint('TOPLEFT', anchor, 'TOPLEFT')
+        t:SetBlendMode('ADD')
+        t:SetAlpha(HL_ALPHA)
+        return t
+    end
+
+    local hlLeft = glow(HL_LEFT_TC, 35, left)
+    local hlRight = glow(HL_RIGHT_TC, 37, right)
+    local hlMid = btn:CreateTexture(nil, 'HIGHLIGHT')
+    hlMid:SetTexture(tex)
+    hlMid:SetTexCoord(unpack(HL_MIDDLE_TC))
+    hlMid:SetHeight(HL_H)
+    hlMid:SetPoint('TOPLEFT', hlLeft, 'TOPRIGHT')
+    hlMid:SetPoint('TOPRIGHT', hlRight, 'TOPLEFT')
+    hlMid:SetBlendMode('ADD')
+    hlMid:SetAlpha(HL_ALPHA)
+
+    btn._duiHighlight = { hlLeft, hlRight, hlMid }
 end
 
 mod.SetupSideTabButton = SetupSideTabButton
@@ -2013,7 +2061,6 @@ do
             width = 64
         end
         self:SetWidth(width)
-        self:GetHighlightTexture():SetWidth(width)
     end
 
     function BottomTab:UpdateHighlight(setName)
@@ -2025,8 +2072,18 @@ do
         else
             PanelTemplates_DeselectTab(self)
         end
+
+        -- PanelTemplates only swaps textures, so the label has to follow the taller selected art.
+        local text = _G[self:GetName() .. 'Text']
+        if text then
+            text:ClearAllPoints()
+            text:SetPoint('CENTER', self, 'CENTER', TEXT_NUDGE_X, active and TEXT_ACTIVE_DROP or 0)
+        end
+
         -- Active tab mutes its own hover highlight
-        self:GetHighlightTexture():SetAlpha(active and 0 or 1)
+        for _, piece in ipairs(self._duiHighlight or {}) do
+            piece:SetAlpha(active and 0 or HL_ALPHA)
+        end
     end
 
     local BottomFilter = mod:NewClass("Frame")
@@ -2037,7 +2094,7 @@ do
         f.buttons = setmetatable({}, { __index = function(t, k)
             local tab = BottomTab:New(f, k)
             if k > 1 then
-                tab:SetPoint("LEFT", f.buttons[k - 1], "RIGHT", 8, 0)
+                tab:SetPoint("LEFT", f.buttons[k - 1], "RIGHT", TAB_GAP, 0)
             else
                 -- Tab row hangs just under the frame's bottom edge
                 tab:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", 13, 2)

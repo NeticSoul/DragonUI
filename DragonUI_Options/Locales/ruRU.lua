@@ -1741,3 +1741,45 @@ L["Test Preview"] = "Тестовый просмотр"
 L["Preview Icon"] = "Значок предпросмотра"
 L["Force one icon on all enemy nameplates so you can position and size it. Set to Off when done."] = "Принудительно показывает один значок на всех индикаторах врагов, чтобы настроить его положение и размер. По окончании выберите «Выкл.»."
 L["DragonUI (Custom)"] = "DragonUI (свой)"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Modern reskin of the Blizzard character window."] = "Современное оформление окна персонажа Blizzard."
+L["Enable Character Panel"] = "Включить окно персонажа"
+L["Apply the DragonUI reskin to the character window."] = "Применяет оформление DragonUI к окну персонажа."
+L["Show your class icon in the portrait instead of your character's face."] = "Показывать в портрете значок класса вместо лица."
+L["Class-Colored Level Text"] = "Цвет класса в строке уровня"
+L["Pets & Mounts"] = "Спутники и транспорт"
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "Отдельное окно для транспорта и спутников вместо старой вкладки питомца."
+L["Enable Pets & Mounts"] = "Включить «Спутники и транспорт»"
+L["Add the Pets & Mounts micro menu button and its window."] = "Добавляет кнопку микроменю и само окно."
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = "Команды: /dragonui, /dui, /pi — /dragonui edit (редактор) — /dragonui help"
+L["Color the class name in the \"Level X Race Class\" line."] = "Окрашивать название класса в строке \"Уровень X Раса Класс\"."
+L["Auto-show bars: Stance (Warriors/Druids/DKs) \226\128\162 Pet (Hunters/Warlocks/DKs) \226\128\162 Vehicle (All classes) \226\128\162 Totem (Shamans)"] = "Автопоказ панелей: Стойка (воины/друиды/РС) • Питомец (охотники/чернокнижники/РС) • Транспорт (все) • Тотем (шаманы)"
+L["Visual enhancements that add Dragonflight-style polish to the UI. These are optional \226\128\148 disable any you don't want."] = "Визуальные улучшения в стиле Dragonflight. Все они необязательны — отключите любое."
+L["Detached \226\128\148 positioned freely via Editor Mode"] = "Отдельно — свободное размещение в режиме редактора"
+L["Attached \226\128\148 follows Target frame"] = "Прикреплено — следует за рамкой цели"
+L["Attached \226\128\148 follows Focus frame"] = "Прикреплено — следует за рамкой фокуса"
+L["Power Bar \226\128\148 Players Only"] = "Полоса ресурса — только игроки"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "Панели"
+L["Character"] = "Персонаж"
+L["Stats Sidebar"] = "Боковая панель характеристик"
+L["The headline numbers above the stat categories."] = "Ключевые числа над категориями характеристик."
+L["Show Item Level"] = "Показывать уровень предметов"
+L["Show the average item level of your equipped gear."] = "Показывает средний уровень надетых предметов."
+L["Show GearScore"] = "Показывать GearScore"
+L["Show the GearScore of your equipped gear."] = "Показывает GearScore вашего снаряжения."
+L["Opens the window without the micro menu."] = "Открывает окно без микроменю."
+L["Toggle Pets & Mounts"] = "Открыть/закрыть Спутников и транспорт"
+L["Click, then press the key to bind. Press Escape to clear it."] = "Нажмите, затем нажмите нужную клавишу. Escape очищает назначение."
+L["Key bindings cannot be changed in combat."] = "Назначение клавиш нельзя изменить в бою."
+L["Hide Model Controls"] = "Скрыть управление моделью"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "Скрывает кнопки поворота, масштаба и сброса над моделью персонажа."
+L["Keep the Reset Button"] = "Оставить кнопку сброса"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "Оставляет только кнопку сброса, пока остальное управление моделью скрыто."

@@ -52,6 +52,18 @@ local function BuildProfilesTab(scroll)
         return profiles
     end
 
+    -- AceDB throws on a copy or a delete that names the active profile, so it is never offered.
+    local function GetOtherProfiles()
+        local profiles = {}
+        local active = db:GetCurrentProfile()
+        for _, name in ipairs(db:GetProfiles()) do
+            if name ~= active then
+                profiles[name] = name
+            end
+        end
+        return profiles
+    end
+
     C:AddDropdown(selectSection, {
         label = LO["Select Profile"],
         getFunc = function() return db:GetCurrentProfile() end,
@@ -88,14 +100,14 @@ local function BuildProfilesTab(scroll)
         label = LO["Copy From"],
         getFunc = function() return nil end,
         setFunc = function(val)
-            if val then
+            if val and val ~= db:GetCurrentProfile() then
                 db:CopyProfile(val)
                 addon:Print(LO["Copied profile: "] .. val)
                 Panel:SelectTab("profiles")
                 StaticPopup_Show("DRAGONUI_RELOAD_UI")
             end
         end,
-        values = GetProfileList(),
+        values = GetOtherProfiles(),
     })
 
     -- ====================================================================
@@ -104,18 +116,6 @@ local function BuildProfilesTab(scroll)
     local deleteSection = C:AddSection(scroll, LO["Delete Profile"])
 
     C:AddDescription(deleteSection, "|cffFF6600" .. LO["Warning:"] .. "|r " .. LO["Warning: Deleting a profile is permanent and cannot be undone."])
-
-    -- Build list excluding current
-    local function GetDeletableProfiles()
-        local profiles = {}
-        local current = db:GetCurrentProfile()
-        for _, name in ipairs(db:GetProfiles()) do
-            if name ~= current then
-                profiles[name] = name
-            end
-        end
-        return profiles
-    end
 
     C:AddDropdown(deleteSection, {
         label = LO["Delete"],
@@ -128,7 +128,7 @@ local function BuildProfilesTab(scroll)
                 end
             end
         end,
-        values = GetDeletableProfiles(),
+        values = GetOtherProfiles(),
     })
 
     -- ====================================================================

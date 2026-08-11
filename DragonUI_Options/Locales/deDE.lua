@@ -1737,3 +1737,48 @@ L["Test Preview"] = "Testvorschau"
 L["Preview Icon"] = "Vorschausymbol"
 L["Force one icon on all enemy nameplates so you can position and size it. Set to Off when done."] = "Erzwingt ein Symbol auf allen Gegnerplaketten, damit du Position und Größe einstellen kannst. Danach wieder auf „Aus“ setzen."
 L["DragonUI (Custom)"] = "DragonUI (benutzerdefiniert)"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Modern reskin of the Blizzard character window."] = "Moderne Überarbeitung des Blizzard-Charakterfensters."
+L["Enable Character Panel"] = "Charakterfenster aktivieren"
+L["Apply the DragonUI reskin to the character window."] = "Wendet die DragonUI-Gestaltung auf das Charakterfenster an."
+L["Show your class icon in the portrait instead of your character's face."] = "Zeigt im Porträt das Klassensymbol statt des Gesichts."
+L["Class-Colored Level Text"] = "Klassenfarbige Stufenzeile"
+L["Pets & Mounts"] = "Haustiere & Reittiere"
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = "Ein eigenes Fenster für Reittiere und Begleiter, das den alten Haustier-Reiter des Charakterfensters ersetzt."
+L["Enable Pets & Mounts"] = "Haustiere & Reittiere aktivieren"
+L["Add the Pets & Mounts micro menu button and its window."] = "Fügt die Mikromenü-Schaltfläche für Haustiere & Reittiere und ihr Fenster hinzu."
+L["Boss"] = "Boss"
+L["Quest"] = "Quest"
+L["Elite"] = "Elite"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = "Befehle: /dragonui, /dui, /pi — /dragonui edit (Editor) — /dragonui help"
+L["Color the class name in the \"Level X Race Class\" line."] = "Färbt den Klassennamen in der Zeile \"Stufe X Volk Klasse\"."
+L["Auto-show bars: Stance (Warriors/Druids/DKs) \226\128\162 Pet (Hunters/Warlocks/DKs) \226\128\162 Vehicle (All classes) \226\128\162 Totem (Shamans)"] = "Leisten automatisch zeigen: Haltung (Krieger/Druiden/TR) • Begleiter (Jäger/Hexer/TR) • Fahrzeug (alle Klassen) • Totem (Schamanen)"
+L["Visual enhancements that add Dragonflight-style polish to the UI. These are optional \226\128\148 disable any you don't want."] = "Optische Verbesserungen im Dragonflight-Stil. Alle optional — einfach abschalten, was nicht gefallen soll."
+L["Detached \226\128\148 positioned freely via Editor Mode"] = "Losgelöst — frei im Editor-Modus platzierbar"
+L["Attached \226\128\148 follows Target frame"] = "Angeheftet — folgt dem Zielfenster"
+L["Attached \226\128\148 follows Focus frame"] = "Angeheftet — folgt dem Fokusfenster"
+L["Power Bar \226\128\148 Players Only"] = "Ressourcenleiste — nur Spieler"
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = "Fenster"
+L["Character"] = "Charakter"
+L["Stats Sidebar"] = "Werte-Seitenleiste"
+L["The headline numbers above the stat categories."] = "Die hervorgehobenen Zahlen über den Wertekategorien."
+L["Show Item Level"] = "Gegenstandsstufe anzeigen"
+L["Show the average item level of your equipped gear."] = "Zeigt die durchschnittliche Gegenstandsstufe deiner angelegten Ausrüstung."
+L["Show GearScore"] = "GearScore anzeigen"
+L["Show the GearScore of your equipped gear."] = "Zeigt den GearScore deiner angelegten Ausrüstung."
+L["Opens the window without the micro menu."] = "Öffnet das Fenster ohne das Mikromenü."
+L["Toggle Pets & Mounts"] = "Haustiere & Reittiere umschalten"
+L["Click, then press the key to bind. Press Escape to clear it."] = "Klicke und drücke dann die gewünschte Taste. Escape löscht die Belegung."
+L["Key bindings cannot be changed in combat."] = "Tastenbelegungen können im Kampf nicht geändert werden."
+L["Hide Model Controls"] = "Modellsteuerung ausblenden"
+L["Hide the rotate, zoom and reset buttons over the character model."] = "Blendet die Dreh-, Zoom- und Zurücksetzen-Schaltflächen über dem Charaktermodell aus."
+L["Keep the Reset Button"] = "Zurücksetzen-Schaltfläche behalten"
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = "Lässt die Zurücksetzen-Schaltfläche allein stehen, während die übrige Modellsteuerung ausgeblendet bleibt."

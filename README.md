@@ -126,9 +126,11 @@ DragonUI builds on original work and adapted ideas from these addon authors and 
 | Project | Author | Contribution |
 |---------|--------|-------------|
 | [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider) | Karl-HeinzSchneider | Primary design reference |
+| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Character panel art and layout reference |
 | [pretty_actionbar / pretty_minimap](https://github.com/s0h2x) | s0h2x | Action bar and minimap patterns |
 | [RetailUI](https://github.com/a3st) | a3st (Dmitriy) | UI styling reference |
-| [KPack](https://github.com/bkader/KPack) | bkader | Utility patterns |
+| [KPack](https://github.com/bkader/KPack) | bkader | Utility patterns, GearScore reference implementation |
+| GearScore | TankadinTV | Character panel gear score formula |
 | [Combuctor](https://github.com/Jaliborc) | Jaliborc | Bag integration |
 | [BankStack](https://github.com/kemayo/) | kemayo | Bank sort logic |
 | [UnitFrameLayers](https://github.com/RomanSpector) | RomanSpector | Heal/absorb overlay reference |

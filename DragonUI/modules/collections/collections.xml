@@ -1,0 +1,7 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- Must load before micromenu.lua: it captures its button list once at file scope. -->
+    <Script file="microbutton.lua"/>
+    <Script file="core.lua"/>
+    <Script file="window.lua"/>
+    <Script file="journal.lua"/>
+</Ui>

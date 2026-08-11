@@ -213,13 +213,23 @@ local function HookButton(button)
     button:HookScript("OnLeave", OnMoneyLeave)
 end
 
+local function HookMoneyFrameNamed(name)
+    HookButton(_G[name .. "GoldButton"])
+    HookButton(_G[name .. "SilverButton"])
+    HookButton(_G[name .. "CopperButton"])
+end
+
 local function HookBlizzardMoneyFrames()
     for i = 1, (NUM_CONTAINER_FRAMES or 13) do
-        local name = "ContainerFrame" .. i .. "MoneyFrame"
-        HookButton(_G[name .. "GoldButton"])
-        HookButton(_G[name .. "SilverButton"])
-        HookButton(_G[name .. "CopperButton"])
+        HookMoneyFrameNamed("ContainerFrame" .. i .. "MoneyFrame")
     end
+end
+
+-- Any SmallMoneyFrameTemplate can register itself here. Load-on-demand ones — the character
+-- panel's currency tab — do not exist yet when PLAYER_ENTERING_WORLD sweeps the bags.
+function addon.RegisterBlizzardMoneyFrame(frame)
+    local name = frame and frame.GetName and frame:GetName()
+    if name then HookMoneyFrameNamed(name) end
 end
 
 -- Bagster builds its money displays at runtime and calls this for each instance.

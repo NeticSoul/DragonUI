@@ -14,4 +14,8 @@
     <Binding name="CLICK DragonUI_ExtraBarButton10:LeftButton"/>
     <Binding name="CLICK DragonUI_ExtraBarButton11:LeftButton"/>
     <Binding name="CLICK DragonUI_ExtraBarButton12:LeftButton"/>
+    <!-- BINDING_NAME_* set in modules/collections/microbutton.lua -->
+    <Binding name="DRAGONUI_TOGGLE_COLLECTIONS">
+        if DragonUI and DragonUI.ToggleCollections then DragonUI.ToggleCollections() end
+    </Binding>
 </Bindings>

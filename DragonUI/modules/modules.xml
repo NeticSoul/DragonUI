@@ -13,6 +13,10 @@
     <!-- Action Bar Sub-modules (stance, vehicle, petbar, multicast) -->
     <Include file="actionbars\actionbars.xml"/>
     
+    <!-- Pets & Mounts window (its micro button must exist before micromenu.lua loads) -->
+    <Script file="..\data\companion_traits.lua"/>
+    <Include file="collections\collections.xml"/>
+
     <!-- Micro Menu & Bag module -->
     <Script file="micromenu.lua"/>
     
@@ -60,6 +64,9 @@
 
     <!-- Item Level on gear icons -->
     <Script file="itemlevel.lua"/>
+
+    <!-- Retail-style character window reskin -->
+    <Include file="characterpanel\characterpanel.xml"/>
 
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>

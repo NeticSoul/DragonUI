@@ -1010,6 +1010,58 @@ function Controls:AddButton(parent, opts)
 end
 
 -- ============================================================================
+-- KEYBINDING
+-- ============================================================================
+
+-- Binds `opts.action`, a Bindings.xml command name, straight through the client's own binding set
+-- rather than a database field, so the Key Bindings window and this control cannot disagree.
+function Controls:AddKeybinding(parent, opts)
+    local _P = addon.OptionsPanel
+    if _P and _P.indexing then
+        RecordSearchEntry(opts)
+        return MakeStub()
+    end
+    local kb = AceGUI:Create("Keybinding")
+    local label = NormalizeText(opts.label, "Keybinding")
+    local desc = NormalizeDescription(opts.desc)
+
+    kb:SetLabel(label)
+    kb:SetWidth(opts.width or 240)
+    kb:SetKey(GetBindingKey(opts.action) or "")
+
+    kb:SetCallback("OnKeyChanged", function(widget, _, key)
+        -- SetBinding is protected in combat, and the widget has already painted the new key.
+        if InCombatLockdown() then
+            widget:SetKey(GetBindingKey(opts.action) or "")
+            addon:Print(LO["Key bindings cannot be changed in combat."])
+            return
+        end
+        for _, bound in ipairs({ GetBindingKey(opts.action) }) do
+            SetBinding(bound, nil)
+        end
+        if key and key ~= "" then SetBinding(key, opts.action) end
+        SaveBindings(GetCurrentBindingSet())
+        if opts.callback then opts.callback(key) end
+    end)
+
+    if desc then
+        kb:SetCallback("OnEnter", function(w)
+            GameTooltip:SetOwner(w.frame, "ANCHOR_TOPRIGHT")
+            GameTooltip:SetText(label, 1, 1, 1)
+            GameTooltip:AddLine(desc, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        kb:SetCallback("OnLeave", function() GameTooltip:Hide() end)
+    end
+
+    -- The widget's `frame` is a container; the clickable part is `button`, so that is what is skinned.
+    SkinButton({ frame = kb.button })
+    TagSearchId(kb, opts)
+    parent:AddChild(kb)
+    return kb
+end
+
+-- ============================================================================
 -- SECTION (InlineGroup)
 -- ============================================================================
 

@@ -116,6 +116,20 @@ L["Minimap System"] = true
 L["Buff Frame System"] = true
 L["Dark Mode"] = true
 L["Item Quality Borders"] = true
+-- Character Panel
+L["Character Panel"] = true
+L["Modern reskin of the Blizzard character window."] = true
+L["Enable Character Panel"] = true
+L["Apply the DragonUI reskin to the character window."] = true
+L["Class Portrait"] = true
+L["Show your class icon in the portrait instead of your character's face."] = true
+L["Class-Colored Level Text"] = true
+L["Color the class name in the \"Level X Race Class\" line."] = true
+-- Pets & Mounts
+L["Pets & Mounts"] = true
+L["A dedicated window for your mounts and companion pets, replacing the old Pet tab of the character window."] = true
+L["Enable Pets & Mounts"] = true
+L["Add the Pets & Mounts micro menu button and its window."] = true
 L["Enable Enhanced Tooltips"] = true
 L["KeyBind Mode"] = true
 L["Quest Tracker"] = true
@@ -342,7 +356,6 @@ L["Show in Tooltip"] = true
 L["Also enable Blizzard's own item level line in item tooltips."] = true
 L["Choose where the number appears:"] = true
 L["Guild Bank"] = true
-L["Character Panel"] = true
 L["Inspect"] = true
 L["Merchant"] = true
 L["Trade"] = true
@@ -997,7 +1010,6 @@ L["Class Color"] = true
 L["Class Color Health"] = true
 L["Use class color for health bar"] = true
 L["Use class color for health bars in party frames"] = true
-L["Class Portrait"] = true
 L["Show class icon instead of 3D portrait"] = true
 L["Show class icon instead of 3D portrait (only for players)"] = true
 L["Class icon instead of 3D model for players."] = true
@@ -1733,3 +1745,24 @@ L["Debuffs on the Ally"] = true
 L["Buffs the Ally Carries"] = true
 L["Also Show These Spells"] = true
 L["Listed spells always show, buff or debuff, on top of everything above."] = true
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Panels"] = true
+L["Character"] = true
+L["Stats Sidebar"] = true
+L["The headline numbers above the stat categories."] = true
+L["Show Item Level"] = true
+L["Show the average item level of your equipped gear."] = true
+L["Show GearScore"] = true
+L["Show the GearScore of your equipped gear."] = true
+L["Opens the window without the micro menu."] = true
+L["Toggle Pets & Mounts"] = true
+L["Click, then press the key to bind. Press Escape to clear it."] = true
+L["Key bindings cannot be changed in combat."] = true
+L["Hide Model Controls"] = true
+L["Hide the rotate, zoom and reset buttons over the character model."] = true
+L["Keep the Reset Button"] = true
+L["Leave the reset button on its own while the rest of the model controls stay hidden."] = true

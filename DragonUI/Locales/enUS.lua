@@ -452,6 +452,7 @@ L["Color item borders by quality in bags, character panel, bank, and merchant"] 
 L["Item Level"] = true
 L["Show item level on gear icons in bags, character panel, bank, and more"] = true
 L["Item Level: %d"] = true
+L["Unranked"] = true
 L["Key Binding"] = true
 L["LibKeyBound integration for intuitive keybinding"] = true
 L["Buff Frame"] = true
@@ -473,6 +474,61 @@ L["Bagster"] = true
 L["All-in-one bag replacement with filtering and search"] = true
 L["Alt Gold"] = true
 L["Show the gold of your other characters when hovering the money in your bags"] = true
+-- Character Panel
+L["Character Panel"] = true
+L["Retail-style character window with a modern frame, class portrait and stats sidebar"] = true
+L["Character Panel restored. Reload the UI for a fully clean state."] = true
+L["CharacterFrame does not exist."] = true
+L["Open the character panel first: sizes are meaningless while hidden."] = true
+L["(paperdoll-only rows below are skipped on this tab)"] = true
+L["Put the cursor on the 3D model, capturing in 5 seconds."] = true
+L["Ground dump failed: "] = true
+L["Model control dump failed: "] = true
+
+-- Pets & Mounts
+L["Pets & Mounts"] = true
+L["The mounts and pets you have collected."] = true
+L["Dedicated window for your mounts and pets, opened from the micro menu"] = true
+L["Pets & Mounts disabled. Reload the UI to remove its micro menu button."] = true
+L["Favorite"] = true
+L["Remove Favorite"] = true
+L["Favorites"] = true
+L["Keeps this at the front of the list."] = true
+L["Summon Random Favorite"] = true
+L["Mount Random Favorite"] = true
+L["Random Mount"] = true
+L["Random Pet"] = true
+L["Picks one random mount from your favorites."] = true
+L["Picks one random pet from your favorites."] = true
+L["None of your favorites can be used here."] = true
+L["Mark some favorites first."] = true
+L["Right-click for more options"] = true
+L["Nothing collected yet."] = true
+L["Not collected yet"] = true
+L["Collected"] = true
+L["Not Collected"] = true
+L["Drag to place it on an action bar."] = true
+L["No free macro slot for the random favorite button."] = true
+L["Unusable here"] = true
+L["Ground"] = true
+L["Flying"] = true
+L["Aquatic"] = true
+L["Sources"] = true
+L["Source"] = true
+L["Check All"] = true
+L["Uncheck All"] = true
+L["Drop"] = true
+L["Quest"] = true
+L["Vendor"] = true
+L["Profession"] = true
+L["Achievement"] = true
+L["World Event"] = true
+L["Promotion"] = true
+L["Trading Card Game"] = true
+L["In-Game Shop"] = true
+L["Discovery"] = true
+L["/dragonui collections - Open the Pets & Mounts window"] = true
+L["Average item level of your equipped gear."] = true
 L["Character Gold"] = true
 L["No other characters recorded yet"] = true
 L["(current)"] = true
@@ -557,3 +613,29 @@ L["Rect: left=%.1f bottom=%.1f w=%.1f h=%.1f"] = true
 L["Point1: %s -> %s %s (%.1f, %.1f)"] = true
 L["NumPoints: %d"] = true
 L["TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"] = true
+-- Equipment manager pane
+L["Equip"] = true
+L["New Equipment Set"] = true
+L["Rename or change the icon"] = true
+L["Panel settings"] = true
+L["Background"] = true
+L["Stone"] = true
+L["Dark"] = true
+L["Model backdrop"] = true
+L["Greyscale"] = true
+L["Full colour"] = true
+L["You have not earned any titles yet."] = true
+L["This client can only re-save a set, so the gear you are wearing now replaces its contents."] = true
+L["A set with that name already exists."] = true
+L["Delete the equipment set '%s'?"] = true
+L["Overwrite '%s' with your currently equipped items?"] = true
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = true
+L["GearScore"] = true
+L["Weighted score of your equipped gear."] = true
+L["Reset stat order"] = true
+L["Restore the stat categories to their default order?"] = true

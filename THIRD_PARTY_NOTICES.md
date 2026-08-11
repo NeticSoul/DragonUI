@@ -17,9 +17,16 @@ Copyright (C) 2018-2020 Haoqian He. See the embedded license header in the sourc
 
 ## MIT License — DragonflightUI bag textures
 
-The retail-style bag window textures under `DragonUI/assets/` are derived from
-DragonflightUI. Copyright (c) 2022 Karl-HeinzSchneider. The full license is
-included in `LICENSES/MIT-DragonflightUI.txt`.
+The retail-style bag window textures under `DragonUI/assets/`, and the filigree icon frame
+`DragonUI/Textures/Collections/IconFrameGold.tga` (cut from its Spellbook-Parts atlas and
+resampled), are derived from DragonflightUI. Copyright (c) 2022 Karl-HeinzSchneider. The full
+license is included in `LICENSES/MIT-DragonflightUI.txt`.
+
+## EZCollections — Pets & Mounts artwork
+
+The retail-style Collections textures under `DragonUI/Textures/Collections/` (row plates, favourite
+star, model backdrop, faction crests, search glyph, journal portraits) are taken from EZCollections
+by ZEUStiger.
 
 ## Bundled Fonts
 

@@ -72,10 +72,10 @@ L["=== DragonUI Status ==="] = "=== Статус DragonUI ==="
 L["Detected Modules:"] = "Обнаруженные модули:"
 L["Loaded"] = "Загружен"
 L["Not Loaded"] = "Не загружен"
-L["Target Frame"] = true
-L["Focus Frame"] = true
-L["Party Frames"] = true
-L["Cooldowns"] = true
+L["Target Frame"] = "Рамка цели"
+L["Focus Frame"] = "Рамка фокуса"
+L["Party Frames"] = "Рамки группы"
+L["Cooldowns"] = "Восстановление"
 L["Editable Frames: "] = "Редактируемые фреймы: "
 L["DragonUI Version: "] = "Версия DragonUI: "
 
@@ -344,48 +344,48 @@ L["Enable debug mode first with /dragonui debug on"] = "Сначала вклю�
 L["Debug mode is %s"] = "Режим отладки: %s"
 L["Debug mode enabled"] = "Режим отладки включён"
 L["Debug mode disabled"] = "Режим отладки выключен"
-L["enabled"] = true
-L["disabled"] = true
+L["enabled"] = "включён"
+L["disabled"] = "отключён"
 L["Enabled"] = "Включён"
 L["Disabled"] = "Выключен"
-L["Legacy refresh failed for"] = true
-L["Bonus Action Button %d"] = true
-L["Stance Button %d"] = true
-L["Pet Action Button %d"] = true
-L["Multicast Button %d"] = true
-L["Totem Call Button"] = true
-L["Totem Recall Button"] = true
-L["Bottom Left Button"] = true
-L["Bottom Right Button"] = true
-L["Right Button"] = true
-L["Left Button"] = true
-L["Totem Bar"] = true
-L["Test Pet"] = true
-L["=== TargetFrame children (depth 3) ==="] = true
-L["=== FocusFrame children (depth 3) ==="] = true
-L["BG texture not found"] = true
-L["BG tinted RED"] = true
-L["BG tinted GREEN"] = true
-L["BG color reset"] = true
-L["=== BANK SCAN DEBUG ==="] = true
-L["=== BANK QUALITY DEBUG ==="] = true
-L["Module enabled:"] = true
-L["BankFrame exists:"] = true
-L["BankFrame shown:"] = true
-L["Usage: /dui shadowcolor red|green|reset|info"] = true
-L["Usage: /dui shadowcrop <bottom_px> [right_px]"] = true
-L["  e.g. /dui shadowcrop 90 - show top 90 of 128 px height"] = true
-L["  e.g. /dui shadowcrop 90 200 - crop both bottom and right"] = true
-L["  /dui shadowcrop reset - restore full texture"] = true
-L["BG reset to 256x128 full texture"] = true
-L["Crop applied: showing %dx%d of 256x128 (texcoord 0-%.3f, 0-%.3f)"] = true
-L["Invalid values. Height 1-128, Width 1-256"] = true
-L["=== TargetFrame elements (use /dui shadowtest N to toggle) ==="] = true
-L["Total elements: %d"] = true
-L["HIDDEN: %d. %s [%s]"] = true
-L["SHOWN: %d. %s [%s]"] = true
-L["Invalid element number. Use /dui shadowtest to list."] = true
-L["DragonUI Compatibility:"] = true
+L["Legacy refresh failed for"] = "Сбой устаревшего обновления для"
+L["Bonus Action Button %d"] = "Доп. кнопка действия %d"
+L["Stance Button %d"] = "Кнопка стойки %d"
+L["Pet Action Button %d"] = "Кнопка действия питомца %d"
+L["Multicast Button %d"] = "Кнопка мультикаста %d"
+L["Totem Call Button"] = "Кнопка призыва тотемов"
+L["Totem Recall Button"] = "Кнопка отзыва тотемов"
+L["Bottom Left Button"] = "Кнопка снизу слева"
+L["Bottom Right Button"] = "Кнопка снизу справа"
+L["Right Button"] = "Правая кнопка"
+L["Left Button"] = "Левая кнопка"
+L["Totem Bar"] = "Панель тотемов"
+L["Test Pet"] = "Тестовый питомец"
+L["=== TargetFrame children (depth 3) ==="] = "=== Потомки TargetFrame (глубина 3) ==="
+L["=== FocusFrame children (depth 3) ==="] = "=== Потомки FocusFrame (глубина 3) ==="
+L["BG texture not found"] = "Текстура фона не найдена"
+L["BG tinted RED"] = "Фон окрашен в КРАСНЫЙ"
+L["BG tinted GREEN"] = "Фон окрашен в ЗЕЛЁНЫЙ"
+L["BG color reset"] = "Цвет фона сброшен"
+L["=== BANK SCAN DEBUG ==="] = "=== ОТЛАДКА СКАНИРОВАНИЯ БАНКА ==="
+L["=== BANK QUALITY DEBUG ==="] = "=== ОТЛАДКА КАЧЕСТВА БАНКА ==="
+L["Module enabled:"] = "Модуль включён:"
+L["BankFrame exists:"] = "BankFrame существует:"
+L["BankFrame shown:"] = "BankFrame показан:"
+L["Usage: /dui shadowcolor red|green|reset|info"] = "Использование: /dui shadowcolor red|green|reset|info"
+L["Usage: /dui shadowcrop <bottom_px> [right_px]"] = "Использование: /dui shadowcrop <bottom_px> [right_px]"
+L["  e.g. /dui shadowcrop 90 - show top 90 of 128 px height"] = "  напр. /dui shadowcrop 90 - показать верхние 90 из 128 px"
+L["  e.g. /dui shadowcrop 90 200 - crop both bottom and right"] = "  напр. /dui shadowcrop 90 200 - обрезать снизу и справа"
+L["  /dui shadowcrop reset - restore full texture"] = "  /dui shadowcrop reset - вернуть полную текстуру"
+L["BG reset to 256x128 full texture"] = "Фон сброшен к полной текстуре 256x128"
+L["Crop applied: showing %dx%d of 256x128 (texcoord 0-%.3f, 0-%.3f)"] = "Обрезка применена: показано %dx%d из 256x128 (texcoord 0-%.3f, 0-%.3f)"
+L["Invalid values. Height 1-128, Width 1-256"] = "Неверные значения. Высота 1-128, ширина 1-256"
+L["=== TargetFrame elements (use /dui shadowtest N to toggle) ==="] = "=== Элементы TargetFrame (/dui shadowtest N для переключения) ==="
+L["Total elements: %d"] = "Всего элементов: %d"
+L["HIDDEN: %d. %s [%s]"] = "СКРЫТ: %d. %s [%s]"
+L["SHOWN: %d. %s [%s]"] = "ПОКАЗАН: %d. %s [%s]"
+L["Invalid element number. Use /dui shadowtest to list."] = "Неверный номер элемента. Список: /dui shadowtest."
+L["DragonUI Compatibility:"] = "Совместимость DragonUI:"
 L["Registered Modules:"] = "Зарегистрированные модули:"
 L["No modules registered in ModuleRegistry"] = "В реестре модулей нет зарегистрированных модулей"
 L["load-once"] = "однократная загрузка"
@@ -541,3 +541,104 @@ L["|cff00ff00Alt+Right-Click|r to reset position"] = "|cff00ff00Alt+правый
 L["Toggle Inventory"] = "Показать/скрыть инвентарь"
 L["Toggle Bank"] = "Показать/скрыть банк"
 L["Double-Click to Copy"] = "Двойной щелчок для копирования"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["URL"] = "URL"
+L["Unranked"] = "Без звания"
+L["Alt"] = "Alt"
+L["Ctrl"] = "Ctrl"
+L["Shift"] = "Shift"
+L["Character Panel"] = "Окно персонажа"
+L["Retail-style character window with a modern frame, class portrait and stats sidebar"] = "Окно персонажа в стиле retail: современная рамка, портрет класса и панель характеристик"
+L["Character Panel restored. Reload the UI for a fully clean state."] = "Окно персонажа восстановлено. Перезагрузите интерфейс для полной очистки."
+L["Pets & Mounts"] = "Спутники и транспорт"
+L["The mounts and pets you have collected."] = "Средства передвижения и питомцы, которые вы собрали."
+L["Dedicated window for your mounts and pets, opened from the micro menu"] = "Отдельное окно для ваших средств передвижения и питомцев, открывается из микроменю"
+L["Pets & Mounts disabled. Reload the UI to remove its micro menu button."] = "«Спутники и транспорт» отключены. Перезагрузите интерфейс, чтобы убрать кнопку микроменю."
+L["Favorite"] = "Избранное"
+L["Remove Favorite"] = "Убрать из избранного"
+L["Favorites"] = "Избранное"
+L["Keeps this at the front of the list."] = "Держит запись в начале списка."
+L["Summon Random Favorite"] = "Призвать случайного фаворита"
+L["Mount Random Favorite"] = "Оседлать случайного фаворита"
+L["Random Mount"] = "Случ. скакун"
+L["Random Pet"] = "Случ. питомец"
+L["Picks one random mount from your favorites."] = "Выбирает случайного скакуна из избранного."
+L["Picks one random pet from your favorites."] = "Выбирает случайного питомца из избранного."
+L["None of your favorites can be used here."] = "Ни одного из избранных здесь использовать нельзя."
+L["Mark some favorites first."] = "Сначала отметьте избранное."
+L["Right-click for more options"] = "ПКМ — больше действий"
+L["Nothing collected yet."] = "Пока ничего не собрано."
+L["Not collected yet"] = "Ещё не получено"
+L["Collected"] = "Собрано"
+L["Not Collected"] = "Не собрано"
+L["Drag to place it on an action bar."] = "Перетащите на панель команд."
+L["No free macro slot for the random favorite button."] = "Нет свободного слота макроса для кнопки случайного избранного."
+L["Unusable here"] = "Здесь недоступно"
+L["Ground"] = "Наземные"
+L["Flying"] = "Летающие"
+L["Aquatic"] = "Водные"
+L["Sources"] = "Источники"
+L["Source"] = "Источник"
+L["Check All"] = "Отметить все"
+L["Uncheck All"] = "Снять все"
+L["Drop"] = "Добыча"
+L["Quest"] = "Задание"
+L["Vendor"] = "Торговец"
+L["Profession"] = "Профессия"
+L["Achievement"] = "Достижение"
+L["World Event"] = "Игровое событие"
+L["Promotion"] = "Промоакция"
+L["Trading Card Game"] = "Коллекционная карточная игра"
+L["In-Game Shop"] = "Внутриигровой магазин"
+L["Discovery"] = "Открытие"
+L["/dragonui collections - Open the Pets & Mounts window"] = "/dragonui collections - Открыть окно «Спутники и транспорт»"
+L["Average item level of your equipped gear."] = "Средний уровень надетой экипировки."
+L["Equip"] = "Надеть"
+L["New Equipment Set"] = "Новый набор экипировки"
+L["Rename or change the icon"] = "Переименовать или сменить значок"
+L["Panel settings"] = "Настройки панели"
+L["Background"] = "Фон"
+L["Stone"] = "Камень"
+L["Dark"] = "Тёмный"
+L["Model backdrop"] = "Фон модели"
+L["Greyscale"] = "Оттенки серого"
+L["Full colour"] = "Полный цвет"
+L["You have not earned any titles yet."] = "У вас ещё нет ни одного звания."
+L["This client can only re-save a set, so the gear you are wearing now replaces its contents."] = "Этот клиент умеет только перезаписывать набор, поэтому его содержимое заменит надетая сейчас экипировка."
+L["A set with that name already exists."] = "Набор с таким именем уже существует."
+L["Delete the equipment set '%s'?"] = "Удалить набор экипировки «%s»?"
+L["Overwrite '%s' with your currently equipped items?"] = "Перезаписать «%s» надетой сейчас экипировкой?"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["UFL diagnostic not available"] = "Диагностика UFL недоступна"
+L["(unnamed)"] = "(без имени)"
+L["(unnamed_frame)"] = "(рамка_без_имени)"
+L["SHOWN"] = "ПОКАЗАН"
+L["hidden"] = "скрыт"
+L["VISIBLE"] = "ВИДИМ"
+L["invisible"] = "невидим"
+L["VIS"] = "ВИД"
+L["inv"] = "невид"
+L["Rect: left=%.1f bottom=%.1f w=%.1f h=%.1f"] = "Rect: left=%.1f bottom=%.1f w=%.1f h=%.1f"
+L["Point1: %s -> %s %s (%.1f, %.1f)"] = "Point1: %s -> %s %s (%.1f, %.1f)"
+L["NumPoints: %d"] = "NumPoints: %d"
+L["TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"] = "TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"
+
+-- Character Panel, Pets & Mounts and diagnostics
+L["CharacterFrame does not exist."] = "CharacterFrame не существует."
+L["Open the character panel first: sizes are meaningless while hidden."] = "Сначала откройте окно персонажа: пока оно скрыто, размеры не имеют смысла."
+L["(paperdoll-only rows below are skipped on this tab)"] = "(строки только для окна экипировки ниже пропущены на этой вкладке)"
+L["Put the cursor on the 3D model, capturing in 5 seconds."] = "Наведите курсор на 3D-модель, снимок через 5 секунд."
+L["Ground dump failed: "] = "Сбой дампа фонов: "
+L["Model control dump failed: "] = "Сбой дампа элементов управления моделью: "
+
+-- ============================================================================
+-- PANELS TAB / GEAR SUMMARY
+-- ============================================================================
+
+L["Gear summary"] = "Сводка по снаряжению"
+L["GearScore"] = "GearScore"
+L["Weighted score of your equipped gear."] = "Взвешенная оценка вашего снаряжения."
+L["Reset stat order"] = "Сбросить порядок"
+L["Restore the stat categories to their default order?"] = "Вернуть категориям характеристик порядок по умолчанию?"
