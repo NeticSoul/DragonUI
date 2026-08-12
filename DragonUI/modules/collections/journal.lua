@@ -6,7 +6,8 @@ local CO = addon.Collections
 -- One journal serves both tabs: the panes are identical and only the companion kind changes, so the
 -- widgets are built once and repopulated on every tab switch instead of twice over.
 
-local ROW_H = 44
+-- 46, not a round 44: that is the height its plate is cut at, and retail's row, so nothing scales.
+local ROW_H = 46
 local ICON_SIZE = 38
 local SEARCH_H = 20
 local INFO_ICON = 40
@@ -23,6 +24,15 @@ local ACTIVE_SIZE = ICON_SIZE * 64 / (64 - 2 * ACTIVE_STROKE)
 
 -- auraborders.lua's chrome geometry verbatim, scaled off its 37px reference: same white art tinted,
 -- same overhang, same extra pixel on top. The stroke frames the icon from outside, never on its edge.
+-- Retail's own tooltip proportions for this button: a body wide enough not to wrap every clause,
+-- and the gold its spell text is printed in.
+local TOOLTIP_MIN_W = 260
+local TOOLTIP_BODY = { 1, 0.82, 0 }
+
+-- retail MountJournal.MountCount: a fixed 130x20 box with its label and number pinned 10 from each
+-- end, which is what puts the air between them.
+local COUNT_W, COUNT_H, COUNT_PAD = 130, 20, 10
+
 local RANDOM_SIZE = 30
 local FRAME_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe_white.tga"
 local FRAME_SCALE = RANDOM_SIZE / 37
@@ -36,7 +46,7 @@ local ROTATION_SPEED = 0.012
 
 local frame, scroll, content, rows
 local searchBox, filterButton, filterMenu, rowMenu
-local countBox, countText, randomButton
+local countBox, countText, countLabel, randomButton
 local infoIcon, infoFrame, infoDrag, infoName, infoSource, infoDesc, infoStar, model, actionButton
 local emptyText, uncollectedHint
 
@@ -239,10 +249,15 @@ local function buildInfo(host)
     star:SetTexture(CO.TEX.favorite)
     star:SetTexCoord(unpack(CO.FAV_COORD))
     infoStar._star = star
+    -- The star glowing itself rather than a square wash: retail has no favourite BUTTON to copy a
+    -- highlight from -- it favourites through the row's right-click menu -- and a square hilight
+    -- flares well past the star's silhouette.
     local starHL = infoStar:CreateTexture(nil, "HIGHLIGHT")
     starHL:SetAllPoints(infoStar)
-    starHL:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+    starHL:SetTexture(CO.TEX.favorite)
+    starHL:SetTexCoord(unpack(CO.FAV_COORD))
     starHL:SetBlendMode("ADD")
+    starHL:SetAlpha(0.4)
     infoStar:SetScript("OnClick", function()
         local entry = selectedEntry()
         if not entry then return end
@@ -487,9 +502,16 @@ local function randomLabel()
     return addon.L["Summon Random Favorite"]
 end
 
-local function randomDesc()
-    if kind() == "MOUNT" then return addon.L["Picks one random mount from your favorites."] end
-    return addon.L["Picks one random pet from your favorites."]
+-- Retail's own spell wording; the caption keeps the short label, which is all that strip fits.
+local function randomTooltip()
+    if kind() == "MOUNT" then
+        return addon.L["Summon Random Favorite Mount"],
+            addon.L["Summons and dismisses a favorite mount that is usable in the current area."],
+            addon.L["If you don't have any favorite mounts, it'll choose from your whole collection."]
+    end
+    return addon.L["Summon Random Favorite Pet"],
+        addon.L["Summons and dismisses a favorite pet."],
+        addon.L["If you don't have any favorite pets, it'll choose from your whole collection."]
 end
 
 updateRandomIcon = function()
@@ -512,8 +534,8 @@ refresh = function()
     end
 
     -- The pill counts what you actually own, like retail -- not the catalog rows beside them.
-    countText:SetFormattedText("%s: %d", isMount() and MOUNTS or COMPANIONS, collected)
-    countBox:SetWidth(math.max(90, (countText:GetStringWidth() or 0) + 26))
+    countLabel:SetText(isMount() and addon.L["Total Mounts"] or addon.L["Total Pets"])
+    countText:SetText(collected)
     updateRandomIcon()
     if collected == 0 and #flat == 0 then emptyText:Show() else emptyText:Hide() end
 
@@ -657,19 +679,68 @@ local function filterMenuInit(_, level)
     end
 end
 
+-- Retail's grey filter dropdown in place of the red panel button: a three-slice holder so the ends
+-- keep their radius, with the arrow box sitting on its right end.
+-- Sized near the art's native 97x26 so the baked-in chevron barely stretches, and the 2px of
+-- transparent margin the rect carries is pushed back past the button edge.
+local FILTER_W = 92
+local HOLDER_PAD = 2
+
+local function dressFilterButton(btn)
+    for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture",
+                              "GetDisabledTexture", "GetHighlightTexture" }) do
+        local tex = btn[getter] and btn[getter](btn)
+        if tex then tex:SetTexture(nil) end
+    end
+    local holder = btn:CreateTexture(nil, "BACKGROUND")
+    holder:set_atlas("common-dropdown-b-button")
+    holder:SetPoint("TOPLEFT", btn, "TOPLEFT", -HOLDER_PAD, HOLDER_PAD)
+    holder:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", HOLDER_PAD, -HOLDER_PAD)
+
+    -- The whole background is the state, the way WowStyle1FilterDropdownMixin drives it. No wash
+    -- over the top: `open` is a distinct art from `hover`, and a white overlay cannot say that.
+    local over, down = false, false
+    local function restate()
+        local suffix = ""
+        if not btn:IsEnabled() then
+            suffix = "-disabled"
+        elseif UIDROPDOWNMENU_OPEN_MENU == filterMenu and DropDownList1 and DropDownList1:IsShown() then
+            suffix = "-open"
+        elseif down and over then
+            suffix = "-pressedhover"
+        elseif down then
+            suffix = "-pressed"
+        elseif over then
+            suffix = "-hover"
+        end
+        holder:set_atlas("common-dropdown-b-button" .. suffix)
+    end
+
+    btn:HookScript("OnEnter", function() over = true; restate() end)
+    btn:HookScript("OnLeave", function() over = false; restate() end)
+    btn:HookScript("OnMouseDown", function() down = true; restate() end)
+    -- Next frame: the menu's shown state is only settled after the click has been handled.
+    btn:HookScript("OnMouseUp", function() down = false; addon:After(0, restate) end)
+    btn:HookScript("OnEnable", restate)
+    btn:HookScript("OnDisable", restate)
+    -- Retail displaces the LABEL and leaves the art still; Wrath's template shifts it by (1,-1).
+    if btn.SetPushedTextOffset then btn:SetPushedTextOffset(2, -1) end
+    btn._duiRestate = restate
+end
+
 local function buildSearch(parent)
     filterButton = CreateFrame("Button", "DragonUICollectionsFilterButton", parent, "UIPanelButtonTemplate")
-    filterButton:SetSize(76, SEARCH_H)
+    filterButton:SetSize(FILTER_W, SEARCH_H)
     filterButton:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -8, -8)
     filterButton:SetText(FILTER)
-    local arrow = filterButton:CreateTexture(nil, "ARTWORK")
-    arrow:SetSize(8, 8)
-    arrow:SetPoint("RIGHT", filterButton, "RIGHT", -6, 0)
-    arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
+    dressFilterButton(filterButton)
     local label = filterButton:GetFontString()
     if label then
         label:ClearAllPoints()
+        -- The chevron lives in the art's last fifth, so the label stops short of it.
         label:SetPoint("LEFT", filterButton, "LEFT", 8, 0)
+        label:SetPoint("RIGHT", filterButton, "RIGHT", -math.floor(FILTER_W * 0.2), 0)
+        label:SetJustifyH("CENTER")
     end
     filterButton:SetScript("OnClick", function(self)
         ToggleDropDownMenu(1, nil, filterMenu, self, 0, 0)
@@ -711,7 +782,7 @@ local function buildTopBand(parent)
     -- A recessed pill rather than bare floating text, the way retail houses its collected count.
     countBox = CreateFrame("Frame", nil, parent)
     countBox:SetPoint("LEFT", parent, "LEFT", 48, 0)
-    countBox:SetSize(90, 22)
+    countBox:SetSize(COUNT_W, COUNT_H)
     countBox:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -721,8 +792,16 @@ local function buildTopBand(parent)
     countBox:SetBackdropColor(0.05, 0.05, 0.06, 0.9)
     countBox:SetBackdropBorderColor(0.6, 0.6, 0.6, 0.8)
 
-    countText = countBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    countText:SetPoint("CENTER", countBox, "CENTER", 0, 0)
+    -- Two strings, not one formatted line: that is why retail shows no colon. The number rides
+    -- GameFontHighlight (white) against the label's GameFontNormal (gold), pinned to opposite ends.
+    countText = countBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    countText:SetPoint("RIGHT", countBox, "RIGHT", -COUNT_PAD, 0)
+    countText:SetJustifyH("RIGHT")
+
+    countLabel = countBox:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    countLabel:SetPoint("LEFT", countBox, "LEFT", COUNT_PAD, 0)
+    countLabel:SetPoint("RIGHT", countText, "LEFT", -3, 0)
+    countLabel:SetJustifyH("LEFT")
 
     randomButton = CreateFrame("Button", nil, parent)
     randomButton:SetSize(RANDOM_SIZE, RANDOM_SIZE)
@@ -757,13 +836,20 @@ local function buildTopBand(parent)
         if index then PickupMacro(index) end
     end)
     randomButton:SetScript("OnEnter", function(self)
+        local title, desc, fallback = randomTooltip()
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:SetText(randomLabel(), 1, 1, 1)
-        GameTooltip:AddLine(randomDesc(), 0.82, 0.82, 0.82, true)
+        if GameTooltip.SetMinimumWidth then GameTooltip:SetMinimumWidth(TOOLTIP_MIN_W, 1) end
+        GameTooltip:SetText(title, 1, 1, 1)
+        GameTooltip:AddLine(desc, TOOLTIP_BODY[1], TOOLTIP_BODY[2], TOOLTIP_BODY[3], true)
+        GameTooltip:AddLine(fallback, TOOLTIP_BODY[1], TOOLTIP_BODY[2], TOOLTIP_BODY[3], true)
         GameTooltip:AddLine(addon.L["Drag to place it on an action bar."], 0.6, 0.8, 1, true)
         GameTooltip:Show()
     end)
-    randomButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    -- The tooltip is shared, so the widened frame has to be handed back the way it was found.
+    randomButton:SetScript("OnLeave", function()
+        if GameTooltip.SetMinimumWidth then GameTooltip:SetMinimumWidth(0, 0) end
+        GameTooltip:Hide()
+    end)
 end
 
 function CO.BuildJournal(parent)
@@ -791,14 +877,15 @@ function CO.BuildJournal(parent)
     buildTopBand(CO.TopBand)
 
     actionButton = CreateFrame("Button", "DragonUICollectionsActionButton", CO.BottomBand, "UIPanelButtonTemplate")
-    actionButton:SetSize(180, 26)
-    actionButton:SetPoint("CENTER", CO.BottomBand, "CENTER", 0, 0)
+    -- Retail anchors this BOTTOMLEFT of the journal at 140x22, under the list; it is not centred.
+    actionButton:SetSize(140, 22)
+    actionButton:SetPoint("LEFT", CO.BottomBand, "LEFT", 0, 0)
     actionButton:SetScript("OnClick", function()
         CO.Summon(kind(), selectedEntry())
         refresh()
     end)
+    -- Only the action button: the filter wears retail's grey dropdown, dressed in buildSearch.
     addon.SkinRedButton(actionButton)
-    addon.SkinRedButton(filterButton)
 end
 
 CO.Subscribe(function()

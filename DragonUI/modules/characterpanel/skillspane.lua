@@ -5,7 +5,10 @@ local CP = addon.CharacterPanel
 -- report isExpanded where faction headers report isCollapsed, so the flag is flipped on the way in.
 
 local ROW_H = 24
-local BAR_W, BAR_H = 132, 13
+-- Matched to reputationpane.lua: same bar, same frame, same texcoords.
+local BAR_W, BAR_H = 99, 13
+local FRAME_TEX = "Interface\\PaperDollInfoFrame\\UI-Character-ReputationBar"
+local FRAME_LEFT_W, FRAME_H = 60, 15
 local CHILD_INDENT = 12
 local FILL = "Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar"
 
@@ -22,6 +25,39 @@ local TRAINABLE = { 0.2, 0.85, 0.2 }
 local DORMANT = { 0.5, 0.5, 0.5 }
 
 local pane, scroll, content
+
+-- Retail dropped this tab entirely, so there is no filter of theirs to copy. Hiding what is already
+-- capped is the practical one here: what is left is exactly what still has room to move.
+-- In the profile, not a local: a filter that silently forgets itself on every reload reads as the
+-- setting having failed rather than as it never having been kept.
+local filterButton
+
+local function hideMaxed()
+    return CP:Config().skills_hide_maxed and true or false
+end
+
+-- The label carries the state, the way retail's reads "All": a static "Filter" says nothing about
+-- whether anything is being filtered right now.
+local function updateSelection()
+    if filterButton then
+        filterButton:SetSelection(hideMaxed() and addon.L["Hide maxed out"] or addon.L["All"])
+    end
+end
+
+local function filterMenuEntries()
+    local function entry(text, wanted)
+        return {
+            text = text,
+            checked = hideMaxed() == wanted,
+            func = function()
+                CP:Config().skills_hide_maxed = wanted
+                updateSelection()
+                if CP.RefreshSkillsPane then CP.RefreshSkillsPane() end
+            end,
+        }
+    end
+    return { entry(addon.L["All"], false), entry(addon.L["Hide maxed out"], true) }
+end
 local headers, entries
 local flat = {}
 -- Declared here because toggleHeader hands it to the reveal driver, and it is defined further down.
@@ -94,28 +130,19 @@ local function buildEntry(parent)
     back:SetAllPoints(bar)
     back:SetTexture(0, 0, 0)
 
-    local function edge()
-        local t = bar:CreateTexture(nil, "OVERLAY")
-        t:SetTexture(0, 0, 0)
-        t:SetAlpha(0.9)
-        return t
-    end
-    local top = edge()
-    top:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
-    top:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 1, 1)
-    top:SetHeight(1)
-    local bottom = edge()
-    bottom:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", -1, -1)
-    bottom:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
-    bottom:SetHeight(1)
-    local left = edge()
-    left:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
-    left:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", -1, -1)
-    left:SetWidth(1)
-    local right = edge()
-    right:SetPoint("TOPRIGHT", bar, "TOPRIGHT", 1, 1)
-    right:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
-    right:SetWidth(1)
+    -- The reputation frame's two-piece art, so both list tabs wear the same bar. Skills has its own
+    -- UI-Character-Skills-BarBorder, but it is a different shape and the two read as unrelated.
+    local left = bar:CreateTexture(nil, "OVERLAY")
+    left:SetTexture(FRAME_TEX)
+    left:SetSize(FRAME_LEFT_W, FRAME_H)
+    left:SetPoint("LEFT", bar, "LEFT", 0, 0)
+    left:SetTexCoord(0.765625, 1, 0.046875, 0.28125)
+
+    local right = bar:CreateTexture(nil, "OVERLAY")
+    right:SetTexture(FRAME_TEX)
+    right:SetSize(BAR_W - FRAME_LEFT_W, FRAME_H)
+    right:SetPoint("LEFT", left, "RIGHT", 0, 0)
+    right:SetTexCoord(0, 0.15234375, 0.390625, 0.625)
 
     bar.Text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     bar.Text:SetPoint("CENTER", bar, "CENTER", 0, 0)
@@ -215,7 +242,10 @@ local function refresh()
     for i = 1, (GetNumSkillLines and GetNumSkillLines() or 0) do
         local name, isHeader, isExpanded, rank, tempPoints, modifier, maxRank,
               isAbandonable, _, _, _, _, description = GetSkillLineInfo(i)
-        if name and name ~= "" then
+        -- A max rank of one is a proficiency, not a track, so it is never "maxed out" for this.
+        local capped = hideMaxed() and not isHeader and (maxRank or 0) > 1
+                       and (rank or 0) >= maxRank
+        if name and name ~= "" and not capped then
             flat[#flat + 1] = {
                 kind = isHeader and "header" or "entry",
                 index = i, name = name, isCollapsed = not isExpanded,
@@ -255,6 +285,16 @@ local function build()
     pane:SetAllPoints(cf.Inset)
     pane:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 5)
     pane:Hide()
+
+    -- Up in the title strip, on the same right edge as the paperdoll tab's cog. Anchored inside the
+    -- pane instead, it sat in the list and ate a row.
+    if CP.CreateFilterDropdown then
+        local cf = _G.CharacterFrame
+        filterButton = CP.CreateFilterDropdown(pane, "DragonUISkillsFilter", CP.FILTER_DROPDOWN_W, filterMenuEntries)
+        filterButton:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 20)
+        CP.AnchorFilterDropdown(pane, filterButton)
+        updateSelection()
+    end
 
     scroll, content = CP.BuildListPane(pane, "DragonUISkillsScroll", ROW_H, repaint)
     headers = CP.NewRowPool(content, function(parent)

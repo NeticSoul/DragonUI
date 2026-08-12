@@ -5,6 +5,8 @@ local CP = addon.CharacterPanel
 -- Written against Wrath's NAME-keyed API, so names are the identity throughout.
 local ROW_H = 40
 local ICON_SIZE = 34
+-- retail PaperDollFrame.xml gives EquipSet and SaveSet 87x22 over a 172-wide pane -- half each.
+-- The height is the number worth copying; the width is derived in layout() from our own pane.
 local BUTTON_H = 22
 local BUTTON_GAP = 4
 local BUTTON_INSET = 2
@@ -387,9 +389,11 @@ local function layout()
     local width = pane:GetWidth() or 0
     if width <= 0 then return end
 
-    local half = math.floor((width - BUTTON_GAP - BUTTON_INSET * 2) / 2)
+    -- Half the pane each, butted together. Retail hardcodes 87, but its pane is 172 wide, so that
+    -- IS half -- the pair is meant to span the pane, and a literal 87 leaves a gap on a wider one.
+    local half = math.floor(width / 2)
     equipButton:SetWidth(half)
-    saveButton:SetWidth(half)
+    saveButton:SetWidth(width - half)
     scrollChild:SetWidth(scroll:GetWidth() or width)
 end
 
@@ -449,22 +453,34 @@ local function build()
     pane:SetPoint("BOTTOMRIGHT", cf.InsetRight, "BOTTOMRIGHT", -3, 2)
     pane:Hide()
 
+    -- Retail's own geometry: a fixed 87x22 pair butted together at the pane's top left, not one
+    -- button per corner. Labels come from the client's globals, which are already localized.
     equipButton = CreateFrame("Button", "DragonUIEquipSetButton", pane, "UIPanelButtonTemplate")
     equipButton:SetHeight(BUTTON_H)
-    equipButton:SetPoint("TOPLEFT", pane, "TOPLEFT", BUTTON_INSET, -BUTTON_INSET)
-    equipButton:SetText(addon.L["Equip"])
+    equipButton:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, 0)
+    equipButton:SetText(EQUIPSET_EQUIP or addon.L["Equip"])
     equipButton:SetScript("OnClick", function() equipSet(selectedName) end)
 
-    -- Its own width rather than chained off Equip's edge: chaining made one bad width break both.
     saveButton = CreateFrame("Button", "DragonUISaveSetButton", pane, "UIPanelButtonTemplate")
     saveButton:SetHeight(BUTTON_H)
-    saveButton:SetPoint("TOPRIGHT", pane, "TOPRIGHT", -BUTTON_INSET, -BUTTON_INSET)
-    saveButton:SetText(addon.L["Save"])
+    saveButton:SetPoint("LEFT", equipButton, "RIGHT", 0, 0)
+    saveButton:SetText(SAVE or addon.L["Save"])
     saveButton:SetScript("OnClick", function()
         if selectedName then
             StaticPopup_Show("DRAGONUI_SAVE_EQUIPMENT_SET", selectedName, nil, selectedName)
         end
     end)
+
+    -- Retail's UIPanelButtonTemplate carries modern art; Wrath's is the carved grey one, so the
+    -- template alone is not enough to match it. Same skin the collections buttons already wear.
+    if addon.SkinRedButton then
+        addon.SkinRedButton(equipButton)
+        addon.SkinRedButton(saveButton)
+    end
+    -- Above the list, the way retail raises them in its OnLoad: the scroll box starts at the pane's
+    -- own top edge, so at the same level the rows would draw over the buttons.
+    equipButton:SetFrameLevel(pane:GetFrameLevel() + 3)
+    saveButton:SetFrameLevel(pane:GetFrameLevel() + 3)
 
     scroll = CreateFrame("ScrollFrame", "DragonUIEquipmentScroll", pane, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, -LIST_TOP)

@@ -14,11 +14,15 @@ local LEFT_W = 244
 local INSET_GAP = 16
 local TITLE_H = 24
 local TOP_H = 34
-local BOTTOM_H = 30
+-- The action button's own height: retail parks it flush at the journal's bottom, so the band has no
+-- slack of its own. Anything taller just pushed the list up for nothing.
+local BOTTOM_H = 22
 
 -- The character panel's own band geometry, so the rock and streak strip line up with it.
 local STREAK_Y, STREAK_H = 21, 43
 local ROCK = addon._dir .. "UI\\ui-background-rock"
+-- The near-black marble is what makes an inset read as recessed; the body rock alone reads flat.
+local MARBLE = addon._dir .. "UI\\ui-background-marble"
 
 -- Measured off the corner atlas: the cutout is r22.75, the metal turns opaque by r29 and its outer
 -- edge is r33. Our art is full bleed, so it needs r29 -- not the panel's 62, whose icons have padding.
@@ -52,7 +56,7 @@ local function buildChrome()
     streaks:SetHorizTile(true)
     streaks:SetHeight(STREAK_H)
     streaks:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -STREAK_Y)
-    streaks:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -STREAK_Y)
+    streaks:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -STREAK_Y)
 
     -- ARTWORK, under the OVERLAY corner piece whose cutout is the ring around it.
     portrait = frame:CreateTexture(nil, "ARTWORK")
@@ -73,7 +77,7 @@ local function buildInset(name)
     local inset = CreateFrame("Frame", name, frame)
     inset:SetFrameLevel(frame:GetFrameLevel() + 2)
     local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -5)
-    bg:SetTexture(ROCK, "REPEAT", "REPEAT")
+    bg:SetTexture(MARBLE, "REPEAT", "REPEAT")
     bg:SetHorizTile(true)
     bg:SetVertTile(true)
     bg:SetAllPoints(inset)

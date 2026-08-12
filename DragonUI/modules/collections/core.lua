@@ -303,23 +303,35 @@ function CO.SummonRandomFavorite(kind)
         return
     end
 
-    local usableFav, fav = {}, {}
+    local owned, fav = {}, {}
     for _, entry in ipairs(CO.List(kind)) do
-        if entry.index and CO.IsFavorite(kind, entry.creatureID) then
-            fav[#fav + 1] = entry
-            if kind ~= "MOUNT" or CO.MountUsableNow(entry.spellID) then
-                usableFav[#usableFav + 1] = entry
-            end
+        if entry.index then
+            owned[#owned + 1] = entry
+            if CO.IsFavorite(kind, entry.creatureID) then fav[#fav + 1] = entry end
         end
     end
 
-    if #usableFav == 0 then
-        addon:Print(#fav > 0 and addon.L["None of your favorites can be used here."]
-            or addon.L["Mark some favorites first."])
+    -- The whole collection only comes in when nothing is favorited -- an unusable favorite does not.
+    local source = #fav > 0 and fav or owned
+    local usable = {}
+    for _, entry in ipairs(source) do
+        if kind ~= "MOUNT" or CO.MountUsableNow(entry.spellID) then
+            usable[#usable + 1] = entry
+        end
+    end
+
+    if #usable == 0 then
+        local message = addon.L["Nothing collected yet."]
+        if #fav > 0 then
+            message = addon.L["None of your favorites can be used here."]
+        elseif #owned > 0 then
+            message = addon.L["Nothing you own can be used here."]
+        end
+        addon:Print(message)
         return
     end
 
-    local pool = bestTier(kind, usableFav)
+    local pool = bestTier(kind, usable)
 
     CallCompanion(kind, pool[math.random(#pool)].index)
     PlaySound("igMainMenuOptionCheckBoxOn")

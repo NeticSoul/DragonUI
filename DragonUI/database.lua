@@ -1053,6 +1053,9 @@ local defaults = {
                 grey_model_backdrop = true, -- Desaturate and dim the race backdrop behind the model
                 hide_model_controls = false, -- Drop the rotate/zoom/reset strip over the 3D model
                 model_controls_reset_only = false, -- ...except the reset button, when the above is on
+                skills_hide_maxed = false, -- Drop capped skills from the list; the tab's filter sets it
+                rep_standing = 0, -- 0 = every faction, 1..8 = only that FACTION_STANDING_LABEL
+                currency_hide_empty = false, -- Drop currencies the character holds none of
                 show_item_level = true, -- Headline average item level above the stat categories
                 show_gear_score = false, -- Headline GearScore above the stat categories
                 -- stats_collapsed / stats_order are written by the panel itself, never defaulted:

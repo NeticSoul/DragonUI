@@ -144,6 +144,22 @@ local layouts =
 		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
+	-- What DialogBorderTemplate resolves to: retail frames a popup with this, NOT with the inset trim.
+	-- Every piece is pushed out by RAIL_PAD because the rail is only 16 thick inside a 64 piece and
+	-- sits 8.5 in; anchored flush the whole border draws inset and the window's ground shows past it.
+	Dialog = {
+		TopLeftCorner = {atlas = "UI-Frame-DiamondMetal-CornerTopLeft", x = -8, y = 8},
+		TopRightCorner = {atlas = "UI-Frame-DiamondMetal-CornerTopRight", x = 8, y = 8},
+		BottomLeftCorner = {atlas = "UI-Frame-DiamondMetal-CornerBottomLeft", x = -8, y = -8},
+		BottomRightCorner = {atlas = "UI-Frame-DiamondMetal-CornerBottomRight", x = 8, y = -8},
+		-- No offsets of their own: SetupEdge chains these to the CORNERS, so they already carry the
+		-- corners' push. Repeating it here is what left the rails floating off their own frame.
+		TopEdge = {atlas = "_UI-Frame-DiamondMetal-EdgeTop"},
+		BottomEdge = {atlas = "_UI-Frame-DiamondMetal-EdgeBottom"},
+		LeftEdge = {atlas = "!UI-Frame-DiamondMetal-EdgeLeft"},
+		RightEdge = {atlas = "!UI-Frame-DiamondMetal-EdgeRight"}
+	},
+
 	-- The metal frame without the portrait cutout. All four corners are the 32px pair, the top two
 	-- flipped: mixing them with the ornate 75px tops makes each side edge join two widths.
 	MetalFrameTemplate = {
