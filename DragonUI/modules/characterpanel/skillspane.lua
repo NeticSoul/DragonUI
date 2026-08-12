@@ -254,6 +254,20 @@ local function refresh()
             }
         end
     end
+
+    -- A category whose every skill was filtered out would otherwise sit there with nothing under it.
+    -- Collapsed ones stay: the API omits their children, so emptiness cannot be told from hidden.
+    if hideMaxed() then
+        local kept = {}
+        for i = 1, #flat do
+            local row, nextRow = flat[i], flat[i + 1]
+            local empty = row.kind == "header" and not row.isCollapsed
+                and (not nextRow or nextRow.kind == "header")
+            if not empty then kept[#kept + 1] = row end
+        end
+        flat = kept
+    end
+
     repaint()
 end
 

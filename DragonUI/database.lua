@@ -1055,6 +1055,7 @@ local defaults = {
                 model_controls_reset_only = false, -- ...except the reset button, when the above is on
                 skills_hide_maxed = false, -- Drop capped skills from the list; the tab's filter sets it
                 rep_standing = 0, -- 0 = every faction, 1..8 = only that FACTION_STANDING_LABEL
+                rep_hide_inactive = false, -- Drop what the detail popup moved to Inactive
                 currency_hide_empty = false, -- Drop currencies the character holds none of
                 show_item_level = true, -- Headline average item level above the stat categories
                 show_gear_score = false, -- Headline GearScore above the stat categories

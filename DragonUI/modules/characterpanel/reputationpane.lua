@@ -35,6 +35,10 @@ end
 
 local function standingFilter() return CP:Config().rep_standing or 0 end
 
+-- Wrath's answer to retail's "Show Legacy Reputations": the factions the player has parked through
+-- the detail popup's Move to Inactive. Same intent, on the only flag this client actually has.
+local function hideInactive() return CP:Config().rep_hide_inactive and true or false end
+
 local filterButton
 
 local function updateSelection()
@@ -60,6 +64,18 @@ local function filterMenuEntries()
     entry(addon.L["All"], 0)
     -- Descending: Exalted is what a player scans for, and it reads as the ladder they climb.
     for id = STANDINGS, 1, -1 do entry(standingLabel(id), id) end
+
+    -- Retail's shape: the radios pick one standing, then a rule and an independent checkbox below.
+    entries[#entries + 1] = { divider = true }
+    entries[#entries + 1] = {
+        text = addon.L["Hide inactive"],
+        checked = hideInactive(),
+        isCheckbox = true,
+        func = function()
+            CP:Config().rep_hide_inactive = not hideInactive()
+            CP.RefreshReputationPane()
+        end,
+    }
     return entries
 end
 
@@ -287,6 +303,9 @@ local function refresh()
               _, _, isHeader, isCollapsed, hasRep, _, isChild = GetFactionInfo(i)
         -- Headers stay through the filter: dropping one strands the factions under it with no way back.
         local hidden = wanted ~= 0 and not isHeader and standingID ~= wanted
+        if hideInactive() and not isHeader and IsFactionInactive and IsFactionInactive(i) then
+            hidden = true
+        end
         if name and not hidden then
             flat[#flat + 1] = {
                 kind = isHeader and "header" or "entry",
@@ -298,7 +317,7 @@ local function refresh()
     end
 
     -- Repeated because headers nest: emptying an inner one can leave its parent empty in turn.
-    local pruning = wanted ~= 0
+    local pruning = wanted ~= 0 or hideInactive()
     while pruning do
         local kept = {}
         for i = 1, #flat do

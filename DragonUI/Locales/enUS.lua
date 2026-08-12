@@ -503,6 +503,7 @@ L["Total Pets"] = true
 L["Hide maxed out"] = true
 L["All"] = true
 L["Hide empty"] = true
+L["Hide inactive"] = true
 L["Random Mount"] = true
 L["Random Pet"] = true
 L["Summons and dismisses a favorite mount that is usable in the current area."] = true

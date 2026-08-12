@@ -126,6 +126,8 @@ local MENU_ROW_H = 16   -- UIDROPDOWNMENU_BUTTON_HEIGHT
 local MENU_INSET = 15   -- UIDROPDOWNMENU_BORDER_HEIGHT, and where AddButton lands a checkable row
 local MENU_EDGE = 12    -- the backdrop's own right inset
 local MENU_TEXT_X, MENU_CHECK = 20, 16
+-- Retail sets a divider apart with air, not a taller row: the rule itself is a single pixel.
+local MENU_DIVIDER_H = 9
 local MENU_MIN_W, MENU_ROW_PAD, MENU_GAP = 120, 10, 2
 
 local MENU_BACKDROP = {
@@ -160,11 +162,29 @@ local function acquireMenuRow(menu, i)
     hl:SetBlendMode("ADD")
     hl:SetVertexColor(1, 1, 1, 0.12)
 
-    local check = row:CreateTexture(nil, "ARTWORK")
+    -- Retail says "checkbox" with a box that gains a tick, and "radio" with the tick alone.
+    local box = row:CreateTexture(nil, "ARTWORK")
+    box:SetSize(MENU_CHECK, MENU_CHECK)
+    box:SetPoint("LEFT", row, "LEFT", 0, 0)
+    box:set_atlas("checkbox-minimal")
+    box:Hide()
+    row.Box = box
+
+    -- OVERLAY, not ARTWORK: a tick behind the opaque box would simply read as unchecked.
+    local check = row:CreateTexture(nil, "OVERLAY")
     check:SetSize(MENU_CHECK, MENU_CHECK)
     check:SetPoint("LEFT", row, "LEFT", 0, 0)
     check:set_atlas("checkmark-minimal")
     row.Check = check
+
+    local line = row:CreateTexture(nil, "ARTWORK")
+    line:SetTexture("Interface\\Buttons\\WHITE8X8")
+    line:SetHeight(1)
+    line:SetPoint("LEFT", row, "LEFT", 0, 0)
+    line:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    line:SetVertexColor(1, 1, 1, 0.18)
+    line:Hide()
+    row.Line = line
 
     local text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     text:SetPoint("LEFT", row, "LEFT", MENU_TEXT_X, 0)
@@ -174,6 +194,13 @@ local function acquireMenuRow(menu, i)
 
     row:RegisterForClicks("LeftButtonUp")
     row:SetScript("OnClick", function(self)
+        -- A checkbox stays open and redraws: closing on the tick would hide the state it just set.
+        if self._keepOpen then
+            if self._func then self._func() end
+            menu:Populate()
+            PlaySound("igMainMenuOptionCheckBoxOn")
+            return
+        end
         closeFilterMenu()
         if self._func then self._func() end
         PlaySound("igMainMenuOptionCheckBoxOn")
@@ -207,26 +234,38 @@ local function buildFilterMenu(btn, name, build)
 
     function menu:Populate()
         local entries = build() or {}
-        local widest = 0
+        local widest, used = 0, 0
         for i = 1, #entries do
             local entry = entries[i]
             local row = acquireMenuRow(self, i)
+            local divider = entry.divider and true or false
+
+            row.Line:SetShownReq(divider)
+            row.Text:SetShownReq(not divider)
+            row.Box:SetShownReq(not divider and entry.isCheckbox)
+            row.Check:SetShownReq(not divider and entry.checked)
+            row:EnableMouse(not divider)
+            row:SetHeight(divider and MENU_DIVIDER_H or MENU_ROW_H)
+
             row.Text:SetText(entry.text or "")
-            if entry.checked then row.Check:Show() else row.Check:Hide() end
-            row._func = entry.func
-            local y = -(MENU_INSET + (i - 1) * MENU_ROW_H)
+            row._func = divider and nil or entry.func
+            -- Radios pick one and are done; a checkbox is independent, so it keeps the menu up.
+            row._keepOpen = entry.isCheckbox and true or false
+
+            local y = -(MENU_INSET + used)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", self, "TOPLEFT", MENU_INSET, y)
             row:SetPoint("TOPRIGHT", self, "TOPRIGHT", -MENU_EDGE, y)
             row:Show()
-            widest = math.max(widest, row.Text:GetStringWidth() or 0)
+            used = used + (divider and MENU_DIVIDER_H or MENU_ROW_H)
+            if not divider then widest = math.max(widest, row.Text:GetStringWidth() or 0) end
         end
         for i = #entries + 1, #self.Rows do self.Rows[i]:Hide() end
 
         self:SetSize(
             math.max(MENU_MIN_W,
                 math.ceil(widest) + MENU_TEXT_X + MENU_INSET + MENU_EDGE + MENU_ROW_PAD),
-            MENU_INSET * 2 + math.max(1, #entries) * MENU_ROW_H)
+            MENU_INSET * 2 + math.max(MENU_ROW_H, used))
     end
 
     return menu
