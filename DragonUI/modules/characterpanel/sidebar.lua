@@ -9,7 +9,7 @@ local EXPANDED_WIDTH = 551
 -- Resting widths only; the real ones are derived per relayout from the viewport.
 local HEADER_W, HEADER_H = 197, 40
 local ROW_W, ROW_H = 191, 15
-local ROW_INSET = 3
+local ROW_INSET = 2
 
 -- Breathing room: two collapsed bars flush together read as one wider block.
 local SECTION_GAP = 3
@@ -260,9 +260,13 @@ local function buildStatRow(parent, name, isEven, ownerStatIndex)
     row:SetSize(ROW_W, ROW_H)
 
     -- A flat neutral wash, not the Line-Bounce strip: that art is brown and tints every other row.
+    -- Left-anchored and widened past the row's own right edge rather than centered: the row stops
+    -- ROW_INSET short of the scroll viewport, which reads closer to the left border than to the
+    -- scrollbar. Bleeding the wash out to the viewport's clip edge (bleeding further gets clipped
+    -- by the ScrollFrame) puts it the same distance from the scrollbar as the row is from the left.
     local bg = row:CreateTexture(nil, "BACKGROUND")
-    bg:SetPoint("CENTER", row, "CENTER", 0, 0)
-    bg:SetSize(ROW_W, ROW_H)
+    bg:SetPoint("LEFT", row, "LEFT", 0, 0)
+    bg:SetSize(ROW_W + ROW_INSET, ROW_H)
     bg:SetTexture(1, 1, 1)
     bg:SetAlpha(0.05)
     if not isEven then bg:Hide() end
@@ -271,8 +275,8 @@ local function buildStatRow(parent, name, isEven, ownerStatIndex)
     -- Sublevel above the zebra wash, so the glow reads the same on odd and even rows.
     if ownerStatIndex then
         local hl = row:CreateTexture(nil, "BACKGROUND", nil, 1)
-        hl:SetPoint("CENTER", row, "CENTER", 0, 0)
-        hl:SetSize(ROW_W, ROW_H)
+        hl:SetPoint("LEFT", row, "LEFT", 0, 0)
+        hl:SetSize(ROW_W + ROW_INSET, ROW_H)
         hl:SetTexture(1, 1, 1)
         hl:Hide()
         row.Highlight = hl
@@ -714,8 +718,8 @@ function CP.RelayoutSidebar()
                 local h = row:GetHeight() or ROW_H
                 -- Sized even while hidden, or a row collapsed at the last width returns with the old one.
                 row:SetWidth(rowWidth)
-                if row.Bg then row.Bg:SetWidth(rowWidth) end
-                if row.Highlight then row.Highlight:SetWidth(rowWidth) end
+                if row.Bg then row.Bg:SetWidth(rowWidth + ROW_INSET) end
+                if row.Highlight then row.Highlight:SetWidth(rowWidth + ROW_INSET) end
                 if offset >= revealed then
                     row:Hide()
                 else
