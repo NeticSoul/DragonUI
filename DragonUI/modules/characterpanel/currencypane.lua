@@ -19,6 +19,33 @@ local MONEY_RIGHT_PAD = 5
 local ARENA_ICON = "Interface\\PVPFrame\\PVP-ArenaPoints-Icon"
 
 local pane, scroll, content
+
+-- Retail filters by categories Wrath has no concept of. SetCurrencyUnused DOES exist here, but this
+-- pane offers no way to mark anything, so hiding what you hold none of is the filter that is usable.
+local filterButton
+
+local function hideEmpty() return CP:Config().currency_hide_empty and true or false end
+
+local function updateSelection()
+    if filterButton then
+        filterButton:SetSelection(hideEmpty() and addon.L["Hide empty"] or addon.L["All"])
+    end
+end
+
+local function filterMenuEntries()
+    local function entry(text, wanted)
+        return {
+            text = text,
+            checked = hideEmpty() == wanted,
+            func = function()
+                CP:Config().currency_hide_empty = wanted
+                updateSelection()
+                if CP.RefreshCurrencyPane then CP.RefreshCurrencyPane() end
+            end,
+        }
+    end
+    return { entry(addon.L["All"], false), entry(addon.L["Hide empty"], true) }
+end
 local headers, entries
 local flat = {}
 -- Declared here because toggleHeader hands it to the reveal driver, and it is defined further down.
@@ -177,7 +204,9 @@ local function refresh()
     for i = 1, (GetCurrencyListSize and GetCurrencyListSize() or 0) do
         local name, isHeader, isExpanded, _, isWatched, count,
               extraCurrencyType, icon, itemID = GetCurrencyListInfo(i)
-        if name and name ~= "" then
+        -- Headers always stay: dropping one strands its currencies with no way to expand back.
+        local hidden = hideEmpty() and not isHeader and (count or 0) <= 0
+        if name and name ~= "" and not hidden then
             flat[#flat + 1] = {
                 kind = isHeader and "header" or "entry",
                 index = i, name = name, isCollapsed = not isExpanded,
@@ -235,6 +264,14 @@ local function build()
     pane:SetAllPoints(cf.Inset)
     pane:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 5)
     pane:Hide()
+
+    if CP.CreateFilterDropdown then
+        local cf = _G.CharacterFrame
+        filterButton = CP.CreateFilterDropdown(pane, "DragonUICurrencyFilter", CP.FILTER_DROPDOWN_W, filterMenuEntries)
+        filterButton:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 20)
+        CP.AnchorFilterDropdown(pane, filterButton)
+        updateSelection()
+    end
 
     scroll, content = CP.BuildListPane(pane, "DragonUICurrencyScroll", ROW_H, repaint, MONEY_H)
     headers = CP.NewRowPool(content, function(parent)

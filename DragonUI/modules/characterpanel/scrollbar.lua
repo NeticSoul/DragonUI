@@ -4,9 +4,15 @@ local CP = addon.CharacterPanel
 -- Retail's minimal scrollbar over 3.3.5a's UIPanelScrollFrameTemplate slider: an 8px track with
 -- 8x8 caps instead of Blizzard's 16px carved groove and chunky arrow buttons.
 local BAR_W = 8
+local THUMB_OVERLAP = 1
 -- Keeps the track clear of the pane trim at both ends.
 local TRACK_INSET = 7
-local BAR_X_INSET = -1
+-- Retail's MinimalScrollBar holds its Track 19px off each end and parks a 17x11 stepper there.
+local ARROW_SPACE = 19
+local ARROW_W, ARROW_H = 17, 11
+-- The stats sidebar leaves an 11px gutter and its rows run right up to it, so this stays where it
+-- always was. NOT the list panes' -9: those pull their content in by 22 first, the sidebar does not.
+local BAR_X_INSET = -2
 
 local function stripRegions(frame)
     if not frame then return end
@@ -17,17 +23,25 @@ local function stripRegions(frame)
     end
 end
 
+-- Zero unless this bar carries steppers: the stats sidebar has no room for them, so its track runs
+-- the full height the way it did before they existed.
+local function arrowSpace(bar)
+    return bar._duiSteppers and ARROW_SPACE or 0
+end
+
 local function buildTrack(bar)
     if bar._duiTrack then return end
     bar._duiTrack = true
 
+    local gap = arrowSpace(bar)
+
     local top = bar:CreateTexture(nil, "BACKGROUND")
     top:set_atlas("minimal-scrollbar-track-top", true)
-    top:SetPoint("TOP", bar, "TOP", 0, 0)
+    top:SetPoint("TOP", bar, "TOP", 0, -gap)
 
     local bottom = bar:CreateTexture(nil, "BACKGROUND")
     bottom:set_atlas("minimal-scrollbar-track-bottom", true)
-    bottom:SetPoint("BOTTOM", bar, "BOTTOM", 0, 0)
+    bottom:SetPoint("BOTTOM", bar, "BOTTOM", 0, gap)
 
     local middle = bar:CreateTexture(nil, "BACKGROUND")
     middle:set_atlas("!minimal-scrollbar-track-middle")
@@ -57,17 +71,20 @@ local function buildThumb(bar, thumb)
     bottom:set_atlas("minimal-scrollbar-thumb-bottom", true)
     bottom:SetPoint("BOTTOM", grip, "BOTTOM", 0, 0)
 
-    -- A real 3-slice: run full height under the caps, the middle showed through their margins.
-    local mid = bar:CreateTexture(nil, "ARTWORK")
+    -- Under the caps and a pixel into each. Butted edge to edge, the middle and the cap round their
+    -- shared edge independently once the UI scale is not 1, and a hairline of track blinks through
+    -- as the grip travels. Only one pixel, so it never reaches the rounded ends and show through.
+    local mid = bar:CreateTexture(nil, "ARTWORK", nil, -1)
     mid:set_atlas("minimal-scrollbar-thumb-middle")
     mid:SetWidth(BAR_W)
-    mid:SetPoint("TOP", top, "BOTTOM", 0, 0)
-    mid:SetPoint("BOTTOM", bottom, "TOP", 0, 0)
+    mid:SetPoint("TOP", top, "BOTTOM", 0, THUMB_OVERLAP)
+    mid:SetPoint("BOTTOM", bottom, "TOP", 0, -THUMB_OVERLAP)
 
     bar._duiGrip = grip
 end
 
--- The arrows read as clutter; Blizzard still needs the buttons, so blank them rather than remove.
+-- Blanked rather than removed: Blizzard's template still drives these buttons, and a bar with no
+-- gutter for steppers has nowhere to put them without covering its own pane.
 local function hideArrow(button)
     if not button or button._duiArrow then return end
     button._duiArrow = true
@@ -81,11 +98,37 @@ local function hideArrow(button)
     button:EnableMouse(false)
 end
 
+-- Blizzard's carved arrows swapped for the minimal pair, sized and parked where retail puts them.
+local function skinArrow(button, bar, atlas, point)
+    if not button or button._duiArrow then return end
+    button._duiArrow = true
+
+    for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture",
+                              "GetDisabledTexture", "GetHighlightTexture" }) do
+        local tex = button[getter] and button[getter](button)
+        if tex then tex:SetTexture(nil) end
+    end
+
+    button:SetSize(ARROW_W, ARROW_H)
+    button:ClearAllPoints()
+    button:SetPoint(point, bar, point, 0, 0)
+
+    -- Its own texture rather than the button's: the template re-asserts those on every state change.
+    local art = button:CreateTexture(nil, "ARTWORK")
+    art:set_atlas(atlas, true)
+    art:SetPoint("CENTER", button, "CENTER", 0, 0)
+    button._duiArt = art
+end
+
 local MIN_THUMB_H = 20
 
 -- WoW maps a slider's value across (track - thumb), so a thumb that fills its track leaves nothing
 -- to divide by and the drag reads backwards. This is the travel the thumb always leaves behind.
 local MIN_TRAVEL = 12
+
+local function snap(v)
+    return math.floor(v + 0.5)
+end
 
 -- Blizzard's thumb is a fixed 24px whatever the list length; size it to the visible fraction.
 -- Places the grip from the slider's value rather than following the real thumb, so nothing depends
@@ -94,7 +137,8 @@ local function syncThumb(scroll, bar)
     local grip = bar._duiGrip
     if not grip then return end
     local viewport = scroll:GetHeight() or 0
-    local trackH = bar:GetHeight() or 0
+    -- The track is what the grip travels, and the steppers own a slice of each end of the bar.
+    local trackH = (bar:GetHeight() or 0) - 2 * arrowSpace(bar)
     if viewport <= 0 or trackH <= 0 then return end
 
     local minV, maxV = bar:GetMinMaxValues()
@@ -104,9 +148,9 @@ local function syncThumb(scroll, bar)
     -- Nothing to scroll: the grip fills the track.
     if range <= 0 then
         bar._duiTravel = 0
-        grip:SetHeight(trackH)
+        grip:SetHeight(snap(trackH))
         grip:ClearAllPoints()
-        grip:SetPoint("TOP", bar, "TOP", 0, 0)
+        grip:SetPoint("TOP", bar, "TOP", 0, -arrowSpace(bar))
         return
     end
 
@@ -114,13 +158,17 @@ local function syncThumb(scroll, bar)
     local h = trackH * (viewport / (viewport + range))
     if h < math.min(MIN_THUMB_H, maxGrip) then h = math.min(MIN_THUMB_H, maxGrip) end
     if h > maxGrip then h = maxGrip end
+    -- Both of these come out of a ratio. The caps are placed at their native size, so half a pixel
+    -- of grip leaves the bottom one meeting the stretched middle across a seam.
+    h = snap(h)
 
     local travel = trackH - h
     bar._duiTravel = travel
 
     grip:SetHeight(h)
     grip:ClearAllPoints()
-    grip:SetPoint("TOP", bar, "TOP", 0, -travel * ((bar:GetValue() - minV) / range))
+    grip:SetPoint("TOP", bar, "TOP", 0,
+        -(arrowSpace(bar) + snap(travel * ((bar:GetValue() - minV) / range))))
 end
 
 -- WoW maps a thumb drag through (track - thumb) inside C, and on short lists that mapping has come
@@ -129,10 +177,11 @@ end
 local dragger = CreateFrame("Frame")
 dragger:Hide()
 
+-- The one seam the drag math reads its origin through, so insetting it here is all the steppers cost.
 local function trackTopOf(bar)
     local top = bar:GetTop()
     if not top then return nil end
-    return top
+    return top - arrowSpace(bar)
 end
 
 local function cursorTopIn(bar)
@@ -236,12 +285,14 @@ end
 
 -- `host` is the pane the bar sits flush inside; the template would hang it outside the scroll frame.
 -- The insets drop it below or lift it above whatever occupies that pane's top and bottom.
-function CP.ReskinScrollBar(scroll, host, topInset, xInset, bottomInset)
+function CP.ReskinScrollBar(scroll, host, topInset, xInset, bottomInset, withSteppers)
     if not scroll or not scroll.GetName then return end
     local name = scroll:GetName()
     local bar = _G[name .. "ScrollBar"]
     if not bar or bar._duiReskinned then return end
     bar._duiReskinned = true
+    -- Opt in: only the list panes leave a gutter wide enough for steppers to sit in.
+    bar._duiSteppers = withSteppers and true or false
 
     stripRegions(bar)
     bar:SetWidth(BAR_W)
@@ -254,8 +305,14 @@ function CP.ReskinScrollBar(scroll, host, topInset, xInset, bottomInset)
     buildTrack(bar)
     buildThumb(bar, thumb)
 
-    hideArrow(_G[name .. "ScrollBarScrollUpButton"])
-    hideArrow(_G[name .. "ScrollBarScrollDownButton"])
+    local up, down = _G[name .. "ScrollBarScrollUpButton"], _G[name .. "ScrollBarScrollDownButton"]
+    if bar._duiSteppers then
+        skinArrow(up, bar, "minimal-scrollbar-arrow-top", "TOP")
+        skinArrow(down, bar, "minimal-scrollbar-arrow-bottom", "BOTTOM")
+    else
+        hideArrow(up)
+        hideArrow(down)
+    end
 
     wireDrag(bar, host)
     hookThumbSync(scroll, bar)

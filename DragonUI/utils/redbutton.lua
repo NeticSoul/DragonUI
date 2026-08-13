@@ -51,6 +51,16 @@ local function apply(btn, state)
     -- Mirrored: the right cap samples the same slice right-to-left.
     skin.right:SetTexCoord(rect.cap[2], rect.cap[1], rect.cap[3], rect.cap[4])
     skin.middle:SetTexCoord(rect.mid[1], rect.mid[2], rect.mid[3], rect.mid[4])
+
+    -- The sheet's disabled row is still red, just darker, so a dead button still reads as clickable.
+    -- Draining the colour is what makes it read as unavailable.
+    local off = (state or stateOf(btn)) == "DISABLED"
+    local shade = off and 0.55 or 1
+    for _, tex in ipairs({ skin.left, skin.right, skin.middle }) do
+        tex:SetDesaturated(off)
+        tex:SetVertexColor(shade, shade, shade)
+    end
+
     resize(btn)
 end
 

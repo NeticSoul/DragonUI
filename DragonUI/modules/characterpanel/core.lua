@@ -49,6 +49,13 @@ function CP:Enabled()
     return addon:IsModuleEnabled("characterpanel")
 end
 
+-- Asked rather than assumed: honorpane moves the secure companion buttons out of the window's tree,
+-- which is the only thing that made it protected, so resizing is free unless they ever come back.
+function CP:CanLayout()
+    local cf = _G.CharacterFrame
+    return cf and not (InCombatLockdown() and cf:IsProtected())
+end
+
 -- Every builder registers here; boot runs them in order once CharacterFrame exists.
 CP._builders = {}
 
