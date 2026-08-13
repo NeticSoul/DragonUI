@@ -7,31 +7,17 @@ local INSET_RIGHT = -6
 local INSET_BOTTOM = 4
 local INSET_ATTIC = -60
 
--- Retail's InsetFrameTemplate ground, shipped with the addon: the near-black marble is what makes
--- a pane read as recessed against the body rock, and it stays dark whichever body the cog picks.
-local MARBLE = addon._dir .. "UI\\ui-background-marble"
-
-local function decorate(inset)
-    if inset._duiDecorated then return end
-    inset._duiDecorated = true
-
-    local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -5)
-    bg:SetTexture(MARBLE, "REPEAT", "REPEAT")
-    bg:SetHorizTile(true)
-    bg:SetVertTile(true)
-    bg:SetAllPoints(inset)
-    inset.Bg = bg
-end
-
--- Retail's CharacterFrame paints this across its Inset, so the marble underneath never shows on that
--- side. Atlas first, then the anchors: set_atlas freezes a size it reads off an already-sized region.
+-- Sized from the Inset, not self-queried: right after Show(), this texture's own GetSize() lags.
 local function paintPanelGround(inset)
-    if inset._duiPanelGround then return end
-    inset._duiPanelGround = true
-
-    local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -4)
+    if not inset._duiPanelGroundTex then
+        inset._duiPanelGroundTex = inset:CreateTexture(nil, "BACKGROUND", nil, -4)
+    end
+    local bg = inset._duiPanelGroundTex
     bg:set_atlas("character-panel-background")
-    bg:SetAllPoints(inset)
+    bg:ClearAllPoints()
+    bg:SetPoint("TOPLEFT", inset, "TOPLEFT", 0, 0)
+    bg:SetWidth(inset:GetWidth())
+    bg:SetHeight(inset:GetHeight())
 end
 
 local function buildInset()
@@ -47,8 +33,6 @@ local function buildInset()
     -- but below the tab subframes, which chrome.lua raises to make room.
     cf.Inset = inset
 
-    decorate(inset)
-    -- Only this one: the sidebar carries no such override in retail and keeps the bare marble.
     paintPanelGround(inset)
     return inset
 end
@@ -68,7 +52,6 @@ local function buildInsetRight()
     insetRight:Hide()
     cf.InsetRight = insetRight
 
-    decorate(insetRight)
     return insetRight
 end
 
@@ -99,11 +82,19 @@ local function setInsetForTab(tabName)
         cf:SetWidth(CP.VANILLA_WIDTH)
         cf:SetHeight(CP.VANILLA_HEIGHT)
     end
+
+    -- Tab switches resize the Inset without CharacterFrame re-firing OnShow, so repaint here too.
+    paintPanelGround(inset)
 end
 
 CP.BuildInset = buildInset
 CP.BuildInsetRight = buildInsetRight
 CP.SetInsetForTab = setInsetForTab
+
+function CP.RepaintPanelGround()
+    local cf = _G.CharacterFrame
+    if cf and cf.Inset then paintPanelGround(cf.Inset) end
+end
 
 CP:RegisterBuilder("insets", function()
     buildInset()
