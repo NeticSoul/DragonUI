@@ -514,6 +514,7 @@ L["None of your favorites can be used here."] = true
 L["Nothing you own can be used here."] = true
 L["Right-click for more options"] = true
 L["Nothing collected yet."] = true
+L["No pet active"] = true
 L["Not collected yet"] = true
 L["Collected"] = true
 L["Not Collected"] = true

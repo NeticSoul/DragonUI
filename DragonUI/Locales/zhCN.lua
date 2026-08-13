@@ -587,6 +587,7 @@ L["None of your favorites can be used here."] = "你的收藏没有一个能在�
 L["Nothing you own can be used here."] = "你拥有的没有一个能在此使用。"
 L["Right-click for more options"] = "右键查看更多选项"
 L["Nothing collected yet."] = "尚未收集任何内容。"
+L["No pet active"] = "无活动宠物"
 L["Not collected yet"] = "尚未收集"
 L["Collected"] = "已收集"
 L["Not Collected"] = "未收集"

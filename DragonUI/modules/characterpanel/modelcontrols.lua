@@ -20,6 +20,8 @@ local PAN_SPEED = 0.004
 local DEFAULT_ROTATION = 0.61
 -- Matches the collections model, so both windows spin at the same rate under the same drag.
 local ROTATION_SPEED = 0.012
+-- Radians per second while a rotate button is held; roughly a full turn in four seconds.
+local ROTATE_PER_SECOND = 1.6
 
 local bar, faded, controls, buttons
 
@@ -322,6 +324,94 @@ function CP.RefreshModelControls()
     if not bar then return end
     layoutControls()
     bar:Hide()
+end
+
+CP.StyleModelButton = styleButton
+
+-- Its own drag frame and its own buttons: the character strip's are bound to CharacterModelFrame by
+-- closure, so sharing them would leave whichever model was wired last driving both.
+function CP.WirePetModelControls(model)
+    if not model or model._duiPetControls then return end
+    model._duiPetControls = true
+    model.rotation = DEFAULT_ROTATION
+    model:EnableMouse(true)
+    model:EnableMouseWheel(true)
+
+    local rotator = CreateFrame("Frame", nil, model)
+    rotator:Hide()
+    -- Polled, not taken from OnMouseUp: releasing with the cursor off the model never delivers it.
+    rotator:SetScript("OnUpdate", function(self)
+        if not IsMouseButtonDown("LeftButton") then self:Hide(); return end
+        local x = GetCursorPosition()
+        model.rotation = (model.rotation or DEFAULT_ROTATION) + (x - (self.x or x)) * ROTATION_SPEED
+        self.x = x
+        model:SetRotation(model.rotation)
+    end)
+
+    -- Its own frame, not the character strip's panner: that one is bound to CharacterModelFrame by
+    -- closure, so sharing it would leave whichever model was wired last taking both drags.
+    local panner = CreateFrame("Frame", nil, model)
+    panner:Hide()
+    panner:SetScript("OnUpdate", function(self)
+        if not IsMouseButtonDown("RightButton") then self:Hide(); return end
+        local cx, cy = GetCursorPosition()
+        local dx, dy = cx - (self.x or cx), cy - (self.y or cy)
+        self.x, self.y = cx, cy
+        -- Screen x maps to the model's lateral axis, screen y to its vertical one.
+        applyPan(model, dx * PAN_SPEED, dy * PAN_SPEED)
+    end)
+
+    model:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
+            rotator.x = GetCursorPosition()
+            rotator:Show()
+        elseif button == "RightButton" then
+            panner.x, panner.y = GetCursorPosition()
+            panner:Show()
+        end
+    end)
+    model:SetScript("OnMouseUp", function() rotator:Hide(); panner:Hide() end)
+    model:SetScript("OnHide", function() rotator:Hide(); panner:Hide() end)
+    model:SetScript("OnMouseWheel", function(_, delta) applyZoom(model, delta * ZOOM_STEP) end)
+
+    local strip = CreateFrame("Frame", nil, model)
+    strip:SetHeight(BTN_SIZE)
+    strip:SetPoint("BOTTOM", model, "BOTTOM", 0, 2)
+
+    -- Held, not clicked: Blizzard's own hold-to-rotate lives in Model_OnUpdate, which finds its
+    -- buttons by GLOBAL NAME and so can never drive ours. This is that loop, per button.
+    local spinner = CreateFrame("Frame", nil, model)
+    spinner:Hide()
+    spinner:SetScript("OnUpdate", function(self, elapsed)
+        model.rotation = (model.rotation or DEFAULT_ROTATION) + self.step * elapsed
+        model:SetRotation(model.rotation)
+    end)
+    model:HookScript("OnHide", function() spinner:Hide() end)
+
+    local order = {}
+    local function add(glyph, step)
+        local btn = CreateFrame("Button", nil, strip)
+        styleButton(btn, glyph)
+        btn:RegisterForClicks("LeftButtonDown", "LeftButtonUp")
+        btn:SetScript("OnMouseDown", function()
+            spinner.step = step
+            spinner:Show()
+        end)
+        -- Also on leave: releasing off the button never delivers OnMouseUp, and it would spin forever.
+        btn:SetScript("OnMouseUp", function() spinner:Hide() end)
+        btn:SetScript("OnLeave", function() spinner:Hide() end)
+        order[#order + 1] = btn
+    end
+
+    add("common-icon-rotateright", -ROTATE_PER_SECOND)
+    add("common-icon-rotateleft", ROTATE_PER_SECOND)
+
+    local step = BTN_SIZE - BTN_OVERLAP
+    strip:SetWidth(step * (#order - 1) + BTN_SIZE)
+    for i, btn in ipairs(order) do
+        btn:SetPoint("LEFT", strip, "LEFT", (i - 1) * step, 0)
+    end
+    return strip
 end
 
 CP:RegisterBuilder("modelcontrols", build)

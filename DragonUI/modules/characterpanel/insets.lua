@@ -73,7 +73,7 @@ local function setInsetForTab(tabName)
     elseif CP.OWNED_TABS[tabName] then
         -- No sidebar here, so the inset follows the frame's own right edge instead.
         inset:SetPoint("BOTTOMRIGHT", cf, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
-        cf:SetWidth(CP.LIST_WIDTH)
+        cf:SetWidth(CP.WidthForTabs and CP.WidthForTabs(CP.LIST_WIDTH) or CP.LIST_WIDTH)
         cf:SetHeight(CP.PANEL_HEIGHT)
     else
         inset:SetPoint("BOTTOMRIGHT", cf, "BOTTOMLEFT", CP.PANEL_WIDTH + INSET_RIGHT, INSET_BOTTOM)

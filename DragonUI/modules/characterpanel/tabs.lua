@@ -1,13 +1,14 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- Six, not Blizzard's five: honorpane.lua adds a Honor tab at the end and retires the pet one.
+-- Six, not Blizzard's five: honorpane.lua adds a Honor tab at the end.
 local NUM_TABS = 6
 
 -- Blizzard's tab order is NOT CHARACTERFRAME_SUBFRAMES order: 3 is Reputation, 4 is Skills. Slot 2
--- is empty -- pets and mounts have their own window, so the chain skips tab 2 by visibility.
+-- keeps its own meaning -- petpane.lua takes it over and shows it only while there is a pet.
 local TAB_SUBFRAME = {
     [1] = "PaperDollFrame",
+    [2] = "DragonUIPetFrame",
     [3] = "ReputationFrame",
     [4] = "SkillFrame",
     [5] = "TokenFrame",
@@ -213,6 +214,27 @@ local function rechain()
             prev = t
         end
     end
+end
+
+-- Tab widths come from the TRANSLATED label, so a wider panel cannot be a constant: six tabs fit
+-- in 430 in English and overflow it in German. Measured, the strip is right in every locale.
+local TAB_RIGHT_MARGIN = 6
+
+function CP.TabStripWidth()
+    local total, first = TAB_START_X, true
+    for i = 1, NUM_TABS do
+        local t = tab(i)
+        if t and t:IsShown() then
+            if not first then total = total + TAB_GAP end
+            total = total + (t:GetWidth() or 0)
+            first = false
+        end
+    end
+    return total
+end
+
+function CP.WidthForTabs(base)
+    return math.max(base or 0, CP.TabStripWidth() + TAB_RIGHT_MARGIN)
 end
 
 function CP.TabStripRight()

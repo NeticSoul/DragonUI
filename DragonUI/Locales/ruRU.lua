@@ -579,6 +579,7 @@ L["None of your favorites can be used here."] = "Ни одного из избр
 L["Nothing you own can be used here."] = "Здесь нельзя использовать ничего из вашей коллекции."
 L["Right-click for more options"] = "ПКМ — больше действий"
 L["Nothing collected yet."] = "Пока ничего не собрано."
+L["No pet active"] = "Нет активного питомца"
 L["Not collected yet"] = "Ещё не получено"
 L["Collected"] = "Собрано"
 L["Not Collected"] = "Не собрано"

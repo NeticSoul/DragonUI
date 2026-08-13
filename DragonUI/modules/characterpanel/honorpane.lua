@@ -271,45 +271,9 @@ local function buildTab()
     if CP.RechainTabs then CP.RechainTabs() end
 end
 
--- The pet tab goes away here because this is what replaces it. The frame is pinned shut too:
--- `hidden` is what ToggleCharacter checks, which the unit popup and TOGGLECHARACTER3 both go through.
-local function removePetTab()
-    local tab = _G.CharacterFrameTab2
-    if not tab or tab._duiRetired then return end
-    tab._duiRetired = true
-    tab:Hide()
-    tab.Show = tab.Hide
-
-    local pet = _G.PetPaperDollFrame
-    if pet then pet.hidden = true end
-
-    -- Secure CompanionButtons live here; protection climbs to parents and reached the whole panel.
-    local companions = _G.PetPaperDollFrameCompanionFrame
-    if companions and not companions._duiRetired then
-        companions._duiRetired = true
-        -- A hidden holder, never UIParent: PetPaperDollFrame_UpdateTabs still Shows this off pet events.
-        local holder = CreateFrame("Frame", nil, UIParent)
-        holder:Hide()
-        companions:SetParent(holder)
-        companions:ClearAllPoints()
-        companions:SetPoint("TOPLEFT", holder, "TOPLEFT")
-    end
-
-    -- PetPaperDollFrame_UpdateIsAvailable clears `hidden` and re-anchors CharacterFrameTab3 onto
-    -- the retired tab on every pet change, over-constraining a tab our chain has already placed.
-    if _G.PetPaperDollFrame_UpdateIsAvailable then
-        hooksecurefunc("PetPaperDollFrame_UpdateIsAvailable", function()
-            if _G.PetPaperDollFrame then _G.PetPaperDollFrame.hidden = true end
-            if CP.RechainTabs then CP.RechainTabs() end
-        end)
-    end
-end
-
 local function build()
     local cf = _G.CharacterFrame
     if pane or not cf or not cf.Inset then return end
-
-    removePetTab()
 
     pane = CreateFrame("Frame", FRAME_NAME, cf)
     pane:SetAllPoints(cf)

@@ -577,6 +577,7 @@ L["None of your favorites can be used here."] = "여기서 사용할 수 있는 
 L["Nothing you own can be used here."] = "여기서 사용할 수 있는 것이 없습니다."
 L["Right-click for more options"] = "오른쪽 클릭으로 추가 옵션"
 L["Nothing collected yet."] = "아직 수집한 것이 없습니다."
+L["No pet active"] = "활성 소환수 없음"
 L["Not collected yet"] = "아직 수집하지 않음"
 L["Collected"] = "수집함"
 L["Not Collected"] = "미수집"

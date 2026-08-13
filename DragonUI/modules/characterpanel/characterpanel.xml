@@ -37,6 +37,8 @@
 	<Script file="currencypane.lua"/>
 	<!-- after tabs.lua: it adds a sixth tab and rechains the strip through CP.RechainTabs. -->
 	<Script file="honorpane.lua"/>
+	<!-- after modelcontrols.lua: its pet model borrows the rotate strip's button skin. -->
+	<Script file="petpane.lua"/>
 	<!-- after chrome.lua: reuses its close button helper. -->
 	<Script file="reputationdetail.lua"/>
 	<Script file="equipment.lua"/>

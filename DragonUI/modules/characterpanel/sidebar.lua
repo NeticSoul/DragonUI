@@ -1000,7 +1000,10 @@ local function collapse(keepWidth)
     local cf = _G.CharacterFrame
     if not cf or not CP:CanLayout() or not CP:Enabled() then return end
     -- This runs after SetInsetForTab, so forcing the narrow width here would silently undo it.
-    if not keepWidth then cf:SetWidth(CP.PANEL_WIDTH) end
+    -- Never below what the tab strip needs: a pet tab makes six, which overflows the bare panel.
+    if not keepWidth then
+        cf:SetWidth(CP.WidthForTabs and CP.WidthForTabs(CP.PANEL_WIDTH) or CP.PANEL_WIDTH)
+    end
     if cf.InsetRight then cf.InsetRight:Hide() end
 end
 

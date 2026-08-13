@@ -4,16 +4,18 @@ local CharacterPanelModule = { initialized = false, applied = false }
 addon.CharacterPanel = addon.CharacterPanel or {}
 local CP = addon.CharacterPanel
 
--- No PetPaperDollFrame: honorpane.lua retires its tab and pins it shut, so it can never be the
+-- No PetPaperDollFrame: petpane.lua pins it shut and takes over its tab, so it can never be the
 -- active tab. It stays in Blizzard's own CHARACTERFRAME_SUBFRAMES, which is what keeps it hidden.
 CP.SUBFRAMES = {
-    "PaperDollFrame", "SkillFrame", "ReputationFrame", "TokenFrame", "DragonUIHonorFrame",
+    "PaperDollFrame", "DragonUIPetFrame", "SkillFrame", "ReputationFrame", "TokenFrame",
+    "DragonUIHonorFrame",
 }
 
 -- Tabs whose contents we draw ourselves, so they get the retail frame and Blizzard's own widgets
 -- are hidden wholesale. Everything else keeps Blizzard's layout and window size.
 CP.OWNED_TABS = {
     PaperDollFrame = true,
+    DragonUIPetFrame = true,
     SkillFrame = true,
     ReputationFrame = true,
     TokenFrame = true,

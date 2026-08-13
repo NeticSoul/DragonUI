@@ -578,6 +578,7 @@ L["None of your favorites can be used here."] = "Keiner Eurer Favoriten lässt s
 L["Nothing you own can be used here."] = "Nichts aus Eurem Besitz lässt sich hier benutzen."
 L["Right-click for more options"] = "Rechtsklick für weitere Optionen"
 L["Nothing collected yet."] = "Noch nichts gesammelt."
+L["No pet active"] = "Kein Begleiter aktiv"
 L["Not collected yet"] = "Noch nicht gesammelt"
 L["Collected"] = "Gesammelt"
 L["Not Collected"] = "Nicht gesammelt"
