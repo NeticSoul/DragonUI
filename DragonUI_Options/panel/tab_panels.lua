@@ -184,6 +184,58 @@ local function BuildCharacterSubTab(scroll)
         disabled = function() return not IsEnabled("characterpanel") end,
         requiresReload = false,
     })
+
+    C:AddDescription(statsSection, LO["Set which stat and which combat panel lead the list:"])
+
+    C:AddDropdown(statsSection, {
+        label = LO["Highlight Main Stat"],
+        desc = LO["The attribute your class is built around."],
+        values = {
+            auto = LO["Auto (by class)"],
+            off = LO["Off"],
+            STRENGTH = _G.SPELL_STAT1_NAME,
+            AGILITY = _G.SPELL_STAT2_NAME,
+            STAMINA = _G.SPELL_STAT3_NAME,
+            INTELLECT = _G.SPELL_STAT4_NAME,
+            SPIRIT = _G.SPELL_STAT5_NAME,
+        },
+        getFunc = function()
+            return GetModuleField("characterpanel", "stat_highlight") or "auto"
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("characterpanel").stat_highlight = val
+        end,
+        callback = function()
+            local CP = addon.CharacterPanel
+            if CP and CP.RefreshSidebar then CP.RefreshSidebar() end
+        end,
+        disabled = function() return not IsEnabled("characterpanel") end,
+        requiresReload = false,
+    })
+
+    C:AddDropdown(statsSection, {
+        label = LO["Combat Statistics"],
+        desc = LO["Which one leads the list: Melee, Ranged, or Spell."],
+        values = {
+            auto = LO["Auto (by class)"],
+            off = LO["Off"],
+            PLAYERSTAT_MELEE_COMBAT = _G.PLAYERSTAT_MELEE_COMBAT,
+            PLAYERSTAT_RANGED_COMBAT = _G.PLAYERSTAT_RANGED_COMBAT,
+            PLAYERSTAT_SPELL_COMBAT = _G.PLAYERSTAT_SPELL_COMBAT,
+        },
+        getFunc = function()
+            return GetModuleField("characterpanel", "combat_order") or "auto"
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("characterpanel").combat_order = val
+        end,
+        callback = function()
+            local CP = addon.CharacterPanel
+            if CP and CP.ApplyStatsAutoSort then CP.ApplyStatsAutoSort() end
+        end,
+        disabled = function() return not IsEnabled("characterpanel") end,
+        requiresReload = false,
+    })
 end
 
 -- ============================================================================

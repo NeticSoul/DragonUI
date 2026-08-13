@@ -26,6 +26,115 @@ local SECTIONS = {
 
 local RESIST_SCHOOLS = { 2, 3, 4, 5, 6 }
 
+-- statIndex matches UnitStat / PaperDollFrame_SetStat's own numbering: 1 Str, 2 Agi, 3 Sta, 4 Int, 5 Spirit.
+-- Classes whose class-defining stat and combat category never change across their 3 talent trees.
+local CLASS_PROFILE = {
+    ROGUE   = { stat = 2, combat = "PLAYERSTAT_MELEE_COMBAT" },
+    HUNTER  = { stat = 2, combat = "PLAYERSTAT_RANGED_COMBAT" },
+    PRIEST  = { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" },
+    MAGE    = { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" },
+    WARLOCK = { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" },
+}
+
+-- Everyone else flips with spec. Tanking trees read Stamina rather than Strength/Agility: Wrath tank
+-- itemization leads with Stamina once Defense/Hit/Expertise are capped, on every one of these. Tab
+-- order (1/2/3) is the client's own, unchanged since each class' introduction.
+local SPEC_PROFILE = {
+    WARRIOR = {
+        { stat = 1, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Arms
+        { stat = 1, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Fury
+        { stat = 3, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Protection
+    },
+    DEATHKNIGHT = {
+        { stat = 3, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Blood, Wrath's tanking tree
+        { stat = 1, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Frost
+        { stat = 1, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Unholy
+    },
+    PALADIN = {
+        { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" }, -- Holy
+        { stat = 3, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Protection
+        { stat = 1, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Retribution
+    },
+    SHAMAN = {
+        { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" }, -- Elemental
+        { stat = 2, combat = "PLAYERSTAT_MELEE_COMBAT" }, -- Enhancement
+        { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" }, -- Restoration
+    },
+    DRUID = {
+        { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" }, -- Balance
+        -- Feral Combat covers both Cat and Bear -- 3.3.5a never split a separate Guardian tree the
+        -- way later expansions did, so the two roles are told apart by shapeshift form instead.
+        { feral = true, combat = "PLAYERSTAT_MELEE_COMBAT" },
+        { stat = 4, combat = "PLAYERSTAT_SPELL_COMBAT" }, -- Restoration
+    },
+}
+
+-- Bear Form absorbed Dire Bear Form's bonuses in patch 3.2, but both icons are checked in case an
+-- older rank is somehow still what's active. Comparing icons rather than names stays locale-safe.
+local BEAR_FORM_ICON = GetSpellInfo and select(3, GetSpellInfo(5487))
+local DIRE_BEAR_FORM_ICON = GetSpellInfo and select(3, GetSpellInfo(9634))
+
+-- Same loop-and-check BonusActionBarFrame's own ShapeshiftBar_UpdateState uses to find the active form.
+local function inBearForm()
+    for i = 1, GetNumShapeshiftForms() do
+        local icon, _, isActive = GetShapeshiftFormInfo(i)
+        if isActive then
+            return icon ~= nil and (icon == BEAR_FORM_ICON or icon == DIRE_BEAR_FORM_ICON)
+        end
+    end
+    return false
+end
+
+-- Same rule Blizzard's own talent UI uses for "which spec is active" (TalentFrame_UpdateSpecInfoCache):
+-- the tree with the most points spent wins. Ties, and a fresh character with none spent, fall to tree 1.
+local function activeTalentTab()
+    local best, bestPoints = 1, -1
+    for tab = 1, GetNumTalentTabs() do
+        local _, _, pointsSpent = GetTalentTabInfo(tab)
+        if pointsSpent and pointsSpent > bestPoints then
+            bestPoints, best = pointsSpent, tab
+        end
+    end
+    return best
+end
+
+local function detectedProfile()
+    local _, classToken = UnitClass("player")
+    local trees = SPEC_PROFILE[classToken]
+    local profile = trees and trees[activeTalentTab()] or CLASS_PROFILE[classToken]
+    if profile and profile.feral then
+        return { stat = inBearForm() and 3 or 2, combat = profile.combat }
+    end
+    return profile
+end
+
+local STAT_TOKENS = { STRENGTH = 1, AGILITY = 2, STAMINA = 3, INTELLECT = 4, SPIRIT = 5 }
+
+-- Auto pick first, then whichever half the user overrode in Settings. "off" drops that half
+-- entirely (no highlight / no promoted category) instead of falling back to the auto pick.
+function CP.GetPrimaryStatProfile()
+    local cfg = CP:Config()
+    local profile = detectedProfile()
+
+    local stat = profile and profile.stat
+    local statOverride = cfg.stat_highlight
+    if statOverride == "off" then
+        stat = nil
+    elseif statOverride and statOverride ~= "auto" then
+        stat = STAT_TOKENS[statOverride]
+    end
+
+    local combat = profile and profile.combat
+    local combatOverride = cfg.combat_order
+    if combatOverride == "off" then
+        combat = nil
+    elseif combatOverride and combatOverride ~= "auto" then
+        combat = combatOverride
+    end
+
+    return stat, combat
+end
+
 local pane, scrollChild, ilvlRow, gsRow
 local resistRows = {}
 
@@ -146,7 +255,7 @@ end
 
 -- Blizzard's setters address the label and value by global name, so each row has to be named
 -- and carry <name>Label / <name>StatText children.
-local function buildStatRow(parent, name, isEven)
+local function buildStatRow(parent, name, isEven, ownerStatIndex)
     local row = CreateFrame("Frame", name, parent)
     row:SetSize(ROW_W, ROW_H)
 
@@ -158,6 +267,16 @@ local function buildStatRow(parent, name, isEven)
     bg:SetAlpha(0.05)
     if not isEven then bg:Hide() end
     row.Bg = bg
+
+    -- Sublevel above the zebra wash, so the glow reads the same on odd and even rows.
+    if ownerStatIndex then
+        local hl = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+        hl:SetPoint("CENTER", row, "CENTER", 0, 0)
+        hl:SetSize(ROW_W, ROW_H)
+        hl:SetTexture(1, 1, 1)
+        hl:Hide()
+        row.Highlight = hl
+    end
 
     local label = row:CreateFontString(name .. "Label", "ARTWORK", "GameFontNormalSmall")
     label:SetPoint("LEFT", row, "LEFT", 11, 0)
@@ -295,6 +414,59 @@ local function startAnimator()
     animator:Show()
 end
 
+-- Base Stats and Defense never move; only which combat category leads is class/spec-dependent.
+local function orderedSections()
+    local _, combatKey = CP.GetPrimaryStatProfile()
+    if not combatKey then return SECTIONS end
+
+    local base, defense, promoted, others = nil, nil, nil, {}
+    for _, section in ipairs(SECTIONS) do
+        if section.index == "PLAYERSTAT_BASE_STATS" then
+            base = section
+        elseif section.index == "PLAYERSTAT_DEFENSES" then
+            defense = section
+        elseif section.index == combatKey then
+            promoted = section
+        else
+            others[#others + 1] = section
+        end
+    end
+    if not promoted then return SECTIONS end
+
+    local out = {}
+    if base then out[#out + 1] = base end
+    out[#out + 1] = promoted
+    for _, section in ipairs(others) do out[#out + 1] = section end
+    if defense then out[#out + 1] = defense end
+    return out
+end
+
+local function defaultKeyOrder()
+    local out = { "itemlevel", "gearscore" }
+    for _, section in ipairs(orderedSections()) do out[#out + 1] = section.index end
+    out[#out + 1] = "resistance"
+    return out
+end
+
+-- Same rearrange applySavedOrder/ResetSidebarOrder already do: walk the wanted key order, pull
+-- matching sections out of the current layout, then tack on anything the list didn't mention.
+local function reorderLayoutTo(keyOrder)
+    local byKey = {}
+    for _, section in ipairs(layout) do byKey[section.key] = section end
+
+    local sorted = {}
+    for _, key in ipairs(keyOrder) do
+        if byKey[key] then
+            sorted[#sorted + 1] = byKey[key]
+            byKey[key] = nil
+        end
+    end
+    for _, section in ipairs(layout) do
+        if byKey[section.key] then sorted[#sorted + 1] = section end
+    end
+    layout = sorted
+end
+
 local function saveCollapsed()
     local store = {}
     for _, section in ipairs(layout) do
@@ -430,6 +602,24 @@ function CP.ResetSidebarOrder()
     CP.RelayoutSidebar()
 end
 
+-- Re-picks the class/spec order (talents, form, or a Settings override may have changed) and re-flows.
+-- A saved order is a hint the user set on purpose, so it still outranks this, same as applySavedOrder.
+function CP.ApplyStatsAutoSort()
+    if not scrollChild or CP:Config().stats_order then return end
+
+    local before = drawnOffsets()
+    reorderLayoutTo(defaultKeyOrder())
+
+    -- Reset's baseline follows the live pick too, or resetting after a respec would restore the order
+    -- computed at login instead of the one that matches the character right now.
+    defaultOrder = {}
+    for _, section in ipairs(layout) do defaultOrder[#defaultOrder + 1] = section.key end
+
+    refreshMoveButtons()
+    startSlide(before)
+    CP.RelayoutSidebar()
+end
+
 -- A saved order is a hint, never the list itself: an unknown key is dropped and a section the saved
 -- order predates keeps its build position, so a future section can never go missing.
 local function applySavedOrder()
@@ -525,6 +715,7 @@ function CP.RelayoutSidebar()
                 -- Sized even while hidden, or a row collapsed at the last width returns with the old one.
                 row:SetWidth(rowWidth)
                 if row.Bg then row.Bg:SetWidth(rowWidth) end
+                if row.Highlight then row.Highlight:SetWidth(rowWidth) end
                 if offset >= revealed then
                     row:Hide()
                 else
@@ -635,8 +826,10 @@ local function buildSidebar()
 
     for _, section in ipairs(SECTIONS) do
         local rows = {}
+        local isBaseStats = section.index == "PLAYERSTAT_BASE_STATS"
         for i = 1, ROWS_PER_SECTION do
-            rows[i] = buildStatRow(scrollChild, section.prefix .. i, i % 2 == 0)
+            rows[i] = buildStatRow(scrollChild, section.prefix .. i, i % 2 == 0,
+                                   isBaseStats and i <= 5 and i or nil)
         end
         addSection(section.index, _G[section.index] or section.index, rows)
     end
@@ -647,6 +840,8 @@ local function buildSidebar()
     end
     addSection("resistance", RESISTANCE_LABEL, resists)
 
+    -- Class/spec order becomes the baseline "default" a saved order overrides and Reset returns to.
+    reorderLayoutTo(defaultKeyOrder())
     for _, section in ipairs(layout) do defaultOrder[#defaultOrder + 1] = section.key end
 
     applySavedOrder()
@@ -735,6 +930,31 @@ local function refreshGearScore()
     gsRow.tooltip2 = addon.L["Weighted score of your equipped gear."]
 end
 
+-- SECTIONS[1] is Base Stats by construction; that's the only section its 5 rows can highlight.
+local function refreshStatHighlight()
+    local statIndex = CP.GetPrimaryStatProfile()
+    local _, classToken = UnitClass("player")
+    local color = classToken and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classToken]
+
+    for i = 1, 5 do
+        local row = _G[SECTIONS[1].prefix .. i]
+        local hl = row and row.Highlight
+        if hl then
+            if statIndex == i then
+                if color then
+                    hl:SetVertexColor(color.r, color.g, color.b)
+                else
+                    hl:SetVertexColor(1, 0.82, 0)
+                end
+                hl:SetAlpha(0.22)
+                hl:Show()
+            else
+                hl:Hide()
+            end
+        end
+    end
+end
+
 local function refresh()
     if not pane then return end
     refreshItemLevel()
@@ -749,6 +969,7 @@ local function refresh()
         end
     end
 
+    refreshStatHighlight()
     refreshResistances()
     CP.RelayoutSidebar()
 end
@@ -811,7 +1032,20 @@ events:RegisterEvent("UNIT_ATTACK")
 events:RegisterEvent("PLAYER_DAMAGE_DONE_MODS")
 events:RegisterEvent("COMBAT_RATING_UPDATE")
 events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-events:SetScript("OnEvent", function(_, _, unit)
+events:RegisterEvent("CHARACTER_POINTS_CHANGED")
+events:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+-- Only Feral's Cat/Bear split needs this, and every other class fires it too (stances share the API).
+if select(2, UnitClass("player")) == "DRUID" then
+    events:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+end
+events:SetScript("OnEvent", function(_, event, unit)
+    -- None of these three carry a unit arg, so they can't share the generic unit-check branch below.
+    if event == "CHARACTER_POINTS_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED"
+       or event == "UPDATE_SHAPESHIFT_FORM" then
+        CP.ApplyStatsAutoSort()
+        if pane and pane:IsVisible() then refresh() end
+        return
+    end
     if unit and unit ~= "player" then return end
     if pane and pane:IsVisible() then refresh() end
 end)
