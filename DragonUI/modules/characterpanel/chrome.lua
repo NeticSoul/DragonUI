@@ -282,6 +282,7 @@ local function hookFrameShow()
         -- The database is certainly up by now, so a builder's half-loaded config gets its real value.
         CP.ApplyBodyBackground()
         if CP.ApplyModelBackdrop then CP.ApplyModelBackdrop() end
+        if CP.RepaintPanelGround then CP.RepaintPanelGround() end
     end)
 end
 
