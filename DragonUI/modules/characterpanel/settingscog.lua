@@ -147,6 +147,10 @@ local function build()
     cog:SetScript("OnClick", function(self)
         ToggleDropDownMenu(1, nil, menu, self, 0, 0)
     end)
+    -- Blizzard's DropDownList1 lives on UIParent, so it outlives the cog unless it is closed by hand.
+    cog:SetScript("OnHide", function()
+        if UIDROPDOWNMENU_OPEN_MENU == menu then CloseDropDownMenus() end
+    end)
     cog:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         -- Neutral wording: the same gear serves every tab we draw, so naming one of them is wrong

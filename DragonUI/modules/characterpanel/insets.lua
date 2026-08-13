@@ -7,22 +7,31 @@ local INSET_RIGHT = -6
 local INSET_BOTTOM = 4
 local INSET_ATTIC = -60
 
--- Retail's InsetFrameTemplate fills with UI-Background-Marble, which is a Cata+ path that does
--- not exist on 3.3.5a; DragonUI ships its own rock tile, so use that instead.
-local ROCK = addon._dir .. "UI\\ui-background-rock"
+-- Retail's InsetFrameTemplate ground, shipped with the addon: the near-black marble is what makes
+-- a pane read as recessed against the body rock, and it stays dark whichever body the cog picks.
+local MARBLE = addon._dir .. "UI\\ui-background-marble"
 
 local function decorate(inset)
     if inset._duiDecorated then return end
     inset._duiDecorated = true
 
     local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -5)
-    bg:SetTexture(ROCK, "REPEAT", "REPEAT")
+    bg:SetTexture(MARBLE, "REPEAT", "REPEAT")
     bg:SetHorizTile(true)
     bg:SetVertTile(true)
     bg:SetAllPoints(inset)
-    -- Tint owned by chrome.lua, which drives every ground in the panel from one setting.
     inset.Bg = bg
-    if CP.ApplyBodyBackground then CP.ApplyBodyBackground() end
+end
+
+-- Retail's CharacterFrame paints this across its Inset, so the marble underneath never shows on that
+-- side. Atlas first, then the anchors: set_atlas freezes a size it reads off an already-sized region.
+local function paintPanelGround(inset)
+    if inset._duiPanelGround then return end
+    inset._duiPanelGround = true
+
+    local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -4)
+    bg:set_atlas("character-panel-background")
+    bg:SetAllPoints(inset)
 end
 
 local function buildInset()
@@ -39,6 +48,8 @@ local function buildInset()
     cf.Inset = inset
 
     decorate(inset)
+    -- Only this one: the sidebar carries no such override in retail and keeps the bare marble.
+    paintPanelGround(inset)
     return inset
 end
 
@@ -65,7 +76,7 @@ end
 -- Blizzard's layout, built against the stock 384x512 window, so they keep exactly those dimensions.
 local function setInsetForTab(tabName)
     local cf = _G.CharacterFrame
-    if not cf or not cf.Inset or InCombatLockdown() then return end
+    if not cf or not cf.Inset or not CP:CanLayout() then return end
     local inset = cf.Inset
 
     inset:ClearAllPoints()

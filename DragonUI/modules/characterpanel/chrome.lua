@@ -123,13 +123,12 @@ end
 -- xoffset is the only lever that moves a left-area panel without fighting the panel system.
 local PANEL_X_NUDGE = 6
 
+-- On the frame, not in UIPanelWindows: tainting that table blocks the first panel open in combat.
 local function nudgePanel()
-    local info = UIPanelWindows and UIPanelWindows["CharacterFrame"]
-    if not info or info.xoffset == PANEL_X_NUDGE then return end
-    info.xoffset = PANEL_X_NUDGE
-    if _G.CharacterFrame and _G.CharacterFrame:IsShown() and UpdateUIPanelPositions then
-        UpdateUIPanelPositions(_G.CharacterFrame)
-    end
+    local cf = _G.CharacterFrame
+    if not cf or cf:GetAttribute("UIPanelLayout-xoffset") == PANEL_X_NUDGE then return end
+    cf:SetAttribute("UIPanelLayout-xoffset", PANEL_X_NUDGE)
+    if cf:IsShown() and UpdateUIPanelPositions then UpdateUIPanelPositions(cf) end
 end
 
 -- The Inset's ground is its rock and nothing else; the second sheet that used to cover it is gone
@@ -159,11 +158,11 @@ local function applyBackgrounds(cf)
     CP.ApplyBodyBackground()
 end
 
--- One setting drives every ground. `body` must track the insets or the strip between them reads as a
--- dark band; `streak` is an alpha, not a tint, because dark strokes on dark ground only stack.
+-- The setting shades the BODY only: retail pairs either body with dark panes, so the insets keep
+-- their own marble. `streak` is an alpha, not a tint, because dark strokes on dark ground only stack.
 local TINTS = {
-    stone = { body = 1.0, inset = 1.0, sidebar = 1.0, paper = 1.0, streak = 1.0 },
-    dark = { body = 0.45, inset = 0.45, sidebar = 0.45, paper = 0.8, streak = 0.35 },
+    stone = { body = 1.0, paper = 1.0, streak = 1.0 },
+    dark = { body = 0.45, paper = 0.8, streak = 0.35 },
 }
 
 function CP.ApplyBodyBackground()
@@ -177,12 +176,6 @@ function CP.ApplyBodyBackground()
     end
     if cf._duiStreaks then
         cf._duiStreaks:SetAlpha(tint.streak)
-    end
-    if cf.Inset and cf.Inset.Bg then
-        cf.Inset.Bg:SetVertexColor(tint.inset, tint.inset, tint.inset)
-    end
-    if cf.InsetRight and cf.InsetRight.Bg then
-        cf.InsetRight.Bg:SetVertexColor(tint.sidebar, tint.sidebar, tint.sidebar)
     end
     -- The faction popup hangs off the panel, so it shades with it.
     if CP.DetailGround then
@@ -210,16 +203,21 @@ function CP.ModernizeCloseButton(cb, owner, x, y)
     cb:ClearAllPoints()
     cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", x or 1, y or 0)
 
-    local nt = cb:GetNormalTexture()
-    if nt then
-        nt:SetTexture(REDBUTTON)
-        nt:SetTexCoord(0.152344, 0.292969, 0.0078125, 0.304688)
+    -- All four states UIPanelCloseButtonNoScripts declares, with the sheet's own rects. The pushed
+    -- one used to point at 41..79, which is the DISABLED art -- pressed lives further down at 81.
+    local function dress(getter, l, r, t, b, blend)
+        local tex = cb[getter] and cb[getter](cb)
+        if not tex then return end
+        tex:SetTexture(REDBUTTON)
+        tex:SetTexCoord(l, r, t, b)
+        if blend then tex:SetBlendMode(blend) end
     end
-    local pt = cb:GetPushedTexture()
-    if pt then
-        pt:SetTexture(REDBUTTON)
-        pt:SetTexCoord(0.152344, 0.292969, 0.320312, 0.617188)
-    end
+
+    dress("GetNormalTexture", 39/256, 75/256, 1/128, 39/128)
+    dress("GetPushedTexture", 39/256, 75/256, 81/128, 119/128)
+    dress("GetDisabledTexture", 39/256, 75/256, 41/128, 79/128)
+    -- Left as the client's old minimize glow otherwise: a square Wrath flare over a modern red X.
+    dress("GetHighlightTexture", 115/256, 151/256, 1/128, 39/128, "ADD")
 end
 
 local function applyCloseButton()
@@ -261,7 +259,9 @@ function CP.ApplyChromeForTab(tabName)
     end
     if cf._duiRockBg then if retail then cf._duiRockBg:Show() else cf._duiRockBg:Hide() end end
     -- Only on the tabs we draw ourselves, which are the only ones whose grounds it controls.
-    if CP.SetSettingsCogShown then CP.SetSettingsCogShown(CP.OWNED_TABS[active] and true or false) end
+    -- Paperdoll only: on the list tabs that top-right slot is where retail puts their filter, and
+    -- the cog's own menu is all model and ground settings that only mean anything on this one.
+    if CP.SetSettingsCogShown then CP.SetSettingsCogShown(active == "PaperDollFrame") end
     if cf.Inset then if retail then cf.Inset:Show() else cf.Inset:Hide() end end
 
     -- Suppressed on whether WE reskin that frame, never on which tab is active: one flag derived

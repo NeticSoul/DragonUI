@@ -757,7 +757,7 @@ end
 -- restore has already put away is what left the window stretched with nothing in the gap.
 local function expand()
     local cf = _G.CharacterFrame
-    if not cf or InCombatLockdown() or not CP:Enabled() then return end
+    if not cf or not CP:CanLayout() or not CP:Enabled() then return end
     buildSidebar()
     if not pane then return end
     cf:SetWidth(EXPANDED_WIDTH)
@@ -773,7 +773,7 @@ end
 
 local function collapse(keepWidth)
     local cf = _G.CharacterFrame
-    if not cf or InCombatLockdown() or not CP:Enabled() then return end
+    if not cf or not CP:CanLayout() or not CP:Enabled() then return end
     -- This runs after SetInsetForTab, so forcing the narrow width here would silently undo it.
     if not keepWidth then cf:SetWidth(CP.PANEL_WIDTH) end
     if cf.InsetRight then cf.InsetRight:Hide() end

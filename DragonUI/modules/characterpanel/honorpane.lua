@@ -267,7 +267,7 @@ local function buildTab()
         PlaySound("igCharacterInfoTab")
     end)
 
-    if PanelTemplates_SetNumTabs then PanelTemplates_SetNumTabs(cf, TAB_INDEX) end
+    -- No PanelTemplates_SetNumTabs: raising numTabs is what makes UpdateTabs read our own global.
     if CP.RechainTabs then CP.RechainTabs() end
 end
 
@@ -282,6 +282,18 @@ local function removePetTab()
 
     local pet = _G.PetPaperDollFrame
     if pet then pet.hidden = true end
+
+    -- Secure CompanionButtons live here; protection climbs to parents and reached the whole panel.
+    local companions = _G.PetPaperDollFrameCompanionFrame
+    if companions and not companions._duiRetired then
+        companions._duiRetired = true
+        -- A hidden holder, never UIParent: PetPaperDollFrame_UpdateTabs still Shows this off pet events.
+        local holder = CreateFrame("Frame", nil, UIParent)
+        holder:Hide()
+        companions:SetParent(holder)
+        companions:ClearAllPoints()
+        companions:SetPoint("TOPLEFT", holder, "TOPLEFT")
+    end
 
     -- PetPaperDollFrame_UpdateIsAvailable clears `hidden` and re-anchors CharacterFrameTab3 onto
     -- the retired tab on every pet change, over-constraining a tab our chain has already placed.
@@ -305,11 +317,15 @@ local function build()
     pane:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL)
     pane:Hide()
 
-    -- Registered with Blizzard's own list so CharacterFrame_ShowSubFrame hides it for us when any
-    -- other tab is picked, exactly as it does for the five it shipped with.
-    if CHARACTERFRAME_SUBFRAMES then
-        CHARACTERFRAME_SUBFRAMES[#CHARACTERFRAME_SUBFRAMES + 1] = FRAME_NAME
-    end
+    -- Kept out of CHARACTERFRAME_SUBFRAMES: writing to that table taints the loop ToggleCharacter runs.
+    hooksecurefunc("CharacterFrame_ShowSubFrame", function(frameName)
+        local mine = frameName == FRAME_NAME
+        if mine then pane:Show() else pane:Hide() end
+        local tab = _G["CharacterFrameTab" .. TAB_INDEX]
+        if tab then
+            if mine then PanelTemplates_SelectTab(tab) else PanelTemplates_DeselectTab(tab) end
+        end
+    end)
 
     local host = CreateFrame("Frame", nil, cf.Inset)
     host:SetAllPoints(cf.Inset)

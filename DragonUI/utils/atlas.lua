@@ -35,6 +35,13 @@ local rui_QuestTracker = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\QuestTracke
 local rui_UnitFrame = 'Interface\\AddOns\\DragonUI\\Textures\\UI\\UnitFrame.blp';
 local rui_FrameMetal = assets..'UI\\uiframemetal2x';
 local rui_FrameInner = assets..'UI\\uiframeinner';
+local rui_Inner = assets..'UI\\uiframe-inner';
+local rui_Collapse = assets..'CharacterPanel\\collapsebuttons';
+local rui_Dropdown = assets..'UI\\dropdownbutton';
+local rui_Checkbox = assets..'UI\\checkbox-minimal';
+local rui_Diamond = assets..'UI\\uiframe-diamondmetal';
+local rui_DiamondEdges = assets..'UI\\uiframe-diamondmetal-edges';
+local rui_InnerV = assets..'UI\\uiframe-inner-vertical';
 local rui_FrameMetalH = assets..'UI\\uiframemetalhorizontal2x';
 local rui_FrameMetalV = assets..'UI\\uiframemetalvertical2x';
 local rui_CharPanelBg = assets..'CharacterPanel\\characterpanelbackground';
@@ -407,6 +414,69 @@ addon.atlasinfo = {
 	['UI-Frame-Metal-CornerTopRight'] = { rui_FrameMetal, 75, 75, 0.298828, 0.591797, 0.00195312, 0.294922 },
 	-- The worn streak band retail tiles across the body just under a window's title bar.
 	['_UI-Frame-TopTileStreaks'] = { rui_FrameInner, 256, 43, 0, 1, 0.007812, 0.343750 },
+
+	-- UI-Frame-Inner: retail's InsetFrameTemplate trim, 6px corners over 3px tiles. Rects come from
+	-- UiTextureAtlasMember, so these are the client's own numbers, not a fit to substitute art. The
+	-- horizontal pair rides the sheet the streaks already come from -- same file, atlas 950.
+	['UI-Frame-InnerTopLeft'] = { rui_Inner, 6, 6, 97/128, 103/128, 71/128, 77/128 },
+	['UI-Frame-InnerTopRight'] = { rui_Inner, 6, 6, 105/128, 111/128, 71/128, 77/128 },
+	['UI-Frame-InnerBotLeftCorner'] = { rui_Inner, 6, 6, 81/128, 87/128, 71/128, 77/128 },
+	['UI-Frame-InnerBotRight'] = { rui_Inner, 6, 6, 89/128, 95/128, 71/128, 77/128 },
+	['!UI-Frame-InnerLeftTile'] = { rui_InnerV, 3, 256, 31/64, 34/64, 0, 1, false, true },
+	['!UI-Frame-InnerRightTile'] = { rui_InnerV, 3, 256, 36/64, 39/64, 0, 1, false, true },
+	['_UI-Frame-InnerTopTile'] = { rui_FrameInner, 256, 3, 0, 1, 116/128, 119/128, true, false },
+	['_UI-Frame-InnerBotTile'] = { rui_FrameInner, 256, 3, 0, 1, 111/128, 114/128, true, false },
+
+	-- The collapse box retail's ReputationSubHeaderTemplate wears, cut out of its 2048x1024 sheet:
+	-- four 22px icons are not worth shipping 8MB for.
+	['campaign_headericon_closed'] = { rui_Collapse, 22, 22, 0/128, 22/128, 0/32, 22/32 },
+	['campaign_headericon_closedpressed'] = { rui_Collapse, 22, 22, 32/128, 54/128, 0/32, 22/32 },
+	['campaign_headericon_open'] = { rui_Collapse, 22, 22, 64/128, 86/128, 0/32, 22/32 },
+	['campaign_headericon_openpressed'] = { rui_Collapse, 22, 22, 96/128, 118/128, 0/32, 22/32 },
+
+	-- What WowStyle1FilterDropdownMixin actually asks for. Not the a-button, which is the arrow in
+	-- its own box: this is the whole control, gold chevron already part of the art. Retail swaps the
+	-- WHOLE texture per state rather than washing a highlight over it, so all six ship.
+	['common-dropdown-b-button'] = { rui_Dropdown, 97, 26, 0/128, 97/128, 0/256, 26/256 },
+	['common-dropdown-b-button-hover'] = { rui_Dropdown, 97, 26, 0/128, 97/128, 26/256, 52/256 },
+	['common-dropdown-b-button-pressed'] = { rui_Dropdown, 97, 26, 0/128, 97/128, 52/256, 78/256 },
+	['common-dropdown-b-button-pressedhover'] = { rui_Dropdown, 97, 26, 0/128, 97/128, 78/256, 104/256 },
+	['common-dropdown-b-button-open'] = { rui_Dropdown, 97, 26, 0/128, 97/128, 104/256, 130/256 },
+	['common-dropdown-b-button-disabled'] = { rui_Dropdown, 97, 26, 0/128, 97/128, 130/256, 156/256 },
+
+	-- WowStyle1DropdownTemplate's pair, which is what Reputation and Currency wear -- NOT the
+	-- b-button above, that one is the filter dropdown the mount journal uses.
+	['common-dropdown-textholder'] = { rui_Dropdown, 54, 41, 0/128, 54/128, 160/256, 201/256 },
+	-- Cut in three because the source is a 54x41 rounded rect with a 12px bevel: stretched whole to a
+	-- row it smears the corners sideways and squashes the bevel. Only the flat middle may stretch.
+	['common-dropdown-textholder-left'] = { rui_Dropdown, 18, 41, 0/128, 18/128, 160/256, 201/256 },
+	['common-dropdown-textholder-center'] = { rui_Dropdown, 18, 41, 18/128, 36/128, 160/256, 201/256 },
+	['common-dropdown-textholder-right'] = { rui_Dropdown, 18, 41, 36/128, 54/128, 160/256, 201/256 },
+	-- Six states, because WowStyle1DropdownMixin:GetArrowAtlas swaps the WHOLE arrow per state
+	-- rather than washing a highlight over it.
+	['common-dropdown-a-button'] = { rui_Dropdown, 27, 27, 0/128, 27/128, 202/256, 229/256 },
+	['common-dropdown-a-button-hover'] = { rui_Dropdown, 27, 27, 28/128, 55/128, 202/256, 229/256 },
+	['common-dropdown-a-button-pressed'] = { rui_Dropdown, 27, 27, 56/128, 83/128, 202/256, 229/256 },
+	['common-dropdown-a-button-pressedhover'] = { rui_Dropdown, 27, 27, 84/128, 111/128, 202/256, 229/256 },
+	['common-dropdown-a-button-open'] = { rui_Dropdown, 27, 27, 0/128, 27/128, 229/256, 256/256 },
+	['common-dropdown-a-button-disabled'] = { rui_Dropdown, 27, 27, 28/128, 55/128, 229/256, 256/256 },
+
+	-- Retail's MinimalCheckboxTemplate art. No modern SWORD exists anywhere in the atlas, so the
+	-- at-war box keeps the client's classic UI-CheckBox-SwordCheck over this modern square.
+	['checkbox-minimal'] = { rui_Checkbox, 30, 29, 1/64, 31/64, 1/64, 30/64 },
+	['checkmark-minimal'] = { rui_Checkbox, 30, 29, 1/64, 31/64, 32/64, 61/64 },
+	['checkmark-minimal-disabled'] = { rui_Checkbox, 30, 29, 33/64, 63/64, 1/64, 30/64 },
+
+	-- UI-Frame-DiamondMetal: the dialog nine-slice retail frames its popups with. Rects come from
+	-- UiTextureAtlasMember, which only lists the 2x cut, so the pieces draw at their 64px override.
+	['UI-Frame-DiamondMetal-CornerTopLeft'] = { rui_Diamond, 64, 64, 1/256, 129/256, 521/1024, 649/1024 },
+	['UI-Frame-DiamondMetal-CornerTopRight'] = { rui_Diamond, 64, 64, 1/256, 129/256, 651/1024, 779/1024 },
+	['UI-Frame-DiamondMetal-CornerBottomLeft'] = { rui_Diamond, 64, 64, 1/256, 129/256, 261/1024, 389/1024 },
+	['UI-Frame-DiamondMetal-CornerBottomRight'] = { rui_Diamond, 64, 64, 1/256, 129/256, 391/1024, 519/1024 },
+	['_UI-Frame-DiamondMetal-EdgeTop'] = { rui_Diamond, 64, 64, 0, 128/256, 131/1024, 259/1024, true, false },
+	['_UI-Frame-DiamondMetal-EdgeBottom'] = { rui_Diamond, 64, 64, 0, 128/256, 1/1024, 129/1024, true, false },
+	['!UI-Frame-DiamondMetal-EdgeLeft'] = { rui_DiamondEdges, 64, 64, 1/512, 129/512, 0, 1, false, true },
+	['!UI-Frame-DiamondMetal-EdgeRight'] = { rui_DiamondEdges, 64, 64, 131/512, 259/512, 0, 1, false, true },
 	-- The sheet's top corners are 75px and its bottom pair 32px, so a frame built from both joins two
 	-- widths down each side. These are the bottom corners flipped vertically: a matching 32px set.
 	['UI-Frame-Metal-CornerTopLeft-Thin'] = { rui_FrameMetal, 32, 32, 0.298828, 0.423828, 0.423828, 0.298828 },
