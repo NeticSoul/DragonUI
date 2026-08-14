@@ -21,6 +21,12 @@ function CP.ShowSidebarPane(index)
     if index == TITLES and CP.RefreshTitlesPane then CP.RefreshTitlesPane() end
     if index == STATS and CP.RefreshSidebar then CP.RefreshSidebar() end
     if index == EQUIPMENT and CP.RefreshEquipmentPane then CP.RefreshEquipmentPane() end
+
+    -- Right after a tab-switch Show(), self-queried width here can still lag the old tab's -- redo next frame.
+    addon:After(0, function()
+        if index == TITLES and CP.RefreshTitlesPane then CP.RefreshTitlesPane() end
+        if index == EQUIPMENT and CP.RefreshEquipmentPane then CP.RefreshEquipmentPane() end
+    end)
 end
 
 CP.PANE_STATS, CP.PANE_TITLES, CP.PANE_EQUIPMENT = STATS, TITLES, EQUIPMENT
