@@ -28,35 +28,61 @@ local bar, faded, controls, buttons
 -- Draw order of the whole strip; the settings decide which of these actually stand.
 local STRIP_ORDER = { "left", "right", "zoomOut", "zoomIn", "reset" }
 
-local function position(model)
-    if not model.GetPosition then return 0, 0, 0 end
-    local ok, x, y, z = pcall(model.GetPosition, model)
-    if not ok or not x then return 0, 0, 0 end
-    return x, y or 0, z or 0
-end
-
 local function clamp(v, lo, hi)
     if v < lo then return lo elseif v > hi then return hi end
     return v
 end
 
--- Read the live position: anything else that moves the model would leave our counter out of step.
+-- GetPosition survives a model reload unchanged, so the count is kept here instead of read back.
+local function view(model)
+    local v = model._duiView
+    if not v then
+        v = { zoom = 0, y = 0, z = 0 }
+        model._duiView = v
+    end
+    return v
+end
+
+local function applyView(model)
+    local v = view(model)
+    pcall(model.SetPosition, model, v.zoom, v.y, v.z)
+end
+
 local function applyZoom(model, delta)
-    local x, y, z = position(model)
-    pcall(model.SetPosition, model, clamp(x + delta, ZOOM_MIN, ZOOM_MAX), y, z)
+    local v = view(model)
+    v.zoom = clamp(v.zoom + delta, ZOOM_MIN, ZOOM_MAX)
+    applyView(model)
 end
 
 local function applyPan(model, dy, dz)
-    local x, y, z = position(model)
-    pcall(model.SetPosition, model, x,
-          clamp(y + dy, -PAN_LIMIT, PAN_LIMIT),
-          clamp(z + dz, -PAN_LIMIT, PAN_LIMIT))
+    local v = view(model)
+    v.y = clamp(v.y + dy, -PAN_LIMIT, PAN_LIMIT)
+    v.z = clamp(v.z + dz, -PAN_LIMIT, PAN_LIMIT)
+    applyView(model)
 end
 
 local function resetModel(model)
-    if model.SetPosition then pcall(model.SetPosition, model, 0, 0, 0) end
+    local v = view(model)
+    v.zoom, v.y, v.z = 0, 0, 0
+    applyView(model)
     model.rotation = DEFAULT_ROTATION
     if model.SetRotation then pcall(model.SetRotation, model, DEFAULT_ROTATION) end
+end
+
+-- A reload snaps the camera back to default but leaves the stored position alone, so zero both.
+local function trackReloads(model)
+    if model._duiReloadTracked then return end
+    model._duiReloadTracked = true
+
+    local function reset()
+        local v = view(model)
+        v.zoom, v.y, v.z = 0, 0, 0
+        applyView(model)
+    end
+
+    for _, method in ipairs({ "SetUnit", "RefreshUnit", "SetCreature", "SetModel" }) do
+        if model[method] then hooksecurefunc(model, method, reset) end
+    end
 end
 
 -- Square plate, centred glyph, additive glow of that glyph on hover -- how retail lights these.
@@ -292,6 +318,7 @@ local function build()
 
     model:EnableMouse(true)
     wireDrag(model)
+    trackReloads(model)
 
     -- 3.3.5a has no Model_OnMouseWheel, so wheel-zoom is ours to wire.
     model:EnableMouseWheel(true)
@@ -336,6 +363,7 @@ function CP.WirePetModelControls(model)
     model.rotation = DEFAULT_ROTATION
     model:EnableMouse(true)
     model:EnableMouseWheel(true)
+    trackReloads(model)
 
     local rotator = CreateFrame("Frame", nil, model)
     rotator:Hide()

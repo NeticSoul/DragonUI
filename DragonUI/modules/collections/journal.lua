@@ -93,6 +93,8 @@ local function showCreature(creatureID)
     if model._creature == creatureID then return end
     model._creature = creatureID
     model:SetCreature(creatureID)
+    -- SetCreature leaves GetPosition on the pre-reload value, so the count is kept here.
+    model._duiZoom = 0
     if model.SetPosition then model:SetPosition(0, 0, 0) end
     model.rotation = 0.5
     model:SetRotation(model.rotation)
@@ -128,11 +130,11 @@ local function buildModel(parent)
     -- Forget the pose too: a hidden model can drop it, and the guard above would never re-set it.
     model:SetScript("OnHide", function(self) dragger:Hide(); self._creature = nil end)
     model:SetScript("OnMouseWheel", function(self, delta)
-        if not self.GetPosition then return end
-        local x, y, z = self:GetPosition()
-        x = (x or 0) + delta * ZOOM_STEP
-        if x < ZOOM_MIN then x = ZOOM_MIN elseif x > ZOOM_MAX then x = ZOOM_MAX end
-        self:SetPosition(x, y or 0, z or 0)
+        if not self.SetPosition then return end
+        local zoom = (self._duiZoom or 0) + delta * ZOOM_STEP
+        if zoom < ZOOM_MIN then zoom = ZOOM_MIN elseif zoom > ZOOM_MAX then zoom = ZOOM_MAX end
+        self._duiZoom = zoom
+        self:SetPosition(zoom, 0, 0)
     end)
 end
 

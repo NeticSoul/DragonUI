@@ -310,7 +310,7 @@ local function refresh()
     emptyText:Hide()
     setContentShown(true)
 
-    -- Only on a real swap: UNIT_STATS fires constantly in combat and each SetUnit resets the camera.
+    -- Only on a real swap: UNIT_STATS fires constantly in combat and each SetUnit reloads the model.
     local guid = UnitGUID and UnitGUID("pet")
     if guid ~= model._duiGUID then
         model._duiGUID = guid
