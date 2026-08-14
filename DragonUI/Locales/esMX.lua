@@ -620,6 +620,8 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = "Ya existe un conjunto con ese nombre."
 L["Delete the equipment set '%s'?"] = "¿Eliminar el conjunto de equipo '%s'?"
 L["Overwrite '%s' with your currently equipped items?"] = "¿Sobrescribir '%s' con el equipo que llevas puesto?"
+L["Equipment Manager is turned off."] = "El Gestor de equipo está desactivado."
+L["Equipment Manager is turned off. Enable it now?"] = "El Gestor de equipo está desactivado. ¿Quieres activarlo ahora?"
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["UFL diagnostic not available"] = "Diagnóstico UFL no disponible"

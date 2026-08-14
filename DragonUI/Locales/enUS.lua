@@ -640,6 +640,8 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = true
 L["Delete the equipment set '%s'?"] = true
 L["Overwrite '%s' with your currently equipped items?"] = true
+L["Equipment Manager is turned off."] = true
+L["Equipment Manager is turned off. Enable it now?"] = true
 
 -- ============================================================================
 -- PANELS TAB / GEAR SUMMARY

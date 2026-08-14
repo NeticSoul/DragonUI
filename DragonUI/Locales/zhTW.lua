@@ -508,6 +508,8 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = "已存在同名套裝。"
 L["Delete the equipment set '%s'?"] = "刪除裝備套裝「%s」？"
 L["Overwrite '%s' with your currently equipped items?"] = "用目前穿戴的物品覆蓋「%s」？"
+L["Equipment Manager is turned off."] = "裝備管理員已關閉。"
+L["Equipment Manager is turned off. Enable it now?"] = "裝備管理員已關閉。是否立即啟用？"
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["Legacy refresh failed for"] = "舊式重新整理失敗："

@@ -628,6 +628,8 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = "已存在同名套装。"
 L["Delete the equipment set '%s'?"] = "删除装备套装“%s”？"
 L["Overwrite '%s' with your currently equipped items?"] = "用当前穿戴的物品覆盖“%s”？"
+L["Equipment Manager is turned off."] = "装备管理器已关闭。"
+L["Equipment Manager is turned off. Enable it now?"] = "装备管理器已关闭。是否立即启用？"
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["CharacterFrame does not exist."] = "CharacterFrame 不存在。"

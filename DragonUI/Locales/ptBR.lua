@@ -508,6 +508,8 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = "Já existe um conjunto com esse nome."
 L["Delete the equipment set '%s'?"] = "Excluir o conjunto de equipamento '%s'?"
 L["Overwrite '%s' with your currently equipped items?"] = "Sobrescrever '%s' com os itens equipados agora?"
+L["Equipment Manager is turned off."] = "O Gerenciador de Equipamento está desativado."
+L["Equipment Manager is turned off. Enable it now?"] = "O Gerenciador de Equipamento está desativado. Ativar agora?"
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["Legacy refresh failed for"] = "Falha na atualização legada de"

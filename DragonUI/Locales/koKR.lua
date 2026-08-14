@@ -618,6 +618,8 @@ L["This client can only re-save a set, so the gear you are wearing now replaces 
 L["A set with that name already exists."] = "같은 이름의 세트가 이미 있습니다."
 L["Delete the equipment set '%s'?"] = "장비 세트 '%s'을(를) 삭제할까요?"
 L["Overwrite '%s' with your currently equipped items?"] = "현재 착용 중인 장비로 '%s'을(를) 덮어쓸까요?"
+L["Equipment Manager is turned off."] = "장비 관리자가 꺼져 있습니다."
+L["Equipment Manager is turned off. Enable it now?"] = "장비 관리자가 꺼져 있습니다. 지금 켤까요?"
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["UFL diagnostic not available"] = "UFL 진단을 사용할 수 없음"

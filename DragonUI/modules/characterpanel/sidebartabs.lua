@@ -87,7 +87,7 @@ local function buildTab(index, tooltip)
     tab:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText(tooltip, 1, 1, 1)
-        if not self:IsEnabled() and self._duiDisabledHint then
+        if (not self:IsEnabled() or self._duiSoftDisabled) and self._duiDisabledHint then
             GameTooltip:AddLine(self._duiDisabledHint, 1, 0.1, 0.1, true)
         end
         GameTooltip:Show()
@@ -151,6 +151,18 @@ function CP.RefreshTitlesTabState()
     if not hasAnyTitle() and selected == 2 then selectTab(1) end
 end
 
+-- The equipmentManager CVar itself is owned by equipment.lua; this only paints the tab to match it,
+-- the same soft-disable a real :Disable() can't do here since that would swallow the click too.
+function CP.RefreshEquipmentTabState()
+    local tab = tabs[3]
+    if not tab then return end
+    local enabled = GetCVarBool and GetCVarBool("equipmentManager")
+    tab._duiSoftDisabled = not enabled
+    tab:SetAlpha(enabled and 1 or 0.5)
+    tab.Icon:SetDesaturated(not enabled)
+    if not enabled and selected == 3 then selectTab(1) end
+end
+
 function CP.RefreshSidebarTabPortrait()
     local tab = tabs[1]
     if tab and tab._duiPortrait then refreshPortrait(tab) end
@@ -198,6 +210,16 @@ local function build()
     local tab3 = buildTab(3, EQUIPMENT_MANAGER)
     tab3:SetPoint("BOTTOMRIGHT", strip, "BOTTOMRIGHT", -TAB_RIGHT_INSET, 0)
     setSheetIcon(tab3, TC.equipIcon)
+    tab3._duiDisabledHint = addon.L["Equipment Manager is turned off."]
+    -- A real :Disable() would swallow this click too, so gate it by hand and offer to enable the CVar.
+    tab3:SetScript("OnClick", function(self)
+        if self._duiSoftDisabled then
+            if CP.PromptEnableEquipmentManager then CP.PromptEnableEquipmentManager() end
+            return
+        end
+        PlaySound("igCharacterInfoTab")
+        selectTab(3)
+    end)
 
     local tab2 = buildTab(2, PAPERDOLL_SELECT_TITLE)
     tab2:SetPoint("RIGHT", tab3, "LEFT", -TAB_GAP, 0)
@@ -216,6 +238,7 @@ local function build()
 
     selectTab(1)
     CP.RefreshTitlesTabState()
+    CP.RefreshEquipmentTabState()
 end
 
 CP.SidebarTabsStrip = function() return strip end
