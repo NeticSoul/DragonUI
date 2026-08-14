@@ -39,11 +39,6 @@ local FRAME_SCALE = RANDOM_SIZE / 37
 local FRAME_X, FRAME_TOP = 2.2 * FRAME_SCALE, 2.3 * FRAME_SCALE
 local FRAME_COLOR = { 0.08, 0.08, 0.08 }
 
--- Model:SetPosition's first axis is depth; SetCamDistanceScale only arrives in Cataclysm. The clamp
--- has to straddle 0 or zoom-in stops working at the default position.
-local ZOOM_STEP, ZOOM_MIN, ZOOM_MAX = 0.3, -3, 3
-local ROTATION_SPEED = 0.012
-
 local frame, scroll, content, rows
 local searchBox, filterButton, filterMenu, rowMenu
 local countBox, countText, countLabel, randomButton
@@ -92,10 +87,8 @@ local function showCreature(creatureID)
     -- companion event, so re-setting the same creature made the model loop its intro forever.
     if model._creature == creatureID then return end
     model._creature = creatureID
+    -- SetCreature is hooked by WireModelView, which zeroes the zoom and pan the reload just undid.
     model:SetCreature(creatureID)
-    -- SetCreature leaves GetPosition on the pre-reload value, so the count is kept here.
-    model._duiZoom = 0
-    if model.SetPosition then model:SetPosition(0, 0, 0) end
     model.rotation = 0.5
     model:SetRotation(model.rotation)
 end
@@ -104,38 +97,13 @@ local function buildModel(parent)
     model = CreateFrame("PlayerModel", nil, parent)
     model:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, -132)
     model:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -6, 6)
-    model:EnableMouse(true)
-    model:EnableMouseWheel(true)
     model.rotation = 0.5
 
-    -- Model_OnUpdate finds its rotate buttons by global name, so the panel's strip cannot drive this.
-    local dragger = CreateFrame("Frame", nil, model)
-    dragger:Hide()
-    -- The button state is polled rather than taken from OnMouseUp: releasing with the cursor off the
-    -- model never delivers that event, and the model would keep spinning with nothing held.
-    dragger:SetScript("OnUpdate", function(self)
-        if not IsMouseButtonDown("LeftButton") then self:Hide(); return end
-        local x = GetCursorPosition()
-        model.rotation = model.rotation + (x - (self.x or x)) * ROTATION_SPEED
-        self.x = x
-        model:SetRotation(model.rotation)
-    end)
+    -- Forget the pose too: a hidden model can drop it, and showCreature's guard would never re-set it.
+    model:SetScript("OnHide", function(self) self._creature = nil end)
 
-    model:SetScript("OnMouseDown", function(_, button)
-        if button ~= "LeftButton" then return end
-        dragger.x = GetCursorPosition()
-        dragger:Show()
-    end)
-    model:SetScript("OnMouseUp", function() dragger:Hide() end)
-    -- Forget the pose too: a hidden model can drop it, and the guard above would never re-set it.
-    model:SetScript("OnHide", function(self) dragger:Hide(); self._creature = nil end)
-    model:SetScript("OnMouseWheel", function(self, delta)
-        if not self.SetPosition then return end
-        local zoom = (self._duiZoom or 0) + delta * ZOOM_STEP
-        if zoom < ZOOM_MIN then zoom = ZOOM_MIN elseif zoom > ZOOM_MAX then zoom = ZOOM_MAX end
-        self._duiZoom = zoom
-        self:SetPosition(zoom, 0, 0)
-    end)
+    -- Last, so it hooks the OnHide above instead of being overwritten by it.
+    addon:WireModelView(model, { scale = true })
 end
 
 local function updateInfo()

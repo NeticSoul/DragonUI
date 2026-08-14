@@ -10,16 +10,6 @@ local FADE_SECONDS = 0.15
 local PLATE_SHEET = addon._dir .. "CharacterPanel\\commonbuttons"
 local ICON_SHEET = addon._dir .. "CharacterPanel\\commonicons"
 
--- Model:SetPosition's first axis is depth; SetCamDistanceScale only arrives in Cataclysm. The clamp
--- has to straddle 0 or zoom-in silently stops working at the default position.
-local ZOOM_STEP = 0.25
-local ZOOM_MIN, ZOOM_MAX = -3, 3
-local PAN_LIMIT = 1.5
-local PAN_SPEED = 0.004
--- Model_OnLoad's own starting rotation, so reset returns to exactly Blizzard's default.
-local DEFAULT_ROTATION = 0.61
--- Matches the collections model, so both windows spin at the same rate under the same drag.
-local ROTATION_SPEED = 0.012
 -- Radians per second while a rotate button is held; roughly a full turn in four seconds.
 local ROTATE_PER_SECOND = 1.6
 
@@ -27,63 +17,6 @@ local bar, faded, controls, buttons
 
 -- Draw order of the whole strip; the settings decide which of these actually stand.
 local STRIP_ORDER = { "left", "right", "zoomOut", "zoomIn", "reset" }
-
-local function clamp(v, lo, hi)
-    if v < lo then return lo elseif v > hi then return hi end
-    return v
-end
-
--- GetPosition survives a model reload unchanged, so the count is kept here instead of read back.
-local function view(model)
-    local v = model._duiView
-    if not v then
-        v = { zoom = 0, y = 0, z = 0 }
-        model._duiView = v
-    end
-    return v
-end
-
-local function applyView(model)
-    local v = view(model)
-    pcall(model.SetPosition, model, v.zoom, v.y, v.z)
-end
-
-local function applyZoom(model, delta)
-    local v = view(model)
-    v.zoom = clamp(v.zoom + delta, ZOOM_MIN, ZOOM_MAX)
-    applyView(model)
-end
-
-local function applyPan(model, dy, dz)
-    local v = view(model)
-    v.y = clamp(v.y + dy, -PAN_LIMIT, PAN_LIMIT)
-    v.z = clamp(v.z + dz, -PAN_LIMIT, PAN_LIMIT)
-    applyView(model)
-end
-
-local function resetModel(model)
-    local v = view(model)
-    v.zoom, v.y, v.z = 0, 0, 0
-    applyView(model)
-    model.rotation = DEFAULT_ROTATION
-    if model.SetRotation then pcall(model.SetRotation, model, DEFAULT_ROTATION) end
-end
-
--- A reload snaps the camera back to default but leaves the stored position alone, so zero both.
-local function trackReloads(model)
-    if model._duiReloadTracked then return end
-    model._duiReloadTracked = true
-
-    local function reset()
-        local v = view(model)
-        v.zoom, v.y, v.z = 0, 0, 0
-        applyView(model)
-    end
-
-    for _, method in ipairs({ "SetUnit", "RefreshUnit", "SetCreature", "SetModel" }) do
-        if model[method] then hooksecurefunc(model, method, reset) end
-    end
-end
 
 -- Square plate, centred glyph, additive glow of that glyph on hover -- how retail lights these.
 local function styleButton(btn, glyph)
@@ -213,55 +146,6 @@ local function startFade(target)
     end)
 end
 
--- Hooked, not set: the model's XML OnUpdate drives hold-to-rotate and its OnMouseUp is what lets an
--- item be dropped on the model. Driving the pan through either one wiped that behaviour.
-local panner = CreateFrame("Frame")
-panner:Hide()
-
-local rotator = CreateFrame("Frame")
-rotator:Hide()
-
-local function wireDrag(model)
-    if model._duiDragWired then return end
-    model._duiDragWired = true
-
-    -- The button state is polled, as Blizzard's own drag loops do: a release with the cursor off the
-    -- model never delivers OnMouseUp here, and this frame outlives the panel, so it would never stop.
-    panner:SetScript("OnUpdate", function(self)
-        if not IsMouseButtonDown("RightButton") then self:Hide(); return end
-        local cx, cy = GetCursorPosition()
-        local dx, dy = cx - (self.x or cx), cy - (self.y or cy)
-        self.x, self.y = cx, cy
-        -- Screen x maps to the model's lateral axis, screen y to its vertical one.
-        applyPan(model, dx * PAN_SPEED, dy * PAN_SPEED)
-    end)
-
-    -- Writes model.rotation, not just SetRotation: Model_OnUpdate reads that field to carry a held
-    -- rotate button on, so a drag that skipped it would be snapped away by the next button press.
-    rotator:SetScript("OnUpdate", function(self)
-        if not IsMouseButtonDown("LeftButton") then self:Hide(); return end
-        local cx = GetCursorPosition()
-        model.rotation = (model.rotation or DEFAULT_ROTATION) + (cx - (self.x or cx)) * ROTATION_SPEED
-        self.x = cx
-        model:SetRotation(model.rotation)
-    end)
-
-    model:HookScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" then
-            rotator.x = GetCursorPosition()
-            rotator:Show()
-        elseif button == "RightButton" then
-            panner.x, panner.y = GetCursorPosition()
-            panner:Show()
-        end
-    end)
-    -- The XML OnMouseUp still runs first, so dropping an item on the model still equips it.
-    model:HookScript("OnMouseUp", function(_, button)
-        if button == "LeftButton" then rotator:Hide() end
-        if button == "RightButton" then panner:Hide() end
-    end)
-end
-
 local function build()
     local model = _G.CharacterModelFrame
     local left = _G.CharacterModelFrameRotateLeftButton
@@ -294,12 +178,15 @@ local function build()
         return btn
     end
 
+    -- Depth, not scale: the player is always framed the same way, so it cannot drift like a creature.
     local zoomIn = makeButton("DragonUIModelZoomIn", "common-icon-zoomin",
-                              function() applyZoom(model, ZOOM_STEP) end)
+                              function() addon:ZoomModelDepth(model, 1) end)
     local zoomOut = makeButton("DragonUIModelZoomOut", "common-icon-zoomout",
-                               function() applyZoom(model, -ZOOM_STEP) end)
-    local reset = makeButton("DragonUIModelReset", "common-icon-undo",
-                             function() resetModel(model) end)
+                               function() addon:ZoomModelDepth(model, -1) end)
+    local reset = makeButton("DragonUIModelReset", "common-icon-undo", function()
+        addon:ResetModelView(model)
+        addon:ResetModelRotation(model)
+    end)
 
     buttons = { left = left, right = right, zoomOut = zoomOut, zoomIn = zoomIn, reset = reset }
     layoutControls()
@@ -316,15 +203,8 @@ local function build()
         releaseButtons()
     end)
 
-    model:EnableMouse(true)
-    wireDrag(model)
-    trackReloads(model)
-
-    -- 3.3.5a has no Model_OnMouseWheel, so wheel-zoom is ours to wire.
-    model:EnableMouseWheel(true)
-    model:HookScript("OnMouseWheel", function(_, delta)
-        applyZoom(model, delta * ZOOM_STEP)
-    end)
+    -- Hooked, not set: the model's XML OnMouseUp is what lets an item be dropped onto it to equip.
+    addon:WireModelView(model, { hook = true })
 
     -- Revealed over the model OR the strip, so reaching for a button does not fade it out underneath.
     -- Nothing standing means nothing to reveal; drag-rotate and wheel-zoom are not buttons and stay.
@@ -355,52 +235,12 @@ end
 
 CP.StyleModelButton = styleButton
 
--- Its own drag frame and its own buttons: the character strip's are bound to CharacterModelFrame by
--- closure, so sharing them would leave whichever model was wired last driving both.
+-- Scale zoom: an imp and a felguard are framed at distances a depth push cannot serve alike.
 function CP.WirePetModelControls(model)
     if not model or model._duiPetControls then return end
     model._duiPetControls = true
-    model.rotation = DEFAULT_ROTATION
-    model:EnableMouse(true)
-    model:EnableMouseWheel(true)
-    trackReloads(model)
-
-    local rotator = CreateFrame("Frame", nil, model)
-    rotator:Hide()
-    -- Polled, not taken from OnMouseUp: releasing with the cursor off the model never delivers it.
-    rotator:SetScript("OnUpdate", function(self)
-        if not IsMouseButtonDown("LeftButton") then self:Hide(); return end
-        local x = GetCursorPosition()
-        model.rotation = (model.rotation or DEFAULT_ROTATION) + (x - (self.x or x)) * ROTATION_SPEED
-        self.x = x
-        model:SetRotation(model.rotation)
-    end)
-
-    -- Its own frame, not the character strip's panner: that one is bound to CharacterModelFrame by
-    -- closure, so sharing it would leave whichever model was wired last taking both drags.
-    local panner = CreateFrame("Frame", nil, model)
-    panner:Hide()
-    panner:SetScript("OnUpdate", function(self)
-        if not IsMouseButtonDown("RightButton") then self:Hide(); return end
-        local cx, cy = GetCursorPosition()
-        local dx, dy = cx - (self.x or cx), cy - (self.y or cy)
-        self.x, self.y = cx, cy
-        -- Screen x maps to the model's lateral axis, screen y to its vertical one.
-        applyPan(model, dx * PAN_SPEED, dy * PAN_SPEED)
-    end)
-
-    model:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" then
-            rotator.x = GetCursorPosition()
-            rotator:Show()
-        elseif button == "RightButton" then
-            panner.x, panner.y = GetCursorPosition()
-            panner:Show()
-        end
-    end)
-    model:SetScript("OnMouseUp", function() rotator:Hide(); panner:Hide() end)
-    model:SetScript("OnHide", function() rotator:Hide(); panner:Hide() end)
-    model:SetScript("OnMouseWheel", function(_, delta) applyZoom(model, delta * ZOOM_STEP) end)
+    addon:ResetModelRotation(model)
+    addon:WireModelView(model, { scale = true })
 
     local strip = CreateFrame("Frame", nil, model)
     strip:SetHeight(BTN_SIZE)
@@ -411,7 +251,7 @@ function CP.WirePetModelControls(model)
     local spinner = CreateFrame("Frame", nil, model)
     spinner:Hide()
     spinner:SetScript("OnUpdate", function(self, elapsed)
-        model.rotation = (model.rotation or DEFAULT_ROTATION) + self.step * elapsed
+        model.rotation = model.rotation + self.step * elapsed
         model:SetRotation(model.rotation)
     end)
     model:HookScript("OnHide", function() spinner:Hide() end)
