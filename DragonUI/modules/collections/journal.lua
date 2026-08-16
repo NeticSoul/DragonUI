@@ -85,25 +85,29 @@ local function showCreature(creatureID)
     model:Show()
     -- Only on a real change: SetCreature restarts the idle animation, and refresh() runs on every
     -- companion event, so re-setting the same creature made the model loop its intro forever.
-    if model._creature == creatureID then return end
-    model._creature = creatureID
-    -- SetCreature is hooked by WireModelView, which zeroes the zoom and pan the reload just undid.
+    if model._creature == creatureID and not model._duiStale then return end
+    model._duiStale = nil
+
+    -- A new creature is framed at its own distance, so the previous one's zoom means nothing here.
+    if model._creature ~= creatureID then
+        model._creature = creatureID
+        -- The zoom resets itself on the reload below; the pose is ours to put back.
+        addon:ResetModelRotation(model, 0.5)
+    end
     model:SetCreature(creatureID)
-    model.rotation = 0.5
-    model:SetRotation(model.rotation)
 end
 
 local function buildModel(parent)
     model = CreateFrame("PlayerModel", nil, parent)
     model:SetPoint("TOPLEFT", parent, "TOPLEFT", 6, -132)
     model:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -6, 6)
-    model.rotation = 0.5
 
-    -- Forget the pose too: a hidden model can drop it, and showCreature's guard would never re-set it.
-    model:SetScript("OnHide", function(self) self._creature = nil end)
+    -- A hidden model can drop its content, and showCreature's guard would never re-issue SetCreature.
+    model:SetScript("OnHide", function(self) self._duiStale = true end)
 
     -- Last, so it hooks the OnHide above instead of being overwritten by it.
-    addon:WireModelView(model, { scale = true })
+    addon:WireModelView(model, { facing = 0.5, pivot = addon.ModelPivot.creature })
+    addon:ResetModelRotation(model, 0.5)
 end
 
 local function updateInfo()
