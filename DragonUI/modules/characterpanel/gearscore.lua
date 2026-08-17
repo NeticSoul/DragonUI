@@ -97,7 +97,7 @@ function CP.GetGearScore(unit)
     local offHand = GetInventoryItemLink(unit, 17)
     local titanGrip = 1
     if equipLocOf(GetInventoryItemLink(unit, 16)) == "INVTYPE_2HWEAPON"
-        or equipLocOf(offHand) == "INVTYPE_2HWEAPON" then
+        and equipLocOf(offHand) == "INVTYPE_2HWEAPON" then
         titanGrip = 0.5
     end
 
