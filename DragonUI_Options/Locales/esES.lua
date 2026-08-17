@@ -365,6 +365,8 @@ L["Show the caster's name (class-colored) and spell ID on buff and debuff toolti
 -- Chat Mods
 L["Enable Chat Mods"] = "Activar Mods de Chat"
 L["Enables or disables Chat Mods."] = "Activa o desactiva los mods de chat."
+L["Show Link Tooltips on Hover"] = "Mostrar tooltips de enlaces al pasar el cursor"
+L["Show tooltips for supported chat links without holding Alt."] = "Muestra tooltips para los enlaces de chat compatibles sin mantener pulsada la tecla Alt."
 L["Editbox Position"] = "Posición del Editbox"
 L["Choose where the chat editbox is positioned."] = "Elegir dónde se posiciona el editbox del chat."
 L["Top"] = "Arriba"

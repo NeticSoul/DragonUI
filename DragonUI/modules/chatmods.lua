@@ -876,11 +876,17 @@ local HOVERABLE_LINK_TYPES = {
     quest = true, spell = true, talent = true, unit = true
 }
 
+local function IsLinkHoverTooltipEnabled()
+    local config = GetModuleConfig()
+    return config and config.linkHoverTooltip == true
+end
+
 local function OnHyperlinkEnter(self, data, link)
     if not ChatModsModule.applied or not data then return end
 
     local linkType = data:match("^(.-):")
-    if HOVERABLE_LINK_TYPES[linkType] and IsAltKeyDown() then
+    if HOVERABLE_LINK_TYPES[linkType]
+        and (IsLinkHoverTooltipEnabled() or IsAltKeyDown()) then
         ShowUIPanel(GameTooltip)
         GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
         GameTooltip:SetHyperlink(link)
@@ -894,6 +900,14 @@ local function OnHyperlinkLeave(self, data, link)
 
     local linkType = data:match("^(.-):")
     if HOVERABLE_LINK_TYPES[linkType] and ChatModsModule.frames.linkHoverTooltipShown then
+        HideUIPanel(GameTooltip)
+        ChatModsModule.frames.linkHoverTooltipShown = nil
+    end
+end
+
+addon.RefreshChatLinkHover = function()
+    if ChatModsModule.frames.linkHoverTooltipShown
+        and not IsLinkHoverTooltipEnabled() then
         HideUIPanel(GameTooltip)
         ChatModsModule.frames.linkHoverTooltipShown = nil
     end
@@ -1349,6 +1363,9 @@ local function RestoreChatModsSystem()
     if not ChatModsModule.applied then return end
 
     StopChatButtonsHoverUpdater()
+    if ChatModsModule.frames.linkHoverTooltipShown then
+        HideUIPanel(GameTooltip)
+    end
     ChatModsModule.frames.linkHoverTooltipShown = nil
 
     -- Remove filters on disable so re-enable does not stack duplicate handlers.

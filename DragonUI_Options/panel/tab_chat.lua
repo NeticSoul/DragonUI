@@ -42,6 +42,18 @@ local function BuildChatTab(scroll)
         requiresReload = true,
     })
 
+    C:AddToggle(generalSection, {
+        label = LO["Show Link Tooltips on Hover"] or "Show Link Tooltips on Hover",
+        desc = LO["Show tooltips for supported chat links without holding Alt."]
+            or "Show tooltips for supported chat links without holding Alt.",
+        dbPath = "modules.chatmods.linkHoverTooltip",
+        callback = function()
+            if addon.RefreshChatLinkHover then
+                addon.RefreshChatLinkHover()
+            end
+        end,
+    })
+
     -- ====================================================================
     -- EDITBOX POSITION
     -- ====================================================================

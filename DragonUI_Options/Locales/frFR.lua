@@ -73,6 +73,8 @@ L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."]
 -- Chat Mods
 L["Enable Chat Mods"] = "Activer les mods de chat"
 L["Enables or disables Chat Mods."] = "Active ou désactive les mods de chat."
+L["Show Link Tooltips on Hover"] = "Afficher les infobulles des liens au survol"
+L["Show tooltips for supported chat links without holding Alt."] = "Afficher les infobulles des liens de chat pris en charge sans maintenir la touche Alt."
 L["Editbox Position"] = "Position de la zone de saisie"
 L["Choose where the chat editbox is positioned."] = "Choisissez où se trouve la zone de saisie du chat."
 L["Top"] = "Haut"

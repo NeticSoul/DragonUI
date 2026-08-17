@@ -350,6 +350,8 @@ L["Show the caster's name (class-colored) and spell ID on buff and debuff toolti
 -- Chat Mods
 L["Enable Chat Mods"] = "채팅 모드 활성화"
 L["Enables or disables Chat Mods."] = "쳄팅 모드를 활성화하거나 비활성화합니다."
+L["Show Link Tooltips on Hover"] = "마우스 오버 시 링크 툴팁 표시"
+L["Show tooltips for supported chat links without holding Alt."] = "Alt 키를 누르지 않고 지원되는 채팅 링크의 툴팁을 표시합니다."
 L["Editbox Position"] = "입력창 위치"
 L["Choose where the chat editbox is positioned."] = "채팅 입력창의 위치를 선택하세요."
 L["Top"] = "상단"
