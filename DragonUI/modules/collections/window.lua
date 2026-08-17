@@ -297,4 +297,10 @@ function CO.Toggle(kind)
     CO.Open(kind)
 end
 
-addon.ToggleCollections = CO.Toggle
+-- A server with ToggleCollectionsJournal ships its own window, and stock 3.3.5a has none.
+function addon.ToggleCollections(kind)
+    if type(_G.ToggleCollectionsJournal) == "function" then
+        return _G.ToggleCollectionsJournal()
+    end
+    return CO.Toggle(kind)
+end
