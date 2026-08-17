@@ -26,8 +26,16 @@ _G["BINDING_NAME_" .. BINDING] = addon.L["Pets & Mounts"]
 
 btn:RegisterForClicks("LeftButtonUp")
 btn:SetScript("OnClick", function()
-    if addon.ToggleCollections then addon.ToggleCollections() end
+    -- ToggleCollectionsJournal does not exist on stock 3.3.5a; its presence means the
+    -- server (e.g. Deviate Delight) ships its own native Collections window, which takes
+    -- priority over DragonUI's Pets & Mounts browser.
+    if type(_G.ToggleCollectionsJournal) == "function" then
+        _G.ToggleCollectionsJournal()
+    elseif addon.ToggleCollections then
+        addon.ToggleCollections()
+    end
 end)
+
 -- What MainMenuBarMicroButton's own OnEnter does: it is what puts every other micro menu tooltip at
 -- the default anchor and prints the second line in NORMAL_FONT_COLOR.
 btn.tooltipText = addon.L["Pets & Mounts"]
