@@ -497,6 +497,8 @@ function NP.gather.SyncHealth(plateData, value)
     if NP.gather.IsTotemIconOnlyActive(plateData) then
         bar:Hide()
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
+        if plateData.minaHpNum then plateData.minaHpNum:Hide() end
+        if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
         return
     end
 
@@ -504,6 +506,8 @@ function NP.gather.SyncHealth(plateData, value)
     if NP.gather.IsHeadlineActive(plateData) then
         bar:Hide()
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
+        if plateData.minaHpNum then plateData.minaHpNum:Hide() end
+        if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
         return
     end
 
