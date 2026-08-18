@@ -1640,6 +1640,9 @@ function CastbarModule:OnUpdate(unitType, castbar, elapsed)
                 castbar.castingEx = false
                 castbar.channelingEx = false
                 if unitType == "player" then HideLatencyIndicator() end
+                -- Hide instantly; HandleCastStop_Simple no-ops afterward since flags are already cleared here.
+                if frames.spark then frames.spark:Hide() end
+                HideAllTicks(frames.ticks)
                 ShowSuccessFlash(unitType)
             end
             -- If new cast started, flags stay true and we skip fadeout
