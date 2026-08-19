@@ -200,8 +200,9 @@ function CP.ModernizeCloseButton(cb, owner, x, y)
     cb._duiModernized = true
 
     cb:SetSize(24, 24)
+    cb._duiOwner, cb._duiX, cb._duiY = owner, x or 1, y or 0
     cb:ClearAllPoints()
-    cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", x or 1, y or 0)
+    cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", cb._duiX, cb._duiY)
 
     -- All four states UIPanelCloseButtonNoScripts declares, with the sheet's own rects. The pushed
     -- one used to point at 41..79, which is the DISABLED art -- pressed lives further down at 81.
@@ -218,6 +219,15 @@ function CP.ModernizeCloseButton(cb, owner, x, y)
     dress("GetDisabledTexture", 39/256, 75/256, 41/128, 79/128)
     -- Left as the client's old minimize glow otherwise: a square Wrath flare over a modern red X.
     dress("GetHighlightTexture", 115/256, 151/256, 1/128, 39/128, "ADD")
+end
+
+-- SetPoint without a ClearAllPoints ADDS an anchor, so one stray re-anchor from outside leaves the
+-- button pinned twice and stretched rather than merely moved.
+function CP.ReanchorCloseButton()
+    local cb = _G.CharacterFrameCloseButton
+    if not cb or not cb._duiModernized then return end
+    cb:ClearAllPoints()
+    cb:SetPoint("TOPRIGHT", cb._duiOwner or _G.CharacterFrame, "TOPRIGHT", cb._duiX, cb._duiY)
 end
 
 local function applyCloseButton()
