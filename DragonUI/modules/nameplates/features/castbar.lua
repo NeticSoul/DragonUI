@@ -200,6 +200,11 @@ function NP.castbar.BindNativeCastPlateIdentity(plateData)
 end
 
 function NP.castbar.OnNativeCastShown(plateData)
+    -- Headline plates are name only; stomp the native bar as the client shows it.
+    if NP.gather.IsHeadlineActive(plateData) then
+        NP.castbar.HideNativeCastVisual(plateData)
+        return
+    end
     ResetNativeCastTrack(plateData)
     NP.layout.EnsureMinaStack(plateData)
     local bar = plateData.minaCast
@@ -350,6 +355,10 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
         return
     end
     if bar._intHideAt then
+        return
+    end
+    -- Headline plates never show cast visuals, including the interrupted hold.
+    if NP.gather.IsHeadlineActive(plateData) then
         return
     end
 
@@ -894,8 +903,8 @@ function PartyRaidCastTracker:StartCast(unit, isChannel)
     local plateData = FindPlateForGroupUnit(unit)
     if not plateData or not plateData.minaPartyCast then return end
 
-    -- Headline mode shows only the name for party/raid plates: no cast bar.
-    if NP.gather.IsFriendlyNameOnlyActive(plateData) then return end
+    -- Headline mode shows only the name (players and friendly NPCs): no cast bar.
+    if NP.gather.IsHeadlineActive(plateData) then return end
 
     -- Plates resolved as target/focus already render the main castbar.
     local resolvedUnit = NP.identity.ResolvePlateUnit(plateData)
@@ -2166,6 +2175,9 @@ function NP.castbar.StartMonitorCast(plateData, sourceGUID, spellName, spellIcon
     if not IsOffTargetMonitorEnabled(cfg) then
         return false
     end
+    if NP.gather.IsHeadlineActive(plateData) then
+        return false
+    end
     if IsAggressiveCastMonitor(cfg) and sourceGUID then
         if not PlateMayReceiveMonitorCast(plateData, sourceGUID) then
             return false
@@ -2733,6 +2745,22 @@ function NP.castbar.SuppressNativeCastVisual(plateData)
     plateData._nativeCastSuppressed = true
 end
 
+-- Headline (name-only) plates carry no cast visuals at all: drop both addon bars
+-- past their interrupt/success fades and stomp the native bar the client draws.
+function NP.castbar.HidePlateCastVisualsForHeadline(plateData)
+    if not plateData then return end
+    -- Cleared first so the reset below cannot re-show an interrupted party bar.
+    PartyRaidCastTracker.activeCasts[plateData] = nil
+    NP.castbar.ResetPlateCastBar(plateData)
+    if plateData.minaCastSpark then plateData.minaCastSpark:Hide() end
+    if plateData.minaPartyCastSpark then plateData.minaPartyCastSpark:Hide() end
+    -- Otherwise the backup promotion in SyncCastBar can resurrect the bar.
+    plateData._monitorBackup = nil
+    activeTickPlates[plateData] = nil
+    -- Not SuppressNativeCastVisual: its one-shot flag would no-op on later casts.
+    NP.castbar.HideNativeCastVisual(plateData)
+end
+
 function NP.castbar.HidePlateCastBar(plateData, force)
     local bar = plateData.minaCast
     if not bar then
@@ -3291,6 +3319,11 @@ function NP.castbar.SyncCastBar(plateData)
     local src = plateData.castBar
     local bar = plateData.minaCast
     if not bar then return end
+
+    if NP.gather.IsHeadlineActive(plateData) then
+        NP.castbar.HidePlateCastVisualsForHeadline(plateData)
+        return
+    end
 
     if NP.gather.IsTotemIconOnlyActive(plateData) then
         NP.castbar.HidePlateCastBar(plateData)
