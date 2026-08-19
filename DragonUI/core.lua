@@ -27,8 +27,18 @@ addon.Options = { type = "group", name = "DragonUI", args = {} }
 addon.OptionsLoaded = false
 
 function addon.core:OnInitialize()
+    -- SavedVariables are loaded but AceDB is not, so read the account-wide setting
+    -- straight off the table the way addon.GetActiveLocale does. AceDB consults this
+    -- only for characters that have no profile yet, and New() errors on anything but
+    -- a string or true - hence the type guard.
+    local sv = _G.DragonUIDB
+    local defaultProfile = sv and sv.global and sv.global.defaultProfile
+    if type(defaultProfile) ~= "string" or defaultProfile == "" then
+        defaultProfile = nil
+    end
+
     -- Replace the temporary addon.db with the real AceDB
-    addon.db = LibStub("AceDB-3.0"):New("DragonUIDB", addon.defaults);
+    addon.db = LibStub("AceDB-3.0"):New("DragonUIDB", addon.defaults, defaultProfile);
 
     -- First point where the stored language override is readable; UI is built later (PLAYER_LOGIN).
     addon.RefreshLocale()
@@ -50,6 +60,33 @@ function addon.core:OnInitialize()
     -- Apply current profile configuration immediately
     -- This ensures the profile is loaded when the addon starts
     addon:RefreshConfig();
+end
+
+-- Account-wide default profile for characters that have never run DragonUI.
+-- Lives in global rather than a profile so it survives profile switch/copy/reset;
+-- the raw fallback mirrors addon.GetActiveLocale for calls made before AceDB exists.
+function addon:GetDefaultProfileKey()
+    local key
+    if addon.db and addon.db.global then
+        key = addon.db.global.defaultProfile
+    else
+        local sv = _G.DragonUIDB
+        key = sv and sv.global and sv.global.defaultProfile
+    end
+    if type(key) == "string" and key ~= "" then
+        return key
+    end
+    return nil
+end
+
+-- Pass nil or an empty string to go back to per-character profiles.
+function addon:SetDefaultProfileKey(key)
+    if not (addon.db and addon.db.global) then return end
+    if type(key) == "string" and key ~= "" then
+        addon.db.global.defaultProfile = key
+    else
+        addon.db.global.defaultProfile = nil
+    end
 end
 
 function addon.core:OnEnable()
