@@ -200,12 +200,14 @@ function NP.castbar.BindNativeCastPlateIdentity(plateData)
 end
 
 function NP.castbar.OnNativeCastShown(plateData)
+    -- Reset first: leaving headline mid-cast would otherwise read a stale max value
+    -- left by the previous cast on this recycled plate.
+    ResetNativeCastTrack(plateData)
     -- Headline plates are name only; stomp the native bar as the client shows it.
     if NP.gather.IsHeadlineActive(plateData) then
         NP.castbar.HideNativeCastVisual(plateData)
         return
     end
-    ResetNativeCastTrack(plateData)
     NP.layout.EnsureMinaStack(plateData)
     local bar = plateData.minaCast
     if bar then
@@ -980,7 +982,10 @@ function PartyRaidCastTracker:StopCast(unit, interrupted)
     local plateData = self:FindPlateForUnit(unit)
     if not plateData then return end
     local bar = plateData.minaPartyCast
-    if bar and (interrupted or ShouldInterruptPartyEarlyEnd(unit, bar)) then
+    -- ShowInterruptedState no-ops under headline, so fall through to HideBar instead
+    -- of clearing activeCasts and leaving the bar up until the next refresh.
+    if bar and (interrupted or ShouldInterruptPartyEarlyEnd(unit, bar))
+        and not NP.gather.IsHeadlineActive(plateData) then
         NP.castbar.ShowInterruptedState(bar, plateData, true)
         self.activeCasts[plateData] = nil
         return
@@ -3317,13 +3322,15 @@ end
 function NP.castbar.SyncCastBar(plateData)
     local cfg = NP.config.GetCfg()
     local src = plateData.castBar
-    local bar = plateData.minaCast
-    if not bar then return end
 
+    -- Above the bar check: a headline plate with no minaCast yet still needs the stomp.
     if NP.gather.IsHeadlineActive(plateData) then
         NP.castbar.HidePlateCastVisualsForHeadline(plateData)
         return
     end
+
+    local bar = plateData.minaCast
+    if not bar then return end
 
     if NP.gather.IsTotemIconOnlyActive(plateData) then
         NP.castbar.HidePlateCastBar(plateData)
@@ -3579,6 +3586,12 @@ end
 -- Native castbar hook handler (lifecycle)
 
 function NP.castbar.OnNativeCastValueChanged(plateData, val)
+    -- Fires every frame for the whole cast; headline plates only need the native
+    -- stomp re-asserted, not a full reset pass per plate per frame.
+    if NP.gather.IsHeadlineActive(plateData) then
+        NP.castbar.HideNativeCastVisual(plateData)
+        return
+    end
     val = tonumber(val)
     if val and val >= 0.002 then
         UpdateNativeCastTrack(plateData, val)

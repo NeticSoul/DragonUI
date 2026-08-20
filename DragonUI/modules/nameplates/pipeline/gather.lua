@@ -1072,13 +1072,15 @@ function NP.gather.RefreshPlateTargetState(plateData, reason)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
     NP.widgets.SyncList(TARGET_SYNC_WIDGETS, plateData, context, state)
+    -- Called before the headline return below: it is not a pure predicate, and on a
+    -- target transition it clears the GUID and debuffs off a stale duplicate plate.
+    local ownershipValid = NP.identity.ValidatePlateGUIDOwnership(plateData)
     -- Un-targeting mid-cast re-enters headline; drop the bars before the ownership
     -- branch below, which would otherwise leave a pending fade on screen.
     if NP.gather.IsHeadlineActive(plateData) then
         NP.castbar.HidePlateCastVisualsForHeadline(plateData)
         return
     end
-    local ownershipValid = NP.identity.ValidatePlateGUIDOwnership(plateData)
     if not ownershipValid and not NP.castbar.PlateStillCasting(plateData) then
         NP.castbar.HidePlateCastBar(plateData)
     elseif state.showCastbar and NP.castbar.ShouldSkipCastSync(plateData) then
