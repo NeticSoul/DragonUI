@@ -12,6 +12,7 @@ local _arialn = addon.Fonts and addon.Fonts.ARIALN or "Fonts\\ARIALN.TTF"
 local defaults = {
     global = {
         locale = "auto", -- UI language override; "auto" follows the client locale
+        defaultProfile = "", -- Profile new characters start on; "" gives each its own
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
         questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
