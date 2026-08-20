@@ -146,6 +146,57 @@ local function SafeSetFont(fs, size, flags, preferredFont)
     end
 end
 
+-- ============================================================================
+-- LOCALIZED TEXT FITTING
+-- ============================================================================
+
+-- Widget widths are tuned against English; every other language runs wider, so grow the
+-- widget to its own text rather than letting the overflow land on top of its neighbour.
+local function FitWidth(fontString, baseWidth, padding, maxWidth)
+    baseWidth = baseWidth or 0
+    if not fontString or not fontString.GetStringWidth then return baseWidth end
+    local needed = fontString:GetStringWidth()
+    if not needed or needed <= 0 then return baseWidth end
+    needed = math.ceil(needed) + (padding or 0)
+    if maxWidth and needed > maxWidth then needed = maxWidth end
+    if needed < baseWidth then return baseWidth end
+    return needed
+end
+
+-- 3.3.5a has no FontString:SetWordWrap, so a width-clamped string wraps out of its own row
+-- instead of truncating; cut it here, on UTF-8 boundaries so Cyrillic never splits mid-glyph.
+local function ClampText(fontString, maxWidth)
+    if not fontString or not fontString.GetStringWidth then return end
+    if not maxWidth or maxWidth <= 0 then return end
+    local text = fontString:GetText()
+    if not text or text == "" then return end
+    if fontString:GetStringWidth() <= maxWidth then return end
+
+    local cut = #text
+    while cut > 1 do
+        cut = cut - 1
+        local b = string.byte(text, cut + 1)
+        while cut > 1 and b and b >= 128 and b < 192 do
+            cut = cut - 1
+            b = string.byte(text, cut + 1)
+        end
+        fontString:SetText(string.sub(text, 1, cut) .. "\226\128\166")
+        if fontString:GetStringWidth() <= maxWidth then return end
+    end
+end
+
+Controls.FitWidth  = FitWidth
+Controls.ClampText = ClampText
+
+-- Beyond this a grown widget starts crowding the panel; the leftover is truncated instead.
+local MAX_AUTO_WIDTH = 420
+
+-- AceGUI's own defaults, plus the horizontal insets its templates put around the text.
+local BUTTON_BASE_WIDTH   = 200
+local BUTTON_TEXT_INSET   = 34
+local DROPDOWN_BASE_WIDTH = 200
+local DROPDOWN_LABEL_INSET = 6
+
 local function NormalizeText(value, fallback)
     if type(value) == "string" and value ~= "" then
         return value
@@ -361,6 +412,8 @@ local function SkinDropdown(widget)
     if widget.label then
         widget.label:ClearAllPoints()
         widget.label:SetPoint("BOTTOMLEFT", bg, "TOPLEFT", 2, 1)
+        -- Without this the label has no right edge and a long translation runs over the next widget.
+        widget.label:SetPoint("BOTTOMRIGHT", bg, "TOPRIGHT", 0, 1)
         SafeSetFont(widget.label, 12, "")
         widget.label:SetTextColor(1, 0.82, 0)
     end
@@ -851,6 +904,14 @@ function Controls:AddDropdown(parent, opts)
     end)
 
     SkinDropdown(dd)
+
+    -- AceGUI resets the width on every acquire, so re-fit the label after skinning set its font.
+    if dd.label and dd.label:IsShown() then
+        local width = FitWidth(dd.label, opts.width or DROPDOWN_BASE_WIDTH, DROPDOWN_LABEL_INSET + 2, MAX_AUTO_WIDTH)
+        dd:SetWidth(width)
+        ClampText(dd.label, width - DROPDOWN_LABEL_INSET)
+    end
+
     TagSearchId(dd, opts)
     parent:AddChild(dd)
     return dd
@@ -1004,6 +1065,7 @@ function Controls:AddButton(parent, opts)
         btn:SetCallback("OnLeave", function() GameTooltip:Hide() end)
     end
     SkinButton(btn)
+    btn:SetWidth(FitWidth(btn.text, opts.width or BUTTON_BASE_WIDTH, BUTTON_TEXT_INSET, MAX_AUTO_WIDTH))
     TagSearchId(btn, opts)
     parent:AddChild(btn)
     return btn

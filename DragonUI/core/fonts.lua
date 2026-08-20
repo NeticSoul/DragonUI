@@ -12,9 +12,9 @@
 --   zhCN                           : Fonts\ZYKai_T.TTF (Simplified Chinese)
 --   zhTW                           : Fonts\bLEI00D.TTF (Traditional Chinese)
 --
--- Custom fonts (expressway.ttf, PTSansNarrow.ttf) lack CJK/Cyrillic glyphs
--- and render as "???" on those clients. This module selects the correct
--- system font for each locale, falling back to the custom font when safe.
+-- Custom fonts (expressway.ttf, PTSansNarrow.ttf) cover Latin-1, Eastern European
+-- and Cyrillic, but carry no CJK glyphs. This module selects the correct system
+-- font for each locale, falling back to the custom font when safe.
 -- ============================================================================
 
 local addon = select(2, ...)
@@ -33,6 +33,14 @@ local LOCALE_SYSTEM_FONTS = {
     ruRU = "Fonts\\FRIZQT___CYR.TTF",
 }
 
+-- Only CJK is beyond the bundled fonts; forcing the client font on ruRU would strip the
+-- Latin accents every other shipped language needs, so ruRU is deliberately absent here.
+local LOCALE_CJK_FONTS = {
+    koKR = LOCALE_SYSTEM_FONTS.koKR,
+    zhCN = LOCALE_SYSTEM_FONTS.zhCN,
+    zhTW = LOCALE_SYSTEM_FONTS.zhTW,
+}
+
 -- Does this locale need a system font instead of custom Latin-only fonts?
 local _needsSystemFont = (LOCALE_SYSTEM_FONTS[_locale] ~= nil)
 
@@ -47,16 +55,14 @@ local Fonts = {}
 Fonts.PRIMARY = LOCALE_SYSTEM_FONTS[_locale] or "Fonts\\FRIZQT__.TTF"
 
 --- Action bar font (hotkeys, macros, cooldowns, page numbers).
--- Uses expressway.ttf on Latin locales for a modern Dragonflight look,
--- falls back to the locale system font on CJK/Cyrillic.
-Fonts.ACTIONBAR = _needsSystemFont
-    and LOCALE_SYSTEM_FONTS[_locale]
+-- Uses expressway.ttf on Latin and Cyrillic locales for a modern Dragonflight look,
+-- falls back to the locale system font on CJK.
+Fonts.ACTIONBAR = LOCALE_CJK_FONTS[_locale]
     or [[Interface\AddOns\DragonUI\Fonts\expressway.ttf]]
 
 --- Narrow UI font (options panel, editor mode labels).
--- PTSansNarrow.ttf on Latin locales, locale system font on CJK/Cyrillic.
-Fonts.NARROW = _needsSystemFont
-    and LOCALE_SYSTEM_FONTS[_locale]
+-- PTSansNarrow.ttf on Latin and Cyrillic locales, locale system font on CJK.
+Fonts.NARROW = LOCALE_CJK_FONTS[_locale]
     or [[Interface\AddOns\DragonUI_Options\fonts\PTSansNarrow.ttf]]
 
 --- ARIALN replacement: used where database defaults previously hardcoded ARIALN.
