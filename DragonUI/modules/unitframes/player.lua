@@ -2277,6 +2277,92 @@ local PLAYER_SLIDE_DIST = 140
 local slideOffset = 0
 local slideDriver, slideStart, slideReverse
 
+local PLAYER_ANCHOR_OFFSETS = {
+    player = {-15, -7},
+    vehicle = {-20, -5}
+}
+
+local secureGuard, secureAnchor, Ghost_Refresh
+
+-- Restricted SetPoint only accepts relative frames from the protected handle pool, hence the mirror.
+local SECURE_GUARD_SNIPPET = [[
+    if newstate ~= "fix" then return end
+
+    -- The manager only re-fires on a value change, so dirtying our own state is the 0.2s clock.
+    self:SetAttribute("state-duipos", "idle")
+
+    local pf = self:GetFrameRef("playerFrame")
+    if not pf then return end
+
+    local n = pf:GetNumPoints()
+    if n < 2 then return end
+
+    local anchor = self:GetFrameRef("playerAnchor")
+    if not anchor then return end
+
+    local stock = false
+    for i = 1, n do
+        local p, rel, rp, x, y = pf:GetPoint(i)
+        -- GetPoint hands back scale-skewed offsets, so match a window, never equality.
+        if p == "TOPLEFT" and rp == "TOPLEFT" and x and y
+            and x > -19.5 and x < -18.5 and y > -4.5 and y < -3.5 then
+            stock = true
+        end
+    end
+    if not stock then return end
+
+    local ox, oy
+    if pf:GetAttribute("unit") == "vehicle" then
+        ox, oy = self:GetAttribute("duiVehX"), self:GetAttribute("duiVehY")
+    else
+        ox, oy = self:GetAttribute("duiPlrX"), self:GetAttribute("duiPlrY")
+    end
+
+    pf:ClearAllPoints()
+    pf:SetPoint("CENTER", anchor, "CENTER", ox or 0, oy or 0)
+]]
+
+local function SecureGuard_Install()
+    if secureGuard or InCombatLockdown() or not Module.playerFrame then
+        return
+    end
+    if not IsPlayerModuleEnabled() then
+        return
+    end
+
+    secureAnchor = CreateFrame("Frame", "DragonUI_PlayerSecureAnchor", UIParent, "SecureFrameTemplate")
+    secureAnchor:SetAllPoints(Module.playerFrame)
+
+    local guard = CreateFrame("Frame", "DragonUI_PlayerPosGuard", UIParent, "SecureHandlerStateTemplate")
+    guard:SetFrameRef("playerFrame", PlayerFrame)
+    guard:SetFrameRef("playerAnchor", secureAnchor)
+
+    -- Handles only exist when the lookup ran securely; a missing ref makes the snippet a silent no-op.
+    if not guard:GetAttribute("frameref-playerFrame") or not guard:GetAttribute("frameref-playerAnchor") then
+        addon:Debug("Secure position guard disabled: frame refs unavailable")
+        return
+    end
+
+    guard:SetAttribute("duiPlrX", PLAYER_ANCHOR_OFFSETS.player[1])
+    guard:SetAttribute("duiPlrY", PLAYER_ANCHOR_OFFSETS.player[2])
+    guard:SetAttribute("duiVehX", PLAYER_ANCHOR_OFFSETS.vehicle[1])
+    guard:SetAttribute("duiVehY", PLAYER_ANCHOR_OFFSETS.vehicle[2])
+    guard:SetAttribute("_onstate-duipos", SECURE_GUARD_SNIPPET)
+
+    secureGuard = guard
+    RegisterStateDriver(guard, "duipos", "[combat] fix; off")
+end
+
+local function SecureGuard_Uninstall()
+    if not secureGuard or InCombatLockdown() then
+        return
+    end
+    UnregisterStateDriver(secureGuard, "duipos")
+    UnregisterStateDriver(secureGuard)
+    secureGuard:SetAttribute("_onstate-duipos", nil)
+    secureGuard = nil
+end
+
 -- Apply saved widget position to the player frame
 local function ApplyWidgetPosition()
     -- COMBAT GUARD: Do NOT touch ANY frame during combat.
@@ -2307,11 +2393,12 @@ local function ApplyWidgetPosition()
 
     -- Anchor PlayerFrame to auxiliary frame
     PlayerFrame:ClearAllPoints()
-    local hasVehicleUI = UnitHasVehicleUI("player")
-    if hasVehicleUI then
-        PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", -20, -5 + slideOffset)
-    else
-        PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", -15, -7 + slideOffset)
+    local ofs = PLAYER_ANCHOR_OFFSETS[UnitHasVehicleUI("player") and "vehicle" or "player"]
+    PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", ofs[1], ofs[2] + slideOffset)
+
+    SecureGuard_Install()
+    if Ghost_Refresh then
+        Ghost_Refresh()
     end
 end
 
@@ -3073,11 +3160,646 @@ if PlayerFrame_SequenceFinished then
     end)
 end
 
+-- Stand-in for the transition: DragonUI owns it and nothing protected anchors to it, so unlike
+-- PlayerFrame it can be moved during combat lockdown.
+local GHOST_BASE_LEVEL = 8
+local ghostFrame, ghostKids, ghostPortraits, ghostLive
+local ghostLayout, ghostRefreshPending
+local ghostDriver, ghostStart, ghostReverse, ghostActive
+local ghostCache = {}
+
+-- Textures have no GetEffectiveScale in 3.3.5a, so the scale has to come from the owning frame.
+local function Ghost_RegionScale(region)
+    local parent = region.GetParent and region:GetParent()
+    if parent and parent.GetEffectiveScale then
+        return parent:GetEffectiveScale()
+    end
+    return UIParent:GetEffectiveScale()
+end
+
+-- Rect of a frame or region in PlayerFrame units; nil when it cannot be measured yet.
+local function Ghost_Rect(obj)
+    local left, right = obj:GetLeft(), obj:GetRight()
+    local top, bottom = obj:GetTop(), obj:GetBottom()
+    local baseLeft, baseTop = PlayerFrame:GetLeft(), PlayerFrame:GetTop()
+    if not left or not right or not top or not bottom or not baseLeft or not baseTop then
+        return nil
+    end
+    local os = obj.GetEffectiveScale and obj:GetEffectiveScale() or Ghost_RegionScale(obj)
+    local ps = PlayerFrame:GetEffectiveScale()
+    if not ps or ps == 0 then
+        return nil
+    end
+    return (left * os - baseLeft * ps) / ps, (top * os - baseTop * ps) / ps,
+        (right - left) * os / ps, (top - bottom) * os / ps
+end
+
+local function Ghost_Capture(region, parentAlpha)
+    if not region or not region.IsShown or not region:IsShown() then
+        return nil
+    end
+    local kind = region.GetObjectType and region:GetObjectType()
+    if kind ~= "Texture" and kind ~= "FontString" then
+        return nil
+    end
+    -- DragonUI suppresses Blizzard's own art with SetAlpha(0) rather than Hide(), so IsShown lies.
+    local alpha = parentAlpha * ((region.GetAlpha and region:GetAlpha()) or 1)
+    if alpha < 0.05 then
+        return nil
+    end
+
+    local x, y, w, h = Ghost_Rect(region)
+    if not x then
+        return nil
+    end
+
+    -- Anything living outside the frame is not part of it: a parked mana bar, a stray overlay.
+    if x + w <= 0 or x >= PlayerFrame:GetWidth() or y <= -PlayerFrame:GetHeight() or y - h >= 0 then
+        return nil
+    end
+
+    local coords
+    if kind == "Texture" and region.GetTexCoord then
+        local ulx, uly, llx, lly, urx = region:GetTexCoord()
+        if ulx then
+            coords = {ulx, urx, uly, lly}
+        end
+    end
+
+    local layer = region.GetDrawLayer and region:GetDrawLayer()
+    local capture = {
+        kind = kind,
+        layer = layer or "ARTWORK",
+        src = region,
+        alpha = alpha,
+        x = x,
+        y = y,
+        w = w,
+        h = h
+    }
+
+    if kind == "Texture" then
+        capture.isPortrait = (region == PlayerPortrait) or nil
+        capture.texture = region:GetTexture()
+        if not capture.texture and not capture.isPortrait then
+            return nil
+        end
+        capture.coords = coords
+        if region.GetVertexColor then
+            capture.r, capture.g, capture.b = region:GetVertexColor()
+        end
+    else
+        capture.text = region:GetText()
+        capture.font, capture.size, capture.flags = region:GetFont()
+        if not capture.font then
+            return nil
+        end
+        capture.r, capture.g, capture.b = region:GetTextColor()
+        capture.justifyH = region:GetJustifyH() or "LEFT"
+        -- Anchor the justified edge, so a capture taken while the text was still empty
+        -- lands in the right place once the text exists.
+        if capture.justifyH == "RIGHT" then
+            capture.anchor, capture.ax = "TOPRIGHT", capture.x + capture.w
+        elseif capture.justifyH == "CENTER" then
+            capture.anchor, capture.ax = "TOP", capture.x + capture.w / 2
+        else
+            capture.anchor, capture.ax = "TOPLEFT", capture.x
+        end
+        capture.ay = capture.y
+    end
+    return capture
+end
+
+-- Fat mode and the elite/dragon decorations change which pieces exist and where they sit,
+-- so a snapshot is only valid for the layout it was taken under. Use the raw config, never
+-- IsFatHealthbarActive: that reports false inside a vehicle and would invalidate every snapshot.
+local function Ghost_Layout()
+    local config = GetPlayerConfig()
+    return tostring(IsFatConfigEnabled()) .. "|" .. tostring((config and config.dragon_decoration) or "none")
+end
+
+-- Mirror the frame tree rather than flattening it: draw layers only order regions inside one
+-- frame, while frame level orders the frames themselves, and DragonUI relies on both.
+local function Ghost_Walk(frame, parentAlpha, depth, out, baseLevel)
+    local index = table.getn(out.frames) + 1
+    table.insert(out.frames, {
+        level = (frame:GetFrameLevel() or baseLevel) - baseLevel
+    })
+
+    local fill = nil
+    if frame.GetObjectType and frame:GetObjectType() == "StatusBar" then
+        -- Clone the bar as a real StatusBar: 3.3.5a clips the fill rather than resizing it,
+        -- so replaying it as a plain texture can only ever guess at the value.
+        fill = frame:GetStatusBarTexture()
+        local info = out.frames[index]
+        info.isBar = true
+        info.barSrc = frame
+        info.bx, info.by, info.bw, info.bh = Ghost_Rect(frame)
+        if not info.bx then
+            info.bx, info.by, info.bw, info.bh = 0, 0, 0, 0
+        end
+    end
+
+    local regions = {frame:GetRegions()}
+    for i = 1, table.getn(regions) do
+        if regions[i] ~= fill then
+            local capture = Ghost_Capture(regions[i], parentAlpha)
+            if capture then
+                capture.frame = index
+                table.insert(out.pieces, capture)
+            end
+        end
+    end
+
+    if depth >= 3 then
+        return
+    end
+    local children = {frame:GetChildren()}
+    for i = 1, table.getn(children) do
+        local child = children[i]
+        -- PetFrame is parented to PlayerFrame but is a different unit entirely.
+        if child ~= ghostFrame and child ~= _G.PetFrame and child:IsShown() then
+            local childAlpha = parentAlpha * (child:GetAlpha() or 1)
+            if childAlpha >= 0.05 then
+                Ghost_Walk(child, childAlpha, depth + 1, out, baseLevel)
+            end
+        end
+    end
+end
+
+local function Ghost_Create()
+    if ghostFrame then
+        return
+    end
+    ghostFrame = CreateFrame("Frame", "DragonUI_PlayerGhost", UIParent)
+    ghostFrame:SetFrameLevel(GHOST_BASE_LEVEL)
+    ghostFrame:Hide()
+    ghostKids = {}
+    ghostPortraits = {}
+end
+
+local function Ghost_Mirror(index, info)
+    local kid = ghostKids[index]
+    local wantBar = (info and info.isBar) or false
+    if kid and (kid.duiIsBar or false) ~= wantBar then
+        kid:Hide()
+        kid = nil
+    end
+    if not kid then
+        kid = CreateFrame(wantBar and "StatusBar" or "Frame", nil, ghostFrame)
+        kid.duiPool = {}
+        kid.duiIsBar = wantBar
+        ghostKids[index] = kid
+    end
+    kid:ClearAllPoints()
+    if wantBar then
+        kid:SetPoint("TOPLEFT", ghostFrame, "TOPLEFT", info.bx, info.by)
+        kid:SetWidth(info.bw > 0 and info.bw or 1)
+        kid:SetHeight(info.bh > 0 and info.bh or 1)
+    else
+        kid:SetAllPoints(ghostFrame)
+    end
+    local level = GHOST_BASE_LEVEL + (info and info.level or 0)
+    if level < 0 then
+        level = 0
+    end
+    kid:SetFrameLevel(level)
+    kid:Show()
+    return kid
+end
+
+local function Ghost_Acquire(kid, capture, used)
+    local key = capture.kind .. capture.layer
+    used[key] = (used[key] or 0) + 1
+    local pool = kid.duiPool[key]
+    if not pool then
+        pool = {}
+        kid.duiPool[key] = pool
+    end
+    local obj = pool[used[key]]
+    if not obj then
+        if capture.kind == "Texture" then
+            obj = kid:CreateTexture(nil, capture.layer)
+        else
+            obj = kid:CreateFontString(nil, capture.layer)
+        end
+        pool[used[key]] = obj
+    end
+    return obj
+end
+
+-- Bars are copied wholesale from the source every frame: value, texture and colour are all live.
+local function Ghost_SyncBar(kid, source)
+    if not kid or not source then
+        return
+    end
+    local fill = source:GetStatusBarTexture()
+    if fill and fill:GetTexture() then
+        kid:SetStatusBarTexture(fill:GetTexture())
+        local r, g, b, a = fill:GetVertexColor()
+        if r then
+            kid:SetStatusBarColor(r, g, b, a or 1)
+        end
+        local barFill = kid:GetStatusBarTexture()
+        if barFill then
+            barFill:SetDrawLayer("ARTWORK")
+        end
+    end
+    if source.GetOrientation then
+        kid:SetOrientation(source:GetOrientation())
+    end
+    local minValue, maxValue = source:GetMinMaxValues()
+    kid:SetMinMaxValues(minValue or 0, maxValue or 1)
+    kid:SetValue(source:GetValue() or 0)
+    kid:SetAlpha(source:GetAlpha() or 1)
+end
+
+-- Only the geometry is cached; the frame is displaced mid-transition so it cannot be re-measured,
+-- but every value the player can see is re-read live so the ghost never shows a stale bar.
+local function Ghost_ApplyRegion(obj, capture)
+    local x, y, w, h = capture.x, capture.y, capture.w, capture.h
+    local texture, coords = capture.texture, capture.coords
+    local r, g, b, text = capture.r, capture.g, capture.b, capture.text
+    local src = capture.src
+
+    if src and src:IsShown() then
+        if capture.kind == "Texture" then
+            -- Texture and texcoords must be read together: fat mode and the elite decorations
+            -- swap atlases, so a live texture with cached coords shows the wrong slice.
+            texture = src:GetTexture() or texture
+            if src.GetTexCoord then
+                local ulx, uly, llx, lly, urx = src:GetTexCoord()
+                if ulx then
+                    coords = {ulx, urx, uly, lly}
+                end
+            end
+            if src.GetVertexColor then
+                local vr, vg, vb = src:GetVertexColor()
+                if vr then
+                    r, g, b = vr, vg, vb
+                end
+            end
+        else
+            text = src:GetText() or text
+            local vr, vg, vb = src:GetTextColor()
+            if vr then
+                r, g, b = vr, vg, vb
+            end
+        end
+    end
+
+    if capture.kind == "Texture" then
+        if w <= 0 or h <= 0 or (not texture and not capture.isPortrait) then
+            obj:Hide()
+            return
+        end
+    elseif not text or text == "" then
+        obj:Hide()
+        return
+    end
+
+    obj:SetDrawLayer(capture.layer)
+    obj:ClearAllPoints()
+    obj:SetAlpha(capture.alpha or 1)
+    if capture.kind == "Texture" then
+        obj:SetPoint("TOPLEFT", ghostFrame, "TOPLEFT", x, y)
+        obj:SetWidth(w)
+        obj:SetHeight(h)
+        if not capture.isPortrait then
+            obj:SetTexture(texture)
+        end
+        -- Always reset: these objects are pooled, and a leftover crop from a previous
+        -- configuration is what renders as a whole uncropped atlas sheet.
+        if coords and table.getn(coords) >= 4 then
+            obj:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+        else
+            obj:SetTexCoord(0, 1, 0, 1)
+        end
+        obj:SetVertexColor(r or 1, g or 1, b or 1)
+    else
+        obj:SetPoint(capture.anchor or "TOPLEFT", ghostFrame, "TOPLEFT", capture.ax or x, capture.ay or y)
+        -- Zero means the text was empty when captured; let it size itself instead.
+        obj:SetWidth(w > 0 and w or 0)
+        obj:SetHeight(h > 0 and h or 0)
+        obj:SetFont(capture.font, capture.size, capture.flags)
+        obj:SetText(text)
+        obj:SetTextColor(r or 1, g or 1, b or 1)
+        obj:SetJustifyH(capture.justifyH or "LEFT")
+    end
+    obj:Show()
+end
+
+-- Snapshots must be taken while the frame is settled; mid-transition it carries Blizzard's
+-- extra anchor and every measurement is taken against a displaced, over-constrained rect.
+local function Ghost_Snapshot()
+    -- Read-only, so combat is fine; the frame just has to be settled on a single anchor.
+    if slideOffset ~= 0 or not Module.playerFrame then
+        return false
+    end
+    if PlayerFrame:GetNumPoints() ~= 1 or not PlayerFrame:GetLeft() then
+        return false
+    end
+    Ghost_Create()
+
+    local layout = Ghost_Layout()
+    if ghostLayout ~= layout then
+        ghostLayout = layout
+        ghostCache = {}
+    end
+
+    local out = {frames = {}, pieces = {}}
+    Ghost_Walk(PlayerFrame, 1, 0, out, PlayerFrame:GetFrameLevel() or 0)
+    if table.getn(out.pieces) == 0 then
+        return false
+    end
+
+    -- Bake the portrait content now: once the transition starts the vehicle unit is gone.
+    local state = UnitHasVehicleUI("player") and "vehicle" or "player"
+    local root = Ghost_Mirror(1, out.frames[1])
+    local tex = ghostPortraits[state]
+    if not tex then
+        tex = root:CreateTexture(nil, "ARTWORK")
+        ghostPortraits[state] = tex
+    end
+    tex:Hide()
+    -- A live portrait reports a generated name like "Portrait1", not a path; only a class icon is copyable.
+    local file = PlayerPortrait:GetTexture()
+    local portraitFile = nil
+    if file and string.find(tostring(file), "\\") then
+        portraitFile = file
+        tex:SetTexture(file)
+    else
+        local unit = PlayerFrame.unit or "player"
+        if not UnitExists(unit) then
+            unit = "player"
+        end
+        SetPortraitTexture(tex, unit)
+    end
+
+    ghostCache[state] = {
+        scale = PlayerFrame:GetScale() or 1,
+        width = PlayerFrame:GetWidth(),
+        height = PlayerFrame:GetHeight(),
+        strata = PlayerFrame:GetFrameStrata(),
+        layout = layout,
+        portraitFile = portraitFile,
+        frames = out.frames,
+        pieces = out.pieces
+    }
+    return true
+end
+
+-- ApplyWidgetPosition runs inside ApplyPlayerConfig, before ChangePlayerframe has applied the
+-- new fat/decoration art, so capturing inline would store old art under the new layout tag.
+Ghost_Refresh = function()
+    if ghostRefreshPending then
+        return
+    end
+    ghostRefreshPending = true
+    local attempts = 0
+    local function attempt()
+        attempts = attempts + 1
+        if Ghost_Snapshot() or attempts >= 12 then
+            ghostRefreshPending = false
+            return
+        end
+        addon:After(0.25, attempt)
+    end
+    addon:After(0.05, attempt)
+end
+
+local function Ghost_Build(state)
+    local snapshot = ghostCache[state]
+    if not snapshot or not Module.playerFrame then
+        return false
+    end
+    if snapshot.layout ~= Ghost_Layout() then
+        return false
+    end
+    Ghost_Create()
+
+    ghostFrame:SetScale(snapshot.scale)
+    ghostFrame:SetWidth(snapshot.width)
+    ghostFrame:SetHeight(snapshot.height)
+    ghostFrame:SetFrameStrata(snapshot.strata)
+    ghostFrame:SetFrameLevel(GHOST_BASE_LEVEL)
+
+    for i = 1, table.getn(snapshot.frames) do
+        Ghost_Mirror(i, snapshot.frames[i])
+    end
+
+    for key, tex in pairs(ghostPortraits) do
+        if key ~= state then
+            tex:Hide()
+        end
+    end
+
+    -- Re-bake now when possible: the very first snapshot after a reload can predate the portrait.
+    local portrait = ghostPortraits[state]
+    if portrait then
+        local unit = (state == "vehicle") and "vehicle" or "player"
+        if snapshot.portraitFile then
+            portrait:SetTexture(snapshot.portraitFile)
+        elseif UnitExists(unit) then
+            SetPortraitTexture(portrait, unit)
+        end
+    end
+
+    local used = {}
+    ghostLive = {}
+    for i = 1, table.getn(snapshot.frames) do
+        local info = snapshot.frames[i]
+        if info.isBar then
+            Ghost_SyncBar(ghostKids[i], info.barSrc)
+            table.insert(ghostLive, {bar = ghostKids[i], barSrc = info.barSrc})
+        end
+    end
+    for i = 1, table.getn(snapshot.pieces) do
+        local capture = snapshot.pieces[i]
+        local kid = ghostKids[capture.frame or 1]
+        if kid then
+            local obj
+            if capture.isPortrait then
+                obj = ghostPortraits[state]
+            else
+                if not used[kid] then
+                    used[kid] = {}
+                end
+                obj = Ghost_Acquire(kid, capture, used[kid])
+            end
+            if obj then
+                Ghost_ApplyRegion(obj, capture)
+                -- Text can change mid-slide; static textures cannot.
+                if capture.kind == "FontString" then
+                    table.insert(ghostLive, {obj = obj, capture = capture})
+                end
+            end
+        end
+    end
+
+    for i = 1, table.getn(ghostKids) do
+        local kid = ghostKids[i]
+        local counts = used[kid]
+        for key, pool in pairs(kid.duiPool) do
+            for n = ((counts and counts[key]) or 0) + 1, table.getn(pool) do
+                pool[n]:Hide()
+            end
+        end
+    end
+    return true
+end
+
+local function Ghost_Place(offset)
+    local ofs = PLAYER_ANCHOR_OFFSETS[UnitHasVehicleUI("player") and "vehicle" or "player"]
+    ghostFrame:ClearAllPoints()
+    ghostFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", ofs[1], ofs[2] + offset)
+end
+
+local function Ghost_Stop()
+    if ghostDriver then
+        ghostDriver:SetScript("OnUpdate", nil)
+    end
+    if ghostFrame then
+        ghostFrame:Hide()
+    end
+    ghostLive = nil
+    ghostActive = false
+end
+
+local function Ghost_OnUpdate()
+    local fraction = (GetTime() - ghostStart) / PLAYER_SLIDE_TIME
+    if fraction >= 1 then
+        Ghost_Stop()
+        return
+    end
+    Ghost_Place(PLAYER_SLIDE_DIST * (ghostReverse and (1 - fraction) or fraction))
+    if ghostLive then
+        for i = 1, table.getn(ghostLive) do
+            local entry = ghostLive[i]
+            if entry.bar then
+                Ghost_SyncBar(entry.bar, entry.barSrc)
+            else
+                Ghost_ApplyRegion(entry.obj, entry.capture)
+            end
+        end
+    end
+end
+
+local function Ghost_Start(reverse)
+    -- Outbound still shows the vehicle; inbound is already back on the player art.
+    local state = "player"
+    if not reverse and PlayerFrame.unit == "vehicle" then
+        state = "vehicle"
+    end
+    if not Ghost_Build(state) then
+        return false
+    end
+    ghostReverse = reverse
+    ghostStart = GetTime()
+    ghostActive = true
+    Ghost_Place(reverse and PLAYER_SLIDE_DIST or 0)
+    ghostFrame:SetAlpha(1)
+    ghostFrame:Show()
+    if not ghostDriver then
+        ghostDriver = CreateFrame("Frame")
+    end
+    ghostDriver:SetScript("OnUpdate", Ghost_OnUpdate)
+    return true
+end
+
+-- Runs inside Blizzard's vehicle event path, so a fault here must never escape.
+local function Ghost_SafeStart(reverse)
+    local ok, err = pcall(Ghost_Start, reverse)
+    if not ok and addon.Debug then
+        addon:Debug("Ghost_Start error:", err)
+    end
+end
+
+local PLAYER_MASK_TIMEOUT = 2
+local PLAYER_MASK_HARDCAP = 10
+local PLAYER_MASK_SETTLE = 0.02
+local PLAYER_MASK_FADE = 0.06
+local maskDriver, maskStart, maskLastWrite, maskFadeStart, maskAlpha
+
+local function PlayerMask_Stop()
+    Ghost_Stop()
+    if maskDriver then
+        maskDriver:SetScript("OnUpdate", nil)
+    end
+    maskStart = nil
+    maskFadeStart = nil
+    if maskAlpha then
+        PlayerFrame:SetAlpha(maskAlpha)
+        maskAlpha = nil
+    end
+    if Ghost_Refresh then
+        Ghost_Refresh()
+    end
+end
+
+local function PlayerMask_OnUpdate()
+    local now = GetTime()
+
+    if maskFadeStart then
+        if ghostActive then
+            return
+        end
+        local fraction = (now - maskFadeStart) / PLAYER_MASK_FADE
+        if fraction >= 1 then
+            PlayerMask_Stop()
+        else
+            PlayerFrame:SetAlpha((maskAlpha or 1) * fraction)
+        end
+        return
+    end
+
+    if not InCombatLockdown() or (now - maskStart) > PLAYER_MASK_HARDCAP then
+        PlayerMask_Stop()
+        return
+    end
+
+    -- One point means the guard corrected; a live animation re-adds Blizzard's within a frame.
+    local quiet = (now - maskLastWrite) > PLAYER_MASK_SETTLE
+    if quiet and PlayerFrame:GetNumPoints() == 1 then
+        maskFadeStart = now
+        Ghost_SafeStart(true)
+    elseif quiet and (now - maskStart) > PLAYER_MASK_TIMEOUT then
+        -- Giving up while Blizzard is still writing would reveal the frame at its stock anchor.
+        PlayerMask_Stop()
+    end
+end
+
+-- Blizzard animates at frame rate and the secure guard can only answer at 5Hz, so hide rather than race.
+local function PlayerMask_Begin()
+    if not secureGuard then
+        return
+    end
+    local now = GetTime()
+    maskLastWrite = now
+    if maskStart and not maskFadeStart then
+        return
+    end
+    if maskAlpha == nil then
+        maskAlpha = PlayerFrame:GetAlpha()
+    end
+    maskStart = now
+    maskFadeStart = nil
+    PlayerFrame:SetAlpha(0)
+    Ghost_SafeStart(false)
+    if not maskDriver then
+        maskDriver = CreateFrame("Frame")
+    end
+    maskDriver:SetScript("OnUpdate", PlayerMask_OnUpdate)
+end
+
 -- hooksecurefunc fires after Blizzard's SetPoint, so our position is restored in the same frame.
 hooksecurefunc(PlayerFrame, "SetPoint", function(self, point, relativeTo, relativePoint, x, y)
     if self.DragonUI_SettingPoint then return end
     if InCombatLockdown() then
         deferredPositionUpdate = true
+        if point == "TOPLEFT" and relativeTo == UIParent then
+            PlayerMask_Begin()
+        end
         return
     end
 
@@ -3092,6 +3814,7 @@ end)
 
 local function OnProfileChanged()
     if not IsPlayerModuleEnabled() then
+        SecureGuard_Uninstall()
         addon:ShouldDeferModuleDisable("player", Module)
         return
     end
