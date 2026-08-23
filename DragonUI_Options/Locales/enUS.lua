@@ -384,6 +384,8 @@ L["Show the caster's name (class-colored) and spell ID on buff and debuff toolti
 -- Chat Mods
 L["Enable Chat Mods"] = true
 L["Enables or disables Chat Mods."] = true
+L["Show Link Tooltips on Hover"] = true
+L["Show tooltips for supported chat links without holding Alt."] = true
 L["Editbox Position"] = true
 L["Choose where the chat editbox is positioned."] = true
 L["Top"] = true
@@ -1209,6 +1211,10 @@ L["Active: "] = true
 L["Switch or Create Profile"] = true
 L["Select Profile"] = true
 L["New Profile Name"] = true
+L["Default Profile"] = true
+L["New characters will use this profile."] = true
+L["New characters will get their own profile."] = true
+L["New characters will start on profile: "] = true
 L["Copy From"] = true
 L["Copies all settings from the selected profile into your current one."] = true
 L["Copied profile: "] = true

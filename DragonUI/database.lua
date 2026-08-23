@@ -12,6 +12,7 @@ local _arialn = addon.Fonts and addon.Fonts.ARIALN or "Fonts\\ARIALN.TTF"
 local defaults = {
     global = {
         locale = "auto", -- UI language override; "auto" follows the client locale
+        defaultProfile = "", -- Profile new characters start on; "" gives each its own
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
         questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
@@ -1085,6 +1086,7 @@ local defaults = {
             },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy
+                linkHoverTooltip = false, -- Show supported chat-link tooltips without holding Alt
                 editbox = "bottom", -- Editbox position: "top", "bottom", or "middle"
                 tabIdleAlpha = 0, -- Tab opacity when not hovered (0 = hidden, 1 = fully visible)
                 chatStyle = "none", -- Chat frame background style: "none", "dark", "dragon", "midnight"

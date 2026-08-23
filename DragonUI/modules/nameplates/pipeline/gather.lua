@@ -190,6 +190,9 @@ function NP.gather.ApplyVisualState(plateData, snapshot, context, state, reason)
         NP.layout.LayoutCastBarStack(plateData)
     elseif state.showCastbar then
         NP.castbar.SyncCastBar(plateData)
+    elseif NP.gather.IsHeadlineActive(plateData) then
+        -- Name only; a plain hide would leave the native bar and pending fades up.
+        NP.castbar.HidePlateCastVisualsForHeadline(plateData)
     else
         NP.castbar.HidePlateCastBar(plateData)
     end
@@ -497,6 +500,8 @@ function NP.gather.SyncHealth(plateData, value)
     if NP.gather.IsTotemIconOnlyActive(plateData) then
         bar:Hide()
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
+        if plateData.minaHpNum then plateData.minaHpNum:Hide() end
+        if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
         return
     end
 
@@ -504,6 +509,8 @@ function NP.gather.SyncHealth(plateData, value)
     if NP.gather.IsHeadlineActive(plateData) then
         bar:Hide()
         if plateData.minaHpPct then plateData.minaHpPct:Hide() end
+        if plateData.minaHpNum then plateData.minaHpNum:Hide() end
+        if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
         return
     end
 
@@ -1030,7 +1037,7 @@ end
 function NP.gather.RefreshPlateCastbar(plateData, reason)
     -- Headline mode hides the castbar regardless of the cast event path.
     if NP.gather.IsHeadlineActive(plateData) then
-        NP.castbar.HidePlateCastBar(plateData)
+        NP.castbar.HidePlateCastVisualsForHeadline(plateData)
         return
     end
     local ownershipValid = NP.identity.ValidatePlateGUIDOwnership(plateData)
@@ -1065,7 +1072,15 @@ function NP.gather.RefreshPlateTargetState(plateData, reason)
     NP.gather.SyncPower(plateData, state.showPower and context.resolvedUnit or nil)
     NP.gather.SyncName(plateData, context.resolvedUnit)
     NP.widgets.SyncList(TARGET_SYNC_WIDGETS, plateData, context, state)
+    -- Called before the headline return below: it is not a pure predicate, and on a
+    -- target transition it clears the GUID and debuffs off a stale duplicate plate.
     local ownershipValid = NP.identity.ValidatePlateGUIDOwnership(plateData)
+    -- Un-targeting mid-cast re-enters headline; drop the bars before the ownership
+    -- branch below, which would otherwise leave a pending fade on screen.
+    if NP.gather.IsHeadlineActive(plateData) then
+        NP.castbar.HidePlateCastVisualsForHeadline(plateData)
+        return
+    end
     if not ownershipValid and not NP.castbar.PlateStillCasting(plateData) then
         NP.castbar.HidePlateCastBar(plateData)
     elseif state.showCastbar and NP.castbar.ShouldSkipCastSync(plateData) then

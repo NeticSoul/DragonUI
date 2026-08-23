@@ -753,6 +753,15 @@ local function SecureTypeFor(data)
     return data.type
 end
 
+-- Stock action bars auto-upgrade to the current highest rank; a "Name(Rank N)" attribute pins that
+-- rank forever. Only ShowAllSpellRanks (per-rank spellbook rows) means the user really wants that pin.
+local function SecureSpellName(data)
+    if GetCVarBool("ShowAllSpellRanks") then
+        return data.spell
+    end
+    return BareSpellName(data.spell)
+end
+
 function Secure.Apply(button, data)
     if InCombatLockdown() then
         addon.CombatQueue:Add(button.bar.id .. "_apply_" .. button:GetID(), Secure.Apply, button, data)
@@ -766,7 +775,9 @@ function Secure.Apply(button, data)
 
     if data then
         button:SetAttribute("type1", SecureTypeFor(data))
-        if data.type == "spell" or data.type == "companion" then
+        if data.type == "spell" then
+            button:SetAttribute("spell1", SecureSpellName(data))
+        elseif data.type == "companion" then
             button:SetAttribute("spell1", data.spell)
         elseif data.type == "item" then
             button:SetAttribute("item1", "item:" .. data.item)

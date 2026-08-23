@@ -1012,11 +1012,12 @@ local function CreateCastbar(unitType)
     frames.castbar.fadeOutEx = false
     frames.castbar.selfInterrupt = false
     
-    -- Background
+    -- Widen to match the border's left/right overhang, else a wide bar shows a gap at each end.
     local bg = frames.castbar:CreateTexture(nil, 'BACKGROUND')
     bg:SetTexture(TEXTURES.atlas)
     bg:SetTexCoord(unpack(UV_COORDS.background))
-    bg:SetAllPoints()
+    bg:SetPoint("TOPLEFT", frames.castbar, "TOPLEFT", -2, 0)
+    bg:SetPoint("BOTTOMRIGHT", frames.castbar, "BOTTOMRIGHT", 2, 0)
     
     -- StatusBar texture
     frames.castbar:SetStatusBarTexture(TEXTURES.standard)
@@ -1640,6 +1641,9 @@ function CastbarModule:OnUpdate(unitType, castbar, elapsed)
                 castbar.castingEx = false
                 castbar.channelingEx = false
                 if unitType == "player" then HideLatencyIndicator() end
+                -- Hide instantly; HandleCastStop_Simple no-ops afterward since flags are already cleared here.
+                if frames.spark then frames.spark:Hide() end
+                HideAllTicks(frames.ticks)
                 ShowSuccessFlash(unitType)
             end
             -- If new cast started, flags stay true and we skip fadeout

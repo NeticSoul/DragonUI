@@ -90,6 +90,46 @@ local function BuildProfilesTab(scroll)
     selectSection:AddChild(newName)
 
     -- ====================================================================
+    -- DEFAULT PROFILE (new characters)
+    -- ====================================================================
+    -- Guarded: DragonUI and DragonUI_Options are separate folders, so a user can
+    -- end up running an older core that has no accessors.
+    if addon.GetDefaultProfileKey and addon.SetDefaultProfileKey then
+        local defaultSection = C:AddSection(scroll, LO["Default Profile"])
+
+        C:AddDescription(defaultSection, LO["New characters will use this profile."])
+
+        -- Internal dropdown key only, never shown; the label beside it is.
+        local NO_DEFAULT = "__DRAGONUI_NO_DEFAULT__"
+
+        local function GetDefaultProfileValues()
+            -- GetProfileList returns a fresh table, so adding the sentinel is safe.
+            local values = GetProfileList()
+            values[NO_DEFAULT] = LO["None"]
+            return values
+        end
+
+        C:AddDropdown(defaultSection, {
+            label = LO["Default Profile"],
+            getFunc = function()
+                return addon:GetDefaultProfileKey() or NO_DEFAULT
+            end,
+            -- No reload prompt: nothing about this session changes, the setting
+            -- only applies the next time a new character logs in.
+            setFunc = function(val)
+                if not val or val == NO_DEFAULT then
+                    addon:SetDefaultProfileKey(nil)
+                    addon:Print(LO["New characters will get their own profile."])
+                else
+                    addon:SetDefaultProfileKey(val)
+                    addon:Print(LO["New characters will start on profile: "] .. val)
+                end
+            end,
+            values = GetDefaultProfileValues(),
+        })
+    end
+
+    -- ====================================================================
     -- COPY FROM
     -- ====================================================================
     local copySection = C:AddSection(scroll, LO["Copy From"])

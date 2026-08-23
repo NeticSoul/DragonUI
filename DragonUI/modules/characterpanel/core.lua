@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 local CharacterPanelModule = { initialized = false, applied = false }
@@ -100,8 +102,11 @@ local function RestoreCharacterPanelSystem()
     if CP.RestoreSidebar then CP.RestoreSidebar() end
     if CP.RestorePortrait then CP.RestorePortrait() end
     if CP.RestoreLevelText then CP.RestoreLevelText() end
+    if CP.RestoreModelControls then CP.RestoreModelControls() end
     if CP.RestoreModel then CP.RestoreModel() end
     if CP.RestoreChrome then CP.RestoreChrome() end
+    -- Last: it hands a replacement paperdoll its own widgets back, over the geometry we just undid.
+    if CP.RestoreCompatHD then CP.RestoreCompatHD() end
     addon:Print(addon.L["Character Panel restored. Reload the UI for a fully clean state."])
 end
 

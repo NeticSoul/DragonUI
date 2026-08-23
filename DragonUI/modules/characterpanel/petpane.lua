@@ -312,8 +312,14 @@ local function refresh()
 
     -- Only on a real swap: UNIT_STATS fires constantly in combat and each SetUnit reloads the model.
     local guid = UnitGUID and UnitGUID("pet")
-    if guid ~= model._duiGUID then
-        model._duiGUID = guid
+    -- Reloaded on either count, but only a real swap throws the view away: an imp is not a felguard.
+    if model._duiStale or guid ~= model._duiGUID then
+        model._duiStale = nil
+        if guid ~= model._duiGUID then
+            model._duiGUID = guid
+            -- The zoom resets itself on the reload below; the pose is ours to put back.
+            addon:ResetModelRotation(model)
+        end
         model:SetUnit("pet")
     end
 
@@ -374,6 +380,9 @@ local function buildContents(parent)
     model = CreateFrame("PlayerModel", "DragonUIPetModel", parent)
     model:SetPoint("TOPLEFT", parent, "TOPLEFT", PAD, -HEADER_H)
     model:SetPoint("BOTTOMRIGHT", statsBlock, "TOPRIGHT", -RESIST_COL_W, 6)
+
+    -- A hidden model can drop its content, and refresh's guard would then never re-issue SetUnit.
+    model:SetScript("OnHide", function(self) self._duiStale = true end)
 
     -- Hung from the bottom, not the top: that lines the last gem up with the happiness icon across
     -- the model, and frees the top-right corner for the diet line.

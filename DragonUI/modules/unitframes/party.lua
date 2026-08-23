@@ -278,7 +278,19 @@ local function ShouldHidePartyFramesInRaid()
 end
 
 local function ShouldPartyFramesBeVisible()
-    return GetNumPartyMembers() > 0 and not IsCompactPartyFramesEnabled() and not ShouldHidePartyFramesInRaid()
+    if GetNumPartyMembers() == 0 then
+        return false
+    end
+
+    -- CompactRaidFrames hides party frames in any raid; ClassicAPI stubs this global to return nil.
+    if type(GetDisplayedAllyFrames) == "function" then
+        local displayed = GetDisplayedAllyFrames()
+        if displayed then
+            return displayed == "party"
+        end
+    end
+
+    return not IsCompactPartyFramesEnabled() and not ShouldHidePartyFramesInRaid()
 end
 
 -- Test functions for the editor
@@ -1553,6 +1565,17 @@ local function RefreshAllPartyFrameVisibility()
     end
 end
 
+local function RequestPartyVisibilityRefresh()
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("party_refresh", RefreshAllPartyFrameVisibility)
+        end
+        return
+    end
+
+    RefreshAllPartyFrameVisibility()
+end
+
 
 
 
@@ -1968,18 +1991,7 @@ recoveryFrame:SetScript("OnEvent", function(self, event, unit)
         if addon.EditorMode and addon.EditorMode:IsActive() then
             return
         end
-        local function RefreshPartyFrames()
-            RefreshAllPartyFrameVisibility()
-        end
-        
-        if InCombatLockdown() then
-            -- Queue for after combat ends
-            if addon.CombatQueue then
-                addon.CombatQueue:Add("party_refresh", RefreshPartyFrames)
-            end
-        else
-            RefreshPartyFrames()
-        end
+        RequestPartyVisibilityRefresh()
     end
 
     if event == "CVAR_UPDATE" then
@@ -1991,17 +2003,7 @@ recoveryFrame:SetScript("OnEvent", function(self, event, unit)
             return
         end
 
-        local function RefreshPartyFrames()
-            RefreshAllPartyFrameVisibility()
-        end
-
-        if InCombatLockdown() then
-            if addon.CombatQueue then
-                addon.CombatQueue:Add("party_refresh", RefreshPartyFrames)
-            end
-        else
-            RefreshPartyFrames()
-        end
+        RequestPartyVisibilityRefresh()
 
         return
     end
@@ -2052,6 +2054,20 @@ recoveryFrame:SetScript("OnEvent", function(self, event, unit)
     end
 end)
 
+
+-- ===============================================================
+-- COMPACT RAID FRAMES HANDSHAKE
+-- ===============================================================
+
+-- CompactRaidFrames keeps useCompactPartyFrames in a SavedVariable, so CVAR_UPDATE never fires.
+local allyFramesFrame = CreateFrame("Frame")
+allyFramesFrame:RegisterEvent("PLAYER_LOGIN")
+allyFramesFrame:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_LOGIN")
+    if type(_G.RaidOptionsFrame_UpdatePartyFrames) == "function" then
+        hooksecurefunc("RaidOptionsFrame_UpdatePartyFrames", RequestPartyVisibilityRefresh)
+    end
+end)
 
 -- ===============================================================
 -- VEHICLE & RELOAD RECOVERY SYSTEM

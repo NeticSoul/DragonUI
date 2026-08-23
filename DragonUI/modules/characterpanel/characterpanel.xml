@@ -2,6 +2,8 @@
 ..\FrameXML\UI.xsd">
 	<!-- core.lua first: it owns the namespace and the builder registry the rest append to. -->
 	<Script file="core.lua"/>
+	<!-- first builder of all: every other one reaches for stock widgets this puts back. -->
+	<Script file="compat_hd.lua"/>
 	<!-- insets before chrome: the interior background anchors to CharacterFrame.Inset. -->
 	<Script file="insets.lua"/>
 	<Script file="chrome.lua"/>

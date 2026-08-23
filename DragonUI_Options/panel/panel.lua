@@ -49,6 +49,25 @@ local T = {
     font      = (addon.Fonts and addon.Fonts.NARROW) or "Interface\\AddOns\\DragonUI_Options\\fonts\\PTSansNarrow.ttf",
 }
 
+-- Translated labels overrun the pixel sizes below, which were picked against English.
+local TAB_MIN_WIDTH   = 136
+local TAB_MAX_WIDTH   = 196
+local TAB_TEXT_INSET  = 22
+local PILL_MIN_WIDTH  = 104
+local PILL_MAX_WIDTH  = 190
+local PILL_TEXT_INSET = 18
+
+local function PanelControls()
+    return addon.PanelControls
+end
+
+-- No ClampText here: the pill label carries |cff..|r codes that a byte-wise cut would break.
+local function FitPill(button, fontString)
+    local PC = PanelControls()
+    if not PC then return end
+    button:SetWidth(PC.FitWidth(fontString, PILL_MIN_WIDTH, PILL_TEXT_INSET, PILL_MAX_WIDTH))
+end
+
 -- ============================================================================
 -- BACKDROP TEMPLATES (3.3.5a)
 -- ============================================================================
@@ -171,6 +190,7 @@ local function CreatePanel()
     SetSafeFont(editorText, 11, "")
     editorText:SetPoint("CENTER", 0, 0)
     editorText:SetText("|cff00dd00" .. LO["Editor Mode"] .. "|r")
+    FitPill(editorBtn, editorText)
     editorBtn:SetScript("OnClick", function()
         Panel:Close()
         if addon.EditorMode then addon.EditorMode:Toggle() end
@@ -202,6 +222,7 @@ local function CreatePanel()
     SetSafeFont(keybindText, 11, "")
     keybindText:SetPoint("CENTER", 0, 0)
     keybindText:SetText("|cff00dd00" .. LO["KeyBind Mode"] .. "|r")
+    FitPill(keybindBtn, keybindText)
     keybindBtn:SetScript("OnClick", function()
         Panel:Close()
         if addon.KeyBindingModule and LibStub and LibStub("LibKeyBound-1.0", true) then
@@ -522,6 +543,8 @@ local function BuildTabButtons()
         local text = btn:CreateFontString(nil, "OVERLAY")
         SetSafeFont(text, 12, "")
         text:SetPoint("LEFT", 10, 0)
+        text:SetPoint("RIGHT", -10, 0)
+        text:SetJustifyH("LEFT")
         text:SetText(tabInfo.text)
         text:SetTextColor(0.7, 0.7, 0.7, 1)
         btn.text = text
@@ -545,6 +568,27 @@ local function BuildTabButtons()
 
         Panel.tabButtons[key] = btn
         yOff = yOff - 28
+    end
+
+    local PC = PanelControls()
+    if not PC then return end
+
+    local width = TAB_MIN_WIDTH
+    for _, key in ipairs(Panel.tabOrder) do
+        local btn = Panel.tabButtons[key]
+        if btn then
+            width = PC.FitWidth(btn.text, width, TAB_TEXT_INSET, TAB_MAX_WIDTH)
+        end
+    end
+
+    -- The content frame is anchored to the strip's right edge, so it follows on its own.
+    strip:SetWidth(width + 4)
+    for _, key in ipairs(Panel.tabOrder) do
+        local btn = Panel.tabButtons[key]
+        if btn then
+            btn:SetWidth(width)
+            PC.ClampText(btn.text, width - TAB_TEXT_INSET)
+        end
     end
 end
 
