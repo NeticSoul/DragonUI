@@ -1658,19 +1658,33 @@ function Controls:AddSpellFilterList(parent, opts)
     listLabel:SetText(LO["Click an entry to remove it."])
     parent:AddChild(listLabel)
 
-    -- Long lists get their own scroll box; a curated list of 20+ would otherwise own the panel.
-    local rowHost = parent
-    local maxRows = opts.maxRows or 6
-    if #ids > maxRows then
-        local box = AceGUI:Create("SimpleGroup")
-        box:SetFullWidth(true)
-        box:SetLayout("Fill")
-        box:SetHeight(opts.listHeight or 150)
-        local scroller = AceGUI:Create("ScrollFrame")
-        scroller:SetLayout("List")
-        box:AddChild(scroller)
-        parent:AddChild(box)
-        rowHost = scroller
+    -- Long lists get a fixed-row scroll box; a curated list of 20+ would otherwise own the panel.
+    if #ids > (opts.maxRows or 6) then
+        local list = AceGUI:Create("DragonUIRowList")
+        list:SetFullWidth(true)
+        list:SetHeight(opts.listHeight or 150)
+        list:SetRowFont(self.Theme.font, 12, "")
+        list:SetList(ids, {
+            format = function(spellID)
+                local name, _, icon = GetSpellInfo(spellID)
+                return string.format("|T%s:16:16:0:0:64:64:4:60:4:60|t %s (%d)",
+                    icon or "Interface\\Icons\\INV_Misc_QuestionMark", name or LO["Unknown"], spellID)
+            end,
+            tooltip = function(spellID)
+                GameTooltip:SetText(GetSpellInfo(spellID) or LO["Unknown"], 1, 1, 1)
+                GameTooltip:AddLine(string.format(LO["Spell ID: %d"], spellID), nil, nil, nil, true)
+                GameTooltip:AddLine(LO["Click to remove."], 0.7, 0.7, 0.7, true)
+            end,
+            click = function(index)
+                if not IsDisabled() then
+                    RemoveSpellAtIndex(index)
+                end
+            end,
+        })
+        list:SetDisabled(IsDisabled())
+        parent:AddChild(list)
+        RegisterWidget(list)
+        return listLabel
     end
 
     for index, spellID in ipairs(ids) do
@@ -1704,7 +1718,7 @@ function Controls:AddSpellFilterList(parent, opts)
             row:SetDisabled(true)
         end
         RegisterWidget(row)
-        rowHost:AddChild(row)
+        parent:AddChild(row)
     end
 
     return listLabel

@@ -20,6 +20,7 @@ Locales\Load_Locales.xml
 core.lua
 
 # Custom panel system (AceGUI-based)
+panel\widget_rowlist.lua
 panel\controls.lua
 panel\panel.lua
 panel\tab_general.lua
