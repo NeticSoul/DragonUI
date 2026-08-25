@@ -291,11 +291,9 @@ function AM_Core.Enable()
 	playerScaling = Scaling[playerGUID];
 	privateScaling = Scaling[-1];
 	
-	--ZONE_CHANGED_NEW_AREA
-	--ZONE_CHANGED_INDOORS
-	--ZONE_CHANGED	--add this too or nah?
 	AM_Core.RegisterEvent("ZONE_CHANGED_NEW_AREA");
 	AM_Core.RegisterEvent("ZONE_CHANGED_INDOORS");
+	AM_Core.RegisterEvent("UNIT_AURA");
 	AM_Events.ZONE_CHANGED_NEW_AREA();
 
 	if(playerClass == "DEATHKNIGHT") then
@@ -1035,28 +1033,43 @@ local iccBuffModifier = {
 local iccWrynnName = GetSpellInfo(73828);
 local iccHellscreamName = GetSpellInfo(73822);
 
+local function UpdateICCModifier()
+	local _, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", iccWrynnName);
+	if(not spellID) then
+		_, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", iccHellscreamName);
+	end
+
+	ZONE_MODIFIER = spellID and iccBuffModifier[spellID] or 1;
+end
+
 function AM_Events.ZONE_CHANGED_NEW_AREA()
 	if(UnitInBattleground("player")) then
-		ZONE_MODIFIER = 1.17;
+		ZONE_MODIFIER = 0.9;
 	elseif(IsActiveBattlefieldArena()) then
 		ZONE_MODIFIER = 0.9;
 	else
 		local mapID = GetCurrentMapAreaID()
 		if(mapID == 502) then -- Wintergrasp
-			ZONE_MODIFIER = 1.17;
+			ZONE_MODIFIER = 0.9;
 		elseif(mapID == 605) then -- Icecrown Citadel
-			local _, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", iccWrynnName);
-			if(not spellID) then
-				_, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", iccHellscreamName);
-			end
-
-			ZONE_MODIFIER = spellID and iccBuffModifier[spellID] or 1;
+			-- The server casts the buff on zone-in, which lands after this
+			-- event fires, so an immediate check would see no buff yet.
+			-- Recheck shortly after, and again whenever the buff is
+			-- toggled mid-run via UNIT_AURA.
+			UpdateICCModifier();
+			AM_Core:ScheduleUniqueTimer("icc_modifier", UpdateICCModifier, 2);
 		else
 			ZONE_MODIFIER = 1;
 		end
 	end
 end
 AM_Events.ZONE_CHANGED_INDOORS = AM_Events.ZONE_CHANGED_NEW_AREA;
+
+function AM_Events.UNIT_AURA(unit)
+	if(unit == "player" and GetCurrentMapAreaID() == 605) then
+		UpdateICCModifier();
+	end
+end
 
 function AM_Events.STATS_CHANGED()
 	local baseAP, plusAP, minusAP = UnitAttackPower("player");
@@ -1694,7 +1707,7 @@ end
 local function priest_PowerWordShield_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local _, sp, quality1, sourceScaling, quality2 = Unit_StatsAndScaling(sourceGUID, 0.1, priest_defaultScaling, 0.1);
 
-	local scaleData = sourceScaling[spellId]
+	local scaleData = sourceScaling[spellId] or priest_defaultScaling[spellId];
 	if(scaleData) then
 		return floor((scaleData[1] + sp * scaleData[2]) * ZONE_MODIFIER), math.min(quality1, quality2);
 	end
