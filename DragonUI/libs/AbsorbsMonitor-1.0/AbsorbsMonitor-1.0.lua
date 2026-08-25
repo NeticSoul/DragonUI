@@ -26,7 +26,7 @@
 
 
 
-local AM_Public, upgraded = LibStub:NewLibrary("AbsorbsMonitor-1.0", 90000);
+local AM_Public, upgraded = LibStub:NewLibrary("AbsorbsMonitor-1.0", 90004);
 
 if(not AM_Public) then return; end
 
@@ -178,7 +178,7 @@ local RemoveActiveEffect;
 
 -- Constants
 local LOW_VALUE_TOLERANCE = 50;
-local ZONE_MODIFIER = 1.3; -- "constant"
+local ZONE_MODIFIER = 1; -- "constant"
 
 
 
@@ -261,6 +261,7 @@ end
 --------------------
 
 function AM_Core.Enable()
+	local _
 	_, playerClass = UnitClass("player");
 	playerGUID = UnitGUID("player");
 
@@ -291,6 +292,8 @@ function AM_Core.Enable()
 	privateScaling = Scaling[-1];
 	
 	AM_Core.RegisterEvent("ZONE_CHANGED_NEW_AREA");
+	AM_Core.RegisterEvent("ZONE_CHANGED_INDOORS");
+	AM_Core.RegisterEvent("UNIT_AURA");
 	AM_Events.ZONE_CHANGED_NEW_AREA();
 
 	if(playerClass == "DEATHKNIGHT") then
@@ -1018,19 +1021,98 @@ function AM_Events.GROUPING_CHANGED()
 	end
 end
 
--- Due to be removed in 4.0
+local iccBuffModifier = {
+	-- Hellscream's Warsong
+	[73816] = 1.05, [73818] = 1.10, [73819] = 1.15,
+	[73820] = 1.20, [73821] = 1.25, [73822] = 1.30,
+	-- Strength of Wrynn
+	[73762] = 1.05, [73824] = 1.10, [73825] = 1.15,
+	[73826] = 1.20, [73827] = 1.25, [73828] = 1.30,
+};
+local iccWrynnName = GetSpellInfo(73828);
+local iccHellscreamName = GetSpellInfo(73822);
+
+-- Firelord's Demise (Molten Core). Rank->% confirmed: lowest spell ID = 5%,
+-- highest = 20%, +5% per rank.
+local mcBuffModifier = {
+	[500316] = 1.05, [500317] = 1.10, [500318] = 1.15, [500319] = 1.20,
+};
+local mcBuffName = GetSpellInfo(500319);
+
+-- Zul'Aman zone buff. Rank->% is EXTRAPOLATED from Molten Core's pattern
+-- (+5% per rank, lowest ID = lowest %) - not independently confirmed, and
+-- this has one more rank than MC (5 vs 4), so the 25% top end is a guess.
+-- Verify in-game and adjust if wrong.
+local zaBuffModifier = {
+	[500324] = 1.05, [500325] = 1.10, [500326] = 1.15, [500327] = 1.20, [500328] = 1.25,
+};
+local zaBuffName = GetSpellInfo(500328);
+
+-- Gruul's Lair zone buff. Spell ID range (500329-500333) is extrapolated
+-- from ZA's 5-ID block size, NOT confirmed in-game - verify these IDs
+-- actually exist before trusting this table.
+local gruulBuffModifier = {
+	[500329] = 1.05, [500330] = 1.10, [500331] = 1.15, [500332] = 1.20, [500333] = 1.25,
+};
+local gruulBuffName = GetSpellInfo(500333);
+
+-- Map IDs below are the library's pre-Cata values +1, matching the offset
+-- confirmed against known-good values (Dalaran 504->505, ICC 604->605,
+-- Wintergrasp 501->502). MC/ZA/Gruul have NOT been independently verified
+-- in-game - confirm with /script print(GetCurrentMapAreaID()) and correct
+-- the keys below if any are off.
+local zoneBuffData = {
+	[605] = { name = iccWrynnName, altName = iccHellscreamName, modifier = iccBuffModifier }, -- Icecrown Citadel
+	[697] = { name = mcBuffName, modifier = mcBuffModifier }, -- Molten Core (unverified)
+	[782] = { name = zaBuffName, modifier = zaBuffModifier }, -- Zul'Aman (unverified)
+	[777] = { name = gruulBuffName, modifier = gruulBuffModifier }, -- Gruul's Lair (unverified)
+};
+
+local function UpdateZoneBuffModifier(mapID)
+	local data = zoneBuffData[mapID];
+	if(not data) then
+		ZONE_MODIFIER = 1;
+		return;
+	end
+
+	local _, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", data.name);
+	if(not spellID and data.altName) then
+		_, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", data.altName);
+	end
+
+	ZONE_MODIFIER = spellID and data.modifier[spellID] or 1;
+end
+
 function AM_Events.ZONE_CHANGED_NEW_AREA()
 	if(UnitInBattleground("player")) then
-		ZONE_MODIFIER = 1.17;
+		ZONE_MODIFIER = 0.9;
 	elseif(IsActiveBattlefieldArena()) then
 		ZONE_MODIFIER = 0.9;
-	elseif(GetRealZoneText() == "Wintergrasp") then
-		-- 1.3 * 0.9 = fail Blizzard
-		ZONE_MODIFIER = 1.17;
-	elseif(GetRealZoneText() == "Icecrown Citadel") then
-		ZONE_MODIFIER = 1.3;
 	else
-		ZONE_MODIFIER = 1.3;
+		local mapID = GetCurrentMapAreaID()
+		if(mapID == 502) then -- Wintergrasp
+			ZONE_MODIFIER = 0.9;
+		elseif(zoneBuffData[mapID]) then
+			-- These zone buffs are cast by the server on zone-in, which
+			-- lands after this event fires, so an immediate check may see
+			-- no buff yet. Recheck shortly after, and again whenever auras
+			-- change mid-run via UNIT_AURA (e.g. raid leader toggles it off,
+			-- which fires no zone event).
+			UpdateZoneBuffModifier(mapID);
+			AM_Core:ScheduleUniqueTimer("zone_buff_modifier", UpdateZoneBuffModifier, 2, mapID);
+		else
+			ZONE_MODIFIER = 1;
+		end
+	end
+end
+AM_Events.ZONE_CHANGED_INDOORS = AM_Events.ZONE_CHANGED_NEW_AREA;
+
+function AM_Events.UNIT_AURA(unit)
+	if(unit == "player") then
+		local mapID = GetCurrentMapAreaID();
+		if(zoneBuffData[mapID]) then
+			UpdateZoneBuffModifier(mapID);
+		end
 	end
 end
 
@@ -1048,13 +1130,13 @@ end
 
 function AM_Events.OnUnitStatsReceived(prefix, text, distribution, target)
 	if(not text) then return; end
-	
+
 	local success, guid, class, ap, sp = AM_Core:Deserialize(text);
-	
+
 	if(not(success and guid and class and ap and sp)) then return; end
-	
+
 	if(guid == playerGUID) then return; end
-	
+
 	if(not UnitStats[guid]) then
 		UnitStats[guid] = {class, ap, sp, 1.0};
 	else
@@ -1074,13 +1156,13 @@ end
 
 function AM_Events.OnScalingReceived(prefix, text, distribution, target)
 	if(not text) then return; end
-	
-	local success, guid, class, inScaling = AM_Core:Deserialize(text);		
-	
+
+	local success, guid, class, inScaling = AM_Core:Deserialize(text);
+
 	if(not(success and guid and class and inScaling)) then return; end
-	
+
 	if(guid == playerGUID) then return; end
-	
+
 	(OnScalingDecode[class])(guid, inScaling);
 end
 
@@ -1093,7 +1175,7 @@ function AM_Events.OnPeriodicBroadcast()
 	if(not CommStatsCooldown) then
 		AM_Core:ScheduleUniqueTimer("comm_stats", AM_Core.SendUnitStats, 5);
 	end
-	
+
 	if(not CommScalingCooldown) then
 		AM_Core:ScheduleUniqueTimer("comm_scaling", AM_Core.SendScaling, 5);
 	end
@@ -1109,34 +1191,36 @@ end
 
 function AM_Events.OnSingularActivityCheck(args)
 	local guid, spellId = args[1], args[2];
-	
+
 	if(activeEffectsBySpell[guid] and activeEffectsBySpell[guid][spellId]) then
 		local _, _, _, _, _, name = GetPlayerInfoByGUID(guid);
-		
+
 		-- We cannot track whether it's still on, remove it
 		if(not name) then
 			AM_Core:CancelTimer(activeEffectsBySpell[guid][spellId][6]);
-		
+
 			RemoveActiveEffect(guid, spellId);
+
+			return
 		end
-		
+
 		local stillActive = false;
-		
+
 		for i=1, 40 do
 			local _, _, _, _, _, _, _, _, _, _, buffId = UnitBuff(name, i);
-			
+
 			if(not buffId) then break; end
-			
+
 			if(buffId == spellId) then
 				stillActive = true;
-				
+
 				break;
 			end
 		end
-		
+
 		if(not stillActive) then
 			AM_Core:CancelTimer(activeEffectsBySpell[guid][spellId][6]);
-		
+
 			RemoveActiveEffect(guid, spellId);
 		end
 	else
@@ -1152,14 +1236,14 @@ function AM_Events.OnAreaTimeout(areaEntry)
 
 	for guid, guidEffects in pairs(activeEffectsBySpell) do
 		if(areaEntry[9] == 0) then return; end
-	
+
 		for spellId, effectEntry in pairs(guidEffects) do
-			if(effectEntry == areaEntry) then				
-				RemoveActiveEffect(guid, spellId);								
+			if(effectEntry == areaEntry) then
+				RemoveActiveEffect(guid, spellId);
 			end
 		end
 	end
-	
+
 	-- We're only here if we didn't reduce the refcount to zero
 	----error("Positive refcount "..areaEntry[9].." remained for area effect "..areaEntry[1].." by trigger "..areaEntry[8]);
 end
@@ -1194,7 +1278,7 @@ function AM_Public.RegisterAreaCallbacks(self, funcCreated, funcUpdated, funcCle
 end
 
 function AM_Public.GetLowValueTolerance()
-	return LOW_VALUE_TOLERANE;
+	return LOW_VALUE_TOLERANCE;
 end
 
 function AM_Public.SetLowValueTolerance(value)
@@ -1209,13 +1293,13 @@ function AM_Public.PrintProfiling()
 
 	UpdateAddOnCPUUsage();
 	UpdateAddOnMemoryUsage();
-	
+
 	AM_Core.Print("Mem: "..format("%.3f", GetAddOnMemoryUsage("AbsorbsMonitor")).." kB");
 	AM_Core.Print("Time: "..format("%.3f", GetAddOnCPUUsage("AbsorbsMonitor")).." ms");
 	AM_Core.Print("--- critical code paths (all times in ms) ---");
-	
+
 	local funcTable;
-	
+
 	funcTable = {
 		["ApplySingularEffect"] = ApplySingularEffect,
 		["HitUnit"] = HitUnit,
@@ -1223,17 +1307,17 @@ function AM_Public.PrintProfiling()
 		["OnCombatLogEvent"] = OnCombatLogEvent,
 		["SortEffects"] = SortEffects,
 	};
-		
+
 	local v_type;
 	local time_self, time_combined, count;
-	
+
 	for k, v in pairs(funcTable) do
 		v_type = type(v);
-		
+
 		if(v_type == "function") then
 			time_self, count = GetFunctionCPUUsage(v, false);
 			time_combined = GetFunctionCPUUsage(v, true);
-			
+
 			AM_Core.Print(k.." (#"..count.."): "..format("%.4f", time_self).." / "..format("%.4f", time_combined));
 		end
 	end
@@ -1241,30 +1325,30 @@ end
 
 function AM_Public.Unit_Total(guid)
 	local guidEffects = activeEffectsBySpell and activeEffectsBySpell[guid];
-	
+
 	return (guidEffects and guidEffects[-1] or 0);
 end
 
 function AM_Public.Unit_Effect(guid, spellId)
 	local guidEffects = activeEffectsBySpell[guid];
-	
+
 	if(guidEffects) then
 		if(guidEffects[spellId]) then
 			return guidEffects[spellId][3];
 		end
 	end
-	
+
 	return 0;
 end
 
 function AM_Public.Unit_Stats(guid, missingQuality)
 	local guidStats = UnitStats[guid];
-	
+
 	if(guidStats) then
-		return guidStats[2], guidStats[3], guidStats[4];
+		return guidStats[2] or 0, guidStats[3] or 0, guidStats[4] or missingQuality;
 	else
 		return 0, 0, missingQuality;
-	end		
+	end
 end
 
 function AM_Public.Unit_Scaling(guid, defaultScaling, defaultQuality)
@@ -1284,10 +1368,11 @@ function AM_Public.Unit_StatsAndScaling(guid, missingQuality, defaultScaling, de
 	local guidScaling = Scaling[guid];
 
 	if(guidStats) then
+		-- Attack power, spell power, quality
 		if(guidScaling) then
-			return guidStats[2], guidStats[3], guidStats[4], guidScaling, 1.0;
+			return guidStats[2] or 0, guidStats[3] or 0, guidStats[4] or missingQuality, guidScaling, 1.0;
 		else
-			return guidStats[2], guidStats[3], guidStats[4], defaultScaling, defaultQuality;
+			return guidStats[2] or 0, guidStats[3] or 0, guidStats[4] or missingQuality, defaultScaling, defaultQuality;
 		end
 	else
 		if(guidScaling) then
@@ -1312,7 +1397,7 @@ function AM_Public.ScheduleScalingBroadcast()
 	end
 end
 
-function AM_Public.Test()	
+function AM_Public.Test()
 	ApplySingularEffect("0x0", "source", "0x1a", "dest A", 27779);
 	ApplySingularEffect("0x0", "source", "0x1a", "dest A", 48066);
 	ApplySingularEffect("0x0", "source", "0x1b", "dest B", 31771);
@@ -1355,7 +1440,7 @@ end
 -- coefficient.
 -- Expects at effect[5] a table indexed by spellId with the base values and at
 -- effect[6] the spellpower coefficient
-local function generic_SpellScalingByTable_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)	
+local function generic_SpellScalingByTable_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local effectInfo = Effects[spellId];
 	local _, sp, quality = Unit_Stats(sourceGUID, 0.1);
 
@@ -1396,24 +1481,24 @@ local deathknight_defaultScaling = {0};
 
 local function deathknight_AntiMagicShell_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local maxHealth = UnitCall_bySearch(UnitHealthMax, destGUID, destName);
-	
+
 	if(maxHealth == 0) then
 		return 0, 0.0;
 	end
-	
+
 	local sourceScaling, quality = Unit_Scaling(sourceGUID, deathknight_defaultScaling, 0.5);
-	
+
 	return floor(maxHealth * 0.5), quality, (0.75 + sourceScaling[1]);
 end
 
-local function deathknight_AntiMagicShell_Hit(effectEntry, absorbedRemaining, overkill, spellSchool) 
+local function deathknight_AntiMagicShell_Hit(effectEntry, absorbedRemaining, overkill, spellSchool)
 	-- TODO: what happens to mixed school attacks?
-	if(spellSchool == SCHOOL_MASK_PHYSICAL) then 
+	if(spellSchool == SCHOOL_MASK_PHYSICAL) then
 		return 0, true;
 	end
-	
+
 	local maxAbsorb = floor((absorbedRemaining + overkill) * effectEntry[7]);
-	
+
 	if(effectEntry[3] < maxAbsorb) then
 		return effectEntry[3], false;
 	else
@@ -1429,12 +1514,12 @@ end
 
 local function deathknight_AntiMagicZone_Hit(effectEntry, absorbedRemaining, overkill, spellSchool)
 	-- TODO: what happens to mixed school attacks?
-	if(spellSchool == SCHOOL_MASK_PHYSICAL) then 
+	if(spellSchool == SCHOOL_MASK_PHYSICAL) then
 		return 0, true;
 	end
-	
+
 	local maxAbsorb = floor((absorbedRemaining + overkill) * 0.75);
-	
+
 	if(effectEntry[3] < maxAbsorb) then
 		return effectEntry[3], false;
 	else
@@ -1445,15 +1530,15 @@ end
 local function deathknight_OnTalentUpdate()
 	-- Magic Suppression
 	local _, _, _, _, t = GetTalentInfo(3, 18);
-	
+
 	playerScaling[1] = deathknight_MS_Ranks[t];
-	
+
 	AM_Public.ScheduleScalingBroadcast();
 end
 
 function OnEnableClass.DEATHKNIGHT()
 	AM_Events.PLAYER_TALENT_UPDATE = deathknight_OnTalentUpdate;
-		
+
 	deathknight_OnTalentUpdate();
 end
 
@@ -1469,9 +1554,9 @@ local function druid_SavageDefense_Create(sourceGUID, sourceName, destGUID, dest
 	return floor(ap * 0.25), quality;
 end
 
-local function druid_SavageDefense_Hit(effectEntry, absorbedRemaining, overkill, spellSchool) 
+local function druid_SavageDefense_Hit(effectEntry, absorbedRemaining, overkill, spellSchool)
 	-- TODO: what happens to mixed school attacks?
-	if(spellSchool == SCHOOL_MASK_PHYSICAL) then 
+	if(spellSchool == SCHOOL_MASK_PHYSICAL) then
 		return min(effectEntry[3], absorbedRemaining), false;
 	else
 		return 0, true;
@@ -1496,7 +1581,7 @@ local mage_Absorb_Spells = {
 	[10225] = 875,
 	[27218] = 1125,
 	[43010] = 1950,
-	
+
 	-- Frost Ward
 	[6143] = 165,
 	[8461] = 290,
@@ -1505,7 +1590,7 @@ local mage_Absorb_Spells = {
 	[28609] = 875,
 	[32796] = 1125,
 	[43012] = 1950,
-	
+
 	-- Ice Barrier
 	[11426] = 438,
 	[13031] = 549,
@@ -1515,7 +1600,7 @@ local mage_Absorb_Spells = {
 	[33405] = 1075,
 	[43038] = 2800,
 	[43039] = 3300,
-	
+
 	-- Mana Shield
 	[1463] = 120,
 	[8494] = 210,
@@ -1535,7 +1620,7 @@ local mage_defaultScaling = {1.0};
 -- No Downranking support here
 local function mage_IceBarrier_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local _, sp, quality1, sourceScaling, quality2 = Unit_StatsAndScaling(sourceGUID, 0.3, mage_defaultScaling, 0.4);
-	
+
 	return floor((mage_Absorb_Spells[spellId] + (sp * 0.8053)) * sourceScaling[1]), math.min(quality1, quality2);
 end
 
@@ -1543,7 +1628,7 @@ local function mage_FireWard_Hit(effectEntry, absorbedRemaining, overkill, spell
 	if(spellSchool ~= SCHOOL_MASK_FIRE) then
 		return 0, true;
 	end
-	
+
 	return generic_Hit(effectEntry, absorbedRemaining, overkill, spellSchool);
 end
 
@@ -1551,32 +1636,32 @@ local function mage_FrostWard_Hit(effectEntry, absorbedRemaining, overkill, spel
 	if(spellSchool ~= SCHOOL_MASK_FROST) then
 		return 0, true;
 	end
-	
+
 	return generic_Hit(effectEntry, absorbedRemaining, overkill, spellSchool);
 end
 
 local function mage_OnGlyphUpdated()
 	local glyphSpellId;
-	
+
 	playerScaling[1] = 1.0;
 
 	for i = 1, 6 do
 		_, _, glyphSpellId = GetGlyphSocketInfo(i);
-		
+
 		-- Glyph of Ice Barrier
 		if(glyphSpellId and glyphSpellId == 63095) then
 			playerScaling[1] = 1.3;
-			
+
 			break;
 		end
 	end
-	 
-	AM_Public.ScheduleScalingBroadcast();		
+
+	AM_Public.ScheduleScalingBroadcast();
 end
 
 function OnEnableClass.MAGE()
 	AM_Events.GLYPH_UPDATED = mage_OnGlyphUpdated;
-	
+
 	mage_OnGlyphUpdated();
 end
 
@@ -1593,8 +1678,14 @@ local paladin_defaultScaling = {1.0};
 -- The base value is always 500
 local function paladin_SacredShield_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local _, sp, quality1, sourceScaling, quality2 = Unit_StatsAndScaling(sourceGUID, 0.1, paladin_defaultScaling, 0.2);
-	if not sourceScaling then sourceScaling = {1.0} end
-	return floor((500 + (sp * 0.75)) * sourceScaling[1] * ZONE_MODIFIER), math.min(quality1, quality2);
+	
+	-- Fallback defaults when target/caster stats are unknown
+	sp = sp or 0;
+	quality1 = quality1 or 0.1;
+	quality2 = quality2 or 0.2;
+	sourceScaling = sourceScaling or {1.0};
+
+	return floor((500 + (sp * 0.75)) * (sourceScaling[1] or 1.0) * ZONE_MODIFIER), math.min(quality1, quality2);
 end
 
 local function paladin_OnTalentUpdate()
@@ -1603,15 +1694,15 @@ local function paladin_OnTalentUpdate()
 
 	-- Divine Guardian
 	local _, _, _, _, t = GetTalentInfo(2, 9);
-	
+
 	playerScaling[1] = 1 + (t * 0.1);
-	
-	AM_Public.ScheduleScalingBroadcast();	
+
+	AM_Public.ScheduleScalingBroadcast();
 end
 
 function OnEnableClass.PALADIN()
 	AM_Events.PLAYER_TALENT_UPDATE = paladin_OnTalentUpdate;
-	
+
 	paladin_OnTalentUpdate();
 end
 
@@ -1623,22 +1714,22 @@ end
 
 PRIEST_DIVINEAEGIS_SPELLID = 47753;
 
--- [rank] = {spellId, level, baseValue, incValue}
+-- [rank] = {spellId, level, baseValue, incValue, maxLevel}
 local priest_PWS_Ranks = {
-	[1] = {17, 6, 44, 4},
-	[2] = {592, 12, 88, 6},
-	[3] = {600, 18, 158, 8},
-	[4] = {3747, 24, 234, 10},
-	[5] = {6065, 30, 301, 11},
-	[6] = {6066, 36, 381, 13},
-	[7] = {10898, 42, 484, 15},
-	[8] = {10899, 48, 605, 17},
-	[9] = {10900, 54, 763, 19},
-	[10] = {10901, 60, 942, 21},
-	[11] = {25217, 65, 1125, 18},
-	[12] = {25218, 70, 1265, 20},
-	[13] = {48065, 75, 1920, 30},
-	[14] = {48066, 80, 2230, 0}
+	[1] = {17, 6, 44, 4, 11},
+	[2] = {592, 12, 88, 6, 17},
+	[3] = {600, 18, 158, 8, 23},
+	[4] = {3747, 24, 234, 10, 29},
+	[5] = {6065, 30, 301, 11, 35},
+	[6] = {6066, 36, 381, 13, 41},
+	[7] = {10898, 42, 484, 15, 47},
+	[8] = {10899, 48, 605, 17, 53},
+	[9] = {10900, 54, 763, 19, 59},
+	[10] = {10901, 60, 942, 21, 65},
+	[11] = {25217, 65, 1125, 18, 69},
+	[12] = {25218, 70, 1265, 20, 74},
+	[13] = {48065, 75, 1920, 30, 79},
+	[14] = {48066, 80, 2230, 0, 84}
 };
 
 -- Public Scaling:
@@ -1646,9 +1737,9 @@ local priest_PWS_Ranks = {
 --   Divine Aegis: [47753] = healFactor
 local priest_defaultScaling = {[PRIEST_DIVINEAEGIS_SPELLID] = 0};
 
-do 
+do
 	for k, v in pairs(priest_PWS_Ranks) do
-		priest_defaultScaling[v[1]] = {v[3], 0.809};
+		priest_defaultScaling[v[1]] = {v[3], 0.8068};
 	end
 end
 
@@ -1658,15 +1749,13 @@ end
 --   Computed: base, sp, DA
 
 
-local function priest_PowerWordShield_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)	
+local function priest_PowerWordShield_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local _, sp, quality1, sourceScaling, quality2 = Unit_StatsAndScaling(sourceGUID, 0.1, priest_defaultScaling, 0.1);
-	
-	-- Fall back to default scaling when the source unit's scaling table
-	-- doesn't contain this priest spell (e.g. mage Spellsteal transfers PWS).
-	local spellScaling = sourceScaling[spellId] or priest_defaultScaling[spellId];
-	if not spellScaling then return nil; end
-	
-	return floor((spellScaling[1] + sp * spellScaling[2]) * ZONE_MODIFIER), math.min(quality1, quality2);
+
+	local scaleData = sourceScaling[spellId] or priest_defaultScaling[spellId];
+	if(scaleData) then
+		return floor((scaleData[1] + sp * scaleData[2]) * ZONE_MODIFIER), math.min(quality1, quality2);
+	end
 end
 
 local function priest_PowerWordBarrier_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
@@ -1677,31 +1766,31 @@ local function priest_PowerWordBarrier_Hit(effectEntry, absorbedRemaining, overk
 	return 0, false;
 end
 
-local function priest_DivineAegis_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)		
+local function priest_DivineAegis_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local existing = 0;
-	
+
 	if(destEffects and destEffects[spellId]) then
 		existing = destEffects[spellId][3];
 	end
 
 	local charge = PopCharge(destGUID, spellId);
-	
+
 	if(charge == 0) then
 		return existing, 0.0;
 	end
-	
+
 	local destLevel = UnitCall_bySearch(UnitLevel, destGUID, destName);
-	local quality = 1.0;		
-	
+	local quality = 1.0;
+
 	if(destLevel == 0) then
 		destLevel = 80;
 		quality = 0.4;
 	end
-		
+
 	return min(destLevel * 125, existing + charge), quality;
 end
 
--- I officially HATE Divine Aegis (and Val'anyr for that matter) from now. 
+-- I officially HATE Divine Aegis (and Val'anyr for that matter) from now.
 -- After extensive testing and parsing/filtering a few hours of combat log, I found the following facts:
 -- 	* In MOST cases, every critical heal will trigger an AURA_APPLIED/AURA_REFRESHED event, even on multiple crits on
 --    one penance and with both AURA events being triggered after all critical heals. In rare cases, there is only one...
@@ -1711,16 +1800,16 @@ end
 --    is completely fucked up in those cases. If two priests channel penance at the same time, both crit, you can never say
 --    who will get the AURA_APPLIED event credited (yes, I found both the first-hitting priest as well as the second-hitting
 --    priest there!) and who the following AURA_REFRESHED events
-local function priest_DivineAegis_OnHealCrit(sourceGUID, sourceName, destGUID, destName, spellId, amount)	
+local function priest_DivineAegis_OnHealCrit(sourceGUID, sourceName, destGUID, destName, spellId, amount)
 	-- We can do a direct access to Scaling here, since the callback is only in place if it was present
 	-- in the first place
-	
+
 	PushCharge(destGUID, PRIEST_DIVINEAEGIS_SPELLID, floor(amount * Scaling[sourceGUID][PRIEST_DIVINEAEGIS_SPELLID]), 5.0);
 end
 
 local function priest_ApplyScaling(guid, level, baseFactor, spFactor, daFactor)
 	local guidScaling;
-	
+
 	--AbsorbsMonitor:Print("Applying for "..guid.." ("..level..") with factors: "..baseFactor.." / "..spFactor.." / "..daFactor);
 
 	if(not Scaling[guid]) then
@@ -1729,7 +1818,7 @@ local function priest_ApplyScaling(guid, level, baseFactor, spFactor, daFactor)
 	else
 		guidScaling = Scaling[guid];
 	end
-	
+
 	guidScaling[PRIEST_DIVINEAEGIS_SPELLID] = daFactor;
 
 	if(daFactor > 0) then
@@ -1737,9 +1826,9 @@ local function priest_ApplyScaling(guid, level, baseFactor, spFactor, daFactor)
 	else
 		AM_Core.RemoveCombatTrigger(guid, "OnHealCrit", priest_DivineAegis_OnHealCrit);
 	end
-	
+
 	local rankValue, rankSP;
-	
+
 	for k, v in pairs(priest_PWS_Ranks) do
 		if(v[2] <= level) then
 			if(level == 80) then
@@ -1748,19 +1837,13 @@ local function priest_ApplyScaling(guid, level, baseFactor, spFactor, daFactor)
 				-- TODO
 				rankValue = v[3];
 			end
-		
-			-- Based on the assumption that the decrease in sp coefficient is linear,
-			-- only tested for level 80 though so far
-			-- Cataclysm will help us get rid of this crap again
-			if(v[2] < (level - 5)) then
-				if(level == 80) then
-					rankSP = max(spFactor * ((v[2] * 0.045228921) - 2.381389768), 0);
-				else
-					rankSP = 0;
-				end
-			else
-				rankSP = spFactor;
+
+			--https://github.com/TrinityCore/TrinityCore/blob/3.3.5/src/server/game/Entities/Unit/Unit.cpp#L2326
+			local downCoeff = 1
+			if(level > v[5]) then
+				downCoeff = max(0, min(1, (22 + v[5] - level)/20))
 			end
+			rankSP = spFactor * downCoeff;
 			
 			guidScaling[v[1]] = {rankValue * baseFactor, rankSP};
 		end
@@ -1768,12 +1851,16 @@ local function priest_ApplyScaling(guid, level, baseFactor, spFactor, daFactor)
 end
 
 local function priest_UpdatePlayerScaling()
-	privateScaling.base = ( (1.0 + (privateScaling["TwinDisc"] * 0.01) + (privateScaling["FocusedPower"] * 0.02) + (privateScaling["SpiritualHealing"] * 0.02)) * (1.0 + ((privateScaling["ImpPWS"] + privateScaling["4pcRaid10"]) * 0.05)) );
-	
-	local spFactor = 0.807;
-	spFactor = spFactor + (privateScaling["BorrowedTime"] * 0.08);
-	spFactor = spFactor * (1.0 + (privateScaling["TwinDisc"] * 0.01) + (privateScaling["FocusedPower"] * 0.02) + (privateScaling["SpiritualHealing"] * 0.02)) * (1.0 + ((privateScaling["ImpPWS"] + privateScaling["4pcRaid10"]) * 0.05));	
-	privateScaling.sp = spFactor;	
+	privateScaling.base = (1.0 + (privateScaling["TwinDisc"] * 0.01)) *
+	(1.0 + (privateScaling["FocusedPower"] * 0.02)) *
+	(1.0 + (privateScaling["SpiritualHealing"] * 0.02)) *
+	(1.0 + ((privateScaling["ImpPWS"] + privateScaling["4pcRaid10"]) * 0.05));
+
+	privateScaling.sp = (0.8068 + (privateScaling["BorrowedTime"] * 0.08)) *
+	(1.0 + (privateScaling["TwinDisc"] * 0.01)) *
+	(1 + (privateScaling["FocusedPower"] * 0.02)) *
+	(1 + (privateScaling["SpiritualHealing"] * 0.02)) *
+	(1.0 + ((privateScaling["ImpPWS"] + privateScaling["4pcRaid10"]) * 0.05));
 	
 	privateScaling.DA = (privateScaling["DivineAegis"] * 0.1) * (1 + (privateScaling["4pcRaid9"] * 0.03));
 
