@@ -26,7 +26,7 @@
 
 
 
-local AM_Public, upgraded = LibStub:NewLibrary("AbsorbsMonitor-1.0", 90003);
+local AM_Public, upgraded = LibStub:NewLibrary("AbsorbsMonitor-1.0", 90004);
 
 if(not AM_Public) then return; end
 
@@ -1029,17 +1029,58 @@ local iccBuffModifier = {
 	[73762] = 1.05, [73824] = 1.10, [73825] = 1.15,
 	[73826] = 1.20, [73827] = 1.25, [73828] = 1.30,
 };
-
 local iccWrynnName = GetSpellInfo(73828);
 local iccHellscreamName = GetSpellInfo(73822);
 
-local function UpdateICCModifier()
-	local _, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", iccWrynnName);
-	if(not spellID) then
-		_, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", iccHellscreamName);
+-- Firelord's Demise (Molten Core). Rank->% confirmed: lowest spell ID = 5%,
+-- highest = 20%, +5% per rank.
+local mcBuffModifier = {
+	[500316] = 1.05, [500317] = 1.10, [500318] = 1.15, [500319] = 1.20,
+};
+local mcBuffName = GetSpellInfo(500319);
+
+-- Zul'Aman zone buff. Rank->% is EXTRAPOLATED from Molten Core's pattern
+-- (+5% per rank, lowest ID = lowest %) - not independently confirmed, and
+-- this has one more rank than MC (5 vs 4), so the 25% top end is a guess.
+-- Verify in-game and adjust if wrong.
+local zaBuffModifier = {
+	[500324] = 1.05, [500325] = 1.10, [500326] = 1.15, [500327] = 1.20, [500328] = 1.25,
+};
+local zaBuffName = GetSpellInfo(500328);
+
+-- Gruul's Lair zone buff. Spell ID range (500329-500333) is extrapolated
+-- from ZA's 5-ID block size, NOT confirmed in-game - verify these IDs
+-- actually exist before trusting this table.
+local gruulBuffModifier = {
+	[500329] = 1.05, [500330] = 1.10, [500331] = 1.15, [500332] = 1.20, [500333] = 1.25,
+};
+local gruulBuffName = GetSpellInfo(500333);
+
+-- Map IDs below are the library's pre-Cata values +1, matching the offset
+-- confirmed against known-good values (Dalaran 504->505, ICC 604->605,
+-- Wintergrasp 501->502). MC/ZA/Gruul have NOT been independently verified
+-- in-game - confirm with /script print(GetCurrentMapAreaID()) and correct
+-- the keys below if any are off.
+local zoneBuffData = {
+	[605] = { name = iccWrynnName, altName = iccHellscreamName, modifier = iccBuffModifier }, -- Icecrown Citadel
+	[697] = { name = mcBuffName, modifier = mcBuffModifier }, -- Molten Core (unverified)
+	[782] = { name = zaBuffName, modifier = zaBuffModifier }, -- Zul'Aman (unverified)
+	[777] = { name = gruulBuffName, modifier = gruulBuffModifier }, -- Gruul's Lair (unverified)
+};
+
+local function UpdateZoneBuffModifier(mapID)
+	local data = zoneBuffData[mapID];
+	if(not data) then
+		ZONE_MODIFIER = 1;
+		return;
 	end
 
-	ZONE_MODIFIER = spellID and iccBuffModifier[spellID] or 1;
+	local _, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", data.name);
+	if(not spellID and data.altName) then
+		_, _, _, _, _, _, _, _, _, _, spellID = UnitBuff("player", data.altName);
+	end
+
+	ZONE_MODIFIER = spellID and data.modifier[spellID] or 1;
 end
 
 function AM_Events.ZONE_CHANGED_NEW_AREA()
@@ -1051,13 +1092,14 @@ function AM_Events.ZONE_CHANGED_NEW_AREA()
 		local mapID = GetCurrentMapAreaID()
 		if(mapID == 502) then -- Wintergrasp
 			ZONE_MODIFIER = 0.9;
-		elseif(mapID == 605) then -- Icecrown Citadel
-			-- The server casts the buff on zone-in, which lands after this
-			-- event fires, so an immediate check would see no buff yet.
-			-- Recheck shortly after, and again whenever the buff is
-			-- toggled mid-run via UNIT_AURA.
-			UpdateICCModifier();
-			AM_Core:ScheduleUniqueTimer("icc_modifier", UpdateICCModifier, 2);
+		elseif(zoneBuffData[mapID]) then
+			-- These zone buffs are cast by the server on zone-in, which
+			-- lands after this event fires, so an immediate check may see
+			-- no buff yet. Recheck shortly after, and again whenever auras
+			-- change mid-run via UNIT_AURA (e.g. raid leader toggles it off,
+			-- which fires no zone event).
+			UpdateZoneBuffModifier(mapID);
+			AM_Core:ScheduleUniqueTimer("zone_buff_modifier", UpdateZoneBuffModifier, 2, mapID);
 		else
 			ZONE_MODIFIER = 1;
 		end
@@ -1066,8 +1108,11 @@ end
 AM_Events.ZONE_CHANGED_INDOORS = AM_Events.ZONE_CHANGED_NEW_AREA;
 
 function AM_Events.UNIT_AURA(unit)
-	if(unit == "player" and GetCurrentMapAreaID() == 605) then
-		UpdateICCModifier();
+	if(unit == "player") then
+		local mapID = GetCurrentMapAreaID();
+		if(zoneBuffData[mapID]) then
+			UpdateZoneBuffModifier(mapID);
+		end
 	end
 end
 
