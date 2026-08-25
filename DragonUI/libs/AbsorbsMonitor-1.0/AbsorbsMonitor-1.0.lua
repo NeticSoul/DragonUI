@@ -294,6 +294,7 @@ function AM_Core.Enable()
 	AM_Core.RegisterEvent("ZONE_CHANGED_NEW_AREA");
 	AM_Core.RegisterEvent("ZONE_CHANGED_INDOORS");
 	AM_Core.RegisterEvent("UNIT_AURA");
+	AM_Core.RegisterEvent("UPDATE_BATTLEFIELD_STATUS");
 	AM_Events.ZONE_CHANGED_NEW_AREA();
 
 	if(playerClass == "DEATHKNIGHT") then
@@ -1084,7 +1085,7 @@ local function UpdateZoneBuffModifier(mapID)
 	ZONE_MODIFIER = spellID and data.modifier[spellID] or 1;
 end
 
-function AM_Events.ZONE_CHANGED_NEW_AREA()
+local function UpdateZoneModifier()
 	if(UnitInBattleground("player")) then
 		ZONE_MODIFIER = 0.9;
 	elseif(IsActiveBattlefieldArena()) then
@@ -1094,20 +1095,23 @@ function AM_Events.ZONE_CHANGED_NEW_AREA()
 		if(mapID == 502) then -- Wintergrasp
 			ZONE_MODIFIER = 0.9;
 		elseif(zoneBuffData[mapID]) then
-			-- These zone buffs are cast by the server on zone-in, which
-			-- lands after this event fires, so an immediate check may see
-			-- no buff yet. Recheck shortly after, and again whenever auras
-			-- change mid-run via UNIT_AURA (e.g. raid leader toggles it off,
-			-- which fires no zone event).
 			UpdateZoneBuffModifier(mapID);
-			AM_Core:ScheduleUniqueTimer("zone_buff_modifier", UpdateZoneBuffModifier, 2, mapID);
 		else
 			ZONE_MODIFIER = 1;
 		end
 	end
 end
-AM_Events.ZONE_CHANGED_INDOORS = AM_Events.ZONE_CHANGED_NEW_AREA;
 
+-- Battlefield status and zone buffs both reach the client after this fires, so re-check shortly after.
+function AM_Events.ZONE_CHANGED_NEW_AREA()
+	UpdateZoneModifier();
+
+	AM_Core:ScheduleUniqueTimer("zone_modifier", UpdateZoneModifier, 2);
+end
+AM_Events.ZONE_CHANGED_INDOORS = AM_Events.ZONE_CHANGED_NEW_AREA;
+AM_Events.UPDATE_BATTLEFIELD_STATUS = UpdateZoneModifier;
+
+-- The raid leader can toggle a zone buff off mid-run, which fires no zone event.
 function AM_Events.UNIT_AURA(unit)
 	if(unit == "player") then
 		local mapID = GetCurrentMapAreaID();
@@ -1622,7 +1626,7 @@ local mage_defaultScaling = {1.0};
 local function mage_IceBarrier_Create(sourceGUID, sourceName, destGUID, destName, spellId, destEffects)
 	local _, sp, quality1, sourceScaling, quality2 = Unit_StatsAndScaling(sourceGUID, 0.3, mage_defaultScaling, 0.4);
 
-	return floor((mage_Absorb_Spells[spellId] + (sp * 0.8053)) * sourceScaling[1]), math.min(quality1, quality2);
+	return floor((mage_Absorb_Spells[spellId] + (sp * 0.8068)) * sourceScaling[1]), math.min(quality1, quality2);
 end
 
 local function mage_FireWard_Hit(effectEntry, absorbedRemaining, overkill, spellSchool)
@@ -1852,15 +1856,14 @@ local function priest_ApplyScaling(guid, level, baseFactor, spFactor, daFactor)
 end
 
 local function priest_UpdatePlayerScaling()
+	-- Spiritual Healing shares no bit with PW:S's spell class mask, so it never scales the shield.
 	privateScaling.base = (1.0 + (privateScaling["TwinDisc"] * 0.01)) *
 	(1.0 + (privateScaling["FocusedPower"] * 0.02)) *
-	(1.0 + (privateScaling["SpiritualHealing"] * 0.02)) *
 	(1.0 + ((privateScaling["ImpPWS"] + privateScaling["4pcRaid10"]) * 0.05));
 
 	privateScaling.sp = (0.8068 + (privateScaling["BorrowedTime"] * 0.08)) *
 	(1.0 + (privateScaling["TwinDisc"] * 0.01)) *
 	(1 + (privateScaling["FocusedPower"] * 0.02)) *
-	(1 + (privateScaling["SpiritualHealing"] * 0.02)) *
 	(1.0 + ((privateScaling["ImpPWS"] + privateScaling["4pcRaid10"]) * 0.05));
 	
 	privateScaling.DA = (privateScaling["DivineAegis"] * 0.1) * (1 + (privateScaling["4pcRaid9"] * 0.03));
@@ -2154,15 +2157,15 @@ end
 -- Data Tables --
 -----------------
 
-local mage_FireWard_Entry = {2.0, 30, generic_SpellScalingByTable_Create, mage_FireWard_Hit, mage_Absorb_Spells, 0.8053};
-local mage_FrostWard_Entry = {2.0, 30, generic_SpellScalingByTable_Create, mage_FrostWard_Hit, mage_Absorb_Spells, 0.8053};
+local mage_FireWard_Entry = {2.0, 30, generic_SpellScalingByTable_Create, mage_FireWard_Hit, mage_Absorb_Spells, 0.8068};
+local mage_FrostWard_Entry = {2.0, 30, generic_SpellScalingByTable_Create, mage_FrostWard_Hit, mage_Absorb_Spells, 0.8068};
 local mage_IceBarrier_Entry = {1.0, 60, mage_IceBarrier_Create, generic_Hit};
 local mage_ManaShield_Entry = {1.0, 60, generic_SpellScalingByTable_Create, generic_Hit, mage_Absorb_Spells, 0.8053};
 
 local priest_PWS_Entry = {1.0, 30, priest_PowerWordShield_Create, generic_Hit};	
 
 local warlock_Sacrifice_Entry = {1.0, 30, generic_ConstantByTable_Create, generic_Hit, warlock_Sacrifice_Spells};
-local warlock_ShadowWard_Entry = {2.0, 30, generic_SpellScalingByTable_Create, warlock_ShadowWard_Hit, warlock_ShadowWard_Spells, 0.8053};
+local warlock_ShadowWard_Entry = {2.0, 30, generic_SpellScalingByTable_Create, warlock_ShadowWard_Hit, warlock_ShadowWard_Spells, 0.8068};
 
 
 -- INCOMPLETE
