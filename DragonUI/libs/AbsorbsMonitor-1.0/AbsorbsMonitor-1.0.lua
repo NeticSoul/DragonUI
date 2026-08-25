@@ -1056,11 +1056,10 @@ local gruulBuffModifier = {
 };
 local gruulBuffName = GetSpellInfo(500333);
 
--- Map IDs below are the library's pre-Cata values +1, matching the offset
--- confirmed against known-good values (Dalaran 504->505, ICC 604->605,
--- Wintergrasp 501->502). MC/ZA/Gruul have NOT been independently verified
--- in-game - confirm with /script print(GetCurrentMapAreaID()) and correct
--- the keys below if any are off.
+-- Keys are WorldMapArea.dbc IDs +1: GetCurrentMapAreaID() returns dbcID + 1
+-- (FrameXML does GetCurrentMapAreaID() - 1 before SetMapByID). Verified in
+-- the dbc: ICC 604, Wintergrasp 501, MoltenCore 696, GruulsLair 776,
+-- ZulAman 781; the last three only exist on clients with backported maps.
 local zoneBuffData = {
 	[605] = { name = iccWrynnName, altName = iccHellscreamName, modifier = iccBuffModifier }, -- Icecrown Citadel
 	[697] = { name = mcBuffName, modifier = mcBuffModifier }, -- Molten Core (unverified)
@@ -1070,7 +1069,9 @@ local zoneBuffData = {
 
 local function UpdateZoneBuffModifier(mapID)
 	local data = zoneBuffData[mapID];
-	if(not data) then
+
+	-- data.name is nil when the client lacks the spell, and UnitBuff(unit, nil) errors.
+	if(not (data and data.name)) then
 		ZONE_MODIFIER = 1;
 		return;
 	end
