@@ -114,6 +114,8 @@ L["Sort Guild Bank Tab"] = "整理公會銀行頁籤"
 
 L["Bag Skin"] = "背包外觀"
 L["Retail-style skin for Blizzard bag windows"] = "暴雪背包視窗的正式服風格外觀"
+L["Loot Window"] = "拾取視窗"
+L["Retail-style skin for the Blizzard loot window"] = "暴雪拾取視窗的正式服風格外觀"
 
 -- Version Check Module
 L["Version Check"] = "版本檢查"

@@ -35,6 +35,9 @@
     <Script file="questtracker.lua"/>   
     <Script file="lootroll.lua"/>
 
+    <!-- Blizzard loot window skin (the paginated LootFrame, not the roll popup above) -->
+    <Script file="loot_skin.lua"/>
+
  
     <!-- UnitFrames -->
     <Include file="unitframes\unitframes.xml"/>

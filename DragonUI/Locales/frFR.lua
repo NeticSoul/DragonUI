@@ -114,6 +114,8 @@ L["Sort Guild Bank Tab"] = "Trier l'onglet de la banque de guilde"
 
 L["Bag Skin"] = "Apparence des sacs"
 L["Retail-style skin for Blizzard bag windows"] = "Apparence Retail pour les fenêtres de sacs Blizzard"
+L["Loot Window"] = "Fenêtre de butin"
+L["Retail-style skin for the Blizzard loot window"] = "Apparence Retail pour la fenêtre de butin Blizzard"
 
 -- Version Check Module
 L["Version Check"] = "Vérification de version"

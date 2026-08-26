@@ -1110,6 +1110,9 @@ local defaults = {
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin
             },
+            loot_skin = {
+                enabled = true -- Retail-style skin for the Blizzard loot window
+            },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons
                 bank_fill_from_bags = true, -- Sort bank: top off partial bank stacks from bags first

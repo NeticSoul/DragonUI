@@ -412,6 +412,11 @@ addon.atlasinfo = {
 	-- in-game-verified values against these same three sheets.
 	['UI-Frame-PortraitMetal-CornerTopLeft'] = { rui_FrameMetal, 75, 75, 0.00195312, 0.294922, 0.298828, 0.591797 },
 	['UI-Frame-Metal-CornerTopRight'] = { rui_FrameMetal, 75, 75, 0.298828, 0.591797, 0.00195312, 0.294922 },
+	-- Same corner without the portrait cutout. Measured off the sheet, its rail sits 12px in from
+	-- the piece's left edge exactly like CornerBottomLeft and EdgeLeft, so it drops into the same
+	-- left column; mirroring CornerTopRight instead would land the rail 10.5px off (right-side
+	-- art carries only 1.5px of padding).
+	['UI-Frame-Metal-CornerTopLeft'] = { rui_FrameMetal, 75, 75, 0.00195312, 0.294922, 0.00195312, 0.294922 },
 	-- The worn streak band retail tiles across the body just under a window's title bar.
 	['_UI-Frame-TopTileStreaks'] = { rui_FrameInner, 256, 43, 0, 1, 0.007812, 0.343750 },
 
