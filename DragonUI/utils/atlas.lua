@@ -57,6 +57,7 @@ local rui_ScrollbarMid = assets..'CharacterPanel\\scrollbarmiddle';
 local rui_CommonButtons = assets..'CharacterPanel\\commonbuttons';
 local rui_CommonIcons = assets..'CharacterPanel\\commonicons';
 local rui_ListExpand = assets..'CharacterPanel\\listexpand';
+local rui_LootCard = assets..'UI\\looting-itemcard';
 
 addon.atlasinfo = {
 	['_ui-hud-actionbar-divider-top'] = { uiactionbar2x_, 10, 10, 421/512, 445/512, 833/2048, 861/2048 },
@@ -541,6 +542,14 @@ addon.atlasinfo = {
 	['_options_listexpand_middle'] = { rui_ListExpand, 1, 26, 0.000000, 0.007812, 0.218750, 0.421875 },
 	['options_listexpand_right'] = { rui_ListExpand, 28, 26, 0.007812, 0.226562, 0.437500, 0.640625 },
 	['options_listexpand_right_expanded'] = { rui_ListExpand, 28, 26, 0.242188, 0.460938, 0.437500, 0.640625 },
+
+	-- Retail's loot row art. The strokes are hollow outlines; only the bg is tinted, by quality.
+	['looting_itemcard_bg'] = { rui_LootCard, 298, 76, 0, 0.58203125, 0, 0.296875 },
+	['looting_itemcard_stroke_normal'] = { rui_LootCard, 298, 76, 0, 0.58203125, 0.3046875, 0.6015625 },
+	['looting_itemcard_stroke_clickstate'] = { rui_LootCard, 298, 76, 0, 0.58203125, 0.609375, 0.90625 },
+	['looting_raritytag_frame'] = { rui_LootCard, 208, 15, 0.59375, 1, 0, 0.05859375 },
+	-- Half a texel in: the flipped top samples its opaque end on the edge and bleeds the padding.
+	['_looting_itemcard_shadow-center'] = { rui_LootCard, 8, 150, 0.586914062, 0.600585938, 0.080078125, 0.662109375 },
 };
 
 local C_Texture = {};
