@@ -54,6 +54,8 @@ local CANVAS_INSET = ROW_INSET - VIEW_LEFT
 local CANVAS_INSET_RIGHT = VIEW_WIDTH - CANVAS_INSET - ROW_WIDTH
 -- ScrollingFlatPanelMixin:Resize adds 26 for the viewport's anchors and 20 of slack on top.
 local PANEL_CHROME = VIEW_TOP + VIEW_BOTTOM + 20
+-- Blizzard drops the frame 95 below the cursor, which lands it on the second row; centre the first.
+local CURSOR_DROP = VIEW_TOP + LIST_PAD + ROW_HEIGHT / 2
 local ICON_X, ICON_Y, ICON_SIZE = 5, 4, 37
 local NAME_X, NAME_Y, NAME_WIDTH, NAME_HEIGHT = 8, -8, 150, 30
 local COIN_X, COIN_WIDTH, COIN_HEIGHT = 8, 93, 38
@@ -1034,9 +1036,17 @@ local function InstallHooks(frame)
 
     -- LootFrame_Show raises the frame after OnShow fired, leaving the panel a level short.
     hooksecurefunc("LootFrame_Show", function(self)
-        if IsActive() then
-            SyncPanelLevel(self)
+        if not IsActive() then
+            return
         end
+        if GetCVar("lootUnderMouse") == "1" and (self.numLootItems or 0) > 0 then
+            local scale = self:GetEffectiveScale()
+            local x, y = GetCursorPosition()
+            x, y = x / scale, y / scale + CURSOR_DROP
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT", nil, "BOTTOMLEFT", x - 40, y > 350 and y or 350)
+        end
+        SyncPanelLevel(self)
     end)
 
     frame:HookScript("OnHide", function()
