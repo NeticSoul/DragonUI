@@ -1,3 +1,9 @@
+-- SUPERSEDED, KEPT AS A BACKUP. Not listed in modules.xml, so nothing here loads or runs.
+-- Replaced by modules/objectivetracker.lua, which draws the tracker itself instead of moving
+-- Blizzard's WatchFrame. Moving it made WatchFrame_Update read our geometry (WatchFrame.lua:365),
+-- and the poiWatchFrameLines* buttons created under that tainted execution blocked
+-- WorldMapBlobFrame:Show() in combat. Delete once the new module has proven itself.
+
 local addon = select(2, ...);
 local L = addon.L
 

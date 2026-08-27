@@ -188,6 +188,7 @@ local defaults = {
             x = -210,
             y = -255,
             show_header = true,
+            collapsed = false,   -- Survives reloads; Blizzard's own tracker forgets it
             font_size = 12,      -- Point size for quest tracker text (WoW default: 11)
             show_on_hover = false,
             show_in_combat = false,
