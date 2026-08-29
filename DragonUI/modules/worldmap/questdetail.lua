@@ -25,8 +25,7 @@ local CHIP_H, CHIP_GAP = REWARD_SIZE + 4, 6
 -- The rewards column sits wider than the page text, which is what retail gives its currencies.
 local FOOTER_INSET = 10
 local COIN_ICON = "Interface\\Icons\\INV_Misc_Coin_02"
--- 3.3.5a ships no experience glyph, so the tile is drawn flat and lettered like retail's.
-local XP_COLOR = { 0.53, 0.24, 0.72 }
+local XP_ICON = addon._dir .. "WorldMap\\xp_icon"
 -- The band's carving sits a little low in its cell, so the word follows it down.
 local LABEL_DROP = 2
 
@@ -96,7 +95,7 @@ local function dressReward(button, kind, slot, name, texture, count, quality)
 end
 
 -- An icon and a sunken field: what retail shows experience and money in.
-local function acquireChip(key, icon, colour)
+local function acquireChip(key, icon)
     if detail[key] then return detail[key] end
 
     local chip = CreateFrame("Frame", nil, footer)
@@ -104,16 +103,8 @@ local function acquireChip(key, icon, colour)
     chip.icon = chip:CreateTexture(nil, "ARTWORK")
     chip.icon:SetSize(REWARD_SIZE, REWARD_SIZE)
     chip.icon:SetPoint("LEFT", chip, "LEFT", 0, 0)
-    if colour then
-        chip.icon:SetTexture(colour[1], colour[2], colour[3], 1)
-        chip.label = chip:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        chip.label:SetPoint("CENTER", chip.icon, "CENTER", 0, 0)
-        chip.label:SetText("XP")
-        chip.label:SetTextColor(1, 1, 1)
-    else
-        chip.icon:SetTexture(icon)
-        chip.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    end
+    chip.icon:SetTexture(icon)
+    chip.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     chip.ring = chip:CreateTexture(nil, "OVERLAY")
     chip.ring:SetTexture(addon._dir .. "UI\\ui-quickslot2")
     chip.ring:SetTexCoord(12 / 64, 51 / 64, 12 / 64, 51 / 64)
@@ -175,7 +166,7 @@ local function layoutChips(y, width, money)
     local xp = GetQuestLogRewardXP and GetQuestLogRewardXP() or 0
     local chips = {}
     if xp > 0 then
-        local chip = acquireChip("xpChip", nil, XP_COLOR)
+        local chip = acquireChip("xpChip", XP_ICON)
         chip.text:SetText(tostring(xp))
         chips[#chips + 1] = chip
     elseif detail.xpChip then
