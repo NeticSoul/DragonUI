@@ -339,6 +339,19 @@ L["Rare"] = true
 L["Epic"] = true
 L["Legendary"] = true
 
+-- Loot Window
+L["Loot Window"] = true
+L["Configure the DragonUI loot window."] = true
+L["Enable Loot Window"] = true
+L["Apply the DragonUI skin to the Blizzard loot window."] = true
+L["Open at Cursor"] = true
+L["Open the loot window at the cursor instead of its saved position."] = true
+L["Disable Open at Cursor, then drag the loot window to save its position."] = true
+L["Animate Loot Reflow"] = true
+L["Smoothly close gaps and resize the loot window after collecting items."] = true
+L["Reset Loot Window Position"] = true
+L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = true
+
 -- Item Level
 L["Item Level"] = true
 L["Enable Item Level"] = true

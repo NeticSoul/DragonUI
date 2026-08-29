@@ -1112,7 +1112,8 @@ local defaults = {
                 enabled = true -- Experimental retail-style bag window skin
             },
             loot_skin = {
-                enabled = true -- Retail-style skin for the Blizzard loot window
+                enabled = true, -- Retail-style skin for the Blizzard loot window
+                animated_reflow = true, -- Compact collected loot with animated rows and panel resizing
             },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons
@@ -1143,6 +1144,7 @@ local defaults = {
                 enabled = true, -- Retail-style world map with breadcrumb navigation and a quest log side panel
                 questLog = true, -- Quest log side panel open
                 maximized = false, -- Window at its maximized size
+                objectives = true, -- The objective lines under each quest title in the side panel
                 landmarks = true, -- The client's own landmark pins (battlefield objectives) shown on the map
                 fog = true, -- Undiscovered areas drawn dimmed instead of hidden
                 entrances = true, -- Dungeon and raid entrance pins on zone maps

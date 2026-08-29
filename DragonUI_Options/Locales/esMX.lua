@@ -307,6 +307,19 @@ L["Rare"] = "Raro"
 L["Epic"] = "Épico"
 L["Legendary"] = "Legendario"
 
+-- Ventana de botín
+L["Loot Window"] = "Ventana de botín"
+L["Configure the DragonUI loot window."] = "Configura la ventana de botín de DragonUI."
+L["Enable Loot Window"] = "Activar ventana de botín"
+L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica la apariencia de DragonUI a la ventana de botín de Blizzard."
+L["Open at Cursor"] = "Abrir bajo el cursor"
+L["Open the loot window at the cursor instead of its saved position."] = "Abre la ventana de botín bajo el cursor en lugar de en su posición guardada."
+L["Disable Open at Cursor, then drag the loot window to save its position."] = "Desactiva Abrir bajo el cursor y arrastra la ventana de botín para guardar su posición."
+L["Animate Loot Reflow"] = "Animar reordenación del botín"
+L["Smoothly close gaps and resize the loot window after collecting items."] = "Elimina suavemente los huecos y redimensiona la ventana de botín al recoger objetos."
+L["Reset Loot Window Position"] = "Restablecer posición de la ventana de botín"
+L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Borra la posición guardada. La próxima vez que abras la ventana de botín se usará la posición predeterminada de Blizzard."
+
 -- Item Level
 L["Item Level"] = "Nivel de Objeto"
 L["Enable Item Level"] = "Activar Nivel de Objeto"

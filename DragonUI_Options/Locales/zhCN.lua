@@ -1503,6 +1503,19 @@ L["Icons With Questie"] = "与 Questie 的图标"
 L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "当 Questie 已加载并开启其自身姓名板图标时，由谁在姓名板上绘制任务图标。DragonUI 会禁用 Questie 的（需重载）；Questie 会隐藏 DragonUI 的。"
 L["Ask"] = "询问"
 
+-- 拾取窗口
+L["Loot Window"] = "拾取窗口"
+L["Configure the DragonUI loot window."] = "配置 DragonUI 拾取窗口。"
+L["Enable Loot Window"] = "启用拾取窗口"
+L["Apply the DragonUI skin to the Blizzard loot window."] = "将 DragonUI 皮肤应用到暴雪拾取窗口。"
+L["Open at Cursor"] = "在鼠标位置打开"
+L["Open the loot window at the cursor instead of its saved position."] = "在鼠标位置而非保存的位置打开拾取窗口。"
+L["Disable Open at Cursor, then drag the loot window to save its position."] = "关闭在鼠标位置打开，然后拖动拾取窗口以保存其位置。"
+L["Animate Loot Reflow"] = "播放拾取重排动画"
+L["Smoothly close gaps and resize the loot window after collecting items."] = "拾取物品后平滑填补空隙并调整拾取窗口大小。"
+L["Reset Loot Window Position"] = "重置拾取窗口位置"
+L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "清除保存的位置。下次打开拾取窗口时将使用暴雪默认位置。"
+
 -- Item Level
 L["Item Level"] = "物品等级"
 L["Enable Item Level"] = "启用物品等级"

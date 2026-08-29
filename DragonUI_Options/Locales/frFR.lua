@@ -714,6 +714,19 @@ L["Icons With Questie"] = "Icônes avec Questie"
 L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Qui dessine les icônes de quête sur les plaques quand Questie est chargé avec ses propres icônes activées. DragonUI désactive celles de Questie (rechargement requis) ; Questie masque celles de DragonUI."
 L["Ask"] = "Demander"
 
+-- Fenêtre de butin
+L["Loot Window"] = "Fenêtre de butin"
+L["Configure the DragonUI loot window."] = "Configurer la fenêtre de butin de DragonUI."
+L["Enable Loot Window"] = "Activer la fenêtre de butin"
+L["Apply the DragonUI skin to the Blizzard loot window."] = "Applique l'apparence DragonUI à la fenêtre de butin de Blizzard."
+L["Open at Cursor"] = "Ouvrir au curseur"
+L["Open the loot window at the cursor instead of its saved position."] = "Ouvre la fenêtre de butin au curseur plutôt qu'à sa position enregistrée."
+L["Disable Open at Cursor, then drag the loot window to save its position."] = "Désactivez Ouvrir au curseur, puis faites glisser la fenêtre de butin pour enregistrer sa position."
+L["Animate Loot Reflow"] = "Animer le réagencement du butin"
+L["Smoothly close gaps and resize the loot window after collecting items."] = "Comble les espaces et redimensionne la fenêtre de butin en douceur après avoir récupéré des objets."
+L["Reset Loot Window Position"] = "Réinitialiser la position de la fenêtre de butin"
+L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Efface la position enregistrée. La position par défaut de Blizzard sera utilisée à la prochaine ouverture de la fenêtre de butin."
+
 -- Item Level
 L["Item Level"] = "Niveau d'objet"
 L["Enable Item Level"] = "Activer le niveau d'objet"

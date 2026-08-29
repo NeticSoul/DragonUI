@@ -4,7 +4,7 @@
 ================================================================================
 DragonUI Options Panel - Panels Tab
 ================================================================================
-The reskinned Blizzard windows: Character Panel, Pets & Mounts and World Map.
+The reskinned Blizzard windows: Character Panel, Pets & Mounts, World Map and Loot Window.
 ================================================================================
 ]]
 
@@ -42,6 +42,7 @@ local subTabs = {
     { key = "character",   label = LO["Character"] },
     { key = "collections", label = LO["Pets & Mounts"] },
     { key = "worldmap",    label = LO["World Map"] },
+    { key = "loot",        label = LO["Loot Window"] },
 }
 
 -- Search navigation sub-tab setter.
@@ -362,6 +363,67 @@ local function BuildWorldMapSubTab(scroll)
 end
 
 -- ============================================================================
+-- LOOT WINDOW
+-- ============================================================================
+
+local function BuildLootSubTab(scroll)
+    local lootSection = C:AddSection(scroll, LO["Loot Window"])
+
+    C:AddDescription(lootSection, LO["Configure the DragonUI loot window."])
+
+    C:AddToggle(lootSection, {
+        label = LO["Enable Loot Window"],
+        desc = LO["Apply the DragonUI skin to the Blizzard loot window."],
+        getFunc = function() return IsEnabled("loot_skin") end,
+        setFunc = function(val)
+            EnsureModuleTable("loot_skin").enabled = val
+            if addon.LootSkinModule then addon.LootSkinModule:Refresh() end
+            Panel:SelectTab("panels")
+        end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(lootSection, {
+        label = LO["Open at Cursor"],
+        desc = LO["Open the loot window at the cursor instead of its saved position."],
+        getFunc = function()
+            return GetCVar and GetCVar("lootUnderMouse") == "1"
+        end,
+        setFunc = function(val)
+            if SetCVar then SetCVar("lootUnderMouse", val and "1" or "0") end
+            if addon.LootSkinModule then addon.LootSkinModule:ApplySavedPosition() end
+        end,
+        disabled = function() return not IsEnabled("loot_skin") end,
+        requiresReload = false,
+    })
+
+    C:AddDescription(lootSection, LO["Disable Open at Cursor, then drag the loot window to save its position."])
+
+    C:AddToggle(lootSection, {
+        label = LO["Animate Loot Reflow"],
+        desc = LO["Smoothly close gaps and resize the loot window after collecting items."],
+        getFunc = function()
+            return GetModuleField("loot_skin", "animated_reflow") ~= false
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("loot_skin").animated_reflow = val
+            if addon.LootSkinModule then addon.LootSkinModule:RefreshSettings() end
+        end,
+        disabled = function() return not IsEnabled("loot_skin") end,
+        requiresReload = false,
+    })
+
+    C:AddButton(lootSection, {
+        label = LO["Reset Loot Window Position"],
+        desc = LO["Clear the saved position. The Blizzard default will be used next time you open the loot window."],
+        callback = function()
+            if addon.LootSkinModule then addon.LootSkinModule:ResetPosition() end
+        end,
+        disabled = function() return not IsEnabled("loot_skin") end,
+    })
+end
+
+-- ============================================================================
 -- SUB-TAB DISPATCH
 -- ============================================================================
 
@@ -369,6 +431,7 @@ local subTabBuilders = {
     character   = BuildCharacterSubTab,
     collections = BuildCollectionsSubTab,
     worldmap    = BuildWorldMapSubTab,
+    loot        = BuildLootSubTab,
 }
 
 -- ============================================================================

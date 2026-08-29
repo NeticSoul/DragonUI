@@ -709,6 +709,19 @@ L["Icons With Questie"] = "Ícones com Questie"
 L["Who draws quest icons on plates when Questie is loaded with its own nameplate icons on. DragonUI disables Questie's (needs reload); Questie hides DragonUI's."] = "Quem desenha os ícones de missão nas placas quando o Questie está carregado com seus próprios ícones ativos. DragonUI desativa os do Questie (precisa recarregar); Questie oculta os do DragonUI."
 L["Ask"] = "Perguntar"
 
+-- Janela de saque
+L["Loot Window"] = "Janela de saque"
+L["Configure the DragonUI loot window."] = "Configure a janela de saque do DragonUI."
+L["Enable Loot Window"] = "Ativar janela de saque"
+L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica a aparência do DragonUI à janela de saque da Blizzard."
+L["Open at Cursor"] = "Abrir no cursor"
+L["Open the loot window at the cursor instead of its saved position."] = "Abre a janela de saque no cursor em vez da posição salva."
+L["Disable Open at Cursor, then drag the loot window to save its position."] = "Desative Abrir no cursor e arraste a janela de saque para salvar sua posição."
+L["Animate Loot Reflow"] = "Animar reorganização do saque"
+L["Smoothly close gaps and resize the loot window after collecting items."] = "Fecha os espaços suavemente e redimensiona a janela de saque ao coletar itens."
+L["Reset Loot Window Position"] = "Redefinir posição da janela de saque"
+L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Limpa a posição salva. A posição padrão da Blizzard será usada na próxima vez que abrir a janela de saque."
+
 -- Item Level
 L["Item Level"] = "Nível de Item"
 L["Enable Item Level"] = "Ativar Nível de Item"

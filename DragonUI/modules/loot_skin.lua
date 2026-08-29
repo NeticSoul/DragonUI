@@ -18,6 +18,7 @@ local tremove = tremove
 local max = math.max
 local min = math.min
 local abs = math.abs
+local floor = math.floor
 local GetTime = GetTime
 
 local assets = addon._dir
@@ -79,12 +80,16 @@ local EXIT_FADE_DURATION = 0.2
 local EXIT_STAGGER = 0.07
 -- Shape of retail's ScrollingFlatPanel HideAnim, minus the translation.
 local CLOSE_FADE_DURATION = 0.1
+local ROW_MOVE_DURATION = 0.16
+local FRAME_RESIZE_DURATION = 0.2
+local MANUAL_REFLOW_DELAY = 0.12
 
 local LootSkinModule = {
     initialized = false,
     applied = false,
     hooksInstalled = false,
 }
+addon.LootSkinModule = LootSkinModule
 
 if addon.RegisterModule then
     addon:RegisterModule(
@@ -100,12 +105,59 @@ local function IsActive()
     return LootSkinModule.applied and addon:IsModuleEnabled("loot_skin")
 end
 
+local function GetConfig()
+    return addon:GetModuleConfig("loot_skin") or {}
+end
+
+local function UseAnimatedReflow()
+    return GetConfig().animated_reflow ~= false
+end
+
 -- ============================================================================
 -- BLIZZARD STATE
 -- ============================================================================
 
 local originals = {}
 local frameOriginal
+
+local function IsLootUnderMouse()
+    return GetCVar and GetCVar("lootUnderMouse") == "1"
+end
+
+local function Round(value)
+    return floor(value + (value < 0 and -0.5 or 0.5))
+end
+
+local function ApplySavedPosition(frame)
+    local cfg = GetConfig()
+    if cfg.positionX == nil or cfg.positionY == nil then
+        return false
+    end
+    frame:ClearAllPoints()
+    frame:SetPoint("CENTER", UIParent, "CENTER", cfg.positionX, cfg.positionY)
+    frame:SetUserPlaced(false)
+    return true
+end
+
+local function SavePosition(frame)
+    if IsLootUnderMouse() then
+        return
+    end
+    local cx, cy = frame:GetCenter()
+    local ux, uy = UIParent:GetCenter()
+    if not (cx and cy and ux and uy) then
+        return
+    end
+    local frameScale = frame:GetEffectiveScale()
+    local parentScale = UIParent:GetEffectiveScale()
+    local x = (cx * frameScale - ux * parentScale) / frameScale
+    local y = (cy * frameScale - uy * parentScale) / frameScale
+    local cfg = GetConfig()
+    cfg.positionX, cfg.positionY = Round(x), Round(y)
+    frame:ClearAllPoints()
+    frame:SetPoint("CENTER", UIParent, "CENTER", cfg.positionX, cfg.positionY)
+    frame:SetUserPlaced(false)
+end
 
 local function Remember(object)
     if not object or originals[object] then
@@ -299,8 +351,10 @@ local function UpdateViewport(viewHeight)
 
     for index = 1, rowCount do
         local button = RowButton(index)
-        if button then
-            local top = LIST_PAD - CLIP_TRIM + (index - 1) * ROW_PITCH - scroll
+        local card = cards[index]
+        local displayIndex = UseAnimatedReflow() and card and card._dragonuiDisplayIndex or index
+        if button and displayIndex and (not UseAnimatedReflow() or not card._dragonuiExiting) then
+            local top = LIST_PAD - CLIP_TRIM + (displayIndex - 1) * ROW_PITCH - scroll
             local bottom = top + ROW_HEIGHT
             local shownTop = top > 0 and top or 0
             local shownBottom = bottom < height and bottom or height
@@ -325,6 +379,8 @@ local function UpdateViewport(viewHeight)
                     )
                 end
             end
+        elseif button and button:IsMouseEnabled() then
+            button:EnableMouse(false)
         end
     end
 end
@@ -397,10 +453,13 @@ local function BuildPanel(frame)
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function()
-        frame:StartMoving()
+        if not IsLootUnderMouse() then
+            frame:StartMoving()
+        end
     end)
     panel:SetScript("OnDragStop", function()
         frame:StopMovingOrSizing()
+        SavePosition(frame)
     end)
 
     NineSliceUtils.ApplyLayout(panel, NineSliceUtils.GetLayout("NoPortraitFrameTemplate"))
@@ -584,6 +643,8 @@ end
 
 local flying = 0
 local closePending = false
+local RequestReflow
+local isAutoLoot = false
 
 local function RowTop(index)
     return -(LIST_PAD + (index - 1) * ROW_PITCH)
@@ -604,6 +665,9 @@ local function ResetAnimations()
         card:SetAlpha(1)
         card.hover:Hide()
         card.pushed:Hide()
+        card._dragonuiExiting = nil
+        card._dragonuiDisplayIndex = nil
+        card._dragonuiLayoutSerial = (card._dragonuiLayoutSerial or 0) + 1
     end
     flying = 0
     closePending = false
@@ -613,6 +677,8 @@ end
 local function OnExitFinished(card, button)
     card:Hide()
     card:SetAlpha(1)
+    card._dragonuiExiting = nil
+    card._dragonuiDisplayIndex = nil
     if button then
         button:Hide()
     end
@@ -621,6 +687,9 @@ local function OnExitFinished(card, button)
         Tween(0, CLOSE_FADE_DURATION, function(progress)
             panel:SetAlpha(1 - progress)
         end, HidePanel)
+    elseif flying == 0 and UseAnimatedReflow() and RequestReflow then
+        isAutoLoot = false
+        RequestReflow(0, true)
     end
 end
 
@@ -630,8 +699,10 @@ local function PlayExit(index)
     if not card then
         return
     end
-    local top = RowTop(index) + CLIP_TRIM
+    local displayIndex = UseAnimatedReflow() and (card._dragonuiDisplayIndex or index) or index
+    local top = RowTop(displayIndex) + CLIP_TRIM
 
+    card._dragonuiExiting = UseAnimatedReflow() or nil
     card:SetParent(canvas)
     card:ClearAllPoints()
     card:SetPoint("TOPLEFT", canvas, "TOPLEFT", CANVAS_INSET, top)
@@ -657,7 +728,6 @@ end
 -- ============================================================================
 
 local slotCache = {}
-local isAutoLoot = false
 
 local function SkinCloseButton()
     local button = _G.LootCloseButton
@@ -854,11 +924,67 @@ local function StyleRow(index, ownPass)
     end
 end
 
+local function IsVisibleRow(index)
+    local card, button = cards[index], RowButton(index)
+    return card and button and button:IsShown() and not card._dragonuiExiting
+end
+
+local function RowLayoutTop(scrolls, displayIndex)
+    if scrolls then
+        return RowTop(displayIndex) + CLIP_TRIM
+    end
+    return -VIEW_TOP + RowTop(displayIndex)
+end
+
+local function SetCardPosition(card, parent, left, top)
+    card:ClearAllPoints()
+    card:SetPoint("TOPLEFT", parent, "TOPLEFT", left, top)
+end
+
+local function PlaceCard(card, scrolls, displayIndex, animate)
+    local parent = scrolls and canvas or panel
+    local left = scrolls and CANVAS_INSET or ROW_INSET
+    local targetTop = RowLayoutTop(scrolls, displayIndex)
+    local oldDisplay = card._dragonuiDisplayIndex
+    local oldParent = card:GetParent()
+    local serial = (card._dragonuiLayoutSerial or 0) + 1
+    card._dragonuiLayoutSerial = serial
+    card._dragonuiDisplayIndex = displayIndex
+
+    if animate and oldDisplay and oldDisplay ~= displayIndex and oldParent == parent then
+        local startTop = RowLayoutTop(scrolls, oldDisplay)
+        SetCardPosition(card, parent, left, startTop)
+        Tween(0, ROW_MOVE_DURATION, function(progress)
+            if card._dragonuiLayoutSerial == serial and not card._dragonuiExiting then
+                SetCardPosition(card, parent, left, startTop + (targetTop - startTop) * progress)
+            end
+        end)
+        return
+    end
+
+    card:SetParent(parent)
+    SetCardPosition(card, parent, left, targetTop)
+end
+
 -- WoW sizes a scroll child from its children, so hiding a row re-anchors it and shifts the rest 1px.
-local function HostRows(scrolls)
+local function HostRows(scrolls, animate)
+    local displayIndex = 0
+    for index = 1, rowCount do
+        local card = cards[index]
+        if card and IsVisibleRow(index) then
+            displayIndex = displayIndex + 1
+            PlaceCard(card, scrolls, displayIndex, animate)
+        end
+    end
+    SyncPanelLevel(_G.LootFrame)
+    return displayIndex
+end
+
+local function HostLegacyRows(scrolls)
     for index = 1, rowCount do
         local card = cards[index]
         if card then
+            card._dragonuiDisplayIndex = nil
             card:SetParent(scrolls and canvas or panel)
             card:ClearAllPoints()
             if scrolls then
@@ -871,18 +997,28 @@ local function HostRows(scrolls)
     SyncPanelLevel(_G.LootFrame)
 end
 
-local function ResizeFrame(frame)
-    local rows = 0
-    for index = 1, rowCount do
-        local button = RowButton(index)
-        if button and button:IsShown() then
-            rows = index
-        end
-    end
-    if rows < 1 then
-        rows = 1
+local frameLayoutSerial = 0
+local function SetFrameDimensions(frame, width, height, animate)
+    local oldWidth, oldHeight = frame:GetWidth(), frame:GetHeight()
+    if not animate or (oldWidth == width and oldHeight == height) then
+        frame:SetWidth(width)
+        frame:SetHeight(height)
+        return
     end
 
+    frameLayoutSerial = frameLayoutSerial + 1
+    local serial = frameLayoutSerial
+    Tween(0, FRAME_RESIZE_DURATION, function(progress)
+        if frameLayoutSerial == serial then
+            progress = 1 - (1 - progress) * (1 - progress)
+            frame:SetWidth(oldWidth + (width - oldWidth) * progress)
+            frame:SetHeight(oldHeight + (height - oldHeight) * progress)
+            UpdateViewport()
+        end
+    end)
+end
+
+local function ApplyFrameLayout(frame, rows, animate, hostRows)
     local content = rows * ROW_HEIGHT + (rows - 1) * ROW_SPACING
     canvas:SetHeight(content + LIST_PAD * 2 - CLIP_TRIM)
 
@@ -893,9 +1029,8 @@ local function ResizeFrame(frame)
 
     local viewHeight = height - VIEW_TOP - VIEW_BOTTOM
     local scrolls = canvas:GetHeight() > viewHeight
-    HostRows(scrolls)
-    frame:SetHeight(height)
-    frame:SetWidth(FRAME_WIDTH + (scrolls and SCROLLBAR_WIDTH or 0))
+    hostRows(scrolls, animate)
+    SetFrameDimensions(frame, FRAME_WIDTH + (scrolls and SCROLLBAR_WIDTH or 0), height, animate)
     StopScroll()
     clip:SetVerticalScroll(0)
 
@@ -914,6 +1049,56 @@ local function ResizeFrame(frame)
     end
     -- Passed in rather than measured: the viewport is anchored to a frame resized a line ago.
     UpdateViewport(viewHeight)
+end
+
+local function ResizeFrame(frame, animate)
+    if UseAnimatedReflow() then
+        if flying > 0 then
+            return
+        end
+
+        local rows = 0
+        for index = 1, rowCount do
+            if IsVisibleRow(index) then
+                rows = rows + 1
+            end
+        end
+        ApplyFrameLayout(frame, max(1, rows), animate, HostRows)
+        return
+    end
+
+    local rows = 0
+    for index = 1, rowCount do
+        local button = RowButton(index)
+        if button and button:IsShown() then
+            rows = index
+        end
+    end
+    ApplyFrameLayout(frame, max(1, rows), false, HostLegacyRows)
+end
+
+local reflowQueued, reflowAnimate = false, nil
+RequestReflow = function(delay, animate)
+    if reflowQueued then
+        if animate then
+            reflowAnimate = true
+        end
+        return
+    end
+    reflowQueued = true
+    reflowAnimate = animate
+    addon:After(delay or 0, function()
+        reflowQueued = false
+        local shouldAnimate = reflowAnimate
+        reflowAnimate = nil
+        local frame = _G.LootFrame
+        if IsActive() and frame and frame:IsShown() then
+            if shouldAnimate == nil then
+                shouldAnimate = not isAutoLoot
+            end
+            ResizeFrame(frame, shouldAnimate)
+        end
+    end)
 end
 
 -- Blizzard fills only its four; hiding its pager also stops LOOT_SLOT_CLEARED auto-paging.
@@ -968,7 +1153,28 @@ local function OnLootFrameUpdate()
     for index = VANILLA_ROWS, rowCount do
         StyleRow(index, true)
     end
-    ResizeFrame(_G.LootFrame)
+    if UseAnimatedReflow() then
+        RequestReflow(isAutoLoot and 0 or MANUAL_REFLOW_DELAY)
+    else
+        ResizeFrame(_G.LootFrame)
+    end
+end
+
+local panelShowQueued = false
+local function ShowPanelWhenReady()
+    if panelShowQueued then
+        return
+    end
+    panelShowQueued = true
+    addon:After(0, function()
+        panelShowQueued = false
+        local frame = _G.LootFrame
+        if IsActive() and frame and frame:IsShown() then
+            ResizeFrame(frame)
+            SyncPanelLevel(frame)
+            panel:Show()
+        end
+    end)
 end
 
 -- ============================================================================
@@ -988,6 +1194,9 @@ events:SetScript("OnEvent", function(_, event, arg1)
         if EnsureRows(GetNumLootItems()) then
             SyncPanelLevel(_G.LootFrame)
             LootFrame_Update()
+        end
+        if UseAnimatedReflow() then
+            ShowPanelWhenReady()
         end
     elseif event == "LOOT_CLOSED" then
         isAutoLoot = false
@@ -1010,8 +1219,10 @@ events:SetScript("OnEvent", function(_, event, arg1)
         if isAutoLoot then
             PlayExit(index)
         elseif not button:IsShown() then
-            -- The button is a child of the card, so hiding early would take a live row with it.
             card:Hide()
+        end
+        if UseAnimatedReflow() then
+            RequestReflow(isAutoLoot and 0 or MANUAL_REFLOW_DELAY)
         end
     end
 end)
@@ -1031,7 +1242,12 @@ local function InstallHooks(frame)
         end
         ResetAnimations()
         SyncPanelLevel(self)
-        panel:Show()
+        if UseAnimatedReflow() then
+            panel:Hide()
+        else
+            panel:Show()
+            ResizeFrame(self)
+        end
     end)
 
     -- LootFrame_Show raises the frame after OnShow fired, leaving the panel a level short.
@@ -1039,12 +1255,14 @@ local function InstallHooks(frame)
         if not IsActive() then
             return
         end
-        if GetCVar("lootUnderMouse") == "1" and (self.numLootItems or 0) > 0 then
+        if IsLootUnderMouse() and (self.numLootItems or 0) > 0 then
             local scale = self:GetEffectiveScale()
             local x, y = GetCursorPosition()
             x, y = x / scale, y / scale + CURSOR_DROP
             self:ClearAllPoints()
             self:SetPoint("TOPLEFT", nil, "BOTTOMLEFT", x - 40, y > 350 and y or 350)
+        else
+            ApplySavedPosition(self)
         end
         SyncPanelLevel(self)
     end)
@@ -1127,7 +1345,11 @@ function LootSkinModule:Apply()
     ResizeFrame(frame)
 
     if frame:IsShown() then
-        panel:Show()
+        if UseAnimatedReflow() then
+            ShowPanelWhenReady()
+        else
+            panel:Show()
+        end
     end
 
     events:RegisterEvent("LOOT_OPENED")
@@ -1185,6 +1407,35 @@ function LootSkinModule:Restore()
         frame:SetWidth(frameOriginal.width)
         frame:SetHeight(frameOriginal.height)
         frame:SetHitRectInsets(unpack(frameOriginal.hitRect))
+    end
+end
+
+function LootSkinModule:RefreshSettings()
+    if not self.applied then
+        return
+    end
+    ResetAnimations()
+    local frame = _G.LootFrame
+    if frame and frame:IsShown() then
+        if UseAnimatedReflow() then
+            panel:Hide()
+            ShowPanelWhenReady()
+        else
+            ResizeFrame(frame)
+            panel:Show()
+        end
+    end
+end
+
+function LootSkinModule:ResetPosition()
+    local cfg = GetConfig()
+    cfg.positionX, cfg.positionY = nil, nil
+end
+
+function LootSkinModule:ApplySavedPosition()
+    local frame = _G.LootFrame
+    if frame and frame:IsShown() and not IsLootUnderMouse() then
+        ApplySavedPosition(frame)
     end
 end
 

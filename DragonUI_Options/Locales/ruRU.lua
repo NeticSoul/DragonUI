@@ -299,6 +299,19 @@ L["Rare"] = "Редкое"
 L["Epic"] = "Эпическое"
 L["Legendary"] = "Легендарное"
 
+-- Окно добычи
+L["Loot Window"] = "Окно добычи"
+L["Configure the DragonUI loot window."] = "Настроить окно добычи DragonUI."
+L["Enable Loot Window"] = "Включить окно добычи"
+L["Apply the DragonUI skin to the Blizzard loot window."] = "Применяет оформление DragonUI к окну добычи Blizzard."
+L["Open at Cursor"] = "Открывать у курсора"
+L["Open the loot window at the cursor instead of its saved position."] = "Открывает окно добычи у курсора вместо сохранённой позиции."
+L["Disable Open at Cursor, then drag the loot window to save its position."] = "Отключите Открывать у курсора, затем перетащите окно добычи, чтобы сохранить его позицию."
+L["Animate Loot Reflow"] = "Анимировать перераспределение добычи"
+L["Smoothly close gaps and resize the loot window after collecting items."] = "Плавно заполняет пробелы и изменяет размер окна добычи после получения предметов."
+L["Reset Loot Window Position"] = "Сбросить положение окна добычи"
+L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Удаляет сохранённую позицию. При следующем открытии окна добычи будет использована позиция Blizzard по умолчанию."
+
 -- Item Level
 L["Item Level"] = "Уровень предмета"
 L["Enable Item Level"] = "Включить уровень предмета"
