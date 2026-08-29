@@ -1138,6 +1138,16 @@ local defaults = {
             },
             collections = {
                 enabled = true, -- Dedicated Pets & Mounts window opened from the micro menu
+            },
+            worldmap = {
+                enabled = true, -- Retail-style world map with breadcrumb navigation and a quest log side panel
+                questLog = true, -- Quest log side panel open
+                maximized = false, -- Window at its maximized size
+                landmarks = true, -- The client's own landmark pins (battlefield objectives) shown on the map
+                fog = true, -- Undiscovered areas drawn dimmed instead of hidden
+                entrances = true, -- Dungeon and raid entrance pins on zone maps
+                graveyards = true, -- Graveyard pins on zone maps
+                flightPoints = true, -- Flight master pins on zone maps
             }
         },
 

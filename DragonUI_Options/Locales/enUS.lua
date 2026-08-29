@@ -1778,3 +1778,19 @@ L["Hide Model Controls"] = true
 L["Hide the rotate, zoom and reset buttons over the character model."] = true
 L["Keep the Reset Button"] = true
 L["Leave the reset button on its own while the rest of the model controls stay hidden."] = true
+
+-- World Map
+L["World Map"] = true
+L["Retail-style world map with breadcrumb navigation and a quest log side panel."] = true
+L["Enable World Map"] = true
+L["Apply the DragonUI reskin to the world map."] = true
+L["Show Undiscovered Areas"] = true
+L["Draw the map art of areas you have not explored yet, dimmed."] = true
+L["Show Landmarks"] = true
+L["Show towns, flight points and other landmark pins on the map."] = true
+L["Show Dungeon Entrances"] = true
+L["Show dungeon and raid entrance pins on zone maps."] = true
+L["Show Graveyards"] = true
+L["Show graveyard pins on zone maps."] = true
+L["Show Flight Points"] = true
+L["Show flight master pins on zone maps."] = true

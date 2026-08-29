@@ -89,6 +89,9 @@
     <!-- Alt Gold module (other characters' money on the bag coin tooltip) -->
     <Script file="altmoney.lua"/>
 
+    <!-- Retail-style world map -->
+    <Include file="worldmap\worldmap.xml"/>
+
     <!-- Version Check module (cross-player version broadcast) -->
     <Script file="versioncheck.lua"/>
 </Ui>

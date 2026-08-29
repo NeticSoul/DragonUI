@@ -40,7 +40,8 @@ local FRAME_X, FRAME_TOP = 2.2 * FRAME_SCALE, 2.3 * FRAME_SCALE
 local FRAME_COLOR = { 0.08, 0.08, 0.08 }
 
 local frame, scroll, content, rows
-local searchBox, filterButton, filterMenu, rowMenu
+local searchBox, filterButton
+local rowMenuEntries
 local countBox, countText, countLabel, randomButton
 local infoIcon, infoFrame, infoDrag, infoName, infoSource, infoDesc, infoStar, model, actionButton
 local emptyText, uncollectedHint
@@ -48,7 +49,6 @@ local emptyText, uncollectedHint
 local flat = {}
 local selected = { MOUNT = nil, CRITTER = nil }
 local query = ""
-local menuEntry
 local repaint, refresh, updateRandomIcon
 
 -- Filter state, shared by both tabs except the mount-only ones.
@@ -202,8 +202,7 @@ local function buildInfo(host)
     infoDrag:SetScript("OnClick", function()
         local entry = selectedEntry()
         if not (entry and entry.index) then return end
-        menuEntry = entry
-        if rowMenu then ToggleDropDownMenu(1, nil, rowMenu, "cursor", 0, 0) end
+        addon.Menu.Open("cursor", rowMenuEntries(entry))
     end)
     infoDrag:SetScript("OnEnter", function(self)
         local entry = selectedEntry()
@@ -340,8 +339,7 @@ local function buildRow(parent)
         if not self._entry then return end
         -- A catalog row has nothing to summon or favorite, so it only ever selects.
         if button == "RightButton" and self._entry.index then
-            menuEntry = self._entry
-            if rowMenu then ToggleDropDownMenu(1, nil, rowMenu, "cursor", 0, 0) end
+            addon.Menu.Open("cursor", rowMenuEntries(self._entry))
             return
         end
         selected[kind()] = self._entry.spellID
@@ -519,28 +517,20 @@ end
 
 CO.RefreshJournal = refresh
 
-local function rowMenuInit()
-    local entry = menuEntry
-    if not entry then return end
-    local info = UIDropDownMenu_CreateInfo()
-    info.notCheckable = true
-
+function rowMenuEntries(entry)
+    local summon
     if entry.active then
-        info.text = isMount() and BINDING_NAME_DISMOUNT or PET_DISMISS
+        summon = isMount() and BINDING_NAME_DISMOUNT or PET_DISMISS
     else
-        info.text = isMount() and MOUNT or SUMMON
+        summon = isMount() and MOUNT or SUMMON
     end
-    info.func = function() CO.Summon(kind(), entry); refresh() end
-    UIDropDownMenu_AddButton(info)
-
     local fav = CO.IsFavorite(kind(), entry.creatureID)
-    info.text = fav and addon.L["Remove Favorite"] or addon.L["Favorite"]
-    info.func = function() CO.ToggleFavorite(kind(), entry.creatureID); refresh() end
-    UIDropDownMenu_AddButton(info)
-
-    info.text = CANCEL
-    info.func = nil
-    UIDropDownMenu_AddButton(info)
+    return {
+        { text = summon, func = function() CO.Summon(kind(), entry); refresh() end },
+        { text = fav and addon.L["Remove Favorite"] or addon.L["Favorite"],
+          func = function() CO.ToggleFavorite(kind(), entry.creatureID); refresh() end },
+        { text = CANCEL },
+    }
 end
 
 -- Only the sources actually present, so the submenu never lists a category that filters nothing.
@@ -557,100 +547,53 @@ local function presentSources()
     return out
 end
 
-local function addToggle(level, text, key)
-    local info = UIDropDownMenu_CreateInfo()
-    info.isNotRadio = true
-    info.keepShownOnClick = true
-    info.text = text
-    info.checked = function() return filters[key] end
-    info.func = function(_, _, _, checked)
-        filters[key] = checked and true or false
-        refresh()
-    end
-    UIDropDownMenu_AddButton(info, level)
-end
-
--- UIDropDownMenu_Refresh on 3.3.5a is the SELECTION redraw: it hides every check whose button does
--- not match the dropdown's selected value, which wipes a multi-toggle menu. Re-assert them here.
-local function syncMenuChecks(level)
-    for i = 1, UIDROPDOWNMENU_MAXBUTTONS do
-        local button = _G["DropDownList" .. level .. "Button" .. i]
-        local check = _G["DropDownList" .. level .. "Button" .. i .. "Check"]
-        if button and check then
-            if button:IsShown() and type(button.checked) == "function" and button.checked() then
-                check:Show()
-            else
-                check:Hide()
-            end
-        end
-    end
-end
-
-local function filterMenuInit(_, level)
-    level = level or 1
-
-    if level == 1 then
-        addToggle(level, addon.L["Collected"], "collected")
-        addToggle(level, addon.L["Not Collected"], "notCollected")
-        addToggle(level, addon.L["Favorites"], "favoritesOnly")
-
-        if isMount() then
-            addToggle(level, addon.L["Unusable here"], "unusable")
-
-            local header = UIDropDownMenu_CreateInfo()
-            header.text = TYPE
-            header.isTitle = true
-            header.notCheckable = true
-            UIDropDownMenu_AddButton(header, level)
-
-            addToggle(level, addon.L["Ground"], "ground")
-            addToggle(level, addon.L["Flying"], "flying")
-            addToggle(level, addon.L["Aquatic"], "aquatic")
-        end
-
-        local sources = UIDropDownMenu_CreateInfo()
-        sources.text = addon.L["Sources"]
-        sources.notCheckable = true
-        sources.hasArrow = true
-        sources.value = "sources"
-        UIDropDownMenu_AddButton(sources, level)
-        return
-    end
-
-    if level == 2 and UIDROPDOWNMENU_MENU_VALUE == "sources" then
-        local function redraw()
+local function addToggle(entries, text, key)
+    entries[#entries + 1] = {
+        text = text,
+        keepShown = true,
+        checked = function() return filters[key] end,
+        func = function()
+            filters[key] = not filters[key]
             refresh()
-            syncMenuChecks(level)
-        end
+        end,
+    }
+end
 
-        local all = UIDropDownMenu_CreateInfo()
-        all.notCheckable = true
-        all.keepShownOnClick = true
-        all.text = addon.L["Check All"]
-        all.func = function() wipe(filters.hiddenSources); redraw() end
-        UIDropDownMenu_AddButton(all, level)
+local function filterMenuEntries()
+    local entries = {}
+    addToggle(entries, addon.L["Collected"], "collected")
+    addToggle(entries, addon.L["Not Collected"], "notCollected")
+    addToggle(entries, addon.L["Favorites"], "favoritesOnly")
 
-        all.text = addon.L["Uncheck All"]
-        all.func = function()
+    if isMount() then
+        addToggle(entries, addon.L["Unusable here"], "unusable")
+        entries[#entries + 1] = { text = TYPE, isTitle = true }
+        addToggle(entries, addon.L["Ground"], "ground")
+        addToggle(entries, addon.L["Flying"], "flying")
+        addToggle(entries, addon.L["Aquatic"], "aquatic")
+    end
+
+    entries[#entries + 1] = { text = addon.L["Sources"], isTitle = true }
+    entries[#entries + 1] = { text = addon.L["Check All"], keepShown = true,
+        func = function() wipe(filters.hiddenSources); refresh() end }
+    entries[#entries + 1] = { text = addon.L["Uncheck All"], keepShown = true,
+        func = function()
             wipe(filters.hiddenSources)
             for _, index in ipairs(presentSources()) do filters.hiddenSources[index] = true end
-            redraw()
-        end
-        UIDropDownMenu_AddButton(all, level)
-
-        for _, index in ipairs(presentSources()) do
-            local info = UIDropDownMenu_CreateInfo()
-            info.isNotRadio = true
-            info.keepShownOnClick = true
-            info.text = CO.SourceLabel(index)
-            info.checked = function() return not filters.hiddenSources[index] end
-            info.func = function(_, _, _, checked)
-                filters.hiddenSources[index] = (not checked) and true or nil
+            refresh()
+        end }
+    for _, index in ipairs(presentSources()) do
+        entries[#entries + 1] = {
+            text = CO.SourceLabel(index),
+            keepShown = true,
+            checked = function() return not filters.hiddenSources[index] end,
+            func = function()
+                filters.hiddenSources[index] = (not filters.hiddenSources[index]) and true or nil
                 refresh()
-            end
-            UIDropDownMenu_AddButton(info, level)
-        end
+            end,
+        }
     end
+    return entries
 end
 
 -- Retail's grey filter dropdown in place of the red panel button: a three-slice holder so the ends
@@ -678,7 +621,7 @@ local function dressFilterButton(btn)
         local suffix = ""
         if not btn:IsEnabled() then
             suffix = "-disabled"
-        elseif UIDROPDOWNMENU_OPEN_MENU == filterMenu and DropDownList1 and DropDownList1:IsShown() then
+        elseif addon.Menu.IsOpenFor(btn) then
             suffix = "-open"
         elseif down and over then
             suffix = "-pressedhover"
@@ -717,7 +660,7 @@ local function buildSearch(parent)
         label:SetJustifyH("CENTER")
     end
     filterButton:SetScript("OnClick", function(self)
-        ToggleDropDownMenu(1, nil, filterMenu, self, 0, 0)
+        addon.Menu.Open(self, filterMenuEntries())
         PlaySound("igMainMenuOptionCheckBoxOn")
     end)
 
@@ -830,11 +773,6 @@ function CO.BuildJournal(parent)
     local CP = addon.CharacterPanel
     if not (CP and CP.BuildListPane) then return end
     frame = parent
-
-    rowMenu = CreateFrame("Frame", "DragonUICollectionsRowMenu", UIParent, "UIDropDownMenuTemplate")
-    UIDropDownMenu_Initialize(rowMenu, rowMenuInit, "MENU")
-    filterMenu = CreateFrame("Frame", "DragonUICollectionsFilterMenu", UIParent, "UIDropDownMenuTemplate")
-    UIDropDownMenu_Initialize(filterMenu, filterMenuInit, "MENU")
 
     buildSearch(CO.LeftInset)
     scroll, content = CP.BuildListPane(CO.LeftInset, "DragonUICollectionsScroll", ROW_H, repaint, 0, SEARCH_H + 12)

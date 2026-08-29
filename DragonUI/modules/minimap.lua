@@ -676,8 +676,8 @@ local function ReplaceBlizzardFrame(frame)
         minimapTrackingButton:SetSize(17, 15)
         minimapTrackingButton:SetHitRectInsets(0, 0, 0, 0)
 
-        --  Enable right-click functionality
-        minimapTrackingButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        -- Left clicks stay Blizzard's own OnClick: the tracking menu must open from secure code.
+        minimapTrackingButton:RegisterForClicks("LeftButtonUp")
 
         local shineTexture = _G[minimapTrackingButton:GetName() .. "Shine"]
         shineTexture:SetTexture(nil)
@@ -988,20 +988,6 @@ local function ReplaceBlizzardFrame(frame)
 
     -- In hybrid mode, don't override tracking button scripts -SexyMap's Buttons module handles them
     if not isHybridMode then
-        --  Add right-click functionality to clear tracking
-        minimapTrackingButton:SetScript("OnClick", function(self, button)
-            if button == "RightButton" then
-                -- Set tracking to none
-                SetTracking()
-                -- Update the tracking display
-                MinimapModule:UpdateTrackingIcon()
-
-            else
-                -- Left click - use default behavior
-                ToggleDropDownMenu(1, nil, MiniMapTrackingDropDown, "MiniMapTrackingButton")
-            end
-        end)
-
         --  MANUALLY CONTROL BUTTON MOVEMENT
         minimapTrackingButton:SetScript("OnMouseDown", function(self, button)
             if button == "LeftButton" then
@@ -1021,6 +1007,9 @@ local function ReplaceBlizzardFrame(frame)
                     MiniMapTrackingIcon:ClearAllPoints()
                     MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
                 end
+            elseif button == "RightButton" and self:IsMouseOver() then
+                SetTracking()
+                MinimapModule:UpdateTrackingIcon()
             end
         end)
 
@@ -1821,21 +1810,9 @@ local function StylePVPBattlefieldFrame()
         MiniMapBattlefieldFrame:GetPushedTexture():set_atlas('Minimap-PVP-' .. faction .. '-Pushed', true)
     end
 
-    -- Configure click script like in minimapa_old.lua
-    MiniMapBattlefieldFrame:SetScript('OnClick', function(self, button)
-        GameTooltip:Hide()
-        if MiniMapBattlefieldFrame.status == "active" then
-            if button == "RightButton" then
-                ToggleDropDownMenu(1, nil, MiniMapBattlefieldDropDown, "MiniMapBattlefieldFrame", 0, -5)
-            elseif IsShiftKeyDown() then
-                ToggleBattlefieldMinimap()
-            else
-                ToggleWorldStateScoreFrame()
-            end
-        elseif button == "RightButton" then
-            ToggleDropDownMenu(1, nil, MiniMapBattlefieldDropDown, "MiniMapBattlefieldFrame", 0, -5)
-        else
-            --  SIMPLE: Use the same function as the PVP micromenu button
+    -- Blizzard's OnClick stays (its menu needs secure code) but leaves the out-of-BG click alone.
+    MiniMapBattlefieldFrame:HookScript('OnClick', function(self, button)
+        if MiniMapBattlefieldFrame.status ~= "active" and button ~= "RightButton" then
             TogglePVPFrame()
         end
     end)

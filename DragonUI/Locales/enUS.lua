@@ -654,3 +654,25 @@ L["GearScore"] = true
 L["Weighted score of your equipped gear."] = true
 L["Reset stat order"] = true
 L["Restore the stat categories to their default order?"] = true
+
+-- World Map
+L["World Map"] = true
+L["Retail-style world map with breadcrumb navigation and a quest log side panel"] = true
+L["Map & Quest Log"] = true
+L["World"] = true
+L["Maximize"] = true
+L["Show Quest Log"] = true
+L["Hide Quest Log"] = true
+L["Show Landmarks"] = true
+L["Show Undiscovered Areas"] = true
+L["No quests on this map."] = true
+L["Untrack"] = true
+L["Abandon"] = true
+L["Share"] = true
+L["Show Dungeon Entrances"] = true
+L["Show Graveyards"] = true
+L["Graveyard"] = true
+L["Show Flight Points"] = true
+L["Flight Master"] = true
+L["Click to view on Map"] = true
+L["Search Quest Log"] = true

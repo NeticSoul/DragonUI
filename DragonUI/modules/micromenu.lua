@@ -2654,33 +2654,6 @@ local function ApplyMicromenuSystem()
 
     ApplyLFGFrameStyle()
 
-    MiniMapLFGFrame:SetScript('OnClick', function(self, button)
-        local mode, _ = GetLFGMode();
-        if (button == "RightButton" or mode == "lfgparty" or mode == "abandonedInDungeon") then
-            PlaySound("igMainMenuOpen");
-            local yOffset;
-            if (mode == "queued") then
-                MiniMapLFGFrameDropDown.point = "BOTTOMRIGHT";
-                MiniMapLFGFrameDropDown.relativePoint = "TOPLEFT";
-                yOffset = 0;
-            else
-                MiniMapLFGFrameDropDown.point = nil;
-                MiniMapLFGFrameDropDown.relativePoint = nil;
-                yOffset = 30;
-            end
-            ToggleDropDownMenu(1, nil, MiniMapLFGFrameDropDown, "MiniMapLFGFrame", 0, yOffset);
-        elseif (mode == "proposal") then
-            if (not LFDDungeonReadyPopup:IsShown()) then
-                PlaySound("igCharacterInfoTab");
-                StaticPopupSpecial_Show(LFDDungeonReadyPopup);
-            end
-        elseif (mode == "queued" or mode == "rolecheck") then
-            ToggleLFDParentFrame();
-        elseif (mode == "listed") then
-            ToggleLFRParentFrame();
-        end
-    end)
-
     -- Keep Blizzard's LFD status text/layout ownership intact. We only
     -- re-anchor around the eye and avoid reparenting to prevent text regressions.
 

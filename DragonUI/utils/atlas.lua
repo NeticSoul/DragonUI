@@ -58,6 +58,19 @@ local rui_CommonButtons = assets..'CharacterPanel\\commonbuttons';
 local rui_CommonIcons = assets..'CharacterPanel\\commonicons';
 local rui_ListExpand = assets..'CharacterPanel\\listexpand';
 local rui_LootCard = assets..'UI\\looting-itemcard';
+local rui_RedButton = assets..'UI\\redbutton2x';
+local rui_MapNav = assets..'WorldMap\\navbar';
+local rui_MapNavTile = assets..'WorldMap\\navbar-tile';
+local rui_MapSquareButtons = assets..'WorldMap\\squarebuttons';
+local rui_MapQuestLog = assets..'WorldMap\\questlog';
+local rui_MapQuestParchment = assets..'WorldMap\\questbg-parchment';
+local rui_MapQuestLogBg = assets..'WorldMap\\questlog-background';
+local rui_MapQuestTypes = assets..'WorldMap\\questtypeicons';
+local rui_MapFilter = assets..'WorldMap\\mapfilter';
+local rui_MapCollapse = assets..'WorldMap\\questcollapse';
+local rui_MapTrackingBorder = assets..'WorldMap\\trackingborder';
+local rui_MapZoomHighlight = assets..'WorldMap\\zoomhighlight';
+local rui_MapPins = assets..'WorldMap\\mappins';
 
 addon.atlasinfo = {
 	['_ui-hud-actionbar-divider-top'] = { uiactionbar2x_, 10, 10, 421/512, 445/512, 833/2048, 861/2048 },
@@ -550,6 +563,78 @@ addon.atlasinfo = {
 	['looting_raritytag_frame'] = { rui_LootCard, 208, 15, 0.59375, 1, 0, 0.05859375 },
 	-- Half a texel in: the flipped top samples its opaque end on the edge and bleeds the padding.
 	['_looting_itemcard_shadow-center'] = { rui_LootCard, 8, 150, 0.586914062, 0.600585938, 0.080078125, 0.662109375 },
+
+	-- The metal chrome's wide top-right corner, with room for a maximize button beside the close one.
+	['UI-Frame-Metal-CornerTopRightDouble'] = { rui_FrameMetal, 75, 75, 0.595703, 0.888672, 0.001953, 0.294922 },
+
+	-- RedButton maximize/minimize glyphs, on the sheet the close button is cut from.
+	['redbutton-expand'] = { rui_RedButton, 36, 38, 77/256, 113/256, 1/128, 39/128 },
+	['redbutton-expand-pressed'] = { rui_RedButton, 36, 38, 77/256, 113/256, 81/128, 119/128 },
+	['redbutton-expand-disabled'] = { rui_RedButton, 36, 38, 77/256, 113/256, 41/128, 79/128 },
+	['redbutton-condense'] = { rui_RedButton, 36, 38, 1/256, 37/256, 1/128, 39/128 },
+	['redbutton-condense-pressed'] = { rui_RedButton, 36, 38, 1/256, 37/256, 81/128, 119/128 },
+	['redbutton-condense-disabled'] = { rui_RedButton, 36, 38, 1/256, 37/256, 41/128, 79/128 },
+	['redbutton-highlight'] = { rui_RedButton, 36, 38, 115/256, 151/256, 1/128, 39/128 },
+
+	-- Retail's NavBarTemplate (CS_HelpTextures); Home's banner is cropped at runtime for its notch.
+	['_navbar-button-tile'] = { rui_MapNavTile, 128, 30, 0, 1, 0.06250000, 0.12109375, true, false },
+	['_navbar-barbg-tile'] = { rui_MapNavTile, 128, 34, 0, 1, 0.18750000, 0.25390625, true, false },
+	['_navbar-baroverlay-tile'] = { rui_MapNavTile, 128, 34, 0, 1, 0.25781250, 0.32421875, true, false },
+	['navbar-endcap-up'] = { rui_MapNav, 21, 30, 0.88867188, 0.92968750, 0.29687500, 0.53125000 },
+	['navbar-endcap-down'] = { rui_MapNav, 21, 30, 0.63281250, 0.67382813, 0.75781250, 0.99218750 },
+	['navbar-overflow-up'] = { rui_MapNav, 44, 30, 0.54296875, 0.62890625, 0.75781250, 0.99218750 },
+	['navbar-overflow-down'] = { rui_MapNav, 44, 30, 0.45312500, 0.53906250, 0.75781250, 0.99218750 },
+	['navbar-home-banner'] = { rui_MapNav, 128, 30, 0.45312500, 0.70312500, 0.00781250, 0.24218750 },
+	['navbar-glow-selected'] = { rui_MapNav, 128, 34, 0.00195313, 0.25195313, 0.37500000, 0.64062500 },
+	['navbar-glow-hover'] = { rui_MapNav, 128, 34, 0.00195313, 0.25195313, 0.65625000, 0.92187500 },
+	-- Top and bottom are swapped on purpose: the sheet stores the triangle upward, retail flips it.
+	['navbar-dropdown-arrow'] = { rui_MapSquareButtons, 12, 12, 0.45312500, 0.64062500, 0.20312500, 0.01562500 },
+
+	-- Retail's quest log side panel.
+	['questlog-main-background'] = { rui_MapQuestLogBg, 307, 510, 0, 307/512, 0, 510/512 },
+	['questlog-frame'] = { rui_MapQuestLog, 107, 107, 0.001953, 0.210938, 0.076172, 0.285156 },
+	['questlog-frame-filigree'] = { rui_MapQuestLog, 48, 19, 0.001953, 0.095703, 0.035156, 0.072266 },
+	-- Retail's own rewards stack: carved header, tiling ground, and the band that caps a panel.
+	['questlog-reward-header-top'] = { rui_MapQuestLog, 307, 56, 0.214844, 0.814453, 0.208984, 0.318359 },
+	['questlog-reward-tile-vertical'] = { rui_MapQuestLog, 307, 83, 0.214844, 0.814453, 0.423828, 0.585938 },
+	['questlog-reward-top-frame'] = { rui_MapQuestLog, 307, 52, 0.214844, 0.814453, 0.589844, 0.691406 },
+	['questlog-reward-bottom'] = { rui_MapQuestLog, 307, 88, 0.214844, 0.814453, 0.695312, 0.867188 },
+	-- The page retail writes a quest on, off its own sheet.
+	['questbg-parchment'] = { rui_MapQuestParchment, 299, 407, 0.000977, 0.292969, 0.000977, 0.398438 },
+	['questlog-frame-gradient-bottom'] = { rui_MapQuestLog, 307, 66, 0.214844, 0.814453, 0.076172, 0.205078 },
+	['questlog-tab'] = { rui_MapQuestLog, 64, 22, 0.001953, 0.126953, 0.289062, 0.332031 },
+	['questlog-icon-expand'] = { rui_MapQuestLog, 18, 18, 0.099609, 0.134766, 0.035156, 0.070312 },
+	['questlog-icon-shrink'] = { rui_MapQuestLog, 18, 18, 0.171875, 0.207031, 0.035156, 0.070312 },
+	['questlog-icon-ticksquare'] = { rui_MapQuestLog, 14, 14, 0.224609, 0.251953, 0.001953, 0.029297 },
+	['questlog-icon-checkmark-yellow'] = { rui_MapQuestLog, 17, 14, 0.187500, 0.220703, 0.001953, 0.029297 },
+	['questlog-icon-setting'] = { rui_MapQuestLog, 15, 16, 0.138672, 0.167969, 0.035156, 0.066406 },
+	['questlog-quest-glow-yellow'] = { rui_MapQuestLog, 295, 50, 0.214844, 0.791016, 0.322266, 0.419922 },
+	['questlog-questtypeicon-dungeon'] = { rui_MapQuestTypes, 18, 18, 0.007812, 0.148438, 0.664062, 0.804688 },
+	['questlog-questtypeicon-raid'] = { rui_MapQuestTypes, 18, 18, 0.320312, 0.460938, 0.664062, 0.804688 },
+	['questlog-questtypeicon-group'] = { rui_MapQuestTypes, 18, 18, 0.007812, 0.148438, 0.820312, 0.960938 },
+	['questlog-questtypeicon-pvp'] = { rui_MapQuestTypes, 18, 18, 0.789062, 0.929688, 0.195312, 0.335938 },
+	['questlog-questtypeicon-daily'] = { rui_MapQuestTypes, 18, 18, 0.007812, 0.148438, 0.351562, 0.492188 },
+	['questlog-questtypeicon-heroic'] = { rui_MapQuestTypes, 18, 18, 0.164062, 0.304688, 0.195312, 0.335938 },
+	['questlog-questtypeicon-questfailed'] = { rui_MapQuestTypes, 18, 18, 0.320312, 0.460938, 0.507812, 0.648438 },
+
+	-- The map's overlay controls: filter magnifier, quest log chevrons, corner shadows.
+	['map-filter-button'] = { rui_MapFilter, 48, 48, 0.398438, 0.773438, 0.015625, 0.765625 },
+	['map-filter-button-down'] = { rui_MapFilter, 48, 48, 0.007812, 0.382812, 0.015625, 0.765625 },
+	['map-tracking-border'] = { rui_MapTrackingBorder, 54, 54, 0, 1, 0, 1 },
+	['map-zoom-highlight'] = { rui_MapZoomHighlight, 32, 32, 0, 1, 0, 1 },
+	['map-entrance-dungeon'] = { rui_MapPins, 32, 32, 0/256, 50/256, 0/128, 50/128 },
+	['map-entrance-raid'] = { rui_MapPins, 32, 32, 64/256, 114/256, 0/128, 50/128 },
+	['map-taxinode-neutral'] = { rui_MapPins, 21, 21, 128/256, 160/256, 0/128, 32/128 },
+	['map-taxinode-alliance'] = { rui_MapPins, 21, 21, 160/256, 192/256, 0/128, 32/128 },
+	['map-taxinode-horde'] = { rui_MapPins, 21, 21, 192/256, 224/256, 0/128, 32/128 },
+	['map-taxinode-undiscovered'] = { rui_MapPins, 21, 21, 224/256, 256/256, 0/128, 32/128 },
+	['map-graveyard'] = { rui_MapPins, 12, 16, 128/256, 140/256, 32/128, 48/128 },
+	['questcollapse-show-up'] = { rui_MapCollapse, 32, 32, 0, 32/256, 0, 32/128 },
+	['questcollapse-show-down'] = { rui_MapCollapse, 32, 32, 32/256, 64/256, 0, 32/128 },
+	['questcollapse-hide-up'] = { rui_MapCollapse, 32, 32, 0, 32/256, 32/128, 64/128 },
+	['questcollapse-hide-down'] = { rui_MapCollapse, 32, 32, 32/256, 64/256, 32/128, 64/128 },
+	['mapcornershadow-right'] = { rui_MapCollapse, 46, 53, 64/256, 110/256, 0, 53/128 },
+	['mapcornershadow-left'] = { rui_MapCollapse, 182, 30, 0, 182/256, 64/128, 94/128 },
 };
 
 local C_Texture = {};

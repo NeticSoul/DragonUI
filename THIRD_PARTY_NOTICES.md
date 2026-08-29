@@ -28,6 +28,15 @@ The retail-style Collections textures under `DragonUI/Textures/Collections/` (ro
 star, model backdrop, faction crests, search glyph, journal portraits) are taken from EZCollections
 by ZEUStiger.
 
+## World map artwork
+
+The textures under `DragonUI/Textures/WorldMap/` (breadcrumb bar, quest log panel, quest type
+icons, quest page parchment, filter button, landmark icons, side panel toggle) are cut from
+retail's own sheets (© Blizzard Entertainment) and repacked power-of-two for 3.3.5a; they arrived via
+DragonUI_NewEra's downport through a world map module contributed by PentSec. The magnifier on the
+filter button is the client's own `Interface\Minimap\Tracking\None` (© Blizzard Entertainment),
+composited over that sheet's disc.
+
 ## Bundled Fonts
 
 | Font | Path | License | License File |

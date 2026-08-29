@@ -2,12 +2,7 @@
 
 local addon = select(2, ...)
 
--- Our own objectives tracker, drawn from the client's watch APIs. Blizzard's WatchFrame is left
--- alone on purpose: moving it makes WatchFrame_Update read our geometry (WatchFrame.lua:365), and
--- the poiWatchFrameLines* buttons created under that tainted execution are what blocks
--- WorldMapBlobFrame:Show() in combat once WorldMapFrame_SelectQuestFrame reads them back.
---
--- Not wired into the module registry yet; nothing here runs unless OT.Preview() is called.
+-- Our objectives tracker over the watch APIs; Blizzard's WatchFrame is silenced, never moved.
 
 local OT = {}
 addon.ObjectiveTracker = OT
@@ -35,24 +30,17 @@ local dashWidth = 10
 local TITLE_IDLE = { 0.75, 0.61, 0 }
 local LINE_IDLE = { 0.8, 0.8, 0.8 }
 
--- QuestPOITemplate's own sheets: an 8-per-row grid of numbers under a shared ring.
-local POI_NUMBERS = "Interface\\WorldMap\\UI-QuestPoi-NumberIcons"
-local POI_TURNIN = "Interface\\WorldMap\\UI-WorldMap-QuestIcon"
-local POI_PER_ROW, POI_CELL = 8, 0.125
+local QP = addon.QuestPOI
 
 local frame, content, header, measure
 local blockPool = {}
--- The old module's split, and the reason its editor worked: `anchor` is an empty frame at
--- FULLSCREEN/100 that carries the nineslice and swallows every drag, while the tracker itself sits
--- at LOW like WatchFrame did, under it and under the addon's own panels.
+-- `anchor` swallows every drag at FULLSCREEN so the tracker can sit at LOW, under the panels.
 local anchor
 
 -- Declared up here because build() and Refresh() close over them.
 local savePosition, syncFadeHoverFrames
 
--- Blizzard's "wider quest tracker" option, straight from WatchFrame_SetWidth: the watchFrameWidth
--- CVar picks 204/192 or 306/294. Read from the CVar rather than WATCHFRAME_EXPANDEDWIDTH because
--- WatchFrame no longer has the VARIABLES_LOADED event that would set that global.
+-- Read from the CVar, not WATCHFRAME_EXPANDEDWIDTH: WatchFrame no longer gets VARIABLES_LOADED.
 local function trackerMetrics()
     local cvar = GetCVar and GetCVar("watchFrameWidth")
     if cvar and cvar ~= "0" then return 306, 294, true end
@@ -69,7 +57,7 @@ local function showHeader()
     return not config or config.show_header ~= false
 end
 
--- Blizzard's WatchFrame forgets its collapse on every reload; ours is our own state, so it keeps it.
+-- WatchFrame forgets its collapse on every reload; ours is our own state and keeps it.
 local function setCollapsed(collapsed)
     OT.collapsed = collapsed
     local config = addon.db and addon.db.profile and addon.db.profile.questtracker
@@ -80,9 +68,7 @@ end
 -- MODEL
 -- ============================================================================
 
--- Our own copy of what WatchFrame_GetCurrentMapQuests builds. Computed rather than read from
--- CURRENT_MAP_QUESTS because Blizzard's tracker no longer runs to fill it, and written into our
--- table rather than its global so nothing of Blizzard's carries our taint.
+-- Ours, not CURRENT_MAP_QUESTS: their tracker no longer runs to fill it.
 local mapQuests = {}
 
 local function refreshMapQuests()
@@ -98,13 +84,12 @@ end
 -- Blizzard's own rule: a quest on the map being shown gets a numbered pin, one off it only gets a
 -- marker when it is ready to hand in.
 local function badgeFor(questID, isComplete, counters)
-    local onMap = questID and mapQuests[questID]
-    if onMap then
-        if isComplete then return { turnin = true } end
+    if questID and mapQuests[questID] then
+        if isComplete then return { style = "complete" } end
         counters.numeric = counters.numeric + 1
-        return { number = counters.numeric }
+        return { style = "numeric", number = counters.numeric }
     elseif isComplete then
-        return { turnin = true, dim = true }
+        return { style = "completeOut" }
     end
 end
 
@@ -119,7 +104,7 @@ local function questObjectives(index)
     local lines = {}
     for i = 1, GetNumQuestLeaderBoards(index) do
         local text, _, finished = GetQuestLogLeaderBoard(i, index)
-        -- A finished objective drops off the tracker entirely, same as WatchFrame_DisplayTrackedQuests.
+        -- A finished objective drops off entirely, same as WatchFrame_DisplayTrackedQuests.
         if text and not finished then lines[#lines + 1] = { text = reverseObjective(text) } end
     end
     local required = GetQuestLogRequiredMoney(index)
@@ -318,20 +303,8 @@ local function styleBadge(block, data)
         block.badge:Hide()
         return
     end
-    block.ring:SetTexCoord(0.875, 1, 0.875, 1)
-    if badge.turnin then
-        block.number:SetTexture(POI_TURNIN)
-        block.number:SetTexCoord(0, 0.5, 0, 0.5)
-        block.number:SetSize(BADGE_SIZE * 0.75, BADGE_SIZE * 0.75)
-    else
-        local cell = badge.number - 1
-        local x = math.fmod(cell, POI_PER_ROW) * POI_CELL
-        local y = 0.5 + math.floor(cell / POI_PER_ROW) * POI_CELL
-        block.number:SetTexture(POI_NUMBERS)
-        block.number:SetTexCoord(x, x + POI_CELL, y, y + POI_CELL)
-        block.number:SetSize(BADGE_SIZE, BADGE_SIZE)
-    end
-    block.badge:SetAlpha(badge.dim and 0.6 or 1)
+    QP.SetStyle(block.badge, badge.style, badge.number,
+        block.questID ~= nil and block.questID == QP.GetFocus())
     block.badge:Show()
 end
 
@@ -346,22 +319,10 @@ local function acquireBlock(index)
     block.title:SetPoint("TOPLEFT", block, "TOPLEFT", 0, 0)
     block.title:SetJustifyH("LEFT")
 
-    -- QuestPOITemplate is a Button: it carries its own highlight and pushed art off the same sheet,
-    -- and WatchFrameQuestPOI_OnClick opens the map to that quest.
-    block.badge = CreateFrame("Button", nil, block)
-    block.badge:SetSize(BADGE_SIZE, BADGE_SIZE)
+    -- WatchFrame anchors the POI button here and WatchFrameQuestPOI_OnClick opens the map to it.
+    block.badge = QP.Create(block, BADGE_SIZE)
     block.badge:SetPoint("TOPRIGHT", block.title, "TOPLEFT", 0, BADGE_LIFT)
-    -- BORDER like QuestPOITemplate puts its normal texture, so the pushed art covers it when held.
-    block.ring = block.badge:CreateTexture(nil, "BORDER")
-    block.ring:SetTexture(POI_NUMBERS)
-    block.ring:SetAllPoints(block.badge)
-    block.number = block.badge:CreateTexture(nil, "OVERLAY")
-    block.number:SetPoint("CENTER", block.badge, "CENTER", 0, 0)
-
-    block.badge:SetHighlightTexture(POI_NUMBERS, "ADD")
-    block.badge:GetHighlightTexture():SetTexCoord(0.625, 0.750, 0.875, 1)
-    block.badge:SetPushedTexture(POI_NUMBERS)
-    block.badge:GetPushedTexture():SetTexCoord(0.750, 0.875, 0.875, 1)
+    block.badge:RegisterForClicks("LeftButtonUp")
     block.badge:SetScript("OnClick", function(self)
         local questID = self:GetParent().questID
         -- Opening the map runs Blizzard's quest display; deferred rather than fired in a lockdown.
@@ -546,10 +507,19 @@ function OT.Refresh()
     content:SetSize(width, math.max(y, 1))
     local height = math.max(y, header:GetHeight() + HEADER_DROP)
     frame:SetSize(width, height)
-    -- ShowEditorTest resized the anchor to the tracker; it is the drag surface, so it has to cover it.
+    -- The anchor is the drag surface, so it has to cover the tracker.
     anchor:SetSize(width, height)
     syncFadeHoverFrames()
 end
+
+-- Selecting a quest on the map lights its badge here too; only the badge restyles.
+QP.RegisterFocusListener(function(questID)
+    for _, block in ipairs(blockPool) do
+        if block.badge:IsShown() then
+            QP.SetSelected(block.badge, block.questID ~= nil and block.questID == questID)
+        end
+    end
+end)
 
 -- ============================================================================
 -- BUILD
@@ -668,10 +638,7 @@ local function build()
     end
 end
 
--- Blizzard's tracker is silenced, never moved. Its geometry is the one thing we must not write:
--- WatchFrame_Update reads GetTop()/GetBottom() back (WatchFrame.lua:365) and the poiWatchFrameLines*
--- buttons it then creates come out tainted, which is what blocks WorldMapBlobFrame:Show() in combat.
--- With its events gone that update no longer runs at all, so those buttons are never created here.
+-- Events off, geometry untouched: WatchFrame_Update reads its own rect back and taints from there.
 local WATCHFRAME_EVENTS = {
     "PLAYER_ENTERING_WORLD", "QUEST_LOG_UPDATE", "TRACKED_ACHIEVEMENT_UPDATE", "ITEM_PUSH",
     "DISPLAY_SIZE_CHANGED", "ZONE_CHANGED_NEW_AREA", "WORLD_MAP_UPDATE", "QUEST_POI_UPDATE",

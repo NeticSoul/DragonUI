@@ -81,6 +81,17 @@ local function buildThumb(bar, thumb)
     mid:SetPoint("BOTTOM", bottom, "TOP", 0, -THUMB_OVERLAP)
 
     bar._duiGrip = grip
+    bar._duiThumbArt = { top, mid, bottom }
+end
+
+-- Hiding the grip alone leaves the caps and middle on screen: they only hang off it.
+local function showGrip(bar, shown)
+    local grip = bar._duiGrip
+    if not grip then return end
+    if shown then grip:Show() else grip:Hide() end
+    for _, tex in ipairs(bar._duiThumbArt or {}) do
+        if shown then tex:Show() else tex:Hide() end
+    end
 end
 
 -- Blanked rather than removed: Blizzard's template still drives these buttons, and a bar with no
@@ -145,14 +156,17 @@ local function syncThumb(scroll, bar)
     minV, maxV = minV or 0, maxV or 0
     local range = maxV - minV
 
-    -- Nothing to scroll: the grip fills the track.
+    -- Some panes keep the track visible but drop its grip when there is no range.
     if range <= 0 then
         bar._duiTravel = 0
+        showGrip(bar, not scroll.hideThumbWhenUnscrollable)
         grip:SetHeight(snap(trackH))
         grip:ClearAllPoints()
         grip:SetPoint("TOP", bar, "TOP", 0, -arrowSpace(bar))
         return
     end
+
+    showGrip(bar, true)
 
     local maxGrip = math.max(1, trackH - MIN_TRAVEL)
     local h = trackH * (viewport / (viewport + range))

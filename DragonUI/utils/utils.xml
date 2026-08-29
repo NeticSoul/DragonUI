@@ -6,6 +6,8 @@
 	<Script file="events.lua"/>
 	<Script file="iconframe.lua"/>
 	<Script file="nineslice.lua"/>
+	<Script file="menu.lua"/>
+	<Script file="questpoi.lua"/>
 	<Script file="redbutton.lua"/>
 
 <!--
