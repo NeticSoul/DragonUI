@@ -21,6 +21,8 @@ local SEARCH_H = 20
 local SEARCH_TOP, SEARCH_INSET = 6, 8
 -- InputBoxTemplate hangs its left edge 5 out and its right flush, so the frame is not the box.
 local SEARCH_BLEED = 5
+-- The gear rides the scrollbar's own lane, straight above its top stepper.
+local COG_SIZE, COG_GAP = 20, 4
 -- Cancels ReskinScrollBar's own 7px end inset so the bar runs the frame's full height.
 local BAR_INSET = 7
 -- How far inside the frame's ends the arrow tips stop, so the bar does not run past it.
@@ -30,11 +32,11 @@ local TOME_INSET = 4
 local ROW_X, ROW_GAP = 4, 2
 local HEADER_H, HEADER_GAP = 22, 6
 local TOGGLE_SIZE = 16
-local BADGE_SIZE, TAG_SIZE, TRACK_SIZE = 26, 16, 16
+local BADGE_SIZE, TAG_SIZE, TRACK_SIZE = QP.SIZE, 16, 16
 local TEXT_INDENT = BADGE_SIZE + 6
 local OBJECTIVE_INDENT = TEXT_INDENT + 6
 
-local panel, search, scroll, child
+local panel, search, settings, scroll, child
 local query = ""
 local rowPool, headerPool = {}, {}
 local hoveredRow
@@ -299,6 +301,7 @@ end
 local function collect()
     local badges = mapBadges()
     local view = shownArea()
+    local details = WM:Config().objectives ~= false
     local flat, pending, section = {}, nil, nil
     for index = 1, GetNumQuestLogEntries() do
         local title, level, tag, _, isHeader, isCollapsed, isComplete, isDaily, questID = GetQuestLogTitle(index)
@@ -337,7 +340,7 @@ local function collect()
             flat[#flat + 1] = {
                 kind = "quest", index = index, name = title, level = level,
                 questID = questID, mapRow = badge and badge.frame,
-                objectives = objectiveText(index),
+                objectives = details and objectiveText(index) or "",
                 -- The server leaves plenty of instance quests untagged; the entrance knows better.
                 tag = (isComplete and isComplete < 0 and "questlog-questtypeicon-questfailed")
                     or (isDaily and "questlog-questtypeicon-daily") or (tag and TAG_ATLAS[tag])
@@ -593,6 +596,17 @@ local function fillRow(row, data, width)
     row._style = data.style
     row._focused = data.questID ~= nil and data.questID == QP.GetFocus()
     row._color = GetQuestDifficultyColor(data.level or 0)
+    -- Without objectives the row is still as tall as the badge, so its one line centres on it.
+    local single = data.objectives == ""
+    row.title:ClearAllPoints()
+    row.track:ClearAllPoints()
+    if single then
+        row.title:SetPoint("LEFT", row, "LEFT", TEXT_INDENT, 0)
+        row.track:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    else
+        row.title:SetPoint("TOPLEFT", row, "TOPLEFT", TEXT_INDENT, -2)
+        row.track:SetPoint("TOPRIGHT", row, "TOPRIGHT", -2, -2)
+    end
     row.title:SetWidth(width - TEXT_INDENT - TRACK_SIZE - TAG_SIZE - 8)
     row.title:SetText(data.name or "")
     row.title:SetTextColor(row._color.r, row._color.g, row._color.b)
@@ -766,6 +780,44 @@ local function buildSearch()
     end)
     search:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
     search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+
+    local cog = CreateFrame("Button", "DragonUIWorldMapQuestSettings", panel)
+    cog:SetSize(COG_SIZE, COG_SIZE)
+    local bar = _G[scroll:GetName() .. "ScrollBar"]
+    if bar then
+        cog:SetPoint("BOTTOM", bar, "TOP", 0, COG_GAP)
+    else
+        cog:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -(LIST_GUTTER - RING_OUTSET), -SEARCH_TOP)
+    end
+    local gear = cog:CreateTexture(nil, "ARTWORK")
+    gear:set_atlas("questlog-icon-setting", true)
+    gear:SetPoint("CENTER", cog, "CENTER", 0, 0)
+    local glow = cog:CreateTexture(nil, "HIGHLIGHT")
+    glow:set_atlas("questlog-icon-setting", true)
+    glow:SetPoint("CENTER", cog, "CENTER", 0, 0)
+    glow:SetBlendMode("ADD")
+    glow:SetAlpha(0.4)
+    cog:SetScript("OnClick", function(self)
+        addon.Menu.Open(self, {
+            { text = L["Panel settings"], isTitle = true },
+            {
+                text = QUEST_OBJECTIVES,
+                checked = function() return WM:Config().objectives ~= false end,
+                keepShown = true,
+                func = function()
+                    WM:Config().objectives = not (WM:Config().objectives ~= false)
+                    requestRepaint()
+                end,
+            },
+        })
+    end)
+    cog:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetText(L["Panel settings"])
+        GameTooltip:Show()
+    end)
+    cog:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    settings = cog
 end
 
 local function buildPanel()
@@ -848,6 +900,7 @@ end
 function WM.ShowQuestList()
     scroll:Show()
     search:Show()
+    if settings then settings:Show() end
     requestRepaint()
 end
 
@@ -855,6 +908,8 @@ function WM.HideQuestList()
     hoverRow(nil, false)
     scroll:Hide()
     search:Hide()
+    -- Nothing on the detail page for it to act on, and retail drops it there too.
+    if settings then settings:Hide() end
     panel.empty:Hide()
 end
 

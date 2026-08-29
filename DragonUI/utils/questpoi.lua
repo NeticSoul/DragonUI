@@ -13,6 +13,8 @@ local GLOW = "Interface\\WorldMap\\UI-QuestPoi-IconGlow"
 
 -- QuestPOITemplate's own metrics; every size below is a share of the 32px button.
 local BASE, TURNIN_SIZE, GLOW_SIZE = 32, 24, 50
+-- What QuestPOI_DisplayButton scales the client's own badges to, and so what every list uses.
+QP.SIZE = 29
 local PER_ROW, CELL = 8, 0.125
 local YELLOW, BLACK = 0.5, 0
 

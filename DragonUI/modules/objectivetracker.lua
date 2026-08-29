@@ -18,7 +18,7 @@ local QUEST_GAP = 10             -- WATCHFRAME_QUEST_OFFSET, the gap between one
 local HEADER_GAP = 15
 local CRITERIA_PER_ACHIEVEMENT = 5
 -- QuestPOI_DisplayButton scales the tracker's own buttons to 0.9 of the template's 32px.
-local BADGE_SIZE, ICON_SIZE = 29, 16
+local BADGE_SIZE, ICON_SIZE = addon.QuestPOI.SIZE, 16
 -- The title column IS the frame's left edge; the badge hangs outside it, off the title's TOPLEFT.
 local BADGE_LIFT = 5
 local BUTTON_INSET = -12
