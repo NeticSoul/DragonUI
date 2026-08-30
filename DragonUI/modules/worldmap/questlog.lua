@@ -381,11 +381,16 @@ local function setWatched(index, watched)
     -- No WatchFrame_Update(): it creates poiWatchFrameLines* under our taint, blocking the blob.
 end
 
--- Drawing the blob is protected, so the hand-off queues if locked down.
-local function selectOnMap(row)
+local function selectOnMap(row, flash)
     if not (row and row._mapRow) then return end
-    addon:SafeExecute("worldmap", "selectQuest", WorldMapFrame_SelectQuestFrame, row._mapRow)
-    if not InCombatLockdown() then QP.SetFocus(row._questID) end
+    if InCombatLockdown() then
+        QP.SetFocus(row._questID)
+        if flash and WM.FlashQuestPOI then WM.FlashQuestPOI(row._questID) end
+        return
+    end
+    WorldMapFrame_SelectQuestFrame(row._mapRow)
+    QP.SetFocus(row._questID)
+    if flash and WM.FlashQuestPOI then WM.FlashQuestPOI(row._questID) end
 end
 
 -- Selectable only once the new map has a row for it, so the pick waits for the rebuild.
@@ -395,6 +400,7 @@ local pendingSelect
 local function travelTo(row)
     local questID = row and row._questID
     if not questID then return end
+    if InCombatLockdown() then return end
     local entrance = row._entrance
     if entrance then
         PlaySound("igMainMenuOptionCheckBoxOn")
@@ -515,7 +521,7 @@ local function acquireRow(index)
     -- Retail's split: the title opens the details, the badge is what takes you to the quest.
     row.badge:SetScript("OnClick", function(self)
         local owner = self:GetParent()
-        if owner._mapRow then selectOnMap(owner) else travelTo(owner) end
+        if owner._mapRow then selectOnMap(owner, true) else travelTo(owner) end
     end)
     row.badge:SetScript("OnEnter", function(self)
         local owner = self:GetParent()
@@ -703,7 +709,7 @@ local function repaint()
         for index = 1, rows do
             local row = rowPool[index]
             if row._questID == target and row._mapRow then
-                selectOnMap(row)
+                selectOnMap(row, true)
                 break
             end
         end

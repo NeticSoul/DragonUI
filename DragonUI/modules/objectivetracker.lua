@@ -325,9 +325,17 @@ local function acquireBlock(index)
     block.badge:RegisterForClicks("LeftButtonUp")
     block.badge:SetScript("OnClick", function(self)
         local questID = self:GetParent().questID
-        -- Opening the map runs Blizzard's quest display; deferred rather than fired in a lockdown.
         if questID and WorldMap_OpenToQuest then
-            addon:SafeExecute("questtracker", "openToQuest", WorldMap_OpenToQuest, questID)
+            local worldMap = addon.WorldMap
+            if InCombatLockdown() then
+                if WorldMapFrame:IsShown() then
+                    QP.SetFocus(questID)
+                    if worldMap and worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
+                end
+                return
+            end
+            WorldMap_OpenToQuest(questID)
+            if worldMap and worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
         end
     end)
     -- Hovering the badge lights the quest it belongs to, same as hovering its text.
@@ -580,7 +588,7 @@ local function build()
 
     -- Lined up with the quest titles, not with the badges hanging left of them.
     header.text = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    header.text:SetPoint("TOPLEFT", header, "TOPLEFT", CONTENT_X, 0)
+    header.text:SetPoint("TOPLEFT", header, "TOPLEFT", 0, 0)
     header.text:SetTextColor(1, 0.82, 0)
 
     header.toggle = CreateFrame("Button", nil, header)

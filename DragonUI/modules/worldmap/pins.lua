@@ -14,11 +14,15 @@ local LABEL_FONT_SIZE, DESCRIPTION_FONT_SIZE = 24, 16
 -- The ring's circle is off-centre in Blizzard's border sheet, hence the icon nudge.
 local FILTER_ICON = 26
 local FILTER_ICON_X, FILTER_ICON_Y = 2, -2
--- QuestPOITemplate is 32px; retail's numbered pin reads a good bit smaller than the canvas art.
-local QUEST_POI_SCALE = 0.7
+-- The numbered glyph needs a larger scale to match the completed quest icon.
+local QUEST_POI_SCALE, QUEST_POI_NUMERIC_SCALE = 0.7, 1.05
 local ROCK = addon._dir .. "UI\\ui-background-rock"
+local GLOW = "Interface\\WorldMap\\UI-QuestPoi-IconGlow"
+local FLASH_SECONDS, FLASH_PULSES, FLASH_GROW = 2.5, 3, 0.35
+local FLASH_PATIENCE = 5
 
 local objectivesPlate
+local pendingQuestFlash, pendingQuestFlashUntil
 
 -- ============================================================================
 -- LANDMARKS AND QUEST POIS
@@ -56,8 +60,10 @@ end
 -- Offsets are read in the button's own space, so the badge scale has to come back out of them.
 local function placeQuestPOI(button)
     if button.duiRawX and WM.poiScale then
-        button:SetScale(QUEST_POI_SCALE)
-        local factor = WM.poiScale / QUEST_POI_SCALE
+        local scale = button.type == QUEST_POI_NUMERIC and QUEST_POI_NUMERIC_SCALE or QUEST_POI_SCALE
+        button.duiMapScale = scale
+        button:SetScale(scale)
+        local factor = WM.poiScale / scale
         button:SetPoint("CENTER", WorldMapPOIFrame, "TOPLEFT", button.duiRawX * factor, button.duiRawY * factor)
     end
 end
@@ -70,6 +76,94 @@ local function onQuestPOIDisplayed(questFrame)
     local _, _, _, x, y = button:GetPoint(1)
     button.duiRawX, button.duiRawY = x, y
     placeQuestPOI(button)
+end
+
+local function resizeNumericQuestPOI(button, size)
+    for _, texture in ipairs({ button.normalTexture, button.pushedTexture, button.highlightTexture }) do
+        texture:ClearAllPoints()
+        texture:SetPoint("CENTER", button, "CENTER", 0, 0)
+        texture:SetSize(size, size)
+    end
+    button.number:ClearAllPoints()
+    button.number:SetPoint("CENTER", button, "CENTER", 0, 0)
+    button.number:SetSize(size, size)
+end
+
+local function resetNumericQuestPOI(button)
+    for _, texture in ipairs({ button.normalTexture, button.pushedTexture, button.highlightTexture }) do
+        texture:ClearAllPoints()
+        texture:SetAllPoints(button)
+    end
+    button.number:ClearAllPoints()
+    button.number:SetPoint("CENTER", button, "CENTER", 0, 0)
+    button.number:SetSize(button:GetWidth(), button:GetHeight())
+end
+
+local function flashQuestPOI(button)
+    local glow = button.duiFlashGlow
+    if not glow then
+        glow = button:CreateTexture(nil, "OVERLAY")
+        glow:SetTexture(GLOW)
+        glow:SetBlendMode("ADD")
+        glow:SetPoint("CENTER", button, "CENTER", 0, 0)
+        button.duiFlashGlow = glow
+    end
+    button.duiFlashTime = 0
+    button.duiFlashScale = button.duiMapScale or button:GetScale()
+    button.duiFlashNumeric = button.type == QUEST_POI_NUMERIC
+    glow:Show()
+    button:SetScript("OnUpdate", function(self, elapsed)
+        local time = self.duiFlashTime + elapsed
+        self.duiFlashTime = time
+        if time >= FLASH_SECONDS then
+            self:SetScript("OnUpdate", nil)
+            if self.duiFlashNumeric then
+                resetNumericQuestPOI(self)
+            else
+                self:SetScale(self.duiFlashScale)
+            end
+            self.duiFlashTime, self.duiFlashScale, self.duiFlashNumeric = nil, nil, nil
+            self.duiFlashGlow:Hide()
+            return
+        end
+        local beat = math.sin(time / FLASH_SECONDS * FLASH_PULSES * math.pi * 2) * 0.5 + 0.5
+        local fade = 1 - time / FLASH_SECONDS
+        local grow = 1 + FLASH_GROW * beat * fade
+        if self.duiFlashNumeric then
+            resizeNumericQuestPOI(self, self:GetWidth() * grow)
+        else
+            self:SetScale(self.duiFlashScale * grow)
+        end
+        self.duiFlashGlow:SetSize(self:GetWidth() * 2 * grow, self:GetHeight() * 2 * grow)
+        self.duiFlashGlow:SetAlpha(beat * fade)
+    end)
+end
+
+local function tryFlashQuestPOI()
+    if not pendingQuestFlash then return end
+    if GetTime() > pendingQuestFlashUntil then
+        pendingQuestFlash = nil
+        return
+    end
+    for index = 1, WorldMapFrame.numQuests or 0 do
+        local row = _G["WorldMapQuestFrame" .. index]
+        if row and row.questId == pendingQuestFlash then
+            local button = row.poiIcon
+            local swap = QUEST_POI_SWAP_BUTTONS and QUEST_POI_SWAP_BUTTONS.WorldMapPOIFrame
+            if swap and swap.quest == row and swap:IsShown() then button = swap end
+            if button and button:IsShown() then
+                flashQuestPOI(button)
+                pendingQuestFlash = nil
+            end
+            return
+        end
+    end
+end
+
+function WM.FlashQuestPOI(questID)
+    if not questID then return end
+    pendingQuestFlash, pendingQuestFlashUntil = questID, GetTime() + FLASH_PATIENCE
+    tryFlashQuestPOI()
 end
 
 WM.RefreshLandmarks = restyleLandmarks
@@ -182,6 +276,7 @@ function WM.BuildPins()
     buildCanvasShadow()
 
     hooksecurefunc("WorldMapFrame_Update", restyleLandmarks)
+    hooksecurefunc("WorldMapFrame_Update", tryFlashQuestPOI)
     hooksecurefunc("WorldMapFrame_DisplayQuestPOI", onQuestPOIDisplayed)
 
     local onLayout = WM.OnLayout
