@@ -40,7 +40,7 @@ local anchor
 -- Declared up here because build() and Refresh() close over them.
 local savePosition, syncFadeHoverFrames
 
--- Read from the CVar, not WATCHFRAME_EXPANDEDWIDTH: WatchFrame no longer gets VARIABLES_LOADED.
+-- The same CVar WatchFrame_SetWidth reads, so the two layouts cannot drift apart.
 local function trackerMetrics()
     local cvar = GetCVar and GetCVar("watchFrameWidth")
     if cvar and cvar ~= "0" then return 306, 294, true end
@@ -68,7 +68,7 @@ end
 -- MODEL
 -- ============================================================================
 
--- Ours, not CURRENT_MAP_QUESTS: their tracker no longer runs to fill it.
+-- Ours, so the rows never depend on Blizzard's tracker having run its own pass first.
 local mapQuests = {}
 
 local function refreshMapQuests()
@@ -207,6 +207,14 @@ end
 -- INTERACTION
 -- ============================================================================
 
+-- QuestLog_OpenToQuest writes QuestLogFrame.selectedIndex, read on line 1 of Show Map's OnClick.
+local function openQuestLogTo(index)
+    if not (index and index > 0) then return end
+    SelectQuestLogEntry(index)
+    -- QuestLog_Update returns early while the frame is hidden, so the open has to do the redraw.
+    if QuestLogFrame:IsShown() then QuestLog_Update() else ShowUIPanel(QuestLogFrame) end
+end
+
 -- Same entries WatchFrameDropDown_Initialize builds, in the same order.
 local function blockMenu(block)
     local entries = { { text = block.title, isTitle = true } }
@@ -214,7 +222,7 @@ local function blockMenu(block)
         local index = GetQuestIndexForWatch(block.watchIndex)
         if not index then return entries end
         entries[#entries + 1] = { text = OBJECTIVES_VIEW_IN_QUESTLOG, func = function()
-            QuestLog_OpenToQuest(GetQuestIndexForWatch(block.watchIndex))
+            openQuestLogTo(GetQuestIndexForWatch(block.watchIndex))
         end }
         entries[#entries + 1] = { text = OBJECTIVES_STOP_TRACKING, func = function()
             RemoveQuestWatch(GetQuestIndexForWatch(block.watchIndex))
@@ -258,7 +266,7 @@ local function onBlockClick(block, button)
         end
         -- The log renumbers when a collapsed header opens, so the index is fetched again after.
         ExpandQuestHeader(GetQuestSortIndex(index))
-        QuestLog_OpenToQuest(GetQuestIndexForWatch(block.watchIndex))
+        openQuestLogTo(GetQuestIndexForWatch(block.watchIndex))
     elseif block.kind == "achievement" then
         if IsModifiedClick("CHATLINK") and ChatEdit_GetActiveWindow() then
             local link = GetAchievementLink(block.achievementID)
@@ -269,7 +277,7 @@ local function onBlockClick(block, button)
         if not AchievementFrame:IsShown() then AchievementFrame_ToggleAchievementFrame() end
         AchievementFrame_SelectAchievement(block.achievementID)
     elseif block.kind == "timer" and block.questLogIndex then
-        QuestLog_OpenToQuest(block.questLogIndex)
+        openQuestLogTo(block.questLogIndex)
     end
 end
 
@@ -297,7 +305,94 @@ end
 -- ROWS
 -- ============================================================================
 
+-- QuestPOITemplate is a plain Button, so borrowing Blizzard's own POI costs the rows no protection
+-- and keeps the click secure: WatchFrameQuestPOI_OnClick opens the map even in combat.
+local POI_KINDS = { QUEST_POI_NUMERIC, QUEST_POI_COMPLETE_IN, QUEST_POI_COMPLETE_OUT }
+local borrowed = {}
+
+local function findPOI(questID)
+    if not questID then return end
+    for _, kind in ipairs(POI_KINDS) do
+        local index = 1
+        local button = _G["poiWatchFrameLines" .. kind .. "_" .. index]
+        while button do
+            if button.questId == questID and button:IsShown() then return button end
+            index = index + 1
+            button = _G["poiWatchFrameLines" .. kind .. "_" .. index]
+        end
+    end
+end
+
+-- Given back hidden: Blizzard's next pass re-parents nothing but does re-anchor and re-show it.
+local function releasePOI(button)
+    if not (button and borrowed[button]) then return end
+    borrowed[button] = nil
+    button:SetParent(WatchFrameLines)
+    button:ClearAllPoints()
+    button:Hide()
+end
+
+local function releaseBlockPOI(block)
+    if block.poi then
+        releasePOI(block.poi)
+        block.poi = nil
+    end
+end
+
+-- Alpha does not stop a click landing, and their rows are laid out under ours at alpha 0.
+local muted = {}
+
+local function muteRows(frame)
+    for _, child in ipairs({ frame:GetChildren() }) do
+        if child.IsMouseEnabled and child:IsMouseEnabled() then
+            muted[child] = true
+            child:EnableMouse(false)
+        end
+        muteRows(child)
+    end
+end
+
+-- Only what we actually took, so nothing comes back clickable that Blizzard never made clickable.
+local function unmuteRows()
+    for child in pairs(muted) do
+        child:EnableMouse(true)
+        muted[child] = nil
+    end
+end
+
+-- Blizzard re-anchors every POI to its own hidden lines on each pass of its tracker.
+local function afterWatchFrameUpdate()
+    if not OT.silenced then return end
+    muteRows(WatchFrameLines)
+    for button, block in pairs(borrowed) do
+        if block.poi == button and button:IsShown() then
+            button:ClearAllPoints()
+            button:SetPoint("TOPRIGHT", block.title, "TOPLEFT", 0, BADGE_LIFT)
+        end
+    end
+    -- Their pass is what builds the buttons, so the first one always lands after our rows exist.
+    for _, block in ipairs(blockPool) do
+        if block:IsShown() and block.questID and not block.poi and findPOI(block.questID) then
+            OT.Refresh()
+            return
+        end
+    end
+end
+
 local function styleBadge(block, data)
+    local poi = block.questID and findPOI(block.questID)
+    if block.poi and block.poi ~= poi then releaseBlockPOI(block) end
+    if poi then
+        block.poi, borrowed[poi] = poi, block
+        poi:SetParent(block)
+        -- muteRows took its mouse while it still hung off WatchFrameLines.
+        muted[poi] = nil
+        poi:EnableMouse(true)
+        poi:ClearAllPoints()
+        poi:SetPoint("TOPRIGHT", block.title, "TOPLEFT", 0, BADGE_LIFT)
+        block.badge:Hide()
+        return
+    end
     local badge = data.badge
     if not badge then
         block.badge:Hide()
@@ -325,18 +420,15 @@ local function acquireBlock(index)
     block.badge:RegisterForClicks("LeftButtonUp")
     block.badge:SetScript("OnClick", function(self)
         local questID = self:GetParent().questID
-        if questID and WorldMap_OpenToQuest then
-            local worldMap = addon.WorldMap
-            if InCombatLockdown() then
-                if WorldMapFrame:IsShown() then
-                    QP.SetFocus(questID)
-                    if worldMap and worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
-                end
-                return
-            end
-            WorldMap_OpenToQuest(questID)
-            if worldMap and worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
-        end
+        local worldMap = addon.WorldMap
+        if not (questID and worldMap and worldMap.OpenToQuest) then return end
+        local locked = InCombatLockdown()
+        -- The map is protected, so a closed one stays closed in combat and the click is dropped.
+        if locked and not WorldMapFrame:IsShown() then return end
+        -- Focused first: SetMapByID can drive Blizzard's reselect before OpenToQuest returns.
+        QP.SetFocus(questID)
+        if not locked then worldMap.OpenToQuest(questID) end
+        if worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
     end)
     -- Hovering the badge lights the quest it belongs to, same as hovering its text.
     block.badge:SetScript("OnEnter", function(self) highlight(self:GetParent(), true) end)
@@ -377,6 +469,7 @@ local function fillBlock(block, data, width, size)
         block.icon:SetTexture(data.icon)
         block.icon:Show()
         block.badge:Hide()
+        releaseBlockPOI(block)
     else
         block.icon:Hide()
         styleBadge(block, data)
@@ -508,7 +601,10 @@ function OT.Refresh()
             y = y + block:GetHeight() + QUEST_GAP
         end
     end
-    for index = shown + 1, #blockPool do blockPool[index]:Hide() end
+    for index = shown + 1, #blockPool do
+        blockPool[index]:Hide()
+        releaseBlockPOI(blockPool[index])
+    end
 
     -- The frame itself has to follow the CVar too: leaving it at the narrow width while the header
     -- art and the line budget grew is what pushed the title off to one side in wide mode.
@@ -633,6 +729,18 @@ local function build()
     events:RegisterEvent("QUEST_POI_UPDATE")
     events:SetScript("OnEvent", OT.Refresh)
 
+    if WatchFrame_Update then hooksecurefunc("WatchFrame_Update", afterWatchFrameUpdate) end
+
+    -- The borrowed POI carries Blizzard's OnClick, so the focus and the pulse hang off the call it
+    -- ends in. Catches their quest log's Show Map button and their own tracker for free.
+    if WorldMap_OpenToQuest then
+        hooksecurefunc("WorldMap_OpenToQuest", function(questID)
+            QP.SetFocus(questID)
+            local worldMap = addon.WorldMap
+            if worldMap and worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
+        end)
+    end
+
     -- The options panel calls this straight through when the "wider quest tracker" box is flipped.
     if WatchFrame_SetWidth then
         hooksecurefunc("WatchFrame_SetWidth", function() OT.Refresh() end)
@@ -646,29 +754,23 @@ local function build()
     end
 end
 
--- Events off, geometry untouched: WatchFrame_Update reads its own rect back and taints from there.
-local WATCHFRAME_EVENTS = {
-    "PLAYER_ENTERING_WORLD", "QUEST_LOG_UPDATE", "TRACKED_ACHIEVEMENT_UPDATE", "ITEM_PUSH",
-    "DISPLAY_SIZE_CHANGED", "ZONE_CHANGED_NEW_AREA", "WORLD_MAP_UPDATE", "QUEST_POI_UPDATE",
-    "PLAYER_MONEY", "VARIABLES_LOADED",
-}
-
+-- Invisible, not mute: WatchFrame_Update has to keep running from Blizzard's own events or the POI
+-- buttons the rows borrow are never built, and calling it ourselves would build them tainted.
 local function silenceBlizzardTracker()
     if not WatchFrame or OT.silenced then return end
     OT.silenced = true
-    WatchFrame:UnregisterAllEvents()
     WatchFrame:SetAlpha(0)
     WatchFrame:EnableMouse(false)
 end
 
--- Turning the module off has to hand the player back a working tracker, so its own events go back.
+-- Turning the module off has to hand the player back a working tracker, POI buttons included.
 local function restoreBlizzardTracker()
     if not WatchFrame or not OT.silenced then return end
     OT.silenced = nil
-    for _, event in ipairs(WATCHFRAME_EVENTS) do WatchFrame:RegisterEvent(event) end
+    for _, block in ipairs(blockPool) do releaseBlockPOI(block) end
+    unmuteRows()
     WatchFrame:SetAlpha(1)
     WatchFrame:EnableMouse(true)
-    if WatchFrame_Update then WatchFrame_Update() end
 end
 
 -- The old module's own maths, kept so a position saved by either lands in the same place: measured
@@ -719,6 +821,7 @@ syncFadeHoverFrames = function()
     for _, block in ipairs(blockPool) do
         found[#found + 1] = block
         if block.badge then found[#found + 1] = block.badge end
+        if block.poi then found[#found + 1] = block.poi end
     end
     if header then found[#found + 1] = header.toggle end
     if #found > 0 then addon.VisibilityFade.AddHoverFrames("questtracker", found) end

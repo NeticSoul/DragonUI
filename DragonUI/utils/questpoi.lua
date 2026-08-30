@@ -29,6 +29,9 @@ local SELECTED = { { 0.500, 0.625, 0.375, 0.5 }, { 0.375, 0.500, 0.375, 0.5 }, {
 -- QUEST_POI_COMPLETE_OUT has no selected art, so the dark ring keeps its own when focused.
 local NO_SELECTED_ART = { completeOut = true, offMap = true }
 
+-- The canvas POIs are Blizzard's own buttons; pins.lua crops them off these same numbers.
+QP.MAP_CROP = { idle = RINGS.numeric, selected = SELECTED, glyph = { idle = YELLOW, selected = BLACK } }
+
 local function crop(texture, box)
     texture:SetTexCoord(box[1], box[2], box[3], box[4])
 end
@@ -117,7 +120,7 @@ end
 -- FOCUS
 -- ============================================================================
 
--- Blizzard owns the selection; this mirrors it out to everything that draws a badge.
+-- The one selection every badge follows: the map, the panel rows and the tracker.
 local listeners = {}
 
 function QP.RegisterFocusListener(fn)

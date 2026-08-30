@@ -98,16 +98,23 @@ local function spread(items, width, height)
     end
 end
 
+-- The pool outlives the map, so a pin handed to something else has to drop the pulse it was
+-- running; hidden, its OnUpdate only freezes, and resumes on whatever the pin becomes next.
+local function stopFlash(pin)
+    if not pin.flashTime then return end
+    pin:SetScript("OnUpdate", nil)
+    pin.flashTime = nil
+    pin.glow:Hide()
+    pin.icon:ClearAllPoints()
+    pin.icon:SetAllPoints(pin)
+end
+
 -- Grows and glows on the beat, fading out as it goes, then hands the icon back to the pin's size.
 local function flashUpdate(pin, elapsed)
     local time = (pin.flashTime or 0) + elapsed
     pin.flashTime = time
     if time >= FLASH_SECONDS then
-        pin:SetScript("OnUpdate", nil)
-        pin.flashTime = nil
-        pin.glow:Hide()
-        pin.icon:ClearAllPoints()
-        pin.icon:SetAllPoints(pin)
+        stopFlash(pin)
         return
     end
     local beat = math.sin(time / FLASH_SECONDS * FLASH_PULSES * math.pi * 2) * 0.5 + 0.5
@@ -171,7 +178,9 @@ function WM.RefreshMapPins()
             local item = items[index]
             count = count + 1
             local pin = acquire(count)
+            local previous = pin.name
             item.style(pin, item.entry)
+            if pin.name ~= previous then stopFlash(pin) end
             pin:SetScale(pinScale)
             pin:ClearAllPoints()
             pin:SetPoint("CENTER", WorldMapButton, "TOPLEFT", item.px, -item.py)
@@ -184,7 +193,10 @@ function WM.RefreshMapPins()
             end
         end
     end
-    for index = count + 1, #pool do pool[index]:Hide() end
+    for index = count + 1, #pool do
+        stopFlash(pool[index])
+        pool[index]:Hide()
+    end
     -- Cleared only once the pass is done, so every door of a complex gets lit, not just the first.
     if flashed then pendingFlash = nil end
 end

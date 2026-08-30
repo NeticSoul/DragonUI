@@ -3,6 +3,7 @@
 local addon = select(2, ...)
 local L = addon.L
 local WM = addon.WorldMap
+local QP = addon.QuestPOI
 
 -- What sits on the canvas: landmark pins, quest POIs, the zone label and the filter button.
 
@@ -99,7 +100,35 @@ local function resetNumericQuestPOI(button)
     button.number:SetSize(button:GetWidth(), button:GetHeight())
 end
 
+-- These are Blizzard's pooled buttons: one handed to another quest must drop the pulse it was
+-- running, or the next quest to land on it inherits the animation. Hidden ones freeze mid-pulse.
+local flashing = {}
+
+local function poiQuest(button)
+    return button.questId or (button.quest and button.quest.questId)
+end
+
+local function stopQuestFlash(button)
+    flashing[button] = nil
+    if not button.duiFlashTime then return end
+    button:SetScript("OnUpdate", nil)
+    if button.duiFlashNumeric then
+        resetNumericQuestPOI(button)
+    else
+        button:SetScale(button.duiFlashScale)
+    end
+    button.duiFlashTime, button.duiFlashScale, button.duiFlashNumeric = nil, nil, nil
+    button.duiFlashGlow:Hide()
+end
+
+local function dropStaleFlashes()
+    for button, questID in pairs(flashing) do
+        if not button:IsShown() or poiQuest(button) ~= questID then stopQuestFlash(button) end
+    end
+end
+
 local function flashQuestPOI(button)
+    flashing[button] = poiQuest(button)
     local glow = button.duiFlashGlow
     if not glow then
         glow = button:CreateTexture(nil, "OVERLAY")
@@ -116,14 +145,7 @@ local function flashQuestPOI(button)
         local time = self.duiFlashTime + elapsed
         self.duiFlashTime = time
         if time >= FLASH_SECONDS then
-            self:SetScript("OnUpdate", nil)
-            if self.duiFlashNumeric then
-                resetNumericQuestPOI(self)
-            else
-                self:SetScale(self.duiFlashScale)
-            end
-            self.duiFlashTime, self.duiFlashScale, self.duiFlashNumeric = nil, nil, nil
-            self.duiFlashGlow:Hide()
+            stopQuestFlash(self)
             return
         end
         local beat = math.sin(time / FLASH_SECONDS * FLASH_PULSES * math.pi * 2) * 0.5 + 0.5
@@ -139,7 +161,31 @@ local function flashQuestPOI(button)
     end)
 end
 
+-- QuestPOI_SelectButton keeps its pick in a local of Blizzard's, so the crop is set by hand here.
+local function cropQuestPOI(button, selected)
+    if button.type ~= QUEST_POI_NUMERIC then return end
+    local ring = selected and QP.MAP_CROP.selected or QP.MAP_CROP.idle
+    button.normalTexture:SetTexCoord(ring[1][1], ring[1][2], ring[1][3], ring[1][4])
+    button.pushedTexture:SetTexCoord(ring[2][1], ring[2][2], ring[2][3], ring[2][4])
+    button.highlightTexture:SetTexCoord(ring[3][1], ring[3][2], ring[3][3], ring[3][4])
+    -- QuestPOI_SetTextColor's own grid: the black glyphs sit half a sheet under the yellow ones.
+    local cell = (button.index or 1) - 1
+    local x = math.fmod(cell, QUEST_POI_ICONS_PER_ROW) * QUEST_POI_ICON_SIZE
+    local glyph = selected and QP.MAP_CROP.glyph.selected or QP.MAP_CROP.glyph.idle
+    local y = glyph + math.floor(cell / QUEST_POI_ICONS_PER_ROW) * QUEST_POI_ICON_SIZE
+    button.number:SetTexCoord(x, x + QUEST_POI_ICON_SIZE, y, y + QUEST_POI_ICON_SIZE)
+    if selected then button.selectionGlow:Show() else button.selectionGlow:Hide() end
+end
+
+function WM.SelectQuestPOI(questID)
+    for index = 1, WorldMapFrame.numQuests or 0 do
+        local row = _G["WorldMapQuestFrame" .. index]
+        if row and row.poiIcon then cropQuestPOI(row.poiIcon, row.questId == questID) end
+    end
+end
+
 local function tryFlashQuestPOI()
+    dropStaleFlashes()
     if not pendingQuestFlash then return end
     if GetTime() > pendingQuestFlashUntil then
         pendingQuestFlash = nil
@@ -277,6 +323,10 @@ function WM.BuildPins()
 
     hooksecurefunc("WorldMapFrame_Update", restyleLandmarks)
     hooksecurefunc("WorldMapFrame_Update", tryFlashQuestPOI)
+    -- Blizzard reselects a pin of its own on every rebuild, so ours is re-cropped after it.
+    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function() WM.SelectQuestPOI(QP.GetFocus()) end)
+    QP.RegisterFocusListener(WM.SelectQuestPOI)
+    hooksecurefunc("WorldMapFrame_UpdateQuests", dropStaleFlashes)
     hooksecurefunc("WorldMapFrame_DisplayQuestPOI", onQuestPOIDisplayed)
 
     local onLayout = WM.OnLayout

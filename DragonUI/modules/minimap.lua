@@ -1825,12 +1825,10 @@ local function RemoveBlizzardFrames()
             and addon.db.profile.modules.minimap
             and IsSexyMapHybridModeValue(addon.db.profile.modules.minimap.sexymap_mode))
 
+    -- Hidden is enough, and its scripts stay: nulled, the button comes back dead if anything shows it.
     if MiniMapWorldMapButton then
         MiniMapWorldMapButton:Hide()
         MiniMapWorldMapButton:UnregisterAllEvents()
-        MiniMapWorldMapButton:SetScript("OnClick", nil)
-        MiniMapWorldMapButton:SetScript("OnEnter", nil)
-        MiniMapWorldMapButton:SetScript("OnLeave", nil)
     end
 
     -- In hybrid mode, don't hide tracking/mail elements -SexyMap's Buttons module manages them
@@ -2234,6 +2232,8 @@ function MinimapModule:RestoreMinimapSystem()
 
     -- Restore other original states
     if MiniMapWorldMapButton then
+        -- Its OnLoad took this to keep the binding in the tooltip; UnregisterAllEvents dropped it.
+        MiniMapWorldMapButton:RegisterEvent("UPDATE_BINDINGS")
         MiniMapWorldMapButton:Show()
     end
 

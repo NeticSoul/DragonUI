@@ -381,26 +381,58 @@ local function setWatched(index, watched)
     -- No WatchFrame_Update(): it creates poiWatchFrameLines* under our taint, blocking the blob.
 end
 
+-- Two shapes at most, the selected quest and the row under the cursor, and they can differ. Kept
+-- in one place because three callers used to draw straight onto the canvas and undo each other.
+local drawn = {}
+
+local function blobFor(questID)
+    if not questID then return end
+    for index = 1, #rowPool do
+        local row = rowPool[index]
+        if row:IsShown() and row._questID == questID then
+            if row._mapRow and not row._complete then return questID end
+            return
+        end
+    end
+end
+
+local function showBlob(questID)
+    if not questID or drawn[questID] then return end
+    WorldMapBlobFrame:DrawQuestBlob(questID, true)
+    drawn[questID] = true
+end
+
+-- No combat guard: what is protected on this frame is Show/Hide and moving it, not drawing on it,
+-- which is how the client's own map lights an area mid-fight.
+local function applyBlob()
+    local focus = blobFor(QP.GetFocus())
+    local hover = blobFor(hoveredRow and hoveredRow._questID)
+    for questID in pairs(drawn) do
+        if questID ~= focus and questID ~= hover then
+            WorldMapBlobFrame:DrawQuestBlob(questID, false)
+            drawn[questID] = nil
+        end
+    end
+    showBlob(focus)
+    showBlob(hover)
+end
+
+-- WorldMapFrame_SelectQuestFrame writes WORLDMAP_SETTINGS.selectedQuest*, re-read before it rewrites.
 local function selectOnMap(row, flash)
     if not (row and row._mapRow) then return end
-    if InCombatLockdown() then
-        QP.SetFocus(row._questID)
-        if flash and WM.FlashQuestPOI then WM.FlashQuestPOI(row._questID) end
-        return
-    end
-    WorldMapFrame_SelectQuestFrame(row._mapRow)
     QP.SetFocus(row._questID)
+    applyBlob()
     if flash and WM.FlashQuestPOI then WM.FlashQuestPOI(row._questID) end
 end
 
 -- Selectable only once the new map has a row for it, so the pick waits for the rebuild.
 local pendingSelect
 
--- Asked at the moment it is wanted; the batch may not have reached this quest yet.
+-- Asked at the moment it is wanted; the batch may not have reached this quest yet. No combat guard:
+-- every call below is a C API, and the map this runs from is already open.
 local function travelTo(row)
     local questID = row and row._questID
     if not questID then return end
-    if InCombatLockdown() then return end
     local entrance = row._entrance
     if entrance then
         PlaySound("igMainMenuOptionCheckBoxOn")
@@ -427,17 +459,30 @@ end
 
 -- A collapsed header hides its quests from UpdateQuests' sweep, so their shapes never get cleared.
 local function clearBlobs()
-    if InCombatLockdown() then return end
     for questID in pairs(questArea) do
         WorldMapBlobFrame:DrawQuestBlob(questID, false)
     end
+    -- questArea only holds what the batch has resolved, and ours may not be in it yet.
+    for questID in pairs(drawn) do
+        WorldMapBlobFrame:DrawQuestBlob(questID, false)
+        drawn[questID] = nil
+    end
 end
 
-local function drawBlob(row, show)
-    if row._complete or not (row._mapRow and row._questID) then return end
-    if not show and row._questID == QP.GetFocus() then return end
-    if InCombatLockdown() then return end
-    WorldMapBlobFrame:DrawQuestBlob(row._questID, show)
+WM.ClearBlobs = clearBlobs
+
+-- The blob is rasterised where it was drawn and never travels, so moving the canvas re-lays it.
+function WM.RefreshBlobs()
+    clearBlobs()
+    applyBlob()
+end
+
+-- Blizzard wiped its last pick and drew this one, so that alone IS the canvas now.
+local function reclaimBlob(questFrame)
+    for questID in pairs(drawn) do drawn[questID] = nil end
+    local picked = questFrame and questFrame.questId
+    if picked then drawn[picked] = true end
+    applyBlob()
 end
 
 -- Ours: Blizzard's handler writes WorldMapQuestScrollFrame.highlightedFrame, and reads it back.
@@ -446,17 +491,17 @@ local function hoverRow(row, entering, onBadge)
     hoveredRow = nil
     if previous then
         previous.badge:UnlockHighlight()
-        drawBlob(previous, false)
         if not previous._focused and previous._color then
             previous.title:SetTextColor(previous._color.r, previous._color.g, previous._color.b)
         end
     end
-    if not (entering and row) then return end
-    hoveredRow = row
-    -- A grey badge is the only clickable part of its row, so nothing else should light it.
-    if onBadge or row._style ~= "offMap" then row.badge:LockHighlight() end
-    row.title:SetTextColor(1, 1, 1)
-    drawBlob(row, true)
+    if entering and row then
+        hoveredRow = row
+        -- A grey badge is the only clickable part of its row, so nothing else should light it.
+        if onBadge or row._style ~= "offMap" then row.badge:LockHighlight() end
+        row.title:SetTextColor(1, 1, 1)
+    end
+    applyBlob()
 end
 
 -- ============================================================================
@@ -661,8 +706,9 @@ local function repaint()
     local width = child:GetWidth() - ROW_X * 2
     if width <= 0 then return end
 
-    -- Blizzard owns the selection; reading it feeds the badges, the canvas and the tracker.
-    QP.SetFocus(WorldMapFrame:IsShown() and WORLDMAP_SETTINGS.selectedQuestId or nil)
+    -- Ours alone, and nothing is picked until the player picks it: seeding it from Blizzard's own
+    -- auto-selection lit the area of a quest nobody had chosen.
+    if not WorldMapFrame:IsShown() then QP.SetFocus(nil) end
     local wasHovering = hoveredRow and hoveredRow._questID
     hoverRow(nil, false)
 
@@ -942,7 +988,10 @@ function WM.BuildQuestLog()
         requestRepaint()
         if WM.RefreshQuestDetail then WM.RefreshQuestDetail() end
     end)
-    hooksecurefunc("WorldMapFrame_SelectQuestFrame", requestRepaint)
+    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function(questFrame)
+        reclaimBlob(questFrame)
+        requestRepaint()
+    end)
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("QUEST_LOG_UPDATE")

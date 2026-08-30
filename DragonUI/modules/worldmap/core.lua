@@ -55,6 +55,22 @@ function WM.OnTerrainFloor()
     return level <= 0
 end
 
+-- WorldMap_OpenToQuest writes WorldMapFrame.blockWorldMapUpdate, re-read by its every WORLD_MAP_UPDATE.
+function WM.OpenToQuest(questID)
+    if not questID or InCombatLockdown() then return false end
+    -- Not a getter: it moves the map whatever it answers, so a quest it cannot place must not strand you.
+    local before = (GetCurrentMapAreaID() or 0) - 1
+    local area, floor = GetQuestWorldMapAreaID(questID)
+    if area and area > 0 then
+        SetMapByID(area)
+        if floor and floor > 0 then SetDungeonMapLevel(floor) end
+    elseif before > 0 then
+        SetMapByID(before)
+    end
+    ShowUIPanel(WorldMapFrame)
+    return true
+end
+
 -- ============================================================================
 -- GEOMETRY
 -- ============================================================================
@@ -70,15 +86,6 @@ local function canvasSize()
         return math.floor(WM.DETAIL_W * scale), math.floor(WM.DETAIL_H * scale)
     end
     return WINDOWED_CANVAS_W, math.floor(WINDOWED_CANVAS_W * WM.DETAIL_H / WM.DETAIL_W + 0.5)
-end
-
--- The blob is rasterised where it was drawn and never travels, so moving the canvas re-lays it.
-local function drawSelectedBlob(show)
-    local settings = WORLDMAP_SETTINGS
-    local quest, questID = settings and settings.selectedQuest, settings and settings.selectedQuestId
-    if not (quest and questID and questID > 0) or InCombatLockdown() then return end
-    if show and quest.completed then return end
-    WorldMapBlobFrame:DrawQuestBlob(questID, show)
 end
 
 -- Both passes write implicitly protected frames, so both are combat-deferred.
@@ -109,7 +116,7 @@ local function layoutCanvas()
     end
     if WM.RefreshPins then WM.RefreshPins() end
     if WM.RefreshMapPins then WM.RefreshMapPins() end
-    drawSelectedBlob(true)
+    if WM.RefreshBlobs then WM.RefreshBlobs() end
 end
 
 local function windowSize()
@@ -278,7 +285,7 @@ local function buildChrome()
     titleBar:RegisterForDrag("LeftButton")
     titleBar:SetScript("OnDragStart", function()
         if InCombatLockdown() then return end
-        drawSelectedBlob(false)
+        if WM.ClearBlobs then WM.ClearBlobs() end
         f:StartMoving()
     end)
     titleBar:SetScript("OnDragStop", function()
@@ -287,7 +294,7 @@ local function buildChrome()
             savePosition()
             -- Blizzard recomputes the blob hit box when this is nil.
             WorldMapBlobFrame.xRatio = nil
-            drawSelectedBlob(true)
+            if WM.RefreshBlobs then WM.RefreshBlobs() end
         end)
     end)
 
