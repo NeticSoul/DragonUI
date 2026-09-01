@@ -589,6 +589,13 @@ L["Weighted score of your equipped gear."] = "你已裝備物品的加權評分�
 L["Reset stat order"] = "重設排序"
 L["Restore the stat categories to their default order?"] = "將屬性分類恢復為預設順序？"
 
+-- MERCHANT MODULE
+L["Merchant"] = "商人"
+L["Retail-style vendor window chrome"] = "商人視窗現代風格"
+L["Sell all junk items"] = "出售所有垃圾物品"
+L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "您即將出售所有垃圾物品，且無法再購買回來。\n\n確定要繼續嗎？"
+L["Sold %d junk item(s)."] = "已售出 %d 件垃圾物品。"
+
 -- World Map
 L["World Map"] = "世界地圖"
 L["Retail-style world map with breadcrumb navigation and a quest log side panel"] = "正式服風格的世界地圖，具備路徑導覽與任務記錄側邊欄"

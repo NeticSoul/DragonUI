@@ -170,6 +170,18 @@ local layouts =
 		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
+	-- Retail InsetFrameTemplate: thin inner gold trim around a recessed content area.
+	InsetFrameTemplate = {
+		TopLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerTopLeft" },
+		TopRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerTopRight" },
+		BottomLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerBotLeftCorner", y = -1 },
+		BottomRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerBotRight", y = -1 },
+		TopEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-InnerTopTile" },
+		BottomEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-InnerBotTile" },
+		LeftEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-InnerLeftTile" },
+		RightEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-InnerRightTile" },
+	},
+
 	-- What DialogBorderTemplate resolves to: retail frames a popup with this, NOT with the inset trim.
 	-- Every piece is pushed out by RAIL_PAD because the rail is only 16 thick inside a 64 piece and
 	-- sits 8.5 in; anchored flush the whole border draws inset and the window's ground shows past it.

@@ -658,6 +658,13 @@ L["Weighted score of your equipped gear."] = "Puntuación ponderada de tu equipo
 L["Reset stat order"] = "Restablecer el orden"
 L["Restore the stat categories to their default order?"] = "¿Restablecer las categorías de estadísticas a su orden predeterminado?"
 
+-- MERCHANT MODULE
+L["Merchant"] = "Mercader"
+L["Retail-style vendor window chrome"] = "Marco estilo Retail para la ventana de vendedor"
+L["Sell all junk items"] = "Vender todos los objetos basura"
+L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "Estás a punto de vender todos los objetos basura y no podrás recomprarlos.\n\n¿Seguro que quieres continuar?"
+L["Sold %d junk item(s)."] = "Vendido %d objeto(s) basura."
+
 -- World Map
 L["World Map"] = "Mapa del mundo"
 L["Retail-style world map with breadcrumb navigation and a quest log side panel"] = "Mapa del mundo al estilo de Retail con navegación por migas de pan y un panel lateral de misiones"
