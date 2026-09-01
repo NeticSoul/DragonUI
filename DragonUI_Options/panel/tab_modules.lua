@@ -187,6 +187,12 @@ local function BuildModulesTab(scroll)
         moduleName = "versioncheck",
     })
 
+    ModuleToggle(uiSection, {
+        label = LO["Merchant"],
+        desc = LO["Retail-style vendor window chrome"],
+        moduleName = "merchant",
+    })
+
     -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================
@@ -219,6 +225,7 @@ local function BuildModulesTab(scroll)
             boss = true,
             rage_indicator = true,
             buffs = true,
+            merchant = true,
         }
 
         for _, moduleName in ipairs(MR.loadOrder) do
