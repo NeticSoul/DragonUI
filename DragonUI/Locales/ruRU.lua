@@ -658,6 +658,13 @@ L["Weighted score of your equipped gear."] = "Взвешенная оценка 
 L["Reset stat order"] = "Сбросить порядок"
 L["Restore the stat categories to their default order?"] = "Вернуть категориям характеристик порядок по умолчанию?"
 
+-- MERCHANT MODULE
+L["Merchant"] = "Торговец"
+L["Retail-style vendor window chrome"] = "Современный интерфейс окна торговца"
+L["Sell all junk items"] = "Продать весь хлам"
+L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "Вы собираетесь продать весь хлам и не сможете купить его обратно.\n\nВы уверены, что хотите продолжить?"
+L["Sold %d junk item(s)."] = "Продано %d предмет(а/ов) хлама."
+
 -- World Map
 L["World Map"] = "Карта мира"
 L["Retail-style world map with breadcrumb navigation and a quest log side panel"] = "Карта мира в стиле Retail с навигационной цепочкой и боковой панелью журнала заданий"

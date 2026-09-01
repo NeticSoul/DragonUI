@@ -71,6 +71,9 @@
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>
 
+    <!-- Retail-style vendor window reskin -->
+    <Include file="merchant\merchant.xml"/>
+
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>
     
