@@ -371,6 +371,7 @@ L["Choose where the number appears:"] = true
 L["Guild Bank"] = true
 L["Inspect"] = true
 L["Merchant"] = true
+L["Retail-style vendor window chrome"] = true
 L["Trade"] = true
 L["Loot"] = true
 L["Mail"] = true
