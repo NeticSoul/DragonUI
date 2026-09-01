@@ -655,6 +655,13 @@ L["Weighted score of your equipped gear."] = true
 L["Reset stat order"] = true
 L["Restore the stat categories to their default order?"] = true
 
+--MERCHANT MODULE
+L["Merchant"] = true
+L["Retail-style vendor window chrome"] = true
+L["Sell all junk items"] = true
+L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = true
+L["Sold %d junk item(s)."] = true
+
 -- World Map
 L["World Map"] = true
 L["Retail-style world map with breadcrumb navigation and a quest log side panel"] = true

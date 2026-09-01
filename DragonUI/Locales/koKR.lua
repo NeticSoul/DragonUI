@@ -656,6 +656,13 @@ L["Weighted score of your equipped gear."] = "착용 중인 장비의 가중 점
 L["Reset stat order"] = "순서 초기화"
 L["Restore the stat categories to their default order?"] = "능력치 분류를 기본 순서로 되돌릴까요?"
 
+-- MERCHANT MODULE
+L["Merchant"] = "상인"
+L["Retail-style vendor window chrome"] = "상인 창 모던 스타일"
+L["Sell all junk items"] = "모든 잡동사니 아이템 판매"
+L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "모든 잡동사니 아이템을 판매하게 되며 다시 구매할 수 없습니다.\n\n계속 진행하시겠습니까?"
+L["Sold %d junk item(s)."] = "%d 개의 잡동사니 아이템이 판매되었습니다."
+
 -- World Map
 L["World Map"] = "세계 지도"
 L["Retail-style world map with breadcrumb navigation and a quest log side panel"] = "탐색 경로와 퀘스트 목록 옆 패널을 갖춘 리테일 스타일 세계 지도"
