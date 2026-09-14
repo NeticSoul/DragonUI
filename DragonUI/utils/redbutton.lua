@@ -105,7 +105,8 @@ function addon.SkinRedButton(btn)
     skin.hlRight = highlight(nil, "TOPRIGHT", HL_LEFT + HL_CAP, HL_LEFT)
     skin.hlMiddle = highlight(skin.middle, nil, HL_LEFT + HL_CAP, HL_RIGHT - HL_CAP)
 
-    btn:HookScript("OnEnter", function()
+    btn:HookScript("OnEnter", function(self)
+        if self.IsEnabled and not self:IsEnabled() then return end
         skin.hlLeft:Show(); skin.hlRight:Show(); skin.hlMiddle:Show()
     end)
     btn:HookScript("OnLeave", function(self)
@@ -113,11 +114,14 @@ function addon.SkinRedButton(btn)
         -- Released off the button: OnMouseUp never arrives, so the pushed art would stick.
         apply(self)
     end)
-    btn:HookScript("OnMouseDown", function(self) apply(self, "PUSHED") end)
+    btn:HookScript("OnMouseDown", function(self)
+        if self.IsEnabled and not self:IsEnabled() then return apply(self, "DISABLED") end
+        apply(self, "PUSHED")
+    end)
     -- Next frame: GetButtonState can still read PUSHED inside OnMouseUp, which re-pins the art.
     btn:HookScript("OnMouseUp", function(self) addon:After(0, function() apply(self) end) end)
-    btn:HookScript("OnEnable", function(self) apply(self) end)
-    btn:HookScript("OnDisable", function(self) apply(self) end)
+    btn:HookScript("OnEnable", function(self) apply(self, "NORMAL") end)
+    btn:HookScript("OnDisable", function(self) apply(self, "DISABLED") end)
     btn:HookScript("OnSizeChanged", function(self) resize(self) end)
     btn:HookScript("OnShow", function(self) apply(self) end)
 

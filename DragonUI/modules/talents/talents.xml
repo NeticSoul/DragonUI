@@ -1,0 +1,11 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+    <Script file="NodeData.lua"/>
+    <Script file="Talents.lua"/>
+    <Script file="Behavior.lua"/>
+    <Script file="SearchBox.lua"/>
+    <Script file="SpecTabs.lua"/>
+    <Script file="Glyphs.lua"/>
+    <Script file="Loadouts.lua"/>
+    <Script file="WarmodeButton.lua"/>
+</Ui>

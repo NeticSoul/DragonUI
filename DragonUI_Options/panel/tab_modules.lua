@@ -127,6 +127,13 @@ local function BuildModulesTab(scroll)
     })
 
     ModuleToggle(uiSection, {
+        label = LO["Talents"] or "Talents",
+        desc = LO["Retail-style talent window"] or "Retail-style talent window",
+        moduleName = "talents",
+        requiresReload = true,
+    })
+
+    ModuleToggle(uiSection, {
         label = LO["Buff Frame System"],
         desc = LO["Buff frame styling and toggle button."],
         moduleName = "buffs",
@@ -219,6 +226,7 @@ local function BuildModulesTab(scroll)
             boss = true,
             rage_indicator = true,
             buffs = true,
+            talents = true,
         }
 
         for _, moduleName in ipairs(MR.loadOrder) do

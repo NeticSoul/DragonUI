@@ -92,6 +92,9 @@
     <!-- Retail-style world map -->
     <Include file="worldmap\worldmap.xml"/>
 
+    <!-- Talents module -->
+    <Include file="talents\talents.xml"/>
+
     <!-- Version Check module (cross-player version broadcast) -->
     <Script file="versioncheck.lua"/>
 </Ui>

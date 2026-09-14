@@ -1824,3 +1824,7 @@ L["Show Graveyards"] = "Показывать кладбища"
 L["Show graveyard pins on zone maps."] = "Показывает кладбища на картах зон."
 L["Show Flight Points"] = "Показывать точки полета"
 L["Show flight master pins on zone maps."] = "Показывает распорядителей полетов на картах зон."
+
+-- Talents
+L["Talents"] = "Таланты"
+L["Retail-style talent window"] = "Окно талантов в стиле Retail"

@@ -1831,3 +1831,7 @@ L["Show Graveyards"] = "顯示墓地"
 L["Show graveyard pins on zone maps."] = "在區域地圖上顯示墓地。"
 L["Show Flight Points"] = "顯示飛行點"
 L["Show flight master pins on zone maps."] = "在區域地圖上顯示飛行管理員。"
+
+-- Talents
+L["Talents"] = "天賦"
+L["Retail-style talent window"] = "正式服風格天賦視窗"

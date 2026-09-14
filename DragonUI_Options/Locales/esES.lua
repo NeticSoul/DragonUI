@@ -1823,3 +1823,7 @@ L["Show Graveyards"] = "Mostrar cementerios"
 L["Show graveyard pins on zone maps."] = "Muestra los cementerios en los mapas de zona."
 L["Show Flight Points"] = "Mostrar puntos de vuelo"
 L["Show flight master pins on zone maps."] = "Muestra los maestros de vuelo en los mapas de zona."
+
+-- Talents
+L["Talents"] = "Talentos"
+L["Retail-style talent window"] = "Ventana de talentos al estilo Retail"

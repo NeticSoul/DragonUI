@@ -1825,3 +1825,7 @@ L["Show Graveyards"] = "묘지 표시"
 L["Show graveyard pins on zone maps."] = "지역 지도에 묘지를 표시합니다."
 L["Show Flight Points"] = "비행 지점 표시"
 L["Show flight master pins on zone maps."] = "지역 지도에 비행 조련사를 표시합니다."
+
+-- Talents
+L["Talents"] = "특성"
+L["Retail-style talent window"] = "리테일 스타일 특성 창"

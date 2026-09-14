@@ -1807,3 +1807,7 @@ L["Show Graveyards"] = true
 L["Show graveyard pins on zone maps."] = true
 L["Show Flight Points"] = true
 L["Show flight master pins on zone maps."] = true
+
+-- Talents
+L["Talents"] = true
+L["Retail-style talent window"] = true
