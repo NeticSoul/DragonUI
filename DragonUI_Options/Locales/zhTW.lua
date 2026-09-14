@@ -1905,3 +1905,7 @@ L["HP Warning Threshold"] = "HP警告臨界值"
 L["Percentage of HP at which the warning triggers."] = "HP觸發警告的百分比。"
 L["Test Warning (3 sec)"] = "測試警告（3秒）"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "觸發3秒的警告狀態預覽，以幫助你調整臨界值。"
+
+-- Talents
+L["Talents"] = "天賦"
+L["Retail-style talent window"] = "正式服風格天賦視窗"

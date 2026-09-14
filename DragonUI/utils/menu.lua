@@ -106,10 +106,28 @@ local function acquire(index)
     button.text = button:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmallLeft")
     button.text:SetPoint("RIGHT", button, "RIGHT", 0, 0)
     button.text:SetJustifyH("LEFT")
-    button:SetScript("OnClick", function(self)
+    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    button:SetScript("OnClick", function(self, mouseButton)
         PlaySound("igMainMenuOptionCheckBoxOn")
-        if self.entry.func then self.entry.func() end
+        local handler = (mouseButton == "RightButton" and self.entry.funcRight) or self.entry.func
+        if handler then handler() end
         if self.entry.keepShown and menu:IsShown() then refresh() else menu:Hide() end
+    end)
+    button:SetScript("OnEnter", function(self)
+        if self.entry.tooltip then
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            if type(self.entry.tooltip) == "table" then
+                for i, line in ipairs(self.entry.tooltip) do
+                    GameTooltip:AddLine(line, 1, 1, 1)
+                end
+            else
+                GameTooltip:AddLine(self.entry.tooltip, 1, 1, 1)
+            end
+            GameTooltip:Show()
+        end
+    end)
+    button:SetScript("OnLeave", function(self)
+        GameTooltip:Hide()
     end)
     buttons[index] = button
     return button

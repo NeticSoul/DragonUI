@@ -823,6 +823,9 @@ local defaults = {
             stance = {
                 enabled = true -- Apply DragonUI stance/shapeshift bar positioning and styling
             },
+            talents = {
+                enabled = true -- Talent spec tracking and custom spec names UI
+            },
             petbar = {
                 enabled = true -- Apply DragonUI pet bar positioning and styling
             },

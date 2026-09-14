@@ -1897,3 +1897,7 @@ L["HP Warning Threshold"] = "HP-Warnschwellenwert"
 L["Percentage of HP at which the warning triggers."] = "Prozentsatz der HP, bei dem die Warnung ausgelöst wird."
 L["Test Warning (3 sec)"] = "Warnung testen (3 Sek.)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Löst eine 3-Sekunden-Vorschau des Warnzustands aus, damit du den Schwellenwert anpassen kannst."
+
+-- Talents
+L["Talents"] = "Talente"
+L["Retail-style talent window"] = "Talentfenster im Retail-Stil"
