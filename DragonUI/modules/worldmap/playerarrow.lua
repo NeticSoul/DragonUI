@@ -8,16 +8,15 @@ local WM = addon.WorldMap
 
 local ARROW = addon._dir .. "Minimap\\poi-player"
 local SIZE = 36
-local INTERVAL = 0.05
 
-local arrow, driver
-local since = 0
+local arrow, driver, facing
 
-local function tick(self, elapsed)
-    since = since + elapsed
-    if since < INTERVAL then return end
-    since = 0
-    arrow:SetRotation(GetPlayerFacing() or 0)
+-- Every frame, like the client turns the minimap's: throttling this reads as a stuttering arrow.
+local function tick()
+    local now = GetPlayerFacing() or 0
+    if now == facing then return end
+    facing = now
+    arrow:SetRotation(now)
 end
 
 -- WorldMapPlayer hangs off WorldMapButton, which carries the canvas scale; retail keeps pins one size.

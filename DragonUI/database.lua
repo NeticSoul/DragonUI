@@ -1153,7 +1153,7 @@ local defaults = {
                 flightPoints = true, -- Flight master pins on zone maps
                 coordinates = true, -- Cursor and player coordinates in the canvas corner
                 zoneLevels = true, -- Recommended level ranges beside zone names and instance pins
-                fadeWhenMoving = true, -- Dim the map while you move with the cursor off it
+                fadeWhenMoving = false, -- Dim the map while you move with the cursor off it
                 moveAlpha = 0.4, -- Alpha the map fades to while moving
             }
         },
