@@ -680,10 +680,14 @@ local function StabilizeSecondaryBarLayering()
         return
     end
 
-    local secondaryBars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
-    for _, bar in ipairs(secondaryBars) do
+    -- MultiActionBars.xml puts these in HIGH, where they cut through every window the panel
+    -- manager raises to the top of MEDIUM: the world map, the bags, the character panel.
+    local secondaryBars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft,
+        BonusActionBarFrame, VehicleMenuBarActionButtonFrame}
+    for _, bar in pairs(secondaryBars) do
         if bar and bar.SetToplevel then
             bar:SetToplevel(false)
+            bar:SetFrameStrata("MEDIUM")
         end
     end
 
@@ -1071,7 +1075,7 @@ local function UpdateDfuiExhaustionTick()
         local barW = dfXpBar:GetWidth()
         if not barW or barW == 0 then barW = cfg.bar_width or 466 end
         ExhaustionTick:SetParent(dfXpBar)
-        ExhaustionTick:SetFrameStrata("HIGH")
+        ExhaustionTick:SetFrameStrata("MEDIUM")
         ExhaustionTick:SetFrameLevel(20)
         local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
         tickPos = math.max(tickPos, 0)
@@ -1337,7 +1341,7 @@ local function ApplyRetailUIExpRepBarStyling()
             if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
                 -- Re-parent to MainMenuExpBar and ensure it renders above everything
                 ExhaustionTick:SetParent(MainMenuExpBar)
-                ExhaustionTick:SetFrameStrata("HIGH")
+                ExhaustionTick:SetFrameStrata("MEDIUM")
                 ExhaustionTick:SetFrameLevel(20)
                 -- Position immediately
                 local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
@@ -2218,15 +2222,8 @@ local function ApplyMainbarsSystem()
                     maxLevel = math.max(maxLevel, bar:GetFrameLevel())
                 end
             end
-            
-            -- Check container frame levels too
-            for _, frame in pairs(addon.ActionBarFrames) do
-                if frame and frame.GetFrameLevel then
-                    maxLevel = math.max(maxLevel, frame:GetFrameLevel())
-                end
-            end
 
-            -- Set gryphon art frame level significantly higher than all bars
+            -- Only the bars count: the editor containers sit at level 100 in FULLSCREEN and parent nothing.
             pUiMainBarArt:SetFrameLevel(maxLevel + 15)
             
             -- Also ensure individual gryphons have high draw layers
@@ -2279,7 +2276,8 @@ local function InitializeMainbars()
 
     -- Set initial scale and properties
     pUiMainBar:SetScale(config.mainbars.scale_actionbar);
-    pUiMainBarArt:SetFrameStrata('HIGH');
+    -- The gryphons ride over the bars on frame level alone; a band of their own put them over windows.
+    pUiMainBarArt:SetFrameStrata('MEDIUM');
     pUiMainBarArt:SetFrameLevel(pUiMainBar:GetFrameLevel() + 4);
     pUiMainBarArt:SetAllPoints(pUiMainBar);
     -- CRITICAL: Disable mouse to avoid dead zone on icons
@@ -2617,12 +2615,6 @@ local function InitializeMainbars()
                         end
                     end
                     
-                    for _, frame in pairs(addon.ActionBarFrames) do
-                        if frame and frame.GetFrameLevel then
-                            maxLevel = math.max(maxLevel, frame:GetFrameLevel())
-                        end
-                    end
-
                     pUiMainBarArt:SetFrameLevel(maxLevel + 15)
                 end
             end
