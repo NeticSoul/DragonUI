@@ -16,6 +16,8 @@ local LIST_TOP_PADDING = 8
 local RING_CORNER, RING_OUTSET = 53, 4
 -- The frame's gold line ends 3px inside the list; rows clip below it so none is cut against it.
 local LIST_CLIP_TOP = 5
+-- A dropped map lands on a fractional pixel, and a clip flush with the gold line bleeds a row past it.
+local LIST_CLIP_BOTTOM = 2
 local SEARCH_H = 20
 -- Centred on the frame below it, gutter excluded: it has to sit squarely over the list.
 local SEARCH_TOP, SEARCH_INSET = 6, 8
@@ -929,7 +931,7 @@ local function buildPanel()
 
     scroll = CreateFrame("ScrollFrame", "DragonUIWorldMapQuestList", panel, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", list, "TOPLEFT", 0, -LIST_CLIP_TOP)
-    scroll:SetPoint("BOTTOMRIGHT", list, "BOTTOMRIGHT", 0, 0)
+    scroll:SetPoint("BOTTOMRIGHT", list, "BOTTOMRIGHT", 0, LIST_CLIP_BOTTOM)
     scroll.scrollBarHideable = false
     scroll.hideThumbWhenUnscrollable = true
     -- The bar hangs in the gutter lane, its right edge 7 in from the panel so it clears the frame.
