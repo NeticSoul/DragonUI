@@ -225,8 +225,8 @@ WM.RefreshLandmarks = restyleLandmarks
 function WM.RefreshPins()
     restyleLandmarks()
     for index = 1, WorldMapFrame.numQuests or 0 do
-        local button = _G["WorldMapQuestFrame" .. index].poiIcon
-        if button then placeQuestPOI(button) end
+        local row = _G["WorldMapQuestFrame" .. index]
+        if row and row.poiIcon then placeQuestPOI(row.poiIcon) end
     end
 end
 
@@ -236,20 +236,19 @@ end
 
 function WM.RefreshQuestPOIs()
     local shown = WM:Config().questPOI ~= false
+    local swap, swapped = swapButton(), false
     for index = 1, WorldMapFrame.numQuests or 0 do
-        local button = _G["WorldMapQuestFrame" .. index].poiIcon
+        local row = _G["WorldMapQuestFrame" .. index]
+        local button = row and row.poiIcon
         if button then
-            if not shown then
-                button:Hide()
-            -- QuestPOI_SelectButton hides a COMPLETE_SWAP source and shows its twin in the swap slot.
-            elseif not (button.isSelected and button.type == QUEST_POI_COMPLETE_SWAP) then
-                button:Show()
-            end
+            -- A picked completed quest draws through the shared swap twin, with its own source hidden.
+            local lent = button.isSelected and button.type == QUEST_POI_COMPLETE_SWAP
+            swapped = swapped or lent
+            if shown and not lent then button:Show() else button:Hide() end
         end
     end
-    if not shown then
-        local swap = swapButton()
-        if swap then swap:Hide() end
+    if swap then
+        if shown and swapped then swap:Show() else swap:Hide() end
     end
     if WM.RefreshBlobs then WM.RefreshBlobs() end
     -- The list badges are the same pins seen from the panel, so they come and go with them.

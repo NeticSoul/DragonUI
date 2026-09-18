@@ -19,6 +19,9 @@ addon.WorldMap.FlightPoints = {
     { x = 0.1190, y = 0.7748, name = "Talrendis Point, Azshara", faction = "Alliance" },
     { x = 0.2195, y = 0.4969, name = "Valormok, Azshara", faction = "Horde" },
   },
+  ["AzuremystIsle"] = {
+    { x = 0.3177, y = 0.4646, name = "The Exodar", faction = "Alliance" },
+  },
   ["Badlands"] = {
     { x = 0.0406, y = 0.4489, name = "Kargath, Badlands", faction = "Horde" },
   },
@@ -102,6 +105,9 @@ addon.WorldMap.FlightPoints = {
   ["Elwynn"] = {
     { x = 0.3013, y = 0.3893, name = "Stormwind, Elwynn", faction = "Alliance" },
   },
+  ["EversongWoods"] = {
+    { x = 0.5438, y = 0.5075, name = "Silvermoon City", faction = "Horde" },
+  },
   ["Felwood"] = {
     { x = 0.3442, y = 0.5387, name = "Bloodvenom Post, Felwood", faction = "Horde" },
     { x = 0.5144, y = 0.8229, name = "Emerald Sanctuary, Felwood" },
@@ -156,6 +162,9 @@ addon.WorldMap.FlightPoints = {
     { x = 0.7935, y = 0.7235, name = "Crusaders' Pinnacle, Icecrown" },
     { x = 0.8779, y = 0.7803, name = "The Argent Vanguard, Icecrown" },
   },
+  ["Ironforge"] = {
+    { x = 0.5589, y = 0.4787, name = "Ironforge, Dun Morogh", faction = "Alliance" },
+  },
   ["LakeWintergrasp"] = {
     { x = 0.2163, y = 0.3487, name = "Warsong Camp, Wintergrasp", faction = "Horde" },
     { x = 0.7205, y = 0.3105, name = "Valiance Landing Camp, Wintergrasp", faction = "Alliance" },
@@ -180,6 +189,9 @@ addon.WorldMap.FlightPoints = {
     { x = 0.4527, y = 0.3494, name = "The Stormspire, Netherstorm" },
     { x = 0.6520, y = 0.6676, name = "Cosmowrench, Netherstorm" },
   },
+  ["Ogrimmar"] = {
+    { x = 0.4528, y = 0.6375, name = "Orgrimmar, Durotar", faction = "Horde" },
+  },
   ["Redridge"] = {
     { x = 0.3043, y = 0.5899, name = "Lakeshire, Redridge", faction = "Alliance" },
   },
@@ -192,6 +204,9 @@ addon.WorldMap.FlightPoints = {
     { x = 0.3761, y = 0.5548, name = "Wildhammer Stronghold, Shadowmoon Valley", faction = "Alliance" },
     { x = 0.5639, y = 0.5796, name = "Sanctum of the Stars, Shadowmoon Valley" },
     { x = 0.6319, y = 0.3048, name = "Altar of Sha'tar, Shadowmoon Valley" },
+  },
+  ["ShattrathCity"] = {
+    { x = 0.6380, y = 0.4172, name = "Shattrath, Terokkar Forest" },
   },
   ["SholazarBasin"] = {
     { x = 0.2536, y = 0.5824, name = "Nesingwary Base Camp, Sholazar Basin" },
@@ -209,6 +224,9 @@ addon.WorldMap.FlightPoints = {
   ["StonetalonMountains"] = {
     { x = 0.3654, y = 0.0723, name = "Stonetalon Peak, Stonetalon Mountains", faction = "Alliance" },
     { x = 0.4516, y = 0.5989, name = "Sun Rock Retreat, Stonetalon Mountains", faction = "Horde" },
+  },
+  ["Stormwind"] = {
+    { x = 0.7098, y = 0.7293, name = "Stormwind, Elwynn", faction = "Alliance" },
   },
   ["Stranglethorn"] = {
     { x = 0.2682, y = 0.7700, name = "Booty Bay, Stranglethorn" },
@@ -251,9 +269,15 @@ addon.WorldMap.FlightPoints = {
   ["ThousandNeedles"] = {
     { x = 0.4502, y = 0.4913, name = "Freewind Post, Thousand Needles", faction = "Horde" },
   },
+  ["ThunderBluff"] = {
+    { x = 0.4665, y = 0.4990, name = "Thunder Bluff, Mulgore", faction = "Horde" },
+  },
   ["Tirisfal"] = {
     { x = 0.6120, y = 0.7532, name = "Undercity, Tirisfal", faction = "Horde" },
     { x = 0.8352, y = 0.7006, name = "The Bulwark, Tirisfal", faction = "Horde" },
+  },
+  ["Undercity"] = {
+    { x = 0.6309, y = 0.4832, name = "Undercity, Tirisfal", faction = "Horde" },
   },
   ["UngoroCrater"] = {
     { x = 0.4530, y = 0.0597, name = "Marshal's Refuge, Un'Goro Crater" },
