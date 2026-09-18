@@ -1180,6 +1180,13 @@ end
 -- ============================================================================
 -- EVENTS
 -- ============================================================================
+local function RefreshBlizzardRows()
+    local frame = _G.LootFrame
+    -- Blizzard fills these in its own LOOT_OPENED handler; until then an update reads nil.
+    if IsActive() and frame and frame:IsShown() and frame.numLootItems and frame.page then
+        LootFrame_Update()
+    end
+en
 
 local events = CreateFrame("Frame")
 events:SetScript("OnEvent", function(_, event, arg1)
@@ -1188,12 +1195,11 @@ events:SetScript("OnEvent", function(_, event, arg1)
     end
 
     if event == "LOOT_OPENED" then
-        -- 3.3.5a passes autoLoot as a number, unlike retail's boolean.
         isAutoLoot = arg1 and arg1 ~= 0
-        -- Blizzard already laid the window out by now, so a grown pool has to redo it.
         if EnsureRows(GetNumLootItems()) then
             SyncPanelLevel(_G.LootFrame)
-            LootFrame_Update()
+            -- Deferred: our handler can run before Blizzard's, leaving its state unset.
+            addon:After(0, RefreshBlizzardRows)
         end
         if UseAnimatedReflow() then
             ShowPanelWhenReady()
