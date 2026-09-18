@@ -131,6 +131,7 @@ local function layoutCanvas()
     WorldMapFrameAreaFrame:SetScale(1 / scale)
 
     scaleArrows(WM.poiScale)
+    if WM.RefreshPlayerArrow then WM.RefreshPlayerArrow() end
     if WM.RefreshPins then WM.RefreshPins() end
     if WM.RefreshMapPins then WM.RefreshMapPins() end
     if WM.RefreshBlobs then WM.RefreshBlobs() end
@@ -522,6 +523,7 @@ local function boot()
     if WM.BuildFog then WM.BuildFog() end
     if WM.BuildMapPins then WM.BuildMapPins() end
     if WM.BuildCoords then WM.BuildCoords() end
+    if WM.BuildPlayerArrow then WM.BuildPlayerArrow() end
     if WM.BuildFade then WM.BuildFade() end
 
     chromeAlpha(WORLDMAP_SETTINGS.opacity)
