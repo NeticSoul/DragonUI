@@ -195,6 +195,45 @@ local function refreshResistances()
     end
 end
 
+local function safeFormat(template, ...)
+    if not template then return nil end
+    local ok, text = pcall(string.format, template, ...)
+    return ok and text or template
+end
+
+local function petStatTooltip(i, stat, effective, positive, negative)
+    local template = _G["DEFAULT_STAT" .. i .. "_TOOLTIP"]
+    if not template then return nil end
+
+    local base = stat - positive - negative
+    if i == 1 then
+        return safeFormat(template, effective - 20)
+    elseif i == 2 then
+        local crit = GetCritChanceFromAgility and GetCritChanceFromAgility("pet") or 0
+        return safeFormat(template, crit, effective * 2)
+    elseif i == 3 then
+        local mod = GetUnitHealthModifier and GetUnitHealthModifier("pet") or 1
+        local maxMod = GetUnitMaxHealthModifier and GetUnitMaxHealthModifier("pet") or 1
+        local expected = ((base - 20) * 10 + 20) * mod
+        local real = ((effective - 20) * 10 + 20) * mod
+        return safeFormat(template, (real - expected) * maxMod)
+    elseif i == 4 then
+        local mod = GetUnitPowerModifier and GetUnitPowerModifier("pet") or 1
+        local mana = ((effective - 20) * 15 + 20) * mod
+        local spellCrit = GetSpellCritChanceFromIntellect and GetSpellCritChanceFromIntellect("pet") or 0
+        return safeFormat(template, mana, spellCrit)
+    elseif i == 5 then
+        local text = safeFormat(template, GetUnitHealthRegenRateFromSpirit and GetUnitHealthRegenRateFromSpirit("pet") or 0)
+        if UnitHasMana("pet") and GetUnitManaRegenRateFromSpirit then
+            local regen = math.floor(GetUnitManaRegenRateFromSpirit("pet") * 5)
+            local manaLine = safeFormat(MANA_REGEN_FROM_SPIRIT, regen)
+            if manaLine then text = text .. "\n" .. manaLine end
+        end
+        return text
+    end
+    return template
+end
+
 local function refreshAttributes()
     for i = 1, NUM_PET_STATS do
         local row = attrRows[i]
@@ -211,7 +250,7 @@ local function refreshAttributes()
             tooltip = tooltip .. FONT_COLOR_CODE_CLOSE .. " )"
         end
         row.tooltip = tooltip
-        row.tooltip2 = _G["DEFAULT_STAT" .. i .. "_TOOLTIP"]
+        row.tooltip2 = petStatTooltip(i, stat, effective, positive, negative)
     end
 end
 
@@ -221,10 +260,12 @@ local function refreshCombat()
     local _, effectiveArmor = UnitArmor("pet")
     local bonus = GetPetSpellBonusDamage and GetPetSpellBonusDamage() or 0
 
+    local totalAP = (power or 0) + (powerPos or 0) + (powerNeg or 0)
+
     combatRows[1].Text:SetText(string.format(STAT_FORMAT, ATTACK_POWER))
-    combatRows[1].Value:SetText(colored((power or 0) + (powerPos or 0) + (powerNeg or 0),
-                                        powerPos, powerNeg))
+    combatRows[1].Value:SetText(colored(totalAP, powerPos, powerNeg))
     combatRows[1].tooltip = MELEE_ATTACK_POWER
+    combatRows[1].tooltip2 = safeFormat(MELEE_ATTACK_POWER_TOOLTIP, totalAP / 14)
 
     combatRows[2].Text:SetText(string.format(STAT_FORMAT, DAMAGE))
     combatRows[2].Value:SetText(string.format("%d-%d",
