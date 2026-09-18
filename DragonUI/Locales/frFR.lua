@@ -610,3 +610,18 @@ L["Show Flight Points"] = "Afficher les points de vol"
 L["Flight Master"] = "Maître de vol"
 L["Click to view on Map"] = "Cliquez pour afficher sur la carte"
 L["Search Quest Log"] = "Rechercher dans le journal de quêtes"
+
+-- Level Up Enhance Module
+L["LevelUpFrame"] = "Level Up"
+L["Enhanced tooltip styling with class colors and health bars"] = "Style d'infobulle amélioré avec couleurs de classe et barres de vie"
+L["Level Up Enhance"] = "Survie Améliorée"
+L["Enhanced level-up notification with animated frame"] = "Notification de nivel améliorée avec cadre animé"
+L["You've Reached"] = "Tu as atteint"
+L["Level %d"] = "Niveau %d"
+
+-- ============================================================================
+-- LOW HP ALERT MODULE
+-- ============================================================================
+
+L["Low HP Alert"] = "Alerte de HP Bas"
+L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "Émet un son et fait clignoter les bords de l'écran lorsque votre HP descend sous le seuil."

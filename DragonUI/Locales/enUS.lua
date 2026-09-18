@@ -676,3 +676,18 @@ L["Show Flight Points"] = true
 L["Flight Master"] = true
 L["Click to view on Map"] = true
 L["Search Quest Log"] = true
+
+-- Level Up Enhance Module
+L["LevelUpFrame"] = "Level Up"
+L["Enhanced tooltip styling with class colors and health bars"] = true
+L["Level Up Enhance"] = true
+L["Enhanced level-up notification with animated frame"] = true
+L["You've Reached"] = true
+L["Level %d"] = true
+
+-- ============================================================================
+-- LOW HP ALERT MODULE
+-- ============================================================================
+
+L["Low HP Alert"] = true
+L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = true

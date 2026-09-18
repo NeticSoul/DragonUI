@@ -672,3 +672,18 @@ L["Show Flight Points"] = "显示飞行点"
 L["Flight Master"] = "飞行管理员"
 L["Click to view on Map"] = "点击在地图上查看"
 L["Search Quest Log"] = "搜索任务日志"
+
+-- Level Up Enhance Module
+L["LevelUpFrame"] = "Level Up"
+L["Enhanced tooltip styling with class colors and health bars"] = "带有职业颜色和生命条的增强提示样式"
+L["Level Up Enhance"] = "升级增强"
+L["Enhanced level-up notification with animated frame"] = "带有动画边框的增强升级通知"
+L["You've Reached"] = "你已达到"
+L["Level %d"] = "等级 %d"
+
+-- ============================================================================
+-- LOW HP ALERT MODULE
+-- ============================================================================
+
+L["Low HP Alert"] = "低HP警报"
+L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "当你的HP低于设定的临界值时，发出声音并闪烁屏幕边缘。"
