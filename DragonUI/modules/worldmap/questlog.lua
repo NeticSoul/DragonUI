@@ -35,6 +35,8 @@ local TOGGLE_SIZE = 16
 local BADGE_SIZE, TAG_SIZE, TRACK_SIZE = QP.SIZE, 16, 16
 local TEXT_INDENT = BADGE_SIZE + 6
 local OBJECTIVE_INDENT = TEXT_INDENT + 6
+-- Where a header's own text starts, so a row with no badge still reads as sitting under it.
+local HEADER_TEXT_X = TOGGLE_SIZE + 6
 
 local panel, search, settings, scroll, child
 local query = ""
@@ -663,30 +665,33 @@ local function fillRow(row, data, width)
     row._style = data.style
     row._focused = data.questID ~= nil and data.questID == QP.GetFocus()
     row._color = GetQuestDifficultyColor(data.level or 0)
+    -- Every badge only ever points at the canvas, so with its pins off the whole column goes too.
+    local badges = WM:Config().questPOI ~= false
+    local indent = badges and TEXT_INDENT or HEADER_TEXT_X
     -- Without objectives the row is still as tall as the badge, so its one line centres on it.
     local single = data.objectives == ""
     row.title:ClearAllPoints()
     row.track:ClearAllPoints()
     if single then
-        row.title:SetPoint("LEFT", row, "LEFT", TEXT_INDENT, 0)
+        row.title:SetPoint("LEFT", row, "LEFT", indent, 0)
         row.track:SetPoint("RIGHT", row, "RIGHT", -2, 0)
     else
-        row.title:SetPoint("TOPLEFT", row, "TOPLEFT", TEXT_INDENT, -2)
+        row.title:SetPoint("TOPLEFT", row, "TOPLEFT", indent, -2)
         row.track:SetPoint("TOPRIGHT", row, "TOPRIGHT", -2, -2)
     end
-    row.title:SetWidth(width - TEXT_INDENT - TRACK_SIZE - TAG_SIZE - 8)
+    row.title:SetWidth(width - indent - TRACK_SIZE - TAG_SIZE - 8)
     row.title:SetText(data.name or "")
     row.title:SetTextColor(row._color.r, row._color.g, row._color.b)
 
     if data.objectives ~= "" then
-        row.objectives:SetWidth(width - OBJECTIVE_INDENT - 4)
+        row.objectives:SetWidth(width - indent - (OBJECTIVE_INDENT - TEXT_INDENT) - 4)
         row.objectives:SetText(data.objectives)
         row.objectives:Show()
     else
         row.objectives:Hide()
     end
 
-    if data.style then
+    if data.style and badges then
         QP.SetStyle(row.badge, data.style, data.number, row._focused)
         row.badge:Show()
     else
@@ -710,7 +715,7 @@ local function fillRow(row, data, width)
 
     local height = row.title:GetHeight() + 6
     if data.objectives ~= "" then height = height + row.objectives:GetHeight() + 2 end
-    row:SetHeight(math.max(height, BADGE_SIZE + 4))
+    row:SetHeight(badges and math.max(height, BADGE_SIZE + 4) or height)
 end
 
 -- ============================================================================

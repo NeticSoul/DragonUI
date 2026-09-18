@@ -294,7 +294,8 @@ local function buildChrome()
 
     -- The title band drags the window. The frame is protected, so never in combat.
     local titleBar = CreateFrame("Frame", "DragonUIWorldMapTitleBar", border)
-    titleBar:SetFrameLevel(BASE_LEVEL + 1)
+    -- Over the spacer and the panel: at a shared level the spacer won, so only its right end dragged.
+    titleBar:SetFrameLevel(BASE_LEVEL + 4)
     titleBar:SetPoint("TOPLEFT", border, "TOPLEFT", 58, -1)
     titleBar:SetPoint("TOPRIGHT", border, "TOPRIGHT", -52, -1)
     titleBar:SetHeight(20)

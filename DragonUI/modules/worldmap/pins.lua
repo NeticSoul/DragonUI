@@ -252,6 +252,8 @@ function WM.RefreshQuestPOIs()
         if swap then swap:Hide() end
     end
     if WM.RefreshBlobs then WM.RefreshBlobs() end
+    -- The list badges are the same pins seen from the panel, so they come and go with them.
+    if WM.RefreshQuestLog then WM.RefreshQuestLog() end
 end
 
 local function styleAreaLabel()
