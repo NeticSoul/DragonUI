@@ -1,6 +1,7 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\FrameXML\UI.xsd">
     <Script file="core.lua"/>
+    <Script file="zonelevels.lua"/>
     <Script file="navbar.lua"/>
     <Script file="pins.lua"/>
     <Script file="questlog.lua"/>
@@ -11,4 +12,6 @@
     <Script file="graveyarddata.lua"/>
     <Script file="flightpointdata.lua"/>
     <Script file="mappins.lua"/>
+    <Script file="coords.lua"/>
+    <Script file="fade.lua"/>
 </Ui>

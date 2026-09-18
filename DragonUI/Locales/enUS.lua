@@ -676,3 +676,7 @@ L["Show Flight Points"] = true
 L["Flight Master"] = true
 L["Click to view on Map"] = true
 L["Search Quest Log"] = true
+L["World map module disabled: %s replaces the same map frame."] = true
+L["Cursor"] = true
+L["Show Zone Levels"] = true
+L["Show Map Coordinates"] = true

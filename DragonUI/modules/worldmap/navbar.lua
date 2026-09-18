@@ -90,7 +90,8 @@ local function trail()
             list = function() return zoneList(continent) end }
         local zoneName = zone > 0 and zoneNames(continent)[zone]
         if zoneName then
-            crumbs[#crumbs + 1] = { name = zoneName, onClick = function() SetMapZoom(continent, zone) end }
+            crumbs[#crumbs + 1] = { name = zoneName .. WM.ZoneLevelSuffix(GetMapInfo()),
+                onClick = function() SetMapZoom(continent, zone) end }
         end
     elseif GetNumDungeonMapLevels() > 0 or IsInInstance() then
         crumbs[#crumbs + 1] = { name = GetRealZoneText() }

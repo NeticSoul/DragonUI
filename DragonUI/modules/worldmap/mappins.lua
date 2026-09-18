@@ -14,6 +14,10 @@ local TAXI_ATLAS = { Alliance = "map-taxinode-alliance", Horde = "map-taxinode-h
 local NUDGE_GAP = 0.9
 local NUDGE_PASSES = 8
 local EMPTY = {}
+-- No client API names a taxi node outside the taxi frame, so the generator ships each locale's own.
+local FLIGHT_NAMES = WM.FlightPointName
+    and (WM.FlightPointName[GetLocale()] or (GetLocale() == "esMX" and WM.FlightPointName.esES))
+    or EMPTY
 local GLOW = "Interface\\WorldMap\\UI-QuestPoi-IconGlow"
 local FLASH_SECONDS, FLASH_PULSES, FLASH_GROW = 2.5, 3, 0.7
 -- A pin asked for before its map has drawn stays pending, but not for a later, unrelated visit.
@@ -49,7 +53,9 @@ end
 local function styleEntrance(pin, entry)
     -- The client localizes the LFG dungeon; the generated name covers instances outside that list.
     pin.name = (entry.lfg and GetLFGDungeonInfo(entry.lfg)) or entry.name
-    pin.kind = entry.raid and RAID or LFG_TYPE_DUNGEON
+    local kind = entry.raid and RAID or LFG_TYPE_DUNGEON
+    local levels = WM.DungeonLevelText(entry.lfg)
+    pin.kind = levels and (kind .. " " .. levels) or kind
     pin.icon:set_atlas(entry.raid and "map-entrance-raid" or "map-entrance-dungeon")
     pin:SetSize(ENTRANCE_SIZE, ENTRANCE_SIZE)
 end
@@ -61,7 +67,7 @@ local function styleGraveyard(pin)
 end
 
 local function styleFlightPoint(pin, entry)
-    pin.name, pin.kind = entry.name, L["Flight Master"]
+    pin.name, pin.kind = FLIGHT_NAMES[entry.name] or entry.name, L["Flight Master"]
     pin.icon:set_atlas(TAXI_ATLAS[entry.faction] or "map-taxinode-neutral")
     pin:SetSize(FLIGHT_SIZE, FLIGHT_SIZE)
 end

@@ -1319,22 +1319,6 @@ function LootSkinModule:Apply()
         -- Retail hangs its MinimalScrollBar 16px in from the panel's right edge, 28 down and 6 up.
         CP.ReskinScrollBar(clip, panel, 21, -8, -1, true)
         SyncPanelLevel(frame)
-
-        local bar = ScrollBar()
-        local grabber = bar and bar._duiGrabber
-        -- Its own frame, so it outlives a hidden bar: parked over the rows it would eat their clicks.
-        if grabber and not grabber._dragonuiTiedToBar then
-            grabber._dragonuiTiedToBar = true
-            bar:HookScript("OnShow", function()
-                grabber:Show()
-            end)
-            bar:HookScript("OnHide", function()
-                grabber:Hide()
-            end)
-            if not bar:IsShown() then
-                grabber:Hide()
-            end
-        end
     end
 
     InstallHooks(frame)

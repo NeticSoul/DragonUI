@@ -51,6 +51,8 @@ local function restyleLandmarks()
                 pin:SetScale(pinScale)
                 pin:ClearAllPoints()
                 pin:SetPoint("CENTER", WorldMapButton, "TOPLEFT", x * width / pinScale, -y * height / pinScale)
+                -- Only WorldMapFrame_Update shows these, so re-enabling the filter waits for a map change.
+                pin:Show()
             else
                 pin:Hide()
             end
@@ -64,6 +66,8 @@ local function placeQuestPOI(button)
         local scale = button.type == QUEST_POI_NUMERIC and QUEST_POI_NUMERIC_SCALE or QUEST_POI_SCALE
         button.duiMapScale = scale
         button:SetScale(scale)
+        -- The template insets 8 of 32 a side, leaving the ring we draw mostly unclickable.
+        button:SetHitRectInsets(0, 0, 0, 0)
         local factor = WM.poiScale / scale
         button:SetPoint("CENTER", WorldMapPOIFrame, "TOPLEFT", button.duiRawX * factor, button.duiRawY * factor)
     end
@@ -72,11 +76,15 @@ end
 -- Blizzard only re-anchors a POI it has a position for; the offset it just wrote is the raw one.
 local function onQuestPOIDisplayed(questFrame)
     local button = questFrame.poiIcon
+    if not button then return end
     local _, posX = QuestPOIGetIconInfo(questFrame.questId)
-    if not (button and posX) then return end
-    local _, _, _, x, y = button:GetPoint(1)
-    button.duiRawX, button.duiRawY = x, y
-    placeQuestPOI(button)
+    if posX then
+        local _, _, _, x, y = button:GetPoint(1)
+        button.duiRawX, button.duiRawY = x, y
+        placeQuestPOI(button)
+    end
+    -- Placed first even when off, so re-enabling does not need a rebuild to find its spot again.
+    if WM:Config().questPOI == false then button:Hide() end
 end
 
 local function resizeNumericQuestPOI(button, size)
@@ -222,6 +230,30 @@ function WM.RefreshPins()
     end
 end
 
+local function swapButton()
+    return QUEST_POI_SWAP_BUTTONS and QUEST_POI_SWAP_BUTTONS.WorldMapPOIFrame
+end
+
+function WM.RefreshQuestPOIs()
+    local shown = WM:Config().questPOI ~= false
+    for index = 1, WorldMapFrame.numQuests or 0 do
+        local button = _G["WorldMapQuestFrame" .. index].poiIcon
+        if button then
+            if not shown then
+                button:Hide()
+            -- QuestPOI_SelectButton hides a COMPLETE_SWAP source and shows its twin in the swap slot.
+            elseif not (button.isSelected and button.type == QUEST_POI_COMPLETE_SWAP) then
+                button:Show()
+            end
+        end
+    end
+    if not shown then
+        local swap = swapButton()
+        if swap then swap:Hide() end
+    end
+    if WM.RefreshBlobs then WM.RefreshBlobs() end
+end
+
 local function styleAreaLabel()
     local font = addon.Fonts.PRIMARY
     WorldMapFrameAreaLabel:SetFont(font, LABEL_FONT_SIZE)
@@ -232,6 +264,32 @@ local function styleAreaLabel()
     WorldMapFrameAreaDescription:SetTextColor(1, 1, 1)
     WorldMapFrameAreaDescription:SetShadowColor(0, 0, 0, 1)
     WorldMapFrameAreaDescription:SetShadowOffset(1, -1)
+end
+
+-- UpdateMapHighlight hands its map file only to the texture, so that path is the one clue to the zone.
+local HIGHLIGHT_FILE = "WorldMap\\(.-)\\"
+local rawLabel, shownLabel
+
+local function appendZoneLevel()
+    local text = WorldMapFrameAreaLabel:GetText()
+    if not text or text == "" or text == shownLabel then return end
+    if text ~= rawLabel then
+        local file = not WorldMapFrame.poiHighlight and WorldMapHighlight:IsShown()
+            and strmatch(WorldMapHighlight:GetTexture() or "", HIGHLIGHT_FILE) or nil
+        rawLabel = text
+        shownLabel = text .. WM.ZoneLevelSuffix(file)
+    end
+    WorldMapFrameAreaLabel:SetText(shownLabel)
+end
+
+-- The suffix is cached against the hovered name, so a toggle only lands once that cache is dropped.
+function WM.RefreshZoneLabel()
+    rawLabel, shownLabel = nil, nil
+end
+
+local function refreshZoneLevels()
+    WM.RefreshZoneLabel()
+    WM.RefreshNavBar()
 end
 
 -- ============================================================================
@@ -251,11 +309,15 @@ local function filterEntries()
             end,
         }
     end
+    -- Blizzard's own label: WorldMapQuestShowObjectives is retired, and this is what it read.
+    toggle(SHOW_QUEST_OBJECTIVES_ON_MAP_TEXT, "questPOI", WM.RefreshQuestPOIs)
     toggle(L["Show Landmarks"], "landmarks", restyleLandmarks)
     toggle(L["Show Undiscovered Areas"], "fog", WM.RefreshFog)
     toggle(L["Show Dungeon Entrances"], "entrances", WM.RefreshMapPins)
     toggle(L["Show Graveyards"], "graveyards", WM.RefreshMapPins)
     toggle(L["Show Flight Points"], "flightPoints", WM.RefreshMapPins)
+    toggle(L["Show Zone Levels"], "zoneLevels", refreshZoneLevels)
+    toggle(L["Show Map Coordinates"], "coordinates", WM.RefreshCoords)
     return entries
 end
 
@@ -318,13 +380,21 @@ end
 
 function WM.BuildPins()
     styleAreaLabel()
+    -- The handler is bound in XML, so only a script hook runs in the frame Blizzard rewrites the text.
+    WorldMapButton:HookScript("OnUpdate", appendZoneLevel)
     buildFilterButton()
     buildCanvasShadow()
 
     hooksecurefunc("WorldMapFrame_Update", restyleLandmarks)
     hooksecurefunc("WorldMapFrame_Update", tryFlashQuestPOI)
     -- Blizzard reselects a pin of its own on every rebuild, so ours is re-cropped after it.
-    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function() WM.SelectQuestPOI(QP.GetFocus()) end)
+    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function()
+        if WM:Config().questPOI == false then
+            local swap = swapButton()
+            if swap then swap:Hide() end
+        end
+        WM.SelectQuestPOI(QP.GetFocus())
+    end)
     QP.RegisterFocusListener(WM.SelectQuestPOI)
     hooksecurefunc("WorldMapFrame_UpdateQuests", dropStaleFlashes)
     hooksecurefunc("WorldMapFrame_DisplayQuestPOI", onQuestPOIDisplayed)

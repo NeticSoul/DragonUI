@@ -239,14 +239,17 @@ local function beginDrag(bar)
     applyGripTop(bar, cursorTop - within)
 end
 
-local function wireDrag(bar, host)
+local function wireDrag(bar)
     if bar._duiDrag then return end
     bar._duiDrag = true
     -- The slider keeps the value and the range; it just stops handling the mouse itself.
     bar:EnableMouse(false)
 
-    local grabber = CreateFrame("Button", nil, host)
-    grabber:SetAllPoints(bar)
+    -- On the bar so a hidden view takes it along, and off the ends so the steppers keep their clicks.
+    local grabber = CreateFrame("Button", nil, bar)
+    local gap = arrowSpace(bar)
+    grabber:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, -gap)
+    grabber:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, gap)
     grabber:SetFrameLevel(bar:GetFrameLevel() + 2)
     grabber:SetScript("OnMouseDown", function() beginDrag(bar) end)
     bar._duiGrabber = grabber
@@ -328,6 +331,6 @@ function CP.ReskinScrollBar(scroll, host, topInset, xInset, bottomInset, withSte
         hideArrow(down)
     end
 
-    wireDrag(bar, host)
+    wireDrag(bar)
     hookThumbSync(scroll, bar)
 end

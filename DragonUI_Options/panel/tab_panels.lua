@@ -360,6 +360,56 @@ local function BuildWorldMapSubTab(scroll)
         disabled = function() return not IsEnabled("worldmap") end,
         requiresReload = false,
     })
+
+    C:AddToggle(mapSection, {
+        label = LO["Show Map Coordinates"],
+        desc = LO["Show your coordinates and the cursor's in the corner of the map."],
+        getFunc = function() return GetModuleField("worldmap", "coordinates") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("worldmap").coordinates = val
+            if addon.RefreshWorldMapSystem then addon.RefreshWorldMapSystem() end
+        end,
+        disabled = function() return not IsEnabled("worldmap") end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(mapSection, {
+        label = LO["Show Zone Levels"],
+        desc = LO["Show the recommended level range next to zone names and instance pins."],
+        getFunc = function() return GetModuleField("worldmap", "zoneLevels") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("worldmap").zoneLevels = val
+            if addon.RefreshWorldMapSystem then addon.RefreshWorldMapSystem() end
+        end,
+        disabled = function() return not IsEnabled("worldmap") end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(mapSection, {
+        label = LO["Fade Map While Moving"],
+        desc = LO["Dim the map while you move, unless the cursor is over it."],
+        getFunc = function() return GetModuleField("worldmap", "fadeWhenMoving") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("worldmap").fadeWhenMoving = val
+            if addon.RefreshWorldMapSystem then addon.RefreshWorldMapSystem() end
+            Panel:SelectTab("panels")
+        end,
+        disabled = function() return not IsEnabled("worldmap") end,
+        requiresReload = false,
+    })
+
+    C:AddSlider(mapSection, {
+        label = LO["Moving Map Alpha"],
+        desc = LO["How visible the map stays while you move."],
+        dbPath = "modules.worldmap.moveAlpha",
+        min = 0.1,
+        max = 1,
+        step = 0.05,
+        width = 200,
+        disabled = function()
+            return not IsEnabled("worldmap") or GetModuleField("worldmap", "fadeWhenMoving") == false
+        end,
+    })
 end
 
 -- ============================================================================

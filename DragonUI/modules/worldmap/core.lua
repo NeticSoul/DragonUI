@@ -27,12 +27,19 @@ WM.DETAIL_W, WM.DETAIL_H = 1002, 668
 local WINDOWED_CANVAS_W = 697
 -- Kept clear of the action bars and the screen's right edge when maximized.
 local MAX_BOTTOM_MARGIN, MAX_RIGHT_MARGIN = 96, 24
+local MAP_REPLACERS = { "Mapster" }
 local PORTRAIT = "Interface\\QuestFrame\\UI-QuestLog-BookIcon"
 local ROCK = addon._dir .. "UI\\ui-background-rock"
 local BASE_LEVEL = 10
 
 local function CP()
     return addon.CharacterPanel
+end
+
+local function loadedReplacer()
+    for _, candidate in ipairs(MAP_REPLACERS) do
+        if IsAddOnLoaded(candidate) then return candidate end
+    end
 end
 
 function WM:Config()
@@ -46,6 +53,12 @@ end
 -- The client's one "am I windowed" test, read and never written.
 function WM.IsWindowed()
     return WORLDMAP_SETTINGS.size == WORLDMAP_WINDOWED_SIZE
+end
+
+-- Geometric, so the chrome answers for the canvas under it even though it takes no mouse itself.
+function WM.CursorOverMap()
+    if WM.border and WM.border:IsShown() then return WM.border:IsMouseOver() end
+    return WorldMapFrame:IsMouseOver()
 end
 
 -- Overlays and pins belong to the terrain view; floors under it (Dalaran's Underbelly) have none.
@@ -91,6 +104,13 @@ end
 -- Both passes write implicitly protected frames, so both are combat-deferred.
 local canvasW, canvasH
 
+local function scaleArrows(value)
+    for _, name in ipairs({ "PlayerArrowFrame", "PlayerArrowEffectFrame" }) do
+        local arrow = _G[name]
+        if arrow then arrow:SetScale(value) end
+    end
+end
+
 local function layoutCanvas()
     local f = WorldMapFrame
     local detail = WorldMapDetailFrame
@@ -98,8 +118,8 @@ local function layoutCanvas()
     WM.canvasW, WM.canvasH = canvasW, canvasH
     local scale = canvasW / WM.DETAIL_W
     WM.canvasScale = scale
-    -- Blizzard multiplies POI and arrow offsets by its windowed constant; ours differs by this.
-    WM.poiScale = scale / WORLDMAP_WINDOWED_SIZE
+    -- WorldMapButton_OnUpdate multiplies POI and arrow offsets by this size; ours differs by it.
+    WM.poiScale = scale / WORLDMAP_SETTINGS.size
 
     detail:SetScale(scale)
     detail:ClearAllPoints()
@@ -110,10 +130,7 @@ local function layoutCanvas()
     WorldMapBlobFrame.xRatio = nil
     WorldMapFrameAreaFrame:SetScale(1 / scale)
 
-    for _, name in ipairs({ "PlayerArrowFrame", "PlayerArrowEffectFrame" }) do
-        local arrow = _G[name]
-        if arrow then arrow:SetScale(WM.poiScale) end
-    end
+    scaleArrows(WM.poiScale)
     if WM.RefreshPins then WM.RefreshPins() end
     if WM.RefreshMapPins then WM.RefreshMapPins() end
     if WM.RefreshBlobs then WM.RefreshBlobs() end
@@ -435,6 +452,8 @@ local function onWindowedChanged()
     else
         WM.border:Hide()
         WM.ground:Hide()
+        -- Blizzard never touches this scale, so our canvas compensation would follow it into fullscreen.
+        scaleArrows(1)
         restoreBlizzardWidgets()
     end
     if WM.OnModeChanged then WM.OnModeChanged(windowed) end
@@ -465,7 +484,19 @@ end
 -- BOOT
 -- ============================================================================
 
+-- Blizzard reads these once, at VARIABLES_LOADED, and toggles itself down there; later costs a reload.
+local function prepareWindowedMode()
+    if not GetCVarBool("miniWorldMap") then SetCVar("miniWorldMap", 1) end
+    if not GetCVarBool("advancedWorldMap") then SetCVar("advancedWorldMap", 1) end
+end
+
 local function boot()
+    -- OnInitialize refreshes every module at our own ADDON_LOADED, when addons after us are still
+    -- unloaded and no map replacer would be seen. Only the CVars are worth doing that early.
+    if not IsLoggedIn() then
+        prepareWindowedMode()
+        return
+    end
     if InCombatLockdown() then
         addon.CombatQueue:Add("worldmap_boot", boot)
         return
@@ -473,9 +504,14 @@ local function boot()
     if WorldMapModule.initialized then return end
     WorldMapModule.initialized = true
 
-    -- Both CVars are read at VARIABLES_LOADED, so they take effect on the next reload.
-    if not GetCVarBool("miniWorldMap") then SetCVar("miniWorldMap", 1) end
-    if not GetCVarBool("advancedWorldMap") then SetCVar("advancedWorldMap", 1) end
+    -- They reparent the same frame and drag it out of windowed mode on login; the two cannot share it.
+    local replacer = loadedReplacer()
+    if replacer then
+        addon:Print(format(L["World map module disabled: %s replaces the same map frame."], replacer))
+        return
+    end
+
+    prepareWindowedMode()
 
     buildChrome()
     installHooks()
@@ -484,6 +520,8 @@ local function boot()
     if WM.BuildQuestLog then WM.BuildQuestLog() end
     if WM.BuildFog then WM.BuildFog() end
     if WM.BuildMapPins then WM.BuildMapPins() end
+    if WM.BuildCoords then WM.BuildCoords() end
+    if WM.BuildFade then WM.BuildFade() end
 
     chromeAlpha(WORLDMAP_SETTINGS.opacity)
     onWindowedChanged()
@@ -502,6 +540,10 @@ function addon.RefreshWorldMapSystem()
     WM.RefreshLandmarks()
     WM.RefreshFog()
     WM.RefreshMapPins()
+    WM.RefreshNavBar()
+    WM.RefreshZoneLabel()
+    WM.RefreshCoords()
+    WM.RefreshFade()
 end
 
 -- Hooks and reparented widgets cannot be undone in-session, so a disable waits for the reload.

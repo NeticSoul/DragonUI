@@ -40,6 +40,8 @@ local panel, search, settings, scroll, child
 local query = ""
 local rowPool, headerPool = {}, {}
 local hoveredRow
+-- The player's pick outlives the map; closing it clears the focus so the tracker badge goes dark.
+local lastFocus
 local requestRepaint
 -- Which sections this panel has shut. Ours alone: see toggleHeader.
 local shut = {}
@@ -405,8 +407,9 @@ end
 -- No combat guard: what is protected on this frame is Show/Hide and moving it, not drawing on it,
 -- which is how the client's own map lights an area mid-fight.
 local function applyBlob()
-    local focus = blobFor(QP.GetFocus())
-    local hover = blobFor(hoveredRow and hoveredRow._questID)
+    local on = WM:Config().questPOI ~= false
+    local focus = on and blobFor(QP.GetFocus()) or nil
+    local hover = on and blobFor(hoveredRow and hoveredRow._questID) or nil
     for questID in pairs(drawn) do
         if questID ~= focus and questID ~= hover then
             WorldMapBlobFrame:DrawQuestBlob(questID, false)
@@ -420,8 +423,11 @@ end
 -- WorldMapFrame_SelectQuestFrame writes WORLDMAP_SETTINGS.selectedQuest*, re-read before it rewrites.
 local function selectOnMap(row, flash)
     if not (row and row._mapRow) then return end
-    QP.SetFocus(row._questID)
+    lastFocus = row._questID
+    QP.SetFocus(lastFocus)
     applyBlob()
+    -- fillRow is the only place the row glow is decided, so the pick is not visible until a repaint.
+    requestRepaint()
     if flash and WM.FlashQuestPOI then WM.FlashQuestPOI(row._questID) end
 end
 
@@ -475,6 +481,11 @@ WM.ClearBlobs = clearBlobs
 function WM.RefreshBlobs()
     clearBlobs()
     applyBlob()
+end
+
+-- Outside our windowed chrome the canvas is Blizzard's, and wiping the shape it drew is not ours to do.
+local function ownsCanvas()
+    return WM.IsWindowed()
 end
 
 -- Blizzard wiped its last pick and drew this one, so that alone IS the canvas now.
@@ -546,7 +557,7 @@ local function acquireRow(index)
     if row then return row end
 
     row = CreateFrame("Button", nil, child)
-    row:RegisterForClicks("LeftButtonUp")
+    row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 
     row.glow = row:CreateTexture(nil, "BACKGROUND")
     row.glow:set_atlas("questlog-quest-glow-yellow")
@@ -630,7 +641,12 @@ local function acquireRow(index)
     row.track:SetScript("OnLeave", function() GameTooltip:Hide() end)
     row.tagButton:SetPoint("RIGHT", row.track, "LEFT", -2, 0)
 
-    row:SetScript("OnClick", function(self)
+    -- Right-click is the badge's job without having to hit the badge: mark it and stay in the list.
+    row:SetScript("OnClick", function(self, button)
+        if button == "RightButton" then
+            selectOnMap(self, true)
+            return
+        end
         selectOnMap(self)
         if WM.ShowQuestDetail then WM.ShowQuestDetail(self._index) end
     end)
@@ -708,7 +724,18 @@ local function repaint()
 
     -- Ours alone, and nothing is picked until the player picks it: seeding it from Blizzard's own
     -- auto-selection lit the area of a quest nobody had chosen.
-    if not WorldMapFrame:IsShown() then QP.SetFocus(nil) end
+    if not WorldMapFrame:IsShown() then
+        QP.SetFocus(nil)
+    elseif lastFocus and not QP.GetFocus() then
+        -- Only against a row the rebuilt map actually has, so a pick made elsewhere stays silent.
+        for index = 1, WorldMapFrame.numQuests or 0 do
+            local mapRow = _G["WorldMapQuestFrame" .. index]
+            if mapRow and mapRow.questId == lastFocus and not mapRow.completed then
+                QP.SetFocus(lastFocus)
+                break
+            end
+        end
+    end
     local wasHovering = hoveredRow and hoveredRow._questID
     hoverRow(nil, false)
 
@@ -771,6 +798,9 @@ local function repaint()
             end
         end
     end
+
+    -- blobFor reads the rows this pass just rebuilt, so the shape can only be settled after them.
+    applyBlob()
 end
 
 -- Coalesced: anchors have no measurable width until the frame after the last trigger anyway.
@@ -984,12 +1014,24 @@ function WM.BuildQuestLog()
 
     -- Runs between UpdateQuests and its reselect, the one moment the canvas is meant to be blank.
     hooksecurefunc("WorldMapFrame_UpdateQuests", function()
+        if not ownsCanvas() then return end
         clearBlobs()
         requestRepaint()
         if WM.RefreshQuestDetail then WM.RefreshQuestDetail() end
     end)
     hooksecurefunc("WorldMapFrame_SelectQuestFrame", function(questFrame)
+        if not ownsCanvas() then return end
         reclaimBlob(questFrame)
+        requestRepaint()
+    end)
+    -- The canvas pin is Blizzard's own button, and its click is the one pick that comes through no row.
+    hooksecurefunc("WorldMapQuestPOI_OnClick", function(self)
+        if not ownsCanvas() then return end
+        local questID = self.quest and self.quest.questId
+        if not questID or questID == 0 then return end
+        lastFocus = questID
+        QP.SetFocus(questID)
+        applyBlob()
         requestRepaint()
     end)
 
