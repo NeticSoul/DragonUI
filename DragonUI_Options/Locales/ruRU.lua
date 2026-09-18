@@ -1842,3 +1842,26 @@ L["Show Flight Points"] = "Показывать точки полета"
 L["Show flight master pins on zone maps."] = "Показывает распорядителей полетов на картах зон."
 L["Show Inns"] = "Показывать таверны"
 L["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."] = "Показывает хозяев таверн на картах зон и выделяет таверну, к которой привязан ваш камень возвращения."
+
+-- ============================================================================
+-- LOW HP ALERT MODULE (added by DragonUI)
+-- ============================================================================
+
+L["Low HP Alert"] = "Низкий HP — Оповещение"
+L["Plays a sound and flashes the screen edges when your HP drops below the configured threshold."] = "Играет звук и мигает краями экрана, когда ваш HP падает ниже настроенного порога."
+L["Enable Low HP Alert"] = "Включить оповещение о низком HP"
+L["Warning Sound (every 3 sec)"] = "Звук предупреждения (каждые 3 сек.)"
+L["Plays a warning sound every 3 seconds while HP is below threshold."] = "Играет звук предупреждения каждые 3 секунды, пока HP ниже порога."
+L["Screen Edge Flash"] = "Мигание краев экрана"
+L["Flashes red at the edges of the screen while HP is below threshold."] = "Мигает красным по краям экрана, пока HP ниже порога."
+L["Flash Color"] = "Цвет мигания"
+L["Use Class Color"] = "Использовать цвет класса"
+L["Use your class color (e.g. orange for Druid, yellow for Rogue) instead of the custom color."] = "Используйте цвет вашей класса (например, оранжевый для Друида, жёлтый для Разбойника) вместо пользовательского цвета."
+L["Flash Opacity"] = "Непрозрачность мигания"
+L["Maximum opacity of the flash effect."] = "Максимальная непрозрачность эффекта мигания."
+L["Flash Extent"] = "Длина мигания"
+L["How far the flash extends from the screen edges toward the center, in pixels."] = "Насколько далеко мигание распространяется от краёв экрана к центру, в пикселях."
+L["HP Warning Threshold"] = "Порог предупреждения HP"
+L["Percentage of HP at which the warning triggers."] = "Процент HP, при котором срабатывает предупреждение."
+L["Test Warning (3 sec)"] = "Тест предупреждения (3 сек.)"
+L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Запускает 3-секундный предпросмотр состояния предупреждения, чтобы помочь вам настроить порог."

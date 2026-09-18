@@ -1843,3 +1843,26 @@ L["Show Flight Points"] = "비행 지점 표시"
 L["Show flight master pins on zone maps."] = "지역 지도에 비행 조련사를 표시합니다."
 L["Show Inns"] = "여관 표시"
 L["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."] = "지역 지도에 여관주인을 표시하고 귀환석이 설정된 여관을 강조합니다."
+
+-- ============================================================================
+-- LOW HP ALERT MODULE (added by DragonUI)
+-- ============================================================================
+
+L["Low HP Alert"] = "HP 부족 알림"
+L["Plays a sound and flashes the screen edges when your HP drops below the configured threshold."] = "HP가 설정된 임계값 이하로 떨어지면 소리를 재생하고 화면 가장자리를 깜빡입니다."
+L["Enable Low HP Alert"] = "HP 부족 알림 활성화"
+L["Warning Sound (every 3 sec)"] = "경고음 (3초 간격)"
+L["Plays a warning sound every 3 seconds while HP is below threshold."] = "HP가 임계값 이하일 때 3초마다 경고음을 재생합니다."
+L["Screen Edge Flash"] = "화면 가장자리 깜빡임"
+L["Flashes red at the edges of the screen while HP is below threshold."] = "HP가 임계값 이하일 때 화면 가장자리가 빨간색으로 깜빡입니다."
+L["Flash Color"] = "깜빡임 색상"
+L["Use Class Color"] = "클래스 색상 사용"
+L["Use your class color (e.g. orange for Druid, yellow for Rogue) instead of the custom color."] = "사용자 지정 색상 대신 클래스 색상(예: 드루이드는 주황, 도적이 노랑)을 사용합니다."
+L["Flash Opacity"] = "깜빡임 불투명도"
+L["Maximum opacity of the flash effect."] = "깜빡임 효과의 최대 불투명도."
+L["Flash Extent"] = "깜빡임 범위"
+L["How far the flash extends from the screen edges toward the center, in pixels."] = "깜빡임이 화면 가장자리에서 중심까지 얼마나 퍼지는지, 픽셀 단위."
+L["HP Warning Threshold"] = "HP 경고 임계값"
+L["Percentage of HP at which the warning triggers."] = "경고가 트리거되는 HP 비율."
+L["Test Warning (3 sec)"] = "경고 테스트 (3초)"
+L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "임계값을 조정하는 데 도움이 되는 3초 미리보기 경고 상태를 트리거합니다."

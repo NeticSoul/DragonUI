@@ -862,6 +862,12 @@ local defaults = {
             keypress = {
                 enabled = false -- Fire action-bar abilities on key down instead of key release (SnowfallKeyPress-style)
             },
+            levelupenhance = {
+                enabled = true, -- Enhanced level-up notification with animated frame
+                anchor = "TOP",
+                posX = 0,
+                posY = -128
+            },
             darkmode = {
                 enabled = false, -- Apply darker tinted textures to UI chrome
                 intensity_preset = 3, -- 1 = Light, 2 = Medium, 3 = Dark
@@ -1167,7 +1173,17 @@ local defaults = {
                 zoneLevels = true, -- Recommended level ranges beside zone names and instance pins
                 fadeWhenMoving = false, -- Dim the map while you move with the cursor off it
                 moveAlpha = 0.4, -- Alpha the map fades to while moving
-            }
+            },
+            hp_low_alert = {
+                enabled = true, -- Screen flash and sound when HP drops below threshold
+                threshold = 30, -- HP percentage threshold to trigger warning
+                soundEnabled = false, -- Play warning sound (repeats every 3 sec)
+                flashEnabled = true, -- Flash screen edges red
+                flashColor = { r = 1, g = 0, b = 0 }, -- Color of the screen edge flash
+                useClassColor = false, -- Use player class color instead of flashColor
+                flashOpacity = 0.35, -- Max alpha of the flash (0.0–1.0)
+                flashExtent = 40,  -- Pixels from screen edges toward center
+            },
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)

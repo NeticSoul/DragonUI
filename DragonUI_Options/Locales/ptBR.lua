@@ -1670,3 +1670,26 @@ L["Show Flight Points"] = "Mostrar pontos de voo"
 L["Show flight master pins on zone maps."] = "Mostra os mestres de voo nos mapas de zona."
 L["Show Inns"] = "Mostrar estalagens"
 L["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."] = "Mostra os estalajadeiros nos mapas de zona e destaca a estalagem da sua Pedra de Regresso."
+
+-- ============================================================================
+-- LOW HP ALERT MODULE (added by DragonUI)
+-- ============================================================================
+
+L["Low HP Alert"] = "Alerta de HP Baixo"
+L["Plays a sound and flashes the screen edges when your HP drops below the configured threshold."] = "Reproduz um som e pisca nas bordas da tela quando seu HP cai abaixo do limiar configurado."
+L["Enable Low HP Alert"] = "Ativar Alerta de HP Baixo"
+L["Warning Sound (every 3 sec)"] = "Som de Aviso (a cada 3 seg)"
+L["Plays a warning sound every 3 seconds while HP is below threshold."] = "Reproduz um som de aviso a cada 3 segundos enquanto o HP estiver abaixo do limiar."
+L["Screen Edge Flash"] = "Piscar nas Bordas da Tela"
+L["Flashes red at the edges of the screen while HP is below threshold."] = "Pisca em vermelho nas bordas da tela enquanto o HP estiver abaixo do limiar."
+L["Flash Color"] = "Cor do Piscar"
+L["Use Class Color"] = "Usar Cor da Classe"
+L["Use your class color (e.g. orange for Druid, yellow for Rogue) instead of the custom color."] = "Usa a cor da sua classe (ex. laranja para Druida, amarelo para Ladino) em vez da cor personalizada."
+L["Flash Opacity"] = "Opacidade do Piscar"
+L["Maximum opacity of the flash effect."] = "Opacidade máxima do efeito de piscar."
+L["Flash Extent"] = "Extensão do Piscar"
+L["How far the flash extends from the screen edges toward the center, in pixels."] = "Quão longe o piscar se estende das bordas da tela até o centro, em pixels."
+L["HP Warning Threshold"] = "Limiar de Aviso de HP"
+L["Percentage of HP at which the warning triggers."] = "Porcentagem do HP na qual o aviso é disparado."
+L["Test Warning (3 sec)"] = "Testar Aviso (3 seg)"
+L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Ativa uma prévia de 3 segundos do estado de aviso para ajudar você a ajustar o limiar."

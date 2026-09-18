@@ -689,3 +689,18 @@ L["World map module disabled: %s replaces the same map frame."] = true
 L["Cursor"] = true
 L["Show Zone Levels"] = true
 L["Show Map Coordinates"] = true
+
+-- Level Up Enhance Module
+L["LevelUpFrame"] = "Level Up"
+L["Enhanced tooltip styling with class colors and health bars"] = true
+L["Level Up Enhance"] = true
+L["Enhanced level-up notification with animated frame"] = true
+L["You've Reached"] = true
+L["Level %d"] = true
+
+-- ============================================================================
+-- LOW HP ALERT MODULE
+-- ============================================================================
+
+L["Low HP Alert"] = true
+L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = true

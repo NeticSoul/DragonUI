@@ -1839,3 +1839,26 @@ L["Show Flight Points"] = "显示飞行点"
 L["Show flight master pins on zone maps."] = "在区域地图上显示飞行管理员。"
 L["Show Inns"] = "显示旅店"
 L["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."] = "在区域地图上显示旅店老板，并标出你的炉石所绑定的旅店。"
+
+-- ============================================================================
+-- LOW HP ALERT MODULE (added by DragonUI)
+-- ============================================================================
+
+L["Low HP Alert"] = "低HP警报"
+L["Plays a sound and flashes the screen edges when your HP drops below the configured threshold."] = "当你的HP低于设定的临界值时，发出声音并闪烁屏幕边缘。"
+L["Enable Low HP Alert"] = "启用低HP警报"
+L["Warning Sound (every 3 sec)"] = "警告声音（每3秒）"
+L["Plays a warning sound every 3 seconds while HP is below threshold."] = "当HP低于临界值时，每3秒播放一次警告声音。"
+L["Screen Edge Flash"] = "屏幕边缘闪烁"
+L["Flashes red at the edges of the screen while HP is below threshold."] = "当HP低于临界值时，屏幕边缘闪烁红色。"
+L["Flash Color"] = "闪烁颜色"
+L["Use Class Color"] = "使用职业颜色"
+L["Use your class color (e.g. orange for Druid, yellow for Rogue) instead of the custom color."] = "使用你的职业颜色（例如：德鲁伊为橙色，盗贼为黄色）代替自定义颜色。"
+L["Flash Opacity"] = "闪烁透明度"
+L["Maximum opacity of the flash effect."] = "闪烁效果的最大透明度。"
+L["Flash Extent"] = "闪烁范围"
+L["How far the flash extends from the screen edges toward the center, in pixels."] = "闪烁从屏幕边缘向中心延伸的距离，以像素为单位。"
+L["HP Warning Threshold"] = "HP警告临界值"
+L["Percentage of HP at which the warning triggers."] = "HP触发警告的百分比。"
+L["Test Warning (3 sec)"] = "测试警告（3秒）"
+L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "触发3秒的警告状态预览，以帮助你调整临界值。"

@@ -690,3 +690,18 @@ L["World map module disabled: %s replaces the same map frame."] = "세계 지도
 L["Cursor"] = "커서"
 L["Show Zone Levels"] = "지역 레벨 표시"
 L["Show Map Coordinates"] = "지도 좌표 표시"
+
+-- Level Up Enhance Module
+L["LevelUpFrame"] = "Level Up"
+L["Enhanced tooltip styling with class colors and health bars"] = "클래스 색상 및 체력바가 있는 향상된 툴팁 스타일"
+L["Level Up Enhance"] = "레벨 업 강화"
+L["Enhanced level-up notification with animated frame"] = "애니메이션 프레ーム이 있는 향상된 레벨 업 알림"
+L["You've Reached"] = "당신이 달성"
+L["Level %d"] = "레벨 %d"
+
+-- ============================================================================
+-- LOW HP ALERT MODULE
+-- ============================================================================
+
+L["Low HP Alert"] = "HP 부족 알림"
+L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "HP가 설정된 임계값 이하로 떨어지면 소리를 재생하고 화면 가장자리를 깜빡입니다."

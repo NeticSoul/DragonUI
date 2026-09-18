@@ -1674,3 +1674,26 @@ L["Show Flight Points"] = "Afficher les points de vol"
 L["Show flight master pins on zone maps."] = "Affiche les maîtres de vol sur les cartes de zone."
 L["Show Inns"] = "Afficher les auberges"
 L["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."] = "Affiche les aubergistes sur les cartes de zone et met en évidence l'auberge de votre pierre de foyer."
+
+-- ============================================================================
+-- LOW HP ALERT MODULE (added by DragonUI)
+-- ============================================================================
+
+L["Low HP Alert"] = "Alerte de HP Bas"
+L["Plays a sound and flashes the screen edges when your HP drops below the configured threshold."] = "Émet un son et fait clignoter les bords de l'écran lorsque votre HP descend sous le seuil configuré."
+L["Enable Low HP Alert"] = "Activer l'Alerte de HP Bas"
+L["Warning Sound (every 3 sec)"] = "Son d'Avertissement (toutes les 3 sec)"
+L["Plays a warning sound every 3 seconds while HP is below threshold."] = "Émet un son d'avertissement toutes les 3 secondes tant que le HP est sous le seuil."
+L["Screen Edge Flash"] = "Clignotement des Bords de l'Écran"
+L["Flashes red at the edges of the screen while HP is below threshold."] = "Clignote en rouge aux bords de l'écran tant que le HP est sous le seuil."
+L["Flash Color"] = "Couleur du Clignotement"
+L["Use Class Color"] = "Utiliser la Couleur de Classe"
+L["Use your class color (e.g. orange for Druid, yellow for Rogue) instead of the custom color."] = "Utilise la couleur de votre classe (ex. orange pour Druide, jaune pour Voleur) au lieu de la couleur personnalisée."
+L["Flash Opacity"] = "Opacité du Clignotement"
+L["Maximum opacity of the flash effect."] = "Opacité maximale de l'effet de clignotement."
+L["Flash Extent"] = "Étendue du Clignotement"
+L["How far the flash extends from the screen edges toward the center, in pixels."] = "Quelle distance le clignotement s'étend des bords de l'écran vers le centre, en pixels."
+L["HP Warning Threshold"] = "Seuil d'Avertissement de HP"
+L["Percentage of HP at which the warning triggers."] = "Pourcentage de HP auquel l'avertissement se déclenche."
+L["Test Warning (3 sec)"] = "Tester l'Avertissement (3 sec)"
+L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Déclenche un aperçu de 3 secondes de l'état d'avertissement pour vous aider à ajuster le seuil."
