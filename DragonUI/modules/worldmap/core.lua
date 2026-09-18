@@ -387,7 +387,8 @@ function WM.BuildSideToggle(border)
     button:SetHighlightTexture(ROCK)
     button:GetHighlightTexture():SetBlendMode("ADD")
 
-    local shadow = button:CreateTexture(nil, "BACKGROUND")
+    -- On the frame like its left twin, not the button: the button's level put it over the bottom rail.
+    local shadow = border:CreateTexture(nil, "ARTWORK")
     shadow:set_atlas("mapcornershadow-right", true)
     shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 5, -5)
 
