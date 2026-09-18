@@ -54,9 +54,17 @@ function WM.ZoneLevelSuffix(mapFile)
     return " " .. difficultyHex(range[2]) .. rangeText(range[1], range[2]) .. "|r"
 end
 
+-- Not minLevel/maxLevel: those are the gate to enter, so every level-cap raid reads "70 - 83". The
+-- recommended band is what the instance was built for, capped because its top runs past the cap too.
 function WM.DungeonLevelText(lfgID)
     if not lfgID or WM:Config().zoneLevels == false then return end
-    local _, _, minLevel, maxLevel = GetLFGDungeonInfo(lfgID)
-    if not minLevel or minLevel <= 0 then return end
+    local _, _, _, _, recLevel, minLevel, maxLevel = GetLFGDungeonInfo(lfgID)
+    if not minLevel or minLevel <= 0 then
+        if not recLevel or recLevel <= 0 then return end
+        return rangeText(recLevel, recLevel)
+    end
+    local cap = (MAX_PLAYER_LEVEL or 0) > 0 and MAX_PLAYER_LEVEL or nil
+    if cap and maxLevel and maxLevel > cap then maxLevel = cap end
+    if maxLevel and maxLevel < minLevel then maxLevel = minLevel end
     return rangeText(minLevel, maxLevel)
 end
