@@ -7,7 +7,7 @@
 --
 -- WoW 3.3.5a ships different fonts per locale:
 --   enUS/deDE/frFR/esES/esMX/ptBR : Fonts\FRIZQT__.TTF  + Fonts\ARIALN.TTF
---   ruRU                           : Fonts\FRIZQT___CYR.TTF (Cyrillic glyphs)
+--   ruRU                           : Fonts\FRIZQT__.TTF (the ruRU build carries Cyrillic)
 --   koKR                           : Fonts\2002.TTF (Korean CJK glyphs)
 --   zhCN                           : Fonts\ZYKai_T.TTF (Simplified Chinese)
 --   zhTW                           : Fonts\bLEI00D.TTF (Traditional Chinese)
@@ -30,7 +30,8 @@ local LOCALE_SYSTEM_FONTS = {
     koKR = "Fonts\\2002.TTF",
     zhCN = "Fonts\\ZYKai_T.TTF",
     zhTW = "Fonts\\bLEI00D.TTF",
-    ruRU = "Fonts\\FRIZQT___CYR.TTF",
+    -- FRIZQT___CYR.TTF only exists from Cataclysm on; SetFont with it fails on a 3.3.5a ruRU client.
+    ruRU = "Fonts\\FRIZQT__.TTF",
 }
 
 -- Only CJK is beyond the bundled fonts; forcing the client font on ruRU would strip the

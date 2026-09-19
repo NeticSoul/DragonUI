@@ -71,11 +71,12 @@ function WM.BuildCoords()
     frame:SetFrameLevel(WM.border:GetFrameLevel() + 6)
     frame:EnableMouse(false)
 
-    playerText = frame:CreateFontString(nil, "OVERLAY")
+    -- The template is the fallback: a SetFont path the client can't load leaves a bare string fontless.
+    playerText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     playerText:SetPoint("BOTTOMLEFT", WM.border, "BOTTOMLEFT", EDGE_X, EDGE_Y)
     styleLine(playerText)
 
-    cursorText = frame:CreateFontString(nil, "OVERLAY")
+    cursorText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     cursorText:SetPoint("BOTTOMLEFT", playerText, "TOPLEFT", 0, LINE_GAP)
     styleLine(cursorText)
 
