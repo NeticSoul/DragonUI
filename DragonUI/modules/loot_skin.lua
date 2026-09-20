@@ -1190,10 +1190,12 @@ events:SetScript("OnEvent", function(_, event, arg1)
     if event == "LOOT_OPENED" then
         -- 3.3.5a passes autoLoot as a number, unlike retail's boolean.
         isAutoLoot = arg1 and arg1 ~= 0
-        -- Blizzard already laid the window out by now, so a grown pool has to redo it.
         if EnsureRows(GetNumLootItems()) then
             SyncPanelLevel(_G.LootFrame)
-            LootFrame_Update()
+            -- Hidden means Blizzard's handler runs after ours: numLootItems is unset, and its Show lays us out.
+            if _G.LootFrame:IsShown() then
+                LootFrame_Update()
+            end
         end
         if UseAnimatedReflow() then
             ShowPanelWhenReady()
