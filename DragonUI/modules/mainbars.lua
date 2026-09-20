@@ -2190,6 +2190,10 @@ local function ApplyMainbarsSystem()
         local style = GetXpBarStyle()
         if style == "retailui" then
             ApplyRetailUIExpRepBarStyling()
+        elseif ReputationWatchBar then
+            -- Blizzard re-anchors it to MainMenuBar: an invisible click-eater over the action bar.
+            ReputationWatchBar:ClearAllPoints()
+            ReputationWatchBar:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, -500)
         end
         UpdateBarPositions()
     end)
@@ -2848,7 +2852,7 @@ function addon.SyncBarCVarsFromProfile()
         end
 
         -- Re-apply DragonUI positioning (Blizzard may have moved things)
-        if not InCombatLockdown() and addon.ActionBarFrames then
+        if not InCombatLockdown() and MainbarsModule.applied then
             if addon.PositionActionBarsToContainers then
                 addon.PositionActionBarsToContainers()
             end
@@ -2872,8 +2876,8 @@ local function SyncBarGlobalsToProfile()
     config.bottom_right_enabled = (SHOW_MULTI_ACTIONBAR_2 == 1 or SHOW_MULTI_ACTIONBAR_2 == "1")
     config.right_enabled        = (SHOW_MULTI_ACTIONBAR_3 == 1 or SHOW_MULTI_ACTIONBAR_3 == "1")
     config.left_enabled         = (SHOW_MULTI_ACTIONBAR_4 == 1 or SHOW_MULTI_ACTIONBAR_4 == "1")
-    -- Re-apply DragonUI positioning after Blizzard repositioned
-    if not InCombatLockdown() and addon.ActionBarFrames then
+    -- MultiActionBar_Update runs on every loading screen; with mainbars off there is no pUiMainBar.
+    if not InCombatLockdown() and MainbarsModule.applied then
         if addon.PositionActionBarsToContainers then
             addon.PositionActionBarsToContainers()
         end
