@@ -347,19 +347,28 @@ local function CompanionSlotData(companionType, index)
         spell = name, spellID = spellID, texture = icon }
 end
 
--- GetActionTexture swaps to the lit icon while its form/stance is active; emulate for non-slot buttons.
-local function GetActiveShapeshiftTexture(data)
-    local numForms = GetNumShapeshiftForms() or 0
-    if numForms == 0 then return nil end
-    local target = BareSpellName(data.spell)
-    local idName = data.spellID and GetSpellInfo(data.spellID) or nil
-    for i = 1, numForms do
+-- Spell.dbc ActiveIconID: aspects light up with the same icon as druid forms, but have no form entry.
+local ASPECT_ACTIVE_ICON = "Interface\\Icons\\Spell_Nature_WispSplode"
+local ASPECT_SPELL_IDS = {
+    [5118] = true,  [13159] = true, [13161] = true, [13163] = true, [13165] = true,
+    [14318] = true, [14319] = true, [14320] = true, [14321] = true, [14322] = true,
+    [20043] = true, [20190] = true, [25296] = true, [27044] = true, [27045] = true,
+    [34074] = true, [49071] = true, [61669] = true, [61846] = true, [61847] = true,
+    [61848] = true,
+}
+
+-- GetActionTexture swaps to the lit icon while the spell is active; emulate for non-slot buttons.
+local function GetActiveSpellTexture(target, idName)
+    if not target then return nil end
+    for i = 1, GetNumShapeshiftForms() or 0 do
         local texture, name, isActive = GetShapeshiftFormInfo(i)
-        if isActive and name and (name == target or name == idName) then
-            return texture
+        if name == target or name == idName then
+            return isActive and texture or nil
         end
     end
-    return nil
+    -- Matching the aura by id keeps this working in every locale, and skips a Pack cast on you.
+    local auraID = select(11, UnitBuff("player", target, nil, "PLAYER"))
+    return ASPECT_SPELL_IDS[auraID] and ASPECT_ACTIVE_ICON or nil
 end
 
 local function GetActionSpellName(slot)
@@ -540,13 +549,22 @@ local function ApplyRangeIndicator(button, rangeValid)
     end
 end
 
+-- Only forms and stances check the button; an active aspect just swaps its icon, like on a stock bar.
+local function SpellFormIsActive(name)
+    for i = 1, GetNumShapeshiftForms() or 0 do
+        local _, formName, isActive = GetShapeshiftFormInfo(i)
+        if formName == name then return isActive end
+    end
+    return nil
+end
+
 -- IsCurrentAction equivalent for non-slot SecureActionButtons.
 local function SpellIsCurrent(spellName)
     if not spellName then return nil end
     if IsCurrentSpell(spellName) or IsAutoRepeatSpell(spellName) then return true end
     local base = spellName:match("^(.-)%(")
     if base and (IsCurrentSpell(base) or IsAutoRepeatSpell(base)) then return true end
-    return nil
+    return SpellFormIsActive(BareSpellName(spellName)) and true or nil
 end
 
 local function IsButtonCurrent(button)
@@ -977,14 +995,18 @@ function ButtonProto:UpdateIcon(data)
     end
     local texture
     if data.type == "spell" then
-        texture = GetActiveShapeshiftTexture(data) or select(3, GetSpellInfo(data.spell))
+        local idName = data.spellID and GetSpellInfo(data.spellID) or nil
+        texture = GetActiveSpellTexture(BareSpellName(data.spell), idName)
+            or select(3, GetSpellInfo(data.spell))
         if not texture and data.spellID then
             texture = select(3, GetSpellInfo(data.spellID))
         end
     elseif data.type == "item" then
         texture = GetItemIcon(data.item) or select(10, GetItemInfo(data.item))
     elseif data.type == "macro" then
-        texture = data.texture
+        -- Same resolve as the checked state: a macro standing in for an aspect lights up like it.
+        local macroSpell = data.macro and GetMacroSpell(data.macro)
+        texture = GetActiveSpellTexture(BareSpellName(macroSpell)) or data.texture
     elseif data.type == "companion" then
         texture = data.texture or (data.spellID and select(3, GetSpellInfo(data.spellID)))
     end
@@ -1218,6 +1240,8 @@ function ButtonProto:UpdateChecked()
 end
 
 function ButtonProto:Update()
+    -- An aspect going up or down swaps its icon, and UNIT_AURA only reaches the button through here.
+    self:UpdateIcon(self:GetSlotData())
     self:UpdateCooldown()
     self:UpdateCount()
     self:UpdateUsable()
@@ -1895,6 +1919,7 @@ initFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 initFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 initFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
 initFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+initFrame:RegisterEvent("UNIT_AURA")
 -- 3.3.5a has no SPELL_UPDATE_USABLE; player power events cover oom tint with no target.
 initFrame:RegisterEvent("UNIT_MANA")
 initFrame:RegisterEvent("UNIT_ENERGY")
@@ -1963,7 +1988,7 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
         end
     elseif event == "UPDATE_SHAPESHIFT_FORM" or event == "UPDATE_SHAPESHIFT_FORMS" then
         RefreshShapeshiftIcons()
-    elseif event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_MANA" or event == "UNIT_ENERGY"
+    elseif event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_AURA" or event == "UNIT_MANA" or event == "UNIT_ENERGY"
         or event == "UNIT_RAGE" or event == "UNIT_RUNIC_POWER" then
         if arg1 == "player" then
             RequestRefreshAll()
