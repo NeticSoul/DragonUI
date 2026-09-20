@@ -1913,6 +1913,22 @@ local function LayoutMicroButtons()
     end
 end
 
+-- A client shipping its own micro button can be short a state texture (#473: Whitemane's
+-- CollectionsMicroButton has no disabled one), and the getter then returns nil.
+local function SetMicroStateTexture(button, getter, setter, path, coords)
+    if not (coords and #coords >= 4) then return end
+    local tex = button[getter](button)
+    if not tex then
+        button[setter](button, path)
+        tex = button[getter](button)
+        if not tex then return end
+    end
+    tex:SetTexture(path)
+    tex:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+    tex:ClearAllPoints()
+    tex:SetAllPoints(button)
+end
+
 local function setupMicroButtons(xOffset)
     MigrateMicroIconSpacingToPadding()
 
@@ -2074,37 +2090,10 @@ local function setupMicroButtons(xOffset)
                 local disabledCoords = GetColoredTextureCoords(name, "Disabled")
                 local mouseoverCoords = GetColoredTextureCoords(name, "Mouseover")
 
-                if upCoords and #upCoords >= 4 then
-                    local tex = button:GetNormalTexture()
-                    tex:SetTexture(microTexture)
-                    tex:SetTexCoord(upCoords[1], upCoords[2], upCoords[3], upCoords[4])
-                    tex:ClearAllPoints()
-                    tex:SetAllPoints(button)
-                end
-
-                if downCoords and #downCoords >= 4 then
-                    local tex = button:GetPushedTexture()
-                    tex:SetTexture(microTexture)
-                    tex:SetTexCoord(downCoords[1], downCoords[2], downCoords[3], downCoords[4])
-                    tex:ClearAllPoints()
-                    tex:SetAllPoints(button)
-                end
-
-                if disabledCoords and #disabledCoords >= 4 then
-                    local tex = button:GetDisabledTexture()
-                    tex:SetTexture(microTexture)
-                    tex:SetTexCoord(disabledCoords[1], disabledCoords[2], disabledCoords[3], disabledCoords[4])
-                    tex:ClearAllPoints()
-                    tex:SetAllPoints(button)
-                end
-
-                if mouseoverCoords and #mouseoverCoords >= 4 then
-                    local tex = button:GetHighlightTexture()
-                    tex:SetTexture(microTexture)
-                    tex:SetTexCoord(mouseoverCoords[1], mouseoverCoords[2], mouseoverCoords[3], mouseoverCoords[4])
-                    tex:ClearAllPoints()
-                    tex:SetAllPoints(button)
-                end
+                SetMicroStateTexture(button, 'GetNormalTexture', 'SetNormalTexture', microTexture, upCoords)
+                SetMicroStateTexture(button, 'GetPushedTexture', 'SetPushedTexture', microTexture, downCoords)
+                SetMicroStateTexture(button, 'GetDisabledTexture', 'SetDisabledTexture', microTexture, disabledCoords)
+                SetMicroStateTexture(button, 'GetHighlightTexture', 'SetHighlightTexture', microTexture, mouseoverCoords)
 
                 -- Add/update background (colored mode only)
                 if not button.DragonUIBackground then
