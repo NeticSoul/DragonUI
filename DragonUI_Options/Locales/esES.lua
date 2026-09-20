@@ -1612,6 +1612,7 @@ L["When no target exists, use full opacity instead of Non-Target Opacity."] = "W
 -- Nameplates: localización completa para producción
 L["Allow native nameplates to overlap. Retail-like Stacking enables this automatically because its custom stacking algorithm requires overlap."] = "Permite que las placas de nombre nativas se solapen. El apilado estilo Retail lo activa automáticamente porque su algoritmo personalizado necesita el solapamiento."
 L["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."] = "Colorea el resplandor y la barra de salud según la amenaza (rojo = tanqueando, naranja = perdiendo, amarillo = ganando)."
+L["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."] = "Colorea el resplandor y la barra de salud según la amenaza (naranja = tanqueando, amarillo = ganando o perdiendo)."
 L["Comma-separated, exact totem names (as shown in-game) that should never get a totem icon and render as a normal nameplate instead."] = "Nombres exactos de tótems, separados por comas y tal como aparecen en el juego, que no deben recibir icono y se mostrarán como placas normales."
 L["Enemy Player Class Colors"] = "Colores de clase de jugadores enemigos"
 L["Keep hostile boss and world-boss nameplates visible at the top of the screen wherever they appear."] = "Mantiene visibles en la parte superior de la pantalla las placas de jefes y jefes de mundo hostiles, estén donde estén."

@@ -24,6 +24,8 @@ local LEVEL_OFFSETS = {
     minaCast = 2,
     minaPartyCast = 2,
     minaNameRow = 3,
+    -- Must outrank minaHp or the retail deselected overlay covers the on-bar health text.
+    minaHpTextRow = 4,
     minaPoTextRow = 4,
     -- Reserved above every other sibling: ApplyDebuffIconFrameLevels stacks
     -- icon (+1) and text (+3) off this value, which must clear minaTarget.
@@ -770,8 +772,17 @@ function NP.layout.ApplyNameplateFonts(plateData)
         local offX = cfg.castBarSpellNameOffsetX or 0
         local offY = cfg.castBarSpellNameOffsetY or 0
         fs:ClearAllPoints()
-        fs:SetPoint("LEFT", cast, "LEFT", 4 + offX, offY)
-        fs:SetPoint("RIGHT", cast, "RIGHT", -4 + offX, offY)
+        local icon = cast.minaCastIcon
+        if NP.config.IsRetailSkin() and icon then
+            -- Retail runs the spell name from the icon's right edge, under the bar.
+            fs:SetJustifyH("LEFT")
+            fs:SetPoint("LEFT", icon, "RIGHT", 2 + offX, offY)
+            fs:SetPoint("RIGHT", cast, "RIGHT", -4 + offX, offY)
+        else
+            fs:SetJustifyH("CENTER")
+            fs:SetPoint("LEFT", cast, "LEFT", 4 + offX, offY)
+            fs:SetPoint("RIGHT", cast, "RIGHT", -4 + offX, offY)
+        end
     end
 
     local rowH = math.max(10, nameSize + 1)
@@ -989,7 +1000,7 @@ end
 -- Elite icon Y: name row above bar, or overlay offset when name sits on bar.
 function NP.layout.GetNameOverlayIconY()
     local cfg = NP.config.GetCfg()
-    local base = (cfg.nameOverlayHealthBar == true) and (cfg.nameOverlayOffsetY or 0) or 14
+    local base = NP.config.IsNameOverlayBar() and (cfg.nameOverlayOffsetY or 0) or 14
     return base + (cfg.eliteIconOffsetY or 0)
 end
 
@@ -1043,7 +1054,7 @@ function NP.layout.LayoutMinaStack(plateData)
         plateData.minaThreatTex:SetDrawLayer("BACKGROUND", 1)
     end
 
-    local nameOverlay = cfg.nameOverlayHealthBar == true
+    local nameOverlay = NP.config.IsNameOverlayBar()
     local nameOverlayY = cfg.nameOverlayOffsetY or 0
     local padX = cfg.nameRowPaddingX or 0
 

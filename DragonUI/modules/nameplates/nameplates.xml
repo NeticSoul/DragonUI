@@ -1,6 +1,7 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
     <Script file="core\init.lua"/>
     <Script file="core\constants.lua"/>
+    <Script file="core\atlas.lua"/>
     <Script file="core\config.lua"/>
     <Script file="core\state.lua"/>
     <Script file="pipeline\native_style.lua"/>
@@ -17,6 +18,7 @@
     <Script file="features\raid_marker.lua"/>
     <Script file="features\combo.lua"/>
     <Script file="features\elite.lua"/>
+    <Script file="features\retail_chrome.lua"/>
     <Script file="features\quest.lua"/>
     <Script file="features\quest_providers.lua"/>
     <Script file="features\quest_coexist.lua"/>

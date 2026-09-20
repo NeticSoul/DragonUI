@@ -1496,6 +1496,7 @@ L["When no target exists, use full opacity instead of Non-Target Opacity."] = "W
 L["Allow native nameplates to overlap. Retail-like Stacking enables this automatically because its custom stacking algorithm requires overlap."] = "기본 이름표가 서로 겹치도록 허용합니다. 리테일식 쌓기는 사용자 지정 알고리즘에 겹침이 필요하므로 자동으로 활성화합니다."
 L["Anchor"] = "고정 위치"
 L["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."] = "위협 상태에 따라 광택과 생명력 바 색상을 변경합니다(빨강 = 탱킹, 주황 = 잃는 중, 노랑 = 얻는 중)."
+L["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."] = "위협 상태에 따라 광택과 생명력 바 색상을 변경합니다(주황 = 탱킹, 노랑 = 얻거나 잃는 중)."
 L["Comma-separated, exact totem names (as shown in-game) that should never get a totem icon and render as a normal nameplate instead."] = "토템 아이콘을 사용하지 않고 일반 이름표로 표시할 정확한 게임 내 토템 이름을 쉼표로 구분하여 입력합니다."
 L["Keep hostile boss and world-boss nameplates visible at the top of the screen wherever they appear."] = "적대적 우두머리와 야외 우두머리 이름표를 어디서든 화면 상단에 보이게 유지합니다."
 L["Only apply Retail-like stacking inside party and raid instances. It remains disabled in the open world, battlegrounds, and arenas."] = "리테일식 쌓기를 파티 및 공격대 인스턴스에서만 적용합니다. 야외, 전장 및 투기장에서는 비활성화됩니다."

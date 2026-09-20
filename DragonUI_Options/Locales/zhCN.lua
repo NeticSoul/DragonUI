@@ -1454,6 +1454,7 @@ L["When no target exists, use full opacity instead of Non-Target Opacity."] = "W
 L["Allow native nameplates to overlap. Retail-like Stacking enables this automatically because its custom stacking algorithm requires overlap."] = "允许原生姓名板互相重叠。仿正式服堆叠的自定义算法需要重叠，因此会自动启用此项。"
 L["Anchor"] = "锚点"
 L["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."] = "根据仇恨状态为发光和生命条着色（红色=正在承受，橙色=正在失去，黄色=正在获得）。"
+L["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."] = "根据仇恨状态为发光和生命条着色（橙色=正在承受，黄色=正在获得或失去）。"
 L["Comma-separated, exact totem names (as shown in-game) that should never get a totem icon and render as a normal nameplate instead."] = "输入以逗号分隔的游戏内准确图腾名称；这些图腾不显示图标，而是使用普通姓名板。"
 L["Keep hostile boss and world-boss nameplates visible at the top of the screen wherever they appear."] = "无论在何处出现，都将敌对首领和世界首领姓名板保持在屏幕顶部可见。"
 L["Only apply Retail-like stacking inside party and raid instances. It remains disabled in the open world, battlegrounds, and arenas."] = "仅在地下城和团队副本中使用仿正式服堆叠；在开放世界、战场和竞技场中保持禁用。"

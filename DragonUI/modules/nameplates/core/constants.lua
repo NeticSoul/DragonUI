@@ -155,6 +155,12 @@ C.AGGRO_COLORS = {
     dpsDanger = { 1.0, 0.0, 0.0 },
 }
 
+-- Retail remaps the top threat step to orange instead of red (COMPACT_UNIT_FRAME_THREAT_STATUS_COLORS).
+C.AGGRO_COLORS_RETAIL = {
+    warning = { 1.0, 1.0, 0.4667 },
+    tanking = { 1.0, 0.6, 0.0 },
+}
+
 C.RAID_MARK_HEALTH_COLORS = {
     STAR = { 0.85, 0.81, 0.27 },
     CIRCLE = { 0.93, 0.51, 0.06 },

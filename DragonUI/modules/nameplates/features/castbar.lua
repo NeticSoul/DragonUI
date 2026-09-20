@@ -71,12 +71,14 @@ local function ApplyNativeCastShieldSnap(plateData, bar)
 end
 
 local function ResolveCastNotInterruptible(plateData, bar, fromCastInfo)
+    -- The unit API is authoritative when it says yes: the native snap is taken on the
+    -- bar's OnShow, before Blizzard shows the shield, so it can cache a stale false.
+    if fromCastInfo == true then
+        return true
+    end
     -- Off-target shield from native OnShow snap, not UnitCastingInfo.
     if bar and bar._nativeCastShield ~= nil then
         return bar._nativeCastShield
-    end
-    if fromCastInfo == true then
-        return true
     end
     if fromCastInfo == false then
         return false
@@ -284,7 +286,7 @@ local function ApplyInterruptedHoldVisual(bar)
     end
     bar:SetMinMaxValues(0, 1)
     bar:SetValue(0)
-    bar:SetStatusBarTexture(C.CAST_TEX_STANDARD)
+    bar:SetStatusBarTexture(NP.config.GetCastFillTexture(false, false, true))
     bar:SetStatusBarColor(1, 1, 1, 1)
     local tex = bar:GetStatusBarTexture()
     if tex and tex.SetTexCoord then
@@ -418,10 +420,23 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
     end
 end
 
+-- Both cast paths size the spark; keep the rule here so they cannot drift.
+-- Retail's ui-castingbar-pip is authored for a TILED nine-slice (caps 14+15 of 30). At a
+-- nameplate's 14px spark the caps cannot fit and, with no slice API on 3.3.5a, the art
+-- collapses into a stub -- so both styles keep DragonUI's own spark, which reads correctly.
+function NP.castbar.SizeCastSpark(spark, castH)
+    if not spark then return end
+    spark:SetSize(max(castH, 14), max(castH * 2, 14))
+end
+
 local function ApplyCastShieldTexture(tex)
     if not tex then return end
-    tex:SetTexture(C.CAST_TEX_ATLAS)
-    tex:SetTexCoord(unpack(C.CAST_SHIELD_UV))
+    if NP.config.IsRetailSkin() then
+        NP.atlas.Apply(tex, "castShield")
+    else
+        tex:SetTexture(C.CAST_TEX_ATLAS)
+        tex:SetTexCoord(unpack(C.CAST_SHIELD_UV))
+    end
     tex:SetVertexColor(1, 1, 1, 1)
 end
 
@@ -438,16 +453,29 @@ end
 function NP.castbar.LayoutCastIconShield(shield, iconRef, iconSize, parentBar)
     if not shield or not iconRef then return end
     local size = iconSize or 14
-    shield:SetSize(size * C.CAST_SHIELD_SIZE_W, size * C.CAST_SHIELD_SIZE_H)
     shield:ClearAllPoints()
-    shield:SetPoint("CENTER", iconRef, "CENTER", C.CAST_SHIELD_OFFSET_X, C.CAST_SHIELD_OFFSET_Y)
-    if parentBar and parentBar.GetFrameLevel then
+    local retail = NP.config.IsRetailSkin()
+    if retail then
+        -- Retail's 10x12 shield takes the 12x12 icon's slot; the icon itself is hidden meanwhile.
+        shield:SetSize(max(5, math.floor(size * 10 / 12 + 0.5)), size)
+        shield:SetPoint("RIGHT", iconRef, "RIGHT", 0, 0)
+    else
+        shield:SetSize(size * C.CAST_SHIELD_SIZE_W, size * C.CAST_SHIELD_SIZE_H)
+        shield:SetPoint("CENTER", iconRef, "CENTER", C.CAST_SHIELD_OFFSET_X, C.CAST_SHIELD_OFFSET_Y)
+    end
+    -- Heritage's badge is a frame behind the bar; Modern's is a texture on it, so only
+    -- the frame path has a level to set.
+    if not retail and shield.SetFrameLevel and parentBar and parentBar.GetFrameLevel then
         shield:SetFrameLevel(parentBar:GetFrameLevel() - 1)
     end
 end
 
 function NP.castbar.GetCastSpellIconSize(notInterruptible)
     local castH = select(1, NP.config.GetCastBarMetrics())
+    -- Retail sizes the icon at 12*sv against a 10*sv bar, i.e. 1.2x the cast bar height.
+    if NP.config.IsRetailSkin() then
+        return max(6, math.floor(castH * 1.2 + 0.5))
+    end
     local base = max(castH + 4, 14)
     if notInterruptible then
         return max(math.floor(base * C.CAST_NOTINT_ICON_SCALE + 0.5), 10)
@@ -518,14 +546,27 @@ function NP.castbar.LayoutCastSpellIcon(icon, bar, notInterruptible)
     end
     icon:ClearAllPoints()
     icon:SetSize(iconSize, iconSize)
-    icon:SetPoint("RIGHT", bar, "LEFT", anchorX, anchorY)
+    if NP.config.IsRetailSkin() then
+        -- Retail's Modern style hangs the icon under the bar's left end, not beside it.
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        -- Clear ui-castingbar-frame, which hangs 2px below the bar.
+        icon:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -3)
+    else
+        icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+        icon:SetPoint("RIGHT", bar, "LEFT", anchorX, anchorY)
+    end
     NP.castbar.SyncCastIconFrame(icon, bar, iconSize)
     return iconSize
 end
 
+-- Modern draws the shield as a texture on the bar instead of a child frame: frame levels
+-- belong to layout.UpdateDepthOrdering, which rewrites the cast bar's band on target and
+-- hover changes and left a frame-based shield stranded behind the icon until the next cast.
 function NP.castbar.EnsureCastIconShieldFrame(bar, shieldKey, parentBar)
+    local wantTexture = NP.config.IsRetailSkin()
+    local wantType = wantTexture and "Texture" or "Frame"
     local existing = bar[shieldKey]
-    if existing and existing.GetObjectType and existing:GetObjectType() == "Frame" then
+    if existing and existing.GetObjectType and existing:GetObjectType() == wantType then
         if existing.GetParent and existing:GetParent() == parentBar then
             return existing
         end
@@ -533,7 +574,14 @@ function NP.castbar.EnsureCastIconShieldFrame(bar, shieldKey, parentBar)
     elseif existing and existing.Hide then
         existing:Hide()
     end
-    bar[shieldKey] = NP.castbar.CreateCastIconShield(parentBar)
+    if wantTexture then
+        local tex = parentBar:CreateTexture(nil, "OVERLAY")
+        ApplyCastShieldTexture(tex)
+        tex:Hide()
+        bar[shieldKey] = tex
+    else
+        bar[shieldKey] = NP.castbar.CreateCastIconShield(parentBar)
+    end
     return bar[shieldKey]
 end
 
@@ -827,7 +875,7 @@ function NP.castbar.LayoutPartyCastBar(plateData)
     if not bar or not border then return end
 
     local cfg = NP.config.GetCfg()
-    if cfg.showPartyRaidCastBars ~= true then return end
+    if cfg.showPartyRaidCastBars == false then return end
 
     local anchor = NP.layout.GetCastStackAnchor(plateData)
     if not anchor then return end
@@ -937,12 +985,12 @@ function PartyRaidCastTracker:StartCast(unit, isChannel)
         bar:InvalidateTextureCache()
     end
     if isChannel then
-        bar:SetStatusBarTexture(C.CAST_TEX_CHANNEL)
+        bar:SetStatusBarTexture(NP.config.GetCastFillTexture(true, bar._notInterruptible))
         bar:SetStatusBarColor(C.CAST_COLOR_CHANNEL[1], C.CAST_COLOR_CHANNEL[2], C.CAST_COLOR_CHANNEL[3], 1)
         bar.channelingEx = true
         bar.castingEx = false
     else
-        bar:SetStatusBarTexture(C.CAST_TEX_STANDARD)
+        bar:SetStatusBarTexture(NP.config.GetCastFillTexture(false, bar._notInterruptible))
         bar:SetStatusBarColor(C.CAST_COLOR_STANDARD[1], C.CAST_COLOR_STANDARD[2], C.CAST_COLOR_STANDARD[3], 1)
         bar.castingEx = true
         bar.channelingEx = false
@@ -1020,7 +1068,7 @@ function PartyRaidCastTracker:OnEvent(event, unit, ...)
         return
     end
     local cfg = NP.config.GetCfg()
-    if cfg.showPartyRaidCastBars ~= true then return end
+    if cfg.showPartyRaidCastBars == false then return end
 
     if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
         self:StartCast(unit, event == "UNIT_SPELLCAST_CHANNEL_START")
@@ -2011,8 +2059,7 @@ local function SyncMonitorCastFromNative(plateData, bar)
         end
     end
     if progress and bar.minaSpark and (bar.castingEx or bar.channelingEx) then
-        local castH = select(1, NP.config.GetCastBarMetrics())
-        bar.minaSpark:SetSize(max(castH, 14), max(castH * 2, 14))
+        NP.castbar.SizeCastSpark(bar.minaSpark, select(1, NP.config.GetCastBarMetrics()))
         local w = bar:GetWidth()
         if w and w > 0 then
             bar.minaSpark:ClearAllPoints()
@@ -2599,10 +2646,36 @@ function NP.castbar.UpdateCastInterruptibleVisuals(bar, plateData, isPartyBar)
     local isNotInt = bar._notInterruptible and true or false
     local sbTex = bar:GetStatusBarTexture()
     if sbTex and sbTex.SetDesaturated then
-        sbTex:SetDesaturated(isNotInt)
+        -- Modern swaps in ui-castingbar-uninterruptable, which is already the grey art;
+        -- desaturating it on top only dulls it further.
+        sbTex:SetDesaturated(isNotInt and not NP.config.IsRetailSkin())
     end
     local iconRef = isPartyBar and bar.minaIcon or bar.minaCastIcon
     local shieldKey = isPartyBar and "minaShield" or "minaCastShield"
+    if iconRef and NP.config.IsRetailSkin() then
+        local iconSize = NP.castbar.LayoutCastSpellIcon(iconRef, bar, isNotInt)
+        if isNotInt then
+            local shield = NP.castbar.EnsureCastIconShieldFrame(bar, shieldKey, bar)
+            NP.castbar.LayoutCastIconShield(shield, iconRef, iconSize, bar)
+            shield:Show()
+            -- Blizzard's castbar does the same: Icon:SetShown(not notInterruptible).
+            if iconRef:IsShown() then
+                iconRef._hiddenByShield = true
+                iconRef:Hide()
+            end
+        else
+            if bar[shieldKey] then
+                bar[shieldKey]:Hide()
+            end
+            if iconRef._hiddenByShield then
+                iconRef._hiddenByShield = nil
+                if iconRef:GetTexture() then
+                    iconRef:Show()
+                end
+            end
+        end
+        return
+    end
     if iconRef and iconRef.IsShown and iconRef:IsShown() then
         local iconSize = NP.castbar.LayoutCastSpellIcon(iconRef, bar, isNotInt)
         if isNotInt then
@@ -2889,7 +2962,7 @@ local function PositionCastSpark(bar, progress)
         castH = select(1, NP.config.GetCastBarMetrics())
         bar._cachedCastH = castH
     end
-    spark:SetSize(max(castH, 14), max(castH * 2, 14))
+    NP.castbar.SizeCastSpark(spark, castH)
     local w = bar:GetWidth()
     if w and w > 0 then
         spark:ClearAllPoints()
@@ -3110,7 +3183,7 @@ function NP.castbar.ApplyPlateCastTextures(bar, channeling, plateData)
             bar:InvalidateTextureCache()
         end
         bar._cachedCastH = nil
-        bar:SetStatusBarTexture(C.CAST_TEX_CHANNEL)
+        bar:SetStatusBarTexture(NP.config.GetCastFillTexture(true, bar._notInterruptible))
         bar:SetStatusBarColor(C.CAST_COLOR_CHANNEL[1], C.CAST_COLOR_CHANNEL[2], C.CAST_COLOR_CHANNEL[3], 1)
         bar.channelingEx = true
         bar.castingEx = false
@@ -3119,7 +3192,7 @@ function NP.castbar.ApplyPlateCastTextures(bar, channeling, plateData)
             bar:InvalidateTextureCache()
         end
         bar._cachedCastH = nil
-        bar:SetStatusBarTexture(C.CAST_TEX_STANDARD)
+        bar:SetStatusBarTexture(NP.config.GetCastFillTexture(false, bar._notInterruptible))
         bar:SetStatusBarColor(C.CAST_COLOR_STANDARD[1], C.CAST_COLOR_STANDARD[2], C.CAST_COLOR_STANDARD[3], 1)
         bar.castingEx = true
         bar.channelingEx = false

@@ -16,10 +16,14 @@ function NP.lifecycle.InvalidatePlateVisuals(plateData, clearGuid)
     end
     NP.state.HidePlateDebuffs(plateData)
     if NP.widgets then
+        -- The raid marker is deliberately absent: these Hides exist to clear OUR widgets of
+        -- the recycled plate's previous occupant, but the marker is Blizzard's own region and
+        -- Blizzard hides it itself when the new unit has no mark. Blanking it here only
+        -- latched alpha 0 until a full refresh reached that plate, and those are budgeted --
+        -- so after a nameplate toggle a random subset stayed invisible.
         NP.widgets.Hide("ThreatGlow", plateData)
         NP.widgets.Hide("TargetHighlight", plateData)
         NP.widgets.Hide("Combo", plateData)
-        NP.widgets.Hide("RaidMarker", plateData)
         NP.widgets.Hide("Elite", plateData)
         NP.widgets.Hide("Totem", plateData)
         NP.widgets.Hide("Quest", plateData)
@@ -181,15 +185,6 @@ function NP.lifecycle.SetupPlateHooks(plateData)
         end)
     end
 
-    local raidIcon = plateData.raidIcon
-    if raidIcon and raidIcon.HookScript then
-        raidIcon:HookScript("OnShow", function()
-            if NP.config.IsModuleEnabled() and NP.module.applied then
-                local current = CurrentPlateData()
-                if current then NP.widgets.Sync("RaidMarker", current) end
-            end
-        end)
-    end
 
     local function OnNativeEliteShown()
         if not NP.config.IsModuleEnabled() or not NP.module.applied then return end

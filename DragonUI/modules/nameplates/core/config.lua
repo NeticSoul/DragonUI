@@ -64,6 +64,12 @@ function NP.config.IsRetailBehavior()
     return cfg.retailStackingEnabled == true
 end
 
+-- "legacy" (and the earlier "classic" spelling) opt out; anything else is the modern skin.
+function NP.config.IsRetailSkin()
+    local style = NP.config.GetCfg().plateStyle
+    return style ~= "legacy" and style ~= "classic"
+end
+
 function NP.config.IsBattleGroundHealersLoaded()
     return IsAddOnLoaded and IsAddOnLoaded("BattleGroundHealers") or false
 end
@@ -113,6 +119,26 @@ function NP.config.GetNameplateFont()
         return addon.Fonts[addonKey] or "Fonts\\FRIZQT__.TTF"
     end
     return "Fonts\\FRIZQT__.TTF"
+end
+
+-- Retail swaps the whole fill per cast type; the legacy skin only ever had two.
+function NP.config.GetCastFillTexture(isChannel, notInterruptible, interrupted)
+    if NP.config.IsRetailSkin() then
+        local fills = NP.atlas.CAST_FILL
+        if interrupted then
+            return fills.interrupted
+        elseif notInterruptible then
+            return fills.uninterruptible
+        end
+        return isChannel and fills.channel or fills.standard
+    end
+    return isChannel and C.CAST_TEX_CHANNEL or C.CAST_TEX_STANDARD
+end
+
+-- Retail's Modern style sets nameInsideBar, but the name stays above the bar here
+-- unless the user opts in, so the existing toggle keeps owning the choice.
+function NP.config.IsNameOverlayBar()
+    return NP.config.GetCfg().nameOverlayHealthBar == true
 end
 
 function NP.config.IsPowerShown(plateData)

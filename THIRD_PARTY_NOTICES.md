@@ -37,6 +37,14 @@ are cut from retail's own sheets (© Blizzard Entertainment) and repacked power-
 PentSec. The magnifier on the filter button is the client's own
 `Interface\Minimap\Tracking\None` (© Blizzard Entertainment), composited over that sheet's disc.
 
+## Retail nameplate artwork
+
+The textures under `DragonUI/Textures/Nameplates/Retail/` (health bar capsule and fill, selection
+border, deselected overlay, aggro flare, cast bar frame and fills) are cut
+from retail's own nameplate and casting bar sheets (© Blizzard Entertainment); the bar fills are
+repacked power-of-two for 3.3.5a, and the aggro flare has its mask baked into the alpha. They
+arrived via DragonUI_NewEra's downport.
+
 ## Bundled Fonts
 
 | Font | Path | License | License File |

@@ -197,6 +197,43 @@ function NP.discovery.ApplyBarMask(bar)
     end
 end
 
+-- A 3.3.5a StatusBar squashes its texture into the filled width instead of cropping it, so a
+-- fill with rounded caps pinches into points at low health. The cast bars carry their own
+-- clipping and the unit frames crop the same way; these two bars were the ones left out.
+function NP.discovery.ClipBarFill(bar, cur, maxVal)
+    local tex = bar and bar.GetStatusBarTexture and bar:GetStatusBarTexture()
+    if not tex or not tex.SetTexCoord then
+        return
+    end
+    local right = 1
+    if maxVal and maxVal > 0 and cur and cur >= 0 then
+        right = cur / maxVal
+        if right > 1 then
+            right = 1
+        elseif right < 0 then
+            right = 0
+        end
+    end
+    -- Keyed on the texture too: swapping styles hands the bar a different texture object.
+    if bar._fillClipTex == tex and bar._fillClipRight == right then
+        return
+    end
+    bar._fillClipTex, bar._fillClipRight = tex, right
+    if bar._retailFillOn then
+        NP.retail_chrome.LayoutFill(bar, right)
+    else
+        tex:SetTexCoord(0, right, 0, 1)
+    end
+end
+
+function NP.discovery.SetBarColor(bar, r, g, b)
+    local sliced = bar._retailFillOn
+    bar:SetStatusBarColor(r, g, b, sliced and 0 or 1)
+    if sliced then
+        NP.atlas.SetSliceVertexColor(bar._retailFill, r, g, b, 1)
+    end
+end
+
 function NP.discovery.AttachBarBorder(bar)
     if bar.minaBr then
         return bar.minaBr

@@ -117,6 +117,9 @@ local function ResolveAggroColor(plateData, status)
         end
         return nil
     end
+    if NP.config.IsRetailSkin() and NP.config.GetCfg().retailThreatColors ~= false then
+        return status == 3 and C.AGGRO_COLORS_RETAIL.tanking or C.AGGRO_COLORS_RETAIL.warning
+    end
     if status == 3 then
         return C.AGGRO_COLORS.tanking
     elseif status == 2 then
@@ -152,6 +155,19 @@ function NP.threat.ApplyThreatGlow(plateData)
     local glow = plateData.minaThreatTex
     local hp = plateData.minaHp
     if not threat or not glow or not hp then return end
+
+    -- Modern style draws threat as retail's scrolling aggro flare instead (retail_chrome).
+    -- Driven from here so it tracks threat transitions, not just target changes.
+    if NP.config.IsRetailSkin() then
+        glow:Hide()
+        if threat.SetTexCoord then
+            threat:SetTexCoord(0, 0, 0, 0)
+        end
+        if NP.retail_chrome and NP.retail_chrome.SyncFlare then
+            NP.retail_chrome.SyncFlare(plateData)
+        end
+        return
+    end
 
     -- Blizzard may restore threat texcoords on aggro change.
     if threat.SetTexCoord then

@@ -168,6 +168,7 @@ local FULL_SYNC_WIDGETS = {
     "Combo",
     "Totem",
     "TargetHighlight",
+    "RetailChrome",
 }
 local TARGET_SYNC_WIDGETS = {
     "Debuffs",
@@ -176,6 +177,7 @@ local TARGET_SYNC_WIDGETS = {
     "Elite",
     "Combo",
     "TargetHighlight",
+    "RetailChrome",
 }
 
 function NP.gather.ApplyVisualState(plateData, snapshot, context, state, reason)
@@ -518,9 +520,10 @@ function NP.gather.SyncHealth(plateData, value)
     local cur = value or src:GetValue()
     bar:SetMinMaxValues(minVal, maxVal)
     bar:SetValue(cur)
+    NP.discovery.ClipBarFill(bar, cur - minVal, maxVal - minVal)
 
     local r, g, b = NP.gather.GetHealthBarColor(plateData)
-    bar:SetStatusBarColor(r, g, b, 1)
+    NP.discovery.SetBarColor(bar, r, g, b)
     bar:Show()
 
     local cfg = NP.config.GetCfg()
@@ -625,11 +628,12 @@ function NP.gather.SyncPower(plateData, unit)
 
     if PowerBarColor and powerToken and PowerBarColor[powerToken] then
         local c = PowerBarColor[powerToken]
-        bar:SetStatusBarColor(c.r, c.g, c.b, 1)
+        NP.discovery.SetBarColor(bar, c.r, c.g, c.b)
     end
 
     bar:SetMinMaxValues(0, maxVal)
     bar:SetValue(cur)
+    NP.discovery.ClipBarFill(bar, cur, maxVal)
     bar:Show()
 
     if plateData.minaPoCur then
@@ -925,9 +929,12 @@ function NP.gather.SyncTargetHighlight(plateData, isTargeted)
         isTargeted = NP.identity.IsTargetPlateVisual(plateData)
     end
 
+    -- The retail selected border replaces this overlay; showing both double-highlights.
+    local retailBorder = NP.config.IsRetailSkin() and cfg.retailSelectionBorder ~= false
+
     if isTargeted then
         target:Show()
-        if cfg.showTargetHighlight ~= false then
+        if cfg.showTargetHighlight ~= false and not retailBorder then
             if target.tex then target.tex:Show() end
         else
             if target.tex then target.tex:Hide() end
@@ -1106,6 +1113,9 @@ function NP.gather.RefreshPlateMouseoverState(plateData, reason)
     NP.gather.SyncName(plateData, context.resolvedUnit)
     NP.widgets.Sync("Debuffs", plateData, context, state)
     NP.widgets.Sync("Quest", plateData, context, state)
+    if NP.retail_chrome and NP.retail_chrome.SyncMouseover then
+        NP.retail_chrome.SyncMouseover(plateData)
+    end
 end
 
 -- Threat transitions (engine): sync glow and health tint when status changes.

@@ -62,8 +62,18 @@ function NP.widgets.ReflowTopOverlays(plateData)
         if comboVisible then
             debuffY = C.DEBUFF_HOST_OFFSET_Y_WITH_COMBO or 15
         end
+        -- Retail anchors the aura grid to the name row only while the name sits above the
+        -- bar; with the name inside it, that row is over the bar and the icons land on it.
+        local anchorTo = plateData.minaNameRow
+        if NP.config.IsNameOverlayBar() and plateData.minaHp then
+            anchorTo = plateData.minaHp
+            -- Retail's padding is measured from a bare bar; ours has the capsule on top of it.
+            if NP.retail_chrome and NP.retail_chrome.GetTopInset then
+                debuffY = debuffY + NP.retail_chrome.GetTopInset()
+            end
+        end
         debuffHost:ClearAllPoints()
-        debuffHost:SetPoint("BOTTOMLEFT", plateData.minaNameRow, "TOPLEFT",
+        debuffHost:SetPoint("BOTTOMLEFT", anchorTo, "TOPLEFT",
             cfg.debuffOffsetX or 0, debuffY + (cfg.debuffOffsetY or 0))
     end
 
@@ -103,8 +113,12 @@ end
 
 function NP.widgets.LayoutRaidMarker(plateData)
     local native = plateData.raidIcon
-    local hp = plateData.minaHp
-    if not native or not hp then return false end
+    if not native then return false end
+    -- A missing visual stack is not a reason to hide: widgets.Sync turns any false into
+    -- alpha 0, and RAID_TARGET_UPDATE sweeps every plate, including ones discovered before
+    -- their bars exist. Leaving it on Blizzard's own anchor beats blanking it until the
+    -- next full refresh.
+    if not plateData.minaHp then return true end
     NP.widgets.ReflowTopOverlays(plateData)
     return true
 end
@@ -117,12 +131,13 @@ function NP.widgets.SyncRaidMarker(plateData)
         if native.SetAlpha then native:SetAlpha(0) end
         return
     end
-    -- Layout already reflowed via widgets.Sync; alpha/Show only here.
-    if native.IsShown and native:IsShown() then
-        if native.SetAlpha then native:SetAlpha(1) end
-        native:Show()
-    elseif native.SetAlpha then
-        native:SetAlpha(0)
+    -- Layout already reflowed via widgets.Sync; alpha only here. Do NOT gate on IsShown:
+    -- toggling plates with the game's own key re-shows the plate before Blizzard re-shows
+    -- this region, so a sync landing in that gap latched alpha 0 and the marker stayed
+    -- invisible until the next full refresh -- which is why targeting brought it back.
+    -- The texture's own shown flag already gates it, so alpha 1 costs nothing when hidden.
+    if native.SetAlpha then
+        native:SetAlpha(1)
     end
 end
 

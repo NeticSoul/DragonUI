@@ -43,24 +43,33 @@ function NP.clickbox.OnPlateHidden(_plateData)
 end
 
 function NP.clickbox.CaptureBaseSize(plateData)
-    if plateData._clickboxBaseW and plateData._clickboxBaseH then
+    local plate = plateData and plateData.plate
+    if not plate then
         return
     end
-    local plate = plateData.plate
-    if not plate or not plate.GetSize then
-        return
+
+    local w, h = plate._dragonUIClickboxNativeW, plate._dragonUIClickboxNativeH
+    if not (w and h) then
+        if plate._dragonUIClickboxSized then
+            w, h = NP.module._clickboxNativeW, NP.module._clickboxNativeH
+        elseif plate.GetSize then
+            w, h = plate:GetSize()
+        end
+        if not (w and w > 0 and h and h > 0) then
+            return
+        end
+        -- Blizzard recycles plate frames, so GetSize() on one we already sized reads back scaled.
+        plate._dragonUIClickboxNativeW = w
+        plate._dragonUIClickboxNativeH = h
     end
-    local w, h = plate:GetSize()
-    -- Once only: post-Apply GetSize() already includes the clickbox factor.
-    if w and w > 0 and h and h > 0 then
-        plateData._clickboxBaseW = w
-        plateData._clickboxBaseH = h
-        if not NP.module._clickboxNativeW then
-            NP.module._clickboxNativeW = w
-        end
-        if not NP.module._clickboxNativeH then
-            NP.module._clickboxNativeH = h
-        end
+
+    plateData._clickboxBaseW = w
+    plateData._clickboxBaseH = h
+    if not NP.module._clickboxNativeW then
+        NP.module._clickboxNativeW = w
+    end
+    if not NP.module._clickboxNativeH then
+        NP.module._clickboxNativeH = h
     end
 end
 
@@ -197,6 +206,7 @@ function NP.clickbox.ApplyPlateClickbox(plateData)
     if plate.SetSize then
         local w, h = NP.clickbox.GetClickboxSize(plateData)
         plate:SetSize(w, h)
+        plate._dragonUIClickboxSized = true
     end
 
     if plate.SetHitRectInsets then
@@ -247,10 +257,11 @@ function NP.clickbox.RestorePlate(plateData)
     if not plate or InCombatLockdown() then
         return false
     end
-    local width = NP.module._clickboxNativeW or plateData._clickboxBaseW
-    local height = NP.module._clickboxNativeH or plateData._clickboxBaseH
+    local width = NP.module._clickboxNativeW or plate._dragonUIClickboxNativeW or plateData._clickboxBaseW
+    local height = NP.module._clickboxNativeH or plate._dragonUIClickboxNativeH or plateData._clickboxBaseH
     if width and height and plate.SetSize then
         plate:SetSize(width, height)
+        plate._dragonUIClickboxSized = nil
     end
     if plate.SetHitRectInsets then
         plate:SetHitRectInsets(0, 0, 0, 0)

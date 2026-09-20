@@ -1314,6 +1314,19 @@ L["Enable Nameplates"] = true
 L["Enable or disable the DragonUI nameplate module."] = true
 L["Apply DragonUI nameplate styling."] = true
 L["DragonUI-style health bars on Blizzard nameplates (30300)."] = true
+L["Plate Style"] = true
+L["Nameplate Art"] = true
+L["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome and is still in beta."] = true
+L["Modern (Beta)"] = true
+L["Heritage"] = true
+L["Mouseover Highlight"] = true
+L["Wash the health bar with a bright overlay while the cursor is over the nameplate."] = true
+L["Target Selection Border"] = true
+L["Draw the white glowing border around the current target's health bar."] = true
+L["Dim Non-Target Plates"] = true
+L["Lay the retail dim overlay over every nameplate that is not your target."] = true
+L["Retail Threat Colors"] = true
+L["Use retail's yellow and orange threat steps instead of the yellow, orange and red set."] = true
 L["Unit Nameplates"] = true
 L["Friendly Units"] = true
 L["Enemy Units"] = true
@@ -1748,6 +1761,7 @@ L["When no target exists, use full opacity instead of Non-Target Opacity."] = tr
 -- Nameplates: production-complete descriptions
 L["Allow native nameplates to overlap. Retail-like Stacking enables this automatically because its custom stacking algorithm requires overlap."] = true
 L["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."] = true
+L["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."] = true
 L["Keep hostile boss and world-boss nameplates visible at the top of the screen wherever they appear."] = true
 L["Only apply Retail-like stacking inside party and raid instances. It remains disabled in the open world, battlegrounds, and arenas."] = true
 L["Scales the nameplate clickbox relative to its original size. Changes made during combat are applied when combat ends."] = true

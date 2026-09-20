@@ -232,6 +232,25 @@ Panel.subTabSetters["nameplates"] = function(key) activeSubTab = key or "general
 -- SUB-TAB BUILDERS
 -- ============================================================================
 
+-- The modern capsule paints its own background, so the two background pickers have nothing to set.
+local function RetailChromeOwnsBackground()
+    local style = C:GetDBValue(DB .. ".plateStyle")
+    return style ~= "legacy" and style ~= "classic"
+end
+
+-- Tank and DPS mode return before the retail branch in ResolveAggroColor, so only
+-- the default palette changes: orange for tanking, yellow for gaining or losing.
+local function UsesRetailThreatColors()
+    local style = C:GetDBValue(DB .. ".plateStyle")
+    if style == "legacy" or style == "classic" then
+        return false
+    end
+    if C:GetDBValue(DB .. ".retailThreatColors") == false then
+        return false
+    end
+    return C:GetDBValue(DB .. ".tankMode") ~= true and C:GetDBValue(DB .. ".dpsMode") ~= true
+end
+
 local function BuildGeneralSubTab(scroll)
     C:AddSpacer(scroll)
 
@@ -256,6 +275,84 @@ local function BuildGeneralSubTab(scroll)
         end,
         setFunc = function(val)
             SetCVar("nameplateAllowOverlap", val and "1" or "0")
+        end,
+    })
+
+    local styleSection = C:AddSection(scroll, LO["Plate Style"])
+    local seededStyle = C:GetDBValue(DB .. ".plateStyle")
+    local function IsLegacyStyle()
+        local style = C:GetDBValue(DB .. ".plateStyle")
+        return style == "legacy" or style == "classic"
+    end
+
+    C:AddDropdown(styleSection, {
+        label = LO["Nameplate Art"],
+        desc = LO["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome and is still in beta."],
+        dbPath = DB .. ".plateStyle",
+        values = {
+            modern = LO["Modern (Beta)"],
+            legacy = LO["Heritage"],
+        },
+        width = 200,
+        -- Each style is authored against its own bar size, so seed it on the switch;
+        -- the Layout sliders stay editable afterwards.
+        callback = function()
+            local style = C:GetDBValue(DB .. ".plateStyle")
+            -- Re-picking the value already selected fires this too, and would wipe tuned sliders.
+            if style ~= seededStyle then
+                seededStyle = style
+                local modern = style == "modern"
+                C:SetDBValue(DB .. ".barWidth", modern and 148 or 150)
+                C:SetDBValue(DB .. ".barHeight", modern and 16 or 9)
+                C:SetDBValue(DB .. ".castBarHeight", modern and 8 or 9)
+                -- The modern cast bar is drawn around its spell name, so the skin needs it on.
+                if modern then
+                    C:SetDBValue(DB .. ".showCastBarSpellName", true)
+                end
+                -- NewEra ships its aggro flare off, while the legacy glow is part of that art.
+                C:SetDBValue(DB .. ".threatGlow", not modern)
+            end
+            RefreshNameplates()
+            if Panel and Panel.SelectTab then
+                Panel:SelectTab("nameplates")
+            end
+        end,
+    })
+
+    C:AddToggle(styleSection, {
+        label = LO["Target Selection Border"],
+        desc = LO["Draw the white glowing border around the current target's health bar."],
+        dbPath = DB .. ".retailSelectionBorder",
+        disabled = IsLegacyStyle,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(styleSection, {
+        label = LO["Dim Non-Target Plates"],
+        desc = LO["Lay the retail dim overlay over every nameplate that is not your target."],
+        dbPath = DB .. ".retailDeselectedOverlay",
+        disabled = IsLegacyStyle,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(styleSection, {
+        label = LO["Mouseover Highlight"],
+        desc = LO["Wash the health bar with a bright overlay while the cursor is over the nameplate."],
+        dbPath = DB .. ".retailMouseoverHighlight",
+        disabled = IsLegacyStyle,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(styleSection, {
+        label = LO["Retail Threat Colors"],
+        desc = LO["Use retail's yellow and orange threat steps instead of the yellow, orange and red set."],
+        dbPath = DB .. ".retailThreatColors",
+        disabled = IsLegacyStyle,
+        callback = function()
+            RefreshNameplates()
+            if Panel and Panel.SelectTab then
+                Panel:SelectTab("nameplates")
+            end
         end,
     })
 
@@ -625,6 +722,7 @@ local function BuildHealthSubTab(scroll)
         label = LO["Health Bar Background"],
         desc = LO["Choose the background texture used behind the health bar fill."],
         dbPath = DB .. ".healthBarBackground",
+        disabled = RetailChromeOwnsBackground,
         values = {
             black = LO["Black"],
             castbar = LO["Same as Castbar"],
@@ -1007,7 +1105,9 @@ local function BuildTargetSubTab(scroll)
 
     C:AddToggle(targetThreat, {
         label = LO["Show Threat Glow"],
-        desc = LO["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."],
+        desc = UsesRetailThreatColors()
+            and LO["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."]
+            or LO["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."],
         dbPath = DB .. ".threatGlow",
         callback = RefreshNameplates,
     })
@@ -1025,7 +1125,8 @@ local function BuildTargetSubTab(scroll)
                     C:SetDBValue(DB .. "." .. otherKey, false)
                 end
                 RefreshNameplates()
-                if conflicted and Panel.currentTab then
+                -- Always redraw: the threat-glow description depends on this role too.
+                if Panel.currentTab then
                     Panel:SelectTab(Panel.currentTab)
                 end
             end,
@@ -1082,7 +1183,9 @@ local function BuildBarsSubTab(scroll)
             castbar = LO["Same as Castbar"],
         },
         width = 200,
-        disabled = IsPowerBarDisabled,
+        disabled = function()
+            return IsPowerBarDisabled() or RetailChromeOwnsBackground()
+        end,
         callback = RefreshNameplates,
     })
 
