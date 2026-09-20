@@ -41,6 +41,10 @@ local function ApplyNoopChangesImpl()
         BonusActionBarFrame:EnableMouse(false)
         BonusActionBarFrame:SetScale(0.001)
     end
+    -- PossessBar_OnEvent re-Shows the event-less bonus bar on page change; keybinds then land on it.
+    if PossessBarFrame then
+        PossessBarFrame:UnregisterEvent("ACTIONBAR_PAGE_CHANGED")
+    end
     
     -- Kill ExhaustionTick OnUpdate to prevent Blizzard nil crashes
     -- (GetXPExhaustion() returns nil for non-rested players, Blizzard code doesn't check)
