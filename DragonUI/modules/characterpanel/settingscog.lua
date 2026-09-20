@@ -78,12 +78,12 @@ local function menuEntries(entries)
     addRadio(addon.L["Greyscale"], grey, function() setGreyBackdrop(true) end, entries)
     addRadio(addon.L["Full colour"], not grey, function() setGreyBackdrop(false) end, entries)
 
-    local cfg = CP:Config()
     addTitle(addon.L["Gear summary"], entries)
-    addCheck(addon.L["Item Level"], cfg.show_item_level ~= false, function()
+    -- Read on every redraw: these stay open on click, so a captured value would freeze the tick.
+    addCheck(addon.L["Item Level"], function() return CP:Config().show_item_level ~= false end, function()
         setStatShown("show_item_level", CP:Config().show_item_level == false)
     end, entries)
-    addCheck(addon.L["GearScore"], cfg.show_gear_score and true or false, function()
+    addCheck(addon.L["GearScore"], function() return CP:Config().show_gear_score and true or false end, function()
         setStatShown("show_gear_score", not CP:Config().show_gear_score)
     end, entries)
 
