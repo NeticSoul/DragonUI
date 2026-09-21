@@ -2903,16 +2903,6 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         -- Set original mask to standard Blizzard default
         if not MinimapModule.originalMask then
             MinimapModule.originalMask = "Textures\\MinimapMask"
-
-        end
-
-        -- Check if minimap module should be disabled and restore mask immediately
-        if addon.db and addon.db.profile and addon.db.profile.modules and addon.db.profile.modules.minimap then
-            local isEnabled = addon.db.profile.modules.minimap.enabled
-            if isEnabled == false then
-                Minimap:SetMaskTexture(MinimapModule.originalMask)
-
-            end
         end
     elseif event == "PLAYER_ENTERING_WORLD" then
         MinimapModule:Initialize()
