@@ -197,14 +197,12 @@ end
 
 local function petStatTooltip(i, stat, effective, positive, negative)
     local template = _G["DEFAULT_STAT" .. i .. "_TOOLTIP"]
-    if not template then return nil end
-
-    local base = stat - positive - negative
     if i == 1 then
         return string.format(template, effective - 20)
     elseif i == 2 then
-        return string.format(template, GetCritChanceFromAgility("pet"), effective * 2)
+        return string.format(template, GetCritChanceFromAgility("pet"), effective * ARMOR_PER_AGILITY)
     elseif i == 3 then
+        local base = stat - positive - negative
         local mod = GetUnitHealthModifier("pet")
         local expected = ((base - 20) * 10 + 20) * mod
         local real = ((effective - 20) * 10 + 20) * mod
@@ -260,7 +258,8 @@ local function refreshCombat()
     combatRows[1].Text:SetText(string.format(STAT_FORMAT, ATTACK_POWER))
     combatRows[1].Value:SetText(colored(totalAP, powerPos, powerNeg))
     combatRows[1].tooltip = MELEE_ATTACK_POWER
-    combatRows[1].tooltip2 = string.format(MELEE_ATTACK_POWER_TOOLTIP, math.max(totalAP, 0) / ATTACK_POWER_MAGIC_NUMBER)
+    combatRows[1].tooltip2 = string.format(MELEE_ATTACK_POWER_TOOLTIP,
+        math.max(totalAP, 0) / ATTACK_POWER_MAGIC_NUMBER)
 
     combatRows[2].Text:SetText(string.format(STAT_FORMAT, DAMAGE))
     combatRows[2].Value:SetText(string.format("%d-%d",
