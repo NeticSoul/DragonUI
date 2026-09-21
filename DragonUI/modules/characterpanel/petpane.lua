@@ -195,43 +195,38 @@ local function refreshResistances()
     end
 end
 
-local function safeFormat(template, ...)
-    if not template then return nil end
-    local ok, text = pcall(string.format, template, ...)
-    return ok and text or template
-end
-
 local function petStatTooltip(i, stat, effective, positive, negative)
     local template = _G["DEFAULT_STAT" .. i .. "_TOOLTIP"]
     if not template then return nil end
 
     local base = stat - positive - negative
     if i == 1 then
-        return safeFormat(template, effective - 20)
+        return string.format(template, effective - 20)
     elseif i == 2 then
-        local crit = GetCritChanceFromAgility and GetCritChanceFromAgility("pet") or 0
-        return safeFormat(template, crit, effective * 2)
+        return string.format(template, GetCritChanceFromAgility("pet"), effective * 2)
     elseif i == 3 then
-        local mod = GetUnitHealthModifier and GetUnitHealthModifier("pet") or 1
-        local maxMod = GetUnitMaxHealthModifier and GetUnitMaxHealthModifier("pet") or 1
+        local mod = GetUnitHealthModifier("pet")
         local expected = ((base - 20) * 10 + 20) * mod
         local real = ((effective - 20) * 10 + 20) * mod
-        return safeFormat(template, (real - expected) * maxMod)
+        return string.format(template, (real - expected) * GetUnitMaxHealthModifier("pet"))
     elseif i == 4 then
-        local mod = GetUnitPowerModifier and GetUnitPowerModifier("pet") or 1
-        local mana = ((effective - 20) * 15 + 20) * mod
-        local spellCrit = GetSpellCritChanceFromIntellect and GetSpellCritChanceFromIntellect("pet") or 0
-        return safeFormat(template, mana, spellCrit)
+        local spellCrit = GetSpellCritChanceFromIntellect("pet")
+        if UnitHasMana("pet") then
+            return string.format(
+                template,
+                ((effective - 20) * 15 + 20) * GetUnitPowerModifier("pet"),
+                spellCrit
+            )
+        end
+        return string.format(template:sub(template:find("|n") + 2), spellCrit)
     elseif i == 5 then
-        local text = safeFormat(template, GetUnitHealthRegenRateFromSpirit and GetUnitHealthRegenRateFromSpirit("pet") or 0)
-        if UnitHasMana("pet") and GetUnitManaRegenRateFromSpirit then
-            local regen = math.floor(GetUnitManaRegenRateFromSpirit("pet") * 5)
-            local manaLine = safeFormat(MANA_REGEN_FROM_SPIRIT, regen)
-            if manaLine then text = text .. "\n" .. manaLine end
+        local text = string.format(template, GetUnitHealthRegenRateFromSpirit("pet"))
+        if UnitHasMana("pet") then
+            text = text .. "\n" .. string.format(MANA_REGEN_FROM_SPIRIT,
+                math.floor(GetUnitManaRegenRateFromSpirit("pet") * 5))
         end
         return text
     end
-    return template
 end
 
 local function refreshAttributes()
@@ -265,7 +260,7 @@ local function refreshCombat()
     combatRows[1].Text:SetText(string.format(STAT_FORMAT, ATTACK_POWER))
     combatRows[1].Value:SetText(colored(totalAP, powerPos, powerNeg))
     combatRows[1].tooltip = MELEE_ATTACK_POWER
-    combatRows[1].tooltip2 = safeFormat(MELEE_ATTACK_POWER_TOOLTIP, totalAP / 14)
+    combatRows[1].tooltip2 = string.format(MELEE_ATTACK_POWER_TOOLTIP, math.max(totalAP, 0) / ATTACK_POWER_MAGIC_NUMBER)
 
     combatRows[2].Text:SetText(string.format(STAT_FORMAT, DAMAGE))
     combatRows[2].Value:SetText(string.format("%d-%d",
