@@ -2,7 +2,7 @@
 
 local addon = select(2, ...);
 
--- Standalone bars: type1/spell1/item1/macrotext1 only — never share the 1-120 action slot array.
+-- Standalone bars: unsuffixed type/spell/item/macrotext (any mouse button) — never the 1-120 action slots.
 local CreateFrame = CreateFrame;
 local UIParent = UIParent;
 local InCombatLockdown = InCombatLockdown;
@@ -574,11 +574,11 @@ local function IsButtonCurrent(button)
         local active = index and select(5, GetCompanionInfo(companion.companionType, index))
         return active and true or nil
     end
-    local slotType = button:GetAttribute("type1")
+    local slotType = button:GetAttribute("type")
     if slotType == "spell" then
-        return SpellIsCurrent(button:GetAttribute("spell1"))
+        return SpellIsCurrent(button:GetAttribute("spell"))
     elseif slotType == "item" then
-        local item = button:GetAttribute("item1")
+        local item = button:GetAttribute("item")
         return item and IsCurrentItem(item)
     elseif slotType == "macro" then
         local data = button:GetSlotData()
@@ -593,7 +593,7 @@ local function IsButtonCurrent(button)
 end
 
 local function ButtonItemID(button)
-    local itemAttr = button:GetAttribute("item1")
+    local itemAttr = button:GetAttribute("item")
     return itemAttr and tonumber(itemAttr:match("item:(%d+)"))
 end
 
@@ -705,20 +705,20 @@ local function SetExtrabarTooltip(self)
         self.UpdateTooltip = SetExtrabarTooltip
         return
     end
-    local t = self:GetAttribute("type1")
+    local t = self:GetAttribute("type")
     local rankToEnsure
     if t == "spell" then
-        local spellName = self:GetAttribute("spell1")
+        local spellName = self:GetAttribute("spell")
         local data = self:GetSlotData()
         local ok, rank = SetTooltipByName(spellName, nil, data and data.spellID)
         if ok then rankToEnsure = rank end
     elseif t == "item" then
-        local link = self:GetAttribute("item1")
+        local link = self:GetAttribute("item")
         if link then GameTooltip:SetHyperlink(link) end
     elseif t == "macro" then
         local data = self:GetSlotData()
         local macroIdx = data and data.macro
-        local body = (data and data.macrotext) or self:GetAttribute("macrotext1")
+        local body = (data and data.macrotext) or self:GetAttribute("macrotext")
         local showArg = body and body:match("#showtooltip([^\n]*)")
         local shown
         if showArg then
@@ -786,29 +786,29 @@ function Secure.Apply(button, data)
         return
     end
 
-    button:SetAttribute("type1", nil)
-    button:SetAttribute("spell1", nil)
-    button:SetAttribute("item1", nil)
-    button:SetAttribute("macrotext1", nil)
+    button:SetAttribute("type", nil)
+    button:SetAttribute("spell", nil)
+    button:SetAttribute("item", nil)
+    button:SetAttribute("macrotext", nil)
 
     if data then
-        button:SetAttribute("type1", SecureTypeFor(data))
+        button:SetAttribute("type", SecureTypeFor(data))
         if data.type == "spell" then
-            button:SetAttribute("spell1", SecureSpellName(data))
+            button:SetAttribute("spell", SecureSpellName(data))
         elseif data.type == "companion" then
-            button:SetAttribute("spell1", data.spell)
+            button:SetAttribute("spell", data.spell)
         elseif data.type == "item" then
-            button:SetAttribute("item1", "item:" .. data.item)
+            button:SetAttribute("item", "item:" .. data.item)
         elseif data.type == "macro" then
-            button:SetAttribute("macrotext1", data.macrotext)
+            button:SetAttribute("macrotext", data.macrotext)
         end
     end
     button:UpdateGridVisibility()
 end
 
 -- PreClick/PostClick cast-suppression toggle; callers already check InCombatLockdown.
-function Secure.SetType1(button, t)
-    button:SetAttribute("type1", t)
+function Secure.SetType(button, t)
+    button:SetAttribute("type", t)
 end
 
 -- ============================================================================
@@ -879,14 +879,14 @@ end
 local function SnapshotSlot(button)
     local saved = button:GetSlotData()
     if saved then return CopySlotData(saved) end
-    local t = button:GetAttribute("type1")
+    local t = button:GetAttribute("type")
     if t == "spell" then
-        return { type = "spell", spell = button:GetAttribute("spell1") }
+        return { type = "spell", spell = button:GetAttribute("spell") }
     elseif t == "item" then
         local itemId = ButtonItemID(button)
         if itemId then return { type = "item", item = itemId } end
     elseif t == "macro" then
-        return { type = "macro", macrotext = button:GetAttribute("macrotext1") }
+        return { type = "macro", macrotext = button:GetAttribute("macrotext") }
     end
     return nil
 end
@@ -1083,7 +1083,7 @@ end
 
 -- Empty slots follow Blizzard alwaysShowActionBars (FrameXML MultiActionBars / ActionButton showgrid).
 function ButtonProto:HasContent()
-    return self:GetAttribute("type1") ~= nil
+    return self:GetAttribute("type") ~= nil
 end
 
 function ButtonProto:UpdateGridVisibility()
@@ -1119,10 +1119,10 @@ function ButtonProto:UpdateCooldown()
         end
         return
     end
-    local t = self:GetAttribute("type1")
+    local t = self:GetAttribute("type")
     if t == "spell" then
         local data = self:GetSlotData()
-        ApplyCooldown(self.cooldown, GetButtonSpellCooldown(self:GetAttribute("spell1"), data and data.spellID))
+        ApplyCooldown(self.cooldown, GetButtonSpellCooldown(self:GetAttribute("spell"), data and data.spellID))
     elseif t == "item" then
         local itemId = ButtonItemID(self)
         if itemId then
@@ -1151,7 +1151,7 @@ function ButtonProto:UpdateCooldown()
 end
 
 function ButtonProto:UpdateCount()
-    if self:GetAttribute("type1") == "item" then
+    if self:GetAttribute("type") == "item" then
         local itemId = ButtonItemID(self)
         -- ActionButton_UpdateCount only shows count for consumable/stackable actions; maxStack>1 emulates that.
         local maxStack = itemId and select(8, GetItemInfo(itemId))
@@ -1175,10 +1175,10 @@ function ButtonProto:UpdateUsable()
         ApplyRangeIndicator(self, nil)
         return
     end
-    local t = self:GetAttribute("type1")
+    local t = self:GetAttribute("type")
     local spellName, itemId
     if t == "spell" then
-        spellName = self:GetAttribute("spell1")
+        spellName = self:GetAttribute("spell")
     elseif t == "item" then
         itemId = ButtonItemID(self)
     elseif t == "macro" then
@@ -1290,7 +1290,7 @@ local function Button_PreClick(self)
     local placed = AssignFromCursor(self)
     local justPlaced = lastAssignTime[self] and (GetTime() - lastAssignTime[self]) < 0.1
     if (placed or justPlaced) and not InCombatLockdown() then
-        Secure.SetType1(self, nil)
+        Secure.SetType(self, nil)
         self._extrabarRestoreType = true
     end
 end
@@ -1299,7 +1299,7 @@ local function Button_PostClick(self)
     if self._extrabarRestoreType and not InCombatLockdown() then
         self._extrabarRestoreType = nil
         local data = self:GetSlotData()
-        if data then Secure.SetType1(self, SecureTypeFor(data)) end
+        if data then Secure.SetType(self, SecureTypeFor(data)) end
     end
     self:UpdateChecked()
 end
@@ -1361,7 +1361,7 @@ end
 
 function BarProto:HasRangeContent()
     for _, button in pairs(self.buttons) do
-        local t = button:GetAttribute("type1")
+        local t = button:GetAttribute("type")
         if t == "spell" or t == "item" or t == "macro" then return true end
     end
     return false
