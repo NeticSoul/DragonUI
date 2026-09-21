@@ -195,6 +195,40 @@ local function refreshResistances()
     end
 end
 
+local function petStatTooltip(i, stat, effective, positive, negative)
+    local template = _G["DEFAULT_STAT" .. i .. "_TOOLTIP"]
+    if not template then return nil end
+
+    local base = stat - positive - negative
+    if i == 1 then
+        return string.format(template, effective - 20)
+    elseif i == 2 then
+        return string.format(template, GetCritChanceFromAgility("pet"), effective * 2)
+    elseif i == 3 then
+        local mod = GetUnitHealthModifier("pet")
+        local expected = ((base - 20) * 10 + 20) * mod
+        local real = ((effective - 20) * 10 + 20) * mod
+        return string.format(template, (real - expected) * GetUnitMaxHealthModifier("pet"))
+    elseif i == 4 then
+        local spellCrit = GetSpellCritChanceFromIntellect("pet")
+        if UnitHasMana("pet") then
+            return string.format(
+                template,
+                ((effective - 20) * 15 + 20) * GetUnitPowerModifier("pet"),
+                spellCrit
+            )
+        end
+        return string.format(template:sub(template:find("|n") + 2), spellCrit)
+    elseif i == 5 then
+        local text = string.format(template, GetUnitHealthRegenRateFromSpirit("pet"))
+        if UnitHasMana("pet") then
+            text = text .. "\n" .. string.format(MANA_REGEN_FROM_SPIRIT,
+                math.floor(GetUnitManaRegenRateFromSpirit("pet") * 5))
+        end
+        return text
+    end
+end
+
 local function refreshAttributes()
     for i = 1, NUM_PET_STATS do
         local row = attrRows[i]
@@ -211,7 +245,7 @@ local function refreshAttributes()
             tooltip = tooltip .. FONT_COLOR_CODE_CLOSE .. " )"
         end
         row.tooltip = tooltip
-        row.tooltip2 = _G["DEFAULT_STAT" .. i .. "_TOOLTIP"]
+        row.tooltip2 = petStatTooltip(i, stat, effective, positive, negative)
     end
 end
 
@@ -221,10 +255,12 @@ local function refreshCombat()
     local _, effectiveArmor = UnitArmor("pet")
     local bonus = GetPetSpellBonusDamage and GetPetSpellBonusDamage() or 0
 
+    local totalAP = (power or 0) + (powerPos or 0) + (powerNeg or 0)
+
     combatRows[1].Text:SetText(string.format(STAT_FORMAT, ATTACK_POWER))
-    combatRows[1].Value:SetText(colored((power or 0) + (powerPos or 0) + (powerNeg or 0),
-                                        powerPos, powerNeg))
+    combatRows[1].Value:SetText(colored(totalAP, powerPos, powerNeg))
     combatRows[1].tooltip = MELEE_ATTACK_POWER
+    combatRows[1].tooltip2 = string.format(MELEE_ATTACK_POWER_TOOLTIP, math.max(totalAP, 0) / ATTACK_POWER_MAGIC_NUMBER)
 
     combatRows[2].Text:SetText(string.format(STAT_FORMAT, DAMAGE))
     combatRows[2].Value:SetText(string.format("%d-%d",
