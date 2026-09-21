@@ -27,14 +27,9 @@ local function addTitle(text, entries)
     entries[#entries + 1] = { text = text, isTitle = true }
 end
 
-local function addRadio(text, checked, onSelect, entries)
-    entries[#entries + 1] = { text = text, checked = checked, func = onSelect }
-end
-
--- Kept open on click, unlike the radios: these two are independent, and closing after the first
--- would make turning both on a two-trip job.
-local function addCheck(text, checked, onToggle, entries)
-    entries[#entries + 1] = { text = text, checked = checked, keepShown = true, func = onToggle }
+-- checked is a function: the menu stays open on click, so a captured value would freeze the tick.
+local function addOption(text, checked, onClick, entries)
+    entries[#entries + 1] = { text = text, checked = checked, keepShown = true, func = onClick }
 end
 
 -- Never grey: disabled entries are grey, so a greyed action reads as unclickable.
@@ -63,27 +58,26 @@ StaticPopupDialogs["DRAGONUI_RESET_STAT_ORDER"] = {
 }
 
 local function menuEntries(entries)
-    local dark = CP:Config().dark_background
+    local function isDark() return CP:Config().dark_background and true or false end
+    local function isGrey() return CP:Config().grey_model_backdrop and true or false end
 
     addTitle(addon.L["Background"], entries)
-    addRadio(addon.L["Stone"], not dark, function() setDarkBackground(false) end, entries)
-    addRadio(addon.L["Dark"], dark, function() setDarkBackground(true) end, entries)
+    addOption(addon.L["Stone"], function() return not isDark() end, function() setDarkBackground(false) end, entries)
+    addOption(addon.L["Dark"], isDark, function() setDarkBackground(true) end, entries)
 
     -- Only where there is a model to put a backdrop behind.
     local paperdoll = (CP.ActiveTabName and CP.ActiveTabName()) == "PaperDollFrame"
     if not paperdoll then return end
 
-    local grey = CP:Config().grey_model_backdrop
     addTitle(addon.L["Model backdrop"], entries)
-    addRadio(addon.L["Greyscale"], grey, function() setGreyBackdrop(true) end, entries)
-    addRadio(addon.L["Full colour"], not grey, function() setGreyBackdrop(false) end, entries)
+    addOption(addon.L["Greyscale"], isGrey, function() setGreyBackdrop(true) end, entries)
+    addOption(addon.L["Full colour"], function() return not isGrey() end, function() setGreyBackdrop(false) end, entries)
 
     addTitle(addon.L["Gear summary"], entries)
-    -- Read on every redraw: these stay open on click, so a captured value would freeze the tick.
-    addCheck(addon.L["Item Level"], function() return CP:Config().show_item_level ~= false end, function()
+    addOption(addon.L["Item Level"], function() return CP:Config().show_item_level ~= false end, function()
         setStatShown("show_item_level", CP:Config().show_item_level == false)
     end, entries)
-    addCheck(addon.L["GearScore"], function() return CP:Config().show_gear_score and true or false end, function()
+    addOption(addon.L["GearScore"], function() return CP:Config().show_gear_score and true or false end, function()
         setStatShown("show_gear_score", not CP:Config().show_gear_score)
     end, entries)
 
