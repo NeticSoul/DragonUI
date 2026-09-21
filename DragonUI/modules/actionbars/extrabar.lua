@@ -243,7 +243,8 @@ end
 local function BareSpellName(spellName)
     if not spellName then return nil end
     local bare, inner = spellName:match("^(.+)%(([^%)]*)%)$")
-    if bare and IsRankText(inner) then
+    -- ruRU's RANK global isn't the spell-rank word; only rank subtexts ever carry a number.
+    if bare and (IsRankText(inner) or inner:find("%d")) then
         return bare
     end
     return spellName
