@@ -505,8 +505,10 @@ function UF.TargetStyle.Create(opts)
 
         -- Portrait hook for class portrait
         if not BlizzFrame.DragonUI_PortraitHook then
-            hooksecurefunc("UnitFramePortrait_Update", function(frame, unit)
-                if frame == BlizzFrame and unit == unitToken then
+            -- Blizzard just redrew the portrait (e.g. focus on PARTY_MEMBERS_CHANGED), so the cache is stale.
+            hooksecurefunc("UnitFramePortrait_Update", function(frame)
+                if frame == BlizzFrame then
+                    updateCache.lastPortraitClass = nil
                     UpdateClassPortrait()
                 end
             end)
