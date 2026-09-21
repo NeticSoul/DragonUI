@@ -124,7 +124,12 @@ local function collectQuests(blocks, counters)
             local title, level, _, _, _, _, isComplete, _, questID = GetQuestLogTitle(index)
             local objectives = questObjectives(index)
             -- Blizzard treats an objectiveless quest as ready to hand in.
-            local complete = (isComplete and isComplete > 0) or #objectives == 0
+            local failed = isComplete and isComplete < 0
+            local complete = not failed and ((isComplete and isComplete > 0) or #objectives == 0)
+            if complete then
+                local handIn = GetQuestLogCompletionText(index)
+                objectives = (handIn and handIn ~= "") and { { text = handIn } } or {}
+            end
             blocks[#blocks + 1] = {
                 kind = "quest", watchIndex = watch, questLogIndex = index, questID = questID,
                 title = title, level = level, complete = complete,
