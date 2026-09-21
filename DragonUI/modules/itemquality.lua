@@ -68,13 +68,12 @@ local function GetOrCreateOverlay(frame)
     overlay:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
     overlay:SetBlendMode("ADD")
     overlay:SetPoint("CENTER", frame, "CENTER", 0, 0)
-    -- The glow texture must be ~1.7x the button size for a proper halo effect
-    -- Bag/character item buttons are ~37px, so glow = ~62px
+    -- 62/36 is Blizzard's action-button fit, where the ring lands inside the icon; 70/37 puts it on the slot edge.
     local w, h = frame:GetWidth(), frame:GetHeight()
     if (not w or w == 0) then w = 37 end
     if (not h or h == 0) then h = 37 end
-    overlay:SetWidth(w * 1.7)
-    overlay:SetHeight(h * 1.7)
+    overlay:SetWidth(w * 70 / 37)
+    overlay:SetHeight(h * 70 / 37)
     overlay:Hide()
 
     frame.__DragonUI_QualityOverlay = overlay
