@@ -70,13 +70,12 @@ local function anchorColumns()
         hands:SetPoint("TOPRIGHT", inset, "TOPRIGHT", -4, -2)
     end
 
-    -- The row sits between the columns rather than below them, so all four Wrath slots fit:
-    -- 37+5+37+5+37+15+27 = 163 wide, centred in the 328-wide Inset. Ammo stays — hunters need it.
+    -- Only the three weapons are centred (37+5+37+5+37 = 121): ammo hangs off the right, hidden for relic classes.
     local mh = _G.CharacterMainHandSlot
     if mh and not mh._duiAnchored then
         mh._duiAnchored = true
         mh:ClearAllPoints()
-        mh:SetPoint("BOTTOMLEFT", inset, "BOTTOMLEFT", 83, 20)
+        mh:SetPoint("BOTTOMLEFT", inset, "BOTTOM", -60, 20)
     end
 
     gapFiller(mh, GAP_LEFT, "TOPRIGHT", "TOPLEFT")
