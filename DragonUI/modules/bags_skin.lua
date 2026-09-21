@@ -810,6 +810,8 @@ local function InstallUnusableTintHooks()
     local levelFrame = CreateFrame("Frame")
     levelFrame:RegisterEvent("PLAYER_LEVEL_UP")
     levelFrame:RegisterEvent("SPELLS_CHANGED")
+    -- Profession ranks land after the first bag scan at login, so recipes cache as "red" until then.
+    levelFrame:RegisterEvent("SKILL_LINES_CHANGED")
     levelFrame:SetScript("OnEvent", function(_, event)
         if event == "SPELLS_CHANGED" then
             if addon.ClearUnusableItemTintCache then
