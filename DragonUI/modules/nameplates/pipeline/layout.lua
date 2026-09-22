@@ -44,38 +44,78 @@ local function DepthSortComparator(a, b)
     return (depthDepths[a] or 0) > (depthDepths[b] or 0)
 end
 
+-- This client caps a raise at +128 levels per SetFrameLevel call (lowering is uncapped).
+local function SetFrameLevelFully(frame, level)
+    for _ = 1, 64 do
+        local current = frame:GetFrameLevel()
+        if current == level then
+            return
+        end
+        frame:SetFrameLevel(level)
+        if frame:GetFrameLevel() == current then
+            return
+        end
+    end
+end
+
+-- SetFrameLevel drags every descendant along, so parents are always set before their children.
 local function SetDepthFrameLevel(plateData, frame, level)
     if not plateData or not frame or not frame.SetFrameLevel then return end
-    local originalLevels = plateData._depthOriginalLevels
-    if not originalLevels then
-        originalLevels = setmetatable({}, { __mode = "k" })
-        plateData._depthOriginalLevels = originalLevels
+    -- Only the client-owned plate needs its level remembered; the stack is rebuilt from it.
+    if frame == plateData.plate then
+        local originalLevels = plateData._depthOriginalLevels
+        if not originalLevels then
+            originalLevels = {}
+            plateData._depthOriginalLevels = originalLevels
+        end
+        if originalLevels[frame] == nil then
+            originalLevels[frame] = frame:GetFrameLevel()
+        end
     end
-    if originalLevels[frame] == nil and frame.GetFrameLevel then
-        originalLevels[frame] = frame:GetFrameLevel()
-    end
-    -- SetFrameLevel re-layers the strata's frame list (real cost); skip it when
-    -- the frame already sits at the target level. GetFrameLevel is a cheap getter.
-    if not frame.GetFrameLevel or frame:GetFrameLevel() ~= level then
-        frame:SetFrameLevel(level)
-    end
+    SetFrameLevelFully(frame, level)
     plateData._depthOrderingApplied = true
+end
+
+-- Lays the plate's own frames out above visualRoot's level; shared by the depth pass and its restore.
+local function ApplyStackLevels(plateData, base)
+    for key, offset in pairs(LEVEL_OFFSETS) do
+        local frame = plateData[key]
+        if frame and frame.SetFrameLevel then
+            SetFrameLevelFully(frame, base + offset)
+        end
+    end
+    -- Debuff icons can postdate the host's last level; re-level them so the swipe stays in the band.
+    if plateData.minaDebuffHost and NP.auras and NP.auras.ApplyDebuffIconFrameLevels then
+        NP.auras.ApplyDebuffIconFrameLevels(plateData.minaDebuffHost)
+    end
+    local plate = plateData.plate
+    if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
+        SetFrameLevelFully(plate.BGHframe, base + BGH_FRAME_OFFSET)
+    end
+    local cast = plateData.minaCast
+    if cast then
+        if plateData.minaCastSpark and plateData.minaCastSpark.SetFrameLevel then
+            SetFrameLevelFully(plateData.minaCastSpark, cast:GetFrameLevel() + 3)
+        end
+        if cast.minaCastShield and cast.minaCastShield.SetFrameLevel then
+            SetFrameLevelFully(cast.minaCastShield, cast:GetFrameLevel() - 1)
+        end
+    end
 end
 
 function NP.layout.RestorePlateDepthOrdering(plateData)
     if not plateData then return end
+    local plate = plateData.plate
     local originalLevels = plateData._depthOriginalLevels
-    if originalLevels then
-        for frame, level in pairs(originalLevels) do
-            if frame and frame.SetFrameLevel then
-                frame:SetFrameLevel(level)
-            end
-        end
-        plateData._depthOriginalLevels = nil
+    if plate and originalLevels and originalLevels[plate] ~= nil then
+        SetFrameLevelFully(plate, originalLevels[plate])
     end
-    if plateData.minaDebuffHost
-        and NP.auras and NP.auras.ApplyDebuffIconFrameLevels then
-        NP.auras.ApplyDebuffIconFrameLevels(plateData.minaDebuffHost)
+    plateData._depthOriginalLevels = nil
+    -- Rebuilt from the plate: replayed saved levels were read post-drag and got dragged again.
+    local visualRoot = plateData.visualRoot
+    if plateData._depthOrderingApplied and plate and visualRoot then
+        SetFrameLevelFully(visualRoot, plate:GetFrameLevel() + 1)
+        ApplyStackLevels(plateData, visualRoot:GetFrameLevel())
     end
     plateData._depthOrderingApplied = nil
     plateData._depthAppliedIndex = nil
@@ -283,10 +323,14 @@ function NP.layout.UpdateDepthOrdering(elapsed)
         local plateData = ordered[index]
         local plate = plateData.plate
         local base = index * DEPTH_LEVEL_STEP
+        local visualRoot = plateData.visualRoot
+        -- The client lifts a hovered or targeted plate 10 levels, dragging the stack out of its band.
+        local drifted = visualRoot and visualRoot:GetFrameLevel() ~= base
         -- Skip SetFrameLevel when depth band unchanged; _depthDirty/cfgRev force reapply.
         if plateData._depthAppliedIndex == index
             and plateData._depthAppliedCfgRev == cfgRev
-            and not plateData._depthDirty then
+            and not plateData._depthDirty
+            and not drifted then
             -- Sync BGHframe when attached mid-life.
             if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
                 SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
@@ -298,35 +342,13 @@ function NP.layout.UpdateDepthOrdering(elapsed)
             if cfg.showClickbox == true and plate and plate.SetFrameLevel then
                 SetDepthFrameLevel(plateData, plate, base + 1)
             elseif plateData._depthOriginalLevels and plateData._depthOriginalLevels[plate] ~= nil then
-                plate:SetFrameLevel(plateData._depthOriginalLevels[plate])
+                SetFrameLevelFully(plate, plateData._depthOriginalLevels[plate])
                 plateData._depthOriginalLevels[plate] = nil
             end
-            if plateData.visualRoot and plateData.visualRoot.SetFrameLevel then
-                SetDepthFrameLevel(plateData, plateData.visualRoot, base)
+            if visualRoot and visualRoot.SetFrameLevel then
+                SetDepthFrameLevel(plateData, visualRoot, base)
             end
-            for key, offset in pairs(LEVEL_OFFSETS) do
-                local frame = plateData[key]
-                if frame and frame.SetFrameLevel then
-                    SetDepthFrameLevel(plateData, frame, base + offset)
-                end
-            end
-            -- Debuff icons are children of minaDebuffHost created after this point;
-            -- re-level them so the cooldown swipe stays in the plate's band.
-            if plateData.minaDebuffHost and NP.auras and NP.auras.ApplyDebuffIconFrameLevels then
-                NP.auras.ApplyDebuffIconFrameLevels(plateData.minaDebuffHost)
-            end
-            if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
-                SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
-            end
-            if plateData.minaCastSpark and plateData.minaCastSpark.SetFrameLevel and plateData.minaCast then
-                SetDepthFrameLevel(plateData, plateData.minaCastSpark,
-                    (plateData.minaCast:GetFrameLevel() or (base + 2)) + 3)
-            end
-            if plateData.minaCast and plateData.minaCast.minaCastShield
-                and plateData.minaCast.minaCastShield.SetFrameLevel then
-                SetDepthFrameLevel(plateData, plateData.minaCast.minaCastShield,
-                    (plateData.minaCast:GetFrameLevel() or (base + 2)) - 1)
-            end
+            ApplyStackLevels(plateData, base)
         end
         NP.module._depthOrderingApplied = true
     end
@@ -1211,10 +1233,13 @@ function NP.layout.LayoutCastBarStack(plateData)
         end
 
         if bar.minaCastSpellName then
-            if cfg.showCastBarSpellName ~= false and bar.spellName then
+            local wanted = cfg.showCastBarSpellName ~= false
+            -- An ending cast has already cleared spellName; its name fades out with the bar and icon.
+            local ending = bar._intHideAt or bar._successHoldUntil or bar._successHideAt
+            if wanted and bar.spellName then
                 bar.minaCastSpellName:SetText(bar.spellName)
                 bar.minaCastSpellName:Show()
-            else
+            elseif not wanted or not ending then
                 bar.minaCastSpellName:Hide()
             end
         end

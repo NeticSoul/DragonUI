@@ -340,6 +340,15 @@ local function HideSuccessFlashVisual(bar)
     flash:Hide()
 end
 
+-- Icon, shield and name are children of the bar and fade with its alpha: hide them only with the bar.
+local function HideCastBarContent(bar)
+    if bar.minaCastIcon then bar.minaCastIcon:Hide() end
+    if bar.minaCastShield then bar.minaCastShield:Hide() end
+    if bar.minaCastSpellName then bar.minaCastSpellName:Hide() end
+    if bar.minaIcon then bar.minaIcon:Hide() end
+    if bar.minaShield then bar.minaShield:Hide() end
+end
+
 local function StartSuccessFade(bar)
     if not bar then return end
     if bar._successHoldUntil or bar._successHideAt then
@@ -363,6 +372,7 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
     end
     -- Headline plates never show cast visuals, including the interrupted hold.
     if NP.gather.IsHeadlineActive(plateData) then
+        HideCastBarContent(bar)
         return
     end
 
@@ -380,17 +390,6 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
         plateData.minaCastSpark:Hide()
     elseif isPartyBar and plateData and plateData.minaPartyCastSpark then
         plateData.minaPartyCastSpark:Hide()
-    end
-
-    if not isPartyBar and bar.minaCastIcon then
-        bar.minaCastIcon:Hide()
-    elseif isPartyBar and bar.minaIcon then
-        bar.minaIcon:Hide()
-    end
-    if not isPartyBar and bar.minaCastShield then
-        bar.minaCastShield:Hide()
-    elseif isPartyBar and bar.minaShield then
-        bar.minaShield:Hide()
     end
 
     ApplyInterruptedHoldVisual(bar)
@@ -744,11 +743,7 @@ local function HardResetCastBar(bar)
     bar:SetAlpha(1)
     if bar._intBg then bar._intBg:Hide() end
     HideSuccessFlashVisual(bar)
-    if bar.minaCastIcon then bar.minaCastIcon:Hide() end
-    if bar.minaCastShield then bar.minaCastShield:Hide() end
-    if bar.minaCastSpellName then bar.minaCastSpellName:Hide() end
-    if bar.minaIcon then bar.minaIcon:Hide() end
-    if bar.minaShield then bar.minaShield:Hide() end
+    HideCastBarContent(bar)
     if bar.minaSpark then bar.minaSpark:Hide() end
     bar:Hide()
 end
@@ -916,17 +911,12 @@ function PartyRaidCastTracker:HideBar(plateData)
         if wasInterrupted and bar._intBg then
             NP.castbar.ShowInterruptedState(bar, plateData, true)
         else
+            HideCastBarContent(bar)
             bar:Hide()
         end
     end
     if plateData.minaPartyCastSpark then
         plateData.minaPartyCastSpark:Hide()
-    end
-    if bar and bar.minaIcon then
-        bar.minaIcon:Hide()
-    end
-    if bar and bar.minaShield then
-        bar.minaShield:Hide()
     end
     RefreshCastTickRegistration(plateData)
 end
@@ -2191,8 +2181,7 @@ local function MonitorStopCast(plateData, interrupted)
         if plateData.minaCastSpark then
             plateData.minaCastSpark:Hide()
         end
-        if bar.minaCastIcon then bar.minaCastIcon:Hide() end
-        if bar.minaCastShield then bar.minaCastShield:Hide() end
+        HideCastBarContent(bar)
         HideSuccessFlashVisual(bar)
         bar:Hide()
         NP.discovery.HideCastChrome(plateData)
@@ -2900,9 +2889,6 @@ function NP.castbar.HidePlateCastBar(plateData, force)
     plateData._nativeCastSuppressed = nil
     bar:SetValue(0)
     HideSuccessFlashVisual(bar)
-    if bar.minaCastIcon then bar.minaCastIcon:Hide() end
-    if bar.minaCastShield then bar.minaCastShield:Hide() end
-    if bar.minaCastSpellName then bar.minaCastSpellName:Hide() end
     if wasInterrupted and bar._intBg then
         bar._castSourceGUID = nil
         NP.castbar.ShowInterruptedState(bar, plateData, false)
@@ -2917,6 +2903,7 @@ function NP.castbar.HidePlateCastBar(plateData, force)
         if not bar._recentStopAt then
             bar._castSourceGUID = nil
         end
+        HideCastBarContent(bar)
         bar:Hide()
     end
     RefreshCastTickRegistration(plateData)
@@ -3059,6 +3046,7 @@ local function TickPlateCastBars(plateData, now)
                 bar._intBg:Hide()
             end
             HideSuccessFlashVisual(bar)
+            HideCastBarContent(bar)
             bar:Hide()
             bar:SetAlpha(1)
         end
@@ -3084,8 +3072,7 @@ local function TickPlateCastBars(plateData, now)
             bar._successFading = nil
             bar._interruptFadeActive = nil
             bar:SetValue(0)
-            if bar.minaCastIcon then bar.minaCastIcon:Hide() end
-            if bar.minaCastShield then bar.minaCastShield:Hide() end
+            HideCastBarContent(bar)
             HideSuccessFlashVisual(bar)
             bar:Hide()
             bar:SetAlpha(1)
@@ -3116,6 +3103,7 @@ local function TickPlateCastBars(plateData, now)
             partyBar._interruptFadeActive = nil
             partyBar._applyingInterruptVisual = nil
             partyBar._intBg:Hide()
+            HideCastBarContent(partyBar)
             partyBar:Hide()
             partyBar:SetAlpha(1)
             PartyRaidCastTracker.activeCasts[plateData] = nil

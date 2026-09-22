@@ -342,6 +342,19 @@ end
 
 -- Single OnUpdate driver
 
+local targetVisualState = { showTargetHighlight = false }
+
+-- Target alpha can settle late and the mass refresh is budgeted: redraw the highlight when it flips.
+local function SyncTargetVisual(pd, isTarget)
+    local prev = pd._targetVisual
+    pd._targetVisual = isTarget
+    if prev ~= nil and prev ~= isTarget then
+        targetVisualState.showTargetHighlight = isTarget
+        NP.widgets.Sync("TargetHighlight", pd, nil, targetVisualState)
+        NP.widgets.Sync("RetailChrome", pd, nil, targetVisualState)
+    end
+end
+
 local function EngineOnUpdate(_, elapsed)
     if not NP.config.IsModuleEnabled() or not NP.module.applied then return end
 
@@ -468,8 +481,10 @@ local function EngineOnUpdate(_, elapsed)
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
             if pl and pl.IsShown and pl:IsShown() then
+                local isTarget = NP.identity.IsTargetPlateVisual(pd, hasTarget)
+                SyncTargetVisual(pd, isTarget)
                 local visualAlpha = NP.module._opacityValue
-                if NP.identity.IsTargetPlateVisual(pd, hasTarget)
+                if isTarget
                     or ((not hasTarget) and NP.module._opacityFullNoTarget)
                     or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
                     visualAlpha = 1.0
@@ -481,6 +496,7 @@ local function EngineOnUpdate(_, elapsed)
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
             if pl and pl.IsShown and pl:IsShown() then
+                SyncTargetVisual(pd, NP.identity.IsTargetPlateVisual(pd, hasTarget))
                 NP.layout.SetPlateVisualAlpha(pd, 1.0)
             end
         end

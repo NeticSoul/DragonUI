@@ -183,13 +183,36 @@ local function SetFlareShown(plateData, shown)
     end
 end
 
-local function IsPlateHovered(plateData)
-    local highlight = plateData.highlight
-    if highlight and highlight.IsShown and highlight:IsShown() then
-        return true
+local hoveredPlate
+
+-- Every overlapped plate passes IsMouseOver; the client's highlight marks the one a click would hit.
+local function FindHoveredPlate()
+    local best, bestLevel, bestDepth
+    local anyShown = false
+    for _, plateData in pairs(NP.module.plates) do
+        local plate = plateData.plate
+        if plate and plate:IsShown() then
+            anyShown = true
+            local highlight = plateData.highlight
+            if highlight and highlight:IsShown() then
+                return plateData, true
+            end
+            if plate:IsMouseOver() then
+                -- No highlight to go by: the frontmost depth band wins, then the nearer plate.
+                local root = plateData.visualRoot or plate
+                local level = root:GetFrameLevel()
+                local depth = root:GetEffectiveDepth() or 0
+                if not best or level > bestLevel or (level == bestLevel and depth < bestDepth) then
+                    best, bestLevel, bestDepth = plateData, level, depth
+                end
+            end
+        end
     end
-    local plate = plateData.plate
-    return (plate and plate.IsMouseOver and plate:IsMouseOver()) and true or false
+    return best, anyShown
+end
+
+local function IsPlateHovered(plateData)
+    return plateData ~= nil and plateData == hoveredPlate
 end
 
 local function EnsureFlareDriver()
@@ -230,16 +253,19 @@ local function EnsureFlareDriver()
         -- Hover fires no event: poll it here rather than adding a second OnUpdate.
         -- Only transitions reach SyncMouseover, so a quiet frame costs one getter per plate.
         if NP.config.IsRetailSkin() and NP.config.GetCfg().retailMouseoverHighlight ~= false then
-            for _, plateData in pairs(NP.module.plates) do
-                local plate = plateData._retailMouseover and plateData.plate
-                -- A hidden plate cannot be hovered, and skipping it lets an empty screen park the tick.
-                if plate and plate:IsShown() then
-                    any = true
-                    local hovered = IsPlateHovered(plateData)
-                    if plateData._hoverLit ~= hovered then
-                        plateData._hoverLit = hovered
-                        NP.retail_chrome.SyncMouseover(plateData)
-                    end
+            -- An empty screen lets the tick park; only the plates entering and leaving hover resync.
+            local hovered, anyShown = FindHoveredPlate()
+            if anyShown then
+                any = true
+            end
+            if hovered ~= hoveredPlate then
+                local previous = hoveredPlate
+                hoveredPlate = hovered
+                if previous then
+                    NP.retail_chrome.SyncMouseover(previous)
+                end
+                if hovered then
+                    NP.retail_chrome.SyncMouseover(hovered)
                 end
             end
         end
@@ -407,7 +433,6 @@ local function HideChrome(plateData, restoreLegacy)
             mouseoverLit = nil
         end
     end
-    plateData._hoverLit = nil
     if plateData._retailFlash then
         plateData._retailFlash:Hide()
         plateData._retailFlash:SetAlpha(0)
