@@ -893,6 +893,60 @@ function MainMenuBarMixin:statusbar_setup()
     if ReputationWatchBarText then ReputationWatchBarText:Hide() end
 end
 
+-- 3.3.5a StatusBars squash the whole texture into the fill; crop it so the capped art keeps its shape.
+local function CropStatusBarFill(bar)
+    local vmin, vmax = bar:GetMinMaxValues()
+    if not vmax or vmax <= vmin then return end
+    local pct = (bar:GetValue() - vmin) / (vmax - vmin)
+    bar:GetStatusBarTexture():SetTexCoord(0, math.max(0, math.min(pct, 1)), bar.texTop or 0, bar.texBottom or 1)
+end
+
+-- The 16px-tall rep sheets sit lower than RepYellow/XP\Main; this stretches their rows onto the frame.
+local SHORT_REP_TEXTOP, SHORT_REP_TEXBOTTOM = 0.0605, 0.9677
+
+local function ShowXpBarTooltip(owner)
+    local currXP, maxXP = UnitXP("player"), UnitXPMax("player")
+    if not maxXP or maxXP <= 0 then return end
+    local restedXP = GetXPExhaustion() or 0
+    local pct = 100 * currXP / maxXP
+
+    GameTooltip_SetDefaultAnchor(GameTooltip, owner)
+    GameTooltip:SetText(format("%s%d / %d (%.1f%%)", L["XP: "], currXP, maxXP, pct), 1, 1, 1)
+    GameTooltip:AddDoubleLine(L["Remaining: "], format("|cFFFFFFFF%d (%.1f%%)", maxXP - currXP, 100 - pct))
+    if restedXP > 0 then
+        GameTooltip:AddDoubleLine(L["Rested: "],
+            format("|cFFFFFFFF%d (%.1f%%)", restedXP, 100 * restedXP / (maxXP * 1.5)))
+    end
+    local _, stateName, multiplier = GetRestState()
+    if stateName and multiplier then
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine(format(EXHAUST_TOOLTIP1, stateName, multiplier * 100))
+    end
+    GameTooltip:Show()
+end
+
+local function ShowExhaustionTickTooltip(tick)
+    local stateID, stateName, multiplier = GetRestState()
+    if not stateID then return end
+    local text = format(EXHAUST_TOOLTIP1, stateName, multiplier * 100)
+    if IsResting() then
+        local secs = GetTimeToWellRested()
+        if secs then text = text .. format(EXHAUST_TOOLTIP4, math.ceil(secs / 60)) end
+    elseif stateID == 4 or stateID == 5 then
+        text = text .. EXHAUST_TOOLTIP2
+    end
+    GameTooltip_SetDefaultAnchor(GameTooltip, tick)
+    GameTooltip:SetText(text)
+    GameTooltip:Show()
+end
+
+-- The tick overhangs the main bar, so it rides just under the gryphons instead of with its own bar.
+local function GetExhaustionTickLevel(fill)
+    local level = fill:GetFrameLevel() + 1
+    if pUiMainBarArt then level = math.max(level, pUiMainBarArt:GetFrameLevel() - 1) end
+    return level
+end
+
 local function CreateDragonflightUIXPBar()
     if dfXpBar then return dfXpBar end
 
@@ -921,6 +975,7 @@ local function CreateDragonflightUIXPBar()
     f.RestedBar:SetStatusBarTexture(f.RestedBar.Texture)
     f.RestedBar:SetFrameLevel(3)
     f.RestedBar:SetAlpha(0.69)
+    hooksecurefunc(f.RestedBar, "SetValue", CropStatusBarFill)
 
     -- Rested mark tick (small indicator at the end of rested range)
     local markSizeX, markSizeY = 14, sizeY + 6
@@ -942,6 +997,7 @@ local function CreateDragonflightUIXPBar()
     f.Bar.Texture:SetDrawLayer("ARTWORK", 1)
     f.Bar:SetFrameLevel(4)
     f.Bar:EnableMouse(true)
+    hooksecurefunc(f.Bar, "SetValue", CropStatusBarFill)
 
     -- Border overlay
     f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
@@ -969,25 +1025,7 @@ local function CreateDragonflightUIXPBar()
         end
     end)
 
-    -- Tooltip (borrowed from DragonflightUI)
-    f.Bar:SetScript("OnEnter", function(self)
-        GameTooltip_AddNewbieTip(self, XPBAR_LABEL, 1.0, 1.0, 1.0, NEWBIE_TOOLTIP_XPBAR, 1)
-        GameTooltip.canAddRestStateLine = 1
-        ExhaustionToolTipText()
-        local currXP = UnitXP("player")
-        local maxXP = UnitXPMax("player")
-        local pct = (maxXP > 0) and (100 * currXP / maxXP) or 0
-        local left = maxXP - currXP
-        local leftPct = 100 - pct
-        local restedXP = GetXPExhaustion() or 0
-        local restedMax = maxXP * 1.5
-        local restedPct = (restedMax > 0) and (100 * restedXP / restedMax) or 0
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddDoubleLine(L["XP: "], format("|cFFFFFFFF%s/%s (%.1f%%)", currXP, maxXP, pct))
-        GameTooltip:AddDoubleLine(L["Remaining: "], format("|cFFFFFFFF%s (%.1f%%)", left, leftPct))
-        GameTooltip:AddDoubleLine(L["Rested: "], format("|cFFFFFFFF%s (%.1f%%)", restedXP, restedPct))
-        GameTooltip:Show()
-    end)
+    f.Bar:SetScript("OnEnter", ShowXpBarTooltip)
     f.Bar:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     dfXpBar = f
@@ -1020,6 +1058,8 @@ local function CreateDragonflightUIRepBar()
     f.Bar.Texture:SetAllPoints()
     f.Bar:SetStatusBarTexture(f.Bar.Texture)
     f.Bar:EnableMouse(true)
+    f.Bar.texTop, f.Bar.texBottom = SHORT_REP_TEXTOP, SHORT_REP_TEXBOTTOM
+    hooksecurefunc(f.Bar, "SetValue", CropStatusBarFill)
 
     -- Border overlay
     f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
@@ -1076,16 +1116,17 @@ local function UpdateDfuiExhaustionTick()
         if not barW or barW == 0 then barW = cfg.bar_width or 466 end
         ExhaustionTick:SetParent(dfXpBar)
         ExhaustionTick:SetFrameStrata("MEDIUM")
-        ExhaustionTick:SetFrameLevel(20)
+        ExhaustionTick:SetFrameLevel(GetExhaustionTickLevel(dfXpBar.Bar))
         local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
         tickPos = math.max(tickPos, 0)
         ExhaustionTick:ClearAllPoints()
         ExhaustionTick:SetPoint("CENTER", dfXpBar, "LEFT", tickPos, 0)
         ExhaustionTick:SetScript("OnUpdate", function(self, elapsed)
-            if not self.timer then return end
-            self.timer = self.timer - elapsed
-            if self.timer > 0 then return end
-            self.timer = 1
+            if not self.dragonuiTimer then return end
+            self.dragonuiTimer = self.dragonuiTimer - elapsed
+            if self.dragonuiTimer > 0 then return end
+            self.dragonuiTimer = 1
+            self:SetFrameLevel(GetExhaustionTickLevel(dfXpBar.Bar))
             local et = GetXPExhaustion()
             if not et or et <= 0 then self:Hide() return end
             local cx = UnitXP("player")
@@ -1099,7 +1140,7 @@ local function UpdateDfuiExhaustionTick()
             self:ClearAllPoints()
             self:SetPoint("CENTER", dfXpBar, "LEFT", tp, 0)
         end)
-        ExhaustionTick.timer = 0
+        ExhaustionTick.dragonuiTimer = 0
         ExhaustionTick:Show()
     else
         ExhaustionTick:Hide()
@@ -1222,6 +1263,11 @@ local function UpdateDragonflightUIRepBar()
     else
         dfRepBar.Bar.Texture:SetTexture(addon._dir .. "Reputation\\RepGreen")
     end
+    if standing == 4 then
+        dfRepBar.Bar.texTop, dfRepBar.Bar.texBottom = 0, 1
+    else
+        dfRepBar.Bar.texTop, dfRepBar.Bar.texBottom = SHORT_REP_TEXTOP, SHORT_REP_TEXBOTTOM
+    end
 
     dfRepBar.Bar:SetMinMaxValues(0, maxRep - minRep)
     dfRepBar.Bar:SetValue(value - minRep)
@@ -1339,21 +1385,21 @@ local function ApplyRetailUIExpRepBarStyling()
             local isFullyRested = exhaustionThreshold and exhaustionThreshold >= remainingXP
 
             if showTick and exhaustionThreshold and exhaustionThreshold > 0 and not isFullyRested then
-                -- Re-parent to MainMenuExpBar and ensure it renders above everything
                 ExhaustionTick:SetParent(MainMenuExpBar)
                 ExhaustionTick:SetFrameStrata("MEDIUM")
-                ExhaustionTick:SetFrameLevel(20)
+                ExhaustionTick:SetFrameLevel(GetExhaustionTickLevel(MainMenuExpBar))
                 -- Position immediately
                 local tickPos = math.min(((currXP + exhaustionThreshold) / maxXP) * barW, barW)
                 tickPos = math.max(tickPos, 0)
                 ExhaustionTick:ClearAllPoints()
                 ExhaustionTick:SetPoint("CENTER", MainMenuExpBar, "LEFT", tickPos, 0)
-                -- Install a nil-safe OnUpdate for continuous tracking
+                -- Own timer field: Blizzard's MainMenuExpBar OnEnter/OnLeave/OnUpdate drive ExhaustionTick.timer.
                 ExhaustionTick:SetScript("OnUpdate", function(self, elapsed)
-                    if not self.timer then return end
-                    self.timer = self.timer - elapsed
-                    if self.timer > 0 then return end
-                    self.timer = 1
+                    if not self.dragonuiTimer then return end
+                    self.dragonuiTimer = self.dragonuiTimer - elapsed
+                    if self.dragonuiTimer > 0 then return end
+                    self.dragonuiTimer = 1
+                    self:SetFrameLevel(GetExhaustionTickLevel(MainMenuExpBar))
                     local et = GetXPExhaustion()
                     if not et or et <= 0 then
                         self:Hide()
@@ -1374,7 +1420,7 @@ local function ApplyRetailUIExpRepBarStyling()
                     self:ClearAllPoints()
                     self:SetPoint("CENTER", MainMenuExpBar, "LEFT", tp, 0)
                 end)
-                ExhaustionTick.timer = 0
+                ExhaustionTick.dragonuiTimer = 0
                 ExhaustionTick:Show()
             else
                 ExhaustionTick:Hide()
@@ -1527,13 +1573,20 @@ local function ConnectBarsToEditor()
         addon.DfuiXpBar = xpBar
         addon.DfuiRepBar = repBar
 
+        -- SetParent lifts them to the level-100 editor frame, over the gryphons; RetailUI's bars sit at 1.
         xpBar:SetParent(addon.ActionBarFrames.xpbar)
         xpBar:SetScale(cfg.expbar_scale or 1.0)
         xpBar:SetFrameStrata("MEDIUM")
+        xpBar:SetFrameLevel(2)
+        xpBar.RestedBar:SetFrameLevel(3)
+        xpBar.RestedBarMark:SetFrameLevel(3)
+        xpBar.Bar:SetFrameLevel(4)
 
         repBar:SetParent(addon.ActionBarFrames.repbar)
         repBar:SetScale(cfg.repbar_scale or 1.0)
         repBar:SetFrameStrata("MEDIUM")
+        repBar:SetFrameLevel(2)
+        repBar.Bar:SetFrameLevel(3)
 
         -- Exhaustion tick for DragonflightUI: delegated to UpdateDfuiExhaustionTick()
         UpdateDfuiExhaustionTick()
@@ -2174,6 +2227,24 @@ local function ApplyMainbarsSystem()
             local cfg = GetXpRepConfig() or {}
             if cfg.always_show_text then return end -- always visible, no change needed
             ReputationWatchStatusBarText:SetDrawLayer("HIGHLIGHT")
+        end)
+    end
+
+    -- Blizzard's rest text only appends to the XP newbie tip, so the tick alone showed nothing.
+    if ExhaustionTick then
+        -- The tick overhangs the main bar's buttons; keep its mouse area to the XP bar's height.
+        ExhaustionTick:SetHitRectInsets(10, 10, 9, 9)
+        ExhaustionTick:HookScript("OnEnter", function(self)
+            if IsModuleEnabled() then ShowExhaustionTickTooltip(self) end
+        end)
+    end
+    if MainMenuExpBar then
+        MainMenuExpBar:HookScript("OnEnter", function(self)
+            if not IsModuleEnabled() then return end
+            -- Blizzard's 1s timer would otherwise append its own rest text to our tooltip.
+            if ExhaustionTick then ExhaustionTick.timer = nil end
+            GameTooltip.canAddRestStateLine = nil
+            ShowXpBarTooltip(self)
         end)
     end
 
