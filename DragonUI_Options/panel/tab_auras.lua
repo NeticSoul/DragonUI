@@ -274,6 +274,30 @@ local function BuildAurasTab(scroll)
     C:AddSpacer(scroll)
 
     -- ====================================================================
+    -- AURA TOOLTIPS
+    -- ====================================================================
+    local tooltipSection = C:AddSection(scroll, LO["Aura Tooltips"])
+
+    C:AddToggle(tooltipSection, {
+        label = LO["Show Aura Spell ID"],
+        desc = LO["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."],
+        getFunc = function()
+            local tt = addon.db.profile.modules and addon.db.profile.modules.tooltip
+            return tt and tt.show_aura_spell_id == true
+        end,
+        setFunc = function(val)
+            C:EnsureModuleTable("tooltip").show_aura_spell_id = val
+        end,
+        disabled = function()
+            local tt = addon.db.profile.modules and addon.db.profile.modules.tooltip
+            return not (tt and tt.enabled == true)
+        end,
+        requiresReload = false,
+    })
+
+    C:AddSpacer(scroll)
+
+    -- ====================================================================
     -- WEAPON ENCHANTS
     -- ====================================================================
     local weaponSection = C:AddSection(scroll, LO["Weapon Enchants"])

@@ -399,6 +399,14 @@ local function ShouldShowAuraSource()
     return not cfg or cfg.show_aura_source ~= false
 end
 
+local function ShouldShowAuraSpellId()
+    if not IsModuleEnabled() then
+        return false
+    end
+    local cfg = GetModuleConfig()
+    return cfg and cfg.show_aura_spell_id == true
+end
+
 local function RGBToHex(r, g, b)
     return string.format("|cff%02x%02x%02x",
         math.floor((r or 1) * 255 + 0.5),
@@ -435,23 +443,28 @@ local function GetAuraCasterAndSpellId(unit, index, filter)
 end
 
 local function AddAuraSourceInfo(tt, unit, index, filter)
-    if not ShouldShowAuraSource() or not unit or not index then
+    if not unit or not index then
+        return
+    end
+    local showSource = ShouldShowAuraSource()
+    local showSpellId = ShouldShowAuraSpellId()
+    if not showSource and not showSpellId then
         return
     end
 
     local caster, _, _, spellId = GetAuraCasterAndSpellId(unit, index, filter)
 
-    if AuraSourceAlreadyShown(tt, spellId) then
-        return
+    if showSpellId and AuraSourceAlreadyShown(tt, spellId) then
+        showSpellId = false
     end
 
     local leftText
-    if spellId then
+    if showSpellId and spellId then
         leftText = string.format("|cFFCA3C3C%s|r %d", AURA_ID_LABEL, spellId)
     end
 
     local rightText
-    if caster then
+    if showSource and caster then
         local name = UnitName(caster)
         if name then
             local _, class = UnitClass(caster)

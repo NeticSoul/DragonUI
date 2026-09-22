@@ -313,7 +313,10 @@ L["Restyle the tooltip health bar with class/reaction colors and slimmer look."]
 L["Anchor to Cursor"] = "錨定到游標"
 L["Make the tooltip follow the cursor position instead of the default anchor."] = "使滑鼠提示跟隨游標位置，而不是預設的錨點。"
 L["Show Aura Source"] = "顯示光環來源"
-L["Show the caster's name (class-colored) and spell ID on buff and debuff tooltips."] = "在增益/減益提示中顯示施放者的職業色名稱與法術 ID。"
+L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "在增益/減益提示中顯示施放者的職業色名稱。"
+L["Aura Tooltips"] = "光環提示"
+L["Show Aura Spell ID"] = "顯示法術 ID"
+L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "在增益/減益提示中顯示法術 ID。需要啟用滑鼠提示模組。"
 
 -- 聊天修改
 L["Enable Chat Mods"] = "啟用聊天功能修改"

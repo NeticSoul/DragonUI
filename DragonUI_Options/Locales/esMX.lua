@@ -361,7 +361,10 @@ L["Restyle the tooltip health bar with class/reaction colors and slimmer look."]
 L["Anchor to Cursor"] = "Anclar al Cursor"
 L["Make the tooltip follow the cursor position instead of the default anchor."] = "Hacer que el tooltip siga la posición del cursor en lugar del anclaje predeterminado."
 L["Show Aura Source"] = "Mostrar Origen de Aura"
-L["Show the caster's name (class-colored) and spell ID on buff and debuff tooltips."] = "Muestra el nombre del lanzador (con color de clase) y el ID del hechizo en tooltips de beneficios y perjuicios."
+L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "Muestra el nombre del lanzador (con color de clase) en tooltips de beneficios y perjuicios."
+L["Aura Tooltips"] = "Tooltips de auras"
+L["Show Aura Spell ID"] = "Mostrar ID del hechizo"
+L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "Muestra el ID del hechizo en tooltips de beneficios y perjuicios. Requiere el módulo de Tooltip."
 
 -- Chat Mods
 L["Enable Chat Mods"] = "Activar Mods de Chat"

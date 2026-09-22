@@ -358,7 +358,10 @@ L["Restyle the tooltip health bar with class/reaction colors and slimmer look."]
 L["Anchor to Cursor"] = "커서에 고정"
 L["Make the tooltip follow the cursor position instead of the default anchor."] = "툴팁이 기본 위치 대신 커서를 따라다니도록 설정"
 L["Show Aura Source"] = "오라 시전자 표시"
-L["Show the caster's name (class-colored) and spell ID on buff and debuff tooltips."] = "버프/디버프 툴팁에 시전자 이름(직업 색상)과 주문 ID를 표시합니다."
+L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "버프/디버프 툴팁에 시전자 이름(직업 색상)을 표시합니다."
+L["Aura Tooltips"] = "오라 툴팁"
+L["Show Aura Spell ID"] = "주문 ID 표시"
+L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "버프/디버프 툴팁에 주문 ID를 표시합니다. 툴팁 모듈이 필요합니다."
 
 -- Chat Mods
 L["Enable Chat Mods"] = "채팅 모드 활성화"

@@ -353,7 +353,10 @@ L["Restyle the tooltip health bar with class/reaction colors and slimmer look."]
 L["Anchor to Cursor"] = "Привязать к курсору"
 L["Make the tooltip follow the cursor position instead of the default anchor."] = "Подсказка следует за курсором вместо стандартной привязки."
 L["Show Aura Source"] = "Показывать источник ауры"
-L["Show the caster's name (class-colored) and spell ID on buff and debuff tooltips."] = "Показывать имя наложившего (цветом класса) и ID заклинания в подсказках баффов и дебаффов."
+L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "Показывать имя наложившего (цветом класса) в подсказках баффов и дебаффов."
+L["Aura Tooltips"] = "Подсказки аур"
+L["Show Aura Spell ID"] = "Показывать ID заклинания"
+L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "Показывать ID заклинания в подсказках баффов и дебаффов. Требуется модуль подсказок."
 
 -- Chat Mods
 L["Enable Chat Mods"] = "Включить улучшения чата"

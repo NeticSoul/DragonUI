@@ -392,7 +392,10 @@ L["Restyle the tooltip health bar with class/reaction colors and slimmer look."]
 L["Anchor to Cursor"] = true
 L["Make the tooltip follow the cursor position instead of the default anchor."] = true
 L["Show Aura Source"] = true
-L["Show the caster's name (class-colored) and spell ID on buff and debuff tooltips."] = true
+L["Show the caster's name (class-colored) on buff and debuff tooltips."] = true
+L["Aura Tooltips"] = true
+L["Show Aura Spell ID"] = true
+L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = true
 
 -- Chat Mods
 L["Enable Chat Mods"] = true
