@@ -1001,6 +1001,9 @@ L["Horizontal position offset"] = true
 L["Vertical position offset"] = true
 L["Reset quest tracker to default position"] = true
 L["Font size for quest tracker text"] = true
+L["Custom Height"] = true
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = true
+L["Maximum height of the quest tracker."] = true
 
 -- ============================================================================
 -- UNIT FRAMES TAB

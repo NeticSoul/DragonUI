@@ -889,6 +889,9 @@ L["Horizontal position offset"] = "Horizontaler Positionsversatz"
 L["Vertical position offset"] = "Vertikaler Positionsversatz"
 L["Reset quest tracker to default position"] = "Questverfolgung auf Standardposition zurücksetzen"
 L["Font size for quest tracker text"] = "Schriftgröße für den Text der Questverfolgung"
+L["Custom Height"] = "Eigene Höhe"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "Begrenzt die Questverfolgung auf eine feste Höhe. Ist dies aus, endet sie über den Taschen. Quests, die nicht passen, werden ausgeblendet, bis wieder Platz ist."
+L["Maximum height of the quest tracker."] = "Maximale Höhe der Questverfolgung."
 
 -- ============================================================================
 -- UNIT FRAMES TAB

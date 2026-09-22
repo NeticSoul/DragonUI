@@ -885,6 +885,9 @@ L["Horizontal position offset"] = "Горизонтальное смещение
 L["Vertical position offset"] = "Вертикальное смещение"
 L["Reset quest tracker to default position"] = "Сбросить позицию трекера заданий по умолчанию"
 L["Font size for quest tracker text"] = "Размер шрифта текста трекера заданий"
+L["Custom Height"] = "Своя высота"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "Ограничивает трекер фиксированной высотой. Если выключено, он заканчивается над сумками. Задания, которые не помещаются, скрываются, пока не освободится место."
+L["Maximum height of the quest tracker."] = "Максимальная высота трекера заданий."
 
 -- ============================================================================
 -- UNIT FRAMES TAB

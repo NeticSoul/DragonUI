@@ -847,6 +847,9 @@ L["Horizontal position offset"] = "水平位置偏移量"
 L["Vertical position offset"] = "垂直位置偏移量"
 L["Reset quest tracker to default position"] = "将任务追踪器重置为默认位置"
 L["Font size for quest tracker text"] = "任务追踪器文本的字体大小设置"
+L["Custom Height"] = "自定义高度"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "将追踪器限制为固定高度。关闭时，它会停在背包上方。放不下的任务会被隐藏，直到有空间为止。"
+L["Maximum height of the quest tracker."] = "任务追踪器的最大高度。"
 
 -- ============================================================================
 -- 单位框架标签页

@@ -922,6 +922,9 @@ L["Horizontal position offset"] = "Desfase de posición horizontal"
 L["Vertical position offset"] = "Desfase de posición vertical"
 L["Reset quest tracker to default position"] = "Restablecer el rastreador de misiones a la posición predeterminada"
 L["Font size for quest tracker text"] = "Tamaño de fuente para el texto del rastreador de misiones"
+L["Custom Height"] = "Altura personalizada"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "Limita el rastreador a una altura fija. Si está desactivado, se detiene encima de las bolsas. Las misiones que no caben se ocultan hasta que haya espacio."
+L["Maximum height of the quest tracker."] = "Altura máxima del rastreador de misiones."
 
 -- ============================================================================
 -- UNIT FRAMES TAB

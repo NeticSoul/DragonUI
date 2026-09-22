@@ -47,6 +47,33 @@ local function BuildQuesttrackerTab(scroll)
         callback = RefreshQT,
     })
 
+    C:AddToggle(section, {
+        label = LO["Custom Height"],
+        desc = LO["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."],
+        getFunc = function()
+            return C:GetDBValue("questtracker.custom_height") == true
+        end,
+        setFunc = function(val)
+            C:SetDBValue("questtracker.custom_height", val)
+        end,
+        callback = function()
+            RefreshQT()
+            Panel:SelectTab("questtracker")
+        end,
+    })
+
+    C:AddSlider(section, {
+        label = LO["Height"],
+        desc = LO["Maximum height of the quest tracker."],
+        dbPath = "questtracker.height",
+        min = 400, max = 1000, step = 10,
+        width = 200,
+        disabled = function()
+            return C:GetDBValue("questtracker.custom_height") ~= true
+        end,
+        callback = RefreshQT,
+    })
+
     C:AddHeading(section, LO["Visibility"])
     C:AddVisibilityFadeToggles(section, {
         dbPrefix = "questtracker",

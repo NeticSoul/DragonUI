@@ -893,6 +893,9 @@ L["Horizontal position offset"] = "가로 위치 오프셋"
 L["Vertical position offset"] = "세로 위치 오프셋"
 L["Reset quest tracker to default position"] = "퀘스트 추적기를 기본 위치로 초기화합니다"
 L["Font size for quest tracker text"] = "퀘스트 추적기 문자 글꼴 크기 설정"
+L["Custom Height"] = "사용자 지정 높이"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "추적기를 고정된 높이로 제한합니다. 끄면 가방 위에서 멈춥니다. 들어가지 않는 퀘스트는 공간이 생길 때까지 숨겨집니다."
+L["Maximum height of the quest tracker."] = "퀘스트 추적기의 최대 높이입니다."
 
 -- ============================================================================
 -- UNIT FRAMES TAB

@@ -22,6 +22,11 @@ local BADGE_SIZE, ICON_SIZE = addon.QuestPOI.SIZE, 16
 -- The title column IS the frame's left edge; the badge hangs outside it, off the title's TOPLEFT.
 local BADGE_LIFT = 5
 local BUTTON_INSET = -12
+-- Screen-unit clearances (scale 1), same as NewEra's: off the screen edge, and above the bags bar.
+local SCREEN_MARGIN, BAGS_GAP = 30, 10
+-- Below this much room past the header the cap is dropped, so a tracker never shrinks to nothing.
+local MIN_ROOM = 40
+local MIN_CUSTOM_HEIGHT = 400
 
 -- Measured the way WatchFrame_OnLoad measures it, from a line's own dash at the current font.
 local dashWidth = 10
@@ -50,6 +55,12 @@ end
 local function fontSize()
     local config = addon.db and addon.db.profile and addon.db.profile.questtracker
     return (config and config.font_size) or 12
+end
+
+local function customHeight()
+    local config = addon.db and addon.db.profile and addon.db.profile.questtracker
+    local height = config and config.custom_height and tonumber(config.height)
+    return (height and height >= MIN_CUSTOM_HEIGHT) and height or nil
 end
 
 local function showHeader()
@@ -568,6 +579,34 @@ end
 -- LAYOUT
 -- ============================================================================
 
+-- pUiBagsBar has no rect of its own; the backpack is its tallest button, so its top is the bar's.
+local function bagsFloor(scale)
+    local bags = MainMenuBarBackpackButton
+    local top = bags and bags:IsVisible() and bags:GetTop()
+    if top then return (top * bags:GetEffectiveScale() + BAGS_GAP) / scale end
+end
+
+-- Measured off the edge the anchor pins, which stays put as the tracker grows, so the cut can't flip.
+local function screenRoom(least)
+    local point, scale, top = anchor:GetPoint(1), anchor:GetEffectiveScale(), UIParent:GetTop()
+    if not (point and top and scale and scale > 0) then return end
+    local floor = SCREEN_MARGIN / scale
+    local ceiling = (top * UIParent:GetEffectiveScale() - SCREEN_MARGIN) / scale
+    if string.find(point, "TOP") then
+        local edge = anchor:GetTop()
+        if not edge then return end
+        local bags = bagsFloor(scale)
+        -- Bags moved up level with the tracker would leave it no room; the screen bottom rules then.
+        if bags and bags > floor and edge - bags >= least then floor = bags end
+        return edge - floor
+    elseif string.find(point, "BOTTOM") then
+        local edge = anchor:GetBottom()
+        return edge and ceiling - edge
+    end
+    local _, center = anchor:GetCenter()
+    return center and 2 * math.min(center - floor, ceiling - center)
+end
+
 function OT.Refresh()
     if not (frame and content and OT.enabled) then return end
     local blocks = collect()
@@ -592,13 +631,24 @@ function OT.Refresh()
     refreshHeaderArt(#blocks, width, wide)
     local y = HEADER_DROP + header:GetHeight() + HEADER_GAP
 
-    local shown = 0
+    local shown, truncated, avail, reserved = 0, false, nil, nil
     for index = #timerBlocks, 1, -1 do timerBlocks[index] = nil end
     if not OT.collapsed then
+        local least = y + MIN_ROOM
+        local room, cap = screenRoom(least), customHeight()
+        -- A custom height caps within the screen budget, never past it, and holds the frame that tall.
+        reserved = cap and (room and math.min(cap, room) or cap)
+        avail = reserved or room
+        if avail and avail < least then avail = nil end
         for _, data in ipairs(blocks) do
-            shown = shown + 1
-            local block = acquireBlock(shown)
+            local block = acquireBlock(shown + 1)
             fillBlock(block, data, lineWidth, size)
+            -- Dropped whole with all after it, as retail does; the loop below hides it and frees its POI.
+            if avail and y + block:GetHeight() > avail then
+                truncated = true
+                break
+            end
+            shown = shown + 1
             block:ClearAllPoints()
             block:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -y)
             block:Show()
@@ -615,6 +665,11 @@ function OT.Refresh()
     -- art and the line budget grew is what pushed the title off to one side in wide mode.
     content:SetSize(width, math.max(y, 1))
     local height = math.max(y, header:GetHeight() + HEADER_DROP)
+    if truncated then
+        height = reserved or math.min(height, avail)
+    elseif reserved and reserved > height then
+        height = reserved
+    end
     frame:SetSize(width, height)
     -- The anchor is the drag surface, so it has to cover the tracker.
     anchor:SetSize(width, height)
@@ -657,6 +712,8 @@ local function build()
         self:StopMovingOrSizing()
         if addon.ApplySelectionTint then addon.ApplySelectionTint(self) end
         savePosition()
+        -- How many entries fit on screen depends on where it was dropped.
+        OT.Refresh()
     end)
     anchor:SetScript("OnMouseDown", function(self, button)
         if button == "LeftButton" and addon.SelectEditorFrame then addon.SelectEditorFrame(self) end

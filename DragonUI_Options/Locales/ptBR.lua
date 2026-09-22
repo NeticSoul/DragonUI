@@ -1325,6 +1325,9 @@ L["Reset quest tracker to default position"] = "Redefine o rastreador de missõe
 
 -- Added by DragonUI (missing translations)
 L["Font size for quest tracker text"] = "Tamanho da fonte do texto do rastreador de missões"
+L["Custom Height"] = "Altura personalizada"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "Limita o rastreador a uma altura fixa. Desativado, ele para acima das bolsas. Missões que não cabem ficam ocultas até haver espaço."
+L["Maximum height of the quest tracker."] = "Altura máxima do rastreador de missões."
 L["Pet"] = "Ajudante"
 L["ToT / ToF"] = "AdA / AdF"
 L["Party"] = "Grupo"

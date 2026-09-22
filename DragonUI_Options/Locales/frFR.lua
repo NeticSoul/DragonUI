@@ -1324,6 +1324,9 @@ L["Reset quest tracker to default position"] = "Réinitialise le suivi de quête
 
 -- Added by DragonUI (missing translations)
 L["Font size for quest tracker text"] = "Taille de police du texte du suivi de quêtes"
+L["Custom Height"] = "Hauteur personnalisée"
+L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = "Limite le suivi de quêtes à une hauteur fixe. Désactivé, il s'arrête au-dessus des sacs. Les quêtes qui ne tiennent pas sont masquées jusqu'à ce qu'il y ait de la place."
+L["Maximum height of the quest tracker."] = "Hauteur maximale du suivi de quêtes."
 L["Pet"] = "Familier"
 L["ToT / ToF"] = "CdC / CdF"
 L["Party"] = "Groupe"
