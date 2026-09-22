@@ -75,6 +75,15 @@ local function selectedEntry()
     return CO.Find(kind(), selected[kind()])
 end
 
+local function insertChatLink(entry)
+    if not (entry and entry.spellID and IsModifiedClick("CHATLINK")) then return false end
+    -- The macro editor wants the plain name so /cast works, as CompanionButton_OnModifiedClick does.
+    if MacroFrame and MacroFrame:IsShown() then
+        return ChatEdit_InsertLink((GetSpellInfo(entry.spellID)))
+    end
+    return ChatEdit_InsertLink(GetSpellLink(entry.spellID))
+end
+
 local function showCreature(creatureID)
     if not model then return end
     if not creatureID then
@@ -193,15 +202,16 @@ local function buildInfo(host)
     -- whole opening stays clickable even where the gold overlaps the icon.
     infoDrag = CreateFrame("Button", nil, parent)
     infoDrag:SetAllPoints(infoIcon)
-    infoDrag:RegisterForClicks("RightButtonUp")
+    infoDrag:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     infoDrag:RegisterForDrag("LeftButton")
     infoDrag:SetScript("OnDragStart", function()
         local entry = selectedEntry()
         if entry and entry.index then PickupCompanion(kind(), entry.index) end
     end)
-    infoDrag:SetScript("OnClick", function()
+    infoDrag:SetScript("OnClick", function(_, button)
         local entry = selectedEntry()
-        if not (entry and entry.index) then return end
+        if insertChatLink(entry) then return end
+        if button ~= "RightButton" or not (entry and entry.index) then return end
         addon.Menu.Open("cursor", rowMenuEntries(entry))
     end)
     infoDrag:SetScript("OnEnter", function(self)
@@ -337,6 +347,7 @@ local function buildRow(parent)
     end)
     row:SetScript("OnClick", function(self, button)
         if not self._entry then return end
+        if insertChatLink(self._entry) then return end
         -- A catalog row has nothing to summon or favorite, so it only ever selects.
         if button == "RightButton" and self._entry.index then
             addon.Menu.Open("cursor", rowMenuEntries(self._entry))
