@@ -185,25 +185,25 @@ end
 
 local hoveredPlate
 
--- Every overlapped plate passes IsMouseOver; the client's highlight marks the one a click would hit.
+-- The client highlights the plate a click would hit, but only a highlight under the cursor is live.
 local function FindHoveredPlate()
-    local best, bestLevel, bestDepth
+    local best, bestDepth
     local anyShown = false
+    local overWorld = GetMouseFocus() == WorldFrame
     for _, plateData in pairs(NP.module.plates) do
         local plate = plateData.plate
         if plate and plate:IsShown() then
             anyShown = true
             local highlight = plateData.highlight
             if highlight and highlight:IsShown() then
-                return plateData, true
-            end
-            if plate:IsMouseOver() then
-                -- No highlight to go by: the frontmost depth band wins, then the nearer plate.
-                local root = plateData.visualRoot or plate
-                local level = root:GetFrameLevel()
-                local depth = root:GetEffectiveDepth() or 0
-                if not best or level > bestLevel or (level == bestLevel and depth < bestDepth) then
-                    best, bestLevel, bestDepth = plateData, level, depth
+                if plate:IsMouseOver() then
+                    local depth = plate:GetEffectiveDepth() or 0
+                    if overWorld and (not best or depth < bestDepth) then
+                        best, bestDepth = plateData, depth
+                    end
+                else
+                    -- A camera turn strands it on a plate the cursor left; the next real hover re-shows it.
+                    highlight:Hide()
                 end
             end
         end
