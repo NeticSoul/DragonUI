@@ -226,8 +226,13 @@ function NP.discovery.ClipBarFill(bar, cur, maxVal)
     end
 end
 
+-- Every health tick lands here; the sliced fill turns one recolor into ten widget calls.
 function NP.discovery.SetBarColor(bar, r, g, b)
-    local sliced = bar._retailFillOn
+    local sliced = bar._retailFillOn and true or false
+    if bar._colorR == r and bar._colorG == g and bar._colorB == b and bar._colorSliced == sliced then
+        return
+    end
+    bar._colorR, bar._colorG, bar._colorB, bar._colorSliced = r, g, b, sliced
     bar:SetStatusBarColor(r, g, b, sliced and 0 or 1)
     if sliced then
         NP.atlas.SetSliceVertexColor(bar._retailFill, r, g, b, 1)

@@ -97,6 +97,10 @@ function A.HideSlice(slice)
     end
 end
 
+-- Reused every call: the fill is relaid on each health tick, so no per-call tables.
+local colX, colW, colL, colR = {}, {}, {}, {}
+local rowY, rowH, rowT, rowB = {}, {}, {}, {}
+
 -- Lays nine pieces over anchor's rect grown by the four pads. Margins scale with the
 -- art's render ratio, so the rails keep their proportion at any bar height.
 function A.LayoutSlice(slice, key, anchor, w, h, padL, padT, padR, padB)
@@ -143,36 +147,54 @@ function A.LayoutSlice(slice, key, anchor, w, h, padL, padT, padR, padB)
     local col = slice.collapsed
     slice.keyed = slice.keyed or {}
     local keyed = slice.keyed
+    local geo = slice.geo
+    if not geo then
+        geo = { x = {}, y = {}, w = {}, h = {}, anchor = {} }
+        slice.geo = geo
+    end
 
     -- Every piece anchors to the reference rect, never to a sibling: a collapsed
     -- piece keeps stale geometry and would drag its neighbours off.
-    local xs = { { -padL, capL, l, l + uL },
-                 { -padL + capL, midW, l + uL, r - uR },
-                 { -padL + capL + midW, capR, r - uR, r } }
-    local ys = { { padT, capT, t, t + uT },
-                 { padT - capT, midH, t + uT, b - uB },
-                 { padT - capT - midH, capB, b - uB, b } }
+    colX[1], colW[1], colL[1], colR[1] = -padL, capL, l, l + uL
+    colX[2], colW[2], colL[2], colR[2] = -padL + capL, midW, l + uL, r - uR
+    colX[3], colW[3], colL[3], colR[3] = -padL + capL + midW, capR, r - uR, r
+    rowY[1], rowH[1], rowT[1], rowB[1] = padT, capT, t, t + uT
+    rowY[2], rowH[2], rowT[2], rowB[2] = padT - capT, midH, t + uT, b - uB
+    rowY[3], rowH[3], rowT[3], rowB[3] = padT - capT - midH, capB, b - uB, b
 
     for row = 1, 3 do
         for colIdx = 1, 3 do
             local i = (row - 1) * 3 + colIdx
             local tex = slice[i]
-            local cw, ch = xs[colIdx][2], ys[row][2]
+            local cw, ch = colW[colIdx], rowH[row]
             if cw <= 0 or ch <= 0 then
-                col[i] = true
-                tex:Hide()
+                if not col[i] then
+                    col[i] = true
+                    tex:Hide()
+                end
             else
+                local wasCollapsed = col[i]
                 col[i] = nil
-                -- Sheet and UVs only move when the key does; health ticks relayout 9 pieces per bar.
+                -- Sheet and UVs only move when the key does.
                 if keyed[i] ~= key then
                     keyed[i] = key
                     tex:SetTexture(k[1])
-                    tex:SetTexCoord(xs[colIdx][3], xs[colIdx][4], ys[row][3], ys[row][4])
+                    tex:SetTexCoord(colL[colIdx], colR[colIdx], rowT[row], rowB[row])
                     tex:ClearAllPoints()
+                    geo.anchor[i] = nil
                 end
-                tex:SetSize(cw, ch)
-                tex:SetPoint("TOPLEFT", anchor, "TOPLEFT", xs[colIdx][1], ys[row][1])
-                if slice.shown then
+                -- A fill tick only moves the middle and right columns; skip the pieces that held still.
+                if geo.w[i] ~= cw or geo.h[i] ~= ch then
+                    geo.w[i], geo.h[i] = cw, ch
+                    tex:SetSize(cw, ch)
+                end
+                local x, y = colX[colIdx], rowY[row]
+                if geo.anchor[i] ~= anchor or geo.x[i] ~= x or geo.y[i] ~= y then
+                    geo.anchor[i], geo.x[i], geo.y[i] = anchor, x, y
+                    tex:SetPoint("TOPLEFT", anchor, "TOPLEFT", x, y)
+                end
+                -- Show/HideSlice keep every non-collapsed piece in step with slice.shown.
+                if wasCollapsed and slice.shown then
                     tex:Show()
                 end
             end

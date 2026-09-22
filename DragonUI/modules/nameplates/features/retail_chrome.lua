@@ -108,6 +108,13 @@ local mouseoverLit
 local activeFlares = setmetatable({}, { __mode = "k" })
 local activeFlashes = setmetatable({}, { __mode = "k" })
 
+local function SetFlarePieceShown(tex, shown)
+    if tex._flareShown ~= shown then
+        tex._flareShown = shown
+        if shown then tex:Show() else tex:Hide() end
+    end
+end
+
 -- NewEra clips the flare with a MaskTexture the width of the bar. With no mask API we
 -- clip by hand: two pieces per layer, split at the wrap seam, never wider than the bar.
 local function PlaceFlareLayer(f, first, hp, barW, off)
@@ -115,20 +122,21 @@ local function PlaceFlareLayer(f, first, hp, barW, off)
     local head, tail = f[first], f[first + 1]
 
     if headW > 0 then
-        head:ClearAllPoints()
-        head:SetPoint("BOTTOMLEFT", hp, "TOPLEFT", 0, 0)
+        if head._flareAnchor ~= hp then
+            head._flareAnchor = hp
+            head:SetPoint("BOTTOMLEFT", hp, "TOPLEFT", 0, 0)
+        end
         head:SetWidth(headW)
         head:SetTexCoord(off / barW, 1, 0, 1)
     end
-    if f.shown and headW > 0 then head:Show() else head:Hide() end
+    SetFlarePieceShown(head, f.shown and headW > 0)
 
     if off > 0 then
-        tail:ClearAllPoints()
         tail:SetPoint("BOTTOMLEFT", hp, "TOPLEFT", headW, 0)
         tail:SetWidth(off)
         tail:SetTexCoord(0, off / barW, 0, 1)
     end
-    if f.shown and off > 0 then tail:Show() else tail:Hide() end
+    SetFlarePieceShown(tail, f.shown and off > 0)
 end
 
 local function PlaceFlare(plateData, elapsed)
@@ -170,7 +178,7 @@ local function SetFlareShown(plateData, shown)
         end
     else
         for i = 1, 4 do
-            f[i]:Hide()
+            SetFlarePieceShown(f[i], false)
         end
     end
 end
@@ -478,8 +486,12 @@ local function SyncFlareInternal(plateData, cfg)
         return
     end
     plateData._hadAggro = true
-    for i = 1, 4 do
-        flare[i]:SetVertexColor(r, g, b)
+    -- Reached on every health tick of an aggroed plate; the tint only moves on threat changes.
+    if flare.r ~= r or flare.g ~= g or flare.b ~= b then
+        flare.r, flare.g, flare.b = r, g, b
+        for i = 1, 4 do
+            flare[i]:SetVertexColor(r, g, b)
+        end
     end
     SetFlareShown(plateData, true)
 end
