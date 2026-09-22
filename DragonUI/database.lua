@@ -180,6 +180,11 @@ local defaults = {
                 posY = 144,
                 relativePoint = "CENTER",
                 custom_position = false
+            },
+            levelupenhance = {
+                anchor = "TOP",
+                posX = 0,
+                posY = -180
             }
         },
         -- Quest Tracker
@@ -864,9 +869,6 @@ local defaults = {
             },
             levelupenhance = {
                 enabled = true, -- Enhanced level-up notification with animated frame
-                anchor = "TOP",
-                posX = 0,
-                posY = -128
             },
             darkmode = {
                 enabled = false, -- Apply darker tinted textures to UI chrome

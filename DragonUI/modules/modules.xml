@@ -9,59 +9,59 @@
     <Script file="cooldowns.lua"/>
     <Script file="auracooldowns.lua"/>
     <Script file="mainbars.lua"/>
-
+    
     <!-- Action Bar Sub-modules (stance, vehicle, petbar, multicast) -->
     <Include file="actionbars\actionbars.xml"/>
-
+    
     <!-- Pets & Mounts window (its micro button must exist before micromenu.lua loads) -->
     <Script file="..\data\companion_traits.lua"/>
     <Include file="collections\collections.xml"/>
 
     <!-- Micro Menu & Bag module -->
     <Script file="micromenu.lua"/>
-
+    
     <!-- KeyBinding module -->
     <Script file="keybinding.lua"/>
 
     <!-- Key Press module (fire actions on key down instead of key release) -->
     <Script file="keypress.lua"/>
-
+    
     <!-- Buffs, Minimap & Quest Tracker modules -->
     <Script file="buff_frame.lua"/>
     <Script file="auraborders.lua"/>
     <Script file="minimap_collector.lua"/>
     <Script file="minimap.lua"/>
     <Script file="minimap_decorations.lua"/>
-    <Script file="objectivetracker.lua"/>
+    <Script file="objectivetracker.lua"/>   
     <Script file="lootroll.lua"/>
 
     <!-- Blizzard loot window skin (the paginated LootFrame, not the roll popup above) -->
     <Script file="loot_skin.lua"/>
 
-
+ 
     <!-- UnitFrames -->
     <Include file="unitframes\unitframes.xml"/>
-
+    
     <!-- Cast Bar module -->
-    <Script file="castbar.lua"/>
-
+    <Script file="castbar.lua"/>               
+    
     <!-- Game Menu module -->
     <Script file="gamemenu.lua"/>
-
+    
     <!-- Editor Mode module -->
     <Script file="editor_mode.lua"/>
-
+    
     <!-- Dark Mode module -->
     <Script file="darkmode.lua"/>
-
+    
     <!-- Tooltip Enhancement module -->
     <Script file="tooltip.lua"/>
-
+    
     <!-- Nameplates (custom stack on 30300 Blizzard plates) -->
     <Script file="..\data\npc_rare_ranks.lua"/>
     <Script file="..\data\aura_durations.lua"/>
     <Include file="nameplates\nameplates.xml"/>
-
+    
     <!-- Item Quality Borders module -->
     <Script file="itemquality.lua"/>
 
@@ -76,7 +76,7 @@
 
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>
-
+    
     <!-- Bag item usability tint (shared by bagster and bags_skin; must load before both) -->
     <Script file="bags_usability.lua"/>
 
@@ -85,7 +85,7 @@
 
     <!-- Blizzard bag window skin -->
     <Script file="bags_skin.lua"/>
-
+    
     <!-- Bag Sort module (sort buttons for bags and bank) -->
     <Script file="bagsort.lua"/>
 
@@ -101,6 +101,6 @@
     <!-- Level Up Enhance (level-up notification banner) -->
     <Script file="levelupenhance.lua"/>
 
-    <!-- hp_low_alert (hp low alert when players is under 30% hp alow config) -->
+    <!-- Low HP Alert (screen-edge flash and sound on low health) -->
     <Script file="hp_low_alert.lua"/>
 </Ui>

@@ -693,7 +693,6 @@ L["Show Map Coordinates"] = "지도 좌표 표시"
 
 -- Level Up Enhance Module
 L["LevelUpFrame"] = "Level Up"
-L["Enhanced tooltip styling with class colors and health bars"] = "클래스 색상 및 체력바가 있는 향상된 툴팁 스타일"
 L["Level Up Enhance"] = "레벨 업 강화"
 L["Enhanced level-up notification with animated frame"] = "애니메이션 프레ーム이 있는 향상된 레벨 업 알림"
 L["You've Reached"] = "당신이 달성"

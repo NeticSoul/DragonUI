@@ -695,7 +695,6 @@ L["Show Map Coordinates"] = "Kartenkoordinaten anzeigen"
 
 -- Level Up Enhance Module
 L["LevelUpFrame"] = "Level Up"
-L["Enhanced tooltip styling with class colors and health bars"] = "Verstärkter Tooltip-Stil mit Klassenfarben und Lebensbalken"
 L["Level Up Enhance"] = "Level-Up-Verstärkung"
 L["Enhanced level-up notification with animated frame"] = "Erweiterte Level-Up-Benachrichtigung mit animiertem Rahmen"
 L["You've Reached"] = "Du hast erreicht"

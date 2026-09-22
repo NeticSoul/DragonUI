@@ -626,7 +626,6 @@ L["Show Map Coordinates"] = "顯示地圖座標"
 
 -- Level Up Enhance Module
 L["LevelUpFrame"] = "Level Up"
-L["Enhanced tooltip styling with class colors and health bars"] = "帶有職業顏色和生命條的增強提示樣式"
 L["Level Up Enhance"] = "升級增強"
 L["Enhanced level-up notification with animated frame"] = "帶有動畫邊框的增強升級通知"
 L["You've Reached"] = "你已達到"

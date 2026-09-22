@@ -626,7 +626,6 @@ L["Show Map Coordinates"] = "Afficher les coordonnées"
 
 -- Level Up Enhance Module
 L["LevelUpFrame"] = "Level Up"
-L["Enhanced tooltip styling with class colors and health bars"] = "Style d'infobulle amélioré avec couleurs de classe et barres de vie"
 L["Level Up Enhance"] = "Survie Améliorée"
 L["Enhanced level-up notification with animated frame"] = "Notification de nivel améliorée avec cadre animé"
 L["You've Reached"] = "Tu as atteint"
