@@ -1,17 +1,18 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
--- Retail-style chrome on Blizzard's vendor window. FrameXML keeps buy/sell/repair;
+-- Retail-style chrome on Blizzard's vendor window; FrameXML still owns buy, sell and repair.
 
 local addon = select(2, ...)
-if not addon then return end
 
 local L = addon.L
 local DIR = addon._dir
 local ROCK = DIR .. "UI\\ui-background-rock"
+local MARBLE = DIR .. "UI\\ui-background-marble"
 local REDBUTTON = DIR .. "UI\\redbutton2x"
 local LABEL_PLATE = DIR .. "Merchant\\labelslots"
 local PAGE_BG = DIR .. "Merchant\\pagebutton-background"
 local PAGE_HILITE = DIR .. "Merchant\\pagebutton-hover"
-local QUICKSLOT_BG = DIR .. "UI\\ui-quickslot2"
+local QUICKSLOT_RING = DIR .. "UI\\ui-quickslot2"
+local EMPTY_SLOT = DIR .. "Merchant\\emptyslot"
 local TAB_TEX = DIR .. "UI\\uiframetabs"
 local PAGE_BTN_TEX = {
     MerchantPrevPageButton = {
@@ -33,7 +34,6 @@ local PAGE_BTN_TEX = {
 local MerchantModule = {
     initialized = false,
     applied = false,
-    hooks = {},
     frames = {},
 }
 
@@ -48,10 +48,6 @@ end
 -- CONFIG HELPERS
 -- ============================================================================
 
-local function GetModuleConfig()
-    return addon:GetModuleConfig("merchant")
-end
-
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("merchant")
 end
@@ -60,69 +56,73 @@ end
 -- INLINE HELPERS
 -- ============================================================================
 
-local function TextColor(quality)
-    return quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality] or nil
+-- The link carries its own quality colour, so an uncached item still gets tinted.
+local function TextColor(link)
+    if not link then return nil end
+    local quality = select(3, GetItemInfo(link))
+    if quality then return ITEM_QUALITY_COLORS[quality] end
+    local hex = link:match("^|c(%x%x%x%x%x%x%x%x)")
+    if not hex then return nil end
+    return {
+        r = tonumber(hex:sub(3, 4), 16) / 255,
+        g = tonumber(hex:sub(5, 6), 16) / 255,
+        b = tonumber(hex:sub(7, 8), 16) / 255,
+    }
 end
 
-local _questScanTooltip
+local questScanTooltip
+local questStarterCache = {}
 local function ItemStartsQuestByLink(link)
-    if not link then return false end
-    if not _questScanTooltip then
-        _questScanTooltip = CreateFrame("GameTooltip", "DragonUI_MerchantQuestScan", nil, "GameTooltipTemplate")
-        _questScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+    local itemID = link and tonumber(link:match("item:(%d+)"))
+    if not itemID then return false end
+    local cached = questStarterCache[itemID]
+    if cached ~= nil then return cached end
+
+    if not questScanTooltip then
+        questScanTooltip = CreateFrame("GameTooltip", "DragonUI_MerchantQuestScan", nil, "GameTooltipTemplate")
+        questScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
     end
-    _questScanTooltip:ClearLines()
-    _questScanTooltip:SetHyperlink(link)
-    for i = 1, _questScanTooltip:NumLines() do
-        local text = _G["DragonUI_MerchantQuestScanTextLeft" .. i] and _G["DragonUI_MerchantQuestScanTextLeft" .. i]:GetText()
-        if text and text == ITEM_SPELL_STARTS_QUEST then
-            return true
+    questScanTooltip:ClearLines()
+    questScanTooltip:SetHyperlink(link)
+    local lines = questScanTooltip:NumLines()
+    local starts = false
+    for i = 2, lines do
+        local fs = _G["DragonUI_MerchantQuestScanTextLeft" .. i]
+        if fs and fs:GetText() == ITEM_STARTS_QUEST then
+            starts = true
+            break
         end
     end
-    return false
+    -- A one-line tooltip means the item isn't cached yet; don't remember that as "no".
+    if starts or lines > 1 then questStarterCache[itemID] = starts end
+    return starts
 end
 
 -- ============================================================================
 -- LOCAL HELPERS
 -- ============================================================================
 
-local function setAtlas(tex, name, useSize)
-    if not tex or not name or not addon.atlasinfo or not addon.atlasinfo[name] then
-        return false
-    end
-    tex:set_atlas(name, useSize and true or false)
-    return true
-end
-
 local function ForEachRegion(frame, kind, layer, fn)
-    if not (frame and frame.GetNumRegions) then return end
-    local n = frame:GetNumRegions()
-    for i = 1, n do
-        local r = select(i, frame:GetRegions())
-        if r and r.GetObjectType and r:GetObjectType() == kind then
-            if not layer or (r.GetDrawLayer and r:GetDrawLayer() == layer) then
-                fn(r)
-            end
+    if not frame then return end
+    local regions = { frame:GetRegions() }
+    for i = 1, #regions do
+        local r = regions[i]
+        if r:GetObjectType() == kind and (not layer or r:GetDrawLayer() == layer) then
+            fn(r)
         end
     end
 end
 
 local function FindRegion(frame, kind, predicate)
-    if not (frame and frame.GetNumRegions) then return nil end
-    local n = frame:GetNumRegions()
-    for i = 1, n do
-        local r = select(i, frame:GetRegions())
-        if r and r.GetObjectType and r:GetObjectType() == kind and predicate(r) then
+    if not frame then return nil end
+    local regions = { frame:GetRegions() }
+    for i = 1, #regions do
+        local r = regions[i]
+        if r:GetObjectType() == kind and predicate(r) then
             return r
         end
     end
     return nil
-end
-
-local function keep(f, obj)
-    if not (f and obj) then return end
-    f._duiKeep = f._duiKeep or {}
-    f._duiKeep[obj] = true
 end
 
 local function applyNineSlice(container, layoutName)
@@ -134,20 +134,25 @@ local function applyNineSlice(container, layoutName)
 end
 
 local function attachInset(parent, tlx, tly, brx, bry)
-    if not parent then return nil end
     local inset = CreateFrame("Frame", nil, parent)
     inset:EnableMouse(false)
     inset:SetPoint("TOPLEFT", parent, "TOPLEFT", tlx, tly)
     inset:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", brx, bry)
     applyNineSlice(inset, "InsetFrameTemplate")
+    local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -5)
+    bg:SetTexture(MARBLE, "REPEAT", "REPEAT")
+    bg:SetHorizTile(true)
+    bg:SetVertTile(true)
+    bg:SetAllPoints(inset)
     return inset
 end
 
 local function applyPortraitCutout(tex, parent)
     if not tex or not parent or tex._duiCutout then return end
     tex:ClearAllPoints()
-    tex:SetPoint("TOPLEFT", parent, "TOPLEFT", -5, 8)
-    tex:SetSize(60, 60)
+    -- The ring's 62 minus 3 a side: with no masks in 3.3.5a, a full-square face spills past the metal.
+    tex:SetPoint("TOPLEFT", parent, "TOPLEFT", -2, 4)
+    tex:SetSize(56, 56)
     tex:SetDrawLayer("ARTWORK")
     tex._duiCutout = true
 end
@@ -202,23 +207,27 @@ local BUYBACK_PER_PAGE = BUYBACK_ITEMS_PER_PAGE or 12
 local PANEL_W, PANEL_H = 336, 444
 local GRID_X, GRID_Y   = 11, -69
 local PANEL_X_NUDGE    = 6
-local INSET_TL_X, INSET_TL_Y = 2, -59
+local INSET_TL_X, INSET_TL_Y = 4, -60
 local INSET_BR_X, INSET_BR_Y = -6, 26
-local INSET_BR_Y_BUYBACK = 27
 local ROW_GAP_MERCHANT, ROW_GAP_BUYBACK = -8, -15
 local BAND_Y     = 26
 local BAND_INSET = 1
-local TILE_BLEED = 14
-local MONEY_X, MONEY_Y = -10, 8
+local MONEY_X, MONEY_Y = -6, 10
 
 -- ============================================================================
--- CLASSIC ART DETECTION (must be defined before diagnose and hideClassicChrome)
+-- OUTER CHROME — classic art suppression + modern chrome
 -- ============================================================================
 
 local CLASSIC_PATHS = { "ui%-merchant%-top", "ui%-merchant%-bot", "ui%-buyback%-" }
 
+-- The only classic pieces FrameXML re-Shows on its own (UpdateMerchantInfo / UpdateBuybackInfo).
+local RESHOWN_CLASSIC = {
+    "MerchantNameText", "MerchantRepairText", "MerchantFrameBottomLeftBorder", "MerchantFrameBottomRightBorder",
+    "BuybackFrameTopLeft", "BuybackFrameTopRight", "BuybackFrameBotLeft", "BuybackFrameBotRight",
+}
+
 local function isClassicArt(r)
-    local p = r.GetTexture and r:GetTexture()
+    local p = r:GetTexture()
     if type(p) ~= "string" then return false end
     p = p:lower()
     for _, pat in ipairs(CLASSIC_PATHS) do
@@ -227,40 +236,30 @@ local function isClassicArt(r)
     return false
 end
 
--- ============================================================================
--- OUTER CHROME — classic art suppression + modern chrome
--- ============================================================================
+local function hideReshownClassic()
+    for _, name in ipairs(RESHOWN_CLASSIC) do
+        local t = _G[name]
+        if t then t:Hide() end
+    end
+end
 
 local function hideClassicChrome()
     local f = _G.MerchantFrame
     if not f then return end
 
-    if _G.MerchantFramePortrait then keep(f, _G.MerchantFramePortrait) end
-
-    ForEachRegion(f, "Texture", "BORDER", function(r)
-        if r ~= f._duiStreaks and isClassicArt(r) then r:Hide() end
-    end)
-    ForEachRegion(f, "Texture", "ARTWORK", function(r)
-        if r ~= f._duiStreaks and isClassicArt(r) then r:Hide() end
+    ForEachRegion(f, "Texture", nil, function(r)
+        local layer = r:GetDrawLayer()
+        if (layer == "BORDER" or layer == "ARTWORK") and r ~= f._duiStreaks and isClassicArt(r) then
+            r:Hide()
+        end
     end)
 
-    local kept = f._duiKeep or {}
-    if f.Bg then kept[f.Bg] = true end
-    if f._duiGridInsetBg then kept[f._duiGridInsetBg] = true end
-    if f._duiMoneyInsetBg then kept[f._duiMoneyInsetBg] = true end
+    local portrait = _G.MerchantFramePortrait
     ForEachRegion(f, "Texture", "BACKGROUND", function(r)
-        if not kept[r] then r:Hide() end
+        if r ~= portrait then r:Hide() end
     end)
 
-    if _G.MerchantNameText then _G.MerchantNameText:Hide() end
-
-    for _, name in ipairs({
-        "MerchantRepairText", "MerchantFrameBottomLeftBorder", "MerchantFrameBottomRightBorder",
-        "BuybackFrameTopLeft", "BuybackFrameTopRight", "BuybackFrameBotLeft", "BuybackFrameBotRight",
-    }) do
-        local t = _G[name]
-        if t and t.Hide then t:Hide() end
-    end
+    hideReshownClassic()
 end
 
 -- ============================================================================
@@ -318,10 +317,7 @@ local function buildBottomBand()
     band:SetPoint("BOTTOMLEFT",  f, "BOTTOMLEFT",   BAND_INSET, BAND_Y)
     band:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -BAND_INSET, BAND_Y)
     local t = band:CreateTexture(nil, "ARTWORK")
-    if not setAtlas(t, "ui-merchant-botframe", false) then
-        band:Hide()
-        return
-    end
+    t:set_atlas("ui-merchant-botframe", false)
     t:SetAllPoints()
     band:SetFrameLevel((f:GetFrameLevel() or 1) + 1)
     f._duiBotFrame = band
@@ -331,33 +327,20 @@ end
 -- ROWS — slot reskin, quest bang, name clamping
 -- ============================================================================
 
-local function rowTexture(row, prefix, suffix, pathPattern)
-    local t = _G[prefix .. suffix]
-    if t then return t end
-    if not row then return nil end
-    return FindRegion(row, "Texture", function(r)
-        local p = r.GetTexture and r:GetTexture()
-        return type(p) == "string" and p:lower():find(pathPattern) ~= nil
-    end)
-end
-
 local function reskinSlot(prefix, showLabel)
-    local row = _G[prefix]
-    local slot = rowTexture(row, prefix, "SlotTexture", "ui%-emptyslot")
-    if slot then
-        slot:Show()
-    end
+    local slot = _G[prefix .. "SlotTexture"]
+    if slot then slot:SetTexture(EMPTY_SLOT) end
 
-    local ib  = _G[prefix .. "ItemButton"]
-    local nrm = (ib and ib.GetNormalTexture and ib:GetNormalTexture())
-                or _G[prefix .. "ItemButtonNormalTexture"]
+    local ib = _G[prefix .. "ItemButton"]
+    local nrm = ib and ib:GetNormalTexture()
     if nrm then
+        nrm:SetTexture(QUICKSLOT_RING)
         nrm:ClearAllPoints()
         nrm:SetSize(64, 64)
         nrm:SetPoint("CENTER", ib, "CENTER", 0, -1)
     end
 
-    local nameFrame = rowTexture(row, prefix, "NameFrame", "ui%-merchant%-labelslots")
+    local nameFrame = _G[prefix .. "NameFrame"]
     if nameFrame then
         if showLabel then
             nameFrame:SetTexture(LABEL_PLATE)
@@ -367,39 +350,6 @@ local function reskinSlot(prefix, showLabel)
             nameFrame:Hide()
         end
     end
-end
-
-local function fitBuybackIcon()
-    local ib = _G.MerchantBuyBackItemItemButton
-    if not ib then return end
-    local icon = _G.MerchantBuyBackItemItemButtonIconTexture or ib.icon
-    if not icon then return end
-    icon:ClearAllPoints()
-    icon:SetAllPoints(ib)
-end
-
-local function fitBuybackQualityGlow()
-    local ib = _G.MerchantBuyBackItemItemButton
-    local glow = ib and ib.__DragonUI_QualityOverlay
-    if not glow then return end
-    local n = (ib:GetWidth() or 37) * 1.7
-    if math.abs((glow:GetWidth() or 0) - n) < 0.5 then return end
-    glow:SetSize(n, n)
-end
-
-local BUYBACK_BTN = 37
-
-local function fitBuybackToBar()
-    local ib = _G.MerchantBuyBackItemItemButton
-    if not ib then return end
-    ib:SetSize(BUYBACK_BTN, BUYBACK_BTN)
-    local row = _G.MerchantBuyBackItem
-    if row then row:SetSize(BUYBACK_BTN, BUYBACK_BTN) end
-    fitBuybackIcon()
-    local slot = _G.MerchantBuyBackItemSlotTexture
-    if slot then slot:Show() end
-    local nrm = ib.GetNormalTexture and ib:GetNormalTexture()
-    if nrm then nrm:Show() end
 end
 
 local function reskinAllSlots()
@@ -441,7 +391,7 @@ end
 local REPAIR_ICONS = {
     { button = "MerchantRepairAllButton",       icon = "MerchantRepairAllIcon",            atlas = "spellicon-256x256-repairall"      },
     { button = "MerchantRepairItemButton",      icon = nil,                                atlas = "spellicon-256x256-repair"         },
-    { button = "MerchantGuildBankRepairButton", icon = "MerchantGuildBankRepairButtonIcon", atlas = "spellicon-256x256-repairallguild", size = 36 },
+    { button = "MerchantGuildBankRepairButton", icon = "MerchantGuildBankRepairButtonIcon", atlas = "spellicon-256x256-repairallguild" },
 }
 
 local function repairIconRegion(btn, globalName)
@@ -455,12 +405,11 @@ end
 local function reskinRepairIcons()
     for _, spec in ipairs(REPAIR_ICONS) do
         local btn = _G[spec.button]
-        if btn and spec.size then btn:SetSize(spec.size, spec.size) end
         local icon = btn and repairIconRegion(btn, spec.icon)
-        if icon and setAtlas(icon, spec.atlas, false) then
+        if icon then
+            icon:set_atlas(spec.atlas, false)
             icon:ClearAllPoints()
             icon:SetAllPoints(btn)
-            btn._duiIcon = icon
         end
     end
 end
@@ -469,25 +418,12 @@ local function addRetailSlotBg(buttonName)
     local btn = _G[buttonName]
     if not btn then return end
     if not btn._duiSlotBg then
-        local bg = btn:CreateTexture(nil, "OVERLAY", nil, -2)
-        bg:SetTexture(QUICKSLOT_BG)
-        bg:SetPoint("TOPLEFT",     btn, "TOPLEFT",     -(TILE_BLEED + 3) + 1,  (TILE_BLEED + 3) - 1)
-        bg:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT",  (TILE_BLEED + 3) + 1, -(TILE_BLEED + 3) - 1)
-        bg:SetVertexColor(1, 0.82, 0.32, 1)
+        local bg = btn:CreateTexture(nil, "BACKGROUND")
+        bg:SetTexture(EMPTY_SLOT)
+        bg:SetSize(64, 64)
+        bg:SetPoint("TOPLEFT", btn, "TOPLEFT", -13, 14)
         btn._duiSlotBg = bg
-        bg:Show()
-        local highlight = btn:GetHighlightTexture()
-        if highlight then
-            highlight:SetBlendMode("ADD")
-        end
     end
-end
-
-local function syncSlotBg(buttonName, shown)
-    local btn = _G[buttonName]
-    local bg = btn and btn._duiSlotBg
-    if not bg then return end
-    if shown then bg:Show() else bg:Hide() end
 end
 
 local function addRetailSlotBgs()
@@ -504,66 +440,31 @@ end
 local function postRepairButtons()
     local f = _G.MerchantFrame
     if not f or f.selectedTab ~= 1 then return end
+    local sell = _G.DragonUI_MerchantSellAllJunkButton
 
-    addRetailSlotBgs()
-
-    local sell    = _G.DragonUI_MerchantSellAllJunkButton
-    local repAll  = _G.MerchantRepairAllButton
-    local repItem = _G.MerchantRepairItemButton
-    local gb      = _G.MerchantGuildBankRepairButton
-
-    if CanMerchantRepair and CanMerchantRepair() then
-        local guild = CanGuildBankRepair and CanGuildBankRepair()
-
-        if repAll then
-            repAll:ClearAllPoints()
-            if guild then
-                repAll:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", 96, 33)
-            else
-                repAll:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", 118, 33)
-            end
-            repAll:Show()
+    if CanMerchantRepair() then
+        local repAll, repItem = _G.MerchantRepairAllButton, _G.MerchantRepairItemButton
+        local guild = CanGuildBankRepair()
+        -- 3.3.5a shrinks these to 32 beside the guild anvil; retail keeps every slot at 36.
+        repAll:SetSize(36, 36)
+        repItem:SetSize(36, 36)
+        repAll:ClearAllPoints()
+        repAll:SetPoint("BOTTOMRIGHT", f, "BOTTOMLEFT", guild and 96 or 118, 33)
+        repItem:ClearAllPoints()
+        repItem:SetPoint("RIGHT", repAll, "LEFT", guild and -9 or -8, 0)
+        if guild then
+            local gb = _G.MerchantGuildBankRepairButton
+            gb:SetSize(36, 36)
+            gb:ClearAllPoints()
+            gb:SetPoint("LEFT", repAll, "RIGHT", 8, 0)
         end
-        syncSlotBg("MerchantRepairAllButton", true)
-
-        if repItem then
-            repItem:ClearAllPoints()
-            repItem:SetPoint("RIGHT", repAll, "LEFT", guild and -9 or -8, 0)
-            repItem:Show()
-        end
-        syncSlotBg("MerchantRepairItemButton", true)
-
         if sell then
             sell:ClearAllPoints()
             sell:SetPoint("RIGHT", repAll, "LEFT", guild and 128 or 80, 0)
         end
-        syncSlotBg("DragonUI_MerchantSellAllJunkButton", true)
-
-        if gb then
-            if guild then
-                gb:ClearAllPoints()
-                gb:SetPoint("LEFT", repAll, "RIGHT", 8, 0)
-                gb:Show()
-            else
-                gb:Hide()
-            end
-        end
-        syncSlotBg("MerchantGuildBankRepairButton", guild and true or false)
-    else
-        if repAll then repAll:Hide() end
-        syncSlotBg("MerchantRepairAllButton", false)
-
-        if repItem then repItem:Hide() end
-        syncSlotBg("MerchantRepairItemButton", false)
-
-        if gb then gb:Hide() end
-        syncSlotBg("MerchantGuildBankRepairButton", false)
-
-        if sell then
-            sell:ClearAllPoints()
-            sell:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -148, 33)
-        end
-        syncSlotBg("DragonUI_MerchantSellAllJunkButton", true)
+    elseif sell then
+        sell:ClearAllPoints()
+        sell:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -148, 33)
     end
 end
 
@@ -571,101 +472,67 @@ end
 -- INSETS, PAGE NAV, CLOSE BUTTON
 -- ============================================================================
 
-local INSET_TONE          = { 0.22, 0.22, 0.23 }
-local INSET_TONE_BUYBACK  = { 0.22, 0.22, 0.23 }
-
-local function insetFill(f, key, rect, tone)
-    if f[key] then return f[key] end
-    local t = f:CreateTexture(nil, "ARTWORK", nil, -8)
-    t:SetPoint("TOPLEFT",     rect, "TOPLEFT",     0, 0)
-    t:SetPoint("BOTTOMRIGHT", rect, "BOTTOMRIGHT", 0, 0)
-    t:SetTexture(ROCK, "REPEAT", "REPEAT")
-    t:SetHorizTile(true)
-    t:SetVertTile(true)
-    t:SetVertexColor(tone[1], tone[2], tone[3])
-    keep(f, t)
-    f[key] = t
-    return t
-end
-
 local function buildGridInset()
     local f = _G.MerchantFrame
     if not f or f._duiGridInset then return end
     local inset = attachInset(f, INSET_TL_X, INSET_TL_Y, INSET_BR_X, INSET_BR_Y)
-    if not inset then return end
-    inset:SetFrameLevel((f:GetFrameLevel() or 1) + 1)
+    inset:SetFrameLevel(f:GetFrameLevel() + 1)
     f._duiGridInset = inset
-    insetFill(f, "_duiGridInsetBg", inset, INSET_TONE)
-    local ov = f:CreateTexture(nil, "ARTWORK", nil, -7)
-    ov:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    ov:SetVertexColor(1, 1, 1)
-    ov:SetAlpha(0.2)
-    ov:SetPoint("TOPLEFT",     inset, "TOPLEFT",     0, 0)
-    ov:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", 0, 0)
-    ov:Hide()
-    keep(f, ov)
-    f._duiBuybackOverlay = ov
+    local wash = inset:CreateTexture(nil, "ARTWORK")
+    wash:SetTexture(1, 1, 1, 0.2)
+    wash:SetAllPoints(inset)
+    wash:Hide()
+    f._duiBuybackWash = wash
 end
 
+-- Retail's MerchantMoneyInset, plus a stand-in for its ThinGoldEdge MerchantMoneyBg.
 local function buildMoneyInset()
     local f = _G.MerchantFrame
-    local money = _G.MerchantMoneyFrame
-    if not (f and money) or f._duiMoneyInset then return end
-    if money.SetWidth then
-        money:SetWidth(160)
-    end
-    if not money._duiWidthHooked and hooksecurefunc then
-        local moneyName = money:GetName()
-        hooksecurefunc("MoneyFrame_Update", function(name)
-            if name == moneyName and money.GetWidth and money:GetWidth() > 160 then
-                money:SetWidth(160)
-            end
-        end)
-        money._duiWidthHooked = true
-    end
-
+    if not f or f._duiMoneyInset then return end
     local inset = CreateFrame("Frame", nil, f)
-    inset:SetPoint("TOPLEFT",     money, "TOPLEFT",     -8, 6)
-    inset:SetPoint("BOTTOMRIGHT", money, "BOTTOMRIGHT",  6, -6)
-    inset:EnableMouse(false)
+    inset:SetPoint("TOPLEFT", f, "BOTTOMRIGHT", -171, 36)
+    inset:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -5, 4)
     applyNineSlice(inset, "InsetFrameTemplate")
-    inset:SetFrameLevel((f:GetFrameLevel() or 1) + 4)
-    f._duiMoneyInset = inset
-    if inset.SetBackdrop then
-        local box = CreateFrame("Frame", nil, inset)
-        box:SetPoint("TOPLEFT",     inset, "TOPLEFT",      3, -2)
-        box:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT",  0,  2)
-        box:SetFrameLevel((inset:GetFrameLevel() or 0) + 2)
-        box:SetBackdrop({
-            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-            edgeSize = 14,
-            insets = { left = 4, right = 4, top = 4, bottom = 4 },
-            bgFile = nil,
-        })
-        box:SetBackdropBorderColor(1, 0.82, 0.32, 1)
-        keep(f, box)
-        f._duiMoneyTooltipBorder = box
-    end
-
-    local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -1)
-    bg:SetAllPoints()
-    bg:SetTexture(ROCK, "REPEAT", "REPEAT")
+    local bg = inset:CreateTexture(nil, "BACKGROUND", nil, -5)
+    bg:SetTexture(MARBLE, "REPEAT", "REPEAT")
     bg:SetHorizTile(true)
     bg:SetVertTile(true)
-    bg:SetVertexColor(INSET_TONE[1], INSET_TONE[2], INSET_TONE[3])
-    keep(f, bg)
-    f._duiMoneyInsetBg = bg
+    bg:SetAllPoints(inset)
+    inset:SetFrameLevel(f:GetFrameLevel() + 1)
+    f._duiMoneyInset = inset
+
+    local edge = CreateFrame("Frame", nil, inset)
+    edge:SetPoint("TOPRIGHT", f, "BOTTOMRIGHT", -7, 25)
+    edge:SetPoint("BOTTOMLEFT", f, "BOTTOMRIGHT", -166, 6)
+    edge:SetFrameLevel(inset:GetFrameLevel() + 1)
+    edge:SetBackdrop({ edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14 })
+    edge:SetBackdropBorderColor(1, 0.82, 0.32, 1)
 end
 
+-- Only xoffset: GetUIPanelWindowInfo still copies area/pushable from UIPanelWindows itself.
 local function applyPanelLayout(f)
-    if not f.SetAttribute then return end
     if f:GetAttribute("UIPanelLayout-xoffset") == PANEL_X_NUDGE then return end
-    f:SetAttribute("UIPanelLayout-area",     "left")
-    f:SetAttribute("UIPanelLayout-pushable", 0)
-    f:SetAttribute("UIPanelLayout-xoffset",  PANEL_X_NUDGE)
-    f:SetAttribute("UIPanelLayout-enabled",  true)
-    f:SetAttribute("UIPanelLayout-defined",  true)
+    f:SetAttribute("UIPanelLayout-xoffset", PANEL_X_NUDGE)
     if f:IsShown() and UpdateUIPanelPositions then UpdateUIPanelPositions(f) end
+end
+
+-- Must run again after the sell button exists: at f+1 it ties with the opaque band and loses.
+local function raiseControls(f)
+    local above = (f:GetFrameLevel() or 1) + 4
+    for i = 1, BUYBACK_PER_PAGE do
+        local row = _G["MerchantItem" .. i]
+        if row then row:SetFrameLevel(above) end
+    end
+    for _, name in ipairs({
+        "MerchantBuyBackItem", "MerchantPrevPageButton", "MerchantNextPageButton", "MerchantMoneyFrame",
+        "MerchantRepairAllButton", "MerchantRepairItemButton", "MerchantGuildBankRepairButton",
+        "DragonUI_MerchantSellAllJunkButton",
+    }) do
+        local b = _G[name]
+        if b then b:SetFrameLevel(above) end
+    end
+    local pageText = _G.MerchantPageText
+    if pageText and pageText._duiWrapper then pageText._duiWrapper:SetFrameLevel(above) end
 end
 
 local function applyLayout()
@@ -720,35 +587,7 @@ local function applyLayout()
         buyback:SetPoint("TOPLEFT", _G.MerchantItem10, "BOTTOMLEFT", 30, -53)
     end
 
-    local sellJunk = _G.MerchantFrameSellJunkFrame
-    if sellJunk then
-        sellJunk:ClearAllPoints()
-        sellJunk:SetPoint("BOTTOMRIGHT", money, "BOTTOMLEFT", -4, 0)
-    end
-
-    local repairSettings = _G.MerchantRepairSettingsButton
-    if repairSettings then
-        repairSettings:ClearAllPoints()
-        repairSettings:SetPoint("BOTTOMRIGHT", sellJunk, "BOTTOMLEFT", -4, 0)
-    end
-
-    local above = (f:GetFrameLevel() or 1) + 4
-    for i = 1, BUYBACK_PER_PAGE do
-        local row = _G["MerchantItem" .. i]
-        if row then row:SetFrameLevel(above) end
-    end
-    if _G.MerchantBuyBackItem then _G.MerchantBuyBackItem:SetFrameLevel(above) end
-    if prev then prev:SetFrameLevel(above) end
-    if nxt  then nxt:SetFrameLevel(above)  end
-    if pageText and pageText._duiWrapper then pageText._duiWrapper:SetFrameLevel(above) end
-    if money then money:SetFrameLevel(above) end
-    for _, name in ipairs({
-        "MerchantRepairAllButton", "MerchantRepairItemButton", "MerchantGuildBankRepairButton",
-        "DragonUI_MerchantSellAllJunkButton"
-    }) do
-        local b = _G[name]
-        if b then b:SetFrameLevel(above) end
-    end
+    raiseControls(f)
 end
 
 local function reskinPageNav(btnName)
@@ -818,90 +657,38 @@ local function setRowPitch(gap)
     end
 end
 
-local function setInsetForTab(f)
-    local inset = f._duiGridInset
-    if not inset then return end
-    local buyback = (f.selectedTab == 2)
-
-    if f._duiBuybackOverlay then
-        if buyback then f._duiBuybackOverlay:Show() else f._duiBuybackOverlay:Hide() end
-    end
-
-    local y = buyback and INSET_BR_Y_BUYBACK or INSET_BR_Y
-    if inset._duiBottom == y then return end
-    inset._duiBottom = y
-    inset:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", INSET_BR_X, y)
-    local tone = buyback and INSET_TONE_BUYBACK or INSET_TONE
-    local bg = f._duiGridInsetBg
-    if bg then bg:SetVertexColor(tone[1], tone[2], tone[3]) end
-end
-
 local function postMerchantUpdate()
     local f = _G.MerchantFrame
     if not f or not f._duiBuilt then return end
 
-    hideClassicChrome()
-    setInsetForTab(f)
+    hideReshownClassic()
     updateMerchantTabHighlight(f)
-    if f.Bg then f.Bg:Show() end
-
     if f.Title and _G.MerchantNameText then
         f.Title:SetText(_G.MerchantNameText:GetText() or "")
     end
 
-    local p = _G.MerchantFramePortrait
-    if p then
-        p:Show()
-        if f.selectedTab == 2 then
-            p:SetTexture("Interface\\MerchantFrame\\UI-BuyBack-Icon")
-            p:SetTexCoord(0, 1, 0, 1)
-        elseif SetPortraitTexture then
-            SetPortraitTexture(p, "NPC")
-        end
-    end
-
     local onMerchant = (f.selectedTab == 1)
-
-    if f._duiBotFrame then
-        if onMerchant then f._duiBotFrame:Show() else f._duiBotFrame:Hide() end
-    end
-    local sell = _G.DragonUI_MerchantSellAllJunkButton
-    if sell then
-        if onMerchant then sell:Show() else sell:Hide() end
-    end
-
-    local buyback = _G.MerchantBuyBackItem
-    if buyback then
-        if onMerchant then buyback:Show() else buyback:Hide() end
-    end
-    if not onMerchant then
-        for _, name in ipairs({
-            "MerchantGuildBankRepairButton", "MerchantRepairAllButton", "MerchantRepairItemButton",
-        }) do
-            local b = _G[name]
-            if b then b:Hide() end
-        end
+    if onMerchant then
+        f._duiBuybackWash:Hide()
+        f._duiBotFrame:Show()
+        _G.DragonUI_MerchantSellAllJunkButton:Show()
+    else
+        f._duiBuybackWash:Show()
+        f._duiBotFrame:Hide()
+        _G.DragonUI_MerchantSellAllJunkButton:Hide()
     end
 
     for i = 1, BUYBACK_PER_PAGE do
         clampName(_G["MerchantItem" .. i .. "Name"], 84)
     end
-    if _G.MerchantBuyBackItemName then _G.MerchantBuyBackItemName:Hide() end
-    if _G.MerchantBuyBackItemMoneyFrame then _G.MerchantBuyBackItemMoneyFrame:Hide() end
-    fitBuybackIcon()
-    fitBuybackToBar()
-    fitBuybackQualityGlow()
-
-    postRepairButtons()
+    -- Sits 30px right of the rows, so it has less room before the frame edge.
+    clampName(_G.MerchantBuyBackItemName, 74)
 end
 
-local function colourRow(prefix, link)
-    if not _G[prefix] then return end
-    local quality = link and select(3, GetItemInfo(link)) or nil
-
+local function colourRow(prefix, link, showBang)
     local nm = _G[prefix .. "Name"]
     if nm then
-        local c = TextColor(quality)
+        local c = TextColor(link)
         if c then
             nm:SetTextColor(c.r, c.g, c.b)
         else
@@ -912,7 +699,7 @@ local function colourRow(prefix, link)
     local ib = _G[prefix .. "ItemButton"]
     local bang = ib and ib.IconQuestTexture
     if bang then
-        if link and ItemStartsQuestByLink(link) then bang:Show() else bang:Hide() end
+        if showBang and ItemStartsQuestByLink(link) then bang:Show() else bang:Hide() end
     end
 end
 
@@ -922,12 +709,10 @@ local function postUpdateMerchantInfo()
     setRowPitch(ROW_GAP_MERCHANT)
     local page = f.page or 1
     for i = 1, ITEMS_PER_PAGE do
-        local index = ((page - 1) * ITEMS_PER_PAGE) + i
-        colourRow("MerchantItem" .. i, GetMerchantItemLink and GetMerchantItemLink(index))
+        colourRow("MerchantItem" .. i, GetMerchantItemLink((page - 1) * ITEMS_PER_PAGE + i), true)
     end
-    local n = (GetNumBuybackItems and GetNumBuybackItems()) or 0
-    colourRow("MerchantBuyBackItem",
-              (n > 0 and GetBuybackItemLink) and GetBuybackItemLink(n) or nil)
+    local n = GetNumBuybackItems()
+    colourRow("MerchantBuyBackItem", n > 0 and GetBuybackItemLink(n) or nil, false)
 end
 
 local function postUpdateBuybackInfo()
@@ -935,12 +720,9 @@ local function postUpdateBuybackInfo()
     if not f or not f._duiBuilt then return end
     setRowPitch(ROW_GAP_BUYBACK)
     for i = 1, BUYBACK_PER_PAGE do
-        colourRow("MerchantItem" .. i, GetBuybackItemLink and GetBuybackItemLink(i))
-        local ib = _G["MerchantItem" .. i .. "ItemButton"]
-        if ib and ib.IconQuestTexture then ib.IconQuestTexture:Hide() end
+        colourRow("MerchantItem" .. i, GetBuybackItemLink(i), false)
     end
 end
-
 
 -- ============================================================================
 -- TAB RESKIN
@@ -955,7 +737,6 @@ local HL_MIDDLE_TC = { 0, 0.015625, 0.175781, 0.292969 }
 local TEXT_ACTIVE_DROP, TEXT_NUDGE_X = -7, -2
 local TAB_GAP = 1
 
-
 local function reskinSingleTab(tabName)
     local tab = _G[tabName]
     if not tab or tab._duiTabReskinned then return end
@@ -963,7 +744,6 @@ local function reskinSingleTab(tabName)
     tab:SetFrameLevel(tab:GetFrameLevel() + 4)
     tab:SetNormalFontObject(GameFontNormalSmall)
     tab:SetHighlightFontObject(GameFontHighlightSmall)
-
 
     local left   = _G[tabName .. "Left"]
     local right  = _G[tabName .. "Right"]
@@ -1076,7 +856,7 @@ local function reskinMerchantTabs(f)
 end
 
 -- ============================================================================
--- TAB LABEL STATE —
+-- TAB LABEL STATE
 -- ============================================================================
 
 updateMerchantTabHighlight = function(f)
@@ -1110,206 +890,100 @@ end
 
 local built = false
 
+local function doBuild(f)
+    applyModernChrome()
+    ensureTitle(f, (_G.MerchantNameText and _G.MerchantNameText:GetText()) or "")
+    if _G.MerchantFramePortrait then
+        applyPortraitCutout(_G.MerchantFramePortrait, f)
+    end
+
+    buildGridInset()
+    buildBottomBand()
+    reskinAllSlots()
+    addQuestBangs()
+    reskinRepairIcons()
+    buildMoneyInset()
+    modernizeCloseButton()
+    reskinPageNavButtons()
+    reskinMerchantTabs(f)
+
+    addon.MerchantSellAllJunkBuild()
+    addon.MerchantBuybackUndoBuild()
+
+    addRetailSlotBgs()
+    raiseControls(f)
+end
+
+-- Runs inside MERCHANT_SHOW, after FrameXML's own handler has shown and filled the frame.
 local function buildModernChrome()
     if built then return end
     local f = _G.MerchantFrame
     if not f then return end
     built = true
 
-    local function _doBuild()
-        applyModernChrome()
-        ensureTitle(f, (_G.MerchantNameText and _G.MerchantNameText:GetText()) or "")
-        if _G.MerchantFramePortrait then
-            applyPortraitCutout(_G.MerchantFramePortrait, f)
-        end
-
-        buildGridInset()
-        buildBottomBand()
-        reskinAllSlots()
-        fitBuybackToBar()
-        addQuestBangs()
-        reskinRepairIcons()
-        buildMoneyInset()
-        modernizeCloseButton()
-        reskinPageNavButtons()
-        reskinMerchantTabs(f)
-
-        for i = 1, BUYBACK_PER_PAGE do clampName(_G["MerchantItem" .. i .. "Name"], 84) end
-
-        if addon.MerchantSellAllJunkBuild then addon.MerchantSellAllJunkBuild() end
-        if addon.MerchantBuybackUndoBuild then addon.MerchantBuybackUndoBuild() end
-
-        addRetailSlotBgs()
-    end
-
-    local ok, err = xpcall(_doBuild, function(e) return tostring(e) end)
+    local ok, err = pcall(doBuild, f)
     if not ok then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff1784d1DragonUI|r Merchant build error: " .. tostring(err))
+        addon:Error("Merchant build failed: " .. tostring(err))
         return
     end
 
     f._duiBuilt = true
-
-    if f:IsShown() and _G.MerchantFrame_Update then
+    if f:IsShown() then
+        -- Our SetTexture on the anvils dropped the desaturation OnShow had just applied.
+        MerchantFrame_UpdateCanRepairAll()
+        MerchantFrame_UpdateGuildBankRepair()
         MerchantFrame_Update()
     else
         postMerchantUpdate()
     end
 end
 
-local syncPending
-local function syncSoon()
-    local f = _G.MerchantFrame
-    if not f or syncPending then return end
-    syncPending = true
-    addon:After(0, function()
-        syncPending = false
-        local frame = _G.MerchantFrame
-        if not frame or not frame:IsShown() then return end
-        if not built then
-            buildModernChrome()
-        end
-        if not frame._duiBuilt then return end
-        postMerchantUpdate()
-        if frame.selectedTab == 2 then postUpdateBuybackInfo() else postUpdateMerchantInfo() end
-    end)
-end
-
 -- ============================================================================
--- ARM — called once at login to set up hooks and suppression
+-- ARM — hooks and suppression, once per session
 -- ============================================================================
 
 local function ArmMerchant()
-    if MerchantModule.applied then return end
+    if MerchantModule.initialized then return end
+    MerchantModule.initialized = true
 
     hideClassicChrome()
     applyLayout()
 
-    -- Hook FrameXML updaters
-    if _G.MerchantFrame_Update and not MerchantModule.hooks["MerchantFrame_Update"] then
-        hooksecurefunc("MerchantFrame_Update", postMerchantUpdate)
-        MerchantModule.hooks["MerchantFrame_Update"] = true
-    end
-    if _G.MerchantFrame_UpdateMerchantInfo and not MerchantModule.hooks["MerchantFrame_UpdateMerchantInfo"] then
-        hooksecurefunc("MerchantFrame_UpdateMerchantInfo", postUpdateMerchantInfo)
-        MerchantModule.hooks["MerchantFrame_UpdateMerchantInfo"] = true
-    end
-    if _G.MerchantFrame_UpdateBuybackInfo and not MerchantModule.hooks["MerchantFrame_UpdateBuybackInfo"] then
-        hooksecurefunc("MerchantFrame_UpdateBuybackInfo", postUpdateBuybackInfo)
-        MerchantModule.hooks["MerchantFrame_UpdateBuybackInfo"] = true
-    end
-    if _G.MerchantFrame_UpdateRepairButtons and not MerchantModule.hooks["MerchantFrame_UpdateRepairButtons"] then
-        hooksecurefunc("MerchantFrame_UpdateRepairButtons", postRepairButtons)
-        MerchantModule.hooks["MerchantFrame_UpdateRepairButtons"] = true
-    end
+    hooksecurefunc("MerchantFrame_Update", postMerchantUpdate)
+    hooksecurefunc("MerchantFrame_UpdateMerchantInfo", postUpdateMerchantInfo)
+    hooksecurefunc("MerchantFrame_UpdateBuybackInfo", postUpdateBuybackInfo)
+    hooksecurefunc("MerchantFrame_UpdateRepairButtons", postRepairButtons)
 
-    for _, tabName in ipairs({ "MerchantFrameTab1", "MerchantFrameTab2" }) do
-        local tab = _G[tabName]
-        if tab and tab.HookScript and not MerchantModule.hooks["tab_" .. tabName] then
-            tab:HookScript("OnClick", function()
-                syncSoon()
-            end)
-            MerchantModule.hooks["tab_" .. tabName] = true
-        end
-    end
-
-    local syncFrame = CreateFrame("Frame")
-    syncFrame:RegisterEvent("MERCHANT_SHOW")
-    syncFrame:RegisterEvent("MERCHANT_UPDATE")
-    syncFrame:RegisterEvent("MERCHANT_CLOSED")
-    syncFrame:SetScript("OnEvent", function()
-        syncSoon()
+    local showWatcher = CreateFrame("Frame")
+    showWatcher:RegisterEvent("MERCHANT_SHOW")
+    showWatcher:SetScript("OnEvent", function(self)
+        buildModernChrome()
+        self:UnregisterEvent("MERCHANT_SHOW")
     end)
-    MerchantModule.frames.syncFrame = syncFrame
-
-    local watcher = CreateFrame("Frame")
-    watcher:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-    watcher:SetScript("OnEvent", function()
-        local f = _G.MerchantFrame
-        if not (f and f._duiBuilt and f:IsShown()) then return end
-        if f.selectedTab == 2 then postUpdateBuybackInfo() else postUpdateMerchantInfo() end
-    end)
-    MerchantModule.frames.watcher = watcher
-
-    MerchantModule.applied = true
+    MerchantModule.frames.showWatcher = showWatcher
 end
 
 -- ============================================================================
--- LIFECYCLE: Apply / Restore / Refresh
+-- LIFECYCLE
 -- ============================================================================
 
-local function ApplyMerchant(force)
-    if MerchantModule.applied and not force then return end
+local function ApplyMerchantSystem()
     if not IsModuleEnabled() then return end
-    if MerchantModule.applied then
-        RestoreMerchant(false)
-        MerchantModule.applied = false
-    end
+    MerchantModule.applied = true
     ArmMerchant()
 end
 
-local function RestoreMerchant(resetDeps)
-    if not MerchantModule.applied then return end
+-- Load-once: the hooks stay for the session, so turning the module off takes effect on reload.
+local function RestoreMerchantSystem()
     MerchantModule.applied = false
 end
 
-local function RefreshMerchant(forceSync)
-    if MerchantModule.applied then
-        RestoreMerchant(false)
-    end
-    if IsModuleEnabled() then
-        ApplyMerchant(forceSync == true)
-    end
-end
+addon.ApplyMerchantSystem = ApplyMerchantSystem
+addon.RestoreMerchantSystem = RestoreMerchantSystem
 
--- ============================================================================
--- EXPOSE ON ADDON NAMESPACE
--- ============================================================================
-
-function addon.ApplyMerchantSystem() ApplyMerchant() end
-function addon.RestoreMerchantSystem() RestoreMerchant() end
-function addon.RefreshMerchantSystem() RefreshMerchant() end
-
--- ============================================================================
--- PROFILE CHANGE HANDLER
--- ============================================================================
-
-local function OnProfileChanged()
-    if IsModuleEnabled() then
-        RefreshMerchant()
-    else
-        if (addon.ShouldDeferModuleDisable and addon:ShouldDeferModuleDisable("merchant", MerchantModule)) then
-            return
-        end
-        RestoreMerchant()
-    end
-end
-
--- ============================================================================
--- INITIALIZATION
--- ============================================================================
-
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("ADDON_LOADED")
-initFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-initFrame:SetScript("OnEvent", function(self, event, arg1)
-    if event == "ADDON_LOADED" and arg1 == "DragonUI" then
-        if not IsModuleEnabled() then return end
-        addon:After(0.5, function()
-            if addon.db and addon.db.RegisterCallback then
-                addon.db.RegisterCallback(addon, "OnProfileChanged", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileCopied", OnProfileChanged)
-                addon.db.RegisterCallback(addon, "OnProfileReset", OnProfileChanged)
-            end
-        end)
-        MerchantModule.initialized = true
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        if not IsModuleEnabled() then return end
-        ApplyMerchant()
-        addon:After(0.5, function()
-            if not IsModuleEnabled() then return end
-            ArmMerchant()
-        end)
-    end
+local boot = CreateFrame("Frame")
+boot:RegisterEvent("PLAYER_LOGIN")
+boot:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_LOGIN")
+    ApplyMerchantSystem()
 end)
-

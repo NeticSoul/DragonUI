@@ -597,12 +597,6 @@ local MODULE_LIFECYCLE_OVERRIDES = {
         loadOnce = true,
     },
     mainbars = { refresh = "RefreshMainbarsSystem", loadOnce = true },
-    merchant = {
-        apply = "ApplyMerchantSystem",
-        restore = "RestoreMerchantSystem",
-        refresh = "RefreshMerchantSystem",
-        loadOnce = true,
-    },
     micromenu = { refresh = "RefreshMicromenuSystem", loadOnce = true },
     minimap = { refresh = "RefreshMinimapSystem", loadOnce = true },
     nameplates = {
