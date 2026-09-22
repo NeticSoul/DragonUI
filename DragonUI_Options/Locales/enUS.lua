@@ -1832,3 +1832,5 @@ L["Show Graveyards"] = true
 L["Show graveyard pins on zone maps."] = true
 L["Show Flight Points"] = true
 L["Show flight master pins on zone maps."] = true
+L["Show Inns"] = true
+L["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."] = true

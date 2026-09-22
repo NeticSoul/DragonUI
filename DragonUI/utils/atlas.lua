@@ -629,6 +629,7 @@ addon.atlasinfo = {
 	['map-taxinode-horde'] = { rui_MapPins, 21, 21, 192/256, 224/256, 0/128, 32/128 },
 	['map-taxinode-undiscovered'] = { rui_MapPins, 21, 21, 224/256, 256/256, 0/128, 32/128 },
 	['map-graveyard'] = { rui_MapPins, 12, 16, 128/256, 140/256, 32/128, 48/128 },
+	['map-innkeeper'] = { rui_MapPins, 22, 22, 160/256, 192/256, 32/128, 64/128 },
 	['questcollapse-show-up'] = { rui_MapCollapse, 32, 32, 0, 32/256, 0, 32/128 },
 	['questcollapse-show-down'] = { rui_MapCollapse, 32, 32, 32/256, 64/256, 0, 32/128 },
 	['questcollapse-hide-up'] = { rui_MapCollapse, 32, 32, 0, 32/256, 32/128, 64/128 },

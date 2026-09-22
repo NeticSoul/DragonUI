@@ -29,7 +29,7 @@ addon.WorldMap.Entrances = {
     { x = 0.3250, y = 0.3238, lfg = 50, raid = true, name = "Blackwing Lair", header = "Blackwing Lair" },
     { x = 0.2629, y = 0.2455, lfg = 48, raid = true, name = "Molten Core", header = "Molten Core" },
   },
-  ["Dalaran"] = {
+  ["Dalaran1"] = {
     { x = 0.6680, y = 0.6840, lfg = 220, raid = false, name = "Violet Hold", header = "The Violet Hold" },
   },
   ["DeadwindPass"] = {
@@ -165,7 +165,7 @@ addon.WorldMap.EntranceZone = {
   ["BladesEdgeMountains"] = 475,
   ["BoreanTundra"] = 486,
   ["BurningSteppes"] = 29,
-  ["Dalaran"] = 504,
+  ["Dalaran1"] = 504,
   ["DeadwindPass"] = 32,
   ["Desolace"] = 101,
   ["Dragonblight"] = 488,

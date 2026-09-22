@@ -350,6 +350,18 @@ local function BuildWorldMapSubTab(scroll)
     })
 
     C:AddToggle(mapSection, {
+        label = LO["Show Inns"],
+        desc = LO["Show innkeeper pins on zone maps, marking the inn your hearthstone is set to."],
+        getFunc = function() return GetModuleField("worldmap", "inns") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("worldmap").inns = val
+            if addon.RefreshWorldMapSystem then addon.RefreshWorldMapSystem() end
+        end,
+        disabled = function() return not IsEnabled("worldmap") end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(mapSection, {
         label = LO["Show Landmarks"],
         desc = LO["Show towns, flight points and other landmark pins on the map."],
         getFunc = function() return GetModuleField("worldmap", "landmarks") ~= false end,

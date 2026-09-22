@@ -4,11 +4,16 @@ local addon = select(2, ...)
 local L = addon.L
 local WM = addon.WorldMap
 
--- Dungeon, raid, graveyard and flight pins from the DBC tables; no client API lists them.
+-- Dungeon, raid, graveyard, flight and inn pins from generated tables; no client API lists them.
 
 local ENTRANCE_SIZE = 28
 local FLIGHT_SIZE = 18
 local GRAVEYARD_W, GRAVEYARD_H = 12, 16
+local INN_SIZE, HOME_SIZE = 18, 24
+local HEARTHSTONE = "|TInterface\\Icons\\INV_Misc_Rune_01:14:14|t "
+-- inndata.lua ships each inn as a positional record to stay small; these name its slots.
+local INN_X, INN_Y, INN_SIDE, INN_NPC, INN_AREA = 1, 2, 3, 4, 5
+local INN_SIDES = { A = "Alliance", H = "Horde" }
 local TAXI_ATLAS = { Alliance = "map-taxinode-alliance", Horde = "map-taxinode-horde" }
 -- Pairs closer than this share of their sizes get nudged apart, the way retail does.
 local NUDGE_GAP = 0.9
@@ -18,6 +23,22 @@ local EMPTY = {}
 local FLIGHT_NAMES = WM.FlightPointName
     and (WM.FlightPointName[GetLocale()] or (GetLocale() == "esMX" and WM.FlightPointName.esES))
     or EMPTY
+-- inndata ships each locale's names as a list in InnAreaIDs order, "" where enUS words it the same.
+local function byAreaID(names)
+    if not names then return EMPTY end
+    local byID = {}
+    for i, id in ipairs(WM.InnAreaIDs) do
+        if names[i] and names[i] ~= "" then byID[id] = names[i] end
+    end
+    return byID
+end
+local AREA_NAMES = byAreaID(WM.InnAreaName[GetLocale()] or (GetLocale() == "esMX" and WM.InnAreaName.esES))
+local AREA_NAMES_ENUS = byAreaID(WM.InnAreaName.enUS)
+-- A locale with its own area names but no room names keeps the area name over an English room name.
+local ROOM_NAMES = WM.InnRoomName[GetLocale()] or (GetLocale() == "esMX" and WM.InnRoomName.esES)
+    or (AREA_NAMES == EMPTY and WM.InnRoomName.enUS) or EMPTY
+-- Only this client's locale is ever read, so the other locales' names can be collected.
+WM.InnAreaIDs, WM.InnAreaName, WM.InnRoomName = nil, nil, nil
 local GLOW = "Interface\\WorldMap\\UI-QuestPoi-IconGlow"
 local FLASH_SECONDS, FLASH_PULSES, FLASH_GROW = 2.5, 3, 0.7
 -- A pin asked for before its map has drawn stays pending, but not for a later, unrelated visit.
@@ -25,6 +46,7 @@ local FLASH_PATIENCE = 5
 
 local pool = {}
 local pendingFlash, pendingUntil
+local innByNpc, binder
 
 local function acquire(index)
     local pin = pool[index]
@@ -43,6 +65,7 @@ local function acquire(index)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText(self.name, 1, 1, 1)
         if self.kind then GameTooltip:AddLine(self.kind, 0.8, 0.8, 0.8) end
+        if self.note then GameTooltip:AddLine(self.note, 0.1, 1, 0.1) end
         GameTooltip:Show()
     end)
     pin:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -70,6 +93,107 @@ local function styleFlightPoint(pin, entry)
     pin.name, pin.kind = FLIGHT_NAMES[entry.name] or entry.name, L["Flight Master"]
     pin.icon:set_atlas(TAXI_ATLAS[entry.faction] or "map-taxinode-neutral")
     pin:SetSize(FLIGHT_SIZE, FLIGHT_SIZE)
+end
+
+local function areaName(id)
+    return AREA_NAMES[id] or AREA_NAMES_ENUS[id]
+end
+
+local function styleInn(pin, inn)
+    pin.name = (inn.room and ROOM_NAMES[inn.room]) or areaName(inn[INN_AREA]) or MINIMAP_TRACKING_INNKEEPER
+    pin.kind = MINIMAP_TRACKING_INNKEEPER
+    pin.icon:set_atlas("map-innkeeper")
+    pin:SetSize(INN_SIZE, INN_SIZE)
+end
+
+local function styleHome(pin, inn)
+    styleInn(pin, inn)
+    pin.note = HEARTHSTONE .. L["Hearthstone"]
+    pin:SetSize(HOME_SIZE, HOME_SIZE)
+end
+
+local function indexInns()
+    if innByNpc then return innByNpc end
+    innByNpc = {}
+    for _, inns in pairs(WM.Inns) do
+        for _, inn in ipairs(inns) do
+            local npcs = inn[INN_NPC]
+            if type(npcs) == "table" then
+                for _, npc in ipairs(npcs) do innByNpc[npc] = inn end
+            else
+                innByNpc[npcs] = inn
+            end
+        end
+    end
+    return innByNpc
+end
+
+local function usable(inn, faction)
+    local side = INN_SIDES[inn[INN_SIDE]]
+    return not side or side == faction
+end
+
+local function named(inn, bind, deep)
+    for i = INN_AREA, deep and #inn or INN_AREA do
+        if areaName(inn[i]) == bind then return true end
+    end
+end
+
+-- Matched in the client's own words; a name two usable inns share (Dalaran) picks neither.
+local function innNamed(bind)
+    local faction = UnitFactionGroup("player")
+    for _, deep in ipairs({ false, true }) do
+        local found
+        for _, inns in pairs(WM.Inns) do
+            for _, inn in ipairs(inns) do
+                if usable(inn, faction) and named(inn, bind, deep) then
+                    if found then return nil end
+                    found = inn
+                end
+            end
+        end
+        if found then return found end
+    end
+end
+
+-- GetBindLocation() is only a name; the innkeeper seen binding it wins while that name holds.
+local function homeInn()
+    local bind = GetBindLocation()
+    if not bind or bind == "" then return nil end
+    local saved = addon.db and addon.db.char and addon.db.char.worldmapHome
+    if saved and saved.bind == bind and indexInns()[saved.npc] then return innByNpc[saved.npc] end
+    return innNamed(bind)
+end
+
+-- A creature GUID string holds its entry at characters 7-12: 0xF130|000127|004A2B.
+local function innkeeperOf(unit)
+    local guid = UnitGUID(unit)
+    local id = guid and tonumber(guid:sub(7, 12), 16)
+    return id and indexInns()[id] and id
+end
+
+local function rememberBinder(_, event)
+    local id = innkeeperOf("npc")
+    if id or event == "GOSSIP_SHOW" then binder = id end
+end
+
+-- The bind renames a moment after the accept, or never when the new inn shares the old name.
+local function onConfirmBinder()
+    local npc, before, tries = binder, GetBindLocation(), 0
+    if not npc then return end
+    local function settle()
+        tries = tries + 1
+        local now = GetBindLocation()
+        if now == before and tries < 5 then
+            addon:After(1, settle)
+            return
+        end
+        if addon.db and addon.db.char then
+            addon.db.char.worldmapHome = { npc = npc, bind = now }
+        end
+        WM.RefreshMapPins()
+    end
+    addon:After(1, settle)
 end
 
 -- Overlapping pins slide apart; pins on the exact same point (an instance's wings) fan out.
@@ -155,8 +279,10 @@ function WM.RefreshMapPins()
     local flashed = false
     local count = 0
     local scale = WM.canvasScale
-    if scale and WM.OnTerrainFloor() then
+    if scale then
         local mapFile = GetMapInfo() or ""
+        -- Floors key by level (Dalaran1), so the terrain's pins never land on a floor's own coordinates.
+        if not WM.OnTerrainFloor() then mapFile = mapFile .. GetCurrentMapDungeonLevel() end
         local config = WM:Config()
         -- Pins keep one screen size; positions are worked in those units, not the canvas's.
         local width, height = WorldMapButton:GetWidth() * scale, WorldMapButton:GetHeight() * scale
@@ -173,6 +299,16 @@ function WM.RefreshMapPins()
                 if not entry.faction or entry.faction == faction then add(entry.x, entry.y, FLIGHT_SIZE, styleFlightPoint, entry) end
             end
         end
+        if config.inns ~= false then
+            local home, faction = homeInn(), UnitFactionGroup("player")
+            for _, inn in ipairs(WM.Inns[mapFile] or EMPTY) do
+                if inn == home then
+                    add(inn[INN_X], inn[INN_Y], HOME_SIZE, styleHome, inn)
+                elseif usable(inn, faction) then
+                    add(inn[INN_X], inn[INN_Y], INN_SIZE, styleInn, inn)
+                end
+            end
+        end
         if config.graveyards ~= false then
             for _, point in ipairs(WM.Graveyards[mapFile] or EMPTY) do add(point[1], point[2], GRAVEYARD_H, styleGraveyard) end
         end
@@ -185,6 +321,7 @@ function WM.RefreshMapPins()
             count = count + 1
             local pin = acquire(count)
             local previous = pin.name
+            pin.note = nil
             item.style(pin, item.entry)
             if pin.name ~= previous then stopFlash(pin) end
             pin:SetScale(pinScale)
@@ -209,4 +346,9 @@ end
 
 function WM.BuildMapPins()
     hooksecurefunc("WorldMapFrame_Update", WM.RefreshMapPins)
+    hooksecurefunc("ConfirmBinder", onConfirmBinder)
+    local events = CreateFrame("Frame")
+    events:RegisterEvent("GOSSIP_SHOW")
+    events:RegisterEvent("CONFIRM_BINDER")
+    events:SetScript("OnEvent", rememberBinder)
 end

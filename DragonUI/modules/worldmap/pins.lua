@@ -317,6 +317,7 @@ local function filterEntries()
     toggle(L["Show Dungeon Entrances"], "entrances", WM.RefreshMapPins)
     toggle(L["Show Graveyards"], "graveyards", WM.RefreshMapPins)
     toggle(L["Show Flight Points"], "flightPoints", WM.RefreshMapPins)
+    toggle(L["Show Inns"], "inns", WM.RefreshMapPins)
     toggle(L["Show Zone Levels"], "zoneLevels", refreshZoneLevels)
     toggle(L["Show Map Coordinates"], "coordinates", WM.RefreshCoords)
     return entries

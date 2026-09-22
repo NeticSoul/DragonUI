@@ -61,7 +61,7 @@ function WM.CursorOverMap()
     return WorldMapFrame:IsMouseOver()
 end
 
--- Overlays and pins belong to the terrain view; floors under it (Dalaran's Underbelly) have none.
+-- Overlays belong to the terrain view; Dalaran has none, its city and Underbelly are both floors.
 function WM.OnTerrainFloor()
     local level = GetCurrentMapDungeonLevel()
     if DungeonUsesTerrainMap() then level = level - 1 end

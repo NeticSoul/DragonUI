@@ -1158,6 +1158,7 @@ local defaults = {
                 entrances = true, -- Dungeon and raid entrance pins on zone maps
                 graveyards = true, -- Graveyard pins on zone maps
                 flightPoints = true, -- Flight master pins on zone maps
+                inns = true, -- Innkeeper pins on zone maps, the hearthstone's inn drawn larger
                 coordinates = true, -- Cursor and player coordinates in the canvas corner
                 zoneLevels = true, -- Recommended level ranges beside zone names and instance pins
                 fadeWhenMoving = false, -- Dim the map while you move with the cursor off it

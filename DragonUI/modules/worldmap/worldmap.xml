@@ -11,6 +11,7 @@
     <Script file="entrancedata.lua"/>
     <Script file="graveyarddata.lua"/>
     <Script file="flightpointdata.lua"/>
+    <Script file="inndata.lua"/>
     <Script file="mappins.lua"/>
     <Script file="coords.lua"/>
     <Script file="playerarrow.lua"/>
