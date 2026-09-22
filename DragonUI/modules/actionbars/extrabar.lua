@@ -182,6 +182,16 @@ local function SkinButton(button)
     button:GetCheckedTexture():SetDrawLayer('OVERLAY')
     button:GetPushedTexture():SetDrawLayer('OVERLAY')
 
+    -- ActionButtonTemplate $parentBorder with ActionButton_Update's equipped tint.
+    if not button.border then
+        local border = button:CreateTexture(button:GetName() .. 'Border', 'OVERLAY')
+        border:Hide()
+        button.border = border
+    end
+    button.border:set_atlas('_ui-hud-actionbar-iconborder-checked')
+    button.border:SetAllPoints(normal)
+    button.border:SetVertexColor(0, 1, 0, 0.35)
+
     button.icon:SetTexCoord(.05, .95, .05, .95)
     button.icon:SetAllPoints(button)
     button.icon:SetDrawLayer('BORDER')
@@ -598,6 +608,58 @@ local function ButtonItemID(button)
     return itemAttr and tonumber(itemAttr:match("item:(%d+)"))
 end
 
+local function FindEquippedSlot(itemId)
+    for slot = INVSLOT_FIRST_EQUIPPED or 1, INVSLOT_LAST_EQUIPPED or 19 do
+        if GetInventoryItemID("player", slot) == itemId then return slot end
+    end
+    return nil
+end
+
+local function FindBagSlot(itemId)
+    for bag = 0, NUM_BAG_SLOTS or 4 do
+        for slot = 1, GetContainerNumSlots(bag) or 0 do
+            if GetContainerItemID(bag, slot) == itemId then return bag, slot end
+        end
+    end
+    return nil
+end
+
+-- "item:ID" links describe the base item; only the owned copy carries enchants, gems and binding.
+local function SetItemTooltip(itemId, fallbackLink)
+    local invSlot = itemId and FindEquippedSlot(itemId)
+    if invSlot then
+        GameTooltip:SetInventoryItem("player", invSlot)
+        return true
+    end
+    local bag, slot
+    if itemId then bag, slot = FindBagSlot(itemId) end
+    if bag then
+        GameTooltip:SetBagItem(bag, slot)
+        return true
+    end
+    if fallbackLink then
+        GameTooltip:SetHyperlink(fallbackLink)
+        return true
+    end
+    return false
+end
+
+-- The item a macro would use right now (its own `/use`, or a `#show`/`#showtooltip` item).
+local function MacroItemID(macroIdx)
+    local _, itemLink = GetMacroItem(macroIdx)
+    return itemLink and tonumber(itemLink:match("item:(%d+)"))
+end
+
+local function ButtonEquippedItemID(button)
+    local t = button:GetAttribute("type")
+    if t == "item" then return ButtonItemID(button) end
+    if t == "macro" then
+        local data = button:GetSlotData()
+        return data and data.macro and MacroItemID(data.macro)
+    end
+    return nil
+end
+
 -- ============================================================================
 -- Tooltip
 -- ============================================================================
@@ -686,7 +748,7 @@ local function SetTooltipByName(name, rank, spellID)
     end
     local _, itemLink = GetItemInfo(name)
     if itemLink then
-        GameTooltip:SetHyperlink(itemLink)
+        SetItemTooltip(tonumber(itemLink:match("item:(%d+)")), itemLink)
         return true, nil
     end
     GameTooltip:SetText(name)
@@ -714,8 +776,7 @@ local function SetExtrabarTooltip(self)
         local ok, rank = SetTooltipByName(spellName, nil, data and data.spellID)
         if ok then rankToEnsure = rank end
     elseif t == "item" then
-        local link = self:GetAttribute("item")
-        if link then GameTooltip:SetHyperlink(link) end
+        SetItemTooltip(ButtonItemID(self), self:GetAttribute("item"))
     elseif t == "macro" then
         local data = self:GetSlotData()
         local macroIdx = data and data.macro
@@ -739,8 +800,7 @@ local function SetExtrabarTooltip(self)
             else
                 local _, itemLink = GetMacroItem(macroIdx)
                 if itemLink then
-                    GameTooltip:SetHyperlink(itemLink)
-                    shown = true
+                    shown = SetItemTooltip(tonumber(itemLink:match("item:(%d+)")), itemLink)
                 end
             end
         end
@@ -984,6 +1044,33 @@ end
 local ButtonProto = CreateFrame("CheckButton")
 local ButtonProto_MT = { __index = ButtonProto }
 
+local function IsQuestionMarkIcon(texture)
+    return texture and texture:upper():find("INV_MISC_QUESTIONMARK", 1, true) and true or false
+end
+
+-- GetActionTexture re-evaluates `?` and `#show` macros every update; macrotext buttons get no such help.
+local function MacroIconTexture(macroIdx, macroSpell)
+    local _, macroTexture, body = GetMacroInfo(macroIdx)
+    local showArg = body and body:match("#show([^\n]*)")
+    local showIcon = showArg and not showArg:match("^tooltip")
+    if not showIcon and not IsQuestionMarkIcon(macroTexture) then
+        return macroTexture
+    end
+    showArg = showArg and strtrim((showArg:gsub("^tooltip", "")))
+    -- Conditionals need the client's evaluation; a bare name resolves directly.
+    if showArg and showArg ~= "" and not showArg:find("[", 1, true) then
+        local texture = select(3, GetSpellInfo(showArg)) or GetItemIcon(showArg)
+        if texture then return texture end
+    end
+    if macroSpell then
+        local texture = select(3, GetSpellInfo(macroSpell))
+        if texture then return texture end
+    end
+    local itemId = MacroItemID(macroIdx)
+    local texture = itemId and GetItemIcon(itemId)
+    return texture or macroTexture
+end
+
 function ButtonProto:GetSlotData()
     local slots = Bar_GetSlots(self.bar)
     return slots and slots[self:GetID()]
@@ -1007,7 +1094,8 @@ function ButtonProto:UpdateIcon(data)
     elseif data.type == "macro" then
         -- Same resolve as the checked state: a macro standing in for an aspect lights up like it.
         local macroSpell = data.macro and GetMacroSpell(data.macro)
-        texture = GetActiveSpellTexture(BareSpellName(macroSpell)) or data.texture
+        texture = GetActiveSpellTexture(BareSpellName(macroSpell))
+            or (data.macro and MacroIconTexture(data.macro, macroSpell)) or data.texture
     elseif data.type == "companion" then
         texture = data.texture or (data.spellID and select(3, GetSpellInfo(data.spellID)))
     end
@@ -1240,6 +1328,15 @@ function ButtonProto:UpdateChecked()
     self:SetChecked(IsButtonCurrent(self) and 1 or 0)
 end
 
+function ButtonProto:UpdateEquipped()
+    local itemId = ButtonEquippedItemID(self)
+    if itemId and FindEquippedSlot(itemId) then
+        self.border:Show()
+    else
+        self.border:Hide()
+    end
+end
+
 function ButtonProto:Update()
     -- An aspect going up or down swaps its icon, and UNIT_AURA only reaches the button through here.
     self:UpdateIcon(self:GetSlotData())
@@ -1247,6 +1344,7 @@ function ButtonProto:Update()
     self:UpdateCount()
     self:UpdateUsable()
     self:UpdateChecked()
+    self:UpdateEquipped()
 end
 
 function ButtonProto:UpdateHotkey()
@@ -1920,6 +2018,8 @@ initFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 initFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 initFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
 initFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+-- ACTIONBAR_SLOT_CHANGED only covers macros that also sit on a real slot; [pet] macros need this.
+initFrame:RegisterEvent("UNIT_PET")
 initFrame:RegisterEvent("UNIT_AURA")
 -- 3.3.5a has no SPELL_UPDATE_USABLE; player power events cover oom tint with no target.
 initFrame:RegisterEvent("UNIT_MANA")
@@ -1989,8 +2089,8 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
         end
     elseif event == "UPDATE_SHAPESHIFT_FORM" or event == "UPDATE_SHAPESHIFT_FORMS" then
         RefreshShapeshiftIcons()
-    elseif event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_AURA" or event == "UNIT_MANA" or event == "UNIT_ENERGY"
-        or event == "UNIT_RAGE" or event == "UNIT_RUNIC_POWER" then
+    elseif event == "UNIT_INVENTORY_CHANGED" or event == "UNIT_PET" or event == "UNIT_AURA"
+        or event == "UNIT_MANA" or event == "UNIT_ENERGY" or event == "UNIT_RAGE" or event == "UNIT_RUNIC_POWER" then
         if arg1 == "player" then
             RequestRefreshAll()
         end
