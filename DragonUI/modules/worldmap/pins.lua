@@ -19,6 +19,9 @@ local FILTER_ICON_X, FILTER_ICON_Y = 2, -2
 local QUEST_POI_SCALE, QUEST_POI_NUMERIC_SCALE = 0.7, 1.05
 local ROCK = addon._dir .. "UI\\ui-background-rock"
 local GLOW = "Interface\\WorldMap\\UI-QuestPoi-IconGlow"
+local RING_SHEET = "Interface\\WorldMap\\UI-QuestPoi-NumberIcons"
+-- QuestPOITemplate's turn-in glyph is 24px inside its 32px ring.
+local TURNIN_SHARE = 24 / 32
 local FLASH_SECONDS, FLASH_PULSES, FLASH_GROW = 2.5, 3, 0.35
 local FLASH_PATIENCE = 5
 
@@ -64,7 +67,6 @@ end
 local function placeQuestPOI(button)
     if button.duiRawX and WM.poiScale then
         local scale = button.type == QUEST_POI_NUMERIC and QUEST_POI_NUMERIC_SCALE or QUEST_POI_SCALE
-        button.duiMapScale = scale
         button:SetScale(scale)
         -- The template insets 8 of 32 a side, leaving the ring we draw mostly unclickable.
         button:SetHitRectInsets(0, 0, 0, 0)
@@ -85,25 +87,43 @@ local function onQuestPOIDisplayed(questFrame)
     end
 end
 
-local function resizeNumericQuestPOI(button, size)
+-- Resized, not rescaled: it hangs off an offset in its own scale, so scaling slides it away.
+local function sizeQuestPOI(button, size)
     for _, texture in ipairs({ button.normalTexture, button.pushedTexture, button.highlightTexture }) do
         texture:ClearAllPoints()
         texture:SetPoint("CENTER", button, "CENTER", 0, 0)
         texture:SetSize(size, size)
     end
-    button.number:ClearAllPoints()
-    button.number:SetPoint("CENTER", button, "CENTER", 0, 0)
-    button.number:SetSize(size, size)
+    if button.number then
+        button.number:ClearAllPoints()
+        button.number:SetPoint("CENTER", button, "CENTER", 0, 0)
+        button.number:SetSize(size, size)
+    end
+    if button.duiRing then button.duiRing:SetSize(size / TURNIN_SHARE, size / TURNIN_SHARE) end
 end
 
-local function resetNumericQuestPOI(button)
-    for _, texture in ipairs({ button.normalTexture, button.pushedTexture, button.highlightTexture }) do
-        texture:ClearAllPoints()
-        texture:SetAllPoints(button)
+-- Blizzard rings a completed pin only via the twin its own pick swaps in; ours rings the shared focus.
+local function ringCompletedPOI(button, selected)
+    local ring = button.duiRing
+    if not ring then
+        if not selected then return end
+        ring = button:CreateTexture(nil, "BORDER")
+        ring:SetTexture(RING_SHEET)
+        local box = QP.SELECTED_RING
+        ring:SetTexCoord(box[1], box[2], box[3], box[4])
+        ring:SetPoint("CENTER", button, "CENTER", 0, 0)
+        button.duiRing = ring
+        sizeQuestPOI(button, button:GetWidth())
+        local glow = button.selectionGlow:GetWidth() / TURNIN_SHARE
+        button.selectionGlow:SetSize(glow, glow)
     end
-    button.number:ClearAllPoints()
-    button.number:SetPoint("CENTER", button, "CENTER", 0, 0)
-    button.number:SetSize(button:GetWidth(), button:GetHeight())
+    if selected then
+        ring:Show()
+        button.selectionGlow:Show()
+    else
+        ring:Hide()
+        button.selectionGlow:Hide()
+    end
 end
 
 -- These are Blizzard's pooled buttons: one handed to another quest must drop the pulse it was
@@ -118,12 +138,8 @@ local function stopQuestFlash(button)
     flashing[button] = nil
     if not button.duiFlashTime then return end
     button:SetScript("OnUpdate", nil)
-    if button.duiFlashNumeric then
-        resetNumericQuestPOI(button)
-    else
-        button:SetScale(button.duiFlashScale)
-    end
-    button.duiFlashTime, button.duiFlashScale, button.duiFlashNumeric = nil, nil, nil
+    sizeQuestPOI(button, button:GetWidth())
+    button.duiFlashTime = nil
     button.duiFlashGlow:Hide()
 end
 
@@ -144,8 +160,6 @@ local function flashQuestPOI(button)
         button.duiFlashGlow = glow
     end
     button.duiFlashTime = 0
-    button.duiFlashScale = button.duiMapScale or button:GetScale()
-    button.duiFlashNumeric = button.type == QUEST_POI_NUMERIC
     glow:Show()
     button:SetScript("OnUpdate", function(self, elapsed)
         local time = self.duiFlashTime + elapsed
@@ -157,30 +171,15 @@ local function flashQuestPOI(button)
         local beat = math.sin(time / FLASH_SECONDS * FLASH_PULSES * math.pi * 2) * 0.5 + 0.5
         local fade = 1 - time / FLASH_SECONDS
         local grow = 1 + FLASH_GROW * beat * fade
-        if self.duiFlashNumeric then
-            resizeNumericQuestPOI(self, self:GetWidth() * grow)
-        else
-            self:SetScale(self.duiFlashScale * grow)
-        end
+        sizeQuestPOI(self, self:GetWidth() * grow)
         self.duiFlashGlow:SetSize(self:GetWidth() * 2 * grow, self:GetHeight() * 2 * grow)
         self.duiFlashGlow:SetAlpha(beat * fade)
     end)
 end
 
--- QuestPOI_SelectButton keeps its pick in a local of Blizzard's, so the crop is set by hand here.
 local function cropQuestPOI(button, selected)
-    if button.type ~= QUEST_POI_NUMERIC then return end
-    local ring = selected and QP.MAP_CROP.selected or QP.MAP_CROP.idle
-    button.normalTexture:SetTexCoord(ring[1][1], ring[1][2], ring[1][3], ring[1][4])
-    button.pushedTexture:SetTexCoord(ring[2][1], ring[2][2], ring[2][3], ring[2][4])
-    button.highlightTexture:SetTexCoord(ring[3][1], ring[3][2], ring[3][3], ring[3][4])
-    -- QuestPOI_SetTextColor's own grid: the black glyphs sit half a sheet under the yellow ones.
-    local cell = (button.index or 1) - 1
-    local x = math.fmod(cell, QUEST_POI_ICONS_PER_ROW) * QUEST_POI_ICON_SIZE
-    local glyph = selected and QP.MAP_CROP.glyph.selected or QP.MAP_CROP.glyph.idle
-    local y = glyph + math.floor(cell / QUEST_POI_ICONS_PER_ROW) * QUEST_POI_ICON_SIZE
-    button.number:SetTexCoord(x, x + QUEST_POI_ICON_SIZE, y, y + QUEST_POI_ICON_SIZE)
-    if selected then button.selectionGlow:Show() else button.selectionGlow:Hide() end
+    if button.type == QUEST_POI_COMPLETE_SWAP then return ringCompletedPOI(button, selected) end
+    QP.CropBlizzardPOI(button, selected)
 end
 
 function WM.SelectQuestPOI(questID)
@@ -201,8 +200,6 @@ local function tryFlashQuestPOI()
         local row = _G["WorldMapQuestFrame" .. index]
         if row and row.questId == pendingQuestFlash then
             local button = row.poiIcon
-            local swap = QUEST_POI_SWAP_BUTTONS and QUEST_POI_SWAP_BUTTONS.WorldMapPOIFrame
-            if swap and swap.quest == row and swap:IsShown() then button = swap end
             if button and button:IsShown() then
                 flashQuestPOI(button)
                 pendingQuestFlash = nil
@@ -374,7 +371,16 @@ function WM.BuildPins()
     hooksecurefunc("WorldMapFrame_Update", restyleLandmarks)
     hooksecurefunc("WorldMapFrame_Update", tryFlashQuestPOI)
     -- Blizzard reselects a pin of its own on every rebuild, so ours is re-cropped after it.
-    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function() WM.SelectQuestPOI(QP.GetFocus()) end)
+    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function()
+        -- Blizzard's pick is not ours: undo the twin it swaps in, as its numbered crop is undone below.
+        local swap = QUEST_POI_SWAP_BUTTONS and QUEST_POI_SWAP_BUTTONS.WorldMapPOIFrame
+        if swap and swap:IsShown() then
+            swap:Hide()
+            local source = swap.quest and swap.quest.poiIcon
+            if source then source:Show() end
+        end
+        WM.SelectQuestPOI(QP.GetFocus())
+    end)
     -- The lent checkbox flips its own state; our row's tick and anchor follow it.
     hooksecurefunc("WorldMapQuestShowObjectives_Toggle", function() addon.Menu.Refresh() end)
     hooksecurefunc("WorldMapQuestShowObjectives_AdjustPosition", function() addon.Menu.Refresh() end)

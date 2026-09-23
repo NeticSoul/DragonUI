@@ -29,11 +29,27 @@ local SELECTED = { { 0.500, 0.625, 0.375, 0.5 }, { 0.375, 0.500, 0.375, 0.5 }, {
 -- QUEST_POI_COMPLETE_OUT has no selected art, so the dark ring keeps its own when focused.
 local NO_SELECTED_ART = { completeOut = true, offMap = true }
 
--- The canvas POIs are Blizzard's own buttons; pins.lua crops them off these same numbers.
-QP.MAP_CROP = { idle = RINGS.numeric, selected = SELECTED, glyph = { idle = YELLOW, selected = BLACK } }
+QP.SELECTED_RING = SELECTED[1]
 
 local function crop(texture, box)
     texture:SetTexCoord(box[1], box[2], box[3], box[4])
+end
+
+-- Blizzard keeps its own pick in a local of QuestPOI.lua; its borrowed buttons show the shared focus.
+function QP.CropBlizzardPOI(button, selected)
+    local numeric = button.type == QUEST_POI_NUMERIC
+    if not (numeric or button.type == QUEST_POI_COMPLETE_IN) then return end
+    local art = selected and SELECTED or RINGS.numeric
+    crop(button.normalTexture, art[1])
+    crop(button.pushedTexture, art[2])
+    crop(button.highlightTexture, art[3])
+    if selected then button.selectionGlow:Show() else button.selectionGlow:Hide() end
+    if not numeric then return end
+    -- QuestPOI_SetTextColor's own grid: the black glyphs sit half a sheet under the yellow ones.
+    local cell = (button.index or 1) - 1
+    local x = math.fmod(cell, PER_ROW) * CELL
+    local y = (selected and BLACK or YELLOW) + math.floor(cell / PER_ROW) * CELL
+    button.number:SetTexCoord(x, x + CELL, y, y + CELL)
 end
 
 -- Blizzard nudges only the glyph on a press; the pushed ring art supplies the rest of the motion.

@@ -36,7 +36,6 @@ local HEADER_H, HEADER_GAP = 22, 6
 local TOGGLE_SIZE = 16
 local BADGE_SIZE, TAG_SIZE, TRACK_SIZE = QP.SIZE, 16, 16
 local TEXT_INDENT = BADGE_SIZE + 6
-local OBJECTIVE_INDENT = TEXT_INDENT + 6
 -- Where a header's own text starts, so a row with no badge still reads as sitting under it.
 local HEADER_TEXT_X = TOGGLE_SIZE + 6
 
@@ -46,6 +45,10 @@ local rowPool, headerPool = {}, {}
 local hoveredRow
 -- The player's pick outlives the map; closing it clears the focus so the tracker badge goes dark.
 local lastFocus
+-- Any pick counts, the tracker's too; the close's own clear is the one that must not.
+QP.RegisterFocusListener(function(questID)
+    if questID then lastFocus = questID end
+end)
 local requestRepaint
 -- Which sections this panel has shut. Ours alone: see toggleHeader.
 local shut = {}
@@ -233,6 +236,11 @@ local function objectiveText(index)
     return table.concat(lines, "\n")
 end
 
+local function handInText(index)
+    local text = GetQuestLogCompletionText(index)
+    return (text and text ~= "") and (QUEST_DASH .. text) or ""
+end
+
 -- The tags that promise an instance, and so licence the complex lookup below.
 local INSTANCE_TAG = {}
 for _, value in ipairs({ RAID, LFG_TYPE_RAID, LFG_TYPE_DUNGEON, LFG_TYPE_HEROIC_DUNGEON }) do
@@ -331,6 +339,11 @@ local function collect()
                 pending = nil
             end
             local complete = isComplete == 1 or (badge and badge.completed) or false
+            local objectives = details and objectiveText(index) or ""
+            -- Nothing left to do, objectiveless quests included: Blizzard lists the hand-in instead.
+            if details and not (isComplete and isComplete < 0) and (complete or objectives == "") then
+                objectives = handInText(index)
+            end
             -- The entrance wins over the area: that area is the instance's own map, not the way in.
             local entrance = entranceFor(section, INSTANCE_TAG[tag])
             local target = (entrance and entrance.area) or area
@@ -346,7 +359,7 @@ local function collect()
             flat[#flat + 1] = {
                 kind = "quest", index = index, name = title, level = level,
                 questID = questID, mapRow = badge and badge.frame,
-                objectives = details and objectiveText(index) or "",
+                objectives = objectives,
                 -- The server leaves plenty of instance quests untagged; the entrance knows better.
                 tag = (isComplete and isComplete < 0 and "questlog-questtypeicon-questfailed")
                     or (isDaily and "questlog-questtypeicon-daily") or (tag and TAG_ATLAS[tag])
@@ -601,8 +614,8 @@ local function acquireRow(index)
     row.title:SetPoint("TOPLEFT", row, "TOPLEFT", TEXT_INDENT, -2)
     row.title:SetJustifyH("LEFT")
 
-    row.objectives = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    row.objectives:SetPoint("TOPLEFT", row.title, "BOTTOMLEFT", 6, -2)
+    row.objectives = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    row.objectives:SetPoint("TOPLEFT", row.title, "BOTTOMLEFT", 0, -2)
     row.objectives:SetJustifyH("LEFT")
     row.objectives:SetTextColor(0.8, 0.8, 0.8)
 
@@ -648,7 +661,7 @@ local function acquireRow(index)
     -- Right-click is the badge's job without having to hit the badge: mark it and stay in the list.
     row:SetScript("OnClick", function(self, button)
         if button == "RightButton" then
-            selectOnMap(self, true)
+            if self._mapRow then selectOnMap(self, true) else travelTo(self) end
             return
         end
         selectOnMap(self)
@@ -686,7 +699,7 @@ local function fillRow(row, data, width)
     row.title:SetTextColor(row._color.r, row._color.g, row._color.b)
 
     if data.objectives ~= "" then
-        row.objectives:SetWidth(width - indent - (OBJECTIVE_INDENT - TEXT_INDENT) - 4)
+        row.objectives:SetWidth(width - indent - 4)
         row.objectives:SetText(data.objectives)
         row.objectives:Show()
     else
@@ -737,7 +750,7 @@ local function repaint()
         -- Only against a row the rebuilt map actually has, so a pick made elsewhere stays silent.
         for index = 1, WorldMapFrame.numQuests or 0 do
             local mapRow = _G["WorldMapQuestFrame" .. index]
-            if mapRow and mapRow.questId == lastFocus and not mapRow.completed then
+            if mapRow and mapRow.questId == lastFocus then
                 QP.SetFocus(lastFocus)
                 break
             end

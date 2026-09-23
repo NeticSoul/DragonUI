@@ -50,6 +50,11 @@ function WM:Enabled()
     return addon:IsModuleEnabled("worldmap")
 end
 
+-- Booted, so the quest pick shown on the map is ours; its hooks stay until the reload.
+function WM.IsApplied()
+    return WorldMapModule.applied == true
+end
+
 -- The client's one "am I windowed" test, read and never written.
 function WM.IsWindowed()
     return WORLDMAP_SETTINGS.size == WORLDMAP_WINDOWED_SIZE
@@ -70,7 +75,9 @@ end
 
 -- WorldMap_OpenToQuest writes WorldMapFrame.blockWorldMapUpdate, re-read by its every WORLD_MAP_UPDATE.
 function WM.OpenToQuest(questID)
-    if not questID or InCombatLockdown() then return false end
+    local shown = WorldMapFrame:IsShown()
+    -- Only showing the map is protected; an open one moves freely in combat.
+    if not questID or (InCombatLockdown() and not shown) then return false end
     -- Not a getter: it moves the map whatever it answers, so a quest it cannot place must not strand you.
     local before = (GetCurrentMapAreaID() or 0) - 1
     local area, floor = GetQuestWorldMapAreaID(questID)
@@ -80,7 +87,7 @@ function WM.OpenToQuest(questID)
     elseif before > 0 then
         SetMapByID(before)
     end
-    ShowUIPanel(WorldMapFrame)
+    if not shown then ShowUIPanel(WorldMapFrame) end
     return true
 end
 

@@ -339,6 +339,22 @@ local function findPOI(questID)
     end
 end
 
+-- Only our map shows our pick; with Blizzard's own map, its pick is the one the badges must wear.
+local function ownsPick()
+    local worldMap = addon.WorldMap
+    return worldMap and worldMap.IsApplied and worldMap.IsApplied()
+end
+
+local function cropBorrowed(button)
+    if not ownsPick() then return end
+    QP.CropBlizzardPOI(button, button.questId ~= nil and button.questId == QP.GetFocus())
+end
+
+-- Blizzard's POI closes an open map on its own hidden pick, so ours stands in while it is open.
+local function ourMapOpen()
+    return ownsPick() and WorldMapFrame:IsShown()
+end
+
 -- Given back hidden: Blizzard's next pass re-parents nothing but does re-anchor and re-show it.
 local function releasePOI(button)
     if not (button and borrowed[button]) then return end
@@ -385,8 +401,10 @@ local function afterWatchFrameUpdate()
             button:ClearAllPoints()
             button:SetPoint("TOPRIGHT", block.title, "TOPLEFT", 0, BADGE_LIFT)
         end
+        cropBorrowed(button)
     end
     -- Their pass is what builds the buttons, so the first one always lands after our rows exist.
+    if ourMapOpen() then return end
     for _, block in ipairs(blockPool) do
         if block:IsShown() and block.questID and not block.poi and findPOI(block.questID) then
             OT.Refresh()
@@ -396,7 +414,7 @@ local function afterWatchFrameUpdate()
 end
 
 local function styleBadge(block, data)
-    local poi = block.questID and findPOI(block.questID)
+    local poi = block.questID and not ourMapOpen() and findPOI(block.questID)
     if block.poi and block.poi ~= poi then releaseBlockPOI(block) end
     if poi then
         block.poi, borrowed[poi] = poi, block
@@ -406,6 +424,7 @@ local function styleBadge(block, data)
         poi:EnableMouse(true)
         poi:ClearAllPoints()
         poi:SetPoint("TOPRIGHT", block.title, "TOPLEFT", 0, BADGE_LIFT)
+        cropBorrowed(poi)
         block.badge:Hide()
         return
     end
@@ -438,12 +457,11 @@ local function acquireBlock(index)
         local questID = self:GetParent().questID
         local worldMap = addon.WorldMap
         if not (questID and worldMap and worldMap.OpenToQuest) then return end
-        local locked = InCombatLockdown()
         -- The map is protected, so a closed one stays closed in combat and the click is dropped.
-        if locked and not WorldMapFrame:IsShown() then return end
+        if InCombatLockdown() and not WorldMapFrame:IsShown() then return end
         -- Focused first: SetMapByID can drive Blizzard's reselect before OpenToQuest returns.
         QP.SetFocus(questID)
-        if not locked then worldMap.OpenToQuest(questID) end
+        worldMap.OpenToQuest(questID)
         if worldMap.FlashQuestPOI then worldMap.FlashQuestPOI(questID) end
     end)
     -- Hovering the badge lights the quest it belongs to, same as hovering its text.
@@ -683,6 +701,7 @@ QP.RegisterFocusListener(function(questID)
             QP.SetSelected(block.badge, block.questID ~= nil and block.questID == questID)
         end
     end
+    for button in pairs(borrowed) do cropBorrowed(button) end
 end)
 
 -- ============================================================================
@@ -792,6 +811,12 @@ local function build()
     events:SetScript("OnEvent", OT.Refresh)
 
     if WatchFrame_Update then hooksecurefunc("WatchFrame_Update", afterWatchFrameUpdate) end
+    -- The map's own pick reaches the tracker's buttons too (WorldMapFrame_SelectQuestFrame).
+    for _, name in ipairs({ "QuestPOI_SelectButton", "QuestPOI_DeselectButton" }) do
+        hooksecurefunc(name, function(button)
+            if button and borrowed[button] then cropBorrowed(button) end
+        end)
+    end
 
     -- The borrowed POI carries Blizzard's OnClick, so the focus and the pulse hang off the call it
     -- ends in. Catches their quest log's Show Map button and their own tracker for free.
