@@ -212,7 +212,7 @@ local subTabs = {
     { key = "general",  label = LO["General"] },
     { key = "layout",   label = LO["Layout"] },
     { key = "behavior", label = LO["Behavior"] },
-    { key = "health",   label = LO["Health Bar"] },
+    { key = "health",   label = LO["Name & Health"] },
     { key = "target",   label = LO["Target & Threat"] },
     { key = "bars",     label = LO["Bars"] },
     { key = "icons",    label = LO["Icons"] },
@@ -237,6 +237,9 @@ local function RetailChromeOwnsBackground()
     local style = C:GetDBValue(DB .. ".plateStyle")
     return style ~= "legacy" and style ~= "classic"
 end
+
+-- Modern draws every plate text with NewEra's font recipe, so the font pickers only reach Heritage.
+local ModernOwnsText = RetailChromeOwnsBackground
 
 -- Tank and DPS mode return before the retail branch in ResolveAggroColor, so only
 -- the default palette changes: orange for tanking, yellow for gaining or losing.
@@ -716,9 +719,223 @@ end
 local function BuildHealthSubTab(scroll)
     C:AddSpacer(scroll)
 
-    local health = C:AddSection(scroll, LO["Health Bar"])
+    local function GetNP()
+        return addon.db.profile.modules and addon.db.profile.modules.nameplates or {}
+    end
 
-    C:AddDropdown(health, {
+    -- Controls that grey out with another setting, refreshed in place so the panel keeps its scroll.
+    local dependents = {}
+    local function Depends(widget, isDisabled)
+        dependents[widget] = isDisabled
+        return widget
+    end
+    local function RefreshDependents()
+        for widget, isDisabled in pairs(dependents) do
+            if widget.SetDisabled then
+                widget:SetDisabled(isDisabled())
+            end
+        end
+        RefreshNameplates()
+    end
+    -- For changes that add or remove controls.
+    local function RebuildKeepingScroll()
+        RefreshNameplates()
+        if not Panel or not Panel.SelectTab then return end
+        local savedScroll = Panel.scrollWidget and Panel.scrollWidget.scrollbar
+            and Panel.scrollWidget.scrollbar:GetValue() or 0
+        Panel:SelectTab("nameplates")
+        if savedScroll > 0 and Panel.scrollWidget and Panel.scrollWidget.scrollbar then
+            Panel.scrollWidget.scrollbar:SetValue(savedScroll)
+            Panel.scrollWidget:SetScroll(savedScroll)
+        end
+    end
+
+    local function IsNameInsideBar()
+        return GetNP().nameOverlayHealthBar == true
+    end
+    local function IsNameAboveBar()
+        return not IsNameInsideBar()
+    end
+    local function IsLevelAlwaysShown()
+        return GetNP().showLevelAlways == true
+    end
+    local function IsHealthTextOff()
+        return GetNP().healthTextFormat == "none"
+    end
+    -- A name inside the bar pins the text to the bar's right end, so there is nothing to choose.
+    local function IsHealthTextPositionLocked()
+        return IsHealthTextOff() or IsNameInsideBar()
+    end
+    local function IsHealthTextFontSizeUnused()
+        return ModernOwnsText() or IsHealthTextPositionLocked()
+            or (GetNP().healthTextPosition or "afterName") == "afterName"
+    end
+    local function HasNoFriendlyClassBars()
+        local np = GetNP()
+        return not (np.friendlyClassColors or np.partyClassColors)
+    end
+    local function HasNoEnemyClassBars()
+        return GetNP().enemyPlayerClassColors == false
+    end
+
+    local nameSection = C:AddSection(scroll, LO["Name"])
+
+    local placeRow = C:AddRow(nameSection)
+    C:AddDropdown(placeRow, {
+        label = LO["Name Position"],
+        values = {
+            above = LO["Above the Health Bar"],
+            inside = LO["Inside the Health Bar"],
+        },
+        width = 220,
+        getFunc = function()
+            return IsNameInsideBar() and "inside" or "above"
+        end,
+        setFunc = function(value)
+            C:SetDBValue(DB .. ".nameOverlayHealthBar", value == "inside")
+        end,
+        -- The health text section explains a different layout for each position.
+        callback = RebuildKeepingScroll,
+    })
+    C:AddSlider(placeRow, {
+        label = LO["Vertical Offset"],
+        desc = LO["Moves the name up or down while it sits inside the health bar."],
+        dbPath = DB .. ".nameOverlayOffsetY",
+        min = -20, max = 20, step = 1,
+        width = 200,
+        disabled = IsNameAboveBar,
+        callback = RefreshNameplates,
+    })
+
+    C:AddSlider(nameSection, {
+        label = LO["Horizontal Padding"],
+        desc = LO["Inset the name, level, and health text from the left and right edges of the health bar. Does not affect the elite icon."],
+        dbPath = DB .. ".nameRowPaddingX",
+        min = 0, max = 40, step = 1,
+        width = 200,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(nameSection, {
+        label = LO["Center Name"],
+        desc = LO["Center the name in the space the health text leaves free."],
+        dbPath = DB .. ".centerNameOnly",
+        callback = RefreshNameplates,
+    })
+
+    if ModernOwnsText() then
+        C:AddDescription(nameSection, LO["The Modern style draws the name and health text like NewEra: Friz Quadrata at retail's size, outlined inside the bar."])
+    end
+    local fontRow = C:AddRow(nameSection)
+    C:AddDropdown(fontRow, {
+        label = LO["Font"],
+        dbPath = DB .. ".nameFont",
+        values = {
+            primary = LO["Primary Font"],
+            actionbar = LO["Actionbar Font"],
+            narrow = LO["Narrow Font"],
+            arial = LO["Arial Font"],
+        },
+        width = 220,
+        disabled = ModernOwnsText,
+        callback = RefreshNameplates,
+    })
+    C:AddSlider(fontRow, {
+        label = LO["Font Size"],
+        desc = LO["Font size of the name, and of the health text when it follows the name (1-10, default 2)."],
+        dbPath = DB .. ".fontSize",
+        min = 1, max = 10, step = 1,
+        width = 200,
+        disabled = ModernOwnsText,
+        callback = RefreshNameplates,
+    })
+
+    local levelSection = C:AddSection(scroll, LO["Level"])
+
+    C:AddToggle(levelSection, {
+        label = LO["Show Level Always"],
+        desc = LO["Always show the unit level next to the name."],
+        dbPath = DB .. ".showLevelAlways",
+        callback = RefreshDependents,
+    })
+    Depends(C:AddToggle(levelSection, {
+        label = LO["Show Level In Name When Targeted"],
+        dbPath = DB .. ".showLevelInName",
+        disabled = IsLevelAlwaysShown,
+        callback = RefreshNameplates,
+    }), IsLevelAlwaysShown)
+    Depends(C:AddToggle(levelSection, {
+        label = LO["Show Level on Hover"],
+        dbPath = DB .. ".showLevelOnHover",
+        disabled = IsLevelAlwaysShown,
+        callback = RefreshNameplates,
+    }), IsLevelAlwaysShown)
+    C:AddDropdown(levelSection, {
+        label = LO["Level Format"],
+        dbPath = DB .. ".levelTextFormat",
+        values = {
+            brackets = "[LVL]",
+            parentheses = "(LVL)",
+            plain = "LVL",
+        },
+        width = 220,
+        callback = RefreshNameplates,
+    })
+
+    local healthTextSection = C:AddSection(scroll, LO["Health Text"])
+
+    local textRow = C:AddRow(healthTextSection)
+    C:AddDropdown(textRow, {
+        label = LO["Show"],
+        desc = LO["What the health text shows. With both, the value comes first."],
+        dbPath = DB .. ".healthTextFormat",
+        values = {
+            none = LO["None"],
+            percent = LO["Percent"],
+            value = LO["Value"],
+            valuePercent = LO["Value and Percent"],
+        },
+        width = 200,
+        callback = RefreshDependents,
+    })
+    Depends(C:AddDropdown(textRow, {
+        label = LO["Position"],
+        desc = LO["After the name, the name is shortened so the two never overlap. With the name inside the health bar, the text always sits at the bar's right end."],
+        dbPath = DB .. ".healthTextPosition",
+        -- Show what the plate draws: a name inside the bar forces the text after it.
+        getFunc = function()
+            return IsNameInsideBar() and "afterName" or (GetNP().healthTextPosition or "afterName")
+        end,
+        values = {
+            afterName = LO["After the Name"],
+            barCenter = LO["Inside the Bar, Centered"],
+            barRight = LO["Inside the Bar, Right"],
+            barSplit = LO["Inside the Bar, Value Left and Percent Right"],
+        },
+        width = 260,
+        disabled = IsHealthTextPositionLocked,
+        callback = RefreshDependents,
+    }), IsHealthTextPositionLocked)
+    Depends(C:AddSlider(textRow, {
+        label = LO["Font Size"],
+        desc = LO["Font size of the health text inside the bar (1-10). After the name it uses the name's font size."],
+        dbPath = DB .. ".healthNumberFontSize",
+        min = 1, max = 10, step = 1,
+        width = 200,
+        disabled = IsHealthTextFontSizeUnused,
+        callback = RefreshNameplates,
+    }), IsHealthTextFontSizeUnused)
+
+    if IsNameInsideBar() then
+        C:AddDescription(healthTextSection, LO["The name is inside the health bar, so the health text sits at the bar's right end, after the name."])
+    end
+
+    local barSection = C:AddSection(scroll, LO["Health Bar"])
+
+    if RetailChromeOwnsBackground() then
+        C:AddDescription(barSection, LO["The Modern style draws its own bar background."])
+    end
+    C:AddDropdown(barSection, {
         label = LO["Health Bar Background"],
         desc = LO["Choose the background texture used behind the health bar fill."],
         dbPath = DB .. ".healthBarBackground",
@@ -730,61 +947,7 @@ local function BuildHealthSubTab(scroll)
         width = 200,
         callback = RefreshNameplates,
     })
-
-    local levelToggles = {}
-    local simpleNameControls = {}
-    local function IsCenterNameMode()
-        local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-        return np and np.centerNameOnly == true
-    end
-    local function SetLevelToggleDisabled(disabled)
-        for _, w in ipairs(levelToggles) do
-            if w and w.SetDisabled then
-                w:SetDisabled(disabled)
-            end
-        end
-    end
-    local function RegisterSimpleNameControl(widget)
-        simpleNameControls[#simpleNameControls + 1] = widget
-        return widget
-    end
-    local function UpdateSimpleNameControls()
-        local center = IsCenterNameMode()
-        for _, w in ipairs(simpleNameControls) do
-            if w and w.SetDisabled then
-                w:SetDisabled(center)
-            end
-        end
-        local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-        SetLevelToggleDisabled(np and np.showLevelAlways == true)
-    end
-
-    RegisterSimpleNameControl(C:AddToggle(health, {
-        label = LO["Show Health Percent"],
-        dbPath = DB .. ".showHealthPercent",
-        disabled = IsCenterNameMode,
-        callback = RefreshNameplates,
-    }))
-
-    C:AddToggle(health, {
-        label = LO["Show Health Number"],
-        desc = LO["Shows HP as a number (e.g. 22k) and percent on the health bar."],
-        dbPath = DB .. ".showHealthNumber",
-        callback = RefreshNameplates,
-    })
-
-    C:AddSlider(health, {
-        label = LO["Health Number Font Size"],
-        desc = LO["Health number font scale (1-10)."],
-        dbPath = DB .. ".healthNumberFontSize",
-        min = 1, max = 10, step = 1,
-        width = 200,
-        callback = RefreshNameplates,
-    })
-
-    C:AddSpacer(health)
-
-    C:AddToggle(health, {
+    C:AddToggle(barSection, {
         label = LO["Gray Tapped Units"],
         desc = LO["Grays the health bar when a unit is tapped by another player or group."],
         dbPath = DB .. ".tapDeniedGray",
@@ -799,92 +962,73 @@ local function BuildHealthSubTab(scroll)
         end,
     })
 
-    C:AddColorPicker(health, {
+    local colorSection = C:AddSection(scroll, LO["Colors"])
+
+    C:AddHeading(colorSection, LO["Friendly Units"])
+    local friendlyColorRow = C:AddRow(colorSection)
+    C:AddColorPicker(friendlyColorRow, {
         label = LO["Friendly Player Color"],
         dbPath = DB .. ".friendlyPlayerColor",
         callback = RefreshNameplates,
     })
-
-    C:AddColorPicker(health, {
+    C:AddColorPicker(friendlyColorRow, {
         label = LO["Friendly NPC Color"],
         dbPath = DB .. ".friendlyNPCColor",
         callback = RefreshNameplates,
     })
-
-    local function ClearFriendlyNameClassIfNoBarClass()
-        local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-        if np and not np.friendlyClassColors and not np.partyClassColors then
-            np.friendlyNameClassColors = false
-        end
-    end
-
-    local function RefreshNameplatesAndTab()
-        RefreshNameplates()
-        if Panel and Panel.SelectTab then
-            Panel:SelectTab("nameplates")
-        end
-    end
-
-    C:AddToggle(health, {
+    C:AddToggle(colorSection, {
         label = LO["Party Class Colors"],
         desc = LO["Use class colors for party member nameplates instead of the friendly player color."],
         dbPath = DB .. ".partyClassColors",
-        callback = function()
-            ClearFriendlyNameClassIfNoBarClass()
-            RefreshNameplatesAndTab()
-        end,
+        callback = RefreshDependents,
     })
-
-    C:AddToggle(health, {
-        label = LO["Enemy Player Class Colors"],
-        desc = LO["Use class colors for enemy player nameplates."],
-        dbPath = DB .. ".enemyPlayerClassColors",
-        callback = function(val)
-            local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-            if np and not val then
-                np.enemyNameClassColors = false
-            end
-            RefreshNameplatesAndTab()
-        end,
-    })
-
-    C:AddToggle(health, {
+    C:AddToggle(colorSection, {
         label = LO["Friendly Class Colors"],
         desc = LO["Class-color every friendly player, not just your group. Party and raid show automatically; others fill in when you target or mouse over them, or instantly with awesome_wotlk."],
         dbPath = DB .. ".friendlyClassColors",
-        callback = function()
-            ClearFriendlyNameClassIfNoBarClass()
-            RefreshNameplatesAndTab()
-        end,
+        callback = RefreshDependents,
     })
 
+    C:AddHeading(colorSection, LO["Enemy Units"])
+    C:AddToggle(colorSection, {
+        label = LO["Enemy Player Class Colors"],
+        desc = LO["Use class colors for enemy player nameplates."],
+        dbPath = DB .. ".enemyPlayerClassColors",
+        callback = RefreshDependents,
+    })
+
+    C:AddHeading(colorSection, LO["Name Text"])
+    C:AddToggle(colorSection, {
+        label = LO["Name Reaction Colors"],
+        desc = LO["Tint name text with the health bar reaction color (red/yellow/green/blue)."],
+        dbPath = DB .. ".nameReactionColors",
+        callback = RefreshNameplates,
+    })
+    Depends(C:AddToggle(colorSection, {
+        label = LO["Class Colors on Friendly Names"],
+        desc = LO["Color friendly player names by class. Needs Party Class Colors or Friendly Class Colors."],
+        dbPath = DB .. ".friendlyNameClassColors",
+        disabled = HasNoFriendlyClassBars,
+        callback = RefreshNameplates,
+    }), HasNoFriendlyClassBars)
+    Depends(C:AddToggle(colorSection, {
+        label = LO["Class Colors on Enemy Names"],
+        desc = LO["Color enemy player names by class. Needs Enemy Player Class Colors."],
+        dbPath = DB .. ".enemyNameClassColors",
+        disabled = HasNoEnemyClassBars,
+        callback = RefreshNameplates,
+    }), HasNoEnemyClassBars)
+
     local headline = C:AddSection(scroll, LO["Headline Mode"])
-
-    local function IsHeadlineEnabled()
-        local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-        return np and np.friendlyNameOnly == true
-    end
-
-    local function RebuildHeadlineSection()
-        RefreshNameplates()
-        if not Panel or not Panel.SelectTab then return end
-        local savedScroll = Panel.scrollWidget and Panel.scrollWidget.scrollbar
-            and Panel.scrollWidget.scrollbar:GetValue() or 0
-        Panel:SelectTab("nameplates")
-        if savedScroll > 0 and Panel.scrollWidget and Panel.scrollWidget.scrollbar then
-            Panel.scrollWidget.scrollbar:SetValue(savedScroll)
-            Panel.scrollWidget:SetScroll(savedScroll)
-        end
-    end
 
     C:AddToggle(headline, {
         label = LO["Enable Headline Mode"],
         desc = LO["Hide health, power and cast bars on friendly nameplates, showing only the name."],
         dbPath = DB .. ".friendlyNameOnly",
-        callback = RebuildHeadlineSection,
+        callback = RebuildKeepingScroll,
     })
 
-    if IsHeadlineEnabled() then
+    if GetNP().friendlyNameOnly == true then
         C:AddColorPicker(headline, {
             label = LO["Name Text Color"],
             dbPath = DB .. ".friendlyNameOnlyColor",
@@ -953,135 +1097,6 @@ local function BuildHealthSubTab(scroll)
             callback = RefreshNameplates,
         })
     end
-
-    local nameLevel = C:AddSection(scroll, LO["Name & Level"])
-
-    C:AddToggle(nameLevel, {
-        label = LO["Center Name Only"],
-        desc = LO["Centers the unit name and hides the health percent."],
-        dbPath = DB .. ".centerNameOnly",
-        callback = function()
-            RefreshNameplates()
-            UpdateSimpleNameControls()
-        end,
-    })
-
-    C:AddDropdown(nameLevel, {
-        label = LO["Name Font"],
-        dbPath = DB .. ".nameFont",
-        values = {
-            primary = LO["Primary Font"],
-            actionbar = LO["Actionbar Font"],
-            narrow = LO["Narrow Font"],
-            arial = LO["Arial Font"],
-        },
-        width = 220,
-        callback = RefreshNameplates,
-    })
-
-    C:AddSlider(nameLevel, {
-        label = LO["Font Size"],
-        desc = LO["Name and health percent font scale (1-10, default 2)."],
-        dbPath = DB .. ".fontSize",
-        min = 1, max = 10, step = 1,
-        width = 200,
-        callback = RefreshNameplates,
-    })
-
-    C:AddToggle(nameLevel, {
-        label = LO["Overlay Name On Health Bar"],
-        desc = LO["Anchor the name, level, health percent, and elite icon centered on the health bar instead of above it."],
-        dbPath = DB .. ".nameOverlayHealthBar",
-        callback = RefreshNameplates,
-    })
-
-    C:AddSlider(nameLevel, {
-        label = LO["Overlay Vertical Offset"],
-        desc = LO["Fine-tune the vertical position when 'Overlay Name On Health Bar' is enabled."],
-        dbPath = DB .. ".nameOverlayOffsetY",
-        min = -20, max = 20, step = 1,
-        width = 200,
-        callback = RefreshNameplates,
-    })
-
-    C:AddSlider(nameLevel, {
-        label = LO["Name Row Horizontal Padding"],
-        desc = LO["Inset the name, level, and health percent from the left and right edges of the health bar. Does not affect the elite icon."],
-        dbPath = DB .. ".nameRowPaddingX",
-        min = 0, max = 40, step = 1,
-        width = 200,
-        callback = RefreshNameplates,
-    })
-
-    local function UpdateLevelToggleStates()
-        UpdateSimpleNameControls()
-    end
-
-    C:AddToggle(nameLevel, {
-        label = LO["Show Level Always"],
-        desc = LO["Always show the unit level next to the name."],
-        dbPath = DB .. ".showLevelAlways",
-        callback = function()
-            RefreshNameplates()
-            UpdateLevelToggleStates()
-        end,
-    })
-
-    C:AddDropdown(nameLevel, {
-        label = LO["Level Format"],
-        dbPath = DB .. ".levelTextFormat",
-        values = {
-            brackets = "[LVL]",
-            parentheses = "(LVL)",
-            plain = "LVL",
-        },
-        width = 220,
-        callback = RefreshNameplates,
-    })
-
-    levelToggles[#levelToggles + 1] = C:AddToggle(nameLevel, {
-        label = LO["Show Level In Name When Targeted"],
-        dbPath = DB .. ".showLevelInName",
-        callback = RefreshNameplates,
-    })
-
-    levelToggles[#levelToggles + 1] = C:AddToggle(nameLevel, {
-        label = LO["Show Level on Hover"],
-        dbPath = DB .. ".showLevelOnHover",
-        callback = RefreshNameplates,
-    })
-
-    C:AddToggle(nameLevel, {
-        label = LO["Name Reaction Colors"],
-        desc = LO["Tint name text with the health bar reaction color (red/yellow/green/blue)."],
-        dbPath = DB .. ".nameReactionColors",
-        callback = RefreshNameplates,
-    })
-
-    C:AddToggle(nameLevel, {
-        label = LO["Class Colors on Friendly Names"],
-        desc = LO["Use class colors for friendly player name text."],
-        dbPath = DB .. ".friendlyNameClassColors",
-        disabled = function()
-            local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-            if not np then return false end
-            return not (np.friendlyClassColors or np.partyClassColors)
-        end,
-        callback = RefreshNameplates,
-    })
-
-    C:AddToggle(nameLevel, {
-        label = LO["Class Colors on Enemy Names"],
-        desc = LO["Use class colors for enemy player name text."],
-        dbPath = DB .. ".enemyNameClassColors",
-        disabled = function()
-            local np = addon.db.profile.modules and addon.db.profile.modules.nameplates
-            return np and np.enemyPlayerClassColors == false or false
-        end,
-        callback = RefreshNameplates,
-    })
-
-    UpdateSimpleNameControls()
 end
 
 local function BuildTargetSubTab(scroll)
@@ -1222,12 +1237,17 @@ local function BuildBarsSubTab(scroll)
         return IsCastBarDisabled() or not C:GetDBValue(DB .. ".showCastBarSpellName")
     end
 
+    if ModernOwnsText() then
+        C:AddDescription(castSection, LO["The Modern style sizes the spell name like NewEra."])
+    end
     C:AddSlider(castSection, {
         label = LO["Spell Name Font Size"],
         dbPath = DB .. ".castBarSpellNameFontSize",
         min = 6, max = 16, step = 1,
         width = 200,
-        disabled = IsSpellNameDisabled,
+        disabled = function()
+            return IsSpellNameDisabled() or ModernOwnsText()
+        end,
         callback = RefreshNameplates,
     })
 
@@ -1918,14 +1938,20 @@ local function BuildDebuffsSubTab(scroll)
         callback = RefreshDisabledStates,
     }), IsDebuffsDisabled)
 
+    local function IsCooldownFontSizeDisabled()
+        return IsCooldownTextDisabled() or ModernOwnsText()
+    end
+    if ModernOwnsText() then
+        C:AddDescription(timerSection, LO["The Modern style sizes the timer and stack count to each icon, like NewEra."])
+    end
     Track(C:AddSlider(timerSection, {
         label = LO["Cooldown Font Size"],
         dbPath = DB .. ".debuffCooldownFontSize",
         min = 6, max = 16, step = 1,
         width = 200,
-        disabled = IsCooldownTextDisabled,
+        disabled = IsCooldownFontSizeDisabled,
         callback = RefreshNameplates,
-    }), IsCooldownTextDisabled)
+    }), IsCooldownFontSizeDisabled)
 
     Track(C:AddDropdown(timerSection, {
         label = LO["Cooldown Text Position"],
@@ -2129,14 +2155,30 @@ local function BuildDebuffsSubTab(scroll)
         callback = RebuildAuraUI,
     }), IsDebuffsDisabled)
 
-    if C:GetDBValue(DB .. ".debuffFilterMode") ~= "all" then
+    local debuffListMode = C:GetDBValue(DB .. ".debuffFilterMode")
+    if debuffListMode ~= "all" then
         C:AddHeading(debuffSection, LO["Debuff List"])
+        -- Shared debuffs such as Sunder Armor carry one caster, so "Only My Debuffs" can hide yours.
+        local rules = {
+            dbPath = DB .. ".debuffFilterRules",
+            editable = debuffListMode == "whitelist",
+            label = LO["Show"],
+            values = {
+                any = LO["Always (anyone's)"],
+                default = LO["Follow 'Only My Debuffs'"],
+                mine = LO["Only Mine"],
+            },
+        }
+        if rules.editable then
+            C:AddLabel(debuffSection, LO["Each listed spell can decide whose casts it shows, whatever 'Only My Debuffs' says."])
+        end
         C:AddSpellFilterList(debuffSection, {
             dbPath = DB .. ".debuffFilterList",
             disabled = IsDebuffListDisabled,
             callback = RefreshNameplates,
             rebuildUI = RebuildAuraUI,
             registerDynamic = RegisterDynamicWidget,
+            rules = rules,
         })
     end
 

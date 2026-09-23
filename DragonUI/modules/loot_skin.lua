@@ -1188,6 +1188,10 @@ events:SetScript("OnEvent", function(_, event, arg1)
     end
 
     if event == "LOOT_OPENED" then
+        -- A refresh of a shown frame skips OnShow, so the last loot's fly-outs would hide the new rows.
+        if _G.LootFrame:IsShown() then
+            ResetAnimations()
+        end
         -- 3.3.5a passes autoLoot as a number, unlike retail's boolean.
         isAutoLoot = arg1 and arg1 ~= 0
         if EnsureRows(GetNumLootItems()) then

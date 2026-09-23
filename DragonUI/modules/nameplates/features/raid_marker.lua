@@ -50,6 +50,26 @@ function NP.widgets.RestoreNativeRaidIcon(plateData)
     end
 end
 
+-- Shared by the aura row and its preview box, so the box always shows where the icons go.
+function NP.widgets.GetDebuffHostAnchor(plateData)
+    local cfg = NP.config.GetCfg()
+    local comboVisible = IsComboVisible(plateData)
+    local anchorTo = plateData.minaNameRow or plateData.minaName
+    local y = comboVisible and C.DEBUFF_HOST_OFFSET_Y_WITH_COMBO or C.DEBUFF_HOST_OFFSET_Y
+    -- Retail anchors auras to the name row only above the bar; a row inside it would put them on the bar.
+    if NP.config.IsNameOverlayBar() and plateData.minaHp then
+        anchorTo = plateData.minaHp
+        if not comboVisible then
+            y = C.DEBUFF_HOST_OFFSET_Y_OVERLAY
+        end
+        -- Retail's padding is measured from a bare bar; ours has the capsule on top of it.
+        if NP.retail_chrome and NP.retail_chrome.GetTopInset then
+            y = y + NP.retail_chrome.GetTopInset()
+        end
+    end
+    return anchorTo, cfg.debuffOffsetX or 0, y + (cfg.debuffOffsetY or 0)
+end
+
 function NP.widgets.ReflowTopOverlays(plateData)
     if not plateData then return end
 
@@ -58,23 +78,9 @@ function NP.widgets.ReflowTopOverlays(plateData)
 
     local debuffHost = plateData.minaDebuffHost
     if debuffHost and plateData.minaNameRow then
-        local debuffY = C.DEBUFF_HOST_OFFSET_Y or 3
-        if comboVisible then
-            debuffY = C.DEBUFF_HOST_OFFSET_Y_WITH_COMBO or 15
-        end
-        -- Retail anchors the aura grid to the name row only while the name sits above the
-        -- bar; with the name inside it, that row is over the bar and the icons land on it.
-        local anchorTo = plateData.minaNameRow
-        if NP.config.IsNameOverlayBar() and plateData.minaHp then
-            anchorTo = plateData.minaHp
-            -- Retail's padding is measured from a bare bar; ours has the capsule on top of it.
-            if NP.retail_chrome and NP.retail_chrome.GetTopInset then
-                debuffY = debuffY + NP.retail_chrome.GetTopInset()
-            end
-        end
+        local anchorTo, x, y = NP.widgets.GetDebuffHostAnchor(plateData)
         debuffHost:ClearAllPoints()
-        debuffHost:SetPoint("BOTTOMLEFT", anchorTo, "TOPLEFT",
-            cfg.debuffOffsetX or 0, debuffY + (cfg.debuffOffsetY or 0))
+        debuffHost:SetPoint("BOTTOMLEFT", anchorTo, "TOPLEFT", x, y)
     end
 
     local native = plateData.raidIcon

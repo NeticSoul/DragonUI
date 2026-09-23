@@ -319,6 +319,8 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
     NP.module._opacityFullParty = (cfg.opacityFullParty == true)
     NP.module._retailBehavior = NP.config.IsRetailBehavior()
+    NP.module._healthTextFormat = NP.config.GetHealthTextFormat()
+    NP.module._healthTextPlacement = NP.config.GetHealthTextPlacement()
     NP.module._plateAlphaCompat = cfg.nameplateAlphaCompat == true
     NP.module._barAlphaCompat = cfg.nameplateBarAlphaCompat == true
     NP.module._clampTargetEnabled = cfg.clampTarget == true

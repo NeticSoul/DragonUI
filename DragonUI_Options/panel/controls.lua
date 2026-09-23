@@ -1289,6 +1289,8 @@ end
 -- ============================================================================
 
 local spellFilterPopupContext = nil
+-- Selected entry per list, so the choice survives the panel rebuilding after an add.
+local spellFilterSelection = {}
 local spellFilterExportDialog = nil
 local spellFilterNameCache = nil
 
@@ -1547,6 +1549,9 @@ function Controls:AddSpellFilterList(parent, opts)
     local dbPath = opts.dbPath
     local disabledFunc = opts.disabled
     local registerDynamic = opts.registerDynamic
+    -- Rules ride along with the list; when editable a click selects the entry and the rule lives below.
+    local rules = opts.rules
+    local editRules = rules and rules.editable
 
     local function IsDisabled()
         if type(disabledFunc) == "function" then
@@ -1559,8 +1564,26 @@ function Controls:AddSpellFilterList(parent, opts)
         return self:GetDBValue(dbPath) or ""
     end
 
+    local function GetRules()
+        local tbl = rules and self:GetDBValue(rules.dbPath)
+        return type(tbl) == "table" and tbl or nil
+    end
+
     local function SetListRaw(value)
         self:SetDBValue(dbPath, value or "")
+        -- A rule left behind would come back the day its spell is listed again.
+        local ruleTable = GetRules()
+        if ruleTable then
+            local keep = {}
+            for _, id in ipairs(ParseSpellFilterIDs(value)) do
+                keep[id] = true
+            end
+            for id in pairs(ruleTable) do
+                if not keep[id] then
+                    ruleTable[id] = nil
+                end
+            end
+        end
         if opts.callback then
             opts.callback(value)
         end
@@ -1570,10 +1593,13 @@ function Controls:AddSpellFilterList(parent, opts)
     end
 
     local function AddSpellToken(token)
-        local spellID, name, icon = ResolveSpellFilterToken(token)
+        local spellID = ResolveSpellFilterToken(token)
         if not spellID then
             SpellFilterPrint(LO["Invalid spell name or ID"])
             return
+        end
+        if editRules then
+            spellFilterSelection[dbPath] = spellID
         end
         local ids = ParseSpellFilterIDs(GetListRaw())
         for i = 1, #ids do
@@ -1587,20 +1613,31 @@ function Controls:AddSpellFilterList(parent, opts)
         SetListRaw(SpellFilterIDsToCSV(ids))
     end
 
-    local function RemoveSpellAtIndex(index)
+    local function RemoveSpell(spellID)
         local ids = ParseSpellFilterIDs(GetListRaw())
-        if ids[index] then
-            table.remove(ids, index)
-            SetListRaw(SpellFilterIDsToCSV(ids))
+        for i = 1, #ids do
+            if ids[i] == spellID then
+                table.remove(ids, i)
+                if spellFilterSelection[dbPath] == spellID then
+                    spellFilterSelection[dbPath] = nil
+                end
+                SetListRaw(SpellFilterIDsToCSV(ids))
+                return
+            end
         end
     end
 
-    local function RegisterWidget(widget)
+    local function RegisterWidget(widget, widgetDisabledFunc)
+        widgetDisabledFunc = widgetDisabledFunc or disabledFunc
         if registerDynamic and widget then
-            return registerDynamic(widget, disabledFunc)
+            return registerDynamic(widget, widgetDisabledFunc)
         end
         if widget and widget.SetDisabled then
-            widget:SetDisabled(IsDisabled())
+            if type(widgetDisabledFunc) == "function" then
+                widget:SetDisabled(widgetDisabledFunc())
+            else
+                widget:SetDisabled(widgetDisabledFunc == true)
+            end
         end
         return widget
     end
@@ -1653,9 +1690,58 @@ function Controls:AddSpellFilterList(parent, opts)
         return empty
     end
 
+    local listed = {}
+    for i = 1, #ids do
+        listed[ids[i]] = true
+    end
+    local function GetSelected()
+        local spellID = editRules and spellFilterSelection[dbPath]
+        return spellID and listed[spellID] and spellID or nil
+    end
+
+    local function IconMarkup(icon)
+        return string.format("|T%s:16:16:0:0:64:64:4:60:4:60|t",
+            icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+    end
+
+    local clickHint = editRules and LO["Click to select."] or LO["Click to remove."]
+    local function FillSpellTooltip(spellID)
+        GameTooltip:SetText(GetSpellInfo(spellID) or LO["Unknown"], 1, 1, 1)
+        GameTooltip:AddLine(string.format(LO["Spell ID: %d"], spellID), nil, nil, nil, true)
+        GameTooltip:AddLine(clickHint, 0.7, 0.7, 0.7, true)
+    end
+
+    local function FormatRow(spellID)
+        local name, _, icon = GetSpellInfo(spellID)
+        local text = string.format("%s (%d)", name or LO["Unknown"], spellID)
+        if GetSelected() == spellID then
+            text = "|cffffd100" .. text .. "|r"
+        end
+        local ruleTable = editRules and GetRules()
+        local ruleText = ruleTable and ruleTable[spellID] and rules.values[ruleTable[spellID]]
+        if ruleText then
+            text = text .. "  |cff999999" .. ruleText .. "|r"
+        end
+        return IconMarkup(icon) .. " " .. text
+    end
+
+    local refreshRows, refreshDetail
+    local function OnEntryClick(spellID)
+        if IsDisabled() then
+            return
+        end
+        if not editRules then
+            RemoveSpell(spellID)
+            return
+        end
+        spellFilterSelection[dbPath] = spellID
+        refreshRows()
+        refreshDetail()
+    end
+
     local listLabel = AceGUI:Create("Label")
     listLabel:SetFullWidth(true)
-    listLabel:SetText(LO["Click an entry to remove it."])
+    listLabel:SetText(editRules and LO["Click an entry to select it."] or LO["Click an entry to remove it."])
     parent:AddChild(listLabel)
 
     -- Long lists get a fixed-row scroll box; a curated list of 20+ would otherwise own the panel.
@@ -1665,61 +1751,122 @@ function Controls:AddSpellFilterList(parent, opts)
         list:SetHeight(opts.listHeight or 150)
         list:SetRowFont(self.Theme.font, 12, "")
         list:SetList(ids, {
-            format = function(spellID)
-                local name, _, icon = GetSpellInfo(spellID)
-                return string.format("|T%s:16:16:0:0:64:64:4:60:4:60|t %s (%d)",
-                    icon or "Interface\\Icons\\INV_Misc_QuestionMark", name or LO["Unknown"], spellID)
-            end,
-            tooltip = function(spellID)
-                GameTooltip:SetText(GetSpellInfo(spellID) or LO["Unknown"], 1, 1, 1)
-                GameTooltip:AddLine(string.format(LO["Spell ID: %d"], spellID), nil, nil, nil, true)
-                GameTooltip:AddLine(LO["Click to remove."], 0.7, 0.7, 0.7, true)
-            end,
-            click = function(index)
-                if not IsDisabled() then
-                    RemoveSpellAtIndex(index)
-                end
+            format = FormatRow,
+            tooltip = FillSpellTooltip,
+            click = function(_, spellID)
+                OnEntryClick(spellID)
             end,
         })
         list:SetDisabled(IsDisabled())
         parent:AddChild(list)
         RegisterWidget(list)
+        refreshRows = function()
+            list:RefreshLabels()
+        end
+    else
+        local rows = {}
+        for index, spellID in ipairs(ids) do
+            local row = AceGUI:Create("InteractiveLabel")
+            row:SetFullWidth(true)
+            row:SetText(FormatRow(spellID))
+            if row.label then
+                SafeSetFont(row.label, 12, "", self.Theme.font)
+            end
+            row:SetCallback("OnClick", function()
+                OnEntryClick(spellID)
+            end)
+            row:SetCallback("OnEnter", function(w)
+                GameTooltip:SetOwner(w.frame, "ANCHOR_RIGHT")
+                FillSpellTooltip(spellID)
+                GameTooltip:Show()
+            end)
+            row:SetCallback("OnLeave", function()
+                GameTooltip:Hide()
+            end)
+            if IsDisabled() and row.SetDisabled then
+                row:SetDisabled(true)
+            end
+            RegisterWidget(row)
+            parent:AddChild(row)
+            rows[index] = row
+        end
+        refreshRows = function()
+            for index, spellID in ipairs(ids) do
+                rows[index]:SetText(FormatRow(spellID))
+            end
+        end
+    end
+
+    if not editRules then
         return listLabel
     end
 
-    for index, spellID in ipairs(ids) do
-        local name, _, icon = GetSpellInfo(spellID)
-        name = name or LO["Unknown"]
-        icon = icon or "Interface\\Icons\\INV_Misc_QuestionMark"
-        local rowText = string.format("|T%s:16:16:0:0:64:64:4:60:4:60|t %s (%d)", icon, name, spellID)
-
-        local row = AceGUI:Create("InteractiveLabel")
-        row:SetFullWidth(true)
-        row:SetText(rowText)
-        if row.label then
-            SafeSetFont(row.label, 12, "", self.Theme.font)
-        end
-        row:SetCallback("OnClick", function()
-            if not IsDisabled() then
-                RemoveSpellAtIndex(index)
-            end
-        end)
-        row:SetCallback("OnEnter", function(w)
-            GameTooltip:SetOwner(w.frame, "ANCHOR_RIGHT")
-            GameTooltip:SetText(name, 1, 1, 1)
-            GameTooltip:AddLine(string.format(LO["Spell ID: %d"], spellID), nil, nil, nil, true)
-            GameTooltip:AddLine(LO["Click to remove."], 0.7, 0.7, 0.7, true)
-            GameTooltip:Show()
-        end)
-        row:SetCallback("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-        if IsDisabled() and row.SetDisabled then
-            row:SetDisabled(true)
-        end
-        RegisterWidget(row)
-        parent:AddChild(row)
+    local function IsDetailDisabled()
+        return IsDisabled() or GetSelected() == nil
     end
+    local function GetSelectedRule()
+        local spellID = GetSelected()
+        if not spellID then
+            return nil
+        end
+        local ruleTable = GetRules()
+        return ruleTable and ruleTable[spellID] or "default"
+    end
+
+    local selectedLabel = AceGUI:Create("Label")
+    selectedLabel:SetFullWidth(true)
+    if selectedLabel.label then
+        SafeSetFont(selectedLabel.label, 12, "", self.Theme.font)
+    end
+    parent:AddChild(selectedLabel)
+
+    local detailRow = self:AddRow(parent, { layout = "Flow" })
+    local ruleDropdown = RegisterWidget(self:AddDropdown(detailRow, {
+        label = rules.label,
+        values = rules.values,
+        width = 240,
+        getFunc = GetSelectedRule,
+        setFunc = function(value)
+            local spellID = GetSelected()
+            if not spellID then
+                return
+            end
+            local ruleTable = GetRules()
+            if not ruleTable then
+                ruleTable = {}
+                self:SetDBValue(rules.dbPath, ruleTable)
+            end
+            ruleTable[spellID] = value ~= "default" and value or nil
+            if opts.callback then
+                opts.callback()
+            end
+            refreshRows()
+        end,
+    }), IsDetailDisabled)
+    local removeButton = RegisterWidget(self:AddButton(detailRow, {
+        label = LO["Remove Spell"],
+        width = 130,
+        callback = function()
+            local spellID = GetSelected()
+            if spellID and not IsDisabled() then
+                RemoveSpell(spellID)
+            end
+        end,
+    }), IsDetailDisabled)
+
+    refreshDetail = function()
+        local spellID = GetSelected()
+        if spellID then
+            local name, _, icon = GetSpellInfo(spellID)
+            selectedLabel:SetText(IconMarkup(icon) .. " |cffffd100" .. (name or LO["Unknown"]) .. "|r")
+        else
+            selectedLabel:SetText("|cff888888" .. LO["Select a spell above to choose whose casts it shows."] .. "|r")
+        end
+        ruleDropdown:SetValue(GetSelectedRule())
+        ruleDropdown:SetDisabled(IsDetailDisabled())
+        removeButton:SetDisabled(IsDetailDisabled())
+    end
+    refreshDetail()
 
     return listLabel
 end

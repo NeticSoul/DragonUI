@@ -5,7 +5,7 @@ local addon = select(2, ...)
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI then return end
 
-local Type, Version = "DragonUIRowList", 1
+local Type, Version = "DragonUIRowList", 2
 if (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end
 
 local pairs, floor, max = pairs, math.floor, math.max
@@ -84,7 +84,7 @@ end
 local methods = {
     ["OnAcquire"] = function(self)
         self.font = nil
-        self.tooltip, self.click = nil, nil
+        self.tooltip, self.click, self.format = nil, nil, nil
         self:SetWidth(200)
         self:SetHeight(ROW_HEIGHT * 6)
         self:SetDisabled(false)
@@ -94,7 +94,7 @@ local methods = {
         for i = 1, #self.items do
             self.items[i], self.labels[i] = nil, nil
         end
-        self.tooltip, self.click = nil, nil
+        self.tooltip, self.click, self.format = nil, nil, nil
         Rewind(self)
         Update(self)
     end,
@@ -112,8 +112,17 @@ local methods = {
             labels[i] = item ~= nil and format and format(item) or nil
         end
 
-        self.tooltip, self.click = handlers.tooltip, handlers.click
+        self.tooltip, self.click, self.format = handlers.tooltip, handlers.click, format
         Rewind(self)
+        Update(self)
+    end,
+
+    -- Re-runs the formatter in place, keeping the scroll position (e.g. to mark a selection).
+    ["RefreshLabels"] = function(self)
+        local items, labels, format = self.items, self.labels, self.format
+        for i = 1, #items do
+            labels[i] = format and format(items[i]) or nil
+        end
         Update(self)
     end,
 

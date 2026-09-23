@@ -526,45 +526,45 @@ function NP.gather.SyncHealth(plateData, value)
     NP.discovery.SetBarColor(bar, r, g, b)
     bar:Show()
 
-    local cfg = NP.config.GetCfg()
-    local showHpNum = cfg.showHealthNumber == true
-    -- Guard SetText on unchanged health values.
-    if showHpNum and maxVal and maxVal > 0 then
-        if plateData.minaHpPct then plateData.minaHpPct:Hide() end
-        if plateData.minaHpNum then
-            if plateData._lastHpNumValue ~= cur then
-                plateData._lastHpNumValue = cur
-                local abbr = addon.TextSystem and addon.TextSystem.AbbreviateLargeNumbers(cur) or tostring(math.floor(cur))
-                plateData.minaHpNum:SetText(abbr)
-            end
-            plateData.minaHpNum:Show()
+    local rowText, barText, barPct = plateData.minaHpPct, plateData.minaHpNum, plateData.minaHpBarPct
+    if not rowText or not barText or not barPct then return end
+    local fmt = NP.module._healthTextFormat or NP.config.GetHealthTextFormat()
+    if fmt == "none" or not maxVal or maxVal <= 0 then
+        -- The name ends at this text's left edge, so stale hidden text would still shorten it.
+        if plateData._hpTextCur then
+            plateData._hpTextCur, plateData._hpTextMax = nil, nil
+            rowText:SetText("")
         end
-        if plateData.minaHpBarPct then
-            local pct = math.floor(cur / maxVal * 100 + 0.5)
-            if plateData._lastHpBarPct ~= pct then
-                plateData._lastHpBarPct = pct
-                plateData.minaHpBarPct:SetText(pct .. "%")
-            end
-            plateData.minaHpBarPct:Show()
-        end
-    else
-        if plateData.minaHpNum then plateData.minaHpNum:Hide() end
-        if plateData.minaHpBarPct then plateData.minaHpBarPct:Hide() end
-        if plateData.minaHpPct and cfg.showHealthPercent ~= false and cfg.centerNameOnly ~= true then
-            if maxVal and maxVal > 0 then
-                local pct = math.floor(cur / maxVal * 100 + 0.5)
-                if plateData._lastHpPct ~= pct then
-                    plateData._lastHpPct = pct
-                    plateData.minaHpPct:SetText(pct .. "%")
-                end
-                plateData.minaHpPct:Show()
+        rowText:Hide()
+        barText:Hide()
+        barPct:Hide()
+        return
+    end
+
+    local placement = NP.module._healthTextPlacement or NP.config.GetHealthTextPlacement()
+    local wantValue, wantPct = fmt ~= "percent", fmt ~= "value"
+    local split = placement == "barSplit"
+    -- Guard SetText on unchanged health values; LayoutMinaStack clears this when the text moves.
+    if plateData._hpTextCur ~= cur or plateData._hpTextMax ~= maxVal then
+        plateData._hpTextCur, plateData._hpTextMax = cur, maxVal
+        local value = wantValue and (addon.TextSystem and addon.TextSystem.AbbreviateLargeNumbers(cur)
+            or tostring(math.floor(cur))) or nil
+        local pct = wantPct and (math.floor(cur / maxVal * 100 + 0.5) .. "%") or nil
+        if split then
+            barText:SetText(value or "")
+            barPct:SetText(pct or "")
+        else
+            local text = (value and pct) and (value .. " " .. pct) or value or pct
+            if placement == "afterName" then
+                rowText:SetText(text)
             else
-                plateData.minaHpPct:Hide()
+                barText:SetText(text)
             end
-        elseif plateData.minaHpPct then
-            plateData.minaHpPct:Hide()
         end
     end
+    if placement == "afterName" then rowText:Show() else rowText:Hide() end
+    if placement ~= "afterName" and (wantValue or not split) then barText:Show() else barText:Hide() end
+    if split and wantPct then barPct:Show() else barPct:Hide() end
 end
 
 local function HidePowerBar(plateData)
@@ -835,31 +835,12 @@ function NP.gather.SyncName(plateData, unit)
             plateData.minaBossSkull:Hide()
         end
     end
-    if plateData.minaNameRow and plateData.minaName.SetPoint and plateData.minaName.ClearAllPoints then
-        if centerOnly then
-            local visW = select(1, NP.config.GetBarRefSize())
-            plateData._nameBossShift = nil
-            -- Skip re-anchor when already centered at this width.
-            if plateData._nameCenteredWidth ~= visW then
-                plateData._nameCenteredWidth = visW
-                plateData.minaName:SetJustifyH("CENTER")
-                plateData.minaName:ClearAllPoints()
-                plateData.minaName:SetPoint("CENTER", plateData.minaNameRow, "CENTER", 0, 0)
-                plateData.minaName:SetWidth(visW)
-            end
-        else
-            plateData._nameCenteredWidth = nil
-            plateData.minaName:SetJustifyH("LEFT")
-            local desiredOffset = 0
-            if showsBossSkull then
-                desiredOffset = bossSkullSize + bossSkullGap + bossSkullNameLeftShift
-            end
-            if plateData._nameBossShift ~= desiredOffset then
-                plateData._nameBossShift = desiredOffset
-                plateData.minaName:ClearAllPoints()
-                plateData.minaName:SetPoint("LEFT", plateData.minaNameRow, "LEFT", desiredOffset, 0)
-            end
+    if plateData.minaNameRow then
+        local leftInset = 0
+        if showsBossSkull and not centerOnly then
+            leftInset = bossSkullSize + bossSkullGap + bossSkullNameLeftShift
         end
+        NP.layout.AnchorPlateName(plateData, centerOnly, leftInset)
     end
     -- Skip SetTextColor/SetText when unchanged; both re-shape the font string.
     if plateData._nameTextR ~= r or plateData._nameTextG ~= g or plateData._nameTextB ~= b then

@@ -109,10 +109,17 @@ end
 function NP.config.GetNameplateFontSizes()
     local cfg = NP.config.GetCfg()
     local scale = cfg.fontSize or 2
+    if NP.config.IsRetailSkin() then
+        return C.RETAIL_NAME_FONT_HEIGHT, 7 + scale
+    end
     return 9 + scale, 7 + scale
 end
 
+-- Modern draws its text like NewEra: Friz Quadrata, or the locale's own font where Friz lacks glyphs.
 function NP.config.GetNameplateFont()
+    if NP.config.IsRetailSkin() then
+        return addon.Fonts and addon.Fonts.PRIMARY or "Fonts\\FRIZQT__.TTF"
+    end
     local key = NP.config.GetCfg().nameFont or "primary"
     local addonKey = C.NAMEPLATE_FONT_MAP[key]
     if addonKey and addon.Fonts then
@@ -139,6 +146,23 @@ end
 -- unless the user opts in, so the existing toggle keeps owning the choice.
 function NP.config.IsNameOverlayBar()
     return NP.config.GetCfg().nameOverlayHealthBar == true
+end
+
+local HEALTH_TEXT_FORMATS = { none = true, percent = true, value = true, valuePercent = true }
+local HEALTH_TEXT_PLACEMENTS = { afterName = true, barRight = true, barCenter = true, barSplit = true }
+
+function NP.config.GetHealthTextFormat()
+    local fmt = NP.config.GetCfg().healthTextFormat
+    return HEALTH_TEXT_FORMATS[fmt] and fmt or "percent"
+end
+
+-- A name inside the bar already owns its left side, so the health text has to share its line.
+function NP.config.GetHealthTextPlacement()
+    if NP.config.IsNameOverlayBar() then
+        return "afterName"
+    end
+    local placement = NP.config.GetCfg().healthTextPosition
+    return HEALTH_TEXT_PLACEMENTS[placement] and placement or "afterName"
 end
 
 function NP.config.IsPowerShown(plateData)

@@ -773,24 +773,59 @@ function NP.layout.ApplyNameplateFonts(plateData)
     local nameSize, powerSize = NP.config.GetNameplateFontSizes()
     local fontPath = NP.config.GetNameplateFont()
 
-    local function applyFont(fs, px)
+    local function applyFont(fs, px, flags)
         if not fs then return end
-        SafeSetFont(fs, fontPath, px, "")
+        SafeSetFont(fs, fontPath, px, flags or "")
+        if flags then
+            -- An outline plus the drop shadow doubles every edge.
+            fs:SetShadowColor(0, 0, 0, flags == "" and 1 or 0)
+            fs:SetShadowOffset(1, -1)
+        end
     end
 
     local cfg = NP.config.GetCfg()
-    local hpNumSize = 7 + (cfg.healthNumberFontSize or 2)
-    applyFont(plateData.minaName, nameSize)
-    applyFont(plateData.minaHpPct, nameSize)
+    -- NewEra's Modern text: outlined over the bar, shadowed above it, health text sized like the name.
+    local modern = NP.config.IsRetailSkin()
+    local hpNumSize = modern and nameSize or (7 + (cfg.healthNumberFontSize or 2))
+    -- The client matches "OUTLINE" inside the flag string, so NewEra's THINOUTLINE draws a plain outline here.
+    local barFlags = modern and "THINOUTLINE" or ""
+    local rowFlags = NP.config.IsNameOverlayBar() and barFlags or ""
+    -- NewEra rounds retail's fractional heights to whole screen pixels so the outline stays crisp.
+    local pixelsPerUnit
+    if modern then
+        -- The UI is 768 units tall; the plate's own scale is left out so a target zoom can't bake in.
+        local res = GetCVar("gxResolution")
+        local screenH = res and tonumber(res:match("%d+x(%d+)"))
+        local plateScale = plateData.plate and plateData.plate:GetScale() or 1
+        if screenH and screenH > 0 and plateScale > 0 then
+            pixelsPerUnit = screenH / 768 / plateScale
+        end
+    end
+    local function snap(fs, px)
+        local parent = pixelsPerUnit and fs and fs:GetParent()
+        local eff = parent and parent:GetEffectiveScale()
+        if not eff or eff <= 0 then
+            return px
+        end
+        local unit = eff * pixelsPerUnit
+        return math.max(1, math.floor(px * unit + 0.5)) / unit
+    end
+    applyFont(plateData.minaName, snap(plateData.minaName, nameSize), rowFlags)
+    applyFont(plateData.minaHpPct, snap(plateData.minaHpPct, nameSize), rowFlags)
     applyFont(plateData.minaSubTitle, math.max(8, nameSize - 2))
-    applyFont(plateData.minaHpNum, hpNumSize)
-    applyFont(plateData.minaHpBarPct, hpNumSize)
+    applyFont(plateData.minaHpNum, snap(plateData.minaHpNum, hpNumSize), barFlags)
+    applyFont(plateData.minaHpBarPct, snap(plateData.minaHpBarPct, hpNumSize), barFlags)
     applyFont(plateData.minaPoCur, powerSize)
     applyFont(plateData.minaPoPct, powerSize)
     local cast = plateData.minaCast
     if cast and cast.minaCastSpellName then
         local fs = cast.minaCastSpellName
-        SafeSetFont(fs, fontPath, cfg.castBarSpellNameFontSize or 9, "OUTLINE")
+        local castSize = modern and C.RETAIL_CAST_FONT_HEIGHT or (cfg.castBarSpellNameFontSize or 9)
+        SafeSetFont(fs, fontPath, snap(fs, castSize), "OUTLINE")
+        if modern then
+            fs:SetShadowColor(0, 0, 0, 0)
+            fs:SetShadowOffset(0, 0)
+        end
         local offX = cfg.castBarSpellNameOffsetX or 0
         local offY = cfg.castBarSpellNameOffsetY or 0
         fs:ClearAllPoints()
@@ -1019,6 +1054,30 @@ function NP.layout.EnsureMinaStack(plateData)
     plateData._depthDirty = true
 end
 
+function NP.layout.IsHealthTextBesideName(plateData)
+    local fmt = NP.module._healthTextFormat or NP.config.GetHealthTextFormat()
+    local placement = NP.module._healthTextPlacement or NP.config.GetHealthTextPlacement()
+    return fmt ~= "none" and placement == "afterName" and not NP.gather.IsHeadlineActive(plateData)
+end
+
+-- The name ends where the health text begins, so no mix of options can make them overlap.
+function NP.layout.AnchorPlateName(plateData, centered, leftInset)
+    local name, row = plateData.minaName, plateData.minaNameRow
+    if not name or not row then return end
+    local besideText = plateData.minaHpPct and NP.layout.IsHealthTextBesideName(plateData)
+    local key = (centered and "c" or "l") .. leftInset .. (besideText and "t" or "")
+    if plateData._nameAnchorKey == key then return end
+    plateData._nameAnchorKey = key
+    name:ClearAllPoints()
+    name:SetJustifyH(centered and "CENTER" or "LEFT")
+    name:SetPoint("LEFT", row, "LEFT", leftInset, 0)
+    if besideText then
+        name:SetPoint("RIGHT", plateData.minaHpPct, "LEFT", -C.NAME_TEXT_GAP, 0)
+    else
+        name:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+    end
+end
+
 -- Elite icon Y: name row above bar, or overlay offset when name sits on bar.
 function NP.layout.GetNameOverlayIconY()
     local cfg = NP.config.GetCfg()
@@ -1078,7 +1137,7 @@ function NP.layout.LayoutMinaStack(plateData)
 
     local nameOverlay = NP.config.IsNameOverlayBar()
     local nameOverlayY = cfg.nameOverlayOffsetY or 0
-    local padX = cfg.nameRowPaddingX or 0
+    local padX = (cfg.nameRowPaddingX or 0) + (nameOverlay and C.BAR_TEXT_INSET or 0)
 
     if plateData.minaNameRow then
         plateData.minaNameRow:ClearAllPoints()
@@ -1094,27 +1153,22 @@ function NP.layout.LayoutMinaStack(plateData)
     -- Child widths use row width minus padding.
     visW = visW - (padX * 2)
 
+    -- Unsized, so the name can truncate against the text's real width.
+    if plateData.minaHpPct and plateData.minaNameRow then
+        if plateData.minaHpPct.SetParent then
+            plateData.minaHpPct:SetParent(plateData.minaNameRow)
+        end
+        plateData.minaHpPct:ClearAllPoints()
+        plateData.minaHpPct:SetPoint("RIGHT", plateData.minaNameRow, "RIGHT", 0, 0)
+    end
+
     if plateData.minaName and plateData.minaNameRow then
         if plateData.minaName.SetParent then
             plateData.minaName:SetParent(plateData.minaNameRow)
         end
-        plateData.minaName:ClearAllPoints()
-        -- Invalidate SyncName's center-anchor guard; this pass re-anchors it.
-        plateData._nameCenteredWidth = nil
-        if cfg.centerNameOnly then
-            plateData.minaName:SetJustifyH("CENTER")
-            plateData.minaName:SetPoint("CENTER", plateData.minaNameRow, "CENTER", 0, 0)
-            plateData.minaName:SetWidth(visW)
-            plateData._nameBossShift = nil
-        else
-            plateData.minaName:SetJustifyH("LEFT")
-            plateData.minaName:SetPoint("LEFT", plateData.minaNameRow, "LEFT", 0, 0)
-            plateData._nameBossShift = nil
-            -- showHealthNumber moves the percent text into the bar, hiding minaHpPct here.
-            local reserveForPct = cfg.showHealthPercent ~= false and cfg.showHealthNumber ~= true
-            local nameWidth = reserveForPct and visW * 0.68 or visW
-            plateData.minaName:SetWidth(nameWidth)
-        end
+        plateData._nameAnchorKey = nil
+        local headline = NP.gather.IsHeadlineActive(plateData)
+        NP.layout.AnchorPlateName(plateData, cfg.centerNameOnly == true or headline, 0)
     end
     if plateData.minaBossSkull and plateData.minaNameRow then
         local skullSize = 14
@@ -1124,27 +1178,32 @@ function NP.layout.LayoutMinaStack(plateData)
         plateData.minaBossSkull:Hide()
     end
 
-    if plateData.minaHpPct and plateData.minaNameRow then
-        if plateData.minaHpPct.SetParent then
-            plateData.minaHpPct:SetParent(plateData.minaNameRow)
-        end
-        plateData.minaHpPct:ClearAllPoints()
-        plateData.minaHpPct:SetPoint("RIGHT", plateData.minaNameRow, "RIGHT", 0, 0)
-        plateData.minaHpPct:SetWidth(visW * 0.32)
-    end
-
     if plateData.minaHpTextRow then
         plateData.minaHpTextRow:ClearAllPoints()
         plateData.minaHpTextRow:SetAllPoints(hp)
     end
+    local placement = NP.config.GetHealthTextPlacement()
+    local inset = C.BAR_TEXT_INSET
     if plateData.minaHpNum then
-        plateData.minaHpNum:ClearAllPoints()
-        plateData.minaHpNum:SetPoint("LEFT", hp, "LEFT", 4, 0)
+        local text = plateData.minaHpNum
+        text:ClearAllPoints()
+        if placement == "barCenter" then
+            text:SetJustifyH("CENTER")
+            text:SetPoint("CENTER", hp, "CENTER", 0, 0)
+        elseif placement == "barRight" then
+            text:SetJustifyH("RIGHT")
+            text:SetPoint("RIGHT", hp, "RIGHT", -inset, 0)
+        else
+            text:SetJustifyH("LEFT")
+            text:SetPoint("LEFT", hp, "LEFT", inset, 0)
+        end
     end
     if plateData.minaHpBarPct then
         plateData.minaHpBarPct:ClearAllPoints()
-        plateData.minaHpBarPct:SetPoint("RIGHT", hp, "RIGHT", -4, 0)
+        plateData.minaHpBarPct:SetPoint("RIGHT", hp, "RIGHT", -inset, 0)
     end
+    -- The placement may have moved the text to another FontString; SyncHealth must rewrite it.
+    plateData._hpTextCur, plateData._hpTextMax = nil, nil
 
     if plateData.minaPoTextRow then
         plateData.minaPoTextRow:ClearAllPoints()
@@ -1164,8 +1223,8 @@ function NP.layout.LayoutMinaStack(plateData)
     if plateData.minaDebuffHost then
         plateData.minaDebuffHost:ClearAllPoints()
         plateData.minaDebuffHost:SetSize(visW, 16)
-        plateData.minaDebuffHost:SetPoint("BOTTOMLEFT", plateData.minaNameRow or plateData.minaName, "TOPLEFT",
-            cfg.debuffOffsetX or 0, (C.DEBUFF_HOST_OFFSET_Y or 2) + (cfg.debuffOffsetY or 0))
+        local anchorTo, x, y = NP.widgets.GetDebuffHostAnchor(plateData)
+        plateData.minaDebuffHost:SetPoint("BOTTOMLEFT", anchorTo, "TOPLEFT", x, y)
     end
 
     NP.widgets.LayoutRaidMarker(plateData)

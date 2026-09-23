@@ -407,8 +407,9 @@ local function GetParsedFilterSet(rawList)
             ids[id] = true
             local spellName = GetSpellInfo(id)
             local key = NormalizeAuraName(spellName)
-            if key then
-                names[key] = true
+            -- First listed id wins, so a rank matched by name always finds the same entry's settings.
+            if key and not names[key] then
+                names[key] = id
             end
         end
     end
@@ -418,24 +419,29 @@ local function GetParsedFilterSet(rawList)
     return set
 end
 
-local function AuraMatchesFilterSet(data, filterSet)
+-- Returns the id of the list entry the aura matches: its own id, or another rank by name.
+local function MatchListedSpellId(data, filterSet)
     if not data or not filterSet then
-        return false
+        return nil
     end
     if data.spellId and filterSet.ids[data.spellId] then
-        return true
+        return data.spellId
     end
     local key = NormalizeAuraName(data.name)
     if key and filterSet.names[key] then
-        return true
+        return filterSet.names[key]
     end
     if data.spellId then
         key = NormalizeAuraName(GetSpellInfo(data.spellId))
         if key and filterSet.names[key] then
-            return true
+            return filterSet.names[key]
         end
     end
-    return false
+    return nil
+end
+
+local function AuraMatchesFilterSet(data, filterSet)
+    return MatchListedSpellId(data, filterSet) ~= nil
 end
 
 -- Mechanics do not flag these (Ice Block carries none), so this hand-kept list seeds defensiveBuffList.
@@ -583,13 +589,29 @@ function DebuffRuntime.PassesFilters(cfg, data, isFriendlyPlate)
         end
         return PassesListFilter(mode, cfg.buffFilterList, data)
     end
+    local mode = cfg.debuffFilterMode
+    local mine = data.casterGUID ~= nil and data.casterGUID == UnitGUID("player")
+    -- A whitelisted spell can say for itself whose casts it shows, like PlateBuffs' per-spell rule.
+    if mode == "whitelist" then
+        local listedId = MatchListedSpellId(data, GetParsedFilterSet(cfg.debuffFilterList))
+        if not listedId then
+            return false
+        end
+        local rules = cfg.debuffFilterRules
+        local rule = rules and rules[listedId]
+        if rule == "any" then
+            return true
+        elseif rule == "mine" then
+            return mine
+        end
+    end
     -- Crowd control matters whoever cast it, so it survives the "only mine" filter.
-    if cfg.debuffOnlyMine and data.casterGUID ~= UnitGUID("player") then
+    if cfg.debuffOnlyMine and not mine then
         if not (cfg.debuffIncludeOtherCC and IsCrowdControl(data.spellId, cfg)) then
             return false
         end
     end
-    return PassesListFilter(cfg.debuffFilterMode, cfg.debuffFilterList, data)
+    return mode ~= "blacklist" or not AuraMatchesFilterSet(data, GetParsedFilterSet(cfg.debuffFilterList))
 end
 
 local function DebuffPriorityComparator(a, b)
@@ -871,9 +893,10 @@ local function PollHostIcons(host, now, cfg)
                         if showCooldown then
                             -- Font rarely changes; SetFont recreates the font
                             -- object, so only re-apply when the size differs.
-                            if icon._appliedCdFontSize ~= fontSize then
-                                icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", fontSize, "OUTLINE")
-                                icon._appliedCdFontSize = fontSize
+                            local iconFontSize = icon._cdFontSize or fontSize
+                            if icon._appliedCdFontSize ~= iconFontSize then
+                                icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", iconFontSize, "OUTLINE")
+                                icon._appliedCdFontSize = iconFontSize
                             end
                             -- Countdown text only changes ~1/s; skip identical SetText.
                             local txt = FormatAuraTimeLeft(remaining)
@@ -1251,6 +1274,7 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
     local cooldownFontSize = (cfg and cfg.debuffCooldownFontSize) or 9
     local cooldownTextAnchor = (cfg and cfg.debuffCooldownTextAnchor) or "topright"
     local framed = IsDebuffIconBorderEnabled(cfg)
+    local modernText = NP.config.IsRetailSkin()
 
     host._debuffCooldownFontSize = cooldownFontSize
     host._debuffShowCooldown = showCooldown
@@ -1333,10 +1357,21 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
         icon.expiration = aura.expiration
         ApplyPriorityHighlight(icon, aura, cfg)
         ApplySwipeCooldown(icon, aura, cfg)
+        local cdFontSize, countFontSize = cooldownFontSize, 9
+        if modernText then
+            -- NewEra sizes the timer and the stack count to the icon.
+            cdFontSize = max(8, floor(size * 0.55 + 0.5))
+            countFontSize = max(7, floor(size * 0.5 + 0.5))
+        end
+        icon._cdFontSize = cdFontSize
         -- Re-apply SetFont only on size change.
-        if icon._appliedCdFontSize ~= cooldownFontSize then
-            icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cooldownFontSize, "OUTLINE")
-            icon._appliedCdFontSize = cooldownFontSize
+        if icon._appliedCdFontSize ~= cdFontSize then
+            icon.cooldownText:SetFont("Fonts\\FRIZQT__.TTF", cdFontSize, "OUTLINE")
+            icon._appliedCdFontSize = cdFontSize
+        end
+        if icon._appliedCountFontSize ~= countFontSize then
+            icon.text:SetFont("Fonts\\FRIZQT__.TTF", countFontSize, "OUTLINE")
+            icon._appliedCountFontSize = countFontSize
         end
         ApplyCooldownTextAnchor(icon, cooldownTextAnchor)
         if showCooldown then
@@ -1542,7 +1577,7 @@ end
 
 function NP.auras.ApplyPreviewGeometry(plateData, cfg)
     local overlay = plateData.debuffPreviewOverlay
-    local relativeFrame = plateData.minaNameRow or plateData.minaName
+    local relativeFrame, x, y = NP.widgets.GetDebuffHostAnchor(plateData)
     if not overlay or not relativeFrame then
         return
     end
@@ -1554,8 +1589,7 @@ function NP.auras.ApplyPreviewGeometry(plateData, cfg)
 
     overlay:ClearAllPoints()
     overlay:SetSize(width, iconSize)
-    overlay:SetPoint("BOTTOMLEFT", relativeFrame, "TOPLEFT",
-        cfg.debuffOffsetX or 0, (C.DEBUFF_HOST_OFFSET_Y or 2) + (cfg.debuffOffsetY or 0))
+    overlay:SetPoint("BOTTOMLEFT", relativeFrame, "TOPLEFT", x, y)
 end
 
 function NP.auras.SyncPreviewOverlay(plateData)

@@ -882,9 +882,9 @@ local defaults = {
                 barHeight = 9, -- height of the nameplate in pixels
                 fontSize = 2, -- Scale 1-10, maps to name/HP font px
                 nameFont = "primary", -- font for name/level text (primary, actionbar, narrow, arial, system)
-                showHealthPercent = true,
-                showHealthNumber = false, -- show HP as a number (e.g. 22k) plus percent on the health bar
-                healthNumberFontSize = 2, -- Scale 1-10, maps to health-number font px
+                healthTextFormat = "percent", -- "none" | "percent" | "value" | "valuePercent" (value then percent)
+                healthTextPosition = "afterName", -- "afterName" (the name truncates first) | "barRight" | "barCenter" | "barSplit"; a name inside the bar forces "afterName"
+                healthNumberFontSize = 2, -- Scale 1-10, font px of health text drawn inside the bar
                 nameOverlayHealthBar = false, -- anchor name/level/percent/elite icon centered on the health bar instead of above it
                 nameOverlayOffsetY = 0, -- vertical (Y) offset applied when nameOverlayHealthBar is enabled
                 nameRowPaddingX = 0, -- horizontal inset (left & right) applied to name/level/percent row; does not affect the elite icon
@@ -929,6 +929,7 @@ local defaults = {
                 debuffIncludeOtherCC = true, -- let anyone's crowd control through the "only mine" filter
                 debuffFilterMode = "all", -- "all" | "whitelist" | "blacklist"
                 debuffFilterList = "", -- comma-separated spell IDs for whitelist/blacklist
+                debuffFilterRules = {}, -- whitelist only: [spellId] = "any" | "mine"; unset follows debuffOnlyMine
                 debuffModernIconBorder = true, -- action-bar style frame around debuff icons
                 debuffHighlightCC = true, -- colored border by aura category (crowd control, defensive, dispel type)
                 showBuffs = false, -- show enemy buffs in the same row as debuffs, ordered by rank
@@ -992,7 +993,7 @@ local defaults = {
                 totemIconOnly = false, -- hide the totem nameplate entirely; show only the totem icon
                 showTotemTimer = true, -- show remaining life on own totems (requires GetTotemInfo data)
                 totemNormalModeList = "", -- comma-separated exact totem names forced to render as a plain plate (no icon)
-                centerNameOnly = false, -- hide level/health % and center the unit name
+                centerNameOnly = false, -- center the name in the space the health text leaves
                 showLevelInName = false, -- show the level in the nameplate
                 showLevelOnHover = false, -- level on hover+target; false = target only
                 showLevelAlways = true, -- always show level bracket on any resolvable plate
@@ -1002,7 +1003,7 @@ local defaults = {
                 friendlyNameClassColors = false, -- class colors for friendly player name text (needs bar class options)
                 friendlyPlayerColor = { r = 0, g = 0, b = 1 }, -- default friendly player color (vanilla blue)
                 friendlyNPCColor = { r = 0, g = 1, b = 0 }, -- default friendly NPC color (green)
-                partyClassColors = false, -- use class colors for party members instead of friendlyPlayerColor
+                partyClassColors = true, -- use class colors for party members instead of friendlyPlayerColor
                 friendlyClassColors = false, -- class-color ALL friendly players (not just group); hover/target on stock, instant with awesome_wotlk
                 friendlyNameOnly = false, -- MASTER: enable headline mode (hide health/power/cast bars, show only the name)
                 friendlyNameOnlyParty = true, -- headline mode for party/raid members (default on = preserves previous behavior)

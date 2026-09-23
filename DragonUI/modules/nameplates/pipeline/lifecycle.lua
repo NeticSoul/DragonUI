@@ -87,7 +87,7 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._styledChromeCombo = nil
     plateData._styledChromeHeadline = nil
     plateData._styledChromeReaction = nil
-    plateData._nameCenteredWidth = nil
+    plateData._nameAnchorKey = nil
     plateData._nameTextLast = nil
     plateData._nameTextR = nil
     plateData._nameTextG = nil

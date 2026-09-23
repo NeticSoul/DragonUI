@@ -10,7 +10,7 @@ These are general-purpose functions that can be used by any module.
 local addon = select(2, ...)
 local L = addon.L
 
-addon.DB_SCHEMA_VERSION = 2
+addon.DB_SCHEMA_VERSION = 3
 addon.RELEASE_VERSION = GetAddOnMetadata("DragonUI", "Version") or "2.5"
 
 -- ============================================================================
@@ -1280,6 +1280,20 @@ function addon:ApplyDatabaseMigrations()
             end
             modules.combuctor = nil
         end
+    end
+
+    -- Nameplate health text: the percent and number toggles became one format plus a placement.
+    local nameplates = modules and rawget(modules, "nameplates")
+    if nameplates then
+        if currentVersion < 3 then
+            if rawget(nameplates, "showHealthNumber") == true then
+                nameplates.healthTextFormat, nameplates.healthTextPosition = "valuePercent", "barSplit"
+            elseif rawget(nameplates, "showHealthPercent") == false or rawget(nameplates, "centerNameOnly") == true then
+                -- Centering the name used to hide the percent as well.
+                nameplates.healthTextFormat = "none"
+            end
+        end
+        nameplates.showHealthNumber, nameplates.showHealthPercent = nil, nil
     end
 
     -- profile.chat had no readers left; clear stored values now that the default is gone.
