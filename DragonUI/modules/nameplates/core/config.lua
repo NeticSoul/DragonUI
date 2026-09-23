@@ -109,17 +109,10 @@ end
 function NP.config.GetNameplateFontSizes()
     local cfg = NP.config.GetCfg()
     local scale = cfg.fontSize or 2
-    if NP.config.IsRetailSkin() then
-        return C.RETAIL_NAME_FONT_HEIGHT, 7 + scale
-    end
     return 9 + scale, 7 + scale
 end
 
--- Modern draws its text like NewEra: Friz Quadrata, or the locale's own font where Friz lacks glyphs.
 function NP.config.GetNameplateFont()
-    if NP.config.IsRetailSkin() then
-        return addon.Fonts and addon.Fonts.PRIMARY or "Fonts\\FRIZQT__.TTF"
-    end
     local key = NP.config.GetCfg().nameFont or "primary"
     local addonKey = C.NAMEPLATE_FONT_MAP[key]
     if addonKey and addon.Fonts then

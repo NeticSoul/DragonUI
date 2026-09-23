@@ -308,8 +308,16 @@ local function BuildGeneralSubTab(scroll)
                 C:SetDBValue(DB .. ".barWidth", modern and 148 or 150)
                 C:SetDBValue(DB .. ".barHeight", modern and 16 or 9)
                 C:SetDBValue(DB .. ".castBarHeight", modern and 8 or 9)
-                -- The modern cast bar is drawn around its spell name, so the skin needs it on.
+                -- Modern starts from NewEra's font and text sizes; all stay editable afterwards.
+                C:SetDBValue(DB .. ".fontSize", 2)
+                C:SetDBValue(DB .. ".castBarSpellNameFontSize", modern and 8 or 9)
+                -- NewEra's timer is 0.55 of the icon; Modern scales it up again on enlarged icons.
+                local iconSize = C:GetDBValue(DB .. ".debuffIconSize") or 24
+                C:SetDBValue(DB .. ".debuffCooldownFontSize",
+                    modern and math.min(16, math.max(8, math.floor(iconSize * 0.55 + 0.5))) or 10)
                 if modern then
+                    C:SetDBValue(DB .. ".nameFont", "primary")
+                    -- The modern cast bar is drawn around its spell name, so the skin needs it on.
                     C:SetDBValue(DB .. ".showCastBarSpellName", true)
                 end
                 -- NewEra ships its aggro flare off, while the legacy glow is part of that art.
@@ -823,9 +831,6 @@ local function BuildHealthSubTab(scroll)
         callback = RefreshNameplates,
     })
 
-    if ModernOwnsText() then
-        C:AddDescription(nameSection, LO["The Modern style draws the name and health text like NewEra: Friz Quadrata at retail's size, outlined inside the bar."])
-    end
     local fontRow = C:AddRow(nameSection)
     C:AddDropdown(fontRow, {
         label = LO["Font"],
@@ -837,7 +842,6 @@ local function BuildHealthSubTab(scroll)
             arial = LO["Arial Font"],
         },
         width = 220,
-        disabled = ModernOwnsText,
         callback = RefreshNameplates,
     })
     C:AddSlider(fontRow, {
@@ -846,9 +850,29 @@ local function BuildHealthSubTab(scroll)
         dbPath = DB .. ".fontSize",
         min = 1, max = 10, step = 1,
         width = 200,
-        disabled = ModernOwnsText,
         callback = RefreshNameplates,
     })
+    if ModernOwnsText() then
+        -- One setting per name position, so inside and above keep their own choice.
+        local function OutlineKey()
+            return DB .. (IsNameInsideBar() and ".retailTextOutlineInside" or ".retailTextOutlineAbove")
+        end
+        C:AddToggle(nameSection, {
+            label = LO["Text Outline"],
+            desc = LO["Black outline on the name and health text."],
+            getFunc = function()
+                local value = C:GetDBValue(OutlineKey())
+                if IsNameInsideBar() then
+                    return value ~= false
+                end
+                return value == true
+            end,
+            setFunc = function(value)
+                C:SetDBValue(OutlineKey(), value and true or false)
+            end,
+            callback = RefreshNameplates,
+        })
+    end
 
     local levelSection = C:AddSection(scroll, LO["Level"])
 
@@ -918,7 +942,7 @@ local function BuildHealthSubTab(scroll)
     }), IsHealthTextPositionLocked)
     Depends(C:AddSlider(textRow, {
         label = LO["Font Size"],
-        desc = LO["Font size of the health text inside the bar (1-10). After the name it uses the name's font size."],
+        desc = LO["Font size of the health text inside the bar (1-10). After the name, or in the Modern style, it matches the name."],
         dbPath = DB .. ".healthNumberFontSize",
         min = 1, max = 10, step = 1,
         width = 200,
@@ -1237,17 +1261,12 @@ local function BuildBarsSubTab(scroll)
         return IsCastBarDisabled() or not C:GetDBValue(DB .. ".showCastBarSpellName")
     end
 
-    if ModernOwnsText() then
-        C:AddDescription(castSection, LO["The Modern style sizes the spell name like NewEra."])
-    end
     C:AddSlider(castSection, {
         label = LO["Spell Name Font Size"],
         dbPath = DB .. ".castBarSpellNameFontSize",
         min = 6, max = 16, step = 1,
         width = 200,
-        disabled = function()
-            return IsSpellNameDisabled() or ModernOwnsText()
-        end,
+        disabled = IsSpellNameDisabled,
         callback = RefreshNameplates,
     })
 
@@ -1938,20 +1957,14 @@ local function BuildDebuffsSubTab(scroll)
         callback = RefreshDisabledStates,
     }), IsDebuffsDisabled)
 
-    local function IsCooldownFontSizeDisabled()
-        return IsCooldownTextDisabled() or ModernOwnsText()
-    end
-    if ModernOwnsText() then
-        C:AddDescription(timerSection, LO["The Modern style sizes the timer and stack count to each icon, like NewEra."])
-    end
     Track(C:AddSlider(timerSection, {
         label = LO["Cooldown Font Size"],
         dbPath = DB .. ".debuffCooldownFontSize",
         min = 6, max = 16, step = 1,
         width = 200,
-        disabled = IsCooldownFontSizeDisabled,
+        disabled = IsCooldownTextDisabled,
         callback = RefreshNameplates,
-    }), IsCooldownFontSizeDisabled)
+    }), IsCooldownTextDisabled)
 
     Track(C:AddDropdown(timerSection, {
         label = LO["Cooldown Text Position"],

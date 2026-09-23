@@ -784,12 +784,17 @@ function NP.layout.ApplyNameplateFonts(plateData)
     end
 
     local cfg = NP.config.GetCfg()
-    -- NewEra's Modern text: outlined over the bar, shadowed above it, health text sized like the name.
+    -- Modern health text is sized like the name; the outline is chosen per name position.
     local modern = NP.config.IsRetailSkin()
     local hpNumSize = modern and nameSize or (7 + (cfg.healthNumberFontSize or 2))
     -- The client matches "OUTLINE" inside the flag string, so NewEra's THINOUTLINE draws a plain outline here.
-    local barFlags = modern and "THINOUTLINE" or ""
-    local rowFlags = NP.config.IsNameOverlayBar() and barFlags or ""
+    local outline
+    if NP.config.IsNameOverlayBar() then
+        outline = cfg.retailTextOutlineInside ~= false
+    else
+        outline = cfg.retailTextOutlineAbove == true
+    end
+    local textFlags = (modern and outline) and "THINOUTLINE" or ""
     -- NewEra rounds retail's fractional heights to whole screen pixels so the outline stays crisp.
     local pixelsPerUnit
     if modern then
@@ -810,18 +815,17 @@ function NP.layout.ApplyNameplateFonts(plateData)
         local unit = eff * pixelsPerUnit
         return math.max(1, math.floor(px * unit + 0.5)) / unit
     end
-    applyFont(plateData.minaName, snap(plateData.minaName, nameSize), rowFlags)
-    applyFont(plateData.minaHpPct, snap(plateData.minaHpPct, nameSize), rowFlags)
+    applyFont(plateData.minaName, snap(plateData.minaName, nameSize), textFlags)
+    applyFont(plateData.minaHpPct, snap(plateData.minaHpPct, nameSize), textFlags)
     applyFont(plateData.minaSubTitle, math.max(8, nameSize - 2))
-    applyFont(plateData.minaHpNum, snap(plateData.minaHpNum, hpNumSize), barFlags)
-    applyFont(plateData.minaHpBarPct, snap(plateData.minaHpBarPct, hpNumSize), barFlags)
+    applyFont(plateData.minaHpNum, snap(plateData.minaHpNum, hpNumSize), textFlags)
+    applyFont(plateData.minaHpBarPct, snap(plateData.minaHpBarPct, hpNumSize), textFlags)
     applyFont(plateData.minaPoCur, powerSize)
     applyFont(plateData.minaPoPct, powerSize)
     local cast = plateData.minaCast
     if cast and cast.minaCastSpellName then
         local fs = cast.minaCastSpellName
-        local castSize = modern and C.RETAIL_CAST_FONT_HEIGHT or (cfg.castBarSpellNameFontSize or 9)
-        SafeSetFont(fs, fontPath, snap(fs, castSize), "OUTLINE")
+        SafeSetFont(fs, fontPath, snap(fs, cfg.castBarSpellNameFontSize or 9), "OUTLINE")
         if modern then
             fs:SetShadowColor(0, 0, 0, 0)
             fs:SetShadowOffset(0, 0)
