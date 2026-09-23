@@ -706,3 +706,18 @@ L["Level %d"] = "Level %d"
 
 L["Low HP Alert"] = "Niedriges HP-Alarm"
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "Spielt einen Ton ab und lässt die Bildschirmränder blinken, wenn deine HP unter den Schwellenwert fällt."
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Zauberbuch"
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = "Zauberbuch-Modul deaktiviert: %s ersetzt dasselbe Zauberbuch-Fenster."
+L["Learned spells book with categories, search, and filters."] = "Gelernte Zauber mit Kategorien, Suche und Filtern."
+L["Spellbook settings"] = "Zauberbuch-Einstellungen"
+L["Show All Ranks"] = "Alle Ränge anzeigen"
+L["Hide Passives"] = "Passive ausblenden"
+L["To Learn"] = "Zu lernen"
+L["Requires Level"] = "Benötigtes Level"
+L["Training Cost"] = "Trainingskosten"
+L["Show second page"] = "Zweite Seite anzeigen"
+L["Show single page"] = "Einzelne Seite anzeigen"

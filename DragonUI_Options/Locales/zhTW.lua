@@ -1905,3 +1905,13 @@ L["HP Warning Threshold"] = "HP警告臨界值"
 L["Percentage of HP at which the warning triggers."] = "HP觸發警告的百分比。"
 L["Test Warning (3 sec)"] = "測試警告（3秒）"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "觸發3秒的警告狀態預覽，以幫助你調整臨界值。"
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "法術書"
+L["Scale the spellbook window."] = "縮放法術書視窗。"
+L["Enable Spellbook"] = "啟用法術書"
+L["Enable the DragonUI spellbook module."] = "啟用DragonUI法術書模組。"
+L["Spellbook Scale"] = "法術書縮放"
+L["Resize Spellbook window to your preference."] = "依您的偏好調整法術書視窗大小。"

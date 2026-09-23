@@ -706,3 +706,17 @@ L["Level %d"] = "Уровень %d"
 
 L["Low HP Alert"] = "Низкий HP — Оповещение"
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "Играет звук и мигает краями экрана, когда ваш HP падает ниже порога."
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Книга заклинаний"
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = "Модуль книги заклинаний отключен: %s заменяет то же окно книги заклинаний."
+L["Learned spells book with categories, search, and filters."] = "Книга изученных заклинаний с категориями, поиском и фильтрами."
+L["Spellbook settings"] = "Настройки книги заклинаний"
+L["Show All Ranks"] = "Показать все ранги"
+L["Hide Passives"] = "Скрыть пассивные"
+L["To Learn"] = "Обучиться"
+L["Requires Level"] = "Требуемый уровень"
+L["Training Cost"] = "Стоимость обучения"
+L["Show second page"] = "Показать вторую страницу"
+L["Show single page"] = "Показать одну страницу"

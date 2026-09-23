@@ -1726,3 +1726,13 @@ L["HP Warning Threshold"] = "Limiar de Aviso de HP"
 L["Percentage of HP at which the warning triggers."] = "Porcentagem do HP na qual o aviso é disparado."
 L["Test Warning (3 sec)"] = "Testar Aviso (3 seg)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Ativa uma prévia de 3 segundos do estado de aviso para ajudar você a ajustar o limiar."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Livro de Feitiços"
+L["Scale the spellbook window."] = "Dimensionar a janela do livro de feitiços."
+L["Enable Spellbook"] = "Ativar Livro de Feitiços"
+L["Enable the DragonUI spellbook module."] = "Ativar o módulo de livro de feitiços do DragonUI."
+L["Spellbook Scale"] = "Escala do Livro de Feitiços"
+L["Resize Spellbook window to your preference."] = "Redimensionar a janela do livro de feitiços conforme sua preferência."

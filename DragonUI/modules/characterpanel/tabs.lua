@@ -23,8 +23,19 @@ local TAB_GAP = 1
 local TAB_TEX = addon._dir .. "UI\\uiframetabs"
 
 -- The button is 32 tall; inactive art is 36 and the selected *Disabled* set 42, both flush to the
--- top, so the extra grows DOWNWARD and the selected tab drops below the strip.
+-- top, so the extra grows DOWNWARD and the selected tab drops below the strip. ReskinTab(t, true)
+-- mirrors this vertically (nose up, flat edge down, selected grows ABOVE the strip) for windows
+-- whose tabs sit on top of a band instead of hanging off an edge -- e.g. the spellbook.
 local TAB_H, ACTIVE_LIFT = 32, 0
+
+-- Nose-up variant: swap the V axis so the pointy rod and the label mirror around the strip.
+local function flipV(tc) return { tc[1], tc[2], tc[4], tc[3] } end
+local function flipPoint(p)
+    if p == "TOPLEFT" then return "BOTTOMLEFT" end
+    if p == "TOPRIGHT" then return "BOTTOMRIGHT" end
+    if p == "TOP" then return "BOTTOM" end
+    return p
+end
 
 -- Overhangs read off where the art sits inside each rect: inactive caps carry 1px on their outer
 -- edge, the ACTIVE right cap 2px and its left none. Both states span -4 .. W+4 of visible art.
@@ -69,14 +80,20 @@ local function buildHighlight(t)
     if stock then stock:SetTexture(nil) end
 
     local pieces, ends = {}, {}
+    local onTop = t._duiOnTop
     for _, piece in ipairs(HL_PIECES) do
         local anchor = _G[name .. piece.key]
         if not anchor then return end
         local tex = t:CreateTexture(nil, "HIGHLIGHT")
         tex:SetTexture(TAB_TEX)
-        tex:SetTexCoord(unpack(piece.tc))
+        if onTop then
+            tex:SetTexCoord(piece.tc[1], piece.tc[2], piece.tc[4], piece.tc[3])
+            tex:SetPoint(flipPoint(piece.p), anchor, flipPoint(piece.p), 0, 0)
+        else
+            tex:SetTexCoord(unpack(piece.tc))
+            tex:SetPoint(piece.p, anchor, piece.p, 0, 0)
+        end
         tex:SetSize(piece.w, piece.h)
-        tex:SetPoint(piece.p, anchor, piece.p, 0, 0)
         tex:SetBlendMode("ADD")
         tex:SetAlpha(HL_ALPHA)
         pieces[#pieces + 1] = tex
@@ -85,11 +102,17 @@ local function buildHighlight(t)
 
     local middle = t:CreateTexture(nil, "HIGHLIGHT")
     middle:SetTexture(TAB_TEX)
-    middle:SetTexCoord(unpack(HL_MIDDLE_TC))
+    if onTop then middle:SetTexCoord(HL_MIDDLE_TC[1], HL_MIDDLE_TC[2], HL_MIDDLE_TC[4], HL_MIDDLE_TC[3])
+    else middle:SetTexCoord(unpack(HL_MIDDLE_TC)) end
     middle:SetHorizTile(true)
     middle:SetHeight(HL_H)
-    middle:SetPoint("TOPLEFT", ends.Left, "TOPRIGHT", 0, 0)
-    middle:SetPoint("TOPRIGHT", ends.Right, "TOPLEFT", 0, 0)
+    if onTop then
+        middle:SetPoint("BOTTOMLEFT", ends.Left, "BOTTOMRIGHT", 0, 0)
+        middle:SetPoint("BOTTOMRIGHT", ends.Right, "BOTTOMLEFT", 0, 0)
+    else
+        middle:SetPoint("TOPLEFT", ends.Left, "TOPRIGHT", 0, 0)
+        middle:SetPoint("TOPRIGHT", ends.Right, "TOPLEFT", 0, 0)
+    end
     middle:SetBlendMode("ADD")
     middle:SetAlpha(HL_ALPHA)
     pieces[#pieces + 1] = middle
@@ -101,15 +124,16 @@ local function reskin(t)
     if not t or t._duiReskinned then return end
     t._duiReskinned = true
     local name = t:GetName()
+    local onTop = t._duiOnTop
 
     for _, piece in ipairs(TAB_PIECES) do
         local tex = _G[name .. piece.key]
         if tex then
             tex:ClearAllPoints()
             tex:SetTexture(TAB_TEX)
-            tex:SetTexCoord(unpack(piece.tc))
+            if onTop then tex:SetTexCoord(unpack(flipV(piece.tc))) else tex:SetTexCoord(unpack(piece.tc)) end
             tex:SetSize(piece.w, piece.h)
-            tex:SetPoint(piece.p, t, piece.p, piece.x, piece.y)
+            tex:SetPoint(onTop and flipPoint(piece.p) or piece.p, t, onTop and flipPoint(piece.p) or piece.p, piece.x, piece.y)
         end
     end
 
@@ -124,13 +148,18 @@ local function reskin(t)
         if tex and left and right then
             tex:ClearAllPoints()
             tex:SetTexture(TAB_TEX)
-            tex:SetTexCoord(unpack(m.tc))
+            if onTop then tex:SetTexCoord(unpack(flipV(m.tc))) else tex:SetTexCoord(unpack(m.tc)) end
             -- Height only, never width: the strip spans between the caps by anchor, and a width on
             -- top leaves the engine reconciling a 1px column against the span.
             tex:SetHorizTile(true)
             tex:SetHeight(m.h)
-            tex:SetPoint("TOPLEFT", left, "TOPRIGHT")
-            tex:SetPoint("TOPRIGHT", right, "TOPLEFT")
+            if onTop then
+                tex:SetPoint("BOTTOMLEFT", left, "BOTTOMRIGHT")
+                tex:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+            else
+                tex:SetPoint("TOPLEFT", left, "TOPRIGHT")
+                tex:SetPoint("TOPRIGHT", right, "TOPLEFT")
+            end
         end
     end
 
@@ -157,7 +186,9 @@ local function syncState(t)
     local text = _G[t:GetName() .. "Text"]
     if text then
         text:ClearAllPoints()
-        text:SetPoint("CENTER", t, "CENTER", TEXT_NUDGE_X, selected and TEXT_ACTIVE_DROP or 0)
+        -- The onTop variant regrows UPWARD, so the selected label rides up by the same drop.
+        local drop = selected and (t._duiOnTop and -TEXT_ACTIVE_DROP or TEXT_ACTIVE_DROP) or 0
+        text:SetPoint("CENTER", t, "CENTER", TEXT_NUDGE_X, drop)
     end
 
     -- Muted rather than hidden while selected: the highlight is cut for the 36px inactive body, so
@@ -326,8 +357,11 @@ CP.TAB_SUBFRAME = TAB_SUBFRAME
 
 -- Shared so a DragonUI window outside the character panel gets the same tab art. The hooks come
 -- with it: Blizzard's PanelTemplates applies the selected state, so a tab elsewhere needs re-syncing.
-function CP.ReskinTab(t)
+-- Pass onTop=true for tabs that sit ON a band (nose up, like retail isTabOnTop): the art and the
+-- label drift mirror vertically around the strip instead of hanging off it.
+function CP.ReskinTab(t, onTop)
     if not t then return end
+    t._duiOnTop = onTop and true or nil
     hookTabSelection()
     hookBlizzardResize()
     reskin(t)
