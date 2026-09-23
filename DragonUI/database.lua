@@ -1167,7 +1167,6 @@ local defaults = {
                 questLog = true, -- Quest log side panel open
                 maximized = false, -- Window at its maximized size
                 objectives = true, -- The objective lines under each quest title in the side panel
-                questPOI = true, -- Blizzard's numbered quest pins and their objective areas on the canvas
                 landmarks = true, -- The client's own landmark pins (battlefield objectives) shown on the map
                 fog = true, -- Undiscovered areas drawn dimmed instead of hidden
                 entrances = true, -- Dungeon and raid entrance pins on zone maps

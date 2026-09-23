@@ -12,7 +12,37 @@ local HIDE_DELAY = 2
 local menu
 local buttons = {}
 
+local function releaseOverlay()
+    local lent = menu.lent
+    if not lent then return end
+    menu.lent = nil
+    lent.button:UnlockHighlight()
+    local frame = lent.frame
+    frame:SetParent(lent.parent)
+    frame:SetFrameStrata(lent.strata)
+    frame:SetFrameLevel(lent.level)
+    frame:SetHitRectInsets(lent.insets[1], lent.insets[2], lent.insets[3], lent.insets[4])
+    frame:SetAlpha(lent.alpha)
+end
+
+-- A real click on that frame runs its own handler as its owner's code, not as ours.
+local function lendOverlay(frame, button)
+    menu.lent = {
+        frame = frame, button = button, parent = frame:GetParent(), strata = frame:GetFrameStrata(),
+        level = frame:GetFrameLevel(), insets = { frame:GetHitRectInsets() }, alpha = frame:GetAlpha(),
+    }
+    frame:SetParent(button)
+    frame:SetFrameStrata(menu:GetFrameStrata())
+    frame:SetFrameLevel(button:GetFrameLevel() + 1)
+    frame:ClearAllPoints()
+    frame:SetAllPoints(button)
+    frame:SetHitRectInsets(0, 0, 0, 0)
+    frame:SetAlpha(0)
+    frame:Show()
+end
+
 local function refresh()
+    releaseOverlay()
     local checkable, width = false, MIN_W
     for _, entry in ipairs(menu.entries) do
         if entry.checked ~= nil then checkable = true end
@@ -34,6 +64,7 @@ local function refresh()
         button:SetPoint("TOPLEFT", menu, "TOPLEFT", INSET_X, -(INSET_Y + (index - 1) * BUTTON_H))
         button:SetPoint("RIGHT", menu, "RIGHT", -INSET_X, 0)
         button:Show()
+        if entry.overlay then lendOverlay(entry.overlay, button) end
         width = math.max(width, button.text:GetStringWidth() + indent + 8)
     end
     for index = #menu.entries + 1, #buttons do buttons[index]:Hide() end
@@ -84,6 +115,11 @@ local function build()
     menu.acquire = acquire
     menu.idle = 0
     menu:SetScript("OnUpdate", function(self, elapsed)
+        -- The overlay takes the mouse, so the row under it never lights on its own.
+        local lent = self.lent
+        if lent then
+            if lent.frame:IsMouseOver() then lent.button:LockHighlight() else lent.button:UnlockHighlight() end
+        end
         if not anchorVisible(self.anchor) then
             self:Hide()
             return
@@ -95,7 +131,10 @@ local function build()
         self.idle = self.idle + elapsed
         if self.idle >= HIDE_DELAY then self:Hide() end
     end)
-    menu:SetScript("OnHide", function(self) self.anchor = nil end)
+    menu:SetScript("OnHide", function(self)
+        self.anchor = nil
+        releaseOverlay()
+    end)
     menu:Hide()
     -- Blizzard closes its menus on most clicks around its panels; this one follows.
     hooksecurefunc("CloseDropDownMenus", function() menu:Hide() end)
@@ -103,7 +142,7 @@ end
 
 addon.Menu = {}
 
--- entries: { text, func, checked, keepShown, isTitle, disabled }; anchor is a frame or "cursor".
+-- entries: { text, func, checked, keepShown, isTitle, disabled, overlay }; anchor is a frame or "cursor".
 function addon.Menu.Open(anchor, entries)
     if not menu then build() end
     if menu:IsShown() and menu.anchor == anchor then
@@ -125,6 +164,10 @@ end
 
 function addon.Menu.Close()
     if menu then menu:Hide() end
+end
+
+function addon.Menu.Refresh()
+    if menu and menu:IsShown() then refresh() end
 end
 
 function addon.Menu.IsOpenFor(anchor)

@@ -186,7 +186,7 @@ local RETIRED = {
     "WorldMapFrameSizeDownButton", "WorldMapTrackQuest", "WorldMapTitleButton",
 }
 
--- Dressing it taints the un-localled numEntries its OnClick re-reads, blocking the blob in combat.
+-- Parked here between filter-menu visits; only a real click on it runs its OnClick clean.
 local function retirePermanently()
     if WorldMapQuestShowObjectives:GetParent() == holder then return end
     WorldMapQuestShowObjectives:SetParent(holder)

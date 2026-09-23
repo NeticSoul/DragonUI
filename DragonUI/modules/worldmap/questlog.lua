@@ -411,7 +411,7 @@ end
 -- No combat guard: what is protected on this frame is Show/Hide and moving it, not drawing on it,
 -- which is how the client's own map lights an area mid-fight.
 local function applyBlob()
-    local on = WM:Config().questPOI ~= false
+    local on = WM.ObjectivesShown()
     local focus = on and blobFor(QP.GetFocus()) or nil
     local hover = on and blobFor(hoveredRow and hoveredRow._questID) or nil
     for questID in pairs(drawn) do
@@ -668,7 +668,7 @@ local function fillRow(row, data, width)
     row._focused = data.questID ~= nil and data.questID == QP.GetFocus()
     row._color = GetQuestDifficultyColor(data.level or 0)
     -- Every badge only ever points at the canvas, so with its pins off the whole column goes too.
-    local badges = WM:Config().questPOI ~= false
+    local badges = WM.ObjectivesShown()
     local indent = badges and TEXT_INDENT or HEADER_TEXT_X
     -- Without objectives the row is still as tall as the badge, so its one line centres on it.
     local single = data.objectives == ""

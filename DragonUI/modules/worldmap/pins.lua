@@ -83,8 +83,6 @@ local function onQuestPOIDisplayed(questFrame)
         button.duiRawX, button.duiRawY = x, y
         placeQuestPOI(button)
     end
-    -- Placed first even when off, so re-enabling does not need a rebuild to find its spot again.
-    if WM:Config().questPOI == false then button:Hide() end
 end
 
 local function resizeNumericQuestPOI(button, size)
@@ -230,31 +228,6 @@ function WM.RefreshPins()
     end
 end
 
-local function swapButton()
-    return QUEST_POI_SWAP_BUTTONS and QUEST_POI_SWAP_BUTTONS.WorldMapPOIFrame
-end
-
-function WM.RefreshQuestPOIs()
-    local shown = WM:Config().questPOI ~= false
-    local swap, swapped = swapButton(), false
-    for index = 1, WorldMapFrame.numQuests or 0 do
-        local row = _G["WorldMapQuestFrame" .. index]
-        local button = row and row.poiIcon
-        if button then
-            -- A picked completed quest draws through the shared swap twin, with its own source hidden.
-            local lent = button.isSelected and button.type == QUEST_POI_COMPLETE_SWAP
-            swapped = swapped or lent
-            if shown and not lent then button:Show() else button:Hide() end
-        end
-    end
-    if swap then
-        if shown and swapped then swap:Show() else swap:Hide() end
-    end
-    if WM.RefreshBlobs then WM.RefreshBlobs() end
-    -- The list badges are the same pins seen from the panel, so they come and go with them.
-    if WM.RefreshQuestLog then WM.RefreshQuestLog() end
-end
-
 local function styleAreaLabel()
     local font = addon.Fonts.PRIMARY
     WorldMapFrameAreaLabel:SetFont(font, LABEL_FONT_SIZE)
@@ -297,6 +270,11 @@ end
 -- FILTER BUTTON
 -- ============================================================================
 
+-- The Lua gate is read from the CVar only at load, while the client honours the CVar live.
+function WM.ObjectivesShown()
+    return (WatchFrame.showObjectives and GetCVarBool("questPOI")) and true or false
+end
+
 local function filterEntries()
     local entries = { { text = FILTERS, isTitle = true } }
     local function toggle(text, key, onChanged)
@@ -310,8 +288,12 @@ local function filterEntries()
             end,
         }
     end
-    -- Blizzard's own label: WorldMapQuestShowObjectives is retired, and this is what it read.
-    toggle(SHOW_QUEST_OBJECTIVES_ON_MAP_TEXT, "questPOI", WM.RefreshQuestPOIs)
+    -- Blizzard's own checkbox takes the click: run from our code, its handler taints the blob.
+    entries[#entries + 1] = {
+        text = SHOW_QUEST_OBJECTIVES_ON_MAP_TEXT,
+        checked = function() return WorldMapQuestShowObjectives:GetChecked() end,
+        overlay = WorldMapQuestShowObjectives,
+    }
     toggle(L["Show Landmarks"], "landmarks", restyleLandmarks)
     toggle(L["Show Undiscovered Areas"], "fog", WM.RefreshFog)
     toggle(L["Show Dungeon Entrances"], "entrances", WM.RefreshMapPins)
@@ -354,6 +336,8 @@ local function buildFilterButton()
     highlight:SetAllPoints(button)
 
     button:SetScript("OnClick", function(self)
+        -- Blizzard syncs the tick to the CVar only at load, so a /console change leaves it stale.
+        WorldMapQuestShowObjectives:SetChecked(WM.ObjectivesShown())
         addon.Menu.Open(self, filterEntries())
     end)
     button:SetScript("OnEnter", function(self)
@@ -369,7 +353,7 @@ end
 -- CANVAS SHADOW
 -- ============================================================================
 
--- Where the retired "show quest objectives" box sat; dressing it tainted numEntries (core.lua).
+-- Where Blizzard's "show quest objectives" box sat before it moved into the filter menu.
 local function buildCanvasShadow()
     objectivesPlate = WM.border:CreateTexture(nil, "ARTWORK")
     objectivesPlate:set_atlas("mapcornershadow-left", true)
@@ -390,13 +374,10 @@ function WM.BuildPins()
     hooksecurefunc("WorldMapFrame_Update", restyleLandmarks)
     hooksecurefunc("WorldMapFrame_Update", tryFlashQuestPOI)
     -- Blizzard reselects a pin of its own on every rebuild, so ours is re-cropped after it.
-    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function()
-        if WM:Config().questPOI == false then
-            local swap = swapButton()
-            if swap then swap:Hide() end
-        end
-        WM.SelectQuestPOI(QP.GetFocus())
-    end)
+    hooksecurefunc("WorldMapFrame_SelectQuestFrame", function() WM.SelectQuestPOI(QP.GetFocus()) end)
+    -- The lent checkbox flips its own state; our row's tick and anchor follow it.
+    hooksecurefunc("WorldMapQuestShowObjectives_Toggle", function() addon.Menu.Refresh() end)
+    hooksecurefunc("WorldMapQuestShowObjectives_AdjustPosition", function() addon.Menu.Refresh() end)
     QP.RegisterFocusListener(WM.SelectQuestPOI)
     hooksecurefunc("WorldMapFrame_UpdateQuests", dropStaleFlashes)
     hooksecurefunc("WorldMapFrame_DisplayQuestPOI", onQuestPOIDisplayed)
