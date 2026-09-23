@@ -1730,3 +1730,13 @@ L["HP Warning Threshold"] = "Seuil d'Avertissement de HP"
 L["Percentage of HP at which the warning triggers."] = "Pourcentage de HP auquel l'avertissement se déclenche."
 L["Test Warning (3 sec)"] = "Tester l'Avertissement (3 sec)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Déclenche un aperçu de 3 secondes de l'état d'avertissement pour vous aider à ajuster le seuil."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Tiroir de sorts"
+L["Scale the spellbook window."] = "Mettre à l'échelle la fenêtre du livre de sorts."
+L["Enable Spellbook"] = "Activer le livre de sorts"
+L["Enable the DragonUI spellbook module."] = "Activer le module de livre de sorts de DragonUI."
+L["Spellbook Scale"] = "Échelle du livre de sorts"
+L["Resize Spellbook window to your preference."] = "Redimensionner la fenêtre du livre de sorts à votre convenance."

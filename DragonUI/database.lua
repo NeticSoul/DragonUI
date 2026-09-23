@@ -1162,6 +1162,10 @@ local defaults = {
             collections = {
                 enabled = true, -- Dedicated Pets & Mounts window opened from the micro menu
             },
+            spellbook = {
+                enabled = true, -- Modern spellbook window with learned spells, pets, categories, search
+                scale = 0.75, -- Card/window scale (0.5–1.5) for different resolutions
+            },
             worldmap = {
                 enabled = true, -- Retail-style world map with breadcrumb navigation and a quest log side panel
                 questLog = true, -- Quest log side panel open

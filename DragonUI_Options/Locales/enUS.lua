@@ -1881,3 +1881,13 @@ L["HP Warning Threshold"] = true
 L["Percentage of HP at which the warning triggers."] = true
 L["Test Warning (3 sec)"] = true
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = true
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = true
+L["Scale the spellbook window."] = true
+L["Enable Spellbook"] = true
+L["Enable the DragonUI spellbook module."] = true
+L["Spellbook Scale"] = true
+L["Resize Spellbook window to your preference."] = true

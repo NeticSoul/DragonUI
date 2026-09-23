@@ -1,0 +1,16 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <!-- DragonUI Spellbook module -->
+    <Script file="spellbook.lua"/>
+    <!-- Trainer databases: each file registers its table under DragonUI.SpellsByClass.
+         Loaded AFTER spellbook.lua so its registration globals already exist. -->
+    <Script file="Classes\Warrior.lua"/>
+    <Script file="Classes\Paladin.lua"/>
+    <Script file="Classes\Hunter.lua"/>
+    <Script file="Classes\Rogue.lua"/>
+    <Script file="Classes\Priest.lua"/>
+    <Script file="Classes\DeathKnight.lua"/>
+    <Script file="Classes\Shaman.lua"/>
+    <Script file="Classes\Mage.lua"/>
+    <Script file="Classes\Warlock.lua"/>
+    <Script file="Classes\Druid.lua"/>
+</Ui>

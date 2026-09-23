@@ -637,3 +637,18 @@ L["Level %d"] = "Nível %d"
 
 L["Low HP Alert"] = "Alerta de HP Baixo"
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "Reproduz um som e pisca nas bordas da tela quando seu HP cai abaixo do limiar."
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Livro de Feitiços"
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = "Módulo de livro de feitiços desativado: %s substitui o mesmo frame do livro de feitiços."
+L["Learned spells book with categories, search, and filters."] = "Livro de feitiços aprendidos com categorias, busca e filtros."
+L["Spellbook settings"] = "Configurações do livro de feitiços"
+L["Show All Ranks"] = "Mostrar todos os níveis"
+L["Hide Passives"] = "Ocultar passivas"
+L["To Learn"] = "Para aprender"
+L["Requires Level"] = "Nível requerido"
+L["Training Cost"] = "Custo de treinamento"
+L["Show second page"] = "Mostrar segunda página"
+L["Show single page"] = "Mostrar página única"

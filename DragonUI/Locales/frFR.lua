@@ -637,3 +637,18 @@ L["Level %d"] = "Niveau %d"
 
 L["Low HP Alert"] = "Alerte de HP Bas"
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "Émet un son et fait clignoter les bords de l'écran lorsque votre HP descend sous le seuil."
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Tiroir de sorts"
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = "Le module de tiroir de sorts est désactivé : %s remplace le même cadre."
+L["Learned spells book with categories, search, and filters."] = "Livre de sorts appris avec catégories, recherche et filtres."
+L["Spellbook settings"] = "Réglages du livre de sorts"
+L["Show All Ranks"] = "Afficher tous les rangs"
+L["Hide Passives"] = "Masquer les passifs"
+L["To Learn"] = "À apprendre"
+L["Requires Level"] = "Niveau requis"
+L["Training Cost"] = "Coût d'entraînement"
+L["Show second page"] = "Afficher la deuxième page"
+L["Show single page"] = "Afficher une seule page"

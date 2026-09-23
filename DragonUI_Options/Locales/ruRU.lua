@@ -1898,3 +1898,13 @@ L["HP Warning Threshold"] = "Порог предупреждения HP"
 L["Percentage of HP at which the warning triggers."] = "Процент HP, при котором срабатывает предупреждение."
 L["Test Warning (3 sec)"] = "Тест предупреждения (3 сек.)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Запускает 3-секундный предпросмотр состояния предупреждения, чтобы помочь вам настроить порог."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Книга заклинаний"
+L["Scale the spellbook window."] = "Масштабировать окно книги заклинаний."
+L["Enable Spellbook"] = "Включить книгу заклинаний"
+L["Enable the DragonUI spellbook module."] = "Включить модуль книги заклинаний DragonUI."
+L["Spellbook Scale"] = "Масштаб книги заклинаний"
+L["Resize Spellbook window to your preference."] = "Изменить размер окна книги заклинаний по вашему усмотрению."

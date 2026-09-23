@@ -43,6 +43,7 @@ local subTabs = {
     { key = "collections", label = LO["Pets & Mounts"] },
     { key = "worldmap",    label = LO["World Map"] },
     { key = "loot",        label = LO["Loot Window"] },
+    { key = "spellbook",   label = LO["Spellbook"] or "Spellbook" },
 }
 
 -- Search navigation sub-tab setter.
@@ -486,6 +487,44 @@ local function BuildLootSubTab(scroll)
 end
 
 -- ============================================================================
+-- SPELLBOOK
+-- ============================================================================
+local function BuildSpellbookSubTab(scroll)
+    local sbSection = C:AddSection(scroll, LO["Spellbook"] or "Spellbook")
+    C:AddDescription(sbSection, LO["Scale the spellbook window."] or "Scale the spellbook window.")
+
+    C:AddToggle(sbSection, {
+        label = LO["Enable Spellbook"] or "Enable Spellbook",
+        desc = LO["Enable the DragonUI spellbook module."] or "Enable the DragonUI spellbook module.",
+        getFunc = function() return IsEnabled("spellbook") end,
+        setFunc = function(val)
+            EnsureModuleTable("spellbook").enabled = val
+            if val then
+                if addon.ApplySpellbookSystem then addon.ApplySpellbookSystem() end
+            else
+                if addon.RestoreSpellbookSystem then addon.RestoreSpellbookSystem() end
+            end
+            Panel:SelectTab("panels")
+        end,
+        requiresReload = true,
+    })
+
+    C:AddSlider(sbSection, {
+        label = LO["Spellbook Scale"] or "Spellbook Scale",
+        desc = LO["Resize Spellbook window to your preference."] or "Resize Spellbook window to your preference.",
+        dbPath = "modules.spellbook.scale",
+        min = 0.5,
+        max = 1.5,
+        step = 0.05,
+        width = 200,
+        disabled = function() return not IsEnabled("spellbook") end,
+        callback = function(val)
+            if addon.RefreshSpellbookScale then addon.RefreshSpellbookScale(val) end
+        end,
+    })
+end
+
+-- ============================================================================
 -- SUB-TAB DISPATCH
 -- ============================================================================
 
@@ -494,6 +533,7 @@ local subTabBuilders = {
     collections = BuildCollectionsSubTab,
     worldmap    = BuildWorldMapSubTab,
     loot        = BuildLootSubTab,
+    spellbook   = BuildSpellbookSubTab,
 }
 
 -- ============================================================================

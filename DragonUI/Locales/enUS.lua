@@ -703,3 +703,19 @@ L["Level %d"] = true
 
 L["Low HP Alert"] = true
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = true
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = true
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = true
+L["Learned spells book with categories, search, and filters."] = true
+L["Spellbook settings"] = true
+L["Show All Ranks"] = true
+L["Hide Passives"] = true
+L["To Learn"] = true
+L["Requires Level"] = true
+L["Training Cost"] = true
+L["Show second page"] = true
+L["Show single page"] = true
+

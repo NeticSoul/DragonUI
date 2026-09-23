@@ -60,6 +60,7 @@ local rui_CommonIcons = assets..'CharacterPanel\\commonicons';
 local rui_ListExpand = assets..'CharacterPanel\\listexpand';
 local rui_LootCard = assets..'UI\\looting-itemcard';
 local rui_RedButton = assets..'UI\\redbutton2x';
+local rui_Spellbook = assets..'Spellbook\\';
 local rui_MapNav = assets..'WorldMap\\navbar';
 local rui_MapNavTile = assets..'WorldMap\\navbar-tile';
 local rui_MapSquareButtons = assets..'WorldMap\\squarebuttons';
@@ -568,6 +569,29 @@ addon.atlasinfo = {
 	['looting_itemcard_stroke_normal'] = { rui_LootCard, 298, 76, 0, 0.58203125, 0.3046875, 0.6015625 },
 	['looting_itemcard_stroke_clickstate'] = { rui_LootCard, 298, 76, 0, 0.58203125, 0.609375, 0.90625 },
 	['looting_raritytag_frame'] = { rui_LootCard, 208, 15, 0.59375, 1, 0, 0.05859375 },
+	['spellbook-background-evergreen-header'] = { rui_Spellbook..'spellbook-background', 1614, 58, 0.000488, 0.788574, 0.000977, 0.057617 },
+	['spellbook-background-evergreen-left'] = { rui_Spellbook..'spellbook-background', 806, 805, 0.446289, 0.839844, 0.059570, 0.845703 },
+	['spellbook-background-evergreen-ribbon'] = { rui_Spellbook..'spellbook-background', 102, 557, 0.395508, 0.445313, 0.059570, 0.603516 },
+	['spellbook-background-evergreen-right'] = { rui_Spellbook..'spellbook-background', 807, 805, 0.000488, 0.394531, 0.059570, 0.845703 },
+	['spellbook-corner-flipbook-evergreen'] = { rui_Spellbook..'spellbookelements', 600, 310, 0.000977, 0.586914, 0.000977, 0.303711 },
+	['spellbook-divider'] = { rui_Spellbook..'spellbookelements', 657, 11, 0.249023, 0.890625, 0.411133, 0.421875 },
+	['spellbook-item-backplate'] = { rui_Spellbook..'spellbookelements', 256, 64, 0.311523, 0.561523, 0.305664, 0.368164 },
+	['spellbook-item-iconframe'] = { rui_Spellbook..'spellbookelements', 138, 131, 0.854492, 0.989258, 0.136719, 0.264648 },
+	['spellbook-item-iconframe-hover'] = { rui_Spellbook..'spellbookelements', 132, 125, 0.000977, 0.129883, 0.666992, 0.789063 },
+	['spellbook-item-iconframe-inactive'] = { rui_Spellbook..'spellbookelements', 136, 127, 0.000977, 0.133789, 0.541016, 0.665039 },
+	['spellbook-item-iconframe-passive-hover'] = { rui_Spellbook..'spellbookelements', 108, 108, 0.136719, 0.242188, 0.636719, 0.742188 },
+	['spellbook-item-iconframe-passive-inactive'] = { rui_Spellbook..'spellbookelements', 112, 112, 0.136719, 0.246094, 0.525391, 0.634766 },
+	['spellbook-item-iconframe-shadow'] = { rui_Spellbook..'spellbookelements', 144, 137, 0.854492, 0.995117, 0.000977, 0.134766 },
+	['spellbook-item-needtrainer-iconframe-backplate'] = { rui_Spellbook..'spellbookelements', 137, 131, 0.000977, 0.134766, 0.411133, 0.539063 },
+	['spellbook-item-needtrainer-passive-backplate'] = { rui_Spellbook..'spellbookelements', 113, 115, 0.136719, 0.247070, 0.411133, 0.523438 },
+	['spellbook-item-needtrainer-shadow'] = { rui_Spellbook..'spellbookelements', 270, 270, 0.588867, 0.852539, 0.000977, 0.264648 },
+	['spellbook-item-petautocast-corners'] = { rui_Spellbook..'spellbookelements', 90, 90, 0.563477, 0.651367, 0.305664, 0.393555 },
+	['spellbook-item-unassigned-glow'] = { rui_Spellbook..'spellbookelements', 127, 127, 0.000977, 0.125000, 0.791016, 0.915039 },
+	['spellbook-list-backplate'] = { rui_Spellbook..'spellbookelements', 316, 106, 0.000977, 0.309570, 0.305664, 0.409180 },
+	['spellbook-rotationhelper-iconframe'] = { rui_Spellbook..'spellbookelements', 66, 66, 0.653320, 0.717773, 0.305664, 0.370117 },
+	['talents-node-circle-gray'] = { rui_Spellbook..'4556093-talents', 40, 40, 0.106934, 0.131348, 0.555664, 0.604492 },
+	['talents-node-square-gray'] = { rui_Spellbook..'4556093-talents', 40, 40, 0.490723, 0.529785, 0.799805, 0.877930 },
+
 	-- Half a texel in: the flipped top samples its opaque end on the edge and bleeds the padding.
 	['_looting_itemcard_shadow-center'] = { rui_LootCard, 8, 150, 0.586914062, 0.600585938, 0.080078125, 0.662109375 },
 

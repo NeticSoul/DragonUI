@@ -704,3 +704,18 @@ L["Level %d"] = "레벨 %d"
 
 L["Low HP Alert"] = "HP 부족 알림"
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "HP가 설정된 임계값 이하로 떨어지면 소리를 재생하고 화면 가장자리를 깜빡입니다."
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "주문서"
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = "주문서 모듈이 비활성화되었습니다: %s이(가) 동일한 주문서 창을 대체합니다."
+L["Learned spells book with categories, search, and filters."] = "카테고리, 검색 및 필터가 있는 배운 주문서입니다."
+L["Spellbook settings"] = "주문서 설정"
+L["Show All Ranks"] = "모든 등급 표시"
+L["Hide Passives"] = "지속효과 숨기기"
+L["To Learn"] = "배울 기술"
+L["Requires Level"] = "요구 레벨"
+L["Training Cost"] = "훈련 비용"
+L["Show second page"] = "두 번째 페이지 표시"
+L["Show single page"] = "단일 페이지 표시"

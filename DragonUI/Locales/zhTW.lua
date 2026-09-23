@@ -637,3 +637,18 @@ L["Level %d"] = "等級 %d"
 
 L["Low HP Alert"] = "低HP警報"
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = "當你的HP低於設定的臨界值時，發出聲音並閃爍屏幕邊緣。"
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "法術書"
+L["Spellbook module disabled: %s replaces the same spellbook frame."] = "法術書模組已停用：%s 取代了同一個法術書框架。"
+L["Learned spells book with categories, search, and filters."] = "已學法術書，包含分類、搜尋和篩選。"
+L["Spellbook settings"] = "法術書設定"
+L["Show All Ranks"] = "顯示所有等級"
+L["Hide Passives"] = "隱藏被動技能"
+L["To Learn"] = "待學習"
+L["Requires Level"] = "需要等級"
+L["Training Cost"] = "訓練費用"
+L["Show second page"] = "顯示第二頁"
+L["Show single page"] = "顯示單頁"

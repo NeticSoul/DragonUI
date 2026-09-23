@@ -73,6 +73,8 @@
 
     <!-- Retail-style vendor window reskin -->
     <Include file="merchant\merchant.xml"/>
+    <!-- Spellbook module (must load after collections: micro menu spellbook button calls ToggleSpellBook) -->
+    <Include file="spellbook\spellbook.xml"/>
 
     <!-- Chat Mods module -->
     <Script file="chatmods.lua"/>
