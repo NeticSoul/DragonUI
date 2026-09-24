@@ -12,24 +12,44 @@ local HIDE_DELAY = 2
 local menu
 local buttons = {}
 
-local function releaseOverlay()
-    local lent = menu.lent
-    if not lent then return end
-    menu.lent = nil
-    lent.button:UnlockHighlight()
-    local frame = lent.frame
-    frame:SetParent(lent.parent)
-    frame:SetFrameStrata(lent.strata)
-    frame:SetFrameLevel(lent.level)
-    frame:SetHitRectInsets(lent.insets[1], lent.insets[2], lent.insets[3], lent.insets[4])
-    frame:SetAlpha(lent.alpha)
+local function readPoints(frame, skip)
+    local points = {}
+    for index = 1, frame:GetNumPoints() do
+        local point, relativeTo, relativePoint, x, y = frame:GetPoint(index)
+        -- A nil relativeTo means the parent, which during a loan is the row itself.
+        if not skip or (relativeTo and relativeTo ~= skip) then
+            points[#points + 1] = { point, relativeTo, relativePoint, x, y }
+        end
+    end
+    return points
+end
+
+-- Anchors go back too (other addons hang widgets off it); ones its owner set during the loan win.
+local function releaseOverlays()
+    for index = #menu.lent, 1, -1 do
+        local lent = menu.lent[index]
+        menu.lent[index] = nil
+        lent.button:UnlockHighlight()
+        local frame = lent.frame
+        local rewritten = readPoints(frame, lent.button)
+        frame:SetParent(lent.parent)
+        frame:SetFrameStrata(lent.strata)
+        frame:SetFrameLevel(lent.level)
+        frame:SetHitRectInsets(lent.insets[1], lent.insets[2], lent.insets[3], lent.insets[4])
+        frame:SetAlpha(lent.alpha)
+        frame:ClearAllPoints()
+        for _, p in ipairs(#rewritten > 0 and rewritten or lent.points) do
+            frame:SetPoint(p[1], p[2], p[3], p[4], p[5])
+        end
+    end
 end
 
 -- A real click on that frame runs its own handler as its owner's code, not as ours.
 local function lendOverlay(frame, button)
-    menu.lent = {
+    menu.lent[#menu.lent + 1] = {
         frame = frame, button = button, parent = frame:GetParent(), strata = frame:GetFrameStrata(),
         level = frame:GetFrameLevel(), insets = { frame:GetHitRectInsets() }, alpha = frame:GetAlpha(),
+        points = readPoints(frame),
     }
     frame:SetParent(button)
     frame:SetFrameStrata(menu:GetFrameStrata())
@@ -42,7 +62,7 @@ local function lendOverlay(frame, button)
 end
 
 local function refresh()
-    releaseOverlay()
+    releaseOverlays()
     local checkable, width = false, MIN_W
     for _, entry in ipairs(menu.entries) do
         if entry.checked ~= nil then checkable = true end
@@ -114,10 +134,10 @@ local function build()
     menu:SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b)
     menu.acquire = acquire
     menu.idle = 0
+    menu.lent = {}
     menu:SetScript("OnUpdate", function(self, elapsed)
         -- The overlay takes the mouse, so the row under it never lights on its own.
-        local lent = self.lent
-        if lent then
+        for _, lent in ipairs(self.lent) do
             if lent.frame:IsMouseOver() then lent.button:LockHighlight() else lent.button:UnlockHighlight() end
         end
         if not anchorVisible(self.anchor) then
@@ -133,7 +153,7 @@ local function build()
     end)
     menu:SetScript("OnHide", function(self)
         self.anchor = nil
-        releaseOverlay()
+        releaseOverlays()
     end)
     menu:Hide()
     -- Blizzard closes its menus on most clicks around its panels; this one follows.

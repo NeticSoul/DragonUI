@@ -291,6 +291,14 @@ local function filterEntries()
         checked = function() return WorldMapQuestShowObjectives:GetChecked() end,
         overlay = WorldMapQuestShowObjectives,
     }
+    local npcScan = WM.NPCScanToggle()
+    if npcScan then
+        entries[#entries + 1] = {
+            text = _G[npcScan:GetName() .. "Text"]:GetText(),
+            checked = function() return npcScan:GetChecked() end,
+            overlay = npcScan,
+        }
+    end
     toggle(L["Show Landmarks"], "landmarks", restyleLandmarks)
     toggle(L["Show Undiscovered Areas"], "fog", WM.RefreshFog)
     toggle(L["Show Dungeon Entrances"], "entrances", WM.RefreshMapPins)
@@ -384,6 +392,8 @@ function WM.BuildPins()
     -- The lent checkbox flips its own state; our row's tick and anchor follow it.
     hooksecurefunc("WorldMapQuestShowObjectives_Toggle", function() addon.Menu.Refresh() end)
     hooksecurefunc("WorldMapQuestShowObjectives_AdjustPosition", function() addon.Menu.Refresh() end)
+    local npcScan = WM.NPCScanToggle()
+    if npcScan then npcScan:HookScript("OnClick", function() addon.Menu.Refresh() end) end
     QP.RegisterFocusListener(WM.SelectQuestPOI)
     hooksecurefunc("WorldMapFrame_UpdateQuests", dropStaleFlashes)
     hooksecurefunc("WorldMapFrame_DisplayQuestPOI", onQuestPOIDisplayed)

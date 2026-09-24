@@ -199,6 +199,13 @@ local function retirePermanently()
     WorldMapQuestShowObjectives:SetParent(holder)
 end
 
+-- _NPCScan.Overlay anchors this toggle to the objectives box, so it lives in the filter menu too.
+function WM.NPCScanToggle()
+    local overlay = _NPCScan and _NPCScan.Overlay
+    local module = overlay and overlay.Modules and overlay.Modules.List and overlay.Modules.List.WorldMap
+    return module and module.Loaded and module.Toggle or nil
+end
+
 -- Past VARIABLES_LOADED: that handler reads GetChecked() into WatchFrame.showObjectives.
 local function retireAfterLogin()
     if IsLoggedIn() then
@@ -217,6 +224,8 @@ local function retireBlizzardWidgets()
     for _, name in ipairs(RETIRED) do
         _G[name]:SetParent(holder)
     end
+    local npcScan = WM.NPCScanToggle()
+    if npcScan then npcScan:SetParent(holder) end
     WorldMapFrameTitle:Hide()
     WorldMapFrameMiniBorderLeft:Hide()
     WorldMapFrameMiniBorderRight:Hide()
@@ -226,6 +235,12 @@ end
 local function restoreBlizzardWidgets()
     for _, name in ipairs(RETIRED) do
         _G[name]:SetParent(WorldMapFrame)
+    end
+    local npcScan = WM.NPCScanToggle()
+    if npcScan then
+        npcScan:SetParent(WorldMapFrame)
+        -- A menu loan sets its strata explicitly, which a new parent may not override.
+        npcScan:SetFrameStrata(WorldMapFrame:GetFrameStrata())
     end
     WorldMapFrameTitle:Show()
 end
@@ -449,6 +464,8 @@ end
 
 -- The size keybind still reaches Blizzard's fullscreen map, where our chrome gets out of the way.
 local function onWindowedChanged()
+    -- Its release would hand lent widgets back to the parents they had before this switch.
+    addon.Menu.Close()
     local windowed = WM.IsWindowed()
     if windowed then
         WM.border:Show()
