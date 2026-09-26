@@ -1903,3 +1903,10 @@ L["Triggers a 3-second preview of the warning state to help you adjust the thres
 -- Talents
 L["Talents"] = "특성"
 L["Retail-style talent window"] = "리테일 스타일 특성 창"
+L["Enable Talent Window"] = "특성 창 사용"
+L["Replace Blizzard's talent and glyph window."] = "블리자드 특성 및 문양 창을 대체합니다."
+L["Size of the talent window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "UI 크기에 더해 적용되는 특성 창 크기입니다. 1.0이 다른 창과 같습니다. 화면을 벗어나지 않습니다."
+L["Show Glyph Names"] = "문양 이름 표시"
+L["Name each inscribed glyph beside its socket."] = "새겨진 각 문양의 이름을 홈 옆에 표시합니다."
+L["Show Glyph Effects"] = "문양 효과 표시"
+L["List what your inscribed glyphs do beside the sockets."] = "홈 옆에 새겨진 문양의 효과를 나열합니다."

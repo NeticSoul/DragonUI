@@ -1899,3 +1899,10 @@ L["Triggers a 3-second preview of the warning state to help you adjust the thres
 -- Talents
 L["Talents"] = "天赋"
 L["Retail-style talent window"] = "正式服风格天赋窗口"
+L["Enable Talent Window"] = "启用天赋窗口"
+L["Replace Blizzard's talent and glyph window."] = "替换暴雪的天赋和雕文窗口。"
+L["Size of the talent window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "天赋窗口在界面缩放之上的大小；1.0 与其他面板相同。窗口不会超出屏幕。"
+L["Show Glyph Names"] = "显示雕文名称"
+L["Name each inscribed glyph beside its socket."] = "在每个已铭刻雕文的插槽旁显示其名称。"
+L["Show Glyph Effects"] = "显示雕文效果"
+L["List what your inscribed glyphs do beside the sockets."] = "在插槽旁列出已铭刻雕文的效果。"

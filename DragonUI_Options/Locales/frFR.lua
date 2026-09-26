@@ -1734,3 +1734,10 @@ L["Triggers a 3-second preview of the warning state to help you adjust the thres
 -- Talents
 L["Talents"] = "Talents"
 L["Retail-style talent window"] = "Fenêtre de talents façon Retail"
+L["Enable Talent Window"] = "Activer la fenêtre des talents"
+L["Replace Blizzard's talent and glyph window."] = "Remplace la fenêtre des talents et des glyphes de Blizzard."
+L["Size of the talent window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Taille de la fenêtre des talents, en plus de votre échelle d'interface ; 1.0 correspond aux autres panneaux. Elle ne dépasse jamais de l'écran."
+L["Show Glyph Names"] = "Afficher le nom des glyphes"
+L["Name each inscribed glyph beside its socket."] = "Affiche le nom de chaque glyphe inscrit à côté de son emplacement."
+L["Show Glyph Effects"] = "Afficher les effets des glyphes"
+L["List what your inscribed glyphs do beside the sockets."] = "Liste à côté des emplacements ce que font vos glyphes inscrits."

@@ -72,7 +72,6 @@ local rui_MapCollapse = assets..'WorldMap\\questcollapse';
 local rui_MapTrackingBorder = assets..'WorldMap\\trackingborder';
 local rui_MapZoomHighlight = assets..'WorldMap\\zoomhighlight';
 local rui_MapPins = assets..'WorldMap\\mappins';
-local rui_ProfessionsChrome = assets..'Talents\\professions-chrome-sheet';
 local rui_TalentsPack = assets..'Talents\\talents-sheet';
 local rui_TalentsBgWarrior = assets..'Talents\\talents-bg-warrior';
 local rui_TalentsBgWarriorProtection = assets..'Talents\\talents-bg-warrior-protection';
@@ -94,7 +93,9 @@ local rui_TalentsBgDruid = assets..'Talents\\talents-bg-druid';
 local rui_TalentsBgDruidRestoration = assets..'Talents\\talents-bg-druid-restoration';
 local rui_TalentsBgDeathKnight = assets..'Talents\\talents-bg-deathknight';
 local rui_TalentsBgDeathKnightUnholy = assets..'Talents\\talents-bg-deathknight-unholy';
-local rui_TalentsWarmodeAtlas = assets..'Talents\\talentframeatlas'
+local rui_TalentsWarmodeAtlas = assets..'Talents\\talentframeatlas';
+local rui_TalentsClouds = assets..'Talents\\talents-animations-clouds';
+local rui_TalentsParticles = assets..'Talents\\talents-animations-particles';
 
 addon.atlasinfo = {
 	['_ui-hud-actionbar-divider-top'] = { uiactionbar2x_, 10, 10, 421/512, 445/512, 833/2048, 861/2048 },
@@ -667,49 +668,39 @@ addon.atlasinfo = {
 	['mapcornershadow-right'] = { rui_MapCollapse, 46, 53, 64/256, 110/256, 0, 53/128 },
 	['mapcornershadow-left'] = { rui_MapCollapse, 182, 30, 0, 182/256, 64/128, 94/128 },
 
-	-- Professions detail-card 3-slice (reused by talents glyph pane). Backed by
-	-- charpaperdollhorizontal (already shipped) since there is no dedicated quality pane sheet.
-	['professions-qualitypane-bg-top']    = { rui_ProfessionsChrome, 260, 100, 0.233398, 0.360352, 0.210449, 0.259277 },
-	['professions-qualitypane-bg-middle'] = { rui_ProfessionsChrome, 260, 1,   0.399414, 0.526367, 0.161621, 0.162109 },
-	['professions-qualitypane-bg-bottom'] = { rui_ProfessionsChrome, 260, 99,  0.361328, 0.488281, 0.210449, 0.258789 },
+	-- Talents (Textures/Talents/): node frames, footer and war mode pieces share New Era's 4556093 sheet.
+	['talents-background-bottombar-left'] = { rui_TalentsPack, 806, 82, 3/1024, 809/1024, 209/512, 291/512 },
+	['talents-background-bottombar-right'] = { rui_TalentsPack, 806, 82, 6/1024, 812/1024, 297/512, 379/512 },
+	['talents-button-reset'] = { rui_TalentsPack, 20, 20, 357/1024, 397/1024, 385/512, 425/512 },
+	['talents-button-undo'] = { rui_TalentsPack, 21, 20, 309/1024, 351/1024, 385/512, 425/512 },
+	['talents-node-apex-large-glow'] = { rui_TalentsPack, 148, 148, 565/1024, 713/1024, 3/512, 151/512 },
+	['talents-node-apex-large-gray'] = { rui_TalentsPack, 84, 84, 822/1024, 906/1024, 3/512, 87/512 },
+	['talents-node-apex-large-green'] = { rui_TalentsPack, 84, 84, 912/1024, 996/1024, 3/512, 87/512 },
+	['talents-node-apex-large-locked'] = { rui_TalentsPack, 84, 84, 912/1024, 996/1024, 93/512, 177/512 },
+	['talents-node-apex-large-yellow'] = { rui_TalentsPack, 84, 84, 822/1024, 906/1024, 93/512, 177/512 },
+	['talents-node-circle-gray'] = { rui_TalentsPack, 40, 40, 85/1024, 135/1024, 385/512, 435/512 },
+	['talents-node-circle-green'] = { rui_TalentsPack, 40, 40, 141/1024, 191/1024, 385/512, 435/512 },
+	['talents-node-circle-greenglow'] = { rui_TalentsPack, 82, 82, 818/1024, 900/1024, 183/512, 265/512 },
+	['talents-node-circle-locked'] = { rui_TalentsPack, 40, 40, 253/1024, 303/1024, 385/512, 435/512 },
+	['talents-node-circle-shadow'] = { rui_TalentsPack, 76, 76, 3/1024, 79/1024, 385/512, 461/512 },
+	['talents-node-circle-yellow'] = { rui_TalentsPack, 40, 40, 197/1024, 247/1024, 385/512, 435/512 },
+	['talents-node-square-gray'] = { rui_TalentsPack, 40, 40, 906/1024, 986/1024, 183/512, 263/512 },
+	['talents-node-square-green'] = { rui_TalentsPack, 40, 40, 906/1024, 986/1024, 269/512, 349/512 },
+	['talents-node-square-greenglow'] = { rui_TalentsPack, 84, 84, 391/1024, 559/1024, 3/512, 171/512 },
+	['talents-node-square-locked'] = { rui_TalentsPack, 40, 40, 904/1024, 984/1024, 355/512, 435/512 },
+	['talents-node-square-shadow'] = { rui_TalentsPack, 78, 78, 818/1024, 896/1024, 357/512, 435/512 },
+	['talents-node-square-yellow'] = { rui_TalentsPack, 40, 40, 818/1024, 898/1024, 271/512, 351/512 },
+	['talents-warmode-indent'] = { rui_TalentsPack, 97, 87, 719/1024, 816/1024, 3/512, 90/512 },
+	['talents-warmode-ring'] = { rui_TalentsPack, 94, 100, 3/1024, 191/1024, 3/512, 203/512 },
+	['talents-warmode-ring-disabled'] = { rui_TalentsPack, 94, 100, 197/1024, 385/1024, 3/512, 203/512 },
+	['pvptalents-warmode-glow'] = { rui_TalentsWarmodeAtlas, 105, 110, 0.523438, 0.933594, 0.693359, 0.800781 },
+	['pvptalents-warmode-orb'] = { rui_TalentsWarmodeAtlas, 80, 84, 0.324219, 0.636719, 0.371094, 0.453125 },
+	['pvptalents-warmode-swords'] = { rui_TalentsWarmodeAtlas, 46, 43, 0.753906, 0.933594, 0.101563, 0.143555 },
+	['pvptalents-warmode-swords-disabled'] = { rui_TalentsWarmodeAtlas, 46, 43, 0.792969, 0.972656, 0.302734, 0.344727 },
+	['talents-animations-clouds'] = { rui_TalentsClouds, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
+	['talents-animations-particles'] = { rui_TalentsParticles, 1308, 774, 0.000488, 0.639160, 0.379395, 0.757324 },
 
-	-- ============================================================================
-	-- Talents module (Textures/Talents/)
-	-- ============================================================================
-	-- Node border state frames + edge art / gate / buttons (4556093-talents.blp, same sheet
-	-- the spellbook uses for its passive frames).
-	['talents-node-square-gray']      = { rui_TalentsPack, 40, 40, 0.490723, 0.529785, 0.799805, 0.877930 },
-	['talents-node-circle-gray']      = { rui_TalentsPack, 40, 40, 0.106934, 0.131348, 0.555664, 0.604492 },
-	['talents-node-square-green']     = { rui_TalentsPack, 40, 40, 0.490723, 0.529785, 0.879883, 0.958008 },
-	['talents-node-square-yellow']    = { rui_TalentsPack, 40, 40, 0.534180, 0.573242, 0.732422, 0.810547 },
-	['talents-node-square-locked']    = { rui_TalentsPack, 40, 40, 0.534180, 0.573242, 0.572266, 0.650391 },
-	['talents-node-square-red']       = { rui_TalentsPack, 40, 40, 0.534180, 0.573242, 0.652344, 0.730469 },
-	['talents-node-square-greenglow'] = { rui_TalentsPack, 84, 84, 0.136230, 0.218262, 0.700195, 0.864258 },
-	['talents-node-square-shadow']    = { rui_TalentsPack, 78, 78, 0.229004, 0.267090, 0.922852, 0.999023 },
-  ['talents-sheen-node']            = { rui_TalentsPack, 87, 138, 0.490723, 0.533203, 0.170898, 0.305664 },
-
-	['talents-node-circle-green']     = { rui_TalentsPack, 40, 40, 0.106934, 0.131348, 0.606445, 0.655273 },
-	['talents-node-circle-yellow']    = { rui_TalentsPack, 40, 40, 0.678223, 0.702637, 0.107422, 0.156250 },
-	['talents-node-circle-locked']    = { rui_TalentsPack, 40, 40, 0.106934, 0.131348, 0.657227, 0.706055 },
-	['talents-node-circle-red']       = { rui_TalentsPack, 40, 40, 0.106934, 0.131348, 0.708008, 0.756836 },
-	['talents-node-circle-greenglow'] = { rui_TalentsPack, 82, 82, 0.873047, 0.913086, 0.000977, 0.081055 },
-	['talents-node-circle-shadow']    = { rui_TalentsPack, 76, 76, 0.534180, 0.571289, 0.888672, 0.962891 },
-
-	['talents-node-apex-large-gray']   = { rui_TalentsPack, 84, 84, 0.093262, 0.134277, 0.768555, 0.850586 },
-	['talents-node-apex-large-green']  = { rui_TalentsPack, 84, 84, 0.093262, 0.134277, 0.852539, 0.934570 },
-	['talents-node-apex-large-yellow'] = { rui_TalentsPack, 84, 84, 0.490723, 0.531738, 0.475586, 0.557617 },
-	['talents-node-apex-large-locked'] = { rui_TalentsPack, 84, 84, 0.490723, 0.531738, 0.307617, 0.389648 },
-	['talents-node-apex-large-red']    = { rui_TalentsPack, 84, 84, 0.490723, 0.531738, 0.391602, 0.473633 },
-	['talents-node-apex-large-glow']   = { rui_TalentsPack, 148, 148, 0.229004, 0.301270, 0.776367, 0.920898 },
-
-	['talents-arrow-head-gray']   = { rui_TalentsPack, 14, 12, 0.421387, 0.435059, 0.144531, 0.167969 },
-	['talents-arrow-head-yellow'] = { rui_TalentsPack, 14, 12, 0.465332, 0.479004, 0.144531, 0.167969 },
-	['talents-gate']              = { rui_TalentsPack, 84, 14, 0.000488, 0.082520, 0.965820, 0.993164 },
-	['talents-button-reset']      = { rui_TalentsPack, 20, 20, 0.770020, 0.789551, 0.107422, 0.146484 },
-	['talents-button-undo']       = { rui_TalentsPack, 21, 20, 0.748535, 0.769043, 0.107422, 0.146484 },
-	['talents-background-bottombar'] = { rui_TalentsPack, 1612, 82, 0.000488, 0.787598, 0.000977, 0.081055 },
-
-	-- Spec backgrounds (20 sheets downscaled to 1024 POT; each class gets 3 trees).
+	-- Spec backgrounds: New Era's two-spec sheets, downscaled to 1024.
 	['talents-background-warrior-arms'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
 	['talents-background-warrior-fury'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
 	['talents-background-warrior-protection'] = { rui_TalentsBgWarriorProtection, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
@@ -740,39 +731,6 @@ addon.atlasinfo = {
 	['talents-background-deathknight-blood'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
 	['talents-background-deathknight-frost'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
 	['talents-background-deathknight-unholy'] = { rui_TalentsBgDeathKnightUnholy, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-  -- warmode atlas
-  ['_Talent-blue-glow'] = { rui_TalentsWarmodeAtlas, 16, 16, 0.000000, 0.062500, 0.000977, 0.016602 },
-  ['_Talent-Bottom-Tile'] = { rui_TalentsWarmodeAtlas, 64, 5, 0.000000, 0.250000, 0.077148, 0.082031 },
-  ['_Talent-green-glow'] = { rui_TalentsWarmodeAtlas, 16, 16, 0.000000, 0.062500, 0.083984, 0.099609 },
-  ['_Talent-Top-Tile'] = { rui_TalentsWarmodeAtlas, 64, 13, 0.000000, 0.250000, 0.062500, 0.075195 },
-  ['pvptalents-background'] = { rui_TalentsWarmodeAtlas, 131, 379, 0.003906, 0.515625, 0.554688, 0.924805 },
-  ['pvptalents-list-background'] = { rui_TalentsWarmodeAtlas, 147, 40, 0.199219, 0.773438, 0.147461, 0.186523 },
-  ['pvptalents-list-background-mouseover'] = { rui_TalentsWarmodeAtlas, 147, 40, 0.261719, 0.835938, 0.196289, 0.235352 },
-  ['pvptalents-list-background-selected'] = { rui_TalentsWarmodeAtlas, 147, 40, 0.277344, 0.851563, 0.251953, 0.291016 },
-  ['pvptalents-list-checkmark'] = { rui_TalentsWarmodeAtlas, 28, 26, 0.781250, 0.890625, 0.147461, 0.172852 },
-  ['pvptalents-selectedarrow'] = { rui_TalentsWarmodeAtlas, 43, 44, 0.792969, 0.960938, 0.455078, 0.498047 },
-  ['pvptalents-talentborder'] = { rui_TalentsWarmodeAtlas, 58, 58, 0.523438, 0.750000, 0.634766, 0.691406 },
-  ['pvptalents-talentborder-empty'] = { rui_TalentsWarmodeAtlas, 80, 80, 0.523438, 0.835938, 0.554688, 0.632813 },
-  ['pvptalents-talentborder-glow'] = { rui_TalentsWarmodeAtlas, 68, 68, 0.003906, 0.269531, 0.302734, 0.369141 },
-  ['pvptalents-talentborder-locked'] = { rui_TalentsWarmodeAtlas, 58, 58, 0.757813, 0.984375, 0.634766, 0.691406 },
-  ['pvptalents-warmode-firecover'] = { rui_TalentsWarmodeAtlas, 127, 73, 0.003906, 0.500000, 0.926758, 0.998047 },
-  ['pvptalents-warmode-glow'] = { rui_TalentsWarmodeAtlas, 105, 110, 0.523438, 0.933594, 0.693359, 0.800781 },
-  ['pvptalents-warmode-incentive-ring'] = { rui_TalentsWarmodeAtlas, 48, 48, 0.003906, 0.191406, 0.147461, 0.194336 },
-  ['pvptalents-warmode-orb'] = { rui_TalentsWarmodeAtlas, 80, 84, 0.324219, 0.636719, 0.371094, 0.453125 },
-  ['pvptalents-warmode-ring'] = { rui_TalentsWarmodeAtlas, 80, 84, 0.644531, 0.957031, 0.371094, 0.453125 },
-  ['pvptalents-warmode-ring-disabled'] = { rui_TalentsWarmodeAtlas, 80, 84, 0.003906, 0.316406, 0.371094, 0.453125 },
-  ['pvptalents-warmode-swords'] = { rui_TalentsWarmodeAtlas, 46, 43, 0.753906, 0.933594, 0.101563, 0.143555 },
-  ['pvptalents-warmode-swords-disabled'] = { rui_TalentsWarmodeAtlas, 46, 43, 0.792969, 0.972656, 0.302734, 0.344727 },
-  ['Talent-Background'] = { rui_TalentsWarmodeAtlas, 32, 43, 0.000000, 0.125000, 0.018555, 0.060547 },
-  ['Talent-BottomLeftCurlies'] = { rui_TalentsWarmodeAtlas, 65, 55, 0.523438, 0.777344, 0.921875, 0.975586 },
-  ['Talent-BottomRightCurlies'] = { rui_TalentsWarmodeAtlas, 65, 55, 0.277344, 0.531250, 0.302734, 0.356445 },
-  ['Talent-Highlight'] = { rui_TalentsWarmodeAtlas, 200, 53, 0.003906, 0.785156, 0.455078, 0.506836 },
-  ['Talent-RingWithDot'] = { rui_TalentsWarmodeAtlas, 121, 120, 0.523438, 0.996094, 0.802734, 0.919922 },
-  ['Talent-Selection'] = { rui_TalentsWarmodeAtlas, 190, 45, 0.003906, 0.746094, 0.101563, 0.145508 },
-  ['Talent-Selection-Legendary'] = { rui_TalentsWarmodeAtlas, 190, 45, 0.003906, 0.746094, 0.508789, 0.552734 },
-  ['Talent-Separator'] = { rui_TalentsWarmodeAtlas, 68, 50, 0.003906, 0.269531, 0.251953, 0.300781 },
-  ['Talent-TopLeftCurlies'] = { rui_TalentsWarmodeAtlas, 63, 55, 0.539063, 0.785156, 0.302734, 0.356445 },
-  ['Talent-TopRightCurlies'] = { rui_TalentsWarmodeAtlas, 64, 55, 0.003906, 0.253906, 0.196289, 0.250000 },
 };
 
 local C_Texture = {};

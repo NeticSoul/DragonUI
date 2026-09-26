@@ -1,1021 +1,596 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
 local addon = select(2, ...)
-if not addon.TalentModule then addon.TalentModule = {} end
+addon.TalentModule = addon.TalentModule or {}
 local L = addon.L
 local T = addon.TalentModule
 
-local PER_TIER     = 5
-local PET_PER_TIER = 3
+local PER_TIER = PLAYER_TALENTS_PER_TIER or 5
+local PET_PER_TIER = PET_TALENTS_PER_TIER or 3
+local TEX = addon._dir .. "Talents\\"
 
-local function petHasTalents()
-    if not GetPetTalentTree then return false end
-    local ok, tree = pcall(GetPetTalentTree)
-    return (ok and tree ~= nil and tree ~= "") and true or false
-end
-T.PetHasTalents = petHasTalents
+local EDGE_ACTIVE   = { 1.0, 0.82, 0.0, 0.95 }
+local EDGE_INACTIVE = { 0.24, 0.24, 0.27, 0.38 }
+local EDGE_WIDTH = 32
 
-function T.PetViewActive() return (T._petView and petHasTalents()) and true or false end
-function T.SetPetView(on)
-    T._petView = on and true or false
-    if T._petView and T.GlyphsSetActive then T.GlyphsSetActive(false) end
-end
-
--- ============================================================================
--- Inspect mode
--- ============================================================================
-function T.InspectUnit() return T._inspectUnit end
-local function inspecting() return (T._inspectUnit and true) or false end
-T.IsInspecting = inspecting
-
-local EDGE_ACTIVE   = { 1.0, 0.82, 0.0,  0.95 }
-local EDGE_INACTIVE = { 0.62, 0.58, 0.48, 0.85 }
-
-local SOUNDS = {
-    add    = "igMainMenuOptionCheckBoxOn",
-    remove = "igCharacterInfoTab",
-    apply  = "gsTitleOptionOK",
-    spec   = "igMainMenuOpen",
+local PET_BG = {
+    HunterPetFerocity = "Pet_Ferocity",
+    HunterPetTenacity = "Pet_Tenacity",
+    HunterPetCunning  = "Pet_Cunning",
 }
-local function playSound(key)
-    local s = SOUNDS[key]
-    if s and PlaySound then pcall(PlaySound, s) end
-end
 
 -- ============================================================================
--- API adapter: GetTalentInfo flat tuple -> renderer table
+-- View state
 -- ============================================================================
-local function talentInfo(tab, i, group, isPet)
-    if not GetTalentInfo then return nil end
-    local name, icon, tier, column, rank, maxRank, isExceptional,
-          meetsPrereq, previewRank, meetsPreviewPrereq = GetTalentInfo(tab, i, inspecting(), isPet or false, group)
-    if not name then return nil end
-    return {
-        name               = name,
-        icon               = icon,
-        tier               = tier,
-        column             = column,
-        rank               = rank or 0,
-        maxRank            = maxRank or 0,
-        isExceptional      = isExceptional,
-        meetsPrereq        = meetsPrereq,
-        previewRank        = previewRank,
-        meetsPreviewPrereq = meetsPreviewPrereq,
-    }
+T._populateDirty = true
+
+function T.MarkDirty() T._populateDirty = true end
+
+function T.PetHasTalents()
+    return (GetNumTalentGroups(false, true) or 0) > 0
+end
+
+function T.SetPetView(on)
+    on = on and true or false
+    if T._petView ~= on then T.MarkDirty() end
+    T._petView = on
+end
+
+function T.PetViewActive()
+    return T._petView and T.PetHasTalents() or false
+end
+
+-- The spec group on screen: the inspected or pet one is always active; the player may browse the other.
+function T.ViewGroup()
+    local inspect = T._mode == "inspect"
+    local isPet = not inspect and T.PetViewActive()
+    local active = GetActiveTalentGroup(inspect, isPet) or 1
+    if inspect or isPet then return active, active, inspect, isPet end
+    local view = T._viewGroup or active
+    if view > (GetNumTalentGroups(false, false) or 1) then view = active end
+    return view, active, inspect, isPet
+end
+
+function T.SetViewGroup(group)
+    T._viewGroup = group
+    T.MarkDirty()
 end
 
 local function previewOn()
-    local ok, v
-    if GetCVarBool then ok, v = pcall(GetCVarBool, "previewTalents"); if ok then return v end end
-    if GetCVar then ok, v = pcall(GetCVar, "previewTalents"); if ok then return v == "1" end end
-    return false
+    return GetCVarBool("previewTalents")
 end
 
-local function unspentPoints(group, isPet)
-    if inspecting() then return 0 end
-    if GetUnspentTalentPoints then
-        local ok, v = pcall(GetUnspentTalentPoints, false, isPet or false, group)
-        if ok and v then return v end
-    end
-    if not isPet and UnitCharacterPoints then return UnitCharacterPoints("player") or 0 end
-    return 0
+local function talentInfo(tab, i, inspect, isPet, group)
+    local name, icon, tier, column, rank, maxRank, isExceptional, meetsPrereq, previewRank, meetsPreviewPrereq =
+        GetTalentInfo(tab, i, inspect, isPet, group)
+    if not name then return nil end
+    return {
+        name = name, icon = icon, tier = tier, column = column,
+        rank = rank or 0, maxRank = maxRank or 1, isExceptional = isExceptional,
+        meetsPrereq = meetsPrereq, previewRank = previewRank or rank or 0,
+        meetsPreviewPrereq = meetsPreviewPrereq,
+    }
 end
-
-local function previewSpent(group, isPet)
-    if GetGroupPreviewTalentPointsSpent then
-        local ok, v = pcall(GetGroupPreviewTalentPointsSpent, isPet or false, group)
-        if ok and v then return v end
-    end
-    return 0
-end
-
-local function discardPreview(group, isPet)
-    if InCombatLockdown and InCombatLockdown() then return end
-    isPet = isPet or false
-    if ResetPreviewTalentPoints then pcall(ResetPreviewTalentPoints) end
-    if ResetGroupPreviewTalentPoints then
-        pcall(ResetGroupPreviewTalentPoints, isPet, group)
-        pcall(ResetGroupPreviewTalentPoints, group)
-    end
-    if not (AddPreviewTalentPoints and GetTalentInfo and GetNumTalentTabs) then return end
-    for _pass = 1, 2 do
-        for t = 1, (GetNumTalentTabs(false, isPet) or 0) do
-            local n = (GetNumTalents and GetNumTalents(t, false, isPet)) or 0
-            for i = n, 1, -1 do
-                local info = talentInfo(t, i, group, isPet)
-                if info then
-                    local staged = (info.previewRank or 0) - (info.rank or 0)
-                    if staged > 0 then pcall(AddPreviewTalentPoints, t, i, -staged, isPet, group) end
-                end
-            end
-        end
-    end
-end
-T.DiscardPreview = discardPreview
+T.TalentInfo = talentInfo
 
 -- ============================================================================
--- State machine
+-- Sounds
 -- ============================================================================
-
-local function prereqsMetByRank(pre, byCell, preview)
-    if not pre then return true end
-    for p = 1, #pre, 4 do
-        local ptier, pcol = pre[p], pre[p + 1]
-        local src = ptier and pcol and byCell[ptier * 10 + pcol]
-        if src then
-            local srcRank = (preview and src.previewRank) or src.rank or 0
-            local needed  = src.maxRank or 0
-            if needed > 0 and srcRank < needed then
-                return false
-            end
-        end
-    end
-    return true
+function T.PlayStageSFX(add)
+    PlaySound(add and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
 end
 
-local function computeState(info, prereqs, byCell, tabPointsSpent, preview, available, perTier)
-    perTier = perTier or PER_TIER
-    local liveRank    = info.rank or 0
-    local displayRank = (preview and info.previewRank) or liveRank
-    local prereqsOk   = prereqsMetByRank(prereqs, byCell, preview)
-    local tierUnlocked= ((info.tier or 1) - 1) * perTier <= tabPointsSpent
-    local notMaxed    = not (info.maxRank and info.maxRank > 0 and displayRank >= info.maxRank)
-    local outOfPoints = (available <= 0) and notMaxed
-    local spendable   = prereqsOk and tierUnlocked
-    local colored     = spendable and not outOfPoints
+-- ============================================================================
+-- Node state (New Era's vocabulary over Blizzard's TalentFrame_Update rules)
+-- ============================================================================
+local function computeState(info, tabPointsSpent, preview, available, perTier)
+    local displayRank = preview and info.previewRank or info.rank
+    local meets
+    if preview then meets = info.meetsPreviewPrereq else meets = info.meetsPrereq end
+    local tierUnlocked = ((info.tier or 1) - 1) * perTier <= tabPointsSpent
+    local forceDesat = available <= 0 and displayRank == 0
     local state
-    if preview and displayRank < liveRank then
-        state = "red"
-    elseif colored then
-        state = (displayRank == 0 or notMaxed) and "green" or "yellow"
-    elseif outOfPoints and displayRank > 0 and spendable then
-        state = "dimgreen"
-    else
+    if not (meets and tierUnlocked and not forceDesat) then
         state = (not tierUnlocked and displayRank == 0) and "locked" or "gray"
+    elseif displayRank == 0 then
+        state = "green"
+    else
+        state = "yellow"
     end
     return state, displayRank
 end
 
 -- ============================================================================
--- Node interactions
+-- Node wiring
 -- ============================================================================
-local function nodeAddForbidden(self)
-    if self._prereqsOk == false then return true end
-    return false
-end
-
-local function nodeLeftClick(self)
-    if not AddPreviewTalentPoints then return end
-    if nodeAddForbidden(self) then return end
-    if self._isPet then
-        pcall(AddPreviewTalentPoints, self._tab, self._index, 1, true, T._activeGroup or 1)
-    else
-        pcall(AddPreviewTalentPoints, self._tab, self._index, 1)
-    end
-end
-
-local function nodeRightClick(self)
-    if not AddPreviewTalentPoints then return end
-    if (self._shownRank or 0) <= 0 then return end
-    if self._isPet then
-        pcall(AddPreviewTalentPoints, self._tab, self._index, -1, true, T._activeGroup or 1)
-    else
-        pcall(AddPreviewTalentPoints, self._tab, self._index, -1)
-    end
-end
-
 local function nodeTooltip(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    if self._tab and self._index and GameTooltip.SetTalent then
-        local isPet   = self._isPet or false
-        local inspect = inspecting()
-        local group   = isPet and (T._activeGroup or 1) or (T._viewGroup or T._activeGroup or 1)
-        local preview = (not inspect) and previewOn() or false
-        local ok = pcall(GameTooltip.SetTalent, GameTooltip, self._tab, self._index, inspect, isPet, group, preview)
-        if not ok then
-            ok = pcall(GameTooltip.SetTalent, GameTooltip, self._tab, self._index, inspect, isPet, group)
-        end
-        if ok then
-            GameTooltip:Show()
-            local lines = {}
-            local n = GameTooltip:NumLines() or 0
-            for i = 2, n do
-                local lt = _G["GameTooltipTextLeft" .. i]
-                if lt and lt.GetText then
-                    local t = lt:GetText()
-                    if t and t ~= "" then lines[#lines + 1] = t end
-                end
-            end
-            self._tipDesc = table.concat(lines, " ")
-            return
-        end
+    if T._mode == "edit" then
+        if T.EditTooltip then T.EditTooltip(self) end
+        return
     end
-    if self._tipName then
-        GameTooltip:SetText(self._tipName, 1, 1, 1, 1, true)
-        GameTooltip:Show()
-    end
+    GameTooltip:SetTalent(self._tab, self._index, self._inspect, self._isPet, self._group, self._preview)
+    GameTooltip:Show()
 end
 
-local function wireNode(n)
-    if n._wired then return end
-    n._wired = true
+local function refreshOwnedTooltip()
+    local owner = GameTooltip:GetOwner()
+    if owner and owner._talentNode and owner:IsVisible() then nodeTooltip(owner) end
+end
+T.RefreshNodeTooltip = refreshOwnedTooltip
+
+local function previewRank(tab, index, isPet, group)
+    local _, _, _, _, rank, _, _, _, preview = GetTalentInfo(tab, index, false, isPet, group)
+    return preview or rank or 0
+end
+
+local function previewRankOf(node)
+    return previewRank(node._tab, node._index, node._isPet, node._group)
+end
+
+-- Staged points per tree set; stepping back is always legal, since no later point can rest on the last one.
+local history = {}
+
+local function historyKey(isPet, group)
+    return (isPet and "pet" or "player") .. tostring(group)
+end
+
+local function viewHistory()
+    local group, _, _, isPet = T.ViewGroup()
+    return history[historyKey(isPet, group)], group, isPet
+end
+
+function T.ClearUndo()
+    history = {}
+end
+
+local function nodeClick(self, button)
+    if IsModifiedClick("CHATLINK") and T._mode ~= "edit" then
+        local link = GetTalentLink(self._tab, self._index, self._inspect, self._isPet, self._group, self._preview)
+        if link then ChatEdit_InsertLink(link) end
+        return
+    end
+    if T._mode == "edit" then
+        if T.EditNodeClick then T.EditNodeClick(self, button) end
+        return
+    end
+    if not self._editable then return end
+    local before = previewRankOf(self)
+    AddPreviewTalentPoints(self._tab, self._index, (button == "RightButton") and -1 or 1, self._isPet, self._group)
+    local after = previewRankOf(self)
+    if after ~= before then
+        local key = historyKey(self._isPet, self._group)
+        history[key] = history[key] or {}
+        table.insert(history[key], { tab = self._tab, index = self._index, delta = after - before })
+        T.PlayStageSFX(after > before)
+    end
+    if GameTooltip:IsOwned(self) then nodeTooltip(self) end
+end
+
+function T.WireNode(n)
+    if n._talentNode then return end
+    n._talentNode = true
     n:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    n:SetScript("OnClick", function(self, btn)
-        if InCombatLockdown and InCombatLockdown() then return end
-        if T.IsInspecting and T.IsInspecting() then return end
-        if not self._isPet and (T._viewGroup or 1) ~= (T._activeGroup or 1) then return end
-        if btn == "LeftButton" then nodeLeftClick(self)
-        elseif btn == "RightButton" then nodeRightClick(self) end
-        nodeTooltip(self)
-    end)
+    n:SetScript("OnClick", nodeClick)
     n:SetScript("OnEnter", function(self)
-        if self.ShowHover then self:ShowHover() end
+        self:ShowHover()
         nodeTooltip(self)
     end)
     n:SetScript("OnLeave", function(self)
-        if self.HideHover then self:HideHover() end
+        self:HideHover()
         GameTooltip:Hide()
     end)
 end
-T._WireNode = wireNode
 
 -- ============================================================================
--- Edge drawing & flow engine (fixed axis-aligned lines + destination arrow)
+-- Edges: straight prereq-to-dependent lines with the arrowhead at the dependent (New Era)
 -- ============================================================================
-local sqrt, abs = math.sqrt, math.abs
-local EDGE_LINE_W = 4
-local ARROW_W, ARROW_H = 22, 20
-local ARROW_TIP_REACH = ARROW_H / 4
-
-local ARROW_TC = {
-    down  = function(L, R, T, B) return L, T, L, B, R, T, R, B end,
-    right = function(L, R, T, B) return R, T, L, T, R, B, L, B end,
-    up    = function(L, R, T, B) return R, B, R, T, L, B, L, T end,
-    left  = function(L, R, T, B) return L, B, R, B, L, T, R, T end,
-}
-
-local NODE_PAD  = 2
-local HIT_HARD, HIT_SOFT, BEND_COST = 1000, 6, 4
-local SIDE_EXIT = 7
-local RANK_HALF_W, RANK_DROP, RANK_H = 11, 1, 12
-local EMPTY = {}
-
-local function addNodeRect(tf, tier, col, x, y, visual)
-    local rects = tf._nodeRects
-    if not rects then return end
-    local vs   = visual or T.LAYOUT.NODE
-    local half = vs / 2 + NODE_PAD
-    local key  = tier * 10 + col
-    tf._nodeHalf[key] = vs / 2
-    rects[#rects + 1] = { key = key, cost = HIT_HARD, tier = tier, cx = x,
-                          x0 = x - half, x1 = x + half, y0 = y - half, y1 = y + half }
-    local top = y - vs * (T.LAYOUT.ICON_INSET or 0.84) / 2 - RANK_DROP
-    rects[#rects + 1] = { key = key, cost = HIT_SOFT, tier = tier, cx = x,
-                          x0 = x - RANK_HALF_W, x1 = x + RANK_HALF_W, y0 = top - RANK_H, y1 = top }
+function T.DrawEdge(tf, ptier, pcol, dtier, dcol, active)
+    local sx, sy = T.nodeCenter(ptier, pcol)
+    local dx, dy = T.nodeCenter(dtier, dcol)
+    local c = active and EDGE_ACTIVE or EDGE_INACTIVE
+    local e = tf:AcquireEdge()
+    DrawRouteLine(e.line, tf, sx, sy, dx, dy, EDGE_WIDTH, "TOPLEFT")
+    e.line:SetVertexColor(c[1], c[2], c[3], c[4])
+    local angle = math.atan2(sy - dy, sx - dx)
+    local grow = (dtier >= T.CAPSTONE_TIER) and 1 or T.LAYOUT.NODE_SCALE
+    local off = (T.LAYOUT.NODE / 2) * 1.2 * grow
+    T.SetArrow(e.arrow, active, angle - math.pi / 2)
+    e.arrow:ClearAllPoints()
+    e.arrow:SetPoint("CENTER", tf, "TOPLEFT", dx + math.cos(angle) * off, dy + math.sin(angle) * off)
 end
 
-local function sideLanes(rects, lo, hi, sx)
-    local pitch = (T.LAYOUT and T.LAYOUT.PITCH_X) or 54
-    local xs, seen = {}, {}
-    for i = 1, #rects do
-        local r = rects[i]
-        if r.cost == HIT_HARD and r.tier > lo and r.tier < hi and not seen[r.cx] then
-            seen[r.cx] = true
-            xs[#xs + 1] = r.cx
-        end
-    end
-    if #xs == 0 then return { sx } end
-    table.sort(xs)
-    local lanes = { xs[1] - pitch * 0.5, xs[#xs] + pitch * 0.5 }
-    for i = 1, #xs - 1 do
-        if xs[i + 1] - xs[i] > ((T.LAYOUT and T.LAYOUT.NODE) or 36) then
-            lanes[#lanes + 1] = (xs[i] + xs[i + 1]) / 2
-        end
-    end
-    local width = (T.LAYOUT and T.LAYOUT.TREE_W) or ((((T.LAYOUT and T.LAYOUT.COLS) or 4) - 1) * pitch + 36)
-    local function rank(x)
-        return abs(x - sx) + ((x < 0 or x > width) and 1000 or 0)
-    end
-    table.sort(lanes, function(a, b) return rank(a) < rank(b) end)
-    return lanes
-end
-
-local function buildGapY()
-    local tiers = (T.LAYOUT and T.LAYOUT.TIERS) or 11
-    local g = {}
-    for t = 1, tiers - 1 do
-        local _, y1 = T.nodeCenter(t, 1)
-        local _, y2 = T.nodeCenter(t + 1, 1)
-        g[t] = (y1 + y2) / 2
-    end
-    return g
-end
-
-local function pathCost(pts, rects, skipA, skipB)
-    local n = #pts / 2
-    local cost = (n - 2) * BEND_COST
-    if n > 2 and abs(pts[3] - pts[1]) < 0.5 then cost = cost + SIDE_EXIT end
-    for i = 1, n - 1 do
-        local ax, ay = pts[i * 2 - 1], pts[i * 2]
-        local bx, by = pts[i * 2 + 1], pts[i * 2 + 2]
-        cost = cost + abs(bx - ax) + abs(by - ay)
-        local x0, x1 = ax, bx; if x0 > x1 then x0, x1 = x1, x0 end
-        local y0, y1 = ay, by; if y0 > y1 then y0, y1 = y1, y0 end
-        for k = 1, #rects do
-            local r = rects[k]
-            if r.key ~= skipA and r.key ~= skipB
-               and not (x1 < r.x0 or x0 > r.x1 or y1 < r.y0 or y0 > r.y1) then
-                cost = cost + r.cost
-            end
-        end
-    end
-    return cost
-end
-
-local function tidyPath(pts)
-    local out = {}
-    for i = 1, #pts, 2 do
-        local x, y = pts[i], pts[i + 1]
-        local n = #out
-        if not (n >= 2 and abs(out[n - 1] - x) < 0.5 and abs(out[n] - y) < 0.5) then
-            out[n + 1], out[n + 2] = x, y
-        end
-    end
-    local k = 2
-    while k * 2 <= #out - 2 do
-        local ax, ay = out[k * 2 - 3], out[k * 2 - 2]
-        local bx, by = out[k * 2 - 1], out[k * 2]
-        local cx, cy = out[k * 2 + 1], out[k * 2 + 2]
-        if (abs(ax - bx) < 0.5 and abs(bx - cx) < 0.5) or (abs(ay - by) < 0.5 and abs(by - cy) < 0.5) then
-            table.remove(out, k * 2); table.remove(out, k * 2 - 1)
-        else
-            k = k + 1
-        end
-    end
-    return out
-end
-
-local function routeCandidates(tf, sx, sy, ex, ey, sTier, dTier)
-    local gapY, rects = tf._gapY or EMPTY, tf._nodeRects or EMPTY
-    local out = {}
-    if abs(ex - sx) < 0.5 or abs(ey - sy) < 0.5 then
-        out[#out + 1] = { sx, sy, ex, ey }
-    end
-    local lo, hi = sTier, dTier
-    if lo > hi then lo, hi = hi, lo end
-    local corridors = {}
-    if hi > lo then
-        if dTier >= sTier then
-            for t = hi - 1, lo, -1 do corridors[#corridors + 1] = gapY[t] end
-        else
-            for t = lo, hi - 1 do corridors[#corridors + 1] = gapY[t] end
-        end
+-- ============================================================================
+-- Header
+-- ============================================================================
+function T.SetHeader(tf, name, points)
+    tf.headerName:SetText(string.upper(name or ""))
+    tf.headerPts:SetText(points and tostring(points) or "")
+    if (points or 0) > 0 then
+        tf.headerPts:SetTextColor(0.1, 1.0, 0.1)
     else
-        corridors[#corridors + 1] = gapY[lo - 1]
-        corridors[#corridors + 1] = gapY[lo]
+        tf.headerPts:SetTextColor(0.5, 0.5, 0.5)
     end
-    for i = 1, #corridors do
-        local g = corridors[i]
-        if g then out[#out + 1] = { sx, sy, sx, g, ex, g, ex, ey } end
+    local nameW = tf.headerName:GetStringWidth() or 0
+    local ptsW = tf.headerPts:GetStringWidth() or 0
+    tf.headerName:ClearAllPoints()
+    tf.headerName:SetPoint("LEFT", tf, "TOPLEFT", (tf:GetWidth() - (nameW + 6 + ptsW)) / 2, T.LAYOUT.HEADER_CENTER_Y)
+end
+
+-- ============================================================================
+-- Tree placement (the pet has one shallow tree)
+-- ============================================================================
+local function placeTrees(f, singleTree, maxTier)
+    local s = T.LAYOUT.TREE_SCALE
+    for i, tf in ipairs(f.trees) do
+        tf:ClearAllPoints()
+        local x = (singleTree and i == 1) and (T.FRAME.W - T.LAYOUT.TREE_W * s) / 2 or tf._x
+        tf:SetPoint("TOPLEFT", f, "TOPLEFT", x / s, -T.LAYOUT.TREE_TOP / s)
     end
-    out[#out + 1] = { sx, sy, ex, sy, ex, ey }
-    out[#out + 1] = { sx, sy, sx, ey, ex, ey }
-    local g1, g2 = gapY[lo], gapY[hi - 1]
-    if g1 and g2 and abs(g1 - g2) > 0.5 then
-        local lanes = sideLanes(rects, lo, hi, sx)
-        for i = 1, math.min(#lanes, 2) do
-            local jx = lanes[i]
-            out[#out + 1] = { sx, sy, sx, g1, jx, g1, jx, g2, ex, g2, ex, ey }
+    T._nodeYShift = singleTree and math.max(0, T.Tiers() - maxTier) * T.LAYOUT.PITCH_Y / 2 or 0
+end
+T.PlaceTrees = placeTrees
+
+local function playerTierDepth()
+    if T._deepestTier then return T._deepestTier end
+    local deepest = 0
+    for tab = 1, GetNumTalentTabs(false, false) or 0 do
+        for i = 1, GetNumTalents(tab, false, false) or 0 do
+            local _, _, tier = GetTalentInfo(tab, i, false, false)
+            if tier and tier > deepest then deepest = tier end
         end
     end
-    return out
+    if deepest > 0 then T._deepestTier = deepest end
+    return T._deepestTier
 end
 
-local function trimStart(pts, amount)
-    while amount > 0 and #pts >= 4 do
-        local dx, dy = pts[3] - pts[1], pts[4] - pts[2]
-        local len = sqrt(dx * dx + dy * dy)
-        if len > amount + 0.01 then
-            pts[1] = pts[1] + dx / len * amount
-            pts[2] = pts[2] + dy / len * amount
-            return true
-        end
-        table.remove(pts, 1); table.remove(pts, 1)
-        amount = amount - len
+-- ============================================================================
+-- Populate (live grid, pet grid, inspected grid)
+-- ============================================================================
+local function petBackground(f, bgName)
+    if not f.petBg then
+        f.petBg = f:CreateTexture(nil, "BORDER")
+        f.petBg:SetAllPoints(f.bg)
     end
-    return #pts >= 4
+    local file = bgName and PET_BG[bgName]
+    if file then f.petBg:SetTexture(TEX .. file) end
 end
 
-local function trimEnd(pts, amount)
-    while amount > 0 and #pts >= 4 do
-        local n = #pts
-        local dx, dy = pts[n - 3] - pts[n - 1], pts[n - 2] - pts[n]
-        local len = sqrt(dx * dx + dy * dy)
-        if len > amount + 0.01 then
-            pts[n - 1] = pts[n - 1] + dx / len * amount
-            pts[n]     = pts[n] + dy / len * amount
-            return true
-        end
-        pts[n] = nil; pts[n - 1] = nil
-        amount = amount - len
+function T.Populate()
+    local f = T.frame
+    if not (f and f:IsShown()) then return end
+    if T._mode == "edit" then
+        if T.PopulateEdit then T.PopulateEdit() end
+        return
     end
-    return #pts >= 4
-end
+    if T.GlyphViewActive() then
+        if T.GlyphsRefresh then T.GlyphsRefresh() end
+        T.ApplyChrome()
+        return
+    end
+    if not T._populateDirty then return end
 
-local SHEEN_SWEEP, SHEEN_PEAK = 0.7, 0.40
-local GLINT_MIN, GLINT_MAX    = 0.25, 0.95
-local sin, pi, random = math.sin, math.pi, math.random
+    local depth = playerTierDepth()
+    if depth then T.SetTierDepth(depth) end
 
-local function updateSheen(node, clock)
-    if not node._sheenAllowed then return end
-    local s = node.sheen
-    if not s then return end
-    local st = node._sheenStart
-    if not st then if s:IsShown() then s:Hide() end return end
-    local t = (clock - st) / SHEEN_SWEEP
-    if t < 0 or t >= 1 then node._sheenStart = nil; s:Hide(); return end
-    local env  = sin(pi * t)
-    local full = node._sheenSpan or 28
-    local sz = full * env
-    if sz < 1 then sz = 1 end
-    s:SetSize(sz, sz)
-    local d = full * (t - 0.5)
-    s:ClearAllPoints()
-    s:SetPoint("CENTER", node, "CENTER", d, -d)
-    s:SetAlpha(SHEEN_PEAK)
-    s:Show()
-end
+    local group, active, inspect, isPet = T.ViewGroup()
+    if not inspect then T.SetTitle(TALENTS) end
+    local editable = not inspect and (isPet or group == active)
+    local preview = editable and previewOn()
+    local perTier = isPet and PET_PER_TIER or PER_TIER
+    local unspent = editable and (GetUnspentTalentPoints(false, isPet, group) or 0) or 0
+    local staged = preview and (GetGroupPreviewTalentPointsSpent(isPet, group) or 0) or 0
+    local available = unspent - staged
+    local numTabs = GetNumTalentTabs(inspect, isPet) or 0
 
-local function ensureFlowDriver(f)
-    if f._edgeFlow then return end
-    f._edgeFlow = true
-    T._sheenClock = 0
-    T._nextGlint = 0
-    f:HookScript("OnUpdate", function(self, dt)
-        dt = dt or 0
-        local clock = (T._sheenClock or 0) + dt
-        if clock > 1e6 then clock = 0; T._nextGlint = 0 end
-        T._sheenClock = clock
-        local trees = self.trees
-        if not trees then return end
-        for i = 1, 3 do
-            local tf = trees[i]
-            if tf then
-                local sl = tf._sheenList
-                if sl then for j = 1, #sl do if sl[j]._sheenAllowed then updateSheen(sl[j], clock) end end end
+    local maxPetTier = 1
+    if isPet then
+        for i = 1, GetNumTalents(1, false, true) or 0 do
+            local _, _, tier = GetTalentInfo(1, i, false, true, group)
+            if tier and tier > maxPetTier then maxPetTier = tier end
+        end
+    end
+    placeTrees(f, isPet, maxPetTier)
+
+    local domSpent, domTab, petBgName = -1, 1, nil
+    for tabIdx = 1, 3 do
+        local tf = f.trees[tabIdx]
+        tf:ResetEdges()
+        local used = {}
+        if tabIdx <= numTabs then
+            tf:Show()
+            local name, _, spent, background, previewSpent = GetTalentTabInfo(tabIdx, inspect, isPet, group)
+            if isPet then petBgName = background end
+            local tabPointsSpent = (spent or 0) + (preview and (previewSpent or 0) or 0)
+            T.SetHeader(tf, name, tabPointsSpent)
+            if (spent or 0) > domSpent then domSpent, domTab = spent or 0, tabIdx end
+
+            local infos, byCell = {}, {}
+            for i = 1, GetNumTalents(tabIdx, inspect, isPet) or 0 do
+                local info = talentInfo(tabIdx, i, inspect, isPet, group)
+                if info and info.tier and info.column then
+                    infos[i] = info
+                    byCell[info.tier * 10 + info.column] = info
+                end
             end
-        end
-        if clock >= (T._nextGlint or 0) then
-            local cand = {}
-            for i = 1, 3 do
-                local sl = trees[i] and trees[i]._sheenList
-                if sl then for j = 1, #sl do cand[#cand + 1] = sl[j] end end
+
+            for i, info in pairs(infos) do
+                local state, displayRank = computeState(info, tabPointsSpent, preview, available, perTier)
+                local node = tf:AcquireNode(i)
+                used[i] = true
+                node._tab, node._index, node._group = tabIdx, i, group
+                node._inspect, node._isPet, node._preview = inspect, isPet, preview
+                node._editable = editable
+                node._talentName = info.name
+                node._info = info
+                node:SetVisual(T.ResolveShape(info), state, info.icon, (displayRank > 0) and tostring(displayRank) or "")
+                node:PlaceAt(tf, T.nodeCenter(info.tier, info.column))
+                node:Show()
+                T.WireNode(node)
             end
-            local n = #cand
-            if (available or 0) <= 0 then
-                for i = 1, 3 do
-                    local tf2 = trees[i]
-                    if tf2 and tf2._sheenList then
-                        for j = #tf2._sheenList, 1, -1 do
-                            local nd = tf2._sheenList[j]
-                            if nd then nd._sheenStart = nil; if nd.sheen then nd.sheen:Hide() end end
-                        end
-                        tf2._sheenList = {}
+
+            for i, info in pairs(infos) do
+                local pre = { GetTalentPrereqs(tabIdx, i, inspect, isPet, group) }
+                for p = 1, #pre, 4 do
+                    local ptier, pcol = pre[p], pre[p + 1]
+                    local src = ptier and pcol and byCell[ptier * 10 + pcol]
+                    if src then
+                        local meets
+                        if preview then meets = info.meetsPreviewPrereq else meets = info.meetsPrereq end
+                        local srcRank = preview and src.previewRank or src.rank
+                        T.DrawEdge(tf, ptier, pcol, info.tier, info.column, (meets and srcRank > 0) and true or false)
                     end
                 end
-            elseif n > 0 then
-                if n > 1 and T._lastGlint then
-                    for k = n, 1, -1 do if cand[k] == T._lastGlint then table.remove(cand, k); break end end
-                end
-                local pick = cand[random(#cand)]
-                pick._sheenStart = clock
-                T._lastGlint = pick
             end
-            local mult = math.max(1, 6 - n)
-            T._nextGlint = clock + (GLINT_MIN + random(0, math.floor((GLINT_MAX - GLINT_MIN) * 1000)) / 1000) * mult
+        else
+            tf:Hide()
+            tf.headerName:SetText("")
+            tf.headerPts:SetText("")
         end
-    end)
+        tf:HideUnusedNodes(used)
+        tf:HideUnusedEdges()
+    end
+
+    if isPet then
+        T.SetPortraitUnit("pet")
+        petBackground(f, petBgName)
+        f.petBg:Show()
+        f.bg:Hide()
+    else
+        local unit = inspect and T._inspectUnit or "player"
+        local _, classFile = UnitClass(unit)
+        T.SetPortraitClass(classFile)
+        if f.petBg then f.petBg:Hide() end
+        f.bg:Show()
+        -- Blizzard greys the art of a spec you are only browsing.
+        T.SetBackground(domTab, classFile, not inspect and group ~= active)
+    end
+
+    f.pointsText:SetText(("|cffffffff%d|r %s"):format(math.max(0, available), L["points available"]))
+    T._staged = staged
+    T.ApplyChrome()
+    if T.ApplySearch then T.ApplySearch() end
+    refreshOwnedTooltip()
+    T._populateDirty = false
 end
 
-local function drawEdge(tf, sTier, sCol, dTier, dCol, color)
-    local sx, sy = T.nodeCenter(sTier, sCol)
-    local ex, ey = T.nodeCenter(dTier, dCol)
-    if abs(ex - sx) < 1 and abs(ey - sy) < 1 then return end
-
-    local rects = tf._nodeRects or EMPTY
-    local skipA, skipB = sTier * 10 + sCol, dTier * 10 + dCol
-    local cands = routeCandidates(tf, sx, sy, ex, ey, sTier, dTier)
-    local best, bestCost
-    for i = 1, #cands do
-        local pts = tidyPath(cands[i])
-        if #pts >= 4 then
-            local cost = pathCost(pts, rects, skipA, skipB)
-            if not bestCost or cost < bestCost then best, bestCost = pts, cost end
-        end
-    end
-    if not best then return end
-
-    local halves = tf._nodeHalf or EMPTY
-    local fallback = T.LAYOUT.NODE / 2
-    if not (trimStart(best, (halves[skipA] or fallback) + 1)) then return end
-    if not (trimEnd(best, (halves[skipB] or fallback) + 1)) then return end
-
-    local n = #best / 2
-    for i = 1, n - 1 do
-        local x1, y1 = best[i * 2 - 1], best[i * 2]
-        local x2, y2 = best[i * 2 + 1], best[i * 2 + 2]
-        local dx, dy = x2 - x1, y2 - y1
-        local len = sqrt(dx * dx + dy * dy)
-        if len > EDGE_LINE_W then
-            local line = tf:AcquireEdgeLine()
-            line:SetVertexColor(color[1], color[2], color[3], color[4])
-            if abs(dx) > abs(dy) then
-                line:SetSize(len, EDGE_LINE_W)
-            else
-                line:SetSize(EDGE_LINE_W, len)
-            end
-            line:ClearAllPoints()
-            line:SetPoint("CENTER", tf, "TOPLEFT", (x1 + x2) / 2, (y1 + y2) / 2)
-        end
-    end
-
-    local lx, ly = best[n * 2 - 3], best[n * 2 - 2]
-    local tx, ty = best[n * 2 - 1], best[n * 2]
-    local dx, dy = tx - lx, ty - ly
-    local len = sqrt(dx * dx + dy * dy)
-    if len > 1 then
-        dx, dy = dx / len, dy / len
-        local dir
-        if abs(dx) > abs(dy) then
-            dir = (dx > 0) and "right" or "left"
-        else
-            dir = (dy < 0) and "down" or "up"
-        end
-        local off = ARROW_TIP_REACH
-        local a = tf:AcquireEdgeArrow()
-        local nick = (color == EDGE_ACTIVE) and "talents-arrow-head-yellow" or "talents-arrow-head-gray"
-        a:set_atlas(nick, true)
-        local at = addon.atlasinfo[nick]
-        a:SetTexCoord(ARROW_TC[dir](at[4], at[5], at[6], at[7]))
-        a:SetSize(ARROW_W, ARROW_H)
-        a:ClearAllPoints()
-        a:SetPoint("CENTER", tf, "TOPLEFT", tx - dx * off, ty - dy * off)
-    end
+function T.Refresh()
+    T.MarkDirty()
+    local f = T.frame
+    if not (f and f:IsShown()) then return end
+    T.Populate()
+    if T.RefreshSpecTabs then T.RefreshSpecTabs() end
 end
 
 -- ============================================================================
--- Bottom bar setup
+-- Footer
 -- ============================================================================
 StaticPopupDialogs["DUI_TALENTS_LEARN"] = {
-    text = CONFIRM_LEARN_PREVIEW_TALENTS or "Learn the selected talents? Spent points cannot be refunded without a respec.",
+    text = CONFIRM_LEARN_PREVIEW_TALENTS,
     button1 = YES, button2 = NO,
     OnAccept = function()
-        if LearnPreviewTalents then pcall(LearnPreviewTalents, T.PetViewActive and T.PetViewActive() or false) end
-        playSound("apply")
+        LearnPreviewTalents(T.PetViewActive())
+        PlaySound("igQuestListComplete")
     end,
     hideOnEscape = 1, timeout = 0, exclusive = 1, whileDead = 1,
 }
 
-local function buildBottomBar(f)
-    if f._barBuilt then return end
-    f._barBuilt = true
-    if T.LO_TogglePanel and not (T.IsInspecting and T.IsInspecting()) and not T._petView and not (T.GlyphsIsActive and T.GlyphsIsActive()) then T.LO_TogglePanel() end
+local function discard()
+    local group, _, _, isPet = T.ViewGroup()
+    history[historyKey(isPet, group)] = nil
+    ResetGroupPreviewTalentPoints(isPet, group)
+end
 
-    f.pointsText = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    f.pointsText:SetPoint("TOPLEFT", f, "TOPLEFT", -(T.FRAME.CHROME_R or 0) - -10, -(T.FRAME.CHROME_T or 0) - 590)
-    f.pointsText:SetText("")
+local function undoStep()
+    local steps, group, isPet = viewHistory()
+    local step = steps and table.remove(steps)
+    if not step then return end
+    local before = previewRank(step.tab, step.index, isPet, group)
+    AddPreviewTalentPoints(step.tab, step.index, -step.delta, isPet, group)
+    if previewRank(step.tab, step.index, isPet, group) == before then
+        history[historyKey(isPet, group)] = nil
+        return
+    end
+    T.PlayStageSFX(step.delta < 0)
+end
 
-    local apply = CreateFrame("Button", "DragonUI_TalentApplyButton", f, "UIPanelButtonTemplate")
-    apply:SetSize(160, 20)
-    apply:SetPoint("BOTTOM", f, "BOTTOM", 0, (T.FRAME.CHROME_B or 0) + 27)
-    apply:SetText("Apply Changes")
-    apply:SetScript("OnClick", function(self)
-        if InCombatLockdown and InCombatLockdown() then return end
-        if self.IsEnabled and not self:IsEnabled() then return end
+local function iconButton(parent, tex, onClick, tip)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(25, 25)
+    b:SetPoint("CENTER", tex, "CENTER")
+    b:SetScript("OnClick", onClick)
+    b:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(tip, 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    return b
+end
+
+local function activationPending(group)
+    local spell = TALENT_ACTIVATION_SPELLS[group]
+    return spell and IsCurrentSpell(spell)
+end
+
+T.OnBuild(function(f)
+    local bar = f.barFrame
+
+    f.pointsText = bar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+
+    f.apply = CreateFrame("Button", "DragonUI_TalentApplyButton", bar, "UIPanelButtonTemplate")
+    f.apply:SetSize(150, 22)
+    f.apply:SetPoint("CENTER", bar, "CENTER", 0, 1)
+    f.apply:SetText(L["Apply Changes"])
+    f.apply:SetScript("OnClick", function()
+        if T._mode == "edit" then
+            if T.SaveEditBuild then T.SaveEditBuild() end
+            return
+        end
         StaticPopup_Show("DUI_TALENTS_LEARN")
     end)
-    addon.SkinRedButton(apply)
-    f.apply = apply
-
-    local reset = CreateFrame("Button", "DragonUI_TalentResetButton", f)
-    reset:SetSize(18, 18)
-    reset:SetPoint("LEFT", apply, "RIGHT", 8, 0)
-    local resetIcon = "Interface\\Buttons\\UI-GroupLoot-Pass-Up"
-    local resetNT = reset:CreateTexture(nil, "ARTWORK")
-    resetNT:SetTexture(resetIcon)
-    resetNT:SetAllPoints(reset)
-    resetNT:SetVertexColor(0.7, 0.7, 0.7)
-    reset:SetNormalTexture(resetNT)
-    local resetHT = reset:CreateTexture(nil, "HIGHLIGHT")
-    resetHT:SetTexture(resetIcon)
-    resetHT:SetBlendMode("ADD")
-    resetHT:SetAllPoints(reset)
-    reset:SetHighlightTexture(resetHT)
-    reset:SetScript("OnClick", function()
-        if InCombatLockdown and InCombatLockdown() then return end
-        discardPreview(T._activeGroup or 1, T.PetViewActive and T.PetViewActive() or false)
-        if T.Refresh then T.Refresh() end
+    f.apply:SetScript("OnEnter", function(self)
+        if T._mode == "edit" then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(TALENT_TOOLTIP_LEARNTALENTGROUP, 1, 1, 1, 1, true)
+        GameTooltip:Show()
     end)
-    f.reset = reset
+    f.apply:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    addon.SkinRedButton(f.apply)
 
-    local activate = CreateFrame("Button", "DragonUI_TalentActivateButton", f, "UIPanelButtonTemplate")
-    activate:SetSize(160, 20)
-    activate:SetPoint("BOTTOM", f, "BOTTOM", 0, (T.FRAME.CHROME_B or 0) + 27)
-    activate:SetText(L["Activate"] or "Activate")
-    activate:SetScript("OnClick", function()
-        if InCombatLockdown and InCombatLockdown() then return end
-        if SetActiveTalentGroup and T._viewGroup then pcall(SetActiveTalentGroup, T._viewGroup) end
+    -- 3.3.5a has no GlowEmitter; Blizzard's own button glow, tinted green, pulses the same way.
+    f.applyGlow = bar:CreateTexture(nil, "OVERLAY")
+    f.applyGlow:SetTexture("Interface\\Buttons\\UI-Panel-Button-Glow")
+    f.applyGlow:SetTexCoord(0, 0.75, 0, 0.609375)
+    f.applyGlow:SetBlendMode("ADD")
+    f.applyGlow:SetVertexColor(0.2, 1, 0.2)
+    f.applyGlow:SetPoint("TOPLEFT", f.apply, "TOPLEFT", -11, 7)
+    f.applyGlow:SetPoint("BOTTOMRIGHT", f.apply, "BOTTOMRIGHT", 11, -7)
+    f.applyGlow:SetAlpha(0.35)
+    f.applyGlow:Hide()
+    local pulse = f.applyGlow:CreateAnimationGroup()
+    pulse:SetLooping("BOUNCE")
+    local fade = pulse:CreateAnimation("Alpha")
+    fade:SetChange(0.65)
+    fade:SetDuration(0.8)
+    fade:SetSmoothing("IN_OUT")
+    f.applyGlow.pulse = pulse
+
+    f.reset = bar:CreateTexture(nil, "OVERLAY")
+    f.reset:SetSize(20, 20)
+    f.reset:SetPoint("LEFT", f.apply, "RIGHT", 14, 0)
+    f.reset:set_atlas("talents-button-reset")
+    f.undo = bar:CreateTexture(nil, "OVERLAY")
+    f.undo:SetSize(21, 20)
+    f.undo:SetPoint("LEFT", f.reset, "RIGHT", 8, 0)
+    f.undo:set_atlas("talents-button-undo")
+    f.resetButton = iconButton(bar, f.reset, discard, TALENT_TOOLTIP_RESETTALENTGROUP)
+    f.undoButton = iconButton(bar, f.undo, undoStep, L["Undo the last point"])
+
+    f.activate = CreateFrame("Button", "DragonUI_TalentActivateButton", bar, "UIPanelButtonTemplate")
+    f.activate:SetText(TALENT_SPEC_ACTIVATE)
+    f.activate:SetSize(f.activate:GetTextWidth() + 40, 22)
+    f.activate:SetPoint("LEFT", f.apply, "LEFT", 0, 0)
+    f.activate:SetScript("OnClick", function()
+        SetActiveTalentGroup((T.ViewGroup()))
     end)
-    addon.SkinRedButton(activate)
-    activate:Hide()
-    f.activate = activate
-
-    f._setSubButtonsEnabled = function(on)
-        if apply.EnableMouse then apply:EnableMouse(on) end
-        if reset.EnableMouse then reset:EnableMouse(on) end
-        if apply.SetEnabled then apply:SetEnabled(on) else
-            if on then apply:Enable() else apply:Disable() end
-        end
-        if reset.SetEnabled then reset:SetEnabled(on) else
-            if on then reset:Enable() else reset:Disable() end
-        end
-    end
-end
-
--- ============================================================================
--- Pet background / portrait
--- ============================================================================
-local PET_BG_PATH = addon._dir .. "Talents\\"
-local PET_BG_FILE = {
-    HunterPetFerocity = "Pet_Ferocity",
-    HunterPetTenacity = "Pet_Tenacity",
-    HunterPetCunning   = "Pet_Cunning",
-}
-local function applyPetBackground(f, bgName)
-    if not f then return end
-    if not f.petBg then
-        local tx = f:CreateTexture(nil, "BORDER")
-        tx:SetPoint("TOPLEFT",     f, "TOPLEFT",     (T.FRAME.CHROME_L or 0), -(T.FRAME.CHROME_T or 0))
-        tx:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -(T.FRAME.CHROME_R or 0), (T.FRAME.CHROME_B or 0) + (T.FRAME.BOTTOMBAR_H or 0))
-        tx:SetTexCoord(0, 1, 0, 1)
-        f.petBg = tx
-    end
-    local file = bgName and PET_BG_FILE[bgName]
-    if file then f.petBg:SetTexture(PET_BG_PATH .. file) end
-    if f.bg then f.bg:Hide() end
-    f.petBg:Show()
-end
-
-local function refreshPetPortrait(f)
-    local p = f and f.portrait
-    if not (p and SetPortraitTexture) then return end
-    if not (T.PetViewActive and T.PetViewActive()) then return end
-    if UnitExists and not UnitExists("pet") then return end
-    p:SetTexCoord(0, 1, 0, 1)
-    pcall(SetPortraitTexture, p, "pet")
-end
-
-local function ensurePetPortrait(f)
-    refreshPetPortrait(f)
-    addon:After(0,   function() refreshPetPortrait(f) end)
-    addon:After(0.3, function() refreshPetPortrait(f) end)
-    if not f._duiPetPortraitWatcher then
-        local w = CreateFrame("Frame", nil, f)
-        w:RegisterEvent("UNIT_PORTRAIT_UPDATE")
-        w:RegisterEvent("UNIT_PET")
-        w:SetScript("OnEvent", function(_, _, unit)
-            if unit == nil or unit == "pet" or unit == "player" then refreshPetPortrait(f) end
-        end)
-        f._duiPetPortraitWatcher = w
-    end
-end
-T._ApplyPetBackground = applyPetBackground
-
--- ============================================================================
--- Tier depth from live data
--- ============================================================================
-local function playerTierDepth()
-    if T._playerTiers then return T._playerTiers end
-    local maxTier = 0
-    local numTabs = (GetNumTalentTabs and GetNumTalentTabs(false, false)) or 0
-    for tab = 1, numTabs do
-        local n = (GetNumTalents and GetNumTalents(tab, false, false)) or 0
-        for i = 1, n do
-            local _, _, tier = GetTalentInfo(tab, i, false, false)
-            if tier and tier > maxTier then maxTier = tier end
-        end
-    end
-    if maxTier < 1 then return nil end
-    T._playerTiers = maxTier
-    return maxTier
-end
-
-function T.ApplyTierDepth()
-    if not T.SetTierDepth then return end
-    local depth = playerTierDepth()
-    if depth then T.SetTierDepth(depth) end
-end
-
--- ============================================================================
--- Main data refresh (T.Populate)
--- ============================================================================
-function T.Populate()
-    local f = T.frame
-    if not f or not GetTalentInfo then return end
-    buildBottomBar(f)
-    ensureFlowDriver(f)
-
-    T.ApplyTierDepth()
-
-    if T._petView and not petHasTalents() then T._petView = false end
-    local isPet   = T._petView and true or false
-    local perTier = isPet and PET_PER_TIER or PER_TIER
-
-    local inspect = inspecting()
-    local active = (GetActiveTalentGroup
-                    and (inspect and GetActiveTalentGroup(true, isPet) or GetActiveTalentGroup())) or 1
-    if T._viewGroup == nil or T._lastActive ~= active then T._viewGroup = active end
-    T._activeGroup, T._lastActive = active, active
-    local numGroups = (GetNumTalentGroups and (GetNumTalentGroups() or 1)) or 1
-    if numGroups < 2 then T._viewGroup = active end
-
-    local group    = (isPet or inspect) and active or T._viewGroup
-    local editable = (not inspect) and (isPet or (group == active))
-    local viewChanged = (T._lastViewGroup ~= group) or (T._lastPetView ~= isPet)
-    T._lastViewGroup, T._lastPetView = group, isPet
-    T._group = group
-    local preview = previewOn() and editable
-    local numTabs = (GetNumTalentTabs and GetNumTalentTabs(inspect, isPet)) or 0
-
-    for i = 1, 3 do
-        local tf = f.trees[i]
-        if tf and not tf._defPoint then tf._defPoint = { tf:GetPoint() } end
-    end
-    if isPet and numTabs <= 1 then
-        local tf = f.trees[1]
-        local dp = tf._defPoint
-        local treeW = (T.LAYOUT and T.LAYOUT.TREE_W) or tf:GetWidth() or 0
-        tf:ClearAllPoints()
-        tf:SetPoint("TOPLEFT", f, "TOPLEFT", (T.FRAME.W - treeW) / 2, dp and dp[5] or -64)
-    else
-        for i = 1, 3 do
-            local tf = f.trees[i]
-            local dp = tf and tf._defPoint
-            if dp then tf:ClearAllPoints(); tf:SetPoint(unpack(dp)) end
-        end
-    end
-
-    T._nodeYShift = 0
-    if isPet then
-        local layTiers = (T.LAYOUT and T.LAYOUT.TIERS) or 11
-        local pitchY   = (T.LAYOUT and T.LAYOUT.PITCH_Y) or 44
-        local maxTier, nt = 1, (GetNumTalents and GetNumTalents(1, false, true)) or 0
-        for i = 1, nt do
-            local info = talentInfo(1, i, group, true)
-            if info and info.tier and info.tier > maxTier then maxTier = info.tier end
-        end
-        T._nodeYShift = math.max(0, layTiers - maxTier) * pitchY / 2
-    end
-
-    local unspent       = unspentPoints(group, isPet)
-    local previewSpentAll = preview and previewSpent(group, isPet) or 0
-    local available     = unspent - previewSpentAll
-
-    local domIcon, domSpent, domTab = nil, -1, 1
-    local petBgName
-
-    for tabIdx = 1, 3 do
-        local tf = f.trees[tabIdx]
-        tf:ResetEdges(); tf:ResetGates()
-        tf._sheenList = {}
-        tf._nodeRects, tf._nodeHalf = {}, {}
-        local used = {}
-
-        if tabIdx <= numTabs then
-            local name, icon, spent, _bg, prevSpent = GetTalentTabInfo(tabIdx, inspect, isPet, group)
-            if isPet and _bg then petBgName = _bg end
-            local tabPointsSpent = (spent or 0) + (preview and (prevSpent or 0) or 0)
-            tf.headerName:SetText(string.upper(name or ("Tree " .. tabIdx)))
-            tf.headerPts:SetText(tostring(tabPointsSpent))
-            if (available or 0) <= 0 and (tabPointsSpent or 0) > 0 then
-                tf.headerPts:SetTextColor(0, 0.6, 0)
-            elseif (tabPointsSpent or 0) > 0 then
-                tf.headerPts:SetTextColor(0.1, 1.0, 0.1)
-            else
-                tf.headerPts:SetTextColor(0.5, 0.5, 0.5)
-            end
-
-            local nameW = (tf.headerName:GetStringWidth() or 0) * 0.9
-            local ptsW  = tf.headerPts:GetStringWidth() or 0
-            tf.headerName:ClearAllPoints()
-            tf.headerName:SetPoint("LEFT", tf, "TOPLEFT", (tf:GetWidth() - (nameW + 8 + ptsW)) / 2, (T.LAYOUT and T.LAYOUT.HEADER_CENTER_Y) or -13)
-            tf.headerPts:ClearAllPoints()
-            tf.headerPts:SetPoint("TOP", tf.headerName, "BOTTOM", -5, 2)
-
-            if (spent or 0) > domSpent then domSpent = (spent or 0); domIcon = icon; domTab = tabIdx end
-
-            local numTalents = (GetNumTalents and GetNumTalents(tabIdx, inspect, isPet)) or 0
-            local byCell, infos, prereqs = {}, {}, {}
-
-            local occupied = {}
-            for i = 1, numTalents do
-                local info = talentInfo(tabIdx, i, group, isPet)
-                if info and info.tier and info.column then
-                    infos[i] = info
-                    occupied[#occupied + 1] = { tier = info.tier, column = info.column }
-                    if GetTalentPrereqs then
-                        prereqs[i] = { GetTalentPrereqs(tabIdx, i, inspect, isPet, group) }
-                    end
-                end
-            end
-            if T.SetColumnLayout then T.SetColumnLayout(occupied) end
-
-            for i = 1, numTalents do
-                if infos[i] and infos[i].tier and infos[i].column then
-                    byCell[infos[i].tier * 10 + infos[i].column] = infos[i]
-                end
-            end
-
-            for i = 1, numTalents do
-                local info = infos[i]
-                if info and info.tier and info.column then
-                    local shape = T.ResolveShape(info)
-                    local state, displayRank = computeState(info, prereqs[i], byCell, tabPointsSpent, preview, (editable and available) or 0, perTier)
-                    local node = tf:AcquireNode(i); used[i] = true
-                    node._tab, node._index = tabIdx, i
-                    node._isPet = isPet
-                    node._tipName = info.name
-                    node._info = info
-                    node._prereqs = prereqs[i]
-                    node._prereqsOk = prereqsMetByRank(prereqs[i], byCell, preview)
-                    node._tipDesc = ""
-                    local rankText = (info.maxRank and info.maxRank > 0) and (tostring(displayRank) .. "/" .. tostring(info.maxRank)) or ""
-                    node:SetVisual(shape, state, info.icon, rankText)
-
-                    if editable and not viewChanged and node._shownRank then
-                        if displayRank > node._shownRank then
-                            if node.PlaySpend then node:PlaySpend() end
-                            playSound("add")
-                        elseif displayRank < node._shownRank then
-                            playSound("remove")
-                        end
-                    end
-                    node._shownRank = displayRank
-
-                    local dimmed = (not editable) and (not inspect)
-                    node:SetAlpha(dimmed and 0.66 or 1)
-                    if dimmed and node.icon and node.icon.SetDesaturated then node.icon:SetDesaturated(true) end
-                    if not dimmed and node.icon and node.icon.SetDesaturated then node.icon:SetDesaturated(false) end
-                    local x, y = T.nodeCenter(info.tier, info.column)
-                    node:ClearAllPoints(); node:SetPoint("CENTER", tf, "TOPLEFT", x, y); node:Show()
-                    addNodeRect(tf, info.tier, info.column, x, y, node._visualSize)
-                    wireNode(node)
-
-                    if editable and (displayRank or 0) > 0 and (available or 0) > 0 then
-                        node._sheenAllowed = true
-                        tf._sheenList[#tf._sheenList + 1] = node
-                    else
-                        node._sheenStart = nil
-                        node._sheenAllowed = nil
-                        if node.sheen then node.sheen:Hide() end
-                    end
-                end
-            end
-
-            if editable or inspect then
-                tf._gapY = buildGapY()
-                for i = 1, numTalents do
-                    local info = infos[i]
-                    local pre  = prereqs[i]
-                    if info and pre then
-                        for p = 1, #pre, 4 do
-                            local ptier, pcol = pre[p], pre[p + 1]
-                            local srcInfo = ptier and pcol and byCell[ptier * 10 + pcol]
-                            if srcInfo then
-                                local srcRank = (preview and srcInfo.previewRank) or srcInfo.rank or 0
-                                local needed  = srcInfo.maxRank or 0
-                                local active  = (needed > 0 and srcRank >= needed) or (needed == 0 and srcRank > 0)
-                                local color   = active and EDGE_ACTIVE or EDGE_INACTIVE
-                                drawEdge(tf, ptier, pcol, info.tier, info.column, color)
-                            end
-                        end
-                    end
-                end
-            end
-        else
-            tf.headerName:SetText(""); tf.headerPts:SetText("")
-        end
-
-        tf:HideUnusedNodes(used)
-        tf:HideUnusedEdges()
-        tf:HideUnusedGates()
-    end
-
-    if f.portrait then
-        if isPet then
-            ensurePetPortrait(f)
-        else
-            local _, classFile = UnitClass((inspect and T._inspectUnit) or "player")
-            local c = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
-            if c then
-                f.portrait:SetTexture("Interface\\TargetingFrame\\UI-Classes-Circles")
-                f.portrait:SetTexCoord(c[1], c[2], c[3], c[4])
-            elseif domIcon then
-                f.portrait:SetTexCoord(0, 1, 0, 1); f.portrait:SetTexture(domIcon)
-            end
-        end
-    end
-
-    if isPet then
-        applyPetBackground(f, petBgName)
-    else
-        if f.petBg then f.petBg:Hide() end
-        if f.bg then f.bg:Show() end
-        if T.SetBackground then T.SetBackground(domTab) end
-    end
-
-    if f.pointsText then
-        if inspect then
-            local unit  = T._inspectUnit
-            local who   = (unit and GetUnitName and GetUnitName(unit, true)) or (unit and UnitName(unit)) or ""
-            local total = 0
-            for tabIdx = 1, numTabs do
-                local _, _, spent = GetTalentTabInfo(tabIdx, true, isPet, group)
-                total = total + (spent or 0)
-            end
-            f.pointsText:SetText(who .. ("  |cffffffff%d|r"):format(total) .. (L["points spent"] or ""))
-        else
-            f.pointsText:SetText(("|cffffffff%d|r points available"):format(math.max(0, available)))
-        end
-    end
-    local hasStaged = previewSpentAll > 0
-    if f.apply then
-        if f._setSubButtonsEnabled then f._setSubButtonsEnabled(hasStaged) end
-    end
-
-    if inspect then
-        if f.apply then f.apply:Hide() end
-        if f.reset then f.reset:Hide() end
-        if f.activate then f.activate:Hide() end
-    elseif editable then
-        if f.activate then f.activate:Hide() end
-        if f.apply then f.apply:Show() end
-        if f.reset then f.reset:Show() end
-    else
-        if f.apply then f.apply:Hide() end
-        if f.reset then f.reset:Hide() end
-        if f.activate then
-            f.activate:Show()
-            f.activate:SetText(L["Activate"] or "Activate")
-            f.activate:Enable()
-        end
-    end
-
-    if f._loBtn then if (isPet or inspect) then f._loBtn:Hide() else f._loBtn:Show() end end
-
-    if T.RefreshSpecTabs then T.RefreshSpecTabs() end
-    if T.GlyphsEnsureUI then pcall(T.GlyphsEnsureUI) end
-    if T.GlyphsRefresh then pcall(T.GlyphsRefresh) end
-    if T.GlyphsApplyPaneVisibility then pcall(T.GlyphsApplyPaneVisibility) end
-end
-
-function T.Refresh()
-    local f = T.frame
-    if not (f and f:IsShown()) then return end
-    T.Populate()
-end
-
--- ============================================================================
--- Initialization root boot
--- ============================================================================
-local boot = CreateFrame("Frame")
-boot:RegisterEvent("PLAYER_ENTERING_WORLD")
-boot:SetScript("OnEvent", function(self)
-    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
-    local f = T.frame or (T.Build and T.Build()) or nil
-    if not f then return end
-    buildBottomBar(f)
+    f.activate:SetScript("OnShow", function(self) self:RegisterEvent("CURRENT_SPELL_CAST_CHANGED") end)
+    f.activate:SetScript("OnHide", function(self) self:UnregisterEvent("CURRENT_SPELL_CAST_CHANGED") end)
+    f.activate:SetScript("OnEvent", function() T.ApplyChrome() end)
+    addon.SkinRedButton(f.activate)
+    f.activate:Hide()
 
     f:HookScript("OnShow", function()
-        if GetCVar then pcall(function() T._savedPreviewCVar = GetCVar("previewTalents") end) end
-        if SetCVar then pcall(SetCVar, "previewTalents", "1") end
-        if T.Populate then T.Populate() end
+        T._savedPreviewCVar = GetCVar("previewTalents")
+        SetCVar("previewTalents", "1")
+        T.MarkDirty()
+        T.Populate()
+        if T.RefreshSpecTabs then T.RefreshSpecTabs() end
     end)
     f:HookScript("OnHide", function()
-        discardPreview(T._activeGroup or 1, false)
-        if petHasTalents() then discardPreview(T._activeGroup or 1, true) end
-        if SetCVar and T._savedPreviewCVar then pcall(SetCVar, "previewTalents", T._savedPreviewCVar) end
+        if T._mode == "edit" and T.ExitEditor then T.ExitEditor() end
+        T.ClearUndo()
+        ResetGroupPreviewTalentPoints(false, GetActiveTalentGroup(false, false) or 1)
+        if T.PetHasTalents() then ResetGroupPreviewTalentPoints(true, GetActiveTalentGroup(false, true) or 1) end
+        if T._savedPreviewCVar then SetCVar("previewTalents", T._savedPreviewCVar) end
+        T.ClearInspect()
     end)
+end)
 
-    local ev = CreateFrame("Frame")
-    for _, e in ipairs({
-        "PLAYER_TALENT_UPDATE", "CHARACTER_POINTS_CHANGED", "PREVIEW_TALENT_POINTS_CHANGED",
-        "PLAYER_LEVEL_UP", "ACTIVE_TALENT_GROUP_CHANGED",
-        "PET_TALENT_UPDATE", "PREVIEW_PET_TALENT_POINTS_CHANGED", "UNIT_PET",
-    }) do pcall(function() ev:RegisterEvent(e) end) end
-    ev:SetScript("OnEvent", function(_, event, arg1)
-        if event == "UNIT_PET" and arg1 ~= "player" then return end
-        if event == "ACTIVE_TALENT_GROUP_CHANGED" then playSound("spec") end
-        T.Refresh()
-    end)
+-- Footer visibility per mode: live, browsing the other spec, pet, glyphs, editor, inspect.
+function T.ApplyChrome()
+    local f = T.frame
+    if not (f and f.apply) then return end
+    local glyphs = T.GlyphViewActive()
+    local group, active, inspect, isPet = T.ViewGroup()
+    local edit = T._mode == "edit"
+    local browsing = not inspect and not isPet and not glyphs and group ~= active
+    local live = not inspect and not glyphs and not browsing
+
+    local staged = not edit and (T._staged or 0) > 0
+    f.apply:SetShownReq(live)
+    f.apply:SetText(edit and L["Save Build"] or L["Apply Changes"])
+    if edit or staged then f.apply:Enable() else f.apply:Disable() end
+    local glow = live and staged
+    f.applyGlow:SetShownReq(glow)
+    if glow then
+        if not f.applyGlow.pulse:IsPlaying() then f.applyGlow.pulse:Play() end
+    else
+        f.applyGlow.pulse:Stop()
+    end
+
+    local subs = live and not edit
+    for _, r in ipairs({ f.reset, f.undo, f.resetButton, f.undoButton }) do r:SetShownReq(subs) end
+    local steps = viewHistory()
+    local canUndo = staged and steps ~= nil and #steps > 0
+    if staged then f.resetButton:Enable() else f.resetButton:Disable() end
+    if canUndo then f.undoButton:Enable() else f.undoButton:Disable() end
+    f.reset:SetDesaturated(not staged)
+    f.undo:SetDesaturated(not canUndo)
+
+    f.activate:SetShownReq(browsing)
+    if browsing then
+        if activationPending(group) then f.activate:Disable() else f.activate:Enable() end
+    end
+
+    -- New Era seats it after the search box; in a 1214 window that spot runs into Apply.
+    f.pointsText:SetShownReq(live)
+    f.pointsText:ClearAllPoints()
+    f.pointsText:SetPoint("LEFT", edit and f.editExit or f.undo, "RIGHT", 16, 0)
+    if f.editExit then f.editExit:SetShownReq(edit) end
+    if f.inspectImport then f.inspectImport:SetShownReq(inspect) end
+    if f.loadout then f.loadout:SetShownReq(live and not isPet) end
+    if f.search then f.search:SetShownReq(live or browsing) end
+    if T.RefreshPvP then T.RefreshPvP(not inspect and not glyphs and not edit) end
+end
+
+-- ============================================================================
+-- Events
+-- ============================================================================
+local events = CreateFrame("Frame")
+for _, e in ipairs({
+    "PLAYER_TALENT_UPDATE", "CHARACTER_POINTS_CHANGED", "PREVIEW_TALENT_POINTS_CHANGED",
+    "PREVIEW_PET_TALENT_POINTS_CHANGED", "PET_TALENT_UPDATE", "PLAYER_LEVEL_UP",
+    "ACTIVE_TALENT_GROUP_CHANGED", "UNIT_PET", "INSPECT_TALENT_READY", "UNIT_PORTRAIT_UPDATE",
+}) do events:RegisterEvent(e) end
+events:SetScript("OnEvent", function(_, event, arg1)
+    if not T.applied then return end
+    if event == "UNIT_PET" and arg1 ~= "player" then return end
+    if event == "UNIT_PORTRAIT_UPDATE" then
+        if arg1 == "pet" and T.frame:IsShown() and T.PetViewActive() then T.SetPortraitUnit("pet") end
+        return
+    end
+    if event == "INSPECT_TALENT_READY" and T._mode ~= "inspect" then return end
+    if event == "ACTIVE_TALENT_GROUP_CHANGED" then T._viewGroup = nil end
+    -- Learning, respeccing or swapping specs rebuilds the preview from scratch.
+    if event == "PLAYER_TALENT_UPDATE" or event == "PET_TALENT_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        T.ClearUndo()
+    end
+    if event == "UNIT_PET" and T._petView and not T.PetHasTalents() then T.SetPetView(false) end
+    -- The editor is independent of the character's points; a live event must not repaint over it.
+    if T._mode == "edit" and event ~= "ACTIVE_TALENT_GROUP_CHANGED" then
+        T.MarkDirty()
+        return
+    end
+    T.Refresh()
 end)

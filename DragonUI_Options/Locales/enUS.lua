@@ -1885,3 +1885,10 @@ L["Triggers a 3-second preview of the warning state to help you adjust the thres
 -- Talents
 L["Talents"] = true
 L["Retail-style talent window"] = true
+L["Enable Talent Window"] = true
+L["Replace Blizzard's talent and glyph window."] = true
+L["Size of the talent window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = true
+L["Show Glyph Names"] = true
+L["Name each inscribed glyph beside its socket."] = true
+L["Show Glyph Effects"] = true
+L["List what your inscribed glyphs do beside the sockets."] = true

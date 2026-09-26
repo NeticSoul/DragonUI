@@ -3,9 +3,9 @@
     <Script file="NodeData.lua"/>
     <Script file="Talents.lua"/>
     <Script file="Behavior.lua"/>
+    <Script file="Loadouts.lua"/>
     <Script file="SearchBox.lua"/>
     <Script file="SpecTabs.lua"/>
     <Script file="Glyphs.lua"/>
-    <Script file="Loadouts.lua"/>
     <Script file="WarmodeButton.lua"/>
 </Ui>

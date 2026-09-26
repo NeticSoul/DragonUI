@@ -4,7 +4,7 @@
 ================================================================================
 DragonUI Options Panel - Panels Tab
 ================================================================================
-The reskinned Blizzard windows: Character Panel, Pets & Mounts, World Map and Loot Window.
+The reskinned Blizzard windows: Character Panel, Pets & Mounts, World Map, Loot Window and Talents.
 ================================================================================
 ]]
 
@@ -43,6 +43,7 @@ local subTabs = {
     { key = "collections", label = LO["Pets & Mounts"] },
     { key = "worldmap",    label = LO["World Map"] },
     { key = "loot",        label = LO["Loot Window"] },
+    { key = "talents",     label = LO["Talents"] },
 }
 
 -- Search navigation sub-tab setter.
@@ -486,6 +487,76 @@ local function BuildLootSubTab(scroll)
 end
 
 -- ============================================================================
+-- TALENTS
+-- ============================================================================
+
+local function TalentSettings()
+    addon.db.profile.talents = addon.db.profile.talents or {}
+    return addon.db.profile.talents
+end
+
+local function BuildTalentsSubTab(scroll)
+    local talentSection = C:AddSection(scroll, LO["Talents"])
+
+    C:AddDescription(talentSection, LO["Retail-style talent window"])
+
+    C:AddToggle(talentSection, {
+        label = LO["Enable Talent Window"],
+        desc = LO["Replace Blizzard's talent and glyph window."],
+        getFunc = function() return IsEnabled("talents") end,
+        setFunc = function(val)
+            EnsureModuleTable("talents").enabled = val
+            Panel:SelectTab("panels")
+        end,
+        requiresReload = true,
+    })
+
+    C:AddSlider(talentSection, {
+        label = LO["Scale"],
+        desc = LO["Size of the talent window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."],
+        min = 0.5,
+        max = 1.5,
+        step = 0.05,
+        width = 200,
+        getFunc = function() return TalentSettings().scale or 1 end,
+        setFunc = function(val)
+            TalentSettings().scale = val
+            local T = addon.TalentModule
+            if T and T.ApplyScale then T.ApplyScale() end
+        end,
+        disabled = function() return not IsEnabled("talents") end,
+    })
+
+    local glyphSection = C:AddSection(scroll, _G.GLYPHS)
+
+    C:AddToggle(glyphSection, {
+        label = LO["Show Glyph Names"],
+        desc = LO["Name each inscribed glyph beside its socket."],
+        getFunc = function() return TalentSettings().glyph_names == true end,
+        setFunc = function(val)
+            TalentSettings().glyph_names = val
+            local T = addon.TalentModule
+            if T and T.GlyphsRefresh then T.GlyphsRefresh() end
+        end,
+        disabled = function() return not IsEnabled("talents") end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(glyphSection, {
+        label = LO["Show Glyph Effects"],
+        desc = LO["List what your inscribed glyphs do beside the sockets."],
+        getFunc = function() return TalentSettings().glyph_effects ~= false end,
+        setFunc = function(val)
+            TalentSettings().glyph_effects = val
+            local T = addon.TalentModule
+            if T and T.GlyphsRefresh then T.GlyphsRefresh() end
+        end,
+        disabled = function() return not IsEnabled("talents") end,
+        requiresReload = false,
+    })
+end
+
+-- ============================================================================
 -- SUB-TAB DISPATCH
 -- ============================================================================
 
@@ -494,6 +565,7 @@ local subTabBuilders = {
     collections = BuildCollectionsSubTab,
     worldmap    = BuildWorldMapSubTab,
     loot        = BuildLootSubTab,
+    talents     = BuildTalentsSubTab,
 }
 
 -- ============================================================================

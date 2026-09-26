@@ -596,12 +596,6 @@ local MODULE_LIFECYCLE_OVERRIDES = {
         restore = "RestoreItemQualitySystem",
         loadOnce = true,
     },
-    talents = {
-        apply = "ApplyTalentSystem",
-        restore = "RestoreTalentSystem",
-        refresh = "RefreshTalentSystem",
-        loadOnce = true,
-    },
     mainbars = { refresh = "RefreshMainbarsSystem", loadOnce = true },
     micromenu = { refresh = "RefreshMicromenuSystem", loadOnce = true },
     minimap = { refresh = "RefreshMinimapSystem", loadOnce = true },

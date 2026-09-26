@@ -1,484 +1,204 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
 local addon = select(2, ...)
-if not addon.TalentModule then addon.TalentModule = {} end
+addon.TalentModule = addon.TalentModule or {}
 local L = addon.L
 local T = addon.TalentModule
 
 local MAX_NAME = 16
+local TAB_PREFIX = "DragonUI_TalentFrameTab"
+local PET_TAB, GLYPH_TAB = 3, 4
+local NUM_TABS = 4
 
 -- ============================================================================
--- Per-character custom names stored in the module config.
+-- Custom spec names (per character)
 -- ============================================================================
-local function moduleConfig()
-    local cfg = addon:GetModuleConfig("talents")
-    if not cfg then
-        return nil
-    end
-    cfg.talentSpecNames = cfg.talentSpecNames or {}
-    return cfg
+local function specNames()
+    local char = addon.db and addon.db.char
+    if not char then return nil end
+    char.talentSpecNames = char.talentSpecNames or {}
+    return char.talentSpecNames
 end
-local function charKey()
-    return (UnitName("player") or "?") .. "-" .. (GetRealmName() or "?")
-end
+
 local function customName(group)
-    local cfg = moduleConfig()
-    local c = cfg and cfg.talentSpecNames and cfg.talentSpecNames[charKey()]
-    return c and c[group]
+    local names = specNames()
+    return names and names[group]
 end
-local function setCustomName(group, name)
-    name = (name or ""):gsub("[^%a ]", "")
-    name = name:gsub("^%s+", ""):gsub("%s+$", "")
-    if #name > MAX_NAME then name = name:sub(1, MAX_NAME) end
-    local cfg = moduleConfig()
-    if not cfg then return end
-    local key = charKey()
-    cfg.talentSpecNames[key] = cfg.talentSpecNames[key] or {}
-    cfg.talentSpecNames[key][group] = (name ~= "") and name or nil
-end
-local function defaultName(group)
-    if group == 1 then return "Primary"
-    elseif group == 2 then return "Secondary"
-    elseif group == 3 then return "Tertiary"
-    elseif group == 4 then return "Quaternary"
-    end
-    return "Spec " .. group
-end
-local function specName(group) return customName(group) or defaultName(group) end
 
--- ============================================================================
--- Rename dialog
--- ============================================================================
+function T.SpecName(group)
+    return customName(group) or ((group == 2) and TALENT_SPEC_SECONDARY or TALENT_SPEC_PRIMARY)
+end
+
+-- Pipes would open escape sequences in every label that shows the name; the box already caps length.
+local function cleanName(name)
+    local clean = (name or ""):gsub("[%c|]", "")
+    return clean
+end
+
+local function setCustomName(group, name)
+    local names = specNames()
+    if not names then return end
+    name = strtrim(cleanName(name))
+    names[group] = (name ~= "") and name or nil
+end
+
 StaticPopupDialogs["DUI_TALENT_RENAME_SPEC"] = {
-    text = (L["Rename this specialization (letters only, max %d):"] or "Rename this specialization (letters only, max %d):"):format(MAX_NAME),
-    button1 = ACCEPT or "Accept", button2 = CANCEL or "Cancel",
-    hasEditBox = 1, maxLetters = MAX_NAME,
-    OnShow = function(self)
-        local eb = self.editBox or _G[(self:GetName() or "") .. "EditBox"]
-        if not eb then return end
-        eb:SetText((self.data and self.data.current) or "")
-        eb:HighlightText()
-        eb:SetScript("OnTextChanged", function(box)
-            local txt = box:GetText()
-            local clean = txt:gsub("[^%a ]", "")
-            if clean ~= txt then box:SetText(clean) end
-        end)
+    text = L["Rename this specialization (max %d characters):"],
+    button1 = ACCEPT, button2 = CANCEL,
+    hasEditBox = 1, maxLetters = MAX_NAME, timeout = 0, whileDead = 1, hideOnEscape = 1, exclusive = 1,
+    OnShow = function(self, data)
+        self.editBox:SetText((data and customName(data.group)) or "")
+        self.editBox:HighlightText()
+        self.editBox:SetFocus()
     end,
-    OnAccept = function(self)
-        local eb = self.editBox or _G[(self:GetName() or "") .. "EditBox"]
-        if self.data and self.data.group then
-            setCustomName(self.data.group, eb and eb:GetText() or "")
-            if T.RefreshSpecTabs then T.RefreshSpecTabs() end
-        end
+    EditBoxOnTextChanged = function(self)
+        local txt = self:GetText()
+        local clean = cleanName(txt)
+        if clean ~= txt then self:SetText(clean) end
     end,
-    EditBoxOnEnterPressed = function(editBox)
-        local d = editBox:GetParent()
-        if d.data and d.data.group then
-            setCustomName(d.data.group, editBox:GetText() or "")
-            if T.RefreshSpecTabs then T.RefreshSpecTabs() end
-        end
-        d:Hide()
+    OnAccept = function(self, data)
+        if not data then return end
+        setCustomName(data.group, self.editBox:GetText())
+        T.RefreshSpecTabs()
     end,
-    EditBoxOnEscapePressed = function(editBox) editBox:GetParent():Hide() end,
-    timeout = 0, whileDead = 1, hideOnEscape = 1, exclusive = 1,
+    EditBoxOnEnterPressed = function(self) StaticPopup_OnClick(self:GetParent(), 1) end,
+    EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
 }
 
 -- ============================================================================
--- Tab art (selected/deselected)
+-- Tabs: 1-2 = specs, 3 = pet, 4 = glyphs
 -- ============================================================================
--- Position the tab label
-local function positionTabText(tab, selected)
-    local text = _G[tab:GetName() .. "Text"]
-    if text then
-        text:ClearAllPoints()
-        text:SetPoint("CENTER", tab, "CENTER", TEXT_NUDGE_X,
-            selected and TEXT_ACTIVE_DROP or 0)
-    end
-end
+local function tab(i) return _G[TAB_PREFIX .. i] end
 
-local function applyHighlight(tab, selected)
-    for _, piece in ipairs(tab._duiHighlight or {}) do
-        if piece then
-            local ok = pcall(piece.SetAlpha, piece, selected and 0 or HL_ALPHA)
-        end
-    end
-end
-
-local function setTabArt(tab, selected)
-    if not tab then return end
-    local n = tab:GetName()
-    local function set(suffix, show)
-        local t = _G[n .. suffix]
-        if t then if show then t:Show() else t:Hide() end end
-    end
-
-    set("Left",  not selected); set("Middle",  not selected); set("Right",  not selected)
-    set("LeftDisabled", selected); set("MiddleDisabled", selected); set("RightDisabled", selected)
-
-    if selected then
-        if PanelTemplates_SelectTab then PanelTemplates_SelectTab(tab) end
-        tab:SetDisabledFontObject(GameFontHighlightSmall)
-    else
-        if PanelTemplates_DeselectTab then PanelTemplates_DeselectTab(tab) end
-        tab:SetDisabledFontObject(GameFontNormalSmall)
-    end
-
-    positionTabText(tab, selected)
-    applyHighlight(tab, selected)
-end
-
-local TAB_NAMES = { "DragonUI_TalentSpecTab1", "DragonUI_TalentSpecTab2", "DragonUI_TalentSpecTab3", "DragonUI_TalentSpecTab4" }
-local GLYPH_TAB_NAME = "DragonUI_TalentSpecTabGlyphs"
-local PET_TAB_NAME   = "DragonUI_TalentSpecTabPet"
-
--- ============================================================================
--- TAB RESKIN (uiframetabs metal sheet, same as bagster / character panel)
--- ============================================================================
-local TAB_TEX = addon._dir .. "UI\\uiframetabs"
-local CAP_OVERHANG = 5
-local ACTIVE_OVERHANG_L, ACTIVE_OVERHANG_R = 4, 6
-local HL_ALPHA, HL_H = 0.4, 30
-local HL_LEFT_TC   = { 0.015625, 0.5625, 0.816406, 0.933594 }
-local HL_RIGHT_TC  = { 0.015625, 0.59375, 0.667969, 0.785156 }
-local HL_MIDDLE_TC = { 0, 0.015625, 0.175781, 0.292969 }
-local TEXT_ACTIVE_DROP, TEXT_NUDGE_X = -7, -2
-local TAB_GAP = 1
-
-local function reskinSingleTab(tabName)
-    local tab = _G[tabName]
-    if not tab or tab._duiTabReskinned then return end
-
-    tab:SetFrameLevel((tab:GetFrameLevel() or 1) + 4)
-    tab:SetNormalFontObject(GameFontNormalSmall)
-    tab:SetHighlightFontObject(GameFontHighlightSmall)
-
-    local left   = _G[tabName .. "Left"]
-    local right  = _G[tabName .. "Right"]
-    local middle = _G[tabName .. "Middle"]
-    local leftD  = _G[tabName .. "LeftDisabled"]
-    local rightD = _G[tabName .. "RightDisabled"]
-    local midD   = _G[tabName .. "MiddleDisabled"]
-
-    if left then
-        left:ClearAllPoints()
-        left:SetSize(35, 36)
-        left:SetTexture(TAB_TEX)
-        left:SetTexCoord(0.015625, 0.5625, 0.816406, 0.957031)
-        left:SetPoint("TOPLEFT", tab, "TOPLEFT", -CAP_OVERHANG, 0)
-    end
-    if right then
-        right:ClearAllPoints()
-        right:SetSize(37, 36)
-        right:SetTexture(TAB_TEX)
-        right:SetTexCoord(0.015625, 0.59375, 0.667969, 0.808594)
-        right:SetPoint("TOPRIGHT", tab, "TOPRIGHT", CAP_OVERHANG, 0)
-    end
-    if middle and left and right then
-        middle:ClearAllPoints()
-        middle:SetSize(1, 36)
-        middle:SetTexture(TAB_TEX)
-        middle:SetTexCoord(0, 0.015625, 0.175781, 0.316406)
-        middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
-        middle:SetPoint("TOPRIGHT", right, "TOPLEFT")
-    end
-
-    if leftD then
-        leftD:ClearAllPoints()
-        leftD:SetSize(35, 42)
-        leftD:SetTexture(TAB_TEX)
-        leftD:SetTexCoord(0.015625, 0.5625, 0.496094, 0.660156)
-        leftD:SetPoint("TOPLEFT", tab, "TOPLEFT", -ACTIVE_OVERHANG_L, 0)
-    end
-    if rightD then
-        rightD:ClearAllPoints()
-        rightD:SetSize(37, 42)
-        rightD:SetTexture(TAB_TEX)
-        rightD:SetTexCoord(0.015625, 0.59375, 0.324219, 0.488281)
-        rightD:SetPoint("TOPRIGHT", tab, "TOPRIGHT", ACTIVE_OVERHANG_R, 0)
-    end
-    if midD and leftD and rightD then
-        midD:ClearAllPoints()
-        midD:SetSize(1, 42)
-        midD:SetTexture(TAB_TEX)
-        midD:SetTexCoord(0, 0.015625, 0.00390625, 0.167969)
-        midD:SetPoint("TOPLEFT", leftD, "TOPRIGHT")
-        midD:SetPoint("TOPRIGHT", rightD, "TOPLEFT")
-    end
-
-    local stock = tab:GetHighlightTexture()
-    if stock then stock:SetTexture(nil) end
-
-    local function glow(tc, w, anchor)
-        local t = tab:CreateTexture(nil, "HIGHLIGHT")
-        t:SetTexture(TAB_TEX)
-        t:SetTexCoord(unpack(tc))
-        t:SetSize(w, HL_H)
-        t:SetPoint("TOPLEFT", anchor, "TOPLEFT")
-        t:SetBlendMode("ADD")
-        t:SetAlpha(HL_ALPHA)
-        return t
-    end
-
-    local hlLeft  = left  and glow(HL_LEFT_TC,   35, left)
-    local hlRight = right and glow(HL_RIGHT_TC,  37, right)
-    local hlMid
-    if middle then
-        hlMid = tab:CreateTexture(nil, "HIGHLIGHT")
-        hlMid:SetTexture(TAB_TEX)
-        hlMid:SetTexCoord(unpack(HL_MIDDLE_TC))
-        hlMid:SetHeight(HL_H)
-        hlMid:SetPoint("TOPLEFT", hlLeft, "TOPRIGHT")
-        hlMid:SetPoint("TOPRIGHT", hlRight, "TOPLEFT")
-        hlMid:SetBlendMode("ADD")
-        hlMid:SetAlpha(HL_ALPHA)
-    end
-
-    tab._duiHighlight = { hlLeft, hlRight, hlMid }
-
-    local w = 72
-    tab._duiWidth = w
-    tab:SetWidth(w)
-
-    tab._duiTabReskinned = true
-    local origSetWidth = tab.SetWidth
-    tab.SetWidth = function(self, w)
-        if type(w) == "number" and w > 80 then w = 72 end
-        return origSetWidth(self, w)
-    end
-end
-
-local function buildTab(g)
-    local f = T.frame
-    local name = TAB_NAMES[g]
-    local tab = _G[name]
-    if tab then return tab end
-    local ok, t = pcall(CreateFrame, "Button", name, f, "CharacterFrameTabButtonTemplate")
-    if ok and t then tab = t else
-        tab = CreateFrame("Button", name, f, "UIPanelButtonTemplate"); tab._duiPlain = true
-    end
-    tab:SetID(g)
-    tab:SetScript("OnClick", function(self)
-        if PlaySound then pcall(PlaySound, "igCharacterInfoTab") end
-        local id = self:GetID()
-        T._viewGroup = id
-        T._petView = false
-        if T.GlyphsSetActive then T.GlyphsSetActive(false) end
-        if T.GlyphsApplyPaneVisibility then T.GlyphsApplyPaneVisibility() end
-        local Fb = (T.frame and T.frame.children and T.frame.children["DragonUI_TalentLoadoutsFilter"]) or _G["DragonUI_TalentLoadoutsFilter"]
-        if Fb then
-            if T.IsInspecting and T.IsInspecting() or T._petView or (T.GlyphsIsActive and T.GlyphsIsActive()) then
-                Fb:Hide()
+local function layoutTabs()
+    local f, prev = T.frame, nil
+    for i = 1, NUM_TABS do
+        local t = tab(i)
+        if t and t:IsShown() then
+            t:ClearAllPoints()
+            if prev then
+                t:SetPoint("TOPLEFT", prev, "TOPRIGHT", 4, 0)
             else
-                Fb:Show()
+                t:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 11, 2)
             end
+            prev = t
         end
-
-        if T.RefreshSpecTabs then T.RefreshSpecTabs() end
-        if T.Refresh then T.Refresh() end
-    end)
-    reskinSingleTab(name)
-    return tab
-end
-
-local function buildGlyphTab()
-    local f = T.frame
-    local name = GLYPH_TAB_NAME
-    local tab = _G[name]
-    if tab then return tab end
-    local ok, t = pcall(CreateFrame, "Button", name, f, "CharacterFrameTabButtonTemplate")
-    if ok and t then tab = t else
-        tab = CreateFrame("Button", name, f, "UIPanelButtonTemplate"); tab._duiPlain = true
     end
-    tab:SetScript("OnClick", function()
-        if PlaySound then pcall(PlaySound, "igCharacterInfoTab") end
-        T._petView = false
-        if T.GlyphsSetActive then T.GlyphsSetActive(true) end
-        local Fb = (T.frame and T.frame.children and T.frame.children["DragonUI_TalentLoadoutsFilter"]) or _G["DragonUI_TalentLoadoutsFilter"]
-        if Fb then Fb:Hide() end
-        if T.GlyphsRefresh then T.GlyphsRefresh() end
-        if T.GlyphsApplyPaneVisibility then T.GlyphsApplyPaneVisibility() end
-        if T.RefreshSpecTabs then T.RefreshSpecTabs() end
-    end)
-    reskinSingleTab(name)
-    return tab
 end
 
-local function buildPetTab()
-    local f = T.frame
-    local name = PET_TAB_NAME
-    local tab = _G[name]
-    if tab then return tab end
-    local ok, t = pcall(CreateFrame, "Button", name, f, "CharacterFrameTabButtonTemplate")
-    if ok and t then tab = t else
-        tab = CreateFrame("Button", name, f, "UIPanelButtonTemplate"); tab._duiPlain = true
+-- The editor lives on the talent grid; leaving it first keeps a stray tab click from dropping a build.
+local function leaveEditor()
+    if T._mode ~= "edit" then return true end
+    T.RequestExitEditor()
+    return T._mode ~= "edit"
+end
+
+local function selectTab(id)
+    if not leaveEditor() then return end
+    PlaySound("igCharacterInfoTab")
+    if id == GLYPH_TAB then
+        T.SetPetView(false)
+        T.SetGlyphView(true)
+    elseif id == PET_TAB then
+        T.SetGlyphView(false)
+        T.SetPetView(true)
+    else
+        T.SetGlyphView(false)
+        T.SetPetView(false)
+        T.SetViewGroup(id)
     end
-    tab:SetScript("OnClick", function()
-        if PlaySound then pcall(PlaySound, "igCharacterInfoTab") end
-        if T.SetPetView then T.SetPetView(true) else T._petView = true end
-        if T.GlyphsSetActive then T.GlyphsSetActive(false) end
-        local Fb = (T.frame and T.frame.children and T.frame.children["DragonUI_TalentLoadoutsFilter"]) or _G["DragonUI_TalentLoadoutsFilter"]
-        if Fb then Fb:Hide() end
-        if T.GlyphsApplyPaneVisibility then T.GlyphsApplyPaneVisibility() end
-        if T.RefreshSpecTabs then T.RefreshSpecTabs() end
-        if T.Refresh then T.Refresh() end
-    end)
-    reskinSingleTab(name)
-    return tab
+    T.Refresh()
 end
 
--- Rename cog
-local function buildCog()
-    local f = T.frame
-    if T._specCog then return T._specCog end
-    local cog = CreateFrame("Button", "DragonUI_TalentSpecCog", f)
+local function specTooltip(self)
+    local group = self:GetID()
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(T.SpecName(group), 1, 1, 1)
+    local points = {}
+    for t = 1, GetNumTalentTabs(false, false) or 0 do
+        local _, _, spent = GetTalentTabInfo(t, false, false, group)
+        points[#points + 1] = tostring(spent or 0)
+    end
+    if #points > 0 then GameTooltip:AddLine(table.concat(points, " / "), 1, 0.82, 0) end
+    if group == (GetActiveTalentGroup(false, false) or 1) then
+        GameTooltip:AddLine(TALENT_ACTIVE_SPEC_STATUS, 0.1, 1, 0.1)
+    end
+    GameTooltip:Show()
+end
+
+T.SpecTooltip = specTooltip
+
+T.OnBuild(function(f)
+    for i = 1, NUM_TABS do
+        local t = CreateFrame("Button", TAB_PREFIX .. i, f.tabHolder, "CharacterFrameTabButtonTemplate")
+        t:SetID(i)
+        t:SetScript("OnClick", function(self) selectTab(self:GetID()) end)
+        if i <= 2 then
+            t:SetScript("OnEnter", specTooltip)
+            t:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        end
+        -- How characterpanel/tabs.lua's PanelTemplates_TabResize hook re-chains this strip.
+        t._duiRelayout = layoutTabs
+    end
+    PanelTemplates_SetNumTabs(f, NUM_TABS)
+
+    local cog = CreateFrame("Button", "DragonUI_TalentSpecCog", f.barFrame)
     cog:SetSize(18, 18)
-    cog.Icon = cog:CreateTexture(nil, "ARTWORK")
-    if not cog.Icon.set_atlas or not cog.Icon:set_atlas("questlog-icon-setting", true) then
-        cog.Icon:SetTexture("Interface\\Buttons\\UI-OptionsButton"); cog.Icon:SetSize(16, 16)
-    end
-    cog.Icon:SetPoint("CENTER")
-    cog.Hi = cog:CreateTexture(nil, "HIGHLIGHT")
-    if not cog.Hi.set_atlas or not cog.Hi:set_atlas("questlog-icon-setting", true) then
-        cog.Hi:SetTexture("Interface\\Buttons\\UI-OptionsButton"); cog.Hi:SetSize(16, 16)
-    end
-    cog.Hi:SetPoint("CENTER"); cog.Hi:SetBlendMode("ADD"); cog.Hi:SetAlpha(0.4)
-    cog:SetFrameLevel((f:GetFrameLevel() or 1) + 10)
-    cog:SetPoint("TOPRIGHT", f.bg or f, "TOPRIGHT", -8, -8)
+    cog:SetPoint("TOPRIGHT", f.bg, "TOPRIGHT", -8, -8)
+    local gear = cog:CreateTexture(nil, "ARTWORK")
+    gear:set_atlas("questlog-icon-setting", true)
+    gear:SetPoint("CENTER")
+    local glow = cog:CreateTexture(nil, "HIGHLIGHT")
+    glow:set_atlas("questlog-icon-setting", true)
+    glow:SetPoint("CENTER")
+    glow:SetBlendMode("ADD")
+    glow:SetAlpha(0.4)
     cog:SetScript("OnClick", function()
-        local g = T._viewGroup or 1
-        StaticPopup_Show("DUI_TALENT_RENAME_SPEC", nil, nil, { group = g, current = customName(g) or "" })
+        StaticPopup_Show("DUI_TALENT_RENAME_SPEC", MAX_NAME, nil, { group = (T.ViewGroup()) })
     end)
     cog:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(L["Rename specialization"] or "Rename specialization", 1, 1, 1)
+        GameTooltip:SetText(L["Rename specialization"], 1, 1, 1)
         GameTooltip:Show()
     end)
     cog:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    T._specCog = cog
-    return cog
-end
-
--- ============================================================================
--- Build-once + update (called from Behavior.Populate and tab clicks)
--- ============================================================================
-local function sizeAndAnchorTabs(f, names, opts)
-    local x = opts.startX or 14
-    local parentPoint = opts.parentPoint or "BOTTOMLEFT"
-    for _, n in ipairs(names) do
-        local tab = _G[n]
-        if tab then
-            if tab:IsShown() then
-                tab:ClearAllPoints()
-                tab:SetPoint("BOTTOMLEFT", f, parentPoint, x, opts.startY or 0)
-                x = x + (tab:GetWidth() or 60) + 2
-            end
-        end
-    end
-end
+    cog:Hide()
+    f.specCog = cog
+end)
 
 function T.RefreshSpecTabs()
     local f = T.frame
-    if not f then return end
+    if not (f and f:IsShown()) then return end
+    local CP = addon.CharacterPanel
+    local inspect = T._mode == "inspect"
+    local numGroups = GetNumTalentGroups(false, false) or 1
+    local glyphs, pet = T.GlyphViewActive(), T.PetViewActive()
 
-    if T.IsInspecting and T.IsInspecting() then
-        for _, n in ipairs({ TAB_NAMES[1], TAB_NAMES[2], TAB_NAMES[3], TAB_NAMES[4],
-                             PET_TAB_NAME, GLYPH_TAB_NAME }) do
-            local tab = _G[n]
-            if tab then tab:Hide() end
-        end
-        if T._specCog then T._specCog:Hide() end
-        return
-    end
-
-    local num = (GetNumTalentGroups and (GetNumTalentGroups() or 1)) or 1
-
-    local hasGlyph = (type(T.GlyphsSetActive) == "function")
-    local viewG = T._viewGroup or T._activeGroup or 1
-    local glyphActive = T.GlyphsIsActive and T.GlyphsIsActive() or false
-    local petAvail    = T.PetHasTalents and T.PetHasTalents() or false
-    local petActive   = T.PetViewActive and T.PetViewActive() or false
-    local needTalentsTab = hasGlyph or petAvail
-    local tabsToSize = {}
-
-    if num >= 2 then
-        for g = 1, num do
-            local tab = buildTab(g)
-            local txt = _G[TAB_NAMES[g] .. "Text"]
-            if txt then txt:SetText(specName(g)) elseif tab.SetText then tab:SetText(specName(g)) end
-            tab:Show()
-            tabsToSize[#tabsToSize + 1] = TAB_NAMES[g]
-        end
-    else
-        local tab = buildTab(1)
-        local txt = _G[TAB_NAMES[1] .. "Text"]
-        if needTalentsTab then
-            local talentsLabel = TALENTS or L["Talents"] or "Talents"
-            if txt then txt:SetText(talentsLabel) elseif tab.SetText then tab:SetText(talentsLabel) end
-            tab:Show()
-            tabsToSize[#tabsToSize + 1] = TAB_NAMES[1]
+    local shown = {
+        [1] = not inspect,
+        [2] = not inspect and numGroups >= 2,
+        [PET_TAB] = not inspect and T.PetHasTalents(),
+        [GLYPH_TAB] = not inspect and (UnitLevel("player") or 0) >= SHOW_INSCRIPTION_LEVEL,
+    }
+    for i = 1, NUM_TABS do
+        local t = tab(i)
+        if i == 1 then
+            t:SetText(numGroups >= 2 and T.SpecName(1) or TALENTS)
+        elseif i == 2 then
+            t:SetText(T.SpecName(2))
+        elseif i == PET_TAB then
+            t:SetText(PET)
         else
-            if txt then txt:SetText(specName(1)) elseif tab.SetText then tab:SetText(specName(1)) end
-            tab:Hide()
+            t:SetText(GLYPHS)
         end
-        for g = 2, 4 do
-            local t2 = _G[TAB_NAMES[g]]
-            if t2 then t2:Hide() end
-        end
+        t:SetShownReq(shown[i])
+        if shown[i] and CP and CP.ReskinTab then CP.ReskinTab(t) end
     end
 
-    if petAvail then
-        local ptab = buildPetTab()
-        local ptxt = _G[PET_TAB_NAME .. "Text"]
-        local petLabel = PET or L["Pet"] or "Pet"
-        if ptxt then ptxt:SetText(petLabel) elseif ptab.SetText then ptab:SetText(petLabel) end
-        ptab:Show()
-        tabsToSize[#tabsToSize + 1] = PET_TAB_NAME
-    else
-        local ptab = _G[PET_TAB_NAME]
-        if ptab then ptab:Hide() end
-    end
+    local selected
+    if glyphs then selected = GLYPH_TAB elseif pet then selected = PET_TAB else selected = (T.ViewGroup()) end
+    PanelTemplates_SetTab(f, selected)
+    layoutTabs()
 
-    if hasGlyph then
-        local gtab = buildGlyphTab()
-        local gtxt = _G[GLYPH_TAB_NAME .. "Text"]
-        local glyphLabel = GLYPHS or L["Glyphs"] or "Glyphs"
-        if gtxt then gtxt:SetText(glyphLabel) elseif gtab.SetText then gtab:SetText(glyphLabel) end
-        gtab:Show()
-        tabsToSize[#tabsToSize + 1] = GLYPH_TAB_NAME
-    else
-        local gtab = _G[GLYPH_TAB_NAME]
-        if gtab then gtab:Hide() end
-    end
-
-    if #tabsToSize == 0 then
-        if T._specCog then T._specCog:Hide() end
-        return
-    end
-
-    sizeAndAnchorTabs(f, tabsToSize, { startX = 8, startY = -30, parentPoint = "BOTTOMLEFT" })
-
-    local specTurn = (not glyphActive) and (not petActive)
-    if num >= 2 then
-        for g = 1, num do
-            local tab = _G[TAB_NAMES[g]]
-            if tab then setTabArt(tab, specTurn and (g == viewG)) end
-        end
-        if glyphActive or petActive then
-            if T._specCog then T._specCog:Hide() end
-        else
-            buildCog():Show()
-        end
-    else
-        if T._specCog then T._specCog:Hide() end
-        local t1 = _G[TAB_NAMES[1]]
-        if t1 then setTabArt(t1, specTurn) end
-    end
-
-    if petAvail then
-        setTabArt(_G[PET_TAB_NAME], petActive)
-    end
-    if hasGlyph then
-        local gtab = _G[GLYPH_TAB_NAME]
-        setTabArt(gtab, glyphActive)
-    end
+    f.specCog:SetShownReq(not inspect and not glyphs and not pet and T._mode ~= "edit" and numGroups >= 2)
 end

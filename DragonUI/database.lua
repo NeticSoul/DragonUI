@@ -16,6 +16,7 @@ local defaults = {
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
         questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
+        talentBuilds = {}, -- Saved talent builds per class: [CLASS] = { {name, ranks[tab][index], reqLevel}, ... }
         auraDurations = {} -- Observed debuff durations for nameplates: [spellId] = seconds
     },
     profile = {
@@ -765,6 +766,13 @@ local defaults = {
             }
         },
 
+        -- Talent window
+        talents = {
+            scale = 1, -- Talent window scale on top of the UI scale, like the other panels
+            glyph_names = false, -- Show each inscribed glyph's name beside its socket
+            glyph_effects = true -- Show the active-effects card next to the glyph sockets
+        },
+
         -- MODULES SETTINGS
         modules = {
             noop = {
@@ -824,7 +832,7 @@ local defaults = {
                 enabled = true -- Apply DragonUI stance/shapeshift bar positioning and styling
             },
             talents = {
-                enabled = true -- Talent spec tracking and custom spec names UI
+                enabled = true -- Replace Blizzard's talent and glyph window with the retail-style one
             },
             petbar = {
                 enabled = true -- Apply DragonUI pet bar positioning and styling
