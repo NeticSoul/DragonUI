@@ -3,45 +3,54 @@
 -- Centralized event registration and dispatch for addon subsystems.
 -- ============================================================================
 
-local addon = select(2,...);
-local tinsert = table.insert;
-local select, next = select, next;
-addon.package = {};
+local addon = select(2, ...)
 
-function addon.package:RegisterEvents(callback, ...)
-	local numParams = select('#', ...)
-	assert(type(callback) == 'function', ':RegisterEvents() requires a callback function')
-	for index=1, numParams do
-		local event = select(index, ...)
-		assert(type(event) == 'string', ':RegisterEvents() received incorrect parameter')
-		
-		if not self.events[event] then
-			self.events[event] = {}
-		end
+local type, select, error, tostring = type, select, error, tostring
 
-		-- Skip only this event: returning here would drop every remaining event in the list.
-		local duplicate = false
-		for _,module in next, self.events[event] do
-			if module == callback then
-				duplicate = true
-				break
-			end
-		end
+local subscribers = {}
 
-		if not duplicate then
-			tinsert(self.events[event], callback)
-			self.events:RegisterEvent(event)
+local function dispatch(frame, event, ...)
+	local queue = subscribers[event]
+	if queue then
+		-- The bound is fixed up front: callbacks added mid-dispatch wait for the next occurrence.
+		for slot = 1, #queue do
+			queue[slot](frame, event, ...)
 		end
 	end
 end
 
-function addon.package:fire_event(event, ...)
-	if not self[event] then return; end
-	for index=1, #self[event] do
-		self[event][index](self, event, ...)
+local hub = CreateFrame("Frame")
+hub:SetScript("OnEvent", dispatch)
+
+local eventPackage = { events = hub, fire_event = dispatch }
+addon.package = eventPackage
+
+local function isSubscribed(queue, callback)
+	for slot = 1, #queue do
+		if queue[slot] == callback then
+			return true
+		end
 	end
+	return false
 end
 
--- addon.package.events = {}
-addon.package.events = CreateFrame('Frame');
-addon.package.events:SetScript('OnEvent', addon.package.fire_event);
+function eventPackage:RegisterEvents(callback, ...)
+	if type(callback) ~= "function" then
+		error("RegisterEvents: callback must be a function, got " .. type(callback), 2)
+	end
+	for position = 1, select("#", ...) do
+		local event = select(position, ...)
+		if type(event) ~= "string" then
+			error(("RegisterEvents: event #%d is %s, expected a string"):format(position, tostring(event)), 2)
+		end
+		local queue = subscribers[event]
+		if not queue then
+			queue = {}
+			subscribers[event] = queue
+		end
+		if not isSubscribed(queue, callback) then
+			queue[#queue + 1] = callback
+			hub:RegisterEvent(event)
+		end
+	end
+end

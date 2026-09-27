@@ -1,290 +1,65 @@
-<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
-..\FrameXML\UI.xsd">
-	<!-- utils -->
-	<Script file="atlas.lua"/>
-	<Script file="core.lua"/>
-	<Script file="events.lua"/>
-	<Script file="iconframe.lua"/>
-	<Script file="nineslice.lua"/>
-	<Script file="menu.lua"/>
-	<Script file="questpoi.lua"/>
-	<Script file="redbutton.lua"/>
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="atlas.lua"/>
+    <Script file="core.lua"/>
+    <Script file="events.lua"/>
+    <Script file="iconframe.lua"/>
+    <Script file="nineslice.lua"/>
+    <Script file="menu.lua"/>
+    <Script file="questpoi.lua"/>
+    <Script file="redbutton.lua"/>
+    <Script file="vehicleart.lua"/>
 
-<!--
-*******************************************************************************
-   Frame border element
-	Can have any arbitrary NineSlice theme applied, appears over all frame
-	content, but under any elements like tutorials, notifications, custom
-	artwork, etc...
-*******************************************************************************
--->
-	<Frame name="NineSlicePanelUiTemplate" mixin="NineSlicePanelUiMixin" frameLevel="10" setAllPoints="true" virtual="true">
-		<Scripts>
-			<OnLoad>
-				addon_mixin(self, NineSlicePanelUiMixin)
-				self:OnLoad()
-			</OnLoad>
-		</Scripts>
-	</Frame>
-<!-- End NineSlicePanelUiTemplate  -->
+    <Frame name="NineSlicePanelUiTemplate" frameLevel="10" setAllPoints="true" virtual="true">
+        <Scripts>
+            <OnLoad>addon_mixin(self, NineSlicePanelUiMixin); self:OnLoad()</OnLoad>
+        </Scripts>
+    </Frame>
 
-<!-- MainMenuBarArtFrame -->
-	<Frame name="MainMenuBarUiTemplate" inherits="SecureHandlerStateTemplate" frameLevel="50" toplevel="true" virtual="true">
-		<Size x="526" y="42"/>
-		<Anchors>
-			<Anchor point="BOTTOM" x="0" y="18"/>
-		</Anchors>
-		<Frames>
-			<Frame parentKey="BorderArt" inherits="NineSlicePanelUiTemplate" frameLevel="52">
-				<Attributes>
-					<Attribute name="layoutType" value="UniqueCornersLayout" type="string"/>
-					<Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame" type="string"/>
-				</Attributes>
-				<Anchors>
-					<Anchor point="TOPLEFT" relativePoint="TOPLEFT" x="-4" y="4"/>
-				<Anchor point="BOTTOMRIGHT" relativePoint="BOTTOMRIGHT" x="8" y="-7"/>
-				</Anchors>
-			</Frame>
-			<Frame parentKey="Background" inherits="NineSlicePanelUiTemplate" frameLevel="1" setAllPoints="true">
-				<Attributes>
-					<Attribute name="ignoreInLayout" value="true" type="boolean"/>
-					<Attribute name="layoutType" value="UniqueCornersLayout" type="string"/>
-					<Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame-background" type="string"/>
-					<Attribute name="layoutTextureLayer" value="BACKGROUND" type="string"/>
-				</Attributes>
-			</Frame>
-		</Frames>
-	</Frame>
+    <!-- Bar roots take no scripts: one would replace SecureHandlerStateTemplate's OnLoad. -->
+    <Frame name="MainMenuBarUiTemplate" frameLevel="50" toplevel="true" inherits="SecureHandlerStateTemplate" virtual="true">
+        <Size x="526" y="42"/>
+        <Anchors>
+            <Anchor point="BOTTOM" x="0" y="18"/>
+        </Anchors>
+        <Frames>
+            <!-- Keep both children unnamed: the main bar fader treats unnamed children as decorative art. -->
+            <Frame parentKey="BorderArt" frameLevel="52" inherits="NineSlicePanelUiTemplate">
+                <Anchors>
+                    <Anchor point="TOPLEFT" x="-4" y="4"/>
+                    <Anchor point="BOTTOMRIGHT" x="8" y="-7"/>
+                </Anchors>
+                <Attributes>
+                    <Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame"/>
+                    <Attribute name="layoutType" value="UniqueCornersLayout"/>
+                </Attributes>
+            </Frame>
+            <Frame parentKey="Background" frameLevel="1" setAllPoints="true" inherits="NineSlicePanelUiTemplate">
+                <Attributes>
+                    <Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame-background"/>
+                    <Attribute name="layoutTextureLayer" value="BACKGROUND"/>
+                    <Attribute name="layoutType" value="UniqueCornersLayout"/>
+                    <Attribute name="ignoreInLayout" type="boolean" value="true"/>
+                </Attributes>
+            </Frame>
+        </Frames>
+    </Frame>
 
-<!-- VehicleBarArtFrame -->
-	<Frame name="VehicleBarUiTemplate" inherits="SecureHandlerStateTemplate" frameLevel="54" toplevel="true" virtual="true">
-		<Size x="800" y="56"/>
-		<Anchors>
-			<Anchor point="BOTTOM" x="0" y="0"/>
-		</Anchors>
-		<Frames>
-			<Frame parentKey="OrganicUi" setAllPoints="true" hidden="true">
-				<Layers>
-					<Layer level="BACKGROUND">
-						<!-- Action buttons background -->
-						<Texture name="$parentBACKGROUND1" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="470" y="85"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-170" y="0"/>
-							</Anchors>
-							<TexCoords left="0.0" right="1.8359375" top="0.68359375" bottom="1.0"/>
-						</Texture>
-					</Layer>
-					<Layer level="BORDER">
-						<!-- Leave Seat Buckle -->
-						<Texture name="$parentBORDER1" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="76" y="91"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-161" y="-10"/>
-							</Anchors>
-							<TexCoords left="0.00390625" right="0.30078125" top="0.3203125" bottom="0.67578125"/>
-						</Texture>
-						<!-- Top border -->
-						<Texture name="$parentBORDER2" file="Interface\Vehicles\UI-Vehicle-Frame-Border-Organic">
-							<Size>
-								<AbsDimension x="468" y="16"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-170" y="79"/>
-							</Anchors>
-							<TexCoords left="0.0" right="8.3125" top="0.0" bottom="1.0"/>
-						</Texture>
-						<!-- Border between micro buttons and action buttons -->
-						<Texture name="$parentBORDER3" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="17" y="84"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-247" y="0"/>
-							</Anchors>
-							<TexCoords left="0.93359375" right="1.0" top="0.3515625" bottom="0.6796875"/>
-						</Texture>
-						<!-- Bottom border -->
-						<Texture name="$parentBORDER4" file="Interface\Vehicles\UI-Vehicle-Frame-Border-Organic">
-							<Size>
-								<AbsDimension x="378" y="16"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-257" y="0"/>
-							</Anchors>
-							<TexCoords left="0.0" right="8.3125" top="0.0" bottom="1.0"/>
-						</Texture>
-					</Layer>
-					<Layer level="ARTWORK">
-						<!-- Top right buckle -->
-						<Texture name="$parentARTWORK1" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="92" y="26"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-159" y="73"/>
-							</Anchors>
-							<TexCoords left="0.640625" right="1.0" top="0.0546875" bottom="0.15625"/>
-						</Texture>
-						<!-- Top left buckle -->
-						<Texture name="$parentARTWORK2" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="110" y="25"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMLEFT" x="161" y="76"/>
-							</Anchors>
-							<TexCoords left="0.0" right="0.4296875" top="0.0390625" bottom="0.13671875"/>
-						</Texture>
-						<!-- Bottom right buckle -->
-						<Texture name="$parentARTWORK3" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="77" y="20"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-252" y="-3"/>
-							</Anchors>
-							<TexCoords left="0.640625" right="1.0" top="0.0546875" bottom="0.15625"/>
-						</Texture>
-						<!-- Bottom left buckle -->
-						<Texture name="$parentARTWORK4" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="77" y="20"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-559" y="-3"/>
-							</Anchors>
-							<TexCoords left="1.0" right="0.640625" top="0.0546875" bottom="0.15625"/>
-						</Texture>
-						<!-- Top right buckle -->
-						<Texture name="$parentARTWORK5" file="Interface\Vehicles\UI-Vehicles-Elements-Organic">
-							<Size>
-								<AbsDimension x="31" y="21"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-252" y="75"/>
-							</Anchors>
-							<TexCoords left="0.640625" right="0.78125" top="0.06640625" bottom="0.15625"/>
-						</Texture>
-					</Layer>
-					<Layer level="OVERLAY">
-						<!-- Left end cap -->
-						<Texture name="$parentOVERLAY1" file="Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle">
-							<Size>
-								<AbsDimension x="114" y="128"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMLEFT" x="5" y="-15"/>
-							</Anchors>
-							<TexCoords left="0.0" right="0.4453125" top="0.0" bottom="1.0"/>
-						</Texture>
-						<!-- Right end cap -->
-						<Texture name="$parentOVERLAY2" file="Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle">
-							<Size>
-								<AbsDimension x="114" y="128"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-6" y="-15"/>
-							</Anchors>
-							<TexCoords left="0.4453125" right="0.0" top="0.0" bottom="1.0"/>
-						</Texture>
-						<!-- Right vertical cap -->
-						<Texture name="$parentOVERLAY3" file="Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle">
-							<Size>
-								<AbsDimension x="9" y="103"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-158" y="0"/>
-							</Anchors>
-							<TexCoords left="0.71484375" right="0.7578125" top="0.0" bottom="1.0"/>
-						</Texture>
-						<!-- Right vertical cap -->
-						<Texture name="$parentOVERLAY4" file="Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle">
-							<Size>
-								<AbsDimension x="9" y="103"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMLEFT" x="158" y="0"/>
-							</Anchors>
-							<TexCoords left="0.7578125" right="0.71484375" top="0.0" bottom="1.0"/>
-						</Texture>
-					</Layer>
-				</Layers>
-			</Frame>
-			<Frame parentKey="MechanicUi" setAllPoints="true" hidden="true">
-				<Layers>
-					<Layer level="BACKGROUND">
-						<!-- Action buttons background -->
-						<Texture name="$parentBACKGROUND1" file="Interface\AddOns\DragonUI\Textures\ActionBars\mechanical2">
-							<Size>
-								<AbsDimension x="546" y="88"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-140" y="0"/>
-							</Anchors>
-							<TexCoords left="0.0" right="0.99609375" top="0.173828125" bottom="0.353515625"/>
-						</Texture>
-					</Layer>
-					<!-- Top border -->
-					<Layer level="BORDER">
-						<Texture name="$parentBORDER2" file="Interface\AddOns\DragonUI\Textures\ActionBars\mechanical2">
-							<Size>
-								<AbsDimension x="538" y="26"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-141" y="78"/>
-							</Anchors>
-							<TexCoords left="0.0" right="0.99609375" top="0.017578125" bottom="0.056640625"/>
-						</Texture>
-					</Layer>
-					<Layer level="OVERLAY">
-						<!-- Left end cap -->
-						<Texture name="$parentOVERLAY1" file="Interface\AddOns\DragonUI\Textures\ActionBars\mechanical2">
-							<Size>
-								<AbsDimension x="121" y="128"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMLEFT" x="-36" y="-15"/>
-							</Anchors>
-							<TexCoords left="0.060546875" right="0.283203125" top="0.76953125" bottom="0.98828125"/>
-						</Texture>
-						<!-- Right end cap -->
-						<Texture name="$parentOVERLAY2" file="Interface\AddOns\DragonUI\Textures\ActionBars\mechanical2">
-							<Size>
-								<AbsDimension x="121" y="128"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="16" y="-15"/>
-							</Anchors>
-							<TexCoords left="0.283203125" right="0.060546875" top="0.76953125" bottom="0.98828125"/>
-						</Texture>
-						<!-- Right vertical cap -->
-						<Texture name="$parentOVERLAY3" file="Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle">
-							<Size>
-								<AbsDimension x="9" y="108"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMRIGHT" x="-135" y="0"/>
-							</Anchors>
-							<TexCoords left="0.71484375" right="0.7578125" top="0.0" bottom="1.0"/>
-						</Texture>
-						<!-- Left vertical cap -->
-						<Texture name="$parentOVERLAY4" file="Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle">
-							<Size>
-								<AbsDimension x="9" y="108"/>
-							</Size>
-							<Anchors>
-								<Anchor point="BOTTOMLEFT" x="114" y="0"/>
-							</Anchors>
-							<TexCoords left="0.7578125" right="0.71484375" top="0.0" bottom="1.0"/>
-						</Texture>
-					</Layer>
-				</Layers>
-			</Frame>
-		</Frames>
-	</Frame>
+    <Frame name="VehicleBarUiTemplate" frameLevel="54" toplevel="true" inherits="SecureHandlerStateTemplate" virtual="true">
+        <Size x="800" y="56"/>
+        <Anchors>
+            <Anchor point="BOTTOM" x="0" y="0"/>
+        </Anchors>
+        <Frames>
+            <Frame parentKey="OrganicUi" hidden="true" setAllPoints="true">
+                <Scripts>
+                    <OnLoad>DragonUI.BuildVehicleArt(self, "organic")</OnLoad>
+                </Scripts>
+            </Frame>
+            <Frame parentKey="MechanicUi" hidden="true" setAllPoints="true">
+                <Scripts>
+                    <OnLoad>DragonUI.BuildVehicleArt(self, "mechanical")</OnLoad>
+                </Scripts>
+            </Frame>
+        </Frames>
+    </Frame>
 </Ui>

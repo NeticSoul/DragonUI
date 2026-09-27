@@ -1,136 +1,60 @@
 -- Adapted from Blizzard's retail FrameXML NineSlice system for DragonUI.
-local addon = select(2,...);
-local C_Texture = addon.c_texture;
+local addon = select(2, ...)
 
-local function GetNineSlicePiece(container, pieceName)
-	if container.GetNineSlicePiece then
-		local piece = container:GetNineSlicePiece(pieceName)
-		if piece then
-			return piece, true
-		end
-	end
-	
-	local piece = container[pieceName];
-	if piece then
-		return piece, true;
-	else
-		piece = container:CreateTexture()
-		container[pieceName] = piece;
-		return piece, false;
-	end
+local ipairs, error = ipairs, error
 
-	-- return container[pieceName] or container:CreateTexture(), false
+local atlasShim = addon.c_texture
+
+-- Kept in apply order: corners first, since edges and the centre anchor to them.
+local pieceRules = {}
+local kitPieces = {}
+
+local function addRule(name, rule)
+	rule.name = name
+	-- A mirrored layout flips right-hand art left-to-right and bottom art top-to-bottom.
+	rule.flipX = name:find("Right", 1, true) ~= nil
+	rule.flipY = name:find("Bottom", 1, true) ~= nil
+	pieceRules[#pieceRules + 1] = rule
 end
 
-local function PropagateLayoutSettingsToPieceLayout(userLayout, pieceLayout)
-	-- Only apply mirrorLayout if it wasn't explicitly defined
-	if pieceLayout.mirrorLayout == nil then
-		pieceLayout.mirrorLayout = userLayout.mirrorLayout
-	end
-
-	-- ... and other settings that apply to the whole nine-slice
+-- Anchor pair spanning spot a to spot b; a nil target means the container itself.
+local function span(a, b, targetA, targetB)
+	local pointA, pointB = a:upper(), b:upper()
+	return { { pointA, targetA, pointB }, { pointB, targetB, pointA } }
 end
 
-local function SetupTextureCoordinates(piece, setupInfo, pieceLayout, userLayout)
-	local left, right, top, bottom = 0, 1, 0, 1;
-
-	local pieceMirrored = pieceLayout.mirrorLayout;
-	if pieceMirrored == nil then
-		pieceMirrored = userLayout and userLayout.mirrorLayout;
-	end
-
-	if pieceMirrored then
-		if setupInfo.mirrorVertical then
-			top, bottom = bottom, top;
-		end
-
-		if setupInfo.mirrorHorizontal then
-			left, right = right, left;
-		end
-	end
-	-- piece:SetHorizTile(setupInfo.tileHorizontal)
-	-- piece:SetVertTile(setupInfo.tileVertical)
-	piece:SetSubTexCoord(left, right, top, bottom);
-end
-
-local function SetupPieceVisuals(piece, setupInfo, pieceLayout, textureKit)
-	-- Change texture coordinates before applying atlas.
-	SetupTextureCoordinates(piece, setupInfo, pieceLayout)
-	
-	-- textureKit is optional, that's fine but if it's nil the caller should ensure that there are no format specifiers in .atlas
-	local atlasName = C_Texture.GetFinalNameFromTextureKit(pieceLayout.atlas, textureKit)
-	local info = C_Texture.GetAtlasInfo(atlasName)
-	piece:SetHorizTile(info and info.tilesHorizontally or false)
-	piece:SetVertTile(info and info.tilesVertically or false)
-	piece:set_atlas(atlasName, true)
-end
-
-local function SetupCorner(container, piece, setupInfo, pieceLayout)
-	piece:ClearAllPoints()
-	piece:SetPoint(pieceLayout.point or setupInfo.point, container, pieceLayout.relativePoint or setupInfo.point, pieceLayout.x, pieceLayout.y)
-end
-
-local function SetupEdge(container, piece, setupInfo, pieceLayout)
-	piece:ClearAllPoints();
-
-	local userLayout = NineSliceUtils.GetLayout(container.layoutType);
-	if userLayout and (userLayout.threeSliceVertical or userLayout.threeSliceHorizontal) then
-		piece:SetPoint(setupInfo.point, container, setupInfo.relativePoint, pieceLayout.x, pieceLayout.y);
-		piece:SetPoint(setupInfo.relativePoint, container, setupInfo.point, pieceLayout.x1, pieceLayout.y1);
-	else
-		piece:SetPoint(setupInfo.point, GetNineSlicePiece(container, setupInfo.relativePieces[1]), setupInfo.relativePoint, pieceLayout.x, pieceLayout.y);
-		piece:SetPoint(setupInfo.relativePoint, GetNineSlicePiece(container, setupInfo.relativePieces[2]), setupInfo.point, pieceLayout.x1, pieceLayout.y1);
+for _, row in ipairs({ "Top", "Bottom" }) do
+	for _, column in ipairs({ "Left", "Right" }) do
+		local spot = row .. column
+		addRule(spot .. "Corner", { corner = spot:upper() })
+		kitPieces[spot .. "Corner"] = { atlas = "%s-nineslice-corner" .. spot:lower() }
 	end
 end
 
-local function SetupCenter(container, piece, setupInfo, pieceLayout)
-	piece:ClearAllPoints();
-
-	local userLayout = NineSliceUtils.GetLayout(container.layoutType);
-	if userLayout and userLayout.threeSliceVertical then
-		piece:SetPoint("TOPLEFT", GetNineSlicePiece(container, "TopEdge"), "BOTTOMLEFT", pieceLayout.x, pieceLayout.y);
-		piece:SetPoint("BOTTOMRIGHT", GetNineSlicePiece(container, "BottomEdge"), "TOPRIGHT", pieceLayout.x1, pieceLayout.y1);
-	elseif userLayout and userLayout.threeSliceHorizontal then
-		piece:SetPoint("TOPLEFT", GetNineSlicePiece(container, "LeftEdge"), "TOPRIGHT", pieceLayout.x, pieceLayout.y);
-		piece:SetPoint("BOTTOMRIGHT", GetNineSlicePiece(container, "RightEdge"), "BOTTOMLEFT", pieceLayout.x1, pieceLayout.y1);
-	else
-		piece:SetPoint("TOPLEFT", GetNineSlicePiece(container, "TopLeftCorner"), "BOTTOMRIGHT", pieceLayout.x, pieceLayout.y);
-		piece:SetPoint("BOTTOMRIGHT", GetNineSlicePiece(container, "BottomRightCorner"), "TOPLEFT", pieceLayout.x1, pieceLayout.y1);
+for _, side in ipairs({ "Top", "Bottom", "Left", "Right" }) do
+	local across = side == "Top" or side == "Bottom"
+	local a, b = "Top" .. side, "Bottom" .. side
+	if across then
+		a, b = side .. "Left", side .. "Right"
 	end
+	local toContainer = span(a, b)
+	addRule(side .. "Edge", {
+		anchors = span(a, b, a .. "Corner", b .. "Corner"),
+		vertical = toContainer,
+		horizontal = toContainer,
+	})
+	-- Atlas naming marks strips that tile across with "_" and strips that tile down with "!".
+	kitPieces[side .. "Edge"] = { atlas = (across and "_" or "!") .. "%s-nineslice-edge" .. side:lower() }
 end
 
--- Defines the order in which each piece should be set up, and how to do the setup.
---
--- Mirror types: As a texture memory and effort savings, many borders are assembled from a single topLeft corner, and top/left edges.
--- That's all that's required if everything is symmetrical (left edge is also superfluous, but allows for more detail variation)
--- The mirror flags specify which texture coords to flip relative to the piece that would use default texture coordinates: left = 0, top = 0, right = 1, bottom = 1
-local nineSliceSetup =
-{
-	{ pieceName = "TopLeftCorner", point = "TOPLEFT", fn = SetupCorner, },
-	{ pieceName = "TopRightCorner", point = "TOPRIGHT", mirrorHorizontal = true, fn = SetupCorner, },
-	{ pieceName = "BottomLeftCorner", point = "BOTTOMLEFT", mirrorVertical = true, fn = SetupCorner, },
-	{ pieceName = "BottomRightCorner", point = "BOTTOMRIGHT", mirrorHorizontal = true, mirrorVertical = true, fn = SetupCorner, },
-	{ pieceName = "TopEdge", point = "TOPLEFT", relativePoint = "TOPRIGHT", relativePieces = { "TopLeftCorner", "TopRightCorner" }, fn = SetupEdge, tileHorizontal = true },
-	{ pieceName = "BottomEdge", point = "BOTTOMLEFT", relativePoint = "BOTTOMRIGHT", relativePieces = { "BottomLeftCorner", "BottomRightCorner" }, mirrorVertical = true, tileHorizontal = true, fn = SetupEdge, },
-	{ pieceName = "LeftEdge", point = "TOPLEFT", relativePoint = "BOTTOMLEFT", relativePieces = { "TopLeftCorner", "BottomLeftCorner" }, tileVertical = true, fn = SetupEdge, },
-	{ pieceName = "RightEdge", point = "TOPRIGHT", relativePoint = "BOTTOMRIGHT", relativePieces = { "TopRightCorner", "BottomRightCorner" }, mirrorHorizontal = true, tileVertical = true, fn = SetupEdge, },
-	{ pieceName = "Center", fn = SetupCenter, },
-};
+addRule("Center", {
+	anchors = span("TopLeft", "BottomRight", "TopLeftCorner", "BottomRightCorner"),
+	vertical = { { "TOPLEFT", "TopEdge", "BOTTOMLEFT" }, { "BOTTOMRIGHT", "BottomEdge", "TOPRIGHT" } },
+	horizontal = { { "TOPLEFT", "LeftEdge", "TOPRIGHT" }, { "BOTTOMRIGHT", "RightEdge", "BOTTOMLEFT" } },
+})
+kitPieces.Center = { atlas = "%s-nineslice-center" }
 
-local layouts =
-{
-	UniqueCornersLayout = {
-		TopRightCorner = {atlas = "%s-nineslice-cornertopright"},
-		TopLeftCorner = {atlas = "%s-nineslice-cornertopleft"},
-		BottomLeftCorner = {atlas = "%s-nineslice-cornerbottomleft"},
-		BottomRightCorner = {atlas = "%s-nineslice-cornerbottomright"},
-		TopEdge = {atlas = "_%s-nineslice-edgetop"},
-		BottomEdge = {atlas = "_%s-nineslice-edgebottom"},
-		LeftEdge = {atlas = "!%s-nineslice-edgeleft"},
-		RightEdge = {atlas = "!%s-nineslice-edgeright"},
-		Center = {atlas = "%s-nineslice-center"}
-	},
-
+local layoutRegistry = {
 	-- Retail's PortraitFrameTemplate. The top-left corner carries the portrait cutout, so it
 	-- overhangs 13px left / 16px up; the bottom-left must match or LeftEdge joins two offsets.
 	PortraitFrameTemplate = {
@@ -214,49 +138,127 @@ local layouts =
 	},
 }
 
---------------------------------------------------
--- NINE SLICE UTILS
-NineSliceUtils = {}
+-- Its atlas names embed the texture kit, so one kit picks the whole art set.
+layoutRegistry.UniqueCornersLayout = kitPieces
 
-function NineSliceUtils.ApplyLayout(container, userLayout, textureKit)
-	for pieceIndex, setup in ipairs(nineSliceSetup) do
-		local pieceName = setup.pieceName
-		local pieceLayout = userLayout[pieceName]
-		if pieceLayout then
-			PropagateLayoutSettingsToPieceLayout(userLayout, pieceLayout)
+local function getLayout(name)
+	if name == nil then
+		return nil
+	end
+	return layoutRegistry[name]
+end
 
-			local piece, pieceAlreadyExisted = GetNineSlicePiece(container, pieceName)
-			if not pieceAlreadyExisted then
-				container[pieceName] = piece
-				piece:SetDrawLayer(pieceLayout.layer or "BORDER", pieceLayout.subLevel)
+local function acquirePiece(container, pieceName)
+	local supplier = container.GetNineSlicePiece
+	local found = supplier and supplier(container, pieceName) or container[pieceName]
+	if found then
+		return found, false
+	end
+	local fresh = container:CreateTexture()
+	container[pieceName] = fresh
+	return fresh, true
+end
+
+local function anchorTarget(container, pieceName)
+	if pieceName == nil then
+		return container
+	end
+	return (acquirePiece(container, pieceName))
+end
+
+-- Read from the plain Lua field, never the XML attribute of the same name.
+local function threeSliceMode(container)
+	local named = getLayout(container.layoutType)
+	if not named then
+		return nil
+	end
+	if named.threeSliceVertical then
+		return "vertical"
+	end
+	if named.threeSliceHorizontal then
+		return "horizontal"
+	end
+	return nil
+end
+
+local function anchorPiece(container, tex, rule, spec, mode)
+	tex:ClearAllPoints()
+	if rule.corner then
+		local point, relativePoint = spec.point or rule.corner, spec.relativePoint or rule.corner
+		tex:SetPoint(point, container, relativePoint, spec.x, spec.y)
+		return
+	end
+	local anchors = mode and rule[mode] or rule.anchors
+	local near, far = anchors[1], anchors[2]
+	tex:SetPoint(near[1], anchorTarget(container, near[2]), near[3], spec.x, spec.y)
+	tex:SetPoint(far[1], anchorTarget(container, far[2]), far[3], spec.x1, spec.y1)
+end
+
+local function dressPiece(tex, rule, spec, layout, textureKit)
+	local mirrored = spec.mirrorLayout
+	if mirrored == nil then
+		mirrored = layout.mirrorLayout
+	end
+	local left, right, top, bottom = 0, 1, 0, 1
+	if mirrored then
+		if rule.flipX then
+			left, right = 1, 0
+		end
+		if rule.flipY then
+			top, bottom = 1, 0
+		end
+	end
+	-- set_atlas replaces these texcoords; they only survive while the D3D9Ex bypass skips it.
+	tex:SetSubTexCoord(left, right, top, bottom)
+
+	local atlasName = atlasShim.GetFinalNameFromTextureKit(spec.atlas, textureKit)
+	local info = atlasShim.GetAtlasInfo(atlasName)
+	local across, down = info.tilesHorizontally, info.tilesVertically
+	-- Set here as well because the D3D9Ex bypass turns set_atlas into a no-op for action-bar art.
+	tex:SetHorizTile(across or false)
+	tex:SetVertTile(down or false)
+	tex:set_atlas(atlasName, true)
+end
+
+local function applyLayout(container, layout, textureKit)
+	if not layout then
+		error("NineSliceUtils.ApplyLayout: layout is nil", 2)
+	end
+	local mode = threeSliceMode(container)
+	for _, rule in ipairs(pieceRules) do
+		local spec = layout[rule.name]
+		if spec then
+			local piece, isNew = acquirePiece(container, rule.name)
+			if isNew then
+				piece:SetDrawLayer(spec.layer or "BORDER", spec.subLevel)
 			end
-
-			-- Piece setup can change arbitrary properties, do it before changing the texture.
-			setup.fn(container, piece, setup, pieceLayout)
-			SetupPieceVisuals(piece, setup, pieceLayout, textureKit)
+			anchorPiece(container, piece, rule, spec, mode)
+			dressPiece(piece, rule, spec, layout, textureKit)
 		end
 	end
 end
 
-function NineSliceUtils.GetLayout(layoutName)
-	return layouts[layoutName]
+_G.NineSliceUtils = {
+	ApplyLayout = applyLayout,
+	GetLayout = getLayout,
+}
+
+local function inheritedAttribute(frame, key)
+	return frame:GetAttribute(key) or frame:GetParent():GetAttribute(key)
 end
 
---------------------------------------------------
--- NINE SLICE PANEL MIXIN
- NineSlicePanelUiMixin = {};
-
-function NineSlicePanelUiMixin:GetFrameLayoutType()
-	return self:GetAttribute("layoutType") or self:GetParent():GetAttribute("layoutType")
-end
-
-function NineSlicePanelUiMixin:GetFrameLayoutTextureKit()
-	return self:GetAttribute("layoutTextureKit") or self:GetParent():GetAttribute("layoutTextureKit")
-end
-
-function NineSlicePanelUiMixin:OnLoad()
-	local layout = NineSliceUtils.GetLayout(self:GetFrameLayoutType())
-	if layout then
-		NineSliceUtils.ApplyLayout(self, layout, self:GetFrameLayoutTextureKit());
-	end
-end
+_G.NineSlicePanelUiMixin = {
+	GetFrameLayoutType = function(self)
+		return inheritedAttribute(self, "layoutType")
+	end,
+	GetFrameLayoutTextureKit = function(self)
+		return inheritedAttribute(self, "layoutTextureKit")
+	end,
+	-- layoutTextureLayer and ignoreInLayout stay unread, so both action-bar slices draw in BORDER.
+	OnLoad = function(self)
+		local chosen = getLayout(self:GetFrameLayoutType())
+		if chosen ~= nil then
+			applyLayout(self, chosen, self:GetFrameLayoutTextureKit())
+		end
+	end,
+}
