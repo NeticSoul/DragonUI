@@ -3,6 +3,7 @@
 -- AbsorbsMonitor
 --
 -- Copyright (C) 2010  Philipp Schmidt
+-- Modified in 2026 by DragonUI contributors: zone modifiers, absorb scaling, Spellsteal fix.
 --
 -- This program is free software; you can redistribute it and/or
 -- modify it under the terms of the GNU General Public License

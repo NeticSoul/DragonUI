@@ -3,7 +3,7 @@
 DragonUI - Slash Commands
 ================================================================================
 Centralized slash command handling for DragonUI.
-Based on ElvUI's Commands.lua pattern.
+Slash-command layout inspired by ElvUI.
 ================================================================================
 ]]
 

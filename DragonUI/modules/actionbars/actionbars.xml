@@ -16,4 +16,7 @@
 
     <!-- Extra Action Bar — standalone, independent of any class bonus bar -->
     <Script file="extrabar.lua"/>
+
+    <!-- Uncheck buttons whose paged slot is empty (form or bonus bar left mid-cast) -->
+    <Script file="checkedstate.lua"/>
 </Ui>

@@ -115,48 +115,12 @@ local function MergeFields(target, source, fieldMap)
     end
 end
 
-local function CalculateQuadrantPoint(frame)
-    local screenWidth = UIParent:GetRight()
-    local screenHeight = UIParent:GetTop()
-    local screenCenterX = UIParent:GetCenter()
-    local cx, cy = frame:GetCenter()
-
-    if not cx or not cy or not screenWidth or not screenHeight or not screenCenterX then
-        return nil
-    end
-
-    local LEFT = screenWidth / 3
-    local RIGHT = screenWidth * 2 / 3
-    local TOP = screenHeight / 2
-    local point, x, y
-
-    if cy >= TOP then
-        point = "TOP"
-        y = -(screenHeight - frame:GetTop())
-    else
-        point = "BOTTOM"
-        y = frame:GetBottom()
-    end
-
-    if cx >= RIGHT then
-        point = point .. "RIGHT"
-        x = frame:GetRight() - screenWidth
-    elseif cx <= LEFT then
-        point = point .. "LEFT"
-        x = frame:GetLeft()
-    else
-        x = cx - screenCenterX
-    end
-
-    return point, math.floor(x + 0.5), math.floor(y + 0.5)
-end
-
 local function SaveQuadrantSection(frame, sectionName)
     if not frame or not addon.db or not addon.db.profile then
         return
     end
 
-    local point, x, y = CalculateQuadrantPoint(frame)
+    local point, x, y = addon.GetQuadrantAnchor(frame)
     if not point then
         return
     end

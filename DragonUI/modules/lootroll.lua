@@ -288,38 +288,8 @@ function LootRollModule:ShowEditorTest()
             addon.ApplySelectionTint(f)
         end
 
-        -- Calculate position relative to screen quadrant
-        local screenWidth = UIParent:GetRight()
-        local screenHeight = UIParent:GetTop()
-        local screenCenterX = UIParent:GetCenter()
-        local cx, cy = f:GetCenter()
-        if cx and cy then
-            local LEFT = screenWidth / 3
-            local RIGHT = screenWidth * 2 / 3
-            local TOP = screenHeight / 2
-            local point, x, y
-
-            if cy >= TOP then
-                point = "TOP"
-                y = -(screenHeight - f:GetTop())
-            else
-                point = "BOTTOM"
-                y = f:GetBottom()
-            end
-
-            if cx >= RIGHT then
-                point = point .. "RIGHT"
-                x = f:GetRight() - screenWidth
-            elseif cx <= LEFT then
-                point = point .. "LEFT"
-                x = f:GetLeft()
-            else
-                x = cx - screenCenterX
-            end
-
-            x = math.floor(x + 0.5)
-            y = math.floor(y + 0.5)
-
+        local point, x, y = addon.GetQuadrantAnchor(f)
+        if point then
             f:ClearAllPoints()
             f:SetPoint(point, UIParent, point, x, y)
             f:SetUserPlaced(false)

@@ -876,7 +876,7 @@ local defaults = {
                 enabled = true -- Enable DragonUI quest tracker positioning and styling
             },
             keypress = {
-                enabled = false -- Fire action-bar abilities on key down instead of key release (SnowfallKeyPress-style)
+                enabled = false -- Fire action-bar abilities on key down instead of key release (inspired by SnowfallKeyPress)
             },
             levelupenhance = {
                 enabled = true, -- Enhanced level-up notification with animated frame

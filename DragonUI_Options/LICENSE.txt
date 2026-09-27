@@ -1,3 +1,19 @@
+DragonUI_Options is part of DragonUI (https://github.com/NeticSoul/DragonUI)
+and is released under the MIT License below. Full notices for both addon
+folders: ../DragonUI/THIRD_PARTY_NOTICES.md and ../DragonUI/LICENSES/.
+
+Third-party material in this folder keeps its own license:
+  - libs/AceConfig-3.0, libs/AceDBOptions-3.0, libs/AceGUI-3.0,
+    libs/CallbackHandler-1.0: Ace3 license, see LICENSES/Ace3.txt
+  - libs/LibStub: public domain
+  - fonts/PTSansNarrow.ttf: SIL Open Font License 1.1, see LICENSES/OFL-1.1.txt
+  - panel/controls.lua: portions adapted from NotPlater (MIT, (c) 2023
+    RichSteini), see LICENSES/MIT-NotPlater.txt
+  - Textures/: any World of Warcraft artwork is (c) Blizzard Entertainment and
+    is not covered by the MIT License
+
+================================================================================
+
 MIT License
 
 Copyright (c) 2026 Neticsoul and DragonUI contributors
@@ -19,23 +35,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-================================================================================
-BUNDLED THIRD-PARTY COMPONENTS
-================================================================================
-
-DragonUI core code is released under the MIT License above. DragonUI bundles
-third-party libraries with their own licenses that are distributed with the addon.
-
-World of Warcraft game artwork included in the addon (most textures under
-DragonUI/Textures/) is (c) Blizzard Entertainment. It is not covered by the MIT
-License above and is included only for use with the game.
-
-For information on bundled libraries and their licenses, see:
-  - THIRD_PARTY_NOTICES.md (detailed information)
-  - LICENSES/ directory (full license texts)
-
-For credits and references to addon authors and projects that inspired DragonUI, see the "Credits And References" section in README.md (https://github.com/NeticSoul/DragonUI).
-
-When distributing or modifying DragonUI, please ensure compliance with all
-applicable licenses of bundled components.

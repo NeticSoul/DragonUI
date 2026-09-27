@@ -7,7 +7,7 @@ DragonUI - Core Initialization
 This file handles the main addon initialization using AceAddon-3.0.
 Utility functions have been moved to core/api.lua
 
-Options are loaded on demand from DragonUI_Options addon (ElvUI pattern).
+Options are loaded on demand from DragonUI_Options addon (inspired by ElvUI).
 ================================================================================
 ]]
 
@@ -105,7 +105,7 @@ function addon.core:OnEnable()
 end
 
 -- ============================================================================
--- OPTIONS UI LOADING (ElvUI Pattern)
+-- OPTIONS UI LOADING (inspired by ElvUI)
 -- ============================================================================
 
 function addon:ToggleOptionsUI(msg)

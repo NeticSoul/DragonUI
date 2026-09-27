@@ -441,6 +441,35 @@ function addon.SaveUIFramePosition(frame, configPath1, configPath2)
     end
 end
 
+-- Raw coords on purpose: both callers anchor scale-1 children of UIParent.
+function addon.GetQuadrantAnchor(frame)
+    if not frame then
+        return nil
+    end
+
+    local centerX, centerY = frame:GetCenter()
+    local screenWidth, screenHeight = UIParent:GetRight(), UIParent:GetTop()
+    local screenMidX = UIParent:GetCenter()
+    if not (centerX and centerY and screenWidth and screenHeight and screenMidX) then
+        return nil
+    end
+
+    local vertical, offsetY = "BOTTOM", frame:GetBottom()
+    if centerY >= screenHeight / 2 then
+        vertical, offsetY = "TOP", frame:GetTop() - screenHeight
+    end
+
+    local third = screenWidth / 3
+    local horizontal, offsetX = "", centerX - screenMidX
+    if centerX >= third * 2 then
+        horizontal, offsetX = "RIGHT", frame:GetRight() - screenWidth
+    elseif centerX <= third then
+        horizontal, offsetX = "LEFT", frame:GetLeft()
+    end
+
+    return vertical .. horizontal, math.floor(offsetX + 0.5), math.floor(offsetY + 0.5)
+end
+
 -- Apply a saved widgets.* position to a frame (position presets / reload helpers)
 function addon.ApplyWidgetPositionFromDB(widgetKey, frame)
     if not widgetKey or not frame or not addon.db or not addon.db.profile or not addon.db.profile.widgets then

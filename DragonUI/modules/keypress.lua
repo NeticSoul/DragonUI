@@ -1,365 +1,370 @@
--- ============================================================================
--- DragonUI - Key Press module
--- Fires action-bar abilities on key DOWN instead of key release.
---
--- Minimal port of the proven SnowfallKeyPress mechanism: for every bound key
--- we build a hidden *secure* proxy button (RegisterForClicks "AnyDown") that
--- replicates the bound action, then use SetOverrideBindingClick to make the
--- key click that proxy on key-down. Everything is done through secure
--- templates + protected binding APIs, so there is no taint. All work is
--- skipped while in combat lockdown (the protected binding APIs are blocked
--- there); changes apply on leaving combat or /reload.
--- ============================================================================
-
+-- Key-down casting technique inspired by SnowfallKeyPress (Dayn).
 local addon = select(2, ...)
 
--- ----------------------------------------------------------------------------
--- Binding templates (which kinds of bindings we can accelerate, and how to
--- replicate them onto a secure proxy button). Lifted from SnowfallKeyPress.
--- ----------------------------------------------------------------------------
-local templates = {
-    {command = "^ACTIONBUTTON(%d+)$",          attributes = {{"type", "macro"}, {"actionbutton", "%1"                         }}},
-    {command = "^MULTIACTIONBAR1BUTTON(%d+)$", attributes = {{"type", "click"}, {"clickbutton",  "MultiBarBottomLeftButton%1" }}},
-    {command = "^MULTIACTIONBAR2BUTTON(%d+)$", attributes = {{"type", "click"}, {"clickbutton",  "MultiBarBottomRightButton%1"}}},
-    {command = "^MULTIACTIONBAR3BUTTON(%d+)$", attributes = {{"type", "click"}, {"clickbutton",  "MultiBarRightButton%1"      }}},
-    {command = "^MULTIACTIONBAR4BUTTON(%d+)$", attributes = {{"type", "click"}, {"clickbutton",  "MultiBarLeftButton%1"       }}},
-    {command = "^SHAPESHIFTBUTTON(%d+)$",      attributes = {{"type", "click"}, {"clickbutton",  "ShapeshiftButton%1"         }}},
-    {command = "^BONUSACTIONBUTTON(%d+)$",     attributes = {{"type", "click"}, {"clickbutton",  "PetActionButton%1"          }}},
-    {command = "^MULTICASTSUMMONBUTTON(%d+)$", attributes = {{"type", "click"}, {"multicastsummon", "%1"                      }}},
-    {command = "^MULTICASTRECALLBUTTON1$",     attributes = {{"type", "click"}, {"clickbutton",  "MultiCastRecallSpellButton" }}},
-    {command = "^CLICK (.+):([^:]+)$",         attributes = {{"type", "click"}, {"clickbutton",  "%1"                         }}},
-    {command = "^MACRO (.+)$",                 attributes = {{"type", "macro"}, {"macro",        "%1"                         }}},
-    {command = "^SPELL (.+)$",                 attributes = {{"type", "spell"}, {"spell",        "%1"                         }}},
-    {command = "^ITEM (.+)$",                  attributes = {{"type", "item" }, {"item",         "%1"                         }}},
+local _G = _G
+local type, select, pairs, ipairs = type, select, pairs, ipairs
+local pcall, error, tonumber, tostring = pcall, error, tonumber, tostring
+local floor = math.floor
+local strmatch, strsub, strchar, gmatch = string.match, string.sub, string.char, string.gmatch
+
+local PROXY_PREFIX = "DragonUI_KeyPressButton_"
+local EXTRA_BAR_PREFIX = "DragonUI_ExtraBarButton"
+local FLASH_SECONDS = 0.12
+
+local SLOT_ATTR = "dragonui-slot"
+local CAP_ATTR = "dragonui-vehiclecap"
+local TOTEM_ATTR = "dragonui-totemid"
+
+local STALE_ATTRS = { "type", "clickbutton", "macro", "macrotext", "spell", "item", SLOT_ATTR, CAP_ATTR, TOTEM_ATTR }
+
+local FRAME_REFS = {
+    vehiclebar = "VehicleMenuBar",
+    bonusbar = "BonusActionBarFrame",
+    totemcall = "MultiCastSummonSpellButton",
 }
 
--- Click "type" attributes we are willing to accelerate (anything that doesn't
--- need to differentiate down/up presses).
-local allowedTypeAttributes = {
-    actionbar = true, action = true, pet = true, multispell = true,
-    spell = true, item = true, macro = true, cancelaura = true, stop = true,
-    target = true, focus = true, assist = true, maintank = true, mainassist = true,
-}
+local NAMED_KEYS = [[
+    UP DOWN LEFT RIGHT HOME END PAGEUP PAGEDOWN INSERT DELETE
+    BACKSPACE ENTER ESCAPE TAB SPACE PAUSE NUMLOCK SCROLLLOCK
+    NUMPADDECIMAL NUMPADDIVIDE NUMPADMINUS NUMPADMULTIPLY NUMPADPLUS
+]]
 
--- ----------------------------------------------------------------------------
--- Static key list: every key on a standard keyboard, in every ALT/CTRL/SHIFT
--- combination (mirrors SnowfallKeyPress's default configuration). Built once.
--- ----------------------------------------------------------------------------
-local baseKeys = {
-    "A","B","C","D","E","F","G","H","I","J","K","L","M",
-    "N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
-    "0","1","2","3","4","5","6","7","8","9",
-    "`","-","=","[","]","\\",";","'",".",",","/",
-    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12",
-    "BACKSPACE","DELETE","DOWN","END","ENTER","ESCAPE","HOME","INSERT","LEFT",
-    "NUMLOCK","NUMPAD0","NUMPAD1","NUMPAD2","NUMPAD3","NUMPAD4","NUMPAD5",
-    "NUMPAD6","NUMPAD7","NUMPAD8","NUMPAD9","NUMPADDECIMAL","NUMPADDIVIDE",
-    "NUMPADMINUS","NUMPADMULTIPLY","NUMPADPLUS","PAGEDOWN","PAGEUP","PAUSE",
-    "RIGHT","SCROLLLOCK","SPACE","TAB","UP",
-    "BUTTON3","BUTTON4","BUTTON5",
-}
-local modifiers = { "ALT", "CTRL", "SHIFT" }
-
-local acceleratedKeys -- built lazily
-local function getKeyList()
-    if acceleratedKeys then return acceleratedKeys end
-    acceleratedKeys = {}
-    -- All modifier combinations, including the empty (unmodified) combo.
-    local combos = { "" }
-    for _, mod in ipairs(modifiers) do
-        local n = #combos
-        for i = 1, n do
-            combos[#combos + 1] = combos[i] .. mod .. "-"
-        end
-    end
-    for _, key in ipairs(baseKeys) do
-        for _, combo in ipairs(combos) do
-            acceleratedKeys[#acceleratedKeys + 1] = combo .. key
-        end
-    end
-    return acceleratedKeys
+local ALLOWED_CLICK_TYPES = {}
+for word in gmatch("actionbar action pet multispell spell item macro cancelaura stop target focus assist"
+    .. " maintank mainassist", "%S+") do
+    ALLOWED_CLICK_TYPES[word] = true
 end
 
--- ----------------------------------------------------------------------------
--- Secure acceleration core (adapted from SnowfallKeyPress)
--- ----------------------------------------------------------------------------
-local overrideFrame = CreateFrame("Frame")
-local active = false  -- true while the feature is enabled and hooks should act
-local hook = true     -- guards our own override-binding writes from re-entrancy
-
-local stringmatch, stringgsub = string.match, string.gsub
-
-local function isSecureButton(x)
-    return not not (
-        type(x) == "table"
-        and type(x.IsObjectType) == "function"
-        and issecurevariable(x, "IsObjectType")
-        and x:IsObjectType("Button")
-        and select(2, x:IsProtected())
-    )
+local CLICK_FAMILIES = {
+    SHAPESHIFTBUTTON = "ShapeshiftButton",
+    BONUSACTIONBUTTON = "PetActionButton",
+}
+for bar, family in ipairs({ "MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton",
+    "MultiBarLeftButton" }) do
+    CLICK_FAMILIES["MULTIACTIONBAR" .. bar .. "BUTTON"] = family
 end
 
--- Override bindings skip ActionButtonDown / MultiActionButtonDown (the only path that
--- SetButtonState("PUSHED") for keyboard). Mirror that brief press on the real button.
-local KEY_PUSH_FLASH = 0.12
-local flashUntil = {}
-local flashFrame = CreateFrame("Frame")
-flashFrame:Hide()
-flashFrame:SetScript("OnUpdate", function(self)
+local DIRECT_VERBS = { MACRO = "macro", SPELL = "spell", ITEM = "item" }
+
+local EXPOSE_REFS = [[
+    vehicleBar = self:GetFrameRef("vehiclebar")
+    bonusBar = self:GetFrameRef("bonusbar")
+    totemCall = self:GetFrameRef("totemcall")
+]]
+
+local ROUTE_SLOT = [[
+    local slot = self:GetAttribute("dragonui-slot")
+    if not slot then return end
+    local family = "ActionButton"
+    if vehicleBar and vehicleBar:IsProtected() and vehicleBar:IsShown()
+        and slot <= self:GetAttribute("dragonui-vehiclecap") then
+        family = "VehicleMenuBarActionButton"
+    elseif bonusBar and bonusBar:IsProtected() and bonusBar:IsShown() then
+        family = "BonusActionButton"
+    end
+    self:SetAttribute("macrotext", "/click " .. family .. slot)
+]]
+
+local TOTEM_BEFORE = [[
+    local wanted = self:GetAttribute("dragonui-totemid")
+    if totemCall and wanted then
+        local previous = totemCall:GetID()
+        totemCall:SetID(wanted)
+        return nil, previous
+    end
+]]
+
+local TOTEM_AFTER = [[
+    if totemCall then totemCall:SetID(message) end
+]]
+
+local active = false
+local hooked = false
+local selfInitiated = false
+
+local keyList, keySet
+local proxies = {}
+local wrapped = {}
+local flashDeadline = {}
+
+local owner = CreateFrame("Frame")
+local flashTimer = CreateFrame("Frame")
+flashTimer:Hide()
+
+local function EnsureKeyList()
+    if keyList then return end
+    local bases = {}
+    for code = 65, 90 do bases[#bases + 1] = strchar(code) end
+    for digit = 0, 9 do
+        bases[#bases + 1] = tostring(digit)
+        bases[#bases + 1] = "NUMPAD" .. digit
+    end
+    for f = 1, 12 do bases[#bases + 1] = "F" .. f end
+    for mouse = 3, 5 do bases[#bases + 1] = "BUTTON" .. mouse end
+    for glyph in gmatch("`-=[]\\;',./", ".") do bases[#bases + 1] = glyph end
+    for word in gmatch(NAMED_KEYS, "%S+") do bases[#bases + 1] = word end
+
+    keyList, keySet = {}, {}
+    for mask = 0, 7 do
+        local mods = (mask % 2 == 1 and "ALT-" or "")
+            .. (floor(mask / 2) % 2 == 1 and "CTRL-" or "")
+            .. (mask >= 4 and "SHIFT-" or "")
+        for i = 1, #bases do
+            local key = mods .. bases[i]
+            keyList[#keyList + 1] = key
+            keySet[key] = true
+        end
+    end
+end
+
+local function IsConfiguredOn()
+    local cfg = addon.GetModuleConfig and addon:GetModuleConfig("keypress")
+    return type(cfg) == "table" and cfg.enabled == true
+end
+
+local function CallQuietly(api, ...)
+    selfInitiated = true
+    local ok, err = pcall(api, ...)
+    selfInitiated = false
+    if not ok then error(err, 0) end
+end
+
+local function CurrentSlotButton(slot)
+    local vehicle, bonus = _G.VehicleMenuBar, _G.BonusActionBarFrame
+    if vehicle and vehicle:IsProtected() and vehicle:IsShown() and slot <= (VEHICLE_MAX_ACTIONBUTTONS or 6) then
+        return _G["VehicleMenuBarActionButton" .. slot]
+    elseif bonus and bonus:IsProtected() and bonus:IsShown() then
+        return _G["BonusActionButton" .. slot]
+    end
+    return _G["ActionButton" .. slot]
+end
+
+local function StartFlash(button)
+    button:SetButtonState("PUSHED")
+    flashDeadline[button] = GetTime() + FLASH_SECONDS
+    flashTimer:Show()
+end
+
+flashTimer:SetScript("OnUpdate", function(self)
     local now = GetTime()
-    local any
-    for button, untilTime in pairs(flashUntil) do
-        if now >= untilTime then
-            flashUntil[button] = nil
-            if button.SetButtonState then
-                button:SetButtonState("NORMAL")
-                -- Real action buttons only (extrabar uses a dummy .action for cooldowns).
-                if button:GetAttribute("action") and ActionButton_UpdateState then
-                    ActionButton_UpdateState(button)
-                end
-            end
+    local waiting = false
+    for button, deadline in pairs(flashDeadline) do
+        if now < deadline then
+            waiting = true
         else
-            any = true
+            flashDeadline[button] = nil
+            button:SetButtonState("NORMAL")
+            if button:GetAttribute("action") ~= nil and ActionButton_UpdateState then
+                ActionButton_UpdateState(button)
+            end
         end
     end
-    if not any then self:Hide() end
+    if not waiting then self:Hide() end
 end)
 
-local function FlashActionButton(button)
-    if not button or not button.SetButtonState then return end
-    -- Extra Bar has its own key flash; flashing here also fought its checked state.
-    local name = button.GetName and button:GetName()
-    if name and name:find("DragonUI_ExtraBarButton", 1, true) == 1 then return end
-    button:SetButtonState("PUSHED")
-    flashUntil[button] = GetTime() + KEY_PUSH_FLASH
-    flashFrame:Show()
+-- Override clicks skip Blizzard's keyboard "pushed" state, so the bar button is flashed by hand.
+local function OnProxyClicked(proxy)
+    if not active then return end
+    local slot = proxy:GetAttribute(SLOT_ATTR)
+    local target
+    if slot then
+        target = CurrentSlotButton(slot)
+    else
+        target = proxy:GetAttribute("clickbutton")
+    end
+    if not target or not target.SetButtonState then return end
+    local name = target:GetName()
+    if name and strsub(name, 1, #EXTRA_BAR_PREFIX) == EXTRA_BAR_PREFIX then return end
+    StartFlash(target)
 end
 
-local function ResolveMainActionButton(id)
-    id = tonumber(id)
-    if not id then return nil end
-    if VehicleMenuBar and VehicleMenuBar:IsProtected() and VehicleMenuBar:IsShown()
-        and id <= VEHICLE_MAX_ACTIONBUTTONS then
-        return _G["VehicleMenuBarActionButton" .. id]
-    end
-    if BonusActionBarFrame and BonusActionBarFrame:IsProtected() and BonusActionBarFrame:IsShown() then
-        return _G["BonusActionButton" .. id]
-    end
-    return _G["ActionButton" .. id]
+local function TypeIsAllowed(target, button)
+    local kind = SecureButton_GetModifiedAttribute(target, "type", button)
+    return kind == nil or ALLOWED_CLICK_TYPES[kind] == true
 end
 
-local function EnsureFlashHook(bindButton)
-    if bindButton._dragonUIFlashHooked then return end
-    bindButton._dragonUIFlashHooked = true
-    bindButton:HookScript("OnClick", function(self)
-        if not active then return end
-        local target
-        if self._dragonUIActionId then
-            target = ResolveMainActionButton(self._dragonUIActionId)
-        else
-            target = self:GetAttribute("clickbutton")
+local function CanDriveClick(target, mouse)
+    if type(target) ~= "table" or type(target.IsObjectType) ~= "function" then return false end
+    if not issecurevariable(target, "IsObjectType") then return false end
+    if not target:IsObjectType("Button") then return false end
+    if not select(2, target:IsProtected()) then return false end
+    if target:GetAttribute("", "downbutton", mouse) then return false end
+    local harm = SecureButton_GetModifiedAttribute(target, "harmbutton", mouse)
+    local help = SecureButton_GetModifiedAttribute(target, "helpbutton", mouse)
+    return TypeIsAllowed(target, mouse) and TypeIsAllowed(target, harm) and TypeIsAllowed(target, help)
+end
+
+local function Interpret(command)
+    local verb, rest = strmatch(command, "^(%u+) (.+)$")
+    if verb == "CLICK" then
+        local frameName, mouse = strmatch(rest, "^(.+):([^:]+)$")
+        local target = frameName and _G[frameName]
+        if mouse and CanDriveClick(target, mouse) then
+            return "click", target, mouse
         end
-        FlashActionButton(target)
-    end)
+        return nil
+    elseif verb and DIRECT_VERBS[verb] then
+        return DIRECT_VERBS[verb], rest
+    end
+
+    if command == "MULTICASTRECALLBUTTON1" then
+        return "click", _G.MultiCastRecallSpellButton
+    end
+    local stem, digits = strmatch(command, "^(.-)(%d+)$")
+    if not stem then return nil end
+    if stem == "ACTIONBUTTON" then
+        return "slot", tonumber(digits)
+    elseif stem == "MULTICASTSUMMONBUTTON" then
+        return "totem", tonumber(digits)
+    elseif CLICK_FAMILIES[stem] then
+        return "click", _G[CLICK_FAMILIES[stem] .. digits]
+    end
+    return nil
 end
 
--- Accelerate a single key (key is not currently overridden by us when called).
-local function accelerateKey(key, command)
-    for _, template in ipairs(templates) do
-        if stringmatch(command, template.command) then
-            local mouseButton, clickButtonName, clickButton
-            clickButtonName, mouseButton = stringmatch(command, "^CLICK (.+):([^:]+)$")
-            if clickButtonName then
-                clickButton = _G[clickButtonName]
-                if not isSecureButton(clickButton) or clickButton:GetAttribute("", "downbutton", mouseButton) then
-                    return
-                end
-                local harmButton = SecureButton_GetModifiedAttribute(clickButton, "harmbutton", mouseButton)
-                local helpButton = SecureButton_GetModifiedAttribute(clickButton, "helpbutton", mouseButton)
-                local mouseType = SecureButton_GetModifiedAttribute(clickButton, "type", mouseButton)
-                local harmType  = SecureButton_GetModifiedAttribute(clickButton, "type", harmButton)
-                local helpType  = SecureButton_GetModifiedAttribute(clickButton, "type", helpButton)
-                if (mouseType and not allowedTypeAttributes[mouseType])
-                    or (harmType and not allowedTypeAttributes[harmType])
-                    or (helpType and not allowedTypeAttributes[helpType]) then
-                    return
-                end
-            else
-                mouseButton = "LeftButton"
-            end
+local function GetProxy(key)
+    local proxy = proxies[key]
+    if proxy then return proxy end
 
-            local bindButtonName = "DragonUI_KeyPressButton_" .. key
-            local bindButton = _G[bindButtonName]
-            if not bindButton then
-                bindButton = CreateFrame("Button", bindButtonName, nil, "SecureActionButtonTemplate")
-                bindButton:RegisterForClicks("AnyDown")
-                SecureHandlerSetFrameRef(bindButton, "VehicleMenuBar", VehicleMenuBar)
-                SecureHandlerSetFrameRef(bindButton, "BonusActionBarFrame", BonusActionBarFrame)
-                SecureHandlerSetFrameRef(bindButton, "MultiCastSummonSpellButton", MultiCastSummonSpellButton)
-                SecureHandlerExecute(bindButton, [[
-                    VehicleMenuBar = self:GetFrameRef("VehicleMenuBar");
-                    BonusActionBarFrame = self:GetFrameRef("BonusActionBarFrame");
-                    MultiCastSummonSpellButton = self:GetFrameRef("MultiCastSummonSpellButton");
-                ]])
-            end
+    proxy = CreateFrame("Button", PROXY_PREFIX .. key, nil, "SecureActionButtonTemplate")
+    proxy:RegisterForClicks("AnyDown")
+    for label, globalName in pairs(FRAME_REFS) do
+        local ref = _G[globalName]
+        if ref then SecureHandlerSetFrameRef(proxy, label, ref) end
+    end
+    SecureHandlerExecute(proxy, EXPOSE_REFS)
+    -- Hooked before any wrap, so each wrap saves and later restores the hooked handler.
+    proxy:HookScript("OnClick", OnProxyClicked)
+    proxies[key] = proxy
+    return proxy
+end
 
-            -- Clear any stale wrap from a previous acceleration of this key.
-            SecureHandlerUnwrapScript(bindButton, "OnClick")
-            bindButton._dragonUIActionId = nil
-
-            for _, attribute in ipairs(template.attributes) do
-                local attributeName = attribute[1]
-                local attributeValue = stringgsub(command, template.command, attribute[2], 1)
-
-                if attributeName == "clickbutton" then
-                    bindButton:SetAttribute(attributeName, _G[attributeValue])
-                elseif attributeName == "actionbutton" then
-                    bindButton._dragonUIActionId = tonumber(attributeValue)
-                    -- Decide vehicle/bonus/action at click time, like ActionButtonUp().
-                    SecureHandlerWrapScript(bindButton, "OnClick", bindButton, [[
-                        local clickMacro = "/click ActionButton]] .. attributeValue .. [[";
-                        if (VehicleMenuBar:IsProtected() and VehicleMenuBar:IsShown() and ]] .. tostring(tonumber(attributeValue) <= VEHICLE_MAX_ACTIONBUTTONS) .. [[) then
-                            clickMacro = "/click VehicleMenuBarActionButton]] .. attributeValue .. [[";
-                        elseif (BonusActionBarFrame:IsProtected() and BonusActionBarFrame:IsShown()) then
-                            clickMacro = "/click BonusActionButton]] .. attributeValue .. [[";
-                        end
-                        self:SetAttribute("macrotext", clickMacro);
-                    ]])
-                elseif attributeName == "multicastsummon" then
-                    SecureHandlerWrapScript(bindButton, "OnClick", bindButton, [[
-                        lastID = MultiCastSummonSpellButton:GetID();
-                        MultiCastSummonSpellButton:SetID(]] .. attributeValue .. [[);
-                    ]], [[
-                        MultiCastSummonSpellButton:SetID(lastID);
-                    ]])
-                    bindButton:SetAttribute("clickbutton", MultiCastSummonSpellButton)
-                else
-                    bindButton:SetAttribute(attributeName, attributeValue)
-                end
-            end
-
-            EnsureFlashHook(bindButton)
-
-            -- Priority override so the key clicks our proxy on key-down.
-            hook = false
-            SetOverrideBindingClick(overrideFrame, true, key, bindButtonName, mouseButton)
-            hook = true
-            return
-        end
+local function ResetProxy(proxy)
+    if wrapped[proxy] then
+        SecureHandlerUnwrapScript(proxy, "OnClick")
+        wrapped[proxy] = nil
+    end
+    -- A leftover "macro" attribute outranks "macrotext" in SECURE_ACTIONS.macro.
+    for i = 1, #STALE_ATTRS do
+        proxy:SetAttribute(STALE_ATTRS[i], nil)
     end
 end
 
--- Rebuild all of our overrides from the current bindings.
-local function updateBindings()
-    if InCombatLockdown() then
-        return
+local function WrapProxy(proxy, before, after)
+    SecureHandlerWrapScript(proxy, "OnClick", proxy, before, after)
+    wrapped[proxy] = true
+end
+
+local function Accelerate(key, command)
+    local kind, payload, mouse = Interpret(command)
+    if not kind then return end
+
+    local proxy = GetProxy(key)
+    ResetProxy(proxy)
+    if kind == "slot" then
+        proxy:SetAttribute("type", "macro")
+        proxy:SetAttribute(SLOT_ATTR, payload)
+        -- Restricted code cannot read VEHICLE_MAX_ACTIONBUTTONS itself.
+        proxy:SetAttribute(CAP_ATTR, VEHICLE_MAX_ACTIONBUTTONS or 6)
+        WrapProxy(proxy, ROUTE_SLOT)
+    elseif kind == "totem" then
+        proxy:SetAttribute("type", "click")
+        proxy:SetAttribute("clickbutton", _G.MultiCastSummonSpellButton)
+        proxy:SetAttribute(TOTEM_ATTR, payload)
+        WrapProxy(proxy, TOTEM_BEFORE, TOTEM_AFTER)
+    elseif kind == "click" then
+        proxy:SetAttribute("type", "click")
+        proxy:SetAttribute("clickbutton", payload)
+    else
+        proxy:SetAttribute("type", kind)
+        proxy:SetAttribute(kind, payload)
     end
+    CallQuietly(SetOverrideBindingClick, owner, true, key, PROXY_PREFIX .. key, mouse or "LeftButton")
+end
 
-    hook = false
-    ClearOverrideBindings(overrideFrame)
-    hook = true
+local function AccelerateCurrent(key)
+    local command = GetBindingAction(key, true)
+    if command and command ~= "" then
+        Accelerate(key, command)
+    end
+end
 
+local function Rebuild()
+    if InCombatLockdown() then return end
+    CallQuietly(ClearOverrideBindings, owner)
     if not active then
-        overrideFrame:UnregisterEvent("UPDATE_BINDINGS")
+        owner:UnregisterEvent("UPDATE_BINDINGS")
         return
     end
-
-    for _, key in ipairs(getKeyList()) do
-        local command = GetBindingAction(key, true)
-        if command and command ~= "" then
-            accelerateKey(key, command)
-        end
+    EnsureKeyList()
+    for i = 1, #keyList do
+        AccelerateCurrent(keyList[i])
     end
 end
 
--- ----------------------------------------------------------------------------
--- Hooks: keep our acceleration in sync when other code touches override
--- bindings (vehicle / bonus / stance bar swaps, etc.). Installed once.
--- ----------------------------------------------------------------------------
-local hooksInstalled = false
-local function installHooks()
-    if hooksInstalled then return end
-    hooksInstalled = true
-
-    local keySet -- lazy lookup of accelerated keys
-    local function isAcceleratedKey(key)
-        if not keySet then
-            keySet = {}
-            for _, k in ipairs(getKeyList()) do keySet[k] = true end
-        end
-        return keySet[key]
-    end
-
-    local function setOverrideBindingHook(_, _, overrideKey)
-        if not active or not hook or InCombatLockdown() then return end
-        if isAcceleratedKey(overrideKey) then
-            hook = false
-            SetOverrideBinding(overrideFrame, false, overrideKey, nil)
-            hook = true
-            local command = GetBindingAction(overrideKey, true)
-            if command and command ~= "" then
-                accelerateKey(overrideKey, command)
-            end
-        end
-    end
-    hooksecurefunc("SetOverrideBinding", setOverrideBindingHook)
-    hooksecurefunc("SetOverrideBindingSpell", setOverrideBindingHook)
-    hooksecurefunc("SetOverrideBindingClick", setOverrideBindingHook)
-    hooksecurefunc("SetOverrideBindingItem", setOverrideBindingHook)
-    hooksecurefunc("SetOverrideBindingMacro", setOverrideBindingHook)
-
-    hooksecurefunc("ClearOverrideBindings", function()
-        if active and hook then updateBindings() end
-    end)
+local function OnOtherOverrideSet(_, _, key)
+    if not active or selfInitiated or InCombatLockdown() then return end
+    EnsureKeyList()
+    if not keySet[key] then return end
+    CallQuietly(SetOverrideBinding, owner, false, key, nil)
+    AccelerateCurrent(key)
 end
 
--- ----------------------------------------------------------------------------
--- Public API + db gating
--- ----------------------------------------------------------------------------
-local function isConfiguredOn()
-    local m = addon.db and addon.db.profile and addon.db.profile.modules
-    return m and m.keypress and m.keypress.enabled == true
+local function OnOtherOverridesCleared()
+    if active and not selfInitiated then
+        Rebuild()
+    end
 end
 
-function addon.EnableKeyPress()
+local function InstallHooks()
+    if hooked then return end
+    hooked = true
+    for _, api in ipairs({ "SetOverrideBinding", "SetOverrideBindingSpell", "SetOverrideBindingClick",
+        "SetOverrideBindingItem", "SetOverrideBindingMacro" }) do
+        hooksecurefunc(api, OnOtherOverrideSet)
+    end
+    hooksecurefunc("ClearOverrideBindings", OnOtherOverridesCleared)
+end
+
+local function Enable()
     if active then return end
     active = true
-    installHooks()
-    overrideFrame:RegisterEvent("UPDATE_BINDINGS")
-    updateBindings()
+    InstallHooks()
+    owner:RegisterEvent("UPDATE_BINDINGS")
+    Rebuild()
 end
 
-function addon.DisableKeyPress()
+local function Disable()
     if not active then return end
     active = false
-    overrideFrame:UnregisterEvent("UPDATE_BINDINGS")
-    updateBindings() -- with active=false this just clears our overrides
+    owner:UnregisterEvent("UPDATE_BINDINGS")
+    Rebuild()
 end
 
--- Called by the options toggle. Applies the saved-variable state immediately
--- when out of combat; in combat the protected binding APIs are blocked, so the
--- change is deferred until combat ends (PLAYER_REGEN_ENABLED).
-function addon.RefreshKeyPress()
+local function Refresh()
     if InCombatLockdown() then
-        overrideFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        owner:RegisterEvent("PLAYER_REGEN_ENABLED")
         return
     end
-    if isConfiguredOn() then
-        addon.EnableKeyPress()
+    if IsConfiguredOn() then
+        Enable()
     else
-        addon.DisableKeyPress()
+        Disable()
     end
 end
 
-overrideFrame:SetScript("OnEvent", function(self, event)
+owner:SetScript("OnEvent", function(self, event)
     if event == "UPDATE_BINDINGS" then
-        updateBindings()
+        Rebuild()
     elseif event == "PLAYER_REGEN_ENABLED" then
-        -- Apply a toggle that was requested during combat, then stop listening.
         self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-        addon.RefreshKeyPress()
+        Refresh()
     elseif event == "PLAYER_LOGIN" then
-        addon.RefreshKeyPress()
+        Refresh()
     end
 end)
-overrideFrame:RegisterEvent("PLAYER_LOGIN")
+owner:RegisterEvent("PLAYER_LOGIN")
+
+addon.EnableKeyPress = Enable
+addon.DisableKeyPress = Disable
+addon.RefreshKeyPress = Refresh

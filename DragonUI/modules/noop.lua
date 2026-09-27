@@ -157,7 +157,7 @@ end
 
 -- Function to apply all noop changes (uses CombatQueue if in combat)
 ApplyNoopChanges = function()
-    -- Use central CombatQueue system (ElvUI pattern)
+    -- Use central CombatQueue system (inspired by ElvUI)
     if InCombatLockdown() then
         NoopModule.pendingApply = true
         -- Queue the operation - will execute after combat ends

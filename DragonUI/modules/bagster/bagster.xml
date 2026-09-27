@@ -1,5 +1,6 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
 
+    <Script file="bagster_search.lua"/>
     <Script file="bagster.lua"/>
     <Script file="bagster_data.lua"/>
     <Script file="bagster_sets.lua"/>

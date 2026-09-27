@@ -46,7 +46,7 @@ local NUM_BANKGENERIC_SLOTS = NUM_BANKGENERIC_SLOTS
 local TEXTURE_ITEM_QUEST_BORDER = TEXTURE_ITEM_QUEST_BORDER or [[Interface\ContainerFrame\UI-ContainerQuestBorder]]
 local TEXTURE_ITEM_QUEST_BANG = TEXTURE_ITEM_QUEST_BANG or [[Interface\ContainerFrame\UI-ContainerQuestBorder]]
 
-local ItemSearch = LibStub("LibItemSearch-1.0")
+local ItemSearch = addon.BagsterItemSearch
 local playerName = UnitName("player")
 local playerClass = select(2, UnitClass("player"))
 

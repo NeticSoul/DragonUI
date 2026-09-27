@@ -152,7 +152,7 @@ Missing from the list? [Let me know](https://github.com/NeticSoul/DragonUI/issue
 
 ## 📜 License
 
-DragonUI is released under the [MIT License](LICENSE). Bundled third-party components have their own licenses - see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`LICENSES/`](LICENSES/).
+DragonUI is released under the [MIT License](LICENSE). Bundled third-party components have their own licenses - see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`LICENSES/`](LICENSES/). World of Warcraft game artwork included in the addon (most textures under `DragonUI/Textures/`) is © Blizzard Entertainment, is not covered by the MIT License, and is included only for use with the game.
 
 ## 📎 Disclaimer
 
