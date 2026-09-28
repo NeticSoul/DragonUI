@@ -148,6 +148,25 @@ local function GetBGHIconAnchor(key)
     return BGH_ICON_ANCHORS[anchorKey] or BGH_ICON_ANCHORS.top
 end
 
+-- BGH 1.6.3 dropped ModifyIcon's parent argument; older builds still expect it right after the flag.
+local bghTakesParent
+local function BGHTakesParent()
+    if bghTakesParent == nil then
+        local version = GetAddOnMetadata and GetAddOnMetadata("BattleGroundHealers", "Version")
+        local major, minor, patch = tostring(version or ""):match("(%d+)%.(%d+)%.?(%d*)")
+        major, minor, patch = tonumber(major), tonumber(minor), tonumber(patch) or 0
+        bghTakesParent = major ~= nil and (major * 10000 + minor * 100 + patch) < 10603
+    end
+    return bghTakesParent
+end
+
+local function BGHModifyIconArgs(plate, iconSize, anchor, relativeFrame, offsetX, offsetY)
+    if BGHTakesParent() then
+        return true, plate, iconSize, anchor.anchorPoint, relativeFrame, anchor.relativePoint, offsetX, offsetY
+    end
+    return true, iconSize, anchor.anchorPoint, relativeFrame, anchor.relativePoint, offsetX, offsetY
+end
+
 -- BGH 1.6.0 made SetBGHmark local, so the test preview drives the plate's own icon directly.
 local BGH_TEST_TEXTURES = {
     Blizzlike = {
@@ -238,32 +257,15 @@ function NP.layout.ApplyBattleGroundHealersCompat(plateData)
     local relativeFrame = plateData.minaNameRow or plateData.minaName or plate
 
     if bghFrame and bghFrame.ModifyIcon then
-        bghFrame:ModifyIcon(
-            true,
-            plate,
-            iconSize,
-            anchor.anchorPoint,
-            relativeFrame,
-            anchor.relativePoint,
-            offsetX,
-            offsetY
-        )
+        bghFrame:ModifyIcon(BGHModifyIconArgs(plate, iconSize, anchor, relativeFrame, offsetX, offsetY))
         if bghFrame.SetFrameLevel then
             local base = (plateData.visualRoot and plateData.visualRoot:GetFrameLevel())
                 or (plate:GetFrameLevel() or 0)
             bghFrame:SetFrameLevel(base + BGH_FRAME_OFFSET)
         end
     else
-        plate.shouldModifyBGH = {
-            true,
-            plate,
-            iconSize,
-            anchor.anchorPoint,
-            relativeFrame,
-            anchor.relativePoint,
-            offsetX,
-            offsetY,
-        }
+        -- BGH unpacks this straight into ModifyIcon when it builds the plate's frame.
+        plate.shouldModifyBGH = { BGHModifyIconArgs(plate, iconSize, anchor, relativeFrame, offsetX, offsetY) }
     end
 
     plateData._bghCompatApplied = true
