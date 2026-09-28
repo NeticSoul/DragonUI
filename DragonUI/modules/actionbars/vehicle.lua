@@ -203,7 +203,7 @@ end)
 -- ============================================================================
 
 local stance = {
-    ['DRUID'] = '[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;',
+    ['DRUID'] = '[bonusbar:1,stealth] 8; [bonusbar:1] 7; [bonusbar:3] 9; [bonusbar:4] 10;',
     ['WARRIOR'] = '[bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9;',
     ['PRIEST'] = '[bonusbar:1] 7;',
     ['ROGUE'] = '[bonusbar:1] 7; [bonusbar:2] 8;',
