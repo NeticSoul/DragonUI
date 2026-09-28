@@ -42,7 +42,7 @@ L["Change columns, rows, and buttons shown per action bar."] = true
 L["Switch micro menu icons between colored and grayscale style."] = true
 L["About"] = true
 L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = true
-L["Created and maintained by Neticsoul, with community contributions."] = true
+L["Created and maintained by NeticSoul, with community contributions."] = true
 
 -- Language
 L["Language"] = true

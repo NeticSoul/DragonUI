@@ -1,6 +1,6 @@
 -- =============================================================================
 -- DRAGONUI LOOT WINDOW MODULE
--- Copyright (c) 2026 Neticsoul and DragonUI contributors. Released under the MIT
+-- Copyright (c) 2026 NeticSoul and DragonUI contributors. Released under the MIT
 -- License; see LICENSE at the repository root.
 --
 -- Rewritten from a base module contributed by PentSec, with thanks.

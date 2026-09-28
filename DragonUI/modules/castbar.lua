@@ -3,7 +3,7 @@ local L = addon.L
 
 -- ============================================================================
 -- CASTBAR MODULE FOR DRAGONUI
--- Original code by Neticsoul
+-- Original code by NeticSoul
 -- ============================================================================
 
 local _G = _G

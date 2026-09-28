@@ -215,8 +215,11 @@ pre-render of those retail sheets.
 
 | Font | Path | License | License file |
 |---|---|---|---|
-| Expressway Free, version 2.100 (© 2005 Ray Larabie / Typodermic; "Expressway" is a trademark of Typodermic) | `DragonUI/Fonts/expressway.ttf` | Typodermic freeware license | [LICENSES/Typodermic-EULA.txt](LICENSES/Typodermic-EULA.txt) |
+| Expressway Free, version 2.100 (© 2005 Ray Larabie / Typodermic; "Expressway" is a trademark of Typodermic) | `DragonUI/Fonts/expressway.ttf` | Typodermic Freeware Fonts End User License Agreement | [LICENSES/Typodermic-EULA.txt](LICENSES/Typodermic-EULA.txt) |
 | PT Sans Narrow Bold (© 2009-2010 ParaType Ltd; Reserved Font Names "PT Sans", "PT Serif", "ParaType") | `DragonUI_Options/fonts/PTSansNarrow.ttf` | SIL Open Font License 1.1 | [LICENSES/OFL-1.1.txt](LICENSES/OFL-1.1.txt) |
 
-Both font files are shipped unmodified. PT Sans Narrow also carries the full OFL text inside the
-font file itself.
+Both font files are shipped unmodified. The font's own notice says "This font is freeware. Read
+attached text file for details"; `LICENSES/Typodermic-EULA.txt` is a word-for-word plain-text copy of
+that attached file, `Typodermic Freeware EULA.html` (dated 2004-09-30), as Typodermic distributed it
+with Expressway Free in its official download (`typodermic.com/free/expressway_free.zip`, archived
+2005-2007). PT Sans Narrow also carries the full OFL text inside the font file itself.
