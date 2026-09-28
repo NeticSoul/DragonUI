@@ -160,27 +160,33 @@ end
 -- Skin
 -- ============================================================================
 
--- Own regions (no ActionButtonTemplate); same atlas path as buttons.lua main_buttons.
+-- Own regions (no ActionButtonTemplate); same atlas art as the main action bar buttons.
 local function SkinButton(button)
-    button:SetNormalTexture(config.assets.normal)
+    local art = config.assets
+    button:SetNormalTexture(art.normal)
     local normal = button:GetNormalTexture()
     normal:ClearAllPoints()
-    normal:SetPoint('TOPRIGHT', button, 2.2, 2.3)
-    normal:SetPoint('BOTTOMLEFT', button, -2.2, -2.2)
-    normal:SetVertexColor(1, 1, 1, 1)
+    normal:SetPoint('TOPRIGHT', button, 'TOPRIGHT', 2.2, 2.3)
+    normal:SetPoint('BOTTOMLEFT', button, 'BOTTOMLEFT', -2.2, -2.2)
+    -- Layer normal before checked/pushed exist so OVERLAY stacks normal, checked, pushed.
     normal:SetDrawLayer('OVERLAY')
+    normal:SetVertexColor(1, 1, 1, 1)
 
-    -- SecureActionButtonTemplate has no Checked/Pushed/Highlight — set then atlas like buttons.lua.
-    button:SetCheckedTexture(config.assets.normal)
-    button:SetPushedTexture(config.assets.normal)
-    button:GetCheckedTexture():set_atlas('_ui-hud-actionbar-iconborder-checked')
-    button:GetPushedTexture():set_atlas('_ui-hud-actionbar-iconborder-pushed')
-    button:SetHighlightTexture(config.assets.highlight)
-    button:GetCheckedTexture():SetAllPoints(normal)
-    button:GetPushedTexture():SetAllPoints(normal)
-    button:GetHighlightTexture():SetAllPoints(normal)
-    button:GetCheckedTexture():SetDrawLayer('OVERLAY')
-    button:GetPushedTexture():SetDrawLayer('OVERLAY')
+    -- A bare CheckButton has no checked/pushed region until a path is set, so set_atlas needs one first.
+    button:SetCheckedTexture(art.normal)
+    button:SetPushedTexture(art.normal)
+    local checked, pushed = button:GetCheckedTexture(), button:GetPushedTexture()
+    checked:set_atlas('_ui-hud-actionbar-iconborder-checked')
+    pushed:set_atlas('_ui-hud-actionbar-iconborder-pushed')
+    button:SetHighlightTexture(art.highlight)
+
+    local highlight = button:GetHighlightTexture()
+    for _, region in ipairs({ checked, pushed, highlight }) do
+        region:SetAllPoints(normal)
+        if region ~= highlight then
+            region:SetDrawLayer('OVERLAY')
+        end
+    end
 
     -- ActionButtonTemplate $parentBorder with ActionButton_Update's equipped tint.
     if not button.border then
@@ -196,19 +202,18 @@ local function SkinButton(button)
     button.icon:SetAllPoints(button)
     button.icon:SetDrawLayer('BORDER')
 
-    -- Slot fill + outer shadow (buttons.lua setup_background(..., true)).
     if not button.shadow then
         local shadow = button:CreateTexture(nil, 'ARTWORK', nil, 1)
-        shadow:SetPoint('TOPRIGHT', normal, 3.8, 3.8)
-        shadow:SetPoint('BOTTOMLEFT', normal, -3.8, -3.8)
+        shadow:SetPoint('TOPRIGHT', normal, 'TOPRIGHT', 3.8, 3.8)
+        shadow:SetPoint('BOTTOMLEFT', normal, 'BOTTOMLEFT', -3.8, -3.8)
         shadow:set_atlas('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
         button.shadow = shadow
     end
     if not button.background then
-        local background = button:CreateTexture(nil, 'BACKGROUND')
-        background:SetAllPoints(normal)
-        background:set_atlas('ui-hud-actionbar-iconframe-slot')
-        button.background = background
+        local slotFill = button:CreateTexture(nil, 'BACKGROUND')
+        slotFill:SetAllPoints(normal)
+        slotFill:set_atlas('ui-hud-actionbar-iconframe-slot')
+        button.background = slotFill
     end
     -- Hide slot fill when only_actionbackground (same as pet/stance in buttons.lua).
     local buttonsDb = addon.db and addon.db.profile and addon.db.profile.buttons

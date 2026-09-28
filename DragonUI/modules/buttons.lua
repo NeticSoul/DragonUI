@@ -1,28 +1,16 @@
-local addon = select(2,...);
-local config = addon.config;
-local action = addon.functions;
-local unpack = unpack;
-local select = select;
-local format = string.format;
-local match = string.match;
-local NUM_PET_ACTION_SLOTS = NUM_PET_ACTION_SLOTS;
-local NUM_SHAPESHIFT_SLOTS = NUM_SHAPESHIFT_SLOTS;
-local NUM_POSSESS_SLOTS = NUM_POSSESS_SLOTS;
-local VEHICLE_MAX_ACTIONBUTTONS = VEHICLE_MAX_ACTIONBUTTONS;
-local hooksecurefunc = hooksecurefunc;
-local _G = getfenv(0);
+local addon = select(2, ...)
+local config, _G = addon.config, _G
+local unpack, format, gsub, hooksecurefunc = unpack, string.format, string.gsub, hooksecurefunc
+local NUM_PET_ACTION_SLOTS, NUM_SHAPESHIFT_SLOTS = NUM_PET_ACTION_SLOTS, NUM_SHAPESHIFT_SLOTS
+local NUM_POSSESS_SLOTS, VEHICLE_MAX_ACTIONBUTTONS = NUM_POSSESS_SLOTS, VEHICLE_MAX_ACTIONBUTTONS
 
 -- ============================================================================
 -- BUTTONS MODULE FOR DRAGONUI
 -- ============================================================================
 
-local actionbars = {
-	'ActionButton',
-	'MultiBarBottomLeftButton',
-	'MultiBarBottomRightButton',
-	'MultiBarRightButton',
-	'MultiBarLeftButton',
-};
+local SLOTS_PER_BAR = 12
+local STYLED_BAR_ROWS = { 'ActionButton', 'MultiBarBottomLeftButton', 'MultiBarBottomRightButton',
+    'MultiBarRightButton', 'MultiBarLeftButton' }
 
 -- Module state tracking
 local ButtonsModule = {
@@ -209,19 +197,24 @@ local function NormalizeAdditionalHotkeyVisual(button, hotkey)
     end
 end
 
-addon.buttons_iterator = function()
-    local index = 0
-    local barIndex = 1
-    return function()
-        index = index + 1
-        if index > 12 then
-            index = 1
-            barIndex = barIndex + 1
+local function NumberedGlobal(prefix, index)
+    return _G[format('%s%d', prefix, index)]
+end
+
+-- Stops at the first missing global, since a generic for ends on nil.
+function addon.buttons_iterator()
+    local row, slot = 1, 0
+    local function advance()
+        slot = slot + 1
+        if slot > SLOTS_PER_BAR then
+            row, slot = row + 1, 1
         end
-        if actionbars[barIndex] then
-            return _G[actionbars[barIndex] .. index]
+        local prefix = STYLED_BAR_ROWS[row]
+        if prefix then
+            return NumberedGlobal(prefix, slot)
         end
     end
+    return advance
 end
 
 function addon.actionbuttons_grid()
@@ -230,99 +223,83 @@ function addon.actionbuttons_grid()
         ButtonsModule.pendingRefresh = true
         return
     end
-
-    for index = 1, NUM_ACTIONBAR_BUTTONS do
-        local button = _G[format('ActionButton%d', index)]
-        if button then
-            button:SetAttribute('showgrid', 1)
-            ActionButton_ShowGrid(button)
+    for slot = 1, NUM_ACTIONBAR_BUTTONS do
+        local mainSlot = NumberedGlobal('ActionButton', slot)
+        if mainSlot then
+            mainSlot:SetAttribute('showgrid', 1)
+            ActionButton_ShowGrid(mainSlot)
         end
     end
 end
 
-local function is_petaction(self, name)
-	local spec = self:GetName():match(name)
-	if (spec) then return true else return false end
+local function HasPetSlotName(name)
+    return name ~= nil and name:find('PetActionButton', 1, true) ~= nil
 end
 
-local function fix_texture(self, texture)
+-- PetActionBar_Update swaps in the stock quickslot art; put ours back after it.
+local function KeepPetFrameArt(petSlot, texturePath)
     if not IsModuleEnabled() then return end
-    
-	if texture and texture ~= config.assets.normal then
-		self:SetNormalTexture(config.assets.normal)
-	end
-end
-
-local function setup_background(button, anchor, shadow)
-    if not IsModuleEnabled() then return nil end
-    
-	if not button or button.shadow then return; end
-	if shadow and not button.shadow then
-		local shadow = button:CreateTexture(nil, 'ARTWORK', nil, 1)
-		shadow:SetPoint('TOPRIGHT', anchor, 3.8, 3.8)
-		shadow:SetPoint('BOTTOMLEFT', anchor, -3.8, -3.8)
-		shadow:set_atlas('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
-		button.shadow = shadow;
-	end
-
-	local background = button:CreateTexture(nil, 'BACKGROUND');
-	background:SetAllPoints(anchor);
-	background:set_atlas('ui-hud-actionbar-iconframe-slot');
-	background:Show();
-	
-	return background;
-end
-
--- ============================================================================
--- KEY FORMATTING SYSTEM
--- ============================================================================
-
-local GetKeyText
-do
-    local keyButton = string.gsub(KEY_BUTTON4 or "Button 4", '%d', '')
-    local keyNumpad = string.gsub(KEY_NUMPAD1 or "NumPad 1", '%d', '')
-    local displaySubs = {
-        { '('..keyButton..')', 'M' },
-        { '('..keyNumpad..')', 'N' },
-        { '(a%-)', 'a' },           -- alt- -> a (lowercase)
-        { '(c%-)', 'c' },           -- ctrl- -> c (lowercase)
-        { '(s%-)', 's' },           -- shift- -> s (lowercase)
-        { KEY_BUTTON3 or "Middle Mouse", 'M3' },
-        { KEY_MOUSEWHEELUP or "Mouse Wheel Up", 'MU' },
-        { KEY_MOUSEWHEELDOWN or "Mouse Wheel Down", 'MD' },
-        { KEY_SPACE or "Space", 'BAR' },
-        { CAPSLOCK_KEY_TEXT or "Caps Lock", 'CL' },
-        { KEY_NUMLOCK or "Num Lock", 'NL' },
-        { 'BUTTON', 'M' },
-        { 'NUMPAD', 'N' },
-        { '(ALT%-)', 'a' },         -- ALT- -> a (uppercase version)
-        { '(CTRL%-)', 'c' },        -- CTRL- -> c 
-        { '(SHIFT%-)', 's' },       -- SHIFT- -> s
-        { 'MOUSEWHEELUP', 'MU' },
-        { 'MOUSEWHEELDOWN', 'MD' },
-        { 'SPACE', 'BAR' },
-        -- ruRU spells the numpad out; KEY_NUMPAD1 above doesn't cover it.
-        { '0 (цифр. кл.)', 'N0' },
-        { '1 (цифр. кл.)', 'N1' },
-        { '2 (цифр. кл.)', 'N2' },
-        { '3 (цифр. кл.)', 'N3' },
-        { '4 (цифр. кл.)', 'N4' },
-        { '5 (цифр. кл.)', 'N5' },
-    }
-
-    -- returns formatted key for text.
-    -- @param key - a hotkey name
-    function GetKeyText(key)
-        if not key then return '' end
-        for _, value in pairs(displaySubs) do
-            key = string.gsub(key, value[1], value[2])
-        end
-        return key or error('invalid key string: '..tostring(key))
+    local ours = config.assets.normal
+    if texturePath and texturePath ~= ours then
+        petSlot:SetNormalTexture(ours)
     end
 end
 
--- Assign to addon for global access
-addon.GetKeyText = GetKeyText
+local function PinCorners(region, target, right, top, left, bottom)
+    region:SetPoint('TOPRIGHT', target, 'TOPRIGHT', right, top)
+    region:SetPoint('BOTTOMLEFT', target, 'BOTTOMLEFT', left, bottom)
+end
+
+local function AddSlotBackdrop(owner, frameRegion, withShadow)
+    if not IsModuleEnabled() or not owner or owner.shadow then return end
+    if withShadow then
+        local glow = owner:CreateTexture(nil, 'ARTWORK', nil, 1)
+        PinCorners(glow, frameRegion, 3.8, 3.8, -3.8, -3.8)
+        glow:set_atlas('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
+        owner.shadow = glow
+    end
+    local backdrop = owner:CreateTexture(nil, 'BACKGROUND')
+    backdrop:SetAllPoints(frameRegion)
+    backdrop:set_atlas('ui-hud-actionbar-iconframe-slot')
+    backdrop:Show()
+    return backdrop
+end
+
+local function DigitFree(text)
+    return (gsub(text, '%d', ''))
+end
+
+-- Every entry is a Lua pattern; the localized names are deliberately left unescaped.
+local KEY_SHORTHANDS = {
+    { DigitFree(KEY_BUTTON4 or 'Button 4'), 'M' },
+    { DigitFree(KEY_NUMPAD1 or 'NumPad 1'), 'N' },
+    { 'a%-', 'a' }, { 'c%-', 'c' }, { 's%-', 's' },
+    { KEY_BUTTON3 or 'Middle Mouse', 'M3' },
+    { KEY_MOUSEWHEELUP or 'Mouse Wheel Up', 'MU' },
+    { KEY_MOUSEWHEELDOWN or 'Mouse Wheel Down', 'MD' },
+    { KEY_SPACE or 'Space', 'BAR' },
+    { CAPSLOCK_KEY_TEXT or 'Caps Lock', 'CL' },
+    { KEY_NUMLOCK or 'Num Lock', 'NL' },
+    { 'BUTTON', 'M' }, { 'NUMPAD', 'N' },
+    { 'ALT%-', 'a' }, { 'CTRL%-', 'c' }, { 'SHIFT%-', 's' },
+    { 'MOUSEWHEELUP', 'MU' }, { 'MOUSEWHEELDOWN', 'MD' }, { 'SPACE', 'BAR' },
+}
+for digit = 0, 5 do
+    KEY_SHORTHANDS[#KEY_SHORTHANDS + 1] = { digit .. ' (цифр. кл.)', 'N' .. digit }
+end
+
+function addon.GetKeyText(key)
+    local text = key
+    if not text then
+        return ''
+    end
+    for index = 1, #KEY_SHORTHANDS do
+        local rule = KEY_SHORTHANDS[index]
+        text = gsub(text, rule[1], rule[2])
+    end
+    return text
+end
+local GetKeyText = addon.GetKeyText
 
 -- ============================================================================
 -- BUTTON STYLING FUNCTIONS
@@ -526,156 +503,130 @@ local function StoreOriginalButtonState(button)
     end
 end
 
-local function main_buttons(button, skipCombatGuard)
-    if not IsModuleEnabled() then return end
-    
-    -- Don't style buttons during combat to avoid taint (vehicle buttons
-    -- bypass this via skipCombatGuard — all ops are texture-level, combat-safe)
-    if InCombatLockdown() and not skipCombatGuard then return end
-    
-	if not button or button.__styled then return; end
+local ICON_CROP = { 0.05, 0.95, 0.05, 0.95 }
+local ATLAS_CHECKED = '_ui-hud-actionbar-iconborder-checked'
+local ATLAS_PUSHED = '_ui-hud-actionbar-iconborder-pushed'
+local ATLAS_FLASH = 'ui-hud-actionbar-iconframe-flash'
+local AUTOCAST_EDGES = { { 'TOP', 14 }, { 'BOTTOM', -15 } }
 
-    local buttonName = button:GetName()
-    local isMainActionButton = buttonName and buttonName:match('^ActionButton%d+$')
-
-    -- Prevent click-driven top-level promotion on secondary bars.
-    -- In 3.3.5a, top-level frames can raise above sibling art frames when clicked.
-    if not skipCombatGuard and not isMainActionButton and button.SetToplevel then
-        button:SetToplevel(false)
-        local parentBar = button:GetParent()
-        if parentBar and parentBar.SetToplevel then
-            parentBar:SetToplevel(false)
-        end
-    end
-
-    -- Store original state before styling
-    StoreOriginalButtonState(button)
-
-	local name = button:GetName();
-	local normal = _G[name..'NormalTexture'] or button:GetNormalTexture();
-	local icon = _G[name..'Icon']
-	local flash = _G[name..'Flash']
-	local cooldown = _G[name..'Cooldown']
-	local border = _G[name..'Border']
-	
-	normal:ClearAllPoints()
-	normal:SetPoint('TOPRIGHT', button, 2.2, 2.3)
-	normal:SetPoint('BOTTOMLEFT', button, -2.2, -2.2)
-	normal:SetVertexColor(1, 1, 1, 1)
-	normal:SetDrawLayer('OVERLAY')
-
-	if flash then
-		flash:set_atlas('ui-hud-actionbar-iconframe-flash')
-	end
-
-	if icon then
-		icon:SetTexCoord(.05, .95, .05, .95)
-		icon:SetDrawLayer('BORDER')
-	end
-
-	if cooldown then
-		cooldown:ClearAllPoints()
-		cooldown:SetAllPoints(button)
-		cooldown:SetFrameLevel(button:GetParent():GetFrameLevel() +1)
-	end
-	
-	if border then
-		border:set_atlas('_ui-hud-actionbar-iconborder-checked')
-		border:SetAllPoints(normal)
-	end
-	
-	-- apply button textures
-	button:GetCheckedTexture():set_atlas('_ui-hud-actionbar-iconborder-checked')
-	button:GetPushedTexture():set_atlas('_ui-hud-actionbar-iconborder-pushed')
-	button:SetHighlightTexture(config.assets.highlight)
-	button:GetCheckedTexture():SetAllPoints(normal)
-	button:GetPushedTexture():SetAllPoints(normal)
-	button:GetHighlightTexture():SetAllPoints(normal)
-	button:GetCheckedTexture():SetDrawLayer('OVERLAY')
-	button:GetPushedTexture():SetDrawLayer('OVERLAY')
-
-	button.background = setup_background(button, normal, true)
-	
-	button.__styled = true
+local function Part(owner, suffix)
+    return owner and _G[owner .. suffix]
 end
 
-local function additional_buttons(button)
-    if not IsModuleEnabled() then return end
-    
-    -- CRITICAL: Don't style buttons during combat to avoid taint
-    if InCombatLockdown() then return end
-    
-	if not button then return; end
+local function DropToplevel(frame)
+    if frame and frame.SetToplevel then
+        frame:SetToplevel(false)
+    end
+end
 
-    if button.SetToplevel then
-        button:SetToplevel(false)
-        local parentBar = button:GetParent()
-        if parentBar and parentBar.SetToplevel then
-            parentBar:SetToplevel(false)
+local function SeatFrameArt(art, owner)
+    art:ClearAllPoints()
+    PinCorners(art, owner, 2.2, 2.3, -2.2, -2.2)
+    art:SetDrawLayer('OVERLAY')
+end
+
+local function SeatCooldown(swipe, owner)
+    swipe:ClearAllPoints()
+    swipe:SetAllPoints(owner)
+    swipe:SetFrameLevel(owner:GetParent():GetFrameLevel() + 1)
+end
+
+local function DressLayer(layer, atlas, target, onOverlay)
+    if atlas then
+        layer:set_atlas(atlas)
+    end
+    if onOverlay then
+        layer:SetDrawLayer('OVERLAY')
+    end
+    layer:SetAllPoints(target)
+end
+
+local STATE_LAYERS = {
+    { 'GetCheckedTexture', ATLAS_CHECKED },
+    { 'GetPushedTexture', ATLAS_PUSHED },
+    { 'GetHighlightTexture' },
+}
+
+-- Only the checked and pushed layers (the atlas ones) move up to OVERLAY when asked.
+local function SeatStateArt(owner, art, onOverlay)
+    owner:SetHighlightTexture(config.assets.highlight)
+    for _, entry in ipairs(STATE_LAYERS) do
+        local getter, atlas = entry[1], entry[2]
+        DressLayer(owner[getter](owner), atlas, art, onOverlay and atlas ~= nil)
+    end
+end
+
+local function StyleActionSlot(slotButton, skipCombatGuard)
+    if not IsModuleEnabled() then return end
+    if not skipCombatGuard and InCombatLockdown() then return end
+    if not slotButton or slotButton.__styled then return end
+
+    local id = slotButton:GetName()
+    if not skipCombatGuard and not (id and id:match('^ActionButton%d+$')) then
+        DropToplevel(slotButton)
+        DropToplevel(slotButton:GetParent())
+    end
+    StoreOriginalButtonState(slotButton)
+
+    local art = Part(id, 'NormalTexture') or slotButton:GetNormalTexture()
+    SeatFrameArt(art, slotButton)
+    art:SetVertexColor(1, 1, 1, 1)
+
+    local flash, face = Part(id, 'Flash'), Part(id, 'Icon')
+    local swipe, equipRing = Part(id, 'Cooldown'), Part(id, 'Border')
+    if flash then flash:set_atlas(ATLAS_FLASH) end
+    if face then
+        face:SetTexCoord(unpack(ICON_CROP))
+        face:SetDrawLayer('BORDER')
+    end
+    if swipe then SeatCooldown(swipe, slotButton) end
+    if equipRing then DressLayer(equipRing, ATLAS_CHECKED, art) end
+    SeatStateArt(slotButton, art, true)
+
+    slotButton.background = AddSlotBackdrop(slotButton, art, true)
+    slotButton.__styled = true
+end
+
+local function StyleExtraSlot(slotButton)
+    if not IsModuleEnabled() or InCombatLockdown() or not slotButton then return end
+    DropToplevel(slotButton)
+    DropToplevel(slotButton:GetParent())
+    StoreOriginalButtonState(slotButton)
+    slotButton:SetNormalTexture(config.assets.normal)
+    if slotButton.background then return end
+
+    local id = slotButton:GetName()
+    local art = Part(id, 'NormalTexture2') or Part(id, 'NormalTexture')
+    SeatFrameArt(art, slotButton)
+    SeatStateArt(slotButton, art, false)
+
+    local swipe, face = Part(id, 'Cooldown'), Part(id, 'Icon')
+    local flash, autocast = Part(id, 'Flash'), Part(id, 'AutoCastable')
+    if swipe then SeatCooldown(swipe, slotButton) end
+    if face then
+        face:ClearAllPoints()
+        face:SetTexCoord(unpack(ICON_CROP))
+        face:SetAllPoints(slotButton)
+        face:SetDrawLayer('BORDER')
+    end
+    if flash then flash:set_atlas(ATLAS_FLASH) end
+    if autocast then
+        autocast:ClearAllPoints()
+        for _, edge in ipairs(AUTOCAST_EDGES) do
+            autocast:SetPoint(edge[1], 0, edge[2])
         end
     end
-	
-    -- Store original state before styling
-    StoreOriginalButtonState(button)
-    
-	button:SetNormalTexture(config.assets.normal)
-	if button.background then return; end
+    if HasPetSlotName(id) then
+        hooksecurefunc(slotButton, 'SetNormalTexture', KeepPetFrameArt)
+    end
 
-	local name = button:GetName();
-	local icon = _G[name..'Icon']
-	local flash = _G[name..'Flash']
-	local normal = _G[name..'NormalTexture2'] or _G[name..'NormalTexture']
-	local cooldown = _G[name..'Cooldown']
-	local castable = _G[name..'AutoCastable']
-
-	normal:ClearAllPoints()
-	normal:SetPoint('TOPRIGHT', button, 2.2, 2.3)
-	normal:SetPoint('BOTTOMLEFT', button, -2.2, -2.2)
-	normal:SetDrawLayer('OVERLAY')
-
-	-- apply button textures
-	button:GetCheckedTexture():set_atlas('_ui-hud-actionbar-iconborder-checked')
-	button:GetPushedTexture():set_atlas('_ui-hud-actionbar-iconborder-pushed')
-	button:SetHighlightTexture(config.assets.highlight)
-	button:GetCheckedTexture():SetAllPoints(normal)
-	button:GetPushedTexture():SetAllPoints(normal)
-	button:GetHighlightTexture():SetAllPoints(normal)
-
-	if cooldown then
-		cooldown:ClearAllPoints()
-		cooldown:SetAllPoints(button)
-		cooldown:SetFrameLevel(button:GetParent():GetFrameLevel() +1)
-	end
-
-	if icon then
-		icon:ClearAllPoints()
-		icon:SetTexCoord(.05, .95, .05, .95)
-		icon:SetAllPoints(button)
-		icon:SetDrawLayer('BORDER')
-	end
-
-	if flash then
-		flash:set_atlas('ui-hud-actionbar-iconframe-flash')
-	end
-	
-	if castable then
-		castable:ClearAllPoints()
-		castable:SetPoint('TOP', 0, 14)
-		castable:SetPoint('BOTTOM', 0, -15)
-	end
-
-	if is_petaction(button, 'PetActionButton') then
-		hooksecurefunc(button, "SetNormalTexture", fix_texture)
-	end
-	button.background = setup_background(button, normal, false)
-
-	-- Apply the toggle now — waiting for the next RefreshButtons() pass flashes it visible first.
-	if button.background then
-		local db = GetButtonsConfig()
-		if db and db.only_actionbackground then
-			button.background:Hide()
-		end
-	end
+    local backdrop = AddSlotBackdrop(slotButton, art, false)
+    slotButton.background = backdrop
+    local db = GetButtonsConfig()
+    -- Hidden right away so the slot art never flashes for one frame before RefreshButtons.
+    if backdrop and db and db.only_actionbackground then
+        backdrop:Hide()
+    end
 end
 
 -- ============================================================================
@@ -792,12 +743,9 @@ local function ApplyButtonStyling()
         return
     end
 
-    -- Setup main action buttons
-    for button in addon.buttons_iterator() do
-        if button then
-            main_buttons(button)
-            button:SetSize(37, 37)
-        end
+    for slotButton in addon.buttons_iterator() do
+        StyleActionSlot(slotButton)
+        slotButton:SetSize(37, 37)
     end
     
     ButtonsModule.applied = true
@@ -807,26 +755,23 @@ end
 -- UPDATE HANDLERS
 -- ============================================================================
 
-local function actionbuttons_update(button)
+local function KeyBindModeActive()
+    local binder = addon.KeyBindingModule
+    if not (binder and binder.enabled and LibStub) then return false end
+    local keyBound = LibStub('LibKeyBound-1.0')
+    return keyBound ~= nil and keyBound:IsShown() and true or false
+end
+
+local function actionbuttons_update(slotButton)
     if not IsModuleEnabled() then return end
-    
-    -- CRITICAL: Don't interfere with LibKeyBound during keybind mode
-    if addon.KeyBindingModule and addon.KeyBindingModule.enabled and LibStub and LibStub("LibKeyBound-1.0") then
-        local LibKeyBound = LibStub("LibKeyBound-1.0")
-        if LibKeyBound:IsShown() then
-            if button and button.GetName then
-                local macroText = _G[button:GetName() .. 'Name']
-                if macroText then
-                    macroText:Hide()
-                end
-            end
-        end
+    if KeyBindModeActive() and slotButton and slotButton.GetName then
+        local macroLabel = Part(slotButton:GetName(), 'Name')
+        if macroLabel then macroLabel:Hide() end
     end
-    
-	if not button then return; end
-	local name = button:GetName();
-	if name:find('MultiCast') then return; end
-	button:SetNormalTexture(config.assets.normal);
+    if not slotButton then return end
+    local id = slotButton:GetName()
+    if id and id:find('MultiCast', 1, true) then return end
+    slotButton:SetNormalTexture(config.assets.normal)
 end
 
 function addon.RefreshButtons()
@@ -921,22 +866,18 @@ end
 -- TEMPLATE FUNCTIONS
 -- ============================================================================
 
--- setup vehicle action buttons
--- @param skipCombatGuard: bypass InCombatLockdown + UnitHasVehicleUI guards
---   for mid-combat vehicle entry (all operations are texture-level, combat-safe)
+-- Texture-only work, so a vehicle entered mid-combat can still be skinned with the skip flag.
 function addon.vehiclebuttons_template(skipCombatGuard)
     if not IsModuleEnabled() then return end
-    
-	if skipCombatGuard or UnitHasVehicleUI('player') then
-		for index=1, VEHICLE_MAX_ACTIONBUTTONS do
-			local button = _G['VehicleMenuBarActionButton'..index]
-			if button then
-				main_buttons(button, skipCombatGuard)
-				actionbuttons_hotkey(button)
-			end
-		end
-	end
-
+    if skipCombatGuard or UnitHasVehicleUI('player') then
+        for seat = 1, VEHICLE_MAX_ACTIONBUTTONS do
+            local vehicleSlot = NumberedGlobal('VehicleMenuBarActionButton', seat)
+            if vehicleSlot then
+                StyleActionSlot(vehicleSlot, skipCombatGuard)
+                actionbuttons_hotkey(vehicleSlot)
+            end
+        end
+    end
     RefreshAdditionalBarHotkeys()
 end
 
@@ -996,49 +937,33 @@ function addon.SetKeybindVisualMode(active)
     end
 end
 
--- setup possess buttons
-function addon.possessbuttons_template()
-    if not IsModuleEnabled() then return end
-    
-	for index=1, NUM_POSSESS_SLOTS do
-		additional_buttons(_G['PossessButton'..index])
-	end
+local function StyleExtraRow(prefix, count, withHotkeys)
+    for index = 1, count do
+        local extra = NumberedGlobal(prefix, index)
+        StyleExtraSlot(extra)
+        if extra and withHotkeys then
+            actionbuttons_hotkey(extra)
+        end
+    end
 end
 
--- Totem/multicast buttons (Shaman) — intentionally left unstyled.
--- The multicast module handles positioning only; modifying textures here
--- caused invisibility issues with Blizzard's multicast bar.
+-- Hotkeys only: restyling the multicast buttons left Blizzard's totem bar invisible.
 function addon.totembuttons_template()
     if not IsModuleEnabled() then return end
     RefreshAdditionalBarHotkeys()
 end
 
--- setup pet action buttons
-function addon.petbuttons_template()
-    if not IsModuleEnabled() then return end
-    
-	for index=1, NUM_PET_ACTION_SLOTS do
-		local button = _G['PetActionButton'..index]
-		if button then
-			additional_buttons(button)
-			-- Apply hotkey format to pet buttons too
-			actionbuttons_hotkey(button)
-		end
-	end
-end
-
--- setup stance/shapeshift buttons
-function addon.stancebuttons_template()
-    if not IsModuleEnabled() then return end
-    
-	for index=1, NUM_SHAPESHIFT_SLOTS do
-		local button = _G['ShapeshiftButton'..index]
-		if button then
-			additional_buttons(button)
-			-- Apply hotkey format to stance buttons too
-			actionbuttons_hotkey(button)
-		end
-	end
+-- export name -> { button prefix, slot count, refresh hotkeys too }
+local EXTRA_ROW_EXPORTS = {
+    possessbuttons_template = { 'PossessButton', NUM_POSSESS_SLOTS, false },
+    petbuttons_template = { 'PetActionButton', NUM_PET_ACTION_SLOTS, true },
+    stancebuttons_template = { 'ShapeshiftButton', NUM_SHAPESHIFT_SLOTS, true },
+}
+for exportName, row in pairs(EXTRA_ROW_EXPORTS) do
+    addon[exportName] = function()
+        if not IsModuleEnabled() then return end
+        StyleExtraRow(row[1], row[2], row[3])
+    end
 end
 
 -- ============================================================================
@@ -1082,32 +1007,20 @@ local function SetupHooks()
         end)
     end
 
-    -- cache border color to avoid repeated config access
-    local cachedBorderColor = nil
-
-    -- ShowGrid hook: apply our custom border color to NormalTexture.
-    -- This is the ONLY thing we do in this hook — no show/hide logic.
-    -- Matches pretty_actionbar's approach exactly.
-    hooksecurefunc('ActionButton_ShowGrid', function(button)
-        if not IsModuleEnabled() then return end
-        if not button then return end
-        
-        -- Don't interfere with LibKeyBound during keybind mode
-        if addon.KeyBindingModule and addon.KeyBindingModule.enabled and LibStub and LibStub("LibKeyBound-1.0") then
-            local LibKeyBound = LibStub("LibKeyBound-1.0")
-            if LibKeyBound:IsShown() then return end
+    -- Read once per session; a new border colour needs a reload to reach the grid tint.
+    local gridTint
+    hooksecurefunc('ActionButton_ShowGrid', function(slotButton)
+        if not IsModuleEnabled() or not slotButton or KeyBindModeActive() then return end
+        local id = slotButton:GetName()
+        if not id then return end
+        if not gridTint then
+            local c = config.buttons.border_color
+            if not c then return end
+            gridTint = { c[1], c[2], c[3], c[4] }
         end
-        
-        local buttonName = button:GetName()
-        if not buttonName then return end
-        
-        if not cachedBorderColor then
-            cachedBorderColor = config.buttons.border_color
-        end
-        
-        local normalTexture = _G[buttonName..'NormalTexture']
-        if normalTexture then
-            normalTexture:SetVertexColor(cachedBorderColor[1], cachedBorderColor[2], cachedBorderColor[3], cachedBorderColor[4])
+        local art = Part(id, 'NormalTexture')
+        if art then
+            art:SetVertexColor(gridTint[1], gridTint[2], gridTint[3], gridTint[4])
         end
     end)
     
@@ -1186,16 +1099,14 @@ local function Initialize()
     ButtonsModule.initialized = true
 end
 
--- Register initialization events
-addon.package:RegisterEvents(function()
+local function OnLoginGridPass()
     if IsModuleEnabled() then
         addon.actionbuttons_grid()
         addon.RefreshButtons()
     end
     collectgarbage()
-end,
-    'PLAYER_LOGIN'
-);
+end
+addon.package:RegisterEvents(OnLoginGridPass, 'PLAYER_LOGIN')
 
 -- Auto-initialize when addon loads and handle post-combat refresh
 local initFrame = CreateFrame("Frame")

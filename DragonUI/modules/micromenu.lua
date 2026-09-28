@@ -5,8 +5,8 @@
 
     -- MODULAR VERSION FOR VANILLA & ASCENSION --
 ]]
-local addon = select(2, ...);
-local config = addon.config;
+local addon = select(2, ...)
+local config = addon.config
 local L = addon.L
 
 -- ============================================================================
@@ -72,53 +72,45 @@ end
 -- SECTION 1: LOCALS AND CONSTANTS
 -- ============================================================================
 
-local pairs = pairs;
-local gsub = string.gsub;
-local UIParent = UIParent;
-local hooksecurefunc = hooksecurefunc;
-local _G = _G;
+local pairs, gsub, hooksecurefunc = pairs, string.gsub, hooksecurefunc
+local _G, UIParent = _G, UIParent
 
 -- Performance constants
 local PERFORMANCEBAR_LOW_LATENCY = 200;
 local PERFORMANCEBAR_MEDIUM_LATENCY = 300;
 
--- Frame references
-local MainMenuBarBackpackButton = _G.MainMenuBarBackpackButton;
-local HelpMicroButton = _G.HelpMicroButton;
-local KeyRingButton = _G.KeyRingButton;
+local MainMenuBarBackpackButton, HelpMicroButton, KeyRingButton =
+    _G.MainMenuBarBackpackButton, _G.HelpMicroButton, _G.KeyRingButton
 
--- Button collections (dynamically set based on server)
-local MICRO_BUTTONS
-
-if isAscensionServer then
-    MICRO_BUTTONS = {
-        _G.CharacterMicroButton,
-        _G.SpellbookMicroButton,
-        _G.TalentMicroButton,
-        _G.AchievementMicroButton,
-        _G.QuestLogMicroButton,
-        _G.SocialsMicroButton,
-        _G.LFDMicroButton,
-        _G.PathToAscensionMicroButton,
-        _G.ChallengesMicroButton,
-        _G.MainMenuMicroButton,
-        _G.HelpMicroButton
-    }
-else
-    MICRO_BUTTONS = {
-        _G.CharacterMicroButton,
-        _G.SpellbookMicroButton,
-        _G.TalentMicroButton,
-        _G.AchievementMicroButton,
-        _G.QuestLogMicroButton,
-        _G.SocialsMicroButton,
-        _G.LFDMicroButton,
-        _G.CollectionsMicroButton,
-        _G.PVPMicroButton,
-        _G.MainMenuMicroButton,
-        _G.HelpMicroButton
-    }
+local function SyncKeyRingToKeys()
+    if not KeyRingButton then return end
+    local wanted = HasKey() and true or false
+    local shown = KeyRingButton:IsShown() and true or false
+    if wanted ~= shown then
+        if wanted then
+            KeyRingButton:Show()
+        else
+            KeyRingButton:Hide()
+        end
+    end
 end
+
+local function MicroButtonFor(stem)
+    return _G[stem .. "MicroButton"]
+end
+
+local EIGHTH_STEM, NINTH_STEM = "Collections", "PVP"
+if isAscensionServer then
+    EIGHTH_STEM, NINTH_STEM = "PathToAscension", "Challenges"
+end
+
+-- One constructor keeps a nil slot for a button missing at load, so # still counts all eleven.
+local MICRO_BUTTONS = {
+    MicroButtonFor("Character"), MicroButtonFor("Spellbook"), MicroButtonFor("Talent"),
+    MicroButtonFor("Achievement"), MicroButtonFor("QuestLog"), MicroButtonFor("Socials"),
+    MicroButtonFor("LFD"), MicroButtonFor(EIGHTH_STEM), MicroButtonFor(NINTH_STEM),
+    MicroButtonFor("MainMenu"), (MicroButtonFor("Help")),
+}
 
 
 -- The strip's default anchor allows for an eleventh button, which Pets & Mounts now supplies.
@@ -1477,50 +1469,73 @@ end
 function MainMenuMicroButtonMixin:bagbuttons_setup()
     MicromenuModule.hooks = MicromenuModule.hooks or {}
 
-    -- Setup main backpack button
-    MainMenuBarBackpackButton:SetSize(50, 50)
-    MainMenuBarBackpackButton:SetNormalTexture(nil)
-    MainMenuBarBackpackButton:SetPushedTexture(nil)
-    MainMenuBarBackpackButton:SetHighlightTexture ''
-    MainMenuBarBackpackButton:SetCheckedTexture ''
-    do
-        local ht = MainMenuBarBackpackButton:GetHighlightTexture()
-        ht:SetAllPoints()
-        ht:SetBlendMode('ADD')
-        ht:set_atlas('bag-main-highlight-2x')
-        local ct = MainMenuBarBackpackButton:GetCheckedTexture()
-        ct:SetAllPoints()
-        ct:SetBlendMode('ADD')
-        ct:SetDrawLayer('OVERLAY', 7)
-        ct:set_atlas('bag-main-highlight-2x')
+    local BORDER_GLOW = "bag-border-highlight-2x"
+    local BACKPACK_GLOW = "bag-main-highlight-2x"
+
+    local BUTTON_FACE_ORDER = { "Normal", "Pushed", "Highlight", "Checked" }
+    local SLOT_FACE_ORDER = { "Highlight", "Checked", "Pushed", "Normal" }
+
+    -- A face missing from the table is set to nil.
+    local function ResetFaces(button, order, faces)
+        for _, face in ipairs(order) do
+            button["Set" .. face .. "Texture"](button, faces[face])
+        end
     end
-    MainMenuBarBackpackButtonIconTexture:set_atlas('bag-main-2x')
 
-    -- Backpack position is owned by the overlay; anchoring it here would fight it.
-    MainMenuBarBackpackButtonCount:SetClearPoint('CENTER', MainMenuBarBackpackButton, 'BOTTOM', 0, 14)
-    CharacterBag0Slot:SetClearPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
-
-    -- Setup KeyRingButton
-    KeyRingButton:SetSize(34, 34)
-    KeyRingButton:SetClearPoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
-    KeyRingButton:SetNormalTexture ''
-    KeyRingButton:SetPushedTexture(nil)
-    KeyRingButton:SetHighlightTexture ''
-    KeyRingButton:SetCheckedTexture ''
-
-    local highlight = KeyRingButton:GetHighlightTexture();
-    highlight:SetAllPoints();
-    highlight:SetBlendMode('ADD');
-    highlight:SetAlpha(.4);
-    highlight:set_atlas('bag-border-highlight-2x', true)
-    KeyRingButton:GetNormalTexture():set_atlas('bag-reagent-border-2x')
-    do
-        local ct = KeyRingButton:GetCheckedTexture()
-        ct:SetAllPoints()
-        ct:SetBlendMode('ADD')
-        ct:SetDrawLayer('OVERLAY', 7)
-        ct:set_atlas('bag-border-highlight-2x')
+    local function StretchAdditive(region, owner)
+        region:SetAllPoints(owner)
+        region:SetBlendMode("ADD")
     end
+
+    local function StyleBorderGlows(button)
+        local hover = button:GetHighlightTexture()
+        StretchAdditive(hover, button)
+        hover:SetAlpha(0.4)
+        hover:set_atlas(BORDER_GLOW, true)
+
+        local pressed = button:GetCheckedTexture()
+        StretchAdditive(pressed, button)
+        pressed:SetDrawLayer("OVERLAY", 7)
+        pressed:set_atlas(BORDER_GLOW)
+    end
+
+    local function DressIconAndCount(button)
+        local buttonName = button:GetName()
+        local icon = _G[buttonName .. "IconTexture"]
+        if icon then
+            icon:ClearAllPoints()
+            icon:SetPoint("TOPRIGHT", button, "TOPRIGHT", -5, -2.9)
+            icon:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2.9, 5)
+            pcall(icon.SetTexCoord, icon, 0.08, 0.92, 0.08, 0.92)
+        end
+        local stackCount = _G[buttonName .. "Count"]
+        if stackCount then
+            stackCount:SetClearPoint("CENTER", button, "CENTER", 0, -10)
+            stackCount:SetDrawLayer("OVERLAY")
+        end
+    end
+
+    local backpack = MainMenuBarBackpackButton
+    backpack:SetSize(50, 50)
+    ResetFaces(backpack, BUTTON_FACE_ORDER, { Highlight = "", Checked = "" })
+    StretchAdditive(backpack:GetHighlightTexture(), backpack)
+    backpack:GetHighlightTexture():set_atlas(BACKPACK_GLOW)
+    local backpackChecked = backpack:GetCheckedTexture()
+    StretchAdditive(backpackChecked, backpack)
+    backpackChecked:SetDrawLayer("OVERLAY", 7)
+    backpackChecked:set_atlas(BACKPACK_GLOW)
+    _G.MainMenuBarBackpackButtonIconTexture:set_atlas("bag-main-2x")
+    _G.MainMenuBarBackpackButtonCount:SetClearPoint("CENTER", backpack, "BOTTOM", 0, 14)
+    CharacterBag0Slot:SetClearPoint("RIGHT", backpack, "LEFT", -14, -2)
+
+    if KeyRingButton then
+        KeyRingButton:SetSize(34, 34)
+        KeyRingButton:SetClearPoint("RIGHT", CharacterBag3Slot, "LEFT", -4, 0)
+        ResetFaces(KeyRingButton, BUTTON_FACE_ORDER, { Normal = "", Highlight = "", Checked = "" })
+        KeyRingButton:GetNormalTexture():set_atlas("bag-reagent-border-2x")
+        StyleBorderGlows(KeyRingButton)
+    end
+
     -- Bagster replaces ContainerFrame_OnShow checked sync; highlight backpack/bag slots instead
     local function SyncKeyRingButton()
         if addon.BagsterModule and addon.BagsterModule.BagsterModule
@@ -1551,78 +1566,44 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
         MicromenuModule.hooks.KeyRingSyncHooks = true
     end
 
-    local keyringIcon = KeyRingButtonIconTexture
-    if keyringIcon then
-        keyringIcon:ClearAllPoints()
-        keyringIcon:SetPoint('TOPRIGHT', KeyRingButton, 'TOPRIGHT', -5, -2.9);
-        keyringIcon:SetPoint('BOTTOMLEFT', KeyRingButton, 'BOTTOMLEFT', 2.9, 5);
-        pcall(function()
-            keyringIcon:SetTexCoord(.08, .92, .08, .92)
-        end)
+    if KeyRingButton then
+        DressIconAndCount(KeyRingButton)
     end
 
-    if KeyRingButtonCount then
-        KeyRingButtonCount:SetClearPoint('CENTER', KeyRingButton, 'CENTER', 0, -10);
-        KeyRingButtonCount:SetDrawLayer('OVERLAY')
-    end
+    for _, slot in ipairs(bagslots) do
+        ResetFaces(slot, SLOT_FACE_ORDER, { Normal = "", Highlight = "", Checked = "" })
+        slot:SetSize(28, 28)
 
-    -- Setup individual bag slots
-    for _, bags in pairs(bagslots) do
-        bags:SetHighlightTexture ''
-        bags:SetCheckedTexture ''
-        bags:SetPushedTexture(nil)
-        bags:SetNormalTexture ''
-        bags:SetSize(28, 28)
+        local plate = slot:GetNormalTexture()
+        if plate then
+            plate:SetAlpha(0)
+            plate:Hide()
+        end
+        StyleBorderGlows(slot)
+        DressIconAndCount(slot)
 
-        local normalTexture = bags:GetNormalTexture()
-        if normalTexture then
-            normalTexture:SetAlpha(0)
-            normalTexture:Hide()
+        local ring = slot.customBorder
+        if not ring then
+            ring = slot:CreateTexture(nil, "OVERLAY")
+            ring:SetPoint("CENTER", slot, "CENTER")
+            ring:set_atlas("bag-border-2x", true)
+            slot.customBorder = ring
         end
 
-        bags:GetCheckedTexture():SetAllPoints()
-        bags:GetCheckedTexture():SetBlendMode('ADD')
-        bags:GetCheckedTexture():SetDrawLayer('OVERLAY', 7)
-        bags:GetCheckedTexture():set_atlas('bag-border-highlight-2x')
-
-        local highlight = bags:GetHighlightTexture();
-        highlight:SetAllPoints();
-        highlight:SetBlendMode('ADD');
-        highlight:SetAlpha(.4);
-        highlight:set_atlas('bag-border-highlight-2x', true)
-
-        local icon = _G[bags:GetName() .. 'IconTexture']
-        if icon then
-            icon:ClearAllPoints()
-            icon:SetPoint('TOPRIGHT', bags, 'TOPRIGHT', -5, -2.9);
-            icon:SetPoint('BOTTOMLEFT', bags, 'BOTTOMLEFT', 2.9, 5);
-            pcall(function()
-                icon:SetTexCoord(.08, .92, .08, .92)
-            end)
+        local backdrop = slot.background
+        if not backdrop then
+            backdrop = slot:CreateTexture(nil, "BACKGROUND")
+            backdrop:SetSize(ring:GetWidth(), ring:GetHeight())
+            backdrop:SetPoint("CENTER", slot, "CENTER")
+            backdrop:SetTexture(addon._dir .. "Bags\\bagslots2x")
+            backdrop:SetTexCoord(295 / 512, 356 / 512, 64 / 128, 125 / 128)
+            slot.background = backdrop
         end
 
-        if not bags.customBorder then
-            bags.customBorder = bags:CreateTexture(nil, 'OVERLAY')
-            bags.customBorder:SetPoint('CENTER')
-            bags.customBorder:set_atlas('bag-border-2x', true)
+        for _, layer in ipairs({ ring, backdrop }) do
+            layer:Show()
+            layer:SetAlpha(1)
         end
-        bags.customBorder:Show()
-        bags.customBorder:SetAlpha(1)
-
-        local w, h = bags.customBorder:GetSize()
-        if not bags.background then
-            bags.background = bags:CreateTexture(nil, 'BACKGROUND')
-            bags.background:SetSize(w, h)
-            bags.background:SetPoint('CENTER')
-            bags.background:SetTexture(addon._dir .. 'Bags\\bagslots2x')
-            bags.background:SetTexCoord(295 / 512, 356 / 512, 64 / 128, 125 / 128)
-        end
-        bags.background:Show()
-        bags.background:SetAlpha(1)
-
-        local count = _G[bags:GetName() .. 'Count']
-        count:SetClearPoint('CENTER', 0, -10);
-        count:SetDrawLayer('OVERLAY')
     end
 
     if not pUiBagsBar.registeredInEditor then
@@ -1792,11 +1773,7 @@ function MainMenuMicroButtonMixin:bagbuttons_refresh()
 
     self:bagbuttons_setup();
 
-    if HasKey() then
-        KeyRingButton:Show();
-    else
-        KeyRingButton:Hide();
-    end
+    SyncKeyRingToKeys()
 
     -- Update bag slot icons with delayed stabilization for reload timing.
     ScheduleBagSlotIconRefreshes()
@@ -2520,24 +2497,11 @@ function addon.RefreshBags()
         MainMenuMicroButtonMixin:bagbuttons_refresh();
     end
 
-    if addon.pUiArrowManager then
-        local arrow = addon.pUiArrowManager
-        local isCollapsed = GetBagCollapseState()
-        local normal = arrow:GetNormalTexture()
-        local pushed = arrow:GetPushedTexture()
-        local highlight = arrow:GetHighlightTexture()
-
-        if isCollapsed then
-            normal:set_atlas('bag-arrow-2x')
-            pushed:set_atlas('bag-arrow-2x')
-            highlight:set_atlas('bag-arrow-2x')
-            arrow:SetChecked(true)
-        else
-            normal:set_atlas('bag-arrow-invert-2x')
-            pushed:set_atlas('bag-arrow-invert-2x')
-            highlight:set_atlas('bag-arrow-invert-2x')
-            arrow:SetChecked(nil)
-        end
+    local arrow = addon.pUiArrowManager
+    if arrow then
+        local folded = GetBagCollapseState()
+        arrow:PaintFold(folded)
+        arrow:SetChecked(folded and true or nil)
     end
 
     MainMenuMicroButtonMixin:bagbuttons_reposition()
@@ -2604,40 +2568,38 @@ local function ApplyMicromenuSystem()
     -- SECTION 8: SPECIAL UI ELEMENTS
     -- ============================================================================
 
-    -- Collapse arrow
-    do
-        local arrow = CreateFrame('CheckButton', 'pUiArrowManager', MainMenuBarBackpackButton)
-        addon.pUiArrowManager = arrow
-        arrow:SetSize(12, 18)
-        arrow:SetPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', 0, -2)
-        arrow:SetNormalTexture ''
-        arrow:SetPushedTexture ''
-        arrow:SetHighlightTexture ''
-        arrow:RegisterForClicks('LeftButtonUp')
+    local foldToggle = addon.pUiArrowManager
+        or CreateFrame("CheckButton", "pUiArrowManager", MainMenuBarBackpackButton)
+    addon.pUiArrowManager = foldToggle
+    foldToggle:SetSize(12, 18)
+    foldToggle:SetPoint("RIGHT", MainMenuBarBackpackButton, "LEFT", 0, -2)
+    foldToggle:SetNormalTexture("")
+    foldToggle:SetPushedTexture("")
+    foldToggle:SetHighlightTexture("")
+    foldToggle:RegisterForClicks("LeftButtonUp")
+    foldToggle:Show()
 
-        local normal = arrow:GetNormalTexture()
-        local pushed = arrow:GetPushedTexture()
-        local highlight = arrow:GetHighlightTexture()
-
-        arrow:SetScript('OnClick', function(self)
-            local checked = self:GetChecked();
-            if checked then
-                normal:set_atlas('bag-arrow-2x')
-                pushed:set_atlas('bag-arrow-2x')
-                highlight:set_atlas('bag-arrow-2x')
-                SetBagCollapseState(true)
-                MainMenuMicroButtonMixin:bagbuttons_reposition()
-            else
-                normal:set_atlas('bag-arrow-invert-2x')
-                pushed:set_atlas('bag-arrow-invert-2x')
-                highlight:set_atlas('bag-arrow-invert-2x')
-                SetBagCollapseState(false)
-                MainMenuMicroButtonMixin:bagbuttons_reposition()
-                UpdateBagSlotAlpha()
-                ScheduleBagSlotIconRefreshes()
-            end
-        end)
+    local foldFaces = {
+        foldToggle:GetNormalTexture(), foldToggle:GetPushedTexture(), foldToggle:GetHighlightTexture(),
+    }
+    function foldToggle:PaintFold(folded)
+        local atlas = folded and "bag-arrow-2x" or "bag-arrow-invert-2x"
+        for _, face in ipairs(foldFaces) do
+            face:set_atlas(atlas)
+        end
     end
+
+    -- A CheckButton flips its checked state before OnClick runs, so GetChecked is the new state.
+    foldToggle:SetScript("OnClick", function(self)
+        local folded = self:GetChecked() and true or false
+        self:PaintFold(folded)
+        SetBagCollapseState(folded)
+        MainMenuMicroButtonMixin:bagbuttons_reposition()
+        if not folded then
+            UpdateBagSlotAlpha()
+            ScheduleBagSlotIconRefreshes()
+        end
+    end)
 
     -- LFG Frame customization
 
@@ -2658,26 +2620,25 @@ local function ApplyMicromenuSystem()
     -- SECTION 9: EVENT HANDLERS
     -- ============================================================================
 
-    addon.package:RegisterEvents(function(self, event)
+    addon.package:RegisterEvents(function(_, eventName)
         if not IsModuleEnabled() then return end
-
-        if event == 'BAG_UPDATE' then
-            -- BAG_UPDATE fires frequently (e.g. every time ammo is consumed).
-            -- Blizzard updates IconTexture automatically; only toggle KeyRing
-            -- visibility and refresh slot alpha here.
-            if HasKey() then
-                if not KeyRingButton:IsShown() then
-                    KeyRingButton:Show();
-                end
-            else
-                if KeyRingButton:IsShown() then
-                    KeyRingButton:Hide();
-                end
-            end
-
+        if eventName == "BAG_UPDATE" then
+            SyncKeyRingToKeys()
             UpdateBagSlotAlpha()
         end
-    end, 'BAG_UPDATE');
+    end, "BAG_UPDATE")
+
+    -- The Collections button takes the eleventh slot, so the strip starts further left.
+    local function ResolveMicroStripOffset()
+        if not HasCollectionsButton() then
+            return -166
+        end
+        local collections = _G.CollectionsMicroButton
+        if collections then
+            collections:UnregisterEvent("UPDATE_BINDINGS")
+        end
+        return -180
+    end
 
     addon.package:RegisterEvents(function(self, event)
         if not IsModuleEnabled() then return end
@@ -2697,15 +2658,7 @@ local function ApplyMicromenuSystem()
     -- lightweight to avoid unnecessary work on frequent inventory events.
 
     addon.package:RegisterEvents(function()
-        local xOffset
-        if HasCollectionsButton() then
-            xOffset = -180
-            if _G.CollectionsMicroButton then
-                _G.CollectionsMicroButton:UnregisterEvent('UPDATE_BINDINGS')
-            end
-        else
-            xOffset = -166
-        end
+        local xOffset = ResolveMicroStripOffset()
 
         setupMicroButtons(xOffset);
 
@@ -2734,15 +2687,7 @@ local function ApplyMicromenuSystem()
 
     -- Execute setup immediately only after login; pre-login passes can produce transient bad geometry.
     if IsLoggedIn() then
-        local xOffset
-        if HasCollectionsButton() then
-            xOffset = -180
-            if _G.CollectionsMicroButton then
-                _G.CollectionsMicroButton:UnregisterEvent('UPDATE_BINDINGS')
-            end
-        else
-            xOffset = -166
-        end
+        local xOffset = ResolveMicroStripOffset()
 
         setupMicroButtons(xOffset)
 

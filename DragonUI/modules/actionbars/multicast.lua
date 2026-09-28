@@ -3,12 +3,10 @@
 -- Handles Shaman totem bar and possession bar positioning and styling.
 -- ============================================================================
 
-local addon = select(2,...);
+local addon = select(2, ...)
+local InCombatLockdown, UnitAffectingCombat = InCombatLockdown, UnitAffectingCombat
+local hooksecurefunc, UIParent = hooksecurefunc, UIParent
 local L = addon.L
-local InCombatLockdown = InCombatLockdown;
-local UnitAffectingCombat = UnitAffectingCombat;
-local hooksecurefunc = hooksecurefunc;
-local UIParent = UIParent;
 local NUM_POSSESS_SLOTS = NUM_POSSESS_SLOTS or 10;
 local NUM_MULTI_CAST_BUTTONS_PER_PAGE = NUM_MULTI_CAST_BUTTONS_PER_PAGE or 4;
 
@@ -355,17 +353,14 @@ local function SetupShamanMulticast()
     
     multicastSetupDone = true
     
-    -- Remove default scripts that might interfere with our positioning
-    MultiCastActionBarFrame:SetScript('OnUpdate', nil)
-    MultiCastActionBarFrame:SetScript('OnShow', nil)
-    MultiCastActionBarFrame:SetScript('OnHide', nil)
-    
-    -- Parent the MultiCastActionBarFrame to our anchor
-    -- Once parented, all child buttons stay relative to this parent
-    MultiCastActionBarFrame:SetParent(totembar)
-    MultiCastActionBarFrame:ClearAllPoints()
-    MultiCastActionBarFrame:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
-    MultiCastActionBarFrame:Show()
+    local castBar = MultiCastActionBarFrame
+    for _, handler in ipairs({ 'OnUpdate', 'OnShow', 'OnHide' }) do
+        castBar:SetScript(handler, nil)
+    end
+    castBar:SetParent(totembar)
+    castBar:ClearAllPoints()
+    castBar:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
+    castBar:Show()
     
     -- Apply initial scale and spacing to the PARENT frame
     PositionTotemButtons()

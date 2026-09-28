@@ -1,5 +1,5 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
-    <Script file="MerchantFrame.lua"/>
-    <Script file="SellAllJunk.lua"/>
-    <Script file="BuybackUndo.lua"/>
+    <Script file="merchant_frame.lua"/>
+    <Script file="sell_junk.lua"/>
+    <Script file="buyback_undo.lua"/>
 </Ui>

@@ -1,11 +1,6 @@
-local addon = select(2,...);
-local config = addon.config;
-local event = addon.package;
-local class = addon._class;
-local unpack = unpack;
-local select = select;
-local pairs = pairs;
-local _G = getfenv(0);
+local addon = select(2, ...)
+local _G, pairs, select = _G, pairs, select
+local class = addon._class
 
 -- ============================================================================
 -- STANCE MODULE FOR DRAGONUI
@@ -56,28 +51,20 @@ end
 -- CONSTANTS AND VARIABLES
 -- ============================================================================
 
--- const
-local InCombatLockdown = InCombatLockdown;
-local GetNumShapeshiftForms = GetNumShapeshiftForms;
-local GetShapeshiftFormInfo = GetShapeshiftFormInfo;
-local GetShapeshiftFormCooldown = GetShapeshiftFormCooldown;
-local CreateFrame = CreateFrame;
-local UIParent = UIParent;
-local hooksecurefunc = hooksecurefunc;
-local UnitAffectingCombat = UnitAffectingCombat;
+local InCombatLockdown, UnitAffectingCombat = InCombatLockdown, UnitAffectingCombat
+local GetNumShapeshiftForms, GetShapeshiftFormInfo = GetNumShapeshiftForms, GetShapeshiftFormInfo
+local GetShapeshiftFormCooldown = GetShapeshiftFormCooldown
+local CreateFrame, UIParent, hooksecurefunc = CreateFrame, UIParent, hooksecurefunc
 
--- WOTLK 3.3.5a Constants
-local NUM_SHAPESHIFT_SLOTS = 10; -- Fixed value for 3.3.5a compatibility
+-- Shadows the global on purpose: the bar always lays out ten slots.
+local NUM_SHAPESHIFT_SLOTS = 10
 
-local stance = {
-	['DEATHKNIGHT'] = '[vehicleui] hide; show',
-	['DRUID'] = '[vehicleui] hide; show',
-	['PALADIN'] = '[vehicleui] hide; show',
-	['PRIEST'] = '[vehicleui] hide; show',
-	['ROGUE'] = '[vehicleui] hide; show',
-	['WARLOCK'] = '[vehicleui] hide; show',
-	['WARRIOR'] = '[vehicleui] hide; show'
-};
+local CLASSES_WITH_FORM_BAR = {
+    DEATHKNIGHT = true, DRUID = true, PALADIN = true, PRIEST = true,
+    ROGUE = true, WARLOCK = true, WARRIOR = true,
+}
+local STANCE_VISIBILITY = CLASSES_WITH_FORM_BAR[class] and '[vehicleui] hide; show' or 'hide'
+local HOLDER_EDGE = 37
 
 -- Module frames (created only when enabled)
 local anchor, stancebar
@@ -142,15 +129,12 @@ addon.UpdateStanceBarPosition = UpdateStanceBar
 local function CreateStanceFrames()
     if StanceModule.frames.anchor or not IsModuleEnabled() then return end
     
-    -- Create simple anchor frame
-    anchor = CreateFrame('Frame', 'pUiStanceHolder', UIParent)
-    anchor:SetSize(37, 37)  -- Visual style matching reference
-    StanceModule.frames.anchor = anchor
-    
-    -- Create stance bar frame
-    stancebar = CreateFrame('Frame', 'pUiStanceBar', anchor, 'SecureHandlerStateTemplate')
-    stancebar:SetAllPoints(anchor)
-    StanceModule.frames.stancebar = stancebar
+    local holder = CreateFrame('Frame', 'pUiStanceHolder', UIParent)
+    holder:SetSize(HOLDER_EDGE, HOLDER_EDGE)
+    local bar = CreateFrame('Frame', 'pUiStanceBar', holder, 'SecureHandlerStateTemplate')
+    anchor, stancebar = holder, bar
+    StanceModule.frames.anchor, StanceModule.frames.stancebar = holder, bar
+    bar:SetAllPoints(holder)
     
     -- Expose globally for compatibility
     _G.pUiStanceBar = stancebar
@@ -294,12 +278,47 @@ end
 -- STANCE BUTTON FUNCTIONS
 -- ============================================================================
 
-local function stancebutton_update()
-    if not IsModuleEnabled() or not anchor then return end
-    if InCombatLockdown() then return end
+local function FormSlot(index)
+    return _G['ShapeshiftButton' .. index]
+end
 
-    _G.ShapeshiftButton1:ClearAllPoints()
-    _G.ShapeshiftButton1:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
+local function RestyleFormSlots()
+    local restyle = addon.stancebuttons_template
+    if restyle then
+        restyle()
+    end
+end
+
+local function LayoutFormSlot(slotButton, index, edge, slotScale, gap)
+    slotButton:SetSize(edge, edge)
+    slotButton:SetScale(slotScale)
+    slotButton:ClearAllPoints()
+    if index > 1 then
+        local previous = FormSlot(index - 1)
+        if previous then
+            slotButton:SetPoint('LEFT', previous, 'RIGHT', gap, 0)
+        end
+    else
+        slotButton:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
+    end
+end
+
+local function SyncFormVisibility(slotButton, index)
+    local _, formName = GetShapeshiftFormInfo(index)
+    if formName then
+        slotButton:Show()
+    else
+        slotButton:Hide()
+    end
+end
+
+local stancebutton_update = function()
+    if not (IsModuleEnabled() and anchor) or InCombatLockdown() then return end
+    local lead = FormSlot(1)
+    if lead then
+        lead:ClearAllPoints()
+        lead:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
+    end
 end
 
 local function stancebutton_position()
@@ -321,44 +340,22 @@ local function stancebutton_position()
     local nativeSize = 36
     local scale = btnsize / nativeSize
     
-    for index=1, NUM_SHAPESHIFT_SLOTS do
-		local button = _G['ShapeshiftButton'..index]
-		if button then
-		    -- Set parent if not already configured
-		    if button:GetParent() ~= stancebar then
-			    button:SetParent(stancebar)
-		    end
-		    
-		    -- Set native size - buttons.lua will configure textures correctly
-		    button:SetSize(nativeSize, nativeSize)
-		    
-		    -- Apply scale for user-configurable size (scales everything uniformly)
-		    button:SetScale(scale)
-		    
-		    -- Position buttons (spacing in parent coordinates)
-		    button:ClearAllPoints()
-		    if index == 1 then
-			    button:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
-		    else
-			    local previous = _G['ShapeshiftButton'..index-1]
-			    button:SetPoint('LEFT', previous, 'RIGHT', space, 0)
-		    end
-		    
-		    -- Show/hide based on forms
-		    local _,name = GetShapeshiftFormInfo(index)
-		    if name then
-			    button:Show()
-		    else
-			    button:Hide()
-		    end
-		end
-	end
-	
-	-- Register state driver only once
-	if not StanceModule.stateDrivers.visibility then
-	    StanceModule.stateDrivers.visibility = {frame = stancebar, state = 'visibility', condition = stance[class] or 'hide'}
-	    RegisterStateDriver(stancebar, 'visibility', stance[class] or 'hide')
-	end
+    for index = 1, NUM_SHAPESHIFT_SLOTS do
+        local slotButton = FormSlot(index)
+        if slotButton then
+            if slotButton:GetParent() ~= stancebar then
+                slotButton:SetParent(stancebar)
+            end
+            LayoutFormSlot(slotButton, index, nativeSize, scale, space)
+            SyncFormVisibility(slotButton, index)
+        end
+    end
+
+    local drivers = StanceModule.stateDrivers
+    if not drivers.visibility then
+        drivers.visibility = { frame = stancebar, state = 'visibility', condition = STANCE_VISIBILITY }
+        RegisterStateDriver(stancebar, 'visibility', STANCE_VISIBILITY)
+    end
 
 	-- Hover/combat fade layered on top of the state driver above (alpha-only, never Show/Hide).
 	if addon.VisibilityFade then
@@ -376,88 +373,57 @@ local function stancebutton_position()
 	end
 end
 
-local function stancebutton_updatestate()
+local CASTABLE_SHADE, BLOCKED_SHADE = 1, 0.4
+
+-- Never touches ShapeshiftBarFrame fields: an insecure write there taints Blizzard's stance code.
+local function RefreshFormSlotStates()
     if not IsModuleEnabled() then return end
-    
-	local numForms = GetNumShapeshiftForms()
-	local texture, name, isActive, isCastable;
-	local button, icon, cooldown;
-	local start, duration, enable;
-	for index=1, NUM_SHAPESHIFT_SLOTS do
-		button = _G['ShapeshiftButton'..index]
-		icon = _G['ShapeshiftButton'..index..'Icon']
-		if index <= numForms then
-			texture, name, isActive, isCastable = GetShapeshiftFormInfo(index)
-            icon:SetTexture(texture)
-			cooldown = _G['ShapeshiftButton'..index..'Cooldown']
-            if texture then
-                cooldown:SetAlpha(1)
-            else
-                cooldown:SetAlpha(0)
-			end
-			start, duration, enable = GetShapeshiftFormCooldown(index)
-            CooldownFrame_SetTimer(cooldown, start, duration, enable)
-            if isActive then
-                button:SetChecked(1)
-            else
-                button:SetChecked(0)
-			end
-            if isCastable then
-                icon:SetVertexColor(255/255, 255/255, 255/255)
-            else
-                icon:SetVertexColor(102/255, 102/255, 102/255)
-            end
-		end
-	end
+    local formCount = math.min(NUM_SHAPESHIFT_SLOTS, GetNumShapeshiftForms())
+    for index = 1, formCount do
+        local slotButton = FormSlot(index)
+        if slotButton then
+            local slotName = slotButton:GetName()
+            local face, swipe = _G[slotName .. 'Icon'], _G[slotName .. 'Cooldown']
+            local texture, _, isActive, isCastable = GetShapeshiftFormInfo(index)
+            face:SetTexture(texture)
+            swipe:SetAlpha(texture and 1 or 0)
+            CooldownFrame_SetTimer(swipe, GetShapeshiftFormCooldown(index))
+            slotButton:SetChecked(isActive and 1 or 0)
+            local shade = isCastable and CASTABLE_SHADE or BLOCKED_SHADE
+            face:SetVertexColor(shade, shade, shade)
+        end
+    end
 end
 
-local function stancebutton_setup()
-    if not IsModuleEnabled() then return end
-    
-	if InCombatLockdown() then return end
-	
-	-- First apply button textures (from buttons.lua)
-	if addon.stancebuttons_template then
-	    addon.stancebuttons_template()
-	end
-	
-	-- Then apply positioning and scaling
-	stancebutton_position()
-	
-	-- Then show/hide based on available forms
-	for index=1, NUM_SHAPESHIFT_SLOTS do
-		local button = _G['ShapeshiftButton'..index]
-		local _, name = GetShapeshiftFormInfo(index)
-		if name then
-			button:Show()
-		else
-			button:Hide()
-		end
-	end
-	stancebutton_updatestate();
+local function RebuildFormSlots()
+    if not IsModuleEnabled() or InCombatLockdown() then return end
+    RestyleFormSlots()
+    stancebutton_position()
+    for index = 1, NUM_SHAPESHIFT_SLOTS do
+        local slotButton = FormSlot(index)
+        if slotButton then
+            SyncFormVisibility(slotButton, index)
+        end
+    end
+    RefreshFormSlotStates()
 end
 
--- ============================================================================
--- EVENT HANDLING
--- ============================================================================
+-- Unlisted events only refresh slot states; the form-count events rebuild the whole bar.
+local STANCE_EVENT_ACTIONS = {
+    PLAYER_LOGIN = stancebutton_position,
+    UPDATE_SHAPESHIFT_FORMS = RebuildFormSlots,
+    ACTIVE_TALENT_GROUP_CHANGED = RebuildFormSlots,
+    CHARACTER_POINTS_CHANGED = RebuildFormSlots,
+    PLAYER_ENTERING_WORLD = function(frame, eventName)
+        frame:UnregisterEvent(eventName)
+        RestyleFormSlots()
+    end,
+}
 
-local function OnEvent(self,event,...)
+local function OnEvent(self, event)
     if not IsModuleEnabled() then return end
-    
-	if event == 'PLAYER_LOGIN' then
-		stancebutton_position();
-    elseif event == 'UPDATE_SHAPESHIFT_FORMS'
-        or event == 'ACTIVE_TALENT_GROUP_CHANGED'
-        or event == 'CHARACTER_POINTS_CHANGED' then
-		stancebutton_setup();
-	elseif event == 'PLAYER_ENTERING_WORLD' then
-		self:UnregisterEvent('PLAYER_ENTERING_WORLD');
-		if addon.stancebuttons_template then
-		    addon.stancebuttons_template();
-		end
-	else
-		stancebutton_updatestate();
-	end
+    local action = STANCE_EVENT_ACTIONS[event] or RefreshFormSlotStates
+    action(self, event)
 end
 
 -- ============================================================================
@@ -690,21 +656,10 @@ function addon.RefreshStance()
 	local nativeSize = 36
 	local scale = btnsize / nativeSize
 	
-	for i = 1, NUM_SHAPESHIFT_SLOTS do
-		local button = _G["ShapeshiftButton"..i]
-		if button then
-			-- Set native size and apply scale (buttons.lua handles textures)
-			button:SetSize(nativeSize, nativeSize)
-			button:SetScale(scale)
-			button:ClearAllPoints()
-			if i == 1 then
-				button:SetPoint('BOTTOMLEFT', anchor, 'BOTTOMLEFT', 0, 0)
-			else
-				local prevButton = _G["ShapeshiftButton"..(i-1)]
-				if prevButton then
-					button:SetPoint('LEFT', prevButton, 'RIGHT', space, 0)
-				end
-			end
+	for index = 1, NUM_SHAPESHIFT_SLOTS do
+		local slotButton = FormSlot(index)
+		if slotButton then
+			LayoutFormSlot(slotButton, index, nativeSize, scale, space)
 		end
 	end
 	

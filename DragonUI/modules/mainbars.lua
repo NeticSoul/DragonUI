@@ -41,7 +41,7 @@ end
 -- Bar sizing constants (used by CalculateFrameSize, ArrangeActionBarButtons, and grid layout)
 local ACTION_BUTTON_SIZE = 36  -- Default WoW 3.3.5a action button size
 local ACTION_BUTTON_SPACING = 7  -- Spacing between buttons (matches actionbutton_setup)
--- Horizontal padding: 2px each side, matching pretty_actionbar's (2,2) offset.
+-- Horizontal padding: 2px each side, the same inset as ActionButton1's (2, 2) anchor on the main bar.
 local DEFAULT_PADDING = 4
 -- Vertical padding: 2px bottom + 4px top.  The extra top pixels compensate for
 -- the NineSlice BorderArt asymmetry (TOPLEFT y=4 vs BOTTOMRIGHT y=-7) so the
@@ -299,21 +299,21 @@ local function IsModuleEnabled()
     return addon:IsModuleEnabled("mainbars")
 end
 
-local mainBarPageByClass = {
-    DRUID = '[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;',
-    WARRIOR = '[bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9;',
-    PRIEST = '[bonusbar:1] 7;',
-    ROGUE = '[bonusbar:1] 7; [bonusbar:2] 8;',
-    DEFAULT = '[bonusbar:5] 11; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6;'
+-- Clause order is priority: vehicle/possess (11) beats manual paging, which beats forms.
+local PAGE_CLAUSES_SHARED = "[bonusbar:5] 11; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6;"
+
+local FORM_PAGE_CLAUSES = {
+    DRUID = "[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;",
+    WARRIOR = "[bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9;",
+    PRIEST = "[bonusbar:1] 7;",
+    ROGUE = "[bonusbar:1] 7; [bonusbar:2] 8;",
 }
 
 local function GetMainBarPageCondition()
-    local condition = mainBarPageByClass.DEFAULT
-    local classCondition = mainBarPageByClass[class]
-    if classCondition then
-        condition = condition .. ' ' .. classCondition
-    end
-    return condition .. ' 1'
+    local parts = { PAGE_CLAUSES_SHARED }
+    parts[#parts + 1] = FORM_PAGE_CLAUSES[class]
+    parts[#parts + 1] = "1"
+    return table.concat(parts, " ")
 end
 
 -- Main bar pages are driven through ActionButton actionpage attributes.
@@ -410,18 +410,21 @@ end
 -- Frames and per-login state are created by InitializeMainbars(); these are
 -- declared here so the functions below close over them at file scope.
 
-local config = addon.config;
-local event = addon.package;
-local do_action = addon.functions;
-local select = select;
-local pairs = pairs;
-local ipairs = ipairs;
-local format = string.format;
-local UIParent = UIParent;
-local hooksecurefunc = hooksecurefunc;
-local UnitFactionGroup = UnitFactionGroup;
-local _G = getfenv(0);
-local MainMenuBarMixin = {};
+local config, event, do_action = addon.config, addon.package, addon.functions
+local select, pairs, ipairs, format = select, pairs, ipairs, string.format
+local _G, UIParent, hooksecurefunc, UnitFactionGroup = _G, UIParent, hooksecurefunc, UnitFactionGroup
+local MainMenuBarMixin = {}
+
+local function ShareActionButtonRefs(header, count)
+    for slot = 1, count do
+        local refName = "ActionButton" .. slot
+        local slotButton = _G[refName]
+        if slotButton then
+            header:SetFrameRef(refName, slotButton)
+        end
+    end
+end
+
 local IsWidgetAtDefaultPosition
 local defaultBottomPositions = {
     mainbar         = { posX = 0,    posY = 22  },
@@ -474,30 +477,25 @@ local function SetupMainBarPageDriver(mainBar)
         MainbarsModule.stateDrivers.page = nil
     end
 
-    for i = 1, 12 do
-        local actionButton = _G['ActionButton' .. i]
-        if actionButton then
-            mainBar:SetFrameRef('ActionButton' .. i, actionButton)
-        end
-    end
+    ShareActionButtonRefs(mainBar, 12)
 
+    -- Globals set by Execute persist in this header's restricted environment for _onstate-page.
     mainBar:Execute([[
-            buttons = newtable()
-            for i = 1, 12 do
-                local button = self:GetFrameRef('ActionButton'..i)
-                if button then
-                    table.insert(buttons, button)
-                end
+        mainPageButtons = newtable()
+        for slot = 1, 12 do
+            local handle = self:GetFrameRef("ActionButton" .. slot)
+            if handle then
+                mainPageButtons[#mainPageButtons + 1] = handle
             end
-        ]])
-
-    mainBar:SetAttribute('_onstate-page', [[
-            for i, button in ipairs(buttons) do
-                button:SetAttribute('actionpage', tonumber(newstate))
-            end
-        ]])
-
-    RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
+        end
+    ]])
+    mainBar:SetAttribute("_onstate-page", [[
+        local page = tonumber(newstate)
+        for _, handle in ipairs(mainPageButtons) do
+            handle:SetAttribute("actionpage", page)
+        end
+    ]])
+    RegisterStateDriver(mainBar, "page", GetMainBarPageCondition())
     MainbarsModule.stateDrivers.page = { frame = mainBar, state = 'page' }
     MainbarsModule.pageDriverInstalled = true
     MainbarsModule.pageDriverFrame = mainBar
@@ -519,77 +517,84 @@ local function RefreshMainBarPageState()
     RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
 end
 
-function MainMenuBarMixin:actionbutton_setup()
--- Phase 3D: Defensive combat guard — secure frame operations must not run in combat
-if InCombatLockdown() then return end
-for _, obj in ipairs({MainMenuBar:GetChildren(), MainMenuBarArtFrame:GetChildren()}) do
-    obj:SetParent(pUiMainBar)
-end
+local DIVIDER_PIECES = { top = "divider_top", mid = "divider_mid", bottom = "divider_bottom" }
 
-for index = 1, NUM_ACTIONBAR_BUTTONS do
-    pUiMainBar:SetFrameRef('ActionButton' .. index, _G['ActionButton' .. index])
-end
+local CHAINED_ROWS = {
+    { prefix = "ActionButton", spacingKey = "player", adopt = true },
+    { prefix = "MultiBarBottomLeftButton", spacingKey = "bottom_left" },
+    { prefix = "MultiBarBottomRightButton", spacingKey = "bottom_right" },
+    { prefix = "BonusActionButton", spacingKey = "player" },
+}
 
--- Apply SetThreeSlice only if the background is NOT hidden
-local shouldHideBackground = addon.db and addon.db.profile and addon.db.profile.buttons and 
-                            addon.db.profile.buttons.hide_main_bar_background
-
--- Store divider textures for bar-size management
-addon.MainBarDividers = addon.MainBarDividers or {}
-
-if not shouldHideBackground then
-    for index = 1, NUM_ACTIONBAR_BUTTONS - 1 do
-        local ActionButtons = _G['ActionButton' .. index]
-        do_action.SetThreeSlice(ActionButtons);
-        -- Tag divider textures so update_main_bar_background skips them
-        if pUiMainBar.divider_top then pUiMainBar.divider_top._isDragonUIDivider = true end
-        if pUiMainBar.divider_mid then pUiMainBar.divider_mid._isDragonUIDivider = true end
-        if pUiMainBar.divider_bottom then pUiMainBar.divider_bottom._isDragonUIDivider = true end
-        -- Store reference to dividers created on pUiMainBar
-        addon.MainBarDividers[index] = {
-            top = pUiMainBar.divider_top,
-            mid = pUiMainBar.divider_mid,
-            bottom = pUiMainBar.divider_bottom,
-        }
+-- Only the first child (MainMenuExpBar) moves; MainMenuBar's other children must stay with it.
+local function AdoptBlizzardBarChildren(newParent)
+    local leadChild = MainMenuBar:GetChildren()
+    if leadChild then
+        leadChild:SetParent(newParent)
+    end
+    local artChildren = { MainMenuBarArtFrame:GetChildren() }
+    for index = 1, #artChildren do
+        artChildren[index]:SetParent(newParent)
     end
 end
 
-local mainbarsDb = addon.db and addon.db.profile and addon.db.profile.mainbars
-local playerSpacing = GetBarSpacing(mainbarsDb, "player")
-local blSpacing = GetBarSpacing(mainbarsDb, "bottom_left")
-local brSpacing = GetBarSpacing(mainbarsDb, "bottom_right")
-
-for index = 2, NUM_ACTIONBAR_BUTTONS do
-    local ActionButtons = _G['ActionButton' .. index]
-    ActionButtons:SetParent(pUiMainBar)
-    ActionButtons:SetClearPoint('LEFT', _G['ActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
-
-    local BottomLeftButtons = _G['MultiBarBottomLeftButton' .. index]
-    BottomLeftButtons:SetClearPoint('LEFT', _G['MultiBarBottomLeftButton' .. (index - 1)], 'RIGHT', blSpacing, 0)
-
-    local BottomRightButtons = _G['MultiBarBottomRightButton' .. index]
-    BottomRightButtons:SetClearPoint('LEFT', _G['MultiBarBottomRightButton' .. (index - 1)], 'RIGHT', brSpacing, 0)
-
-    local BonusActionButtons = _G['BonusActionButton' .. index]
-    BonusActionButtons:SetClearPoint('LEFT', _G['BonusActionButton' .. (index - 1)], 'RIGHT', playerSpacing, 0)
+local function RecordMainBarDivider(slot)
+    local record = {}
+    for key, field in pairs(DIVIDER_PIECES) do
+        local piece = pUiMainBar[field]
+        if piece then
+            piece._isDragonUIDivider = true
+        end
+        record[key] = piece
+    end
+    addon.MainBarDividers[slot] = record
 end
+
+function MainMenuBarMixin:actionbutton_setup()
+    if InCombatLockdown() then return end
+
+    AdoptBlizzardBarChildren(pUiMainBar)
+    ShareActionButtonRefs(pUiMainBar, NUM_ACTIONBAR_BUTTONS)
+
+    addon.MainBarDividers = addon.MainBarDividers or {}
+    -- SetThreeSlice hangs the pieces on the button's parent, so the buttons must already be ours.
+    if not config.buttons.hide_main_bar_background then
+        for slot = 1, 11 do
+            do_action.SetThreeSlice(_G["ActionButton" .. slot])
+            RecordMainBarDivider(slot)
+        end
+    end
+
+    local barsDb = addon.db and addon.db.profile and addon.db.profile.mainbars
+    local gapFor = {}
+    for _, key in ipairs({ "player", "bottom_left", "bottom_right" }) do
+        gapFor[key] = GetBarSpacing(barsDb, key)
+    end
+
+    for slot = 2, 12 do
+        for _, row in ipairs(CHAINED_ROWS) do
+            local current, previous = _G[row.prefix .. slot], _G[row.prefix .. (slot - 1)]
+            if current and previous then
+                if row.adopt then
+                    current:SetParent(pUiMainBar)
+                end
+                current:SetClearPoint("LEFT", previous, "RIGHT", gapFor[row.spacingKey], 0)
+            end
+        end
+    end
 end
 
 function MainMenuBarMixin:actionbar_art_setup()
-    -- setup art frames - FIXED
-    MainMenuBarArtFrame:SetParent(pUiMainBarArt)  -- Goes to the art container
-    
-    -- CRITICAL: Gryphons must go to pUiMainBarArt, NOT pUiMainBar
-    for _, art in pairs({MainMenuBarLeftEndCap, MainMenuBarRightEndCap}) do
-        art:SetParent(pUiMainBarArt)  -- To the correct art container
-        art:SetDrawLayer('OVERLAY', 7)  -- Higher layer than ARTWORK
+    for _, region in ipairs({ MainMenuBarArtFrame, MainMenuBarLeftEndCap, MainMenuBarRightEndCap }) do
+        region:SetParent(pUiMainBarArt)
+        if region.SetDrawLayer then
+            region:SetDrawLayer("OVERLAY", 7)
+        end
     end
-
-    -- apply background settings
     self:update_main_bar_background()
-
-    -- apply gryphon styling
-    UpdateGryphonStyle()
+    if UpdateGryphonStyle then
+        UpdateGryphonStyle()
+    end
 end
 
 function MainMenuBarMixin:update_main_bar_background()
@@ -598,35 +603,52 @@ function MainMenuBarMixin:update_main_bar_background()
     end
 end
 
+local PAGE_ARROWS = {
+    { button = "ActionBarUpButton", art = "pageuparrow", y = 8 },
+    { button = "ActionBarDownButton", art = "pagedownarrow", y = -14 },
+}
+
+local SECONDARY_BAR_SCALES = {
+    { bar = "MultiBarRight", key = "scale_rightbar" },
+    { bar = "MultiBarLeft", key = "scale_leftbar" },
+    { bar = "MultiBarBottomLeft", key = "scale_bottomleft", fallback = 0.9 },
+    { bar = "MultiBarBottomRight", key = "scale_bottomright", fallback = 0.9 },
+}
+
 function MainMenuBarMixin:actionbar_setup()
-    ActionButton1:SetParent(pUiMainBar)
-    ActionButton1:SetClearPoint('BOTTOMLEFT', pUiMainBar, 2, 2)
+    local homeBar = pUiMainBar
+    local leadButton = ActionButton1
+    leadButton:SetParent(homeBar)
+    leadButton:SetClearPoint("BOTTOMLEFT", homeBar, "BOTTOMLEFT", 2, 2)
 
-    if config.buttons.pages.show then
-        do_action.SetNumPagesButton(ActionBarUpButton, pUiMainBarArt, 'pageuparrow', 8)
-        do_action.SetNumPagesButton(ActionBarDownButton, pUiMainBarArt, 'pagedownarrow', -14)
-
-        MainMenuBarPageNumber:SetParent(pUiMainBarArt)
-        MainMenuBarPageNumber:SetClearPoint('CENTER', ActionBarDownButton, -1, 12)
-        local pagesFont = config.buttons.pages.font
-        MainMenuBarPageNumber:SetFont(pagesFont[1], pagesFont[2], pagesFont[3])
-        MainMenuBarPageNumber:SetShadowColor(0, 0, 0, 1)
-        MainMenuBarPageNumber:SetShadowOffset(1.2, -1.2)
-        MainMenuBarPageNumber:SetDrawLayer('OVERLAY', 7)
+    local pageCfg = config.buttons.pages
+    local pageLabel = MainMenuBarPageNumber
+    if pageCfg.show then
+        for _, arrow in ipairs(PAGE_ARROWS) do
+            do_action.SetNumPagesButton(_G[arrow.button], pUiMainBarArt, arrow.art, arrow.y)
+        end
+        pageLabel:SetParent(pUiMainBarArt)
+        pageLabel:SetClearPoint("CENTER", ActionBarDownButton, "CENTER", -1, 12)
+        local fontPath, fontSize, fontFlags = unpack(pageCfg.font)
+        pageLabel:SetFont(fontPath, fontSize, fontFlags)
+        pageLabel:SetDrawLayer("OVERLAY", 7)
+        pageLabel:SetShadowOffset(1.2, -1.2)
+        pageLabel:SetShadowColor(0, 0, 0, 1)
     else
-        ActionBarUpButton:Hide();
-        ActionBarDownButton:Hide();
-        MainMenuBarPageNumber:Hide();
+        for _, arrow in ipairs(PAGE_ARROWS) do
+            _G[arrow.button]:Hide()
+        end
+        pageLabel:Hide()
     end
 
     MultiBarBottomRight:EnableMouse(false)
-    MultiBarRight:SetScale(config.mainbars.scale_rightbar)
-    MultiBarLeft:SetScale(config.mainbars.scale_leftbar)
-    if MultiBarBottomLeft then
-        MultiBarBottomLeft:SetScale(config.mainbars.scale_bottomleft or 0.9)
-    end
-    if MultiBarBottomRight then
-        MultiBarBottomRight:SetScale(config.mainbars.scale_bottomright or 0.9)
+
+    local barsCfg = config.mainbars
+    for _, entry in ipairs(SECONDARY_BAR_SCALES) do
+        local bar = _G[entry.bar]
+        if bar then
+            bar:SetScale(barsCfg[entry.key] or entry.fallback)
+        end
     end
 end
 
@@ -1786,11 +1808,12 @@ local function RemoveBlizzardFrames()
     end
 end
 
+local MIXIN_SETUP_ORDER = { "actionbutton_setup", "actionbar_setup", "actionbar_art_setup", "statusbar_setup" }
+
 function MainMenuBarMixin:initialize()
-    self:actionbutton_setup();
-    self:actionbar_setup();
-    self:actionbar_art_setup();
-    self:statusbar_setup();
+    for _, stepName in ipairs(MIXIN_SETUP_ORDER) do
+        self[stepName](self)
+    end
 end
 
 local function CreateActionBarFrames()
@@ -2349,14 +2372,12 @@ local function InitializeMainbars()
 
     addon.SetupMainBarPageDriver = SetupMainBarPageDriver
 
-    -- Set initial scale and properties
-    pUiMainBar:SetScale(config.mainbars.scale_actionbar);
-    -- The gryphons ride over the bars on frame level alone; a band of their own put them over windows.
-    pUiMainBarArt:SetFrameStrata('MEDIUM');
-    pUiMainBarArt:SetFrameLevel(pUiMainBar:GetFrameLevel() + 4);
-    pUiMainBarArt:SetAllPoints(pUiMainBar);
-    -- CRITICAL: Disable mouse to avoid dead zone on icons
-    pUiMainBarArt:EnableMouse(false);
+    pUiMainBar:SetScale(config.mainbars.scale_actionbar)
+    pUiMainBarArt:EnableMouse(false)
+    pUiMainBarArt:SetAllPoints(pUiMainBar)
+    -- HIGH would draw the gryphons over the windows the panel manager raises to the top of MEDIUM.
+    pUiMainBarArt:SetFrameStrata("MEDIUM")
+    pUiMainBarArt:SetFrameLevel(pUiMainBar:GetFrameLevel() + 4)
 
     -- ============================================================================
     -- ALL THE MAINBARS FUNCTIONS (ONLY WHEN ENABLED)
@@ -2376,15 +2397,11 @@ local function InitializeMainbars()
     -- Delegates to the fade system instead of setting alpha directly — doing it here used to stomp
     -- the hover/combat hidden state whenever this ran, popping the background back in after a reload.
 
-    -- Register event to update page number when action bar page changes
-    event:RegisterEvents(function()
-        MainMenuBarPageNumber:SetText(GetActionBarPage());
+    local function OnActionPageEvent()
+        MainMenuBarPageNumber:SetText(GetActionBarPage())
         EnsureBonusButtonsClickThrough()
-    end,
-        'ACTIONBAR_PAGE_CHANGED',
-        'UPDATE_BONUS_ACTIONBAR',
-        'UPDATE_SHAPESHIFT_FORM'
-    );
+    end
+    event:RegisterEvents(OnActionPageEvent, "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR", "UPDATE_SHAPESHIFT_FORM")
 
     -- Helper: position side bar (left/right) buttons in a grid layout using columns.
     -- buttonOrder sets which corner slot 1 grows from (see SetBarGridButtonPoint).
@@ -3388,32 +3405,25 @@ function addon.UpdateGryphonStyle()
         MainMenuBarRightEndCap:SetHeight(rh * scale)
     end
 
-    if db_style.gryphons == 'old' then
-        MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-gryphon-left', true)
-        MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-gryphon-right', true)
-        ApplyEndCapTransform(-85, -22, 84, -22)
-        MainMenuBarLeftEndCap:Show()
-        MainMenuBarRightEndCap:Show()
-    elseif db_style.gryphons == 'new' then
-        if faction == 'Alliance' then
-            MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-gryphon-thick-left', true)
-            MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-gryphon-thick-right', true)
+    -- Art stem and base offsets (left X, left Y, right X, right Y); any other style shows no end caps.
+    local endCapLooks = {
+        old = { "gryphon", -85, -22, 84, -22 },
+        new = { faction == "Alliance" and "gryphon-thick" or "wyvern-thick", -95, -23, 95, -23 },
+        flying = { "gryphon-flying", -80, -21, 80, -21 },
+    }
+    local look = endCapLooks[db_style.gryphons]
+    if look then
+        local stem = "ui-hud-actionbar-" .. look[1]
+        MainMenuBarLeftEndCap:set_atlas(stem .. "-left", true)
+        MainMenuBarRightEndCap:set_atlas(stem .. "-right", true)
+        ApplyEndCapTransform(look[2], look[3], look[4], look[5])
+    end
+    for _, cap in ipairs({ MainMenuBarLeftEndCap, MainMenuBarRightEndCap }) do
+        if look then
+            cap:Show()
         else
-            MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-wyvern-thick-left', true)
-            MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-wyvern-thick-right', true)
+            cap:Hide()
         end
-        ApplyEndCapTransform(-95, -23, 95, -23)
-        MainMenuBarLeftEndCap:Show()
-        MainMenuBarRightEndCap:Show()
-    elseif db_style.gryphons == 'flying' then
-        MainMenuBarLeftEndCap:set_atlas('ui-hud-actionbar-gryphon-flying-left', true)
-        MainMenuBarRightEndCap:set_atlas('ui-hud-actionbar-gryphon-flying-right', true)
-        ApplyEndCapTransform(-80, -21, 80, -21)
-        MainMenuBarLeftEndCap:Show()
-        MainMenuBarRightEndCap:Show()
-    else
-        MainMenuBarLeftEndCap:Hide()
-        MainMenuBarRightEndCap:Hide()
     end
 
     -- Style refresh Shows endcaps; keep them invisible when background hide is on.

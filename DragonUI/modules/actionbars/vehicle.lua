@@ -1,22 +1,32 @@
-local addon = select(2,...);
-local config = addon.config;
-local class = addon._class;
-local unpack = unpack;
-local ipairs = ipairs;
-local RegisterStateDriver = RegisterStateDriver;
-local UnregisterStateDriver = UnregisterStateDriver;
-local UnitVehicleSkin = UnitVehicleSkin;
-local UIParent = UIParent;
-local InCombatLockdown = InCombatLockdown;
-local _G = getfenv(0);
+local addon = select(2, ...)
+local config = addon.config
+local _G, ipairs, UIParent = _G, ipairs, UIParent
+local InCombatLockdown, UnitVehicleSkin = InCombatLockdown, UnitVehicleSkin
+local RegisterStateDriver, UnregisterStateDriver = RegisterStateDriver, UnregisterStateDriver
+
+local VEHICLE_ART = "Interface\\Vehicles\\"
+local EXIT_UP = VEHICLE_ART .. "UI-Vehicles-Button-Exit-Up"
+local EXIT_DOWN = VEHICLE_ART .. "UI-Vehicles-Button-Exit-Down"
+local EXIT_GLOW = VEHICLE_ART .. "UI-Vehicles-Button-Highlight"
+local EXIT_CROP = { 0.140625, 0.859375, 0.140625, 0.859375 }
+local GLOW_CROP = { 0.130625, 0.879375, 0.130625, 0.879375 }
+
+local function CropRegion(region, box)
+    region:SetTexCoord(box[1], box[2], box[3], box[4])
+end
+
+local function DressButtonFace(button, face, file, box, blend)
+    button["Set" .. face .. "Texture"](button, file)
+    local art = button["Get" .. face .. "Texture"](button)
+    if not art then return end
+    CropRegion(art, box)
+    if blend then art:SetBlendMode(blend) end
+end
 
 -- ============================================================================
 -- VEHICLE MODULE FOR DRAGONUI
 -- ============================================================================
--- Approach: Kill VehicleMenuBar in noop.lua (prevents Blizzard's vehicle
--- transition code from interfering). Use secure state drivers and
--- _onstate-* snippets (combat-safe) for vehicle bar show/hide.
--- Matches the pretty_actionbar pattern.
+-- noop.lua kills VehicleMenuBar; secure _onstate-* drivers toggle our bar, so it works in combat.
 -- ============================================================================
 
 -- Module state tracking
@@ -199,28 +209,6 @@ slideFrame:SetScript('OnEvent', function(_, event, unit)
 end)
 
 -- ============================================================================
--- STANCE/BONUS BAR PAGE HANDLING
--- ============================================================================
-
-local stance = {
-    ['DRUID'] = '[bonusbar:1,nostealth] 7; [bonusbar:1,stealth] 7; [bonusbar:2] 8; [bonusbar:3] 9; [bonusbar:4] 10;',
-    ['WARRIOR'] = '[bonusbar:1] 7; [bonusbar:2] 8; [bonusbar:3] 9;',
-    ['PRIEST'] = '[bonusbar:1] 7;',
-    ['ROGUE'] = '[bonusbar:1] 7; [bonusbar:2] 8;',
-    ['DEFAULT'] = '[bonusbar:5] 11; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6;',
-}
-
-local function getbarpage()
-    local condition = stance['DEFAULT']
-    local page = stance[class]
-    if page then
-        condition = condition..' '..page
-    end
-    condition = condition..' 1'
-    return condition
-end
-
--- ============================================================================
 -- VEHICLE EXIT BUTTON (always created — standalone leave vehicle button)
 -- Independent positioning via widgets.vehicleExit (BOTTOM anchor).
 -- Supports dual-bar offset when XP+Rep are both visible.
@@ -269,48 +257,41 @@ local function CreateVehicleExitButton()
     -- Position from widgets DB (independent, BOTTOM-anchored)
     PositionVehicleExitButton()
 
-    -- Textures
-    vehicleExitButton:SetNormalTexture('Interface\\Vehicles\\UI-Vehicles-Button-Exit-Up')
-    vehicleExitButton:GetNormalTexture():SetTexCoord(0.140625, 0.859375, 0.140625, 0.859375)
-    vehicleExitButton:SetPushedTexture('Interface\\Vehicles\\UI-Vehicles-Button-Exit-Down')
-    vehicleExitButton:GetPushedTexture():SetTexCoord(0.140625, 0.859375, 0.140625, 0.859375)
-    vehicleExitButton:SetHighlightTexture('Interface\\Vehicles\\UI-Vehicles-Button-Highlight')
-    vehicleExitButton:GetHighlightTexture():SetTexCoord(0.130625, 0.879375, 0.130625, 0.879375)
-    vehicleExitButton:GetHighlightTexture():SetBlendMode('ADD')
+    DressButtonFace(vehicleExitButton, "Normal", EXIT_UP, EXIT_CROP)
+    DressButtonFace(vehicleExitButton, "Pushed", EXIT_DOWN, EXIT_CROP)
+    DressButtonFace(vehicleExitButton, "Highlight", EXIT_GLOW, GLOW_CROP, "ADD")
 
-    -- Dragonflight-style background (matches action button styling)
-    local bg = vehicleExitButton:CreateTexture(nil, 'BACKGROUND', nil, -1)
-    bg:SetPoint('TOPRIGHT', vehicleExitButton, 3, 3)
-    bg:SetPoint('BOTTOMLEFT', vehicleExitButton, -3, -3)
-    if bg.set_atlas then
-        bg:set_atlas('ui-hud-actionbar-iconframe-slot')
-    else
-        bg:SetColorTexture(0, 0, 0, 0.6)
+    if not vehicleExitButton.background then
+        local rings = {
+            { key = "background", sub = -1, pad = 3, atlas = "ui-hud-actionbar-iconframe-slot" },
+            { key = "shadow", sub = -2, pad = 5, atlas = "ui-hud-actionbar-iconframe-flyoutbordershadow", native = true },
+        }
+        for _, ring in ipairs(rings) do
+            local layer = vehicleExitButton:CreateTexture(nil, "BACKGROUND", nil, ring.sub)
+            layer:SetPoint("TOPRIGHT", vehicleExitButton, "TOPRIGHT", ring.pad, ring.pad)
+            layer:SetPoint("BOTTOMLEFT", vehicleExitButton, "BOTTOMLEFT", -ring.pad, -ring.pad)
+            if layer.set_atlas then
+                layer:set_atlas(ring.atlas, ring.native)
+            end
+            vehicleExitButton[ring.key] = layer
+        end
     end
-    vehicleExitButton.background = bg
 
-    -- Border shadow (Dragonflight style)
-    local shadow = vehicleExitButton:CreateTexture(nil, 'BACKGROUND', nil, -2)
-    shadow:SetPoint('TOPRIGHT', vehicleExitButton, 5, 5)
-    shadow:SetPoint('BOTTOMLEFT', vehicleExitButton, -5, -5)
-    if shadow.set_atlas then
-        shadow:set_atlas('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
+    vehicleExitButton:RegisterForClicks("AnyUp")
+    -- OnShow must be set here, before the HookScript below, or replacing it would drop that hook.
+    local exitHandlers = {
+        OnEnter = function(btn) GameTooltip_AddNewbieTip(btn, LEAVE_VEHICLE, 1, 1, 1) end,
+        OnLeave = GameTooltip_Hide,
+        OnClick = function(btn)
+            VehicleExit()
+            btn:SetChecked(true)
+        end,
+        OnShow = function(btn) btn:SetChecked(false) end,
+    }
+    for script, handler in pairs(exitHandlers) do
+        vehicleExitButton:SetScript(script, handler)
     end
-    vehicleExitButton.shadow = shadow
 
-    -- Scripts
-    vehicleExitButton:RegisterForClicks('AnyUp')
-    vehicleExitButton:SetScript('OnEnter', function(self)
-        GameTooltip_AddNewbieTip(self, LEAVE_VEHICLE, 1.0, 1.0, 1.0, nil)
-    end)
-    vehicleExitButton:SetScript('OnLeave', GameTooltip_Hide)
-    vehicleExitButton:SetScript('OnClick', function(self)
-        VehicleExit()
-        self:SetChecked(true)
-    end)
-    vehicleExitButton:SetScript('OnShow', function(self)
-        self:SetChecked(false)
-    end)
     -- Ensure alpha is always 1 when shown — combat dismount sets alpha=0 as a
     -- visual-only hide fallback; this resets it on any subsequent Show().
     -- Runs in insecure env so SetAlpha works even when Show() comes from a
@@ -413,202 +394,208 @@ local function CreateVehicleArtFrames()
     VehicleModule.frames.vehiclebar = vehiclebar
 end
 
--- Set up secure snippet on vehiclebar (child) — shows/hides parent
--- (vehicleBarBackground) when [vehicleui] changes. Uses custom state name
--- 'vehicleupdate' (NOT 'visibility') to avoid conflicts with other state
--- drivers. Combat-safe: secure snippets execute in the restricted
--- environment. Matches pretty_actionbar's vehiclebutton_state() pattern.
+-- Shows the handler's parent (the art frame), so the art can appear mid-combat from secure code.
+local ART_TOGGLE_SNIPPET = [[
+    local art = self:GetParent()
+    if newstate == "s1" then art:Show() else art:Hide() end
+]]
+local MAINBAR_TOGGLE_SNIPPET = [[
+    if tonumber(newstate) == 1 then self:Hide() else self:Show() end
+]]
+local EXIT_TOGGLE_SNIPPET = [[
+    if newstate == "s1" then self:Show() else self:Hide() end
+]]
+
+local function ArmStateDriver(key, frame, state, snippet, rule)
+    frame:SetAttribute("_onstate-" .. state, snippet)
+    VehicleModule.stateDrivers[key] = { frame = frame, state = state }
+    RegisterStateDriver(frame, state, rule)
+end
+
 local function vehiclebutton_state()
     if not vehiclebar then return end
-    for index = 1, VEHICLE_MAX_ACTIONBUTTONS do
-        local button = _G['VehicleMenuBarActionButton'..index]
-        if button then
-            vehiclebar:SetFrameRef('VehicleMenuBarActionButton'..index, button)
-        end
+    for slot = 1, VEHICLE_MAX_ACTIONBUTTONS do
+        local label = "VehicleMenuBarActionButton" .. slot
+        local ref = _G[label]
+        if ref then vehiclebar:SetFrameRef(label, ref) end
     end
-    vehiclebar:SetAttribute('_onstate-vehicleupdate', [[
-        if newstate == 's1' then
-            self:GetParent():Show()
-        else
-            self:GetParent():Hide()
-        end
-    ]])
-    VehicleModule.stateDrivers.vehicleArtVisibility = {frame = vehiclebar, state = 'vehicleupdate'}
-    RegisterStateDriver(vehiclebar, 'vehicleupdate', '[vehicleui] s1; s2')
+    ArmStateDriver("vehicleArtVisibility", vehiclebar, "vehicleupdate", ART_TOGGLE_SNIPPET, "[vehicleui] s1; s2")
 end
+
+local GEARS_SHEET = addon._dir .. "ActionBars\\mechanical2"
+local ENDCAP_SHEET = VEHICLE_ART .. "UI-Vehicles-Endcap"
+
+-- mechanical2 is a 512-px sheet; power-of-two division stays exact at any FPU precision.
+local function GearBox(left, right, top, bottom)
+    return { left / 512, right / 512, top / 512, bottom / 512 }
+end
+
+-- box = { width, height, point, x, y }, anchored to the region's own (possibly new) parent.
+local function FitRegion(region, box, parent)
+    if parent then region:SetParent(parent) end
+    region:SetSize(box[1], box[2])
+    region:SetClearPoint(box[3], box[4], box[5])
+end
+
+local LEAVE_BOX = { 47, 50, "BOTTOMRIGHT", -178, 14 }
+local GLASS_BOX = { 46, 105, "BOTTOMLEFT", -5, -9 }
+
+local GAUGE_BARS = {
+    { name = "VehicleMenuBarHealthBar", backing = { 0, 1, 0, 1 } },
+    { name = "VehicleMenuBarPowerBar", backing = { 0.5390625, 0.953125, 0, 1 } },
+}
+
+local VEHICLE_SKINS = {
+    mechanical = {
+        show = "MechanicUi", hide = "OrganicUi",
+        exitUp = { GEARS_SHEET, GearBox(45, 84, 185, 224) },
+        exitDown = { GEARS_SHEET, GearBox(2, 40, 185, 223) },
+        bars = {
+            VehicleMenuBarHealthBar = { 38, 84, "BOTTOMLEFT", 74, 6 },
+            VehicleMenuBarPowerBar = { 38, 84, "BOTTOMRIGHT", -94, 6 },
+        },
+        backing = { 40, 92, "BOTTOMLEFT", -2, -6 },
+        glass = { GEARS_SHEET, GearBox(4, 44, 263, 354) },
+        pitch = true,
+    },
+    organic = {
+        show = "OrganicUi", hide = "MechanicUi",
+        exitUp = { EXIT_UP, EXIT_CROP },
+        exitDown = { EXIT_DOWN, EXIT_CROP },
+        bars = {
+            VehicleMenuBarHealthBar = { 38, 74, "BOTTOMLEFT", 119, 3 },
+            VehicleMenuBarPowerBar = { 38, 74, "BOTTOMRIGHT", -119, 3 },
+        },
+        backing = { 40, 83, "BOTTOMLEFT", -2, -9 },
+        glass = { VEHICLE_ART .. "UI-Vehicles-Endcap-Organic-bottle", { 0.46484375, 0.66015625, 0.0390625, 0.9375 } },
+    },
+}
+
+local PITCH_WIDGETS = {
+    { "VehicleMenuBarPitchUpButton", { 32, 31, "BOTTOMLEFT", 156, 46 }, GearBox(1, 34, 227, 259), GearBox(36, 69, 227, 259) },
+    { "VehicleMenuBarPitchDownButton", { 32, 31, "BOTTOMLEFT", 156, 8 }, GearBox(148, 180, 289, 320), GearBox(148, 180, 323, 354) },
+    { "VehicleMenuBarPitchSlider", { 20, 82, "BOTTOMLEFT", 124, 2 } },
+}
+
+local PITCH_TRACK = {
+    { "VehicleMenuBarPitchSliderBG", { 0.46875, 0.50390625, 0.31640625, 0.62109375 }, { 0, 0.85, 0.99 } },
+    { "VehicleMenuBarPitchSliderMarker", { 0.46875, 0.50390625, 0.45, 0.55 }, { 1, 0, 0 }, 20 },
+}
 
 local function vehiclebar_power_setup()
     if not vehiclebar then return end
 
-    VehicleMenuBarLeaveButton:SetParent(vehiclebar)
-    VehicleMenuBarLeaveButton:SetSize(47, 50)
-    VehicleMenuBarLeaveButton:SetClearPoint('BOTTOMRIGHT', -178, 14)
-    VehicleMenuBarLeaveButton:SetHighlightTexture('Interface\\Vehicles\\UI-Vehicles-Button-Highlight')
-    VehicleMenuBarLeaveButton:GetHighlightTexture():SetTexCoord(0.130625, 0.879375, 0.130625, 0.879375)
-    VehicleMenuBarLeaveButton:GetHighlightTexture():SetBlendMode('ADD')
-
-    if not VehicleMenuBarLeaveButton.DragonUIClickHooked then
-        VehicleMenuBarLeaveButton:HookScript('OnClick', VehicleExit)
-        VehicleMenuBarLeaveButton.DragonUIClickHooked = true
+    local leave = VehicleMenuBarLeaveButton
+    FitRegion(leave, LEAVE_BOX, vehiclebar)
+    DressButtonFace(leave, "Highlight", EXIT_GLOW, GLOW_CROP, "ADD")
+    -- HookScript only: Blizzard's own OnClick on this button has to keep running.
+    if not leave.DragonUIClickHooked then
+        leave:HookScript("OnClick", VehicleExit)
+        leave.DragonUIClickHooked = true
     end
 
-    VehicleMenuBarHealthBar:SetParent(vehiclebar)
-    VehicleMenuBarHealthBarOverlay:SetParent(VehicleMenuBarHealthBar)
-    VehicleMenuBarHealthBarOverlay:SetSize(46, 105)
-    VehicleMenuBarHealthBarOverlay:SetClearPoint('BOTTOMLEFT', -5, -9)
-    VehicleMenuBarHealthBarBackground:SetParent(VehicleMenuBarHealthBar)
-    VehicleMenuBarHealthBarBackground:SetTexture([[Interface\Tooltips\UI-Tooltip-Background]])
-    VehicleMenuBarHealthBarBackground:SetTexCoord(0.0, 1.0, 0.0, 1.0)
-    VehicleMenuBarHealthBarBackground:SetVertexColor(
-        TOOLTIP_DEFAULT_BACKGROUND_COLOR.r,
-        TOOLTIP_DEFAULT_BACKGROUND_COLOR.g,
-        TOOLTIP_DEFAULT_BACKGROUND_COLOR.b
-    )
+    local tint = TOOLTIP_DEFAULT_BACKGROUND_COLOR
+    for _, gauge in ipairs(GAUGE_BARS) do
+        local bar = _G[gauge.name]
+        bar:SetParent(vehiclebar)
+        FitRegion(_G[gauge.name .. "Overlay"], GLASS_BOX, bar)
 
-    VehicleMenuBarPowerBar:SetParent(vehiclebar)
-    VehicleMenuBarPowerBarOverlay:SetParent(VehicleMenuBarPowerBar)
-    VehicleMenuBarPowerBarOverlay:SetSize(46, 105)
-    VehicleMenuBarPowerBarOverlay:SetClearPoint('BOTTOMLEFT', -5, -9)
-    VehicleMenuBarPowerBarBackground:SetParent(VehicleMenuBarPowerBar)
-    VehicleMenuBarPowerBarBackground:SetTexture([[Interface\Tooltips\UI-Tooltip-Background]])
-    VehicleMenuBarPowerBarBackground:SetTexCoord(0.5390625, 0.953125, 0.0, 1.0)
-    VehicleMenuBarPowerBarBackground:SetVertexColor(
-        TOOLTIP_DEFAULT_BACKGROUND_COLOR.r,
-        TOOLTIP_DEFAULT_BACKGROUND_COLOR.g,
-        TOOLTIP_DEFAULT_BACKGROUND_COLOR.b
-    )
+        local fill = _G[gauge.name .. "Background"]
+        fill:SetParent(bar)
+        fill:SetTexture("Interface\\Tooltips\\UI-Tooltip-Background")
+        CropRegion(fill, gauge.backing)
+        fill:SetVertexColor(tint.r, tint.g, tint.b)
+    end
 end
 
-local function vehiclebar_mechanical_setup()
-    if not vehicleBarBackground then return end
-
-    vehicleBarBackground.OrganicUi:Hide()
-    vehicleBarBackground.MechanicUi:Show()
-
-    VehicleMenuBarLeaveButton:SetNormalTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarLeaveButton:GetNormalTexture():SetTexCoord(45/512, 84/512, 185/512, 224/512)
-    VehicleMenuBarLeaveButton:SetPushedTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarLeaveButton:GetPushedTexture():SetTexCoord(2/512, 40/512, 185/512, 223/512)
-
-    VehicleMenuBarHealthBar:SetSize(38, 84)
-    VehicleMenuBarPowerBar:SetSize(38, 84)
-    VehicleMenuBarPowerBar:SetClearPoint('BOTTOMRIGHT', -94, 6)
-    VehicleMenuBarHealthBar:SetClearPoint('BOTTOMLEFT', 74, 6)
-    VehicleMenuBarHealthBarBackground:SetSize(40, 92)
-    VehicleMenuBarPowerBarBackground:SetSize(40, 92)
-    VehicleMenuBarHealthBarBackground:SetClearPoint('BOTTOMLEFT', -2, -6)
-    VehicleMenuBarPowerBarBackground:SetClearPoint('BOTTOMLEFT', -2, -6)
-    VehicleMenuBarHealthBarOverlay:SetTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarHealthBarOverlay:SetTexCoord(4/512, 44/512, 263/512, 354/512)
-    VehicleMenuBarPowerBarOverlay:SetTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarPowerBarOverlay:SetTexCoord(4/512, 44/512, 263/512, 354/512)
-
-    VehicleMenuBarPitchUpButton:SetParent(vehicleBarBackground.MechanicUi)
-    VehicleMenuBarPitchUpButton:SetSize(32, 31)
-    VehicleMenuBarPitchUpButton:SetClearPoint('BOTTOMLEFT', 156, 46)
-    VehicleMenuBarPitchUpButton:SetNormalTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarPitchUpButton:SetPushedTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarPitchUpButton:GetNormalTexture():SetTexCoord(1/512, 34/512, 227/512, 259/512)
-    VehicleMenuBarPitchUpButton:GetPushedTexture():SetTexCoord(36/512, 69/512, 227/512, 259/512)
-
-    VehicleMenuBarPitchDownButton:SetParent(vehicleBarBackground.MechanicUi)
-    VehicleMenuBarPitchDownButton:SetSize(32, 31)
-    VehicleMenuBarPitchDownButton:SetClearPoint('BOTTOMLEFT', 156, 8)
-    VehicleMenuBarPitchDownButton:SetNormalTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarPitchDownButton:SetPushedTexture(addon._dir..'ActionBars\\mechanical2')
-    VehicleMenuBarPitchDownButton:GetNormalTexture():SetTexCoord(148/512, 180/512, 289/512, 320/512)
-    VehicleMenuBarPitchDownButton:GetPushedTexture():SetTexCoord(148/512, 180/512, 323/512, 354/512)
-
-    VehicleMenuBarPitchSlider:SetParent(vehicleBarBackground.MechanicUi)
-    VehicleMenuBarPitchSlider:SetSize(20, 82)
-    VehicleMenuBarPitchSlider:SetClearPoint('BOTTOMLEFT', 124, 2)
-
-    local bg1 = _G['DragonUI_VehicleBarBackgroundBACKGROUND1']
-    if bg1 then
-        bg1:SetDrawLayer('BACKGROUND', -1)
+local function FitPitchControls(holder)
+    for _, entry in ipairs(PITCH_WIDGETS) do
+        local control = _G[entry[1]]
+        FitRegion(control, entry[2], holder)
+        if entry[3] then
+            DressButtonFace(control, "Normal", GEARS_SHEET, entry[3])
+            DressButtonFace(control, "Pushed", GEARS_SHEET, entry[4])
+        end
     end
 
-    VehicleMenuBarPitchSliderBG:SetTexture([[Interface\Vehicles\UI-Vehicles-Endcap]])
-    VehicleMenuBarPitchSliderBG:SetTexCoord(0.46875, 0.50390625, 0.31640625, 0.62109375)
-    VehicleMenuBarPitchSliderBG:SetVertexColor(0, 0.85, 0.99)
+    local base = _G.DragonUI_VehicleBarBackgroundBACKGROUND1
+    if base then base:SetDrawLayer("BACKGROUND", -1) end
 
-    VehicleMenuBarPitchSliderMarker:SetWidth(20)
-    VehicleMenuBarPitchSliderMarker:SetTexture([[Interface\Vehicles\UI-Vehicles-Endcap]])
-    VehicleMenuBarPitchSliderMarker:SetTexCoord(0.46875, 0.50390625, 0.45, 0.55)
-    VehicleMenuBarPitchSliderMarker:SetVertexColor(1, 0, 0)
+    for _, entry in ipairs(PITCH_TRACK) do
+        local piece = _G[entry[1]]
+        if entry[4] then piece:SetWidth(entry[4]) end
+        piece:SetTexture(ENDCAP_SHEET)
+        CropRegion(piece, entry[2])
+        piece:SetVertexColor(entry[3][1], entry[3][2], entry[3][3])
+    end
 
-    VehicleMenuBarPitchSliderOverlayThing:SetPoint('TOPLEFT', -5, 2)
-    VehicleMenuBarPitchSliderOverlayThing:SetPoint('BOTTOMRIGHT', 3, -4)
+    -- Deliberately no ClearAllPoints: these points extend the stock anchors, not replace them.
+    local frame = _G.VehicleMenuBarPitchSliderOverlayThing
+    frame:SetPoint("TOPLEFT", -5, 2)
+    frame:SetPoint("BOTTOMRIGHT", 3, -4)
 end
 
-local function vehiclebar_organic_setup()
+-- Touches only insecure widgets, so callers may run it in combat.
+local function ApplyVehicleSkin(skin)
     if not vehicleBarBackground then return end
+    vehicleBarBackground[skin.hide]:Hide()
+    vehicleBarBackground[skin.show]:Show()
 
-    vehicleBarBackground.OrganicUi:Show()
-    vehicleBarBackground.MechanicUi:Hide()
-    VehicleMenuBarHealthBar:SetSize(38, 74)
-    VehicleMenuBarPowerBar:SetSize(38, 74)
-    VehicleMenuBarPowerBar:SetClearPoint('BOTTOMRIGHT', -119, 3)
-    VehicleMenuBarHealthBar:SetClearPoint('BOTTOMLEFT', 119, 3)
-    VehicleMenuBarHealthBarBackground:SetSize(40, 83)
-    VehicleMenuBarPowerBarBackground:SetSize(40, 83)
-    VehicleMenuBarHealthBarBackground:SetClearPoint('BOTTOMLEFT', -2, -9)
-    VehicleMenuBarPowerBarBackground:SetClearPoint('BOTTOMLEFT', -2, -9)
-    VehicleMenuBarLeaveButton:SetNormalTexture('Interface\\Vehicles\\UI-Vehicles-Button-Exit-Up')
-    VehicleMenuBarLeaveButton:GetNormalTexture():SetTexCoord(0.140625, 0.859375, 0.140625, 0.859375)
-    VehicleMenuBarLeaveButton:SetPushedTexture('Interface\\Vehicles\\UI-Vehicles-Button-Exit-Down')
-    VehicleMenuBarLeaveButton:GetPushedTexture():SetTexCoord(0.140625, 0.859375, 0.140625, 0.859375)
-    VehicleMenuBarHealthBarOverlay:SetTexture([[Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle]])
-    VehicleMenuBarHealthBarOverlay:SetTexCoord(0.46484375, 0.66015625, 0.0390625, 0.9375)
-    VehicleMenuBarPowerBarOverlay:SetTexture([[Interface\Vehicles\UI-Vehicles-Endcap-Organic-bottle]])
-    VehicleMenuBarPowerBarOverlay:SetTexCoord(0.46484375, 0.66015625, 0.0390625, 0.9375)
+    local leave = VehicleMenuBarLeaveButton
+    DressButtonFace(leave, "Normal", skin.exitUp[1], skin.exitUp[2])
+    DressButtonFace(leave, "Pushed", skin.exitDown[1], skin.exitDown[2])
+
+    for _, gauge in ipairs(GAUGE_BARS) do
+        FitRegion(_G[gauge.name], skin.bars[gauge.name])
+        FitRegion(_G[gauge.name .. "Background"], skin.backing)
+
+        local glass = _G[gauge.name .. "Overlay"]
+        glass:SetTexture(skin.glass[1])
+        CropRegion(glass, skin.glass[2])
+    end
+
+    if skin.pitch then
+        FitPitchControls(vehicleBarBackground[skin.show])
+    end
 end
 
--- Skin and pitch are independent: only UnitVehicleSkin picks the art ("Natural" = organic, else mechanical,
--- matching PlayerFrame_ToVehicleArt). IsVehicleAimAngleAdjustable only governs the pitch controls.
+-- Only the skin name picks the art; pitch support is no reliable hint of a mechanical vehicle.
 local function vehiclebar_layout_setup()
-    if UnitVehicleSkin('player') == 'Natural' then
-        vehiclebar_organic_setup()
+    if UnitVehicleSkin("player") == "Natural" then
+        ApplyVehicleSkin(VEHICLE_SKINS.organic)
     else
-        vehiclebar_mechanical_setup()
+        ApplyVehicleSkin(VEHICLE_SKINS.mechanical)
     end
 end
 
 -- Exposed so the slide handler (declared earlier) can skin the art before the transition starts.
 VehicleModule.ApplyArtLayout = vehiclebar_layout_setup
 
+local SLOT_SIZE, SLOT_GAP = 52, 6
+
 local function vehiclebutton_position()
-    if not vehiclebar then return end
-    if InCombatLockdown() then return end
+    if not vehiclebar or InCombatLockdown() then return end
 
-    -- Center vehicle buttons within the visible action area of the vehicle art.
-    -- The art frame is 800px wide, but the usable area differs between organic
-    -- and mechanical vehicles:
-    --   Organic: symmetric endcaps, buttons shifted ~48px left of center
-    --   Mechanical: pitch controls on the left add ~40px, shift buttons right
-    local btnSize = 52
-    local btnGap = 6
-    local numButtons = VEHICLE_MAX_ACTIONBUTTONS
-    local totalWidth = numButtons * btnSize + (numButtons - 1) * btnGap
-    local artOffset = IsVehicleAimAngleAdjustable() and -20 or -48
-    local startOffset = -(totalWidth / 2) + artOffset
+    local count = VEHICLE_MAX_ACTIONBUTTONS
+    local rowWidth = count * SLOT_SIZE + (count - 1) * SLOT_GAP
+    local shift = IsVehicleAimAngleAdjustable() and -20 or -48
+    local firstX = shift - rowWidth / 2
 
-    for index = 1, numButtons do
-        local button = _G['VehicleMenuBarActionButton'..index]
-        if button then
-            button:ClearAllPoints()
-            button:SetParent(vehiclebar)
-            button:SetSize(btnSize, btnSize)
-            button:Show()
-            if index == 1 then
-                button:SetPoint('BOTTOMLEFT', vehiclebar, 'BOTTOM', startOffset, 21)
-            else
-                local previous = _G['VehicleMenuBarActionButton'..(index-1)]
-                if previous then
-                    button:SetPoint('LEFT', previous, 'RIGHT', btnGap, 0)
-                end
+    local previous
+    for slot = 1, count do
+        local action = _G["VehicleMenuBarActionButton" .. slot]
+        if action then
+            action:ClearAllPoints()
+            action:SetParent(vehiclebar)
+            action:Show()
+            action:SetSize(SLOT_SIZE, SLOT_SIZE)
+            if slot == 1 then
+                action:SetPoint("BOTTOMLEFT", vehiclebar, "BOTTOM", firstX, 21)
+            elseif previous then
+                action:SetPoint("LEFT", previous, "RIGHT", SLOT_GAP, 0)
             end
         end
+        previous = action
     end
 end
 
@@ -835,15 +822,7 @@ local function SetupVehicleBarHiding(hideMainBar)
     --    Uses custom state name 'vehicleupdate' with secure snippet (NOT
     --    'visibility') to avoid conflicts with other state drivers on pUiMainBar.
     if hideMainBar and not VehicleModule.stateDrivers.mainBarVehicle then
-        mainBar:SetAttribute('_onstate-vehicleupdate', [[
-            if newstate == '1' then
-                self:Hide()
-            else
-                self:Show()
-            end
-        ]])
-        VehicleModule.stateDrivers.mainBarVehicle = {frame = mainBar, state = 'vehicleupdate'}
-        RegisterStateDriver(mainBar, 'vehicleupdate', '[vehicleui] 1; 2')
+        ArmStateDriver("mainBarVehicle", mainBar, "vehicleupdate", MAINBAR_TOGGLE_SNIPPET, "[vehicleui] 1; 2")
     end
 
     -- 2) Secondary bars: register 'visibility' state driver DIRECTLY on each bar.
@@ -907,34 +886,6 @@ local function SetupBonusBarVehicle()
         addon.SetupMainBarPageDriver(pUiMainBar or addon.pUiMainBar or _G.pUiMainBar)
         return
     end
-
-    if not pUiMainBar then return end
-
-    for i = 1, 12 do
-        local actionButton = _G['ActionButton'..i]
-        if actionButton then
-            pUiMainBar:SetFrameRef('ActionButton'..i, actionButton)
-        end
-    end
-
-    pUiMainBar:Execute([[
-        buttons = newtable()
-        for i = 1, 12 do
-            local button = self:GetFrameRef('ActionButton'..i)
-            if button then
-                table.insert(buttons, button)
-            end
-        end
-    ]])
-
-    pUiMainBar:SetAttribute('_onstate-page', [[
-        for i, button in ipairs(buttons) do
-            button:SetAttribute('actionpage', tonumber(newstate))
-        end
-    ]])
-
-    VehicleModule.stateDrivers.bonusBarPage = {frame = pUiMainBar, state = 'page'}
-    RegisterStateDriver(pUiMainBar, 'page', getbarpage())
 end
 
 -- ============================================================================
@@ -1067,17 +1018,10 @@ local function ApplyVehicleSystem()
         -- [target=vehicle,exists] checks UnitExists('vehicle') which is true for ALL
         -- vehicle types: EoE hover disks, multi-seat mounts, bonusbar:5 vehicles.
         -- Hidden when [vehicleui] is active because the art bar has its own leave button.
-        -- Pretty_actionbar confirms [target=vehicle,...] works in 3.3.5a state drivers.
+        -- 3.3.5a state drivers accept [target=vehicle,exists] as a macro condition.
         if vehicleExitButton then
-            vehicleExitButton:SetAttribute('_onstate-vehicleshow', [[
-                if newstate == 's1' then
-                    self:Show()
-                else
-                    self:Hide()
-                end
-            ]])
-            VehicleModule.stateDrivers.exitButtonVehicle = {frame = vehicleExitButton, state = 'vehicleshow'}
-            RegisterStateDriver(vehicleExitButton, 'vehicleshow', '[vehicleui] s2; [target=vehicle,exists] s1; s2')
+            ArmStateDriver("exitButtonVehicle", vehicleExitButton, "vehicleshow", EXIT_TOGGLE_SNIPPET,
+                "[vehicleui] s2; [target=vehicle,exists] s1; s2")
         end
 
         -- Fallback event handler for edge cases where the 'vehicle' unit token
@@ -1167,15 +1111,8 @@ local function ApplyVehicleSystem()
         -- Uses custom state 'vehicleshow' (NOT 'visibility') so mount-type vehicle
         -- Show() calls from the event handler aren't blocked by C-level enforcement.
         if vehicleExitButton then
-            vehicleExitButton:SetAttribute('_onstate-vehicleshow', [[
-                if newstate == 's1' then
-                    self:Show()
-                else
-                    self:Hide()
-                end
-            ]])
-            VehicleModule.stateDrivers.exitButtonVehicle = {frame = vehicleExitButton, state = 'vehicleshow'}
-            RegisterStateDriver(vehicleExitButton, 'vehicleshow', '[target=vehicle,exists] s1; s2')
+            ArmStateDriver("exitButtonVehicle", vehicleExitButton, "vehicleshow", EXIT_TOGGLE_SNIPPET,
+                "[target=vehicle,exists] s1; s2")
         end
 
         -- Fallback event handler for edge cases where the 'vehicle' unit token

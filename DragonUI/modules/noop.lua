@@ -2,10 +2,28 @@
 -- DragonUI - Noop Module
 -- Disables unused Blizzard UI elements (gryphons, extra bars, etc.)
 -- ============================================================================
-local addon = select(2,...);
-local pairs = pairs;
-local hooksecurefunc = hooksecurefunc;
-local InCombatLockdown = InCombatLockdown;
+local addon = select(2, ...)
+local pairs, hooksecurefunc, InCombatLockdown = pairs, hooksecurefunc, InCombatLockdown
+
+local XP_ART_STEMS = { "MainMenuXPBarTexture", "ReputationXPBarTexture", "ReputationWatchBarTexture" }
+
+-- MainMenuBar is only faded, never hidden: MainMenuExpBar and ReputationWatchBar are its children.
+local RETIRED_BAR_PARTS = {
+    "MainMenuBar", "MainMenuBarArtFrame", "MainMenuBarOverlayFrame", "BonusActionBarFrame",
+    "PetActionBarFrame", "ShapeshiftBarFrame", "ShapeshiftBarLeft", "ShapeshiftBarMiddle", "ShapeshiftBarRight",
+}
+
+local UNMANAGED_POSITION_KEYS = {
+    "MultiBarLeft", "MultiBarRight", "MultiBarBottomLeft", "MultiBarBottomRight",
+    "ShapeshiftBarFrame", "PETACTIONBAR_YPOS", "MultiCastActionBarFrame", "MULTICASTACTIONBAR_YPOS",
+}
+
+local function MuteTalentSpecSwap()
+    local talentFrame = _G.PlayerTalentFrame
+    if talentFrame then
+        talentFrame:UnregisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+    end
+end
 
 -- Module state tracking
 local NoopModule = {
@@ -34,12 +52,12 @@ end
 local function ApplyNoopChangesImpl()
     -- Phase 3D: Defensive combat guard — secure frame operations must not run in combat
     if InCombatLockdown() then return end
-    MainMenuBar:EnableMouse(false)
-    PetActionBarFrame:EnableMouse(false)
-    ShapeshiftBarFrame:EnableMouse(false)
-    if BonusActionBarFrame then
-        BonusActionBarFrame:EnableMouse(false)
-        BonusActionBarFrame:SetScale(0.001)
+    for _, bar in pairs({ MainMenuBar, PetActionBarFrame, ShapeshiftBarFrame, BonusActionBarFrame }) do
+        bar:EnableMouse(false)
+    end
+    local bonusBar = BonusActionBarFrame
+    if bonusBar then
+        bonusBar:SetScale(0.001)
     end
     -- PossessBar_OnEvent re-Shows the event-less bonus bar on page change; keybinds then land on it.
     if PossessBarFrame then
@@ -56,56 +74,33 @@ local function ApplyNoopChangesImpl()
         ExhaustionLevelFillBar:Hide()
     end
 
-    local elements_texture = {
-        MainMenuXPBarTexture0,
-        MainMenuXPBarTexture1,
-        MainMenuXPBarTexture2,
-        MainMenuXPBarTexture3,
-        ReputationXPBarTexture0,
-        ReputationXPBarTexture1,
-        ReputationXPBarTexture2,
-        ReputationXPBarTexture3,
-        ReputationWatchBarTexture0,
-        ReputationWatchBarTexture1,
-        ReputationWatchBarTexture2,
-        ReputationWatchBarTexture3,
-    };for _,tex in pairs(elements_texture) do
-        tex:SetTexture(nil)
-    end;
-
-    local elements = {
-        MainMenuBar,
-        MainMenuBarArtFrame,
-        MainMenuBarOverlayFrame,
-        -- VehicleMenuBar,  -- RetailUI pattern: handled separately below (keep events alive)
-        -- VehicleMenuBarArtFrame,
-        BonusActionBarFrame,
-        PetActionBarFrame,
-        ShapeshiftBarFrame,
-        ShapeshiftBarLeft,
-        ShapeshiftBarMiddle,
-        ShapeshiftBarRight,
-    };for _,element in pairs(elements) do
-        if element:GetObjectType() == 'Frame' then
-            element:UnregisterAllEvents()
-            if element == MainMenuBarArtFrame then
-                element:RegisterEvent('CURRENCY_DISPLAY_UPDATE');
+    for _, stem in pairs(XP_ART_STEMS) do
+        for segment = 0, 3 do
+            local art = _G[stem .. segment]
+            if art then
+                art:SetTexture(nil)
             end
         end
-        if element ~= MainMenuBar then
-            element:Hide()
-        end
-        element:SetAlpha(0)
     end
-    elements = nil
-    
-    -- VehicleMenuBar handling depends on whether the vehicle module is enabled.
-    -- When enabled, DragonUI's vehicle module provides its own UI, so we KILL
-    -- VehicleMenuBar completely. Keeping its events alive causes Blizzard's
-    -- vehicle transition code (MainMenuBar_ToVehicleArt etc.) to interfere by
-    -- reparenting VehicleMenuBarActionButtons and repositioning frames —
-    -- this is the root cause of vehicle UI not showing. Matches the
-    -- pretty_actionbar pattern which also kills VehicleMenuBar.
+
+    for _, partName in ipairs(RETIRED_BAR_PARTS) do
+        local part = _G[partName]
+        if part then
+            if part:GetObjectType() == "Frame" then
+                part:UnregisterAllEvents()
+                -- Its OnEvent is what switches on the Currency tab once a token is earned.
+                if partName == "MainMenuBarArtFrame" then
+                    part:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+                end
+            end
+            if partName ~= "MainMenuBar" then
+                part:Hide()
+            end
+            part:SetAlpha(0)
+        end
+    end
+
+    -- Its own events refresh the health/power bars DragonUI adopts, and MainMenuBar_ToVehicleArt re-Shows it.
     local vehicleModuleEnabled = addon.db and addon.db.profile
         and addon.db.profile.modules and addon.db.profile.modules.vehicle
         and addon.db.profile.modules.vehicle.enabled
@@ -119,21 +114,13 @@ local function ApplyNoopChangesImpl()
         -- so Blizzard's native vehicle transitions display correctly.
     end
     
-    local uiManagedFrames = {
-        'MultiBarLeft',
-        'MultiBarRight',
-        'MultiBarBottomLeft',
-        'MultiBarBottomRight',
-        'ShapeshiftBarFrame',
-        'PETACTIONBAR_YPOS',
-        'MultiCastActionBarFrame',
-        'MULTICASTACTIONBAR_YPOS',
-    }
-    local UIPARENT_MANAGED_FRAME_POSITIONS = UIPARENT_MANAGED_FRAME_POSITIONS;
-    for _, frame in pairs(uiManagedFrames) do
-        UIPARENT_MANAGED_FRAME_POSITIONS[frame] = nil
+    -- Left in the table, UIParent_ManageFramePositions would drag these bars back to Blizzard's layout.
+    local managed = UIPARENT_MANAGED_FRAME_POSITIONS
+    if managed then
+        for index = 1, #UNMANAGED_POSITION_KEYS do
+            managed[UNMANAGED_POSITION_KEYS[index]] = nil
+        end
     end
-    uiManagedFrames = nil
 
     -- Prevent Blizzard from repositioning the chat dock when bar layout
     -- changes.  DragonUI manages all bottom bars independently, so the
@@ -143,13 +130,10 @@ local function ApplyNoopChangesImpl()
         FCF_UpdateDockPosition = function() end
     end
 
-    if PlayerTalentFrame then
-        PlayerTalentFrame:UnregisterEvent('ACTIVE_TALENT_GROUP_CHANGED')
-    else
-        hooksecurefunc('TalentFrame_LoadUI', function()
-            PlayerTalentFrame:UnregisterEvent('ACTIVE_TALENT_GROUP_CHANGED')
-        end)
+    if not PlayerTalentFrame then
+        hooksecurefunc("TalentFrame_LoadUI", MuteTalentSpecSwap)
     end
+    MuteTalentSpecSwap()
     
     NoopModule.applied = true
     NoopModule.pendingApply = false

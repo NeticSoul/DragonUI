@@ -1,11 +1,17 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\FrameXML\UI.xsd">
-    <Script file="NodeData.lua"/>
-    <Script file="Talents.lua"/>
-    <Script file="Behavior.lua"/>
-    <Script file="Loadouts.lua"/>
-    <Script file="SearchBox.lua"/>
-    <Script file="SpecTabs.lua"/>
-    <Script file="Glyphs.lua"/>
-    <Script file="WarmodeButton.lua"/>
+    <Script file="build_code.lua"/>
+    <Script file="namespace.lua"/>
+    <Script file="window_shell.lua"/>
+    <Script file="tree_canvas.lua"/>
+    <Script file="live_view.lua"/>
+    <Script file="footer_bar.lua"/>
+    <Script file="tab_strip.lua"/>
+    <Script file="glyph_page.lua"/>
+    <Script file="build_model.lua"/>
+    <Script file="build_editor.lua"/>
+    <Script file="build_menu.lua"/>
+    <Script file="build_sharing.lua"/>
+    <Script file="pvp_orb.lua"/>
+    <Script file="entry_points.lua"/>
 </Ui>

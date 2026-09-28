@@ -1,21 +1,14 @@
-local addon = select(2, ...);
+local addon = select(2, ...)
 
 -- ============================================================================
 -- PETBAR MODULE FOR DRAGONUI
 -- ============================================================================
 
 
--- Petbar constants
-local unpack = unpack;
-local select = select;
-local pairs = pairs;
-local _G = getfenv(0);
-local GetPetActionInfo = GetPetActionInfo;
-local RegisterStateDriver = RegisterStateDriver;
-local UnregisterStateDriver = UnregisterStateDriver;
-local CreateFrame = CreateFrame;
-local UIParent = UIParent;
-local hooksecurefunc = hooksecurefunc;
+local _G, pairs, GetPetActionInfo = _G, pairs, GetPetActionInfo
+local RegisterStateDriver, UnregisterStateDriver = RegisterStateDriver, UnregisterStateDriver
+local CreateFrame, UIParent, hooksecurefunc = CreateFrame, UIParent, hooksecurefunc
+local PET_SLOT_COUNT = 10
 
 -- DragonUI Configuration Functions
 local function IsModuleEnabled()
@@ -159,38 +152,31 @@ local function UpdateAnchorPosition()
         return
     end
     
-    -- Fallback to dynamic positioning only if no widget config exists
-    local config = GetDynamicConfig()
-    local pUiMainBar = addon.pUiMainBar
-    
-    -- Check if anchor should be positioned relative to mainbar or absolute
-    if pUiMainBar and pUiMainBar:IsShown() then
-        -- Dynamic positioning based on other bars (legacy behavior)
-        local leftbar = MultiBarBottomLeft and MultiBarBottomLeft:IsShown()
-        local rightbar = MultiBarBottomRight and MultiBarBottomRight:IsShown()
-        local offsetX = config.x_position
-        local nobar = config.y_position
-        local leftOffset = nobar + config.leftbar_offset
-        local rightOffset = nobar + config.rightbar_offset
-        
-        if not InCombatLockdown() and not UnitAffectingCombat('player') then
-            PetbarModule.anchor:ClearAllPoints()
-            if leftbar and rightbar then
-                PetbarModule.anchor:SetPoint('TOPLEFT', pUiMainBar, 'TOPLEFT', offsetX, leftOffset)
-            elseif leftbar then
-                PetbarModule.anchor:SetPoint("TOPLEFT", pUiMainBar, 'TOPLEFT', offsetX, rightOffset)
-            elseif rightbar then
-                PetbarModule.anchor:SetPoint("TOPLEFT", pUiMainBar, 'TOPLEFT', offsetX, leftOffset)
-            else
-                PetbarModule.anchor:SetPoint("TOPLEFT", pUiMainBar, 'TOPLEFT', offsetX, nobar)
-            end
+    local cfg = GetDynamicConfig()
+    local holder = PetbarModule.anchor
+    local mainBar = addon.pUiMainBar
+    local onMainBar = mainBar and mainBar:IsShown()
+    local locked = InCombatLockdown()
+    local offsetY = cfg.y_position
+    if onMainBar then
+        local leftBar, rightBar = _G.MultiBarBottomLeft, _G.MultiBarBottomRight
+        local leftShown = leftBar and leftBar:IsShown()
+        local rightShown = rightBar and rightBar:IsShown()
+        -- The single-bar offsets are crossed on purpose (left bar alone uses the right offset).
+        if rightShown then
+            offsetY = offsetY + cfg.leftbar_offset
+        elseif leftShown then
+            offsetY = offsetY + cfg.rightbar_offset
         end
+        locked = locked or UnitAffectingCombat('player')
+    end
+    if locked then return end
+
+    holder:ClearAllPoints()
+    if onMainBar then
+        holder:SetPoint('TOPLEFT', mainBar, 'TOPLEFT', cfg.x_position, offsetY)
     else
-        -- Fallback to absolute positioning if mainbar not available
-        if not InCombatLockdown() then
-            PetbarModule.anchor:ClearAllPoints()
-            PetbarModule.anchor:SetPoint('BOTTOM', UIParent, 'BOTTOM', config.x_position, config.y_position)
-        end
+        holder:SetPoint('BOTTOM', UIParent, 'BOTTOM', cfg.x_position, offsetY)
     end
 end
 
@@ -216,81 +202,74 @@ end
 -- PET BUTTON STATE MANAGEMENT
 -- ============================================================================
 
--- Handle pet action button icon and state updates
-local function petbutton_updatestate(self, event)
+local FOLLOW_TOKEN = 'PET_ACTION_FOLLOW'
+
+-- Must never write PetActionBarFrame.showgrid: an insecure write there taints the pet bar.
+local function petbutton_updatestate()
     if not IsModuleEnabled() then return end
-    
-    local config = GetDynamicConfig()
-    local petActionButton, petActionIcon, petAutoCastableTexture, petAutoCastShine
-    
-    for index=1, NUM_PET_ACTION_SLOTS, 1 do
-        local buttonName = 'PetActionButton'..index
-        petActionButton = _G[buttonName]
-        petActionIcon = _G[buttonName..'Icon']
-        petAutoCastableTexture = _G[buttonName..'AutoCastable']
-        petAutoCastShine = _G[buttonName..'Shine']
-        
-        if petActionButton then
-            local name, subtext, texture, isToken, isActive, autoCastAllowed, autoCastEnabled = GetPetActionInfo(index)
-            if not isToken then
-                petActionIcon:SetTexture(texture)
-                petActionButton.tooltipName = name
-            else
-                petActionIcon:SetTexture(_G[texture])
-                petActionButton.tooltipName = _G[name]
+    local showEmpty = GetDynamicConfig().grid
+    for index = 1, NUM_PET_ACTION_SLOTS do
+        local slotName = 'PetActionButton' .. index
+        local slotButton = _G[slotName]
+        if slotButton then
+            local face = _G[slotName .. 'Icon']
+            local castable, shine = _G[slotName .. 'AutoCastable'], _G[slotName .. 'Shine']
+            local actionName, subtext, iconPath, isToken, isActive, canAutoCast, autoCastOn = GetPetActionInfo(index)
+            local isAttack = IsPetAttackAction(index)
+            local isFollow = actionName == FOLLOW_TOKEN
+
+            local label, art = actionName, iconPath
+            if isToken then
+                label, art = _G[actionName], _G[iconPath]
             end
-            petActionButton.isToken = isToken
-            petActionButton.tooltipSubtext = subtext
-            if isActive and name ~= 'PET_ACTION_FOLLOW' then
-                petActionButton:SetChecked(true)
-                if IsPetAttackAction(index) then
-                    PetActionButton_StartFlash(petActionButton)
-                end
-            else
-                petActionButton:SetChecked(false)
-                if IsPetAttackAction(index) then
-                    PetActionButton_StopFlash(petActionButton)
-                end
-            end
-            if autoCastAllowed then
-                petAutoCastableTexture:Show()
-            else
-                petAutoCastableTexture:Hide()
-            end
-            if autoCastEnabled then
-                AutoCastShine_AutoCastStart(petAutoCastShine)
-            else
-                AutoCastShine_AutoCastStop(petAutoCastShine)
-            end
-            -- Always set explicitly (not just when hiding) so toggling "grid" live re-shows
-            -- slots that a previous pass already faded to 0 — otherwise it needs a /reload.
-            if config.grid or name then
-                petActionButton:SetAlpha(1)
-            else
-                petActionButton:SetAlpha(0)
-            end
-            if texture then
-                if GetPetActionSlotUsable(index) then
-                    SetDesaturation(petActionIcon, nil)
+            face:SetTexture(art)
+            slotButton.tooltipName = label
+            slotButton.isToken = isToken
+            slotButton.tooltipSubtext = subtext
+
+            local lit = isActive and not isFollow
+            slotButton:SetChecked(lit and true or false)
+            if isAttack then
+                if lit then
+                    PetActionButton_StartFlash(slotButton)
                 else
-                    SetDesaturation(petActionIcon, 1)
+                    PetActionButton_StopFlash(slotButton)
                 end
-                petActionIcon:Show()
-            else
-                petActionIcon:Hide()
             end
-            if not PetHasActionBar() and texture and name ~= 'PET_ACTION_FOLLOW' then
-                PetActionButton_StopFlash(petActionButton)
-                SetDesaturation(petActionIcon, 1)
-                petActionButton:SetChecked(false)
+
+            if canAutoCast then castable:Show() else castable:Hide() end
+            if autoCastOn then
+                AutoCastShine_AutoCastStart(shine)
+            else
+                AutoCastShine_AutoCastStop(shine)
+            end
+
+            slotButton:SetAlpha((showEmpty or actionName) and 1 or 0)
+
+            if iconPath then
+                SetDesaturation(face, not GetPetActionSlotUsable(index))
+                face:Show()
+            else
+                face:Hide()
+            end
+
+            if iconPath and not isFollow and not PetHasActionBar() then
+                PetActionButton_StopFlash(slotButton)
+                SetDesaturation(face, true)
+                slotButton:SetChecked(false)
             end
         end
     end
-
-    -- Reasserts the bar's hover/combat alpha; anchor-only, so it can't undo the per-slot alpha above.
     if addon.VisibilityFade then
-        addon.VisibilityFade.Update("petbar")
+        addon.VisibilityFade.Update('petbar')
     end
+end
+
+local function PetSlotPoint(index, previous, gap)
+    if index > 1 then
+        return 'LEFT', previous, 'RIGHT', gap, 0
+    end
+    return 'BOTTOMLEFT', 0, 0
 end
 
 -- Position pet buttons (legacy approach - this is what makes it work!)
@@ -310,26 +289,22 @@ local function petbutton_position()
     local btnsize = config.size
     local space = config.spacing
     
-    local button
-    for index=1, 10 do
-        button = _G['PetActionButton'..index]
-        if button then
-            button:ClearAllPoints()
-            button:SetParent(petbar)
-            button:SetSize(btnsize, btnsize)
-            if index == 1 then
-                button:SetPoint('BOTTOMLEFT', 0, 0)
-            else
-                button:SetPoint('LEFT', _G['PetActionButton'..(index-1)], 'RIGHT', space, 0)
-            end
-            button:Show()
-            petbar:SetAttribute('addchild', button)
-            
-            -- Apply DragonUI button styling if buttons module available
+    -- Restyle runs once per placed slot on purpose: cooldown levels come from the parent at first styling.
+    local previous
+    for index = 1, PET_SLOT_COUNT do
+        local slotButton = _G['PetActionButton' .. index]
+        if slotButton then
+            slotButton:ClearAllPoints()
+            slotButton:SetSize(btnsize, btnsize)
+            slotButton:SetParent(petbar)
+            slotButton:SetPoint(PetSlotPoint(index, previous, space))
+            slotButton:Show()
+            petbar:SetAttribute('addchild', slotButton)
             if addon.petbuttons_template then
                 addon.petbuttons_template()
             end
         end
+        previous = slotButton
     end
     
     -- Register state driver for pet visibility (skip during editor mode to keep petbar visible)
@@ -372,28 +347,36 @@ local function CreateEventFrame()
     local eventFrame = CreateFrame("Frame")
     PetbarModule.eventFrame = eventFrame
     
-    local function OnEvent(self, event, ...)
-        if not IsModuleEnabled() then return end
-        -- Skip event processing during editor mode (prevents state driver re-registration)
-        if addon.EditorMode and addon.EditorMode:IsActive() then return end
-        
-        -- Handle pet bar events
-        local arg1 = ...
-        if event == 'PLAYER_LOGIN' then
-            petbutton_position()
-        elseif event == 'PET_BAR_UPDATE'
-        or event == 'UNIT_PET' and arg1 == 'player'
-        or event == 'PLAYER_CONTROL_LOST'
-        or event == 'PLAYER_CONTROL_GAINED'
-        or event == 'PLAYER_FARSIGHT_FOCUS_CHANGED'
-        or event == 'UNIT_FLAGS'
-        or arg1 == 'pet' and event == 'UNIT_AURA' then
-            petbutton_updatestate()
-        elseif event == 'PET_BAR_UPDATE_COOLDOWN' then
-            PetActionBar_UpdateCooldowns()
+    local slotStateEvents = {
+        PET_BAR_UPDATE = true,
+        PLAYER_CONTROL_LOST = true,
+        PLAYER_CONTROL_GAINED = true,
+        PLAYER_FARSIGHT_FOCUS_CHANGED = true,
+        UNIT_FLAGS = true,
+    }
+
+    -- These two only count for one unit; every other event is unit-agnostic.
+    local unitFilteredEvents = { UNIT_PET = 'player', UNIT_AURA = 'pet' }
+
+    local function RefreshesSlotState(eventName, unit)
+        local wantedUnit = unitFilteredEvents[eventName]
+        if wantedUnit then
+            return unit == wantedUnit
         end
-        
-        -- Update anchor position for dynamic positioning
+        return slotStateEvents[eventName] == true
+    end
+
+    local function OnEvent(_, eventName, unit)
+        if not IsModuleEnabled() then return end
+        if addon.EditorMode and addon.EditorMode:IsActive() then return end
+
+        if eventName == 'PLAYER_LOGIN' then
+            petbutton_position()
+        elseif eventName == 'PET_BAR_UPDATE_COOLDOWN' then
+            PetActionBar_UpdateCooldowns()
+        elseif RefreshesSlotState(eventName, unit) then
+            petbutton_updatestate()
+        end
         UpdateAnchorPosition()
     end
     
@@ -430,20 +413,16 @@ local function CreateEventFrame()
     return eventFrame
 end
 
--- Register bottom bar hooks for dynamic repositioning
+-- A fresh pair of hooks is stacked per apply; harmless, since the handler is idempotent.
 local function RegisterBottomBarHooks()
     if not IsModuleEnabled() then return end
-    
-    for _, bar in pairs({MultiBarBottomLeft, MultiBarBottomRight}) do
+    for _, barName in ipairs({ 'MultiBarBottomLeft', 'MultiBarBottomRight' }) do
+        local bar = _G[barName]
         if bar then
-            bar:HookScript('OnShow', function()
-                UpdateAnchorPosition()
-            end)
-            bar:HookScript('OnHide', function()
-                UpdateAnchorPosition()
-            end)
-            PetbarModule.hooks[bar:GetName()..'_Show'] = true
-            PetbarModule.hooks[bar:GetName()..'_Hide'] = true
+            for _, hook in ipairs({ { 'OnShow', '_Show' }, { 'OnHide', '_Hide' } }) do
+                bar:HookScript(hook[1], UpdateAnchorPosition)
+                PetbarModule.hooks[barName .. hook[2]] = true
+            end
         end
     end
 end

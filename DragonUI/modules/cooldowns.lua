@@ -29,58 +29,86 @@ addon.cooldownMixin = {}
 -- Tenths are only drawn under 5s; above that the text changes once a second.
 local TICK_FAST, TICK_SLOW = 0.05, 0.25
 
-function addon.cooldownMixin:update_cooldown(elapsed)
-    if not self:GetParent().action then
-        return
-    end
-    if not self.remain then
-        return
-    end
+local COUNTDOWN_STEPS = {
+    { ceiling = 5, decimals = '%.1f', rgb = { 1, 0, 0.2 } },
+    { ceiling = 60, per = 1, unit = '', rgb = { 1, 1, 0 } },
+    { ceiling = 3600, per = 60, unit = 'm' },
+    { ceiling = math.huge, per = 3600, unit = 'h', shade = 0.7 },
+}
 
-    self.duiNextTick = (self.duiNextTick or 0) - (elapsed or 0)
-    if self.duiNextTick > 0 then
-        return
-    end
+local DEFAULT_TEXT_ANCHOR = { 'CENTER', 0, 1 }
+local NO_FONT = {}
 
-    local text = self.text
-    local remaining = self.remain - GetTime()
-    self.duiNextTick = remaining <= 5 and TICK_FAST or TICK_SLOW
-
-    if remaining > 0 then
-        local db = addon.db.profile.buttons.cooldown
-        if not db then return end
-        
-        if remaining <= 5 then
-            text:SetTextColor(1, 0, .2)
-            text:SetFormattedText('%.1f', remaining)
-        elseif remaining <= 60 then
-            text:SetTextColor(1, 1, 0)
-            text:SetText(ceil(remaining))
-        elseif remaining <= 3600 then
-            text:SetText(ceil(remaining / 60) .. 'm')
-            text:SetTextColor(unpack(db.color))
-        else
-            text:SetText(ceil(remaining / 3600) .. 'h')
-            local r, g, b, a = unpack(db.color)
-            text:SetTextColor(r * 0.7, g * 0.7, b * 0.7, a)
+local function StepFor(secondsLeft)
+    for _, step in ipairs(COUNTDOWN_STEPS) do
+        if secondsLeft <= step.ceiling then
+            return step
         end
-    else
-        self.remain = nil
-        text:Hide()
-        text:SetText ''
     end
 end
 
+local function PaintCountdown(label, step, secondsLeft, dbColor)
+    if step.decimals then
+        label:SetText(step.decimals:format(secondsLeft))
+    else
+        label:SetText(ceil(secondsLeft / step.per) .. step.unit)
+    end
+    local rgb, shade = step.rgb, step.shade
+    if rgb then
+        label:SetTextColor(rgb[1], rgb[2], rgb[3])
+    elseif shade then
+        local r, g, b, a = unpack(dbColor)
+        label:SetTextColor(r * shade, g * shade, b * shade, a)
+    else
+        label:SetTextColor(unpack(dbColor))
+    end
+end
+
+local function StopCountdown(cooldown, blankText)
+    cooldown.remain = nil
+    local label = cooldown.text
+    if label then
+        label:Hide()
+        if blankText then
+            label:SetText('')
+        end
+    end
+end
+
+function addon.cooldownMixin:update_cooldown(elapsed)
+    if not self:GetParent().action or not self.remain then
+        return
+    end
+
+    local wait = (self.duiNextTick or 0) - (elapsed or 0)
+    if wait > 0 then
+        self.duiNextTick = wait
+        return
+    end
+
+    local secondsLeft = self.remain - GetTime()
+    self.duiNextTick = (secondsLeft <= 5) and TICK_FAST or TICK_SLOW
+
+    if secondsLeft <= 0 then
+        StopCountdown(self, true)
+        return
+    end
+
+    local settings = addon.db.profile.buttons.cooldown
+    if settings == nil then
+        return
+    end
+    PaintCountdown(self.text, StepFor(secondsLeft), secondsLeft, settings.color)
+end
+
 function addon.cooldownMixin:create_string()
-    -- 'GameFontNormalLarge' template guarantees a valid font on every locale.
-    -- We immediately override with the centralized addon font for the intended look;
-    -- set_cooldown() may further override with the user's chosen db font.
-    local text = self:CreateFontString(nil, 'OVERLAY', 'GameFontNormalLarge')
-    text:SetFont(addon.Fonts.ACTIONBAR, 16, 'OUTLINE')
-    text:SetPoint('CENTER')
-    self.text = text
+    -- The template guarantees a font even when the SetFont path below fails on this locale.
+    local label = self:CreateFontString(nil, 'OVERLAY', 'GameFontNormalLarge')
+    label:SetFont(addon.Fonts.ACTIONBAR, 16, 'OUTLINE')
+    label:SetPoint('CENTER', self, 'CENTER')
+    self.text = label
     self:SetScript('OnUpdate', addon.cooldownMixin.update_cooldown)
-    return text
+    return label
 end
 
 function addon.cooldownMixin:set_cooldown(start, duration)
@@ -123,26 +151,20 @@ function addon.cooldownMixin:set_cooldown(start, duration)
         end
     end
 
-    if moduleDb.enabled and start > 0 and duration > db.min_duration then
-        self.remain = start + duration
-        self.duiNextTick = 0 -- draw on the next frame instead of waiting out the previous tick
-
-        local text = self.text or addon.cooldownMixin.create_string(self)
-        -- Apply user font if valid, otherwise addon.Fonts.ACTIONBAR stays from create_string
-        local fontPath = db.font and db.font[1]
-        text:SetFont(
-            fontPath or addon.Fonts.ACTIONBAR,
-            db.font_size or (db.font and db.font[2]) or 16,
-            (db.font and db.font[3]) or 'OUTLINE'
-        )
-        text:SetPoint(unpack(db.position))
-        text:Show()
-    else
-        if self.text then
-            self.text:Hide()
-        end
-        self.remain = nil
+    local showText = moduleDb.enabled and start > 0 and duration > db.min_duration
+    if not showText then
+        StopCountdown(self)
+        return
     end
+
+    self.remain = start + duration
+    self.duiNextTick = 0
+    local label = self.text or addon.cooldownMixin.create_string(self)
+    local font = db.font or NO_FONT
+    label:SetFont(font[1] or addon.Fonts.ACTIONBAR, db.font_size or font[2] or 16, font[3] or 'OUTLINE')
+    -- No ClearAllPoints: the DB point is layered on top of create_string's CENTER anchor.
+    label:SetPoint(unpack(db.position or DEFAULT_TEXT_ANCHOR))
+    label:Show()
 end
 
 function addon.RefreshCooldowns()
@@ -202,13 +224,12 @@ function addon.InitializeCooldowns()
         return
     end
     
-    local methods = getmetatable(_G.ActionButton1Cooldown).__index
-    if methods and methods.SetCooldown then
-        hooksecurefunc(methods, 'SetCooldown', addon.cooldownMixin.set_cooldown)
+    -- One hook on the shared widget method table sees every Cooldown's SetCooldown.
+    local widgetMeta = getmetatable(_G.ActionButton1Cooldown)
+    local cooldownMethods = widgetMeta and widgetMeta.__index
+    if type(cooldownMethods) == 'table' and cooldownMethods.SetCooldown then
+        hooksecurefunc(cooldownMethods, 'SetCooldown', addon.cooldownMixin.set_cooldown)
         isHooked = true
-
-    else
-
     end
 
     -- =========================================================================
