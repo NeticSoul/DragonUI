@@ -331,12 +331,12 @@ end
 -- =============================================================================
 -- EVENTS
 -- =============================================================================
-addon.package:RegisterEvents(function()
+addon.package:Subscribe(function()
     LootRollModule:Initialize()
 end, "PLAYER_LOGIN")
 
 -- Re-attach after zone changes, reloads, etc. (same as DragonflightUI pattern)
-addon.package:RegisterEvents(function()
+addon.package:Subscribe(function()
     if LootRollModule.applied then
         AttachContainer()
     end

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -32,7 +34,7 @@ local selected = 1
 -- draws over it, so that overhang read as the tab sitting on the pane. Kept on every tab instead.
 local function styleTab(tab, isSelected)
     if not tab then return end
-    tab.Highlight:SetShownReq(not isSelected)
+    tab.Highlight:SetShownCompat(not isSelected)
     tab.TabBg:SetTexCoord(unpack(isSelected and TC.tabBgActive or TC.tabBg))
 end
 
@@ -57,52 +59,38 @@ local function buildTab(index, tooltip)
     local tab = CreateFrame("Button", "DragonUICharacterSidebarTab" .. index, strip)
     tab:SetSize(TAB_W, TAB_H)
 
-    -- The plate hangs past its button on purpose; that overhang is the shoulder meeting the next tab.
-    local bg = tab:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture(SHEET)
-    bg:SetSize(50, 43)
-    bg:SetPoint("BOTTOMLEFT", tab, "BOTTOMLEFT", -9, -2)
-    bg:SetTexCoord(unpack(TC.tabBg))
-    tab.TabBg = bg
+    -- The plate overhangs into the next tab's shoulder; the hider's 2px drop laps over the pane.
+    for _, spec in ipairs({
+        { "TabBg", "BACKGROUND", 50, 43, "BOTTOMLEFT", -9, -2, TC.tabBg },
+        { "Hider", "OVERLAY", 34, 19, "BOTTOM", 0, -2, TC.tabHider },
+        { "Highlight", "HIGHLIGHT", 31, 31, "TOPLEFT", 2, -3, TC.tabHighlight },
+    }) do
+        local field, layer, w, h, point, x, y, coords = unpack(spec)
+        local tex = tab:CreateTexture(nil, layer)
+        tex:SetTexture(SHEET)
+        tex:SetPoint(point, tab, point, x, y)
+        tex:SetSize(w, h)
+        tex:SetTexCoord(unpack(coords))
+        tab[field] = tex
+    end
+    tab.Icon = tab:CreateTexture(nil, "ARTWORK")
 
-    local icon = tab:CreateTexture(nil, "ARTWORK")
-    tab.Icon = icon
+    local function showLive(self, live)
+        self:SetAlpha(live and 1 or 0.5)
+        self.Icon:SetDesaturated(not live)
+    end
 
-    -- Dropped to the PLATE's floor, not the button's: those 2px are the lip over the pane.
-    local hider = tab:CreateTexture(nil, "OVERLAY")
-    hider:SetTexture(SHEET)
-    hider:SetSize(34, 19)
-    hider:SetPoint("BOTTOM", tab, "BOTTOM", 0, -2)
-    hider:SetTexCoord(unpack(TC.tabHider))
-    tab.Hider = hider
-
-    -- styleTab takes the HIGHLIGHT away from the selected tab, which already carries the lit plate.
-    local hl = tab:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetTexture(SHEET)
-    hl:SetSize(31, 31)
-    hl:SetPoint("TOPLEFT", tab, "TOPLEFT", 2, -3)
-    hl:SetTexCoord(unpack(TC.tabHighlight))
-    tab.Highlight = hl
-
+    tab:SetScript("OnEnable", function(self) showLive(self, true) end)
+    tab:SetScript("OnDisable", function(self) showLive(self, false) end)
+    tab:SetScript("OnLeave", GameTooltip_Hide)
     tab:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(tooltip, 1, 1, 1)
-        if (not self:IsEnabled() or self._duiSoftDisabled) and self._duiDisabledHint then
-            GameTooltip:AddLine(self._duiDisabledHint, 1, 0.1, 0.1, true)
-        end
-        GameTooltip:Show()
+        local tip = GameTooltip
+        tip:SetOwner(self, "ANCHOR_RIGHT")
+        local hint = (self._duiSoftDisabled or not self:IsEnabled()) and self._duiDisabledHint
+        tip:SetText(tooltip, 1, 1, 1)
+        if hint then tip:AddLine(hint, 1, 0.1, 0.1, true) end
+        tip:Show()
     end)
-    tab:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-    tab:SetScript("OnEnable", function(self)
-        self:SetAlpha(1)
-        self.Icon:SetDesaturated(false)
-    end)
-    tab:SetScript("OnDisable", function(self)
-        self:SetAlpha(0.5)
-        self.Icon:SetDesaturated(true)
-    end)
-
     tab:SetScript("OnClick", function()
         PlaySound("igCharacterInfoTab")
         selectTab(index)
@@ -245,7 +233,7 @@ CP.SidebarTabsStrip = function() return strip end
 
 -- The strip belongs to the paperdoll's right pane; elsewhere it would float over Blizzard's content.
 function CP.SetSidebarTabsShown(visible)
-    if strip then strip:SetShownReq(visible) end
+    if strip then strip:SetShownCompat(visible) end
 end
 
 CP:RegisterBuilder("sidebartabs", build)

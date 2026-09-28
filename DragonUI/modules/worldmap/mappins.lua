@@ -79,19 +79,19 @@ local function styleEntrance(pin, entry)
     local kind = entry.raid and RAID or LFG_TYPE_DUNGEON
     local levels = WM.DungeonLevelText(entry.lfg)
     pin.kind = levels and (kind .. " " .. levels) or kind
-    pin.icon:set_atlas(entry.raid and "map-entrance-raid" or "map-entrance-dungeon")
+    pin.icon:SetAtlasTexture(entry.raid and "map-entrance-raid" or "map-entrance-dungeon")
     pin:SetSize(ENTRANCE_SIZE, ENTRANCE_SIZE)
 end
 
 local function styleGraveyard(pin)
     pin.name, pin.kind = L["Graveyard"], nil
-    pin.icon:set_atlas("map-graveyard")
+    pin.icon:SetAtlasTexture("map-graveyard")
     pin:SetSize(GRAVEYARD_W, GRAVEYARD_H)
 end
 
 local function styleFlightPoint(pin, entry)
     pin.name, pin.kind = FLIGHT_NAMES[entry.name] or entry.name, L["Flight Master"]
-    pin.icon:set_atlas(TAXI_ATLAS[entry.faction] or "map-taxinode-neutral")
+    pin.icon:SetAtlasTexture(TAXI_ATLAS[entry.faction] or "map-taxinode-neutral")
     pin:SetSize(FLIGHT_SIZE, FLIGHT_SIZE)
 end
 
@@ -102,7 +102,7 @@ end
 local function styleInn(pin, inn)
     pin.name = (inn.room and ROOM_NAMES[inn.room]) or areaName(inn[INN_AREA]) or MINIMAP_TRACKING_INNKEEPER
     pin.kind = MINIMAP_TRACKING_INNKEEPER
-    pin.icon:set_atlas("map-innkeeper")
+    pin.icon:SetAtlasTexture("map-innkeeper")
     pin:SetSize(INN_SIZE, INN_SIZE)
 end
 

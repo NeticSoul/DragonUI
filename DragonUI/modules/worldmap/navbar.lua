@@ -123,7 +123,7 @@ end
 -- Home's banner keeps its notched right edge and loses width on the left, retail's own crop.
 local function cropBanner(tex, width)
     width = math.min(width, BANNER_W)
-    local _, _, _, left, right, top, bottom = addon.functions.atlas_unpack("navbar-home-banner")
+    local _, _, _, left, right, top, bottom = addon.functions.UnpackAtlas("navbar-home-banner")
     tex:SetTexCoord(right - (right - left) * (width / BANNER_W), right, top, bottom)
     tex:SetWidth(width)
 end
@@ -137,7 +137,7 @@ local function buildArrow(parent)
     highlight:SetTexture("Interface\\Buttons\\UI-Common-MouseHilight")
     highlight:SetBlendMode("ADD")
     arrow.glyph = arrow:CreateTexture(nil, "OVERLAY")
-    arrow.glyph:set_atlas("navbar-dropdown-arrow", true)
+    arrow.glyph:SetAtlasTexture("navbar-dropdown-arrow", true)
     arrow.glyph:SetPoint("CENTER", arrow, "CENTER", 0, -1)
     arrow:SetScript("OnMouseDown", function(self) self.glyph:SetPoint("CENTER", -1, -2) end)
     arrow:SetScript("OnMouseUp", function(self) self.glyph:SetPoint("CENTER", 0, -1) end)
@@ -159,12 +159,12 @@ local function acquireCrumb(index)
     crumb.bg:SetHeight(30)
 
     crumb.selected = crumb:CreateTexture(nil, "ARTWORK", nil, 0)
-    crumb.selected:set_atlas("navbar-glow-selected")
+    crumb.selected:SetAtlasTexture("navbar-glow-selected")
     crumb.selected:SetPoint("TOPLEFT", crumb, "TOPLEFT", -2, 4)
     crumb.selected:SetPoint("BOTTOMRIGHT", crumb, "BOTTOMRIGHT", 0, -4)
 
     crumb.hover = crumb:CreateTexture(nil, "ARTWORK", nil, 1)
-    crumb.hover:set_atlas("navbar-glow-hover")
+    crumb.hover:SetAtlasTexture("navbar-glow-hover")
     crumb.hover:SetPoint("TOPLEFT", crumb, "TOPLEFT", -2, 4)
     crumb.hover:SetPoint("BOTTOMRIGHT", crumb, "BOTTOMRIGHT", 0, -4)
     crumb.hover:SetBlendMode("ADD")
@@ -172,7 +172,7 @@ local function acquireCrumb(index)
 
     -- Above both glows, and bridging into the next crumb's left padding.
     crumb.endcap = crumb:CreateTexture(nil, "ARTWORK", nil, 2)
-    crumb.endcap:set_atlas("navbar-endcap-up", true)
+    crumb.endcap:SetAtlasTexture("navbar-endcap-up", true)
     crumb.endcap:SetPoint("LEFT", crumb, "RIGHT", 0, 0)
 
     crumb.text = crumb:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -201,9 +201,9 @@ local function acquireOverflow()
     local button = CreateFrame("Button", nil, bar)
     button:SetSize(OVERFLOW_W, 30)
     button:SetNormalTexture(addon._dir .. "UI\\ui-background-rock")
-    button:GetNormalTexture():set_atlas("navbar-overflow-up")
+    button:GetNormalTexture():SetAtlasTexture("navbar-overflow-up")
     button:SetPushedTexture(addon._dir .. "UI\\ui-background-rock")
-    button:GetPushedTexture():set_atlas("navbar-overflow-down")
+    button:GetPushedTexture():SetAtlasTexture("navbar-overflow-down")
     button:SetScript("OnClick", function(self)
         local list = {}
         for _, crumb in ipairs(self.hidden) do
@@ -238,12 +238,12 @@ local function placeCrumb(index, entry, previous, level, isLast)
     crumb:SetWidth(crumb.width)
     crumb.bg:ClearAllPoints()
     if crumb.isHome then
-        crumb.bg:set_atlas("navbar-home-banner")
+        crumb.bg:SetAtlasTexture("navbar-home-banner")
         crumb.bg:SetPoint("RIGHT", crumb, "RIGHT", ENDCAP_W, 0)
         cropBanner(crumb.bg, crumb.width + ENDCAP_W + HOME_BLEED)
         crumb.endcap:Hide()
     else
-        crumb.bg:set_atlas("_navbar-button-tile")
+        crumb.bg:SetAtlasTexture("_navbar-button-tile")
         crumb.bg:SetSize(crumb.width, 30)
         crumb.bg:SetPoint("CENTER", crumb, "CENTER", 0, 0)
         crumb.endcap:Show()
@@ -342,7 +342,7 @@ function WM.BuildNavBar()
     bar.crumbs = {}
 
     bar.bg = bar:CreateTexture(nil, "BACKGROUND")
-    bar.bg:set_atlas("_navbar-barbg-tile")
+    bar.bg:SetAtlasTexture("_navbar-barbg-tile")
     bar.bg:SetHeight(BAR_H)
     bar.bg:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
 
@@ -353,7 +353,7 @@ function WM.BuildNavBar()
     rim:SetAllPoints(bar)
 
     bar.sheen = rim:CreateTexture(nil, "OVERLAY")
-    bar.sheen:set_atlas("_navbar-baroverlay-tile")
+    bar.sheen:SetAtlasTexture("_navbar-baroverlay-tile")
     bar.sheen:SetHeight(BAR_H)
     bar.sheen:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
 

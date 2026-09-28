@@ -441,8 +441,10 @@ end
 
 local BOTTOM_PILL_HEIGHT = 17
 local BOTTOM_PILL_GAP = 3
+-- Blizzard re-anchors the coins on every update, so the frame rises and its pill sinks by the same amount.
+local MONEY_LIFT = 0.5
 
-local function ApplyPillChrome(bar, texturePath)
+local function ApplyPillChrome(bar, texturePath, yOffset)
     if bar._dragonuiPill then
         return
     end
@@ -450,13 +452,13 @@ local function ApplyPillChrome(bar, texturePath)
 
     local left = bar:CreateTexture(nil, "BACKGROUND")
     left:SetSize(8, 17)
-    left:SetPoint("LEFT", bar, "LEFT")
+    left:SetPoint("LEFT", bar, "LEFT", 0, yOffset or 0)
     left:SetTexture(texturePath)
     left:SetTexCoord(0.03125, 0.53125, 0.289062, 0.554688)
 
     local right = bar:CreateTexture(nil, "BACKGROUND")
     right:SetSize(8, 17)
-    right:SetPoint("RIGHT", bar, "RIGHT")
+    right:SetPoint("RIGHT", bar, "RIGHT", 0, yOffset or 0)
     right:SetTexture(texturePath)
     right:SetTexCoord(0.03125, 0.53125, 0.570312, 0.835938)
 
@@ -475,7 +477,7 @@ local function SkinMoneyFrame(frame)
     moneyFrame._dragonuiSkinned = true
 
     moneyFrame:SetHeight(BOTTOM_PILL_HEIGHT)
-    ApplyPillChrome(moneyFrame, textures.coinbox)
+    ApplyPillChrome(moneyFrame, textures.coinbox, -MONEY_LIFT)
 end
 
 -- MoneyFrameTemplate rebuilds each coin's NormalTexture on every RefreshMoneyFrame, so a one-time
@@ -557,11 +559,11 @@ local function RepositionBackpackBottomWidgets(frame)
         BackpackTokenFrame:ClearAllPoints()
         BackpackTokenFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
         BackpackTokenFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
-        moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8 + BOTTOM_PILL_HEIGHT + BOTTOM_PILL_GAP)
-        moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8 + BOTTOM_PILL_HEIGHT + BOTTOM_PILL_GAP)
+        moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8 + BOTTOM_PILL_HEIGHT + BOTTOM_PILL_GAP + MONEY_LIFT)
+        moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8 + BOTTOM_PILL_HEIGHT + BOTTOM_PILL_GAP + MONEY_LIFT)
     else
-        moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8)
-        moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+        moneyFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 8, 8 + MONEY_LIFT)
+        moneyFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8 + MONEY_LIFT)
     end
 end
 

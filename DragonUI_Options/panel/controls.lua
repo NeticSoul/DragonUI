@@ -1,3 +1,6 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from NotPlater (MIT, (c) 2023 RichSteini); see THIRD_PARTY_NOTICES.
+
 --[[
 ================================================================================
 DragonUI Options Panel - Controls Library

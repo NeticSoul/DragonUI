@@ -13,7 +13,7 @@ btn:SetSize(32, 40)
 btn:SetPoint("CENTER")
 btn:Hide()
 
--- setupMicroButtons re-points all four; they only have to exist for its getters to return one.
+-- layoutMicroButtons re-points all four; they only have to exist for its getters to return one.
 btn:SetNormalTexture(ICON)
 btn:SetPushedTexture(ICON)
 btn:SetDisabledTexture(ICON)

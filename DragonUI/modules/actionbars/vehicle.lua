@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local config = addon.config
 local _G, ipairs, UIParent = _G, ipairs, UIParent
@@ -50,8 +52,8 @@ if addon.RegisterModule then
 end
 
 -- Frame variables
-local pUiMainBar = nil
-local vehicleBarBackground = nil
+local mainBarFrame = nil
+local vehicleArt = nil
 local vehiclebar = nil
 local vehicleExitButton = nil
 
@@ -72,7 +74,7 @@ local function CheckDependencies()
     if not IsMainbarsModuleEnabled() then
         return false
     end
-    local mainBar = addon.pUiMainBar or _G.pUiMainBar
+    local mainBar = addon.MainBar or _G.DragonUI_MainActionBar
     if not mainBar then
         return false
     end
@@ -129,7 +131,7 @@ local function VehicleSlide_PlaceAll(fraction)
         VehicleModule.slideNeedsSnap = true
         return false
     end
-    VehicleSlide_Place(vehicleBarBackground, fraction)
+    VehicleSlide_Place(vehicleArt, fraction)
     VehicleSlide_Place(vehicleExitButton, fraction)
     return true
 end
@@ -270,8 +272,8 @@ local function CreateVehicleExitButton()
             local layer = vehicleExitButton:CreateTexture(nil, "BACKGROUND", nil, ring.sub)
             layer:SetPoint("TOPRIGHT", vehicleExitButton, "TOPRIGHT", ring.pad, ring.pad)
             layer:SetPoint("BOTTOMLEFT", vehicleExitButton, "BOTTOMLEFT", -ring.pad, -ring.pad)
-            if layer.set_atlas then
-                layer:set_atlas(ring.atlas, ring.native)
+            if layer.SetAtlasTexture then
+                layer:SetAtlasTexture(ring.atlas, ring.native)
             end
             vehicleExitButton[ring.key] = layer
         end
@@ -367,30 +369,30 @@ end
 -- ============================================================================
 
 local function CreateVehicleArtFrames()
-    if vehicleBarBackground then return end
+    if vehicleArt then return end
 
-    vehicleBarBackground = CreateFrame(
+    vehicleArt = CreateFrame(
         'Frame',
         'DragonUI_VehicleBarBackground',
         UIParent,
-        'VehicleBarUiTemplate'
+        'DragonUIVehicleBarTemplate'
     )
-    vehicleBarBackground:SetScale(config.mainbars.scale_vehicle or 1)
-    vehicleBarBackground:Hide()
-    VehicleSlide_SetAnchor(vehicleBarBackground)
+    vehicleArt:SetScale(config.mainbars.scale_vehicle or 1)
+    vehicleArt:Hide()
+    VehicleSlide_SetAnchor(vehicleArt)
 
     -- vehiclebar: content container (buttons, health, power go here)
     -- Inherits visibility from parent — do NOT explicitly Hide() it
     vehiclebar = CreateFrame(
         'Frame',
         'DragonUI_VehicleBar',
-        vehicleBarBackground,
+        vehicleArt,
         'SecureHandlerStateTemplate'
     )
-    vehiclebar:SetAllPoints(vehicleBarBackground)
-    -- vehiclebar is NOT hidden — it inherits visibility from vehicleBarBackground
+    vehiclebar:SetAllPoints(vehicleArt)
+    -- vehiclebar is NOT hidden — it inherits visibility from vehicleArt
 
-    VehicleModule.frames.vehicleBarBackground = vehicleBarBackground
+    VehicleModule.frames.vehicleArt = vehicleArt
     VehicleModule.frames.vehiclebar = vehiclebar
 end
 
@@ -412,7 +414,7 @@ local function ArmStateDriver(key, frame, state, snippet, rule)
     RegisterStateDriver(frame, state, rule)
 end
 
-local function vehiclebutton_state()
+local function updateVehicleButtons()
     if not vehiclebar then return end
     for slot = 1, VEHICLE_MAX_ACTIONBUTTONS do
         local label = "VehicleMenuBarActionButton" .. slot
@@ -434,7 +436,7 @@ end
 local function FitRegion(region, box, parent)
     if parent then region:SetParent(parent) end
     region:SetSize(box[1], box[2])
-    region:SetClearPoint(box[3], box[4], box[5])
+    region:SetSinglePoint(box[3], box[4], box[5])
 end
 
 local LEAVE_BOX = { 47, 50, "BOTTOMRIGHT", -178, 14 }
@@ -447,7 +449,7 @@ local GAUGE_BARS = {
 
 local VEHICLE_SKINS = {
     mechanical = {
-        show = "MechanicUi", hide = "OrganicUi",
+        show = "MechanicalArt", hide = "OrganicArt",
         exitUp = { GEARS_SHEET, GearBox(45, 84, 185, 224) },
         exitDown = { GEARS_SHEET, GearBox(2, 40, 185, 223) },
         bars = {
@@ -459,7 +461,7 @@ local VEHICLE_SKINS = {
         pitch = true,
     },
     organic = {
-        show = "OrganicUi", hide = "MechanicUi",
+        show = "OrganicArt", hide = "MechanicalArt",
         exitUp = { EXIT_UP, EXIT_CROP },
         exitDown = { EXIT_DOWN, EXIT_CROP },
         bars = {
@@ -482,7 +484,7 @@ local PITCH_TRACK = {
     { "VehicleMenuBarPitchSliderMarker", { 0.46875, 0.50390625, 0.45, 0.55 }, { 1, 0, 0 }, 20 },
 }
 
-local function vehiclebar_power_setup()
+local function setupVehiclePower()
     if not vehiclebar then return end
 
     local leave = VehicleMenuBarLeaveButton
@@ -537,9 +539,9 @@ end
 
 -- Touches only insecure widgets, so callers may run it in combat.
 local function ApplyVehicleSkin(skin)
-    if not vehicleBarBackground then return end
-    vehicleBarBackground[skin.hide]:Hide()
-    vehicleBarBackground[skin.show]:Show()
+    if not vehicleArt then return end
+    vehicleArt[skin.hide]:Hide()
+    vehicleArt[skin.show]:Show()
 
     local leave = VehicleMenuBarLeaveButton
     DressButtonFace(leave, "Normal", skin.exitUp[1], skin.exitUp[2])
@@ -555,12 +557,12 @@ local function ApplyVehicleSkin(skin)
     end
 
     if skin.pitch then
-        FitPitchControls(vehicleBarBackground[skin.show])
+        FitPitchControls(vehicleArt[skin.show])
     end
 end
 
 -- Only the skin name picks the art; pitch support is no reliable hint of a mechanical vehicle.
-local function vehiclebar_layout_setup()
+local function layoutVehicleBar()
     if UnitVehicleSkin("player") == "Natural" then
         ApplyVehicleSkin(VEHICLE_SKINS.organic)
     else
@@ -569,11 +571,11 @@ local function vehiclebar_layout_setup()
 end
 
 -- Exposed so the slide handler (declared earlier) can skin the art before the transition starts.
-VehicleModule.ApplyArtLayout = vehiclebar_layout_setup
+VehicleModule.ApplyArtLayout = layoutVehicleBar
 
 local SLOT_SIZE, SLOT_GAP = 52, 6
 
-local function vehiclebutton_position()
+local function positionVehicleButtons()
     if not vehiclebar or InCombatLockdown() then return end
 
     local count = VEHICLE_MAX_ACTIONBUTTONS
@@ -683,10 +685,10 @@ end
 
 -- Apply full vehicle art layout (called when NOT in combat lockdown)
 local function ApplyFullVehicleArtLayout()
-    vehiclebar_layout_setup()
-    vehiclebutton_position()
-    if addon.vehiclebuttons_template then
-        addon.vehiclebuttons_template()
+    layoutVehicleBar()
+    positionVehicleButtons()
+    if addon.StyleVehicleButtons then
+        addon.StyleVehicleButtons()
     end
     HideEmptyVehicleButtons()
     if VehicleMenuBarHealthBar then
@@ -715,24 +717,24 @@ local function OnVehicleEvent(self, event, ...)
             -- State drivers are already set up with [vehicleui] condition —
             -- they auto-toggle visibility (main bar hides, vehicle art shows).
             -- Vehicle buttons are pre-parented to vehiclebar at init time,
-            -- so they become visible when the state driver shows vehicleBarBackground.
+            -- so they become visible when the state driver shows vehicleArt.
             -- RegisterStateDriver is PROTECTED and CANNOT be called in combat.
             -- Full art layout (organic/mechanical textures, health/power bar sizes,
             -- overlay positions, leave button textures) runs here — these operate
             -- on non-secure widgets (StatusBars, Textures) which are combat-safe.
-            -- Only secure frame repositioning (vehiclebutton_position) is deferred
+            -- Only secure frame repositioning (positionVehicleButtons) is deferred
             -- to PLAYER_REGEN_ENABLED.
             VehicleModule.pendingCombatVehicleSetup = true
             -- Combat-safe full vehicle art layout: sets bar sizes, positions,
-            -- overlay textures, leave button textures AND toggles OrganicUi/MechanicUi.
-            -- Without this, vehicleBarBackground appears with wrong/missing decorations.
-            pcall(vehiclebar_layout_setup)
+            -- overlay textures, leave button textures AND toggles OrganicArt/MechanicalArt.
+            -- Without this, vehicleArt appears with wrong/missing decorations.
+            pcall(layoutVehicleBar)
             -- Button styling with skipCombatGuard=true: bypasses the
             -- InCombatLockdown + UnitHasVehicleUI guards in buttons.lua.
             -- All operations are texture-level (NormalTexture, atlas, draw layers)
             -- which are combat-safe in 3.3.5a.
-            if addon.vehiclebuttons_template then
-                pcall(addon.vehiclebuttons_template, true)
+            if addon.StyleVehicleButtons then
+                pcall(addon.StyleVehicleButtons, true)
             end
             -- Health/power bar updates are safe even in combat
             if VehicleMenuBarHealthBar then
@@ -742,24 +744,24 @@ local function OnVehicleEvent(self, event, ...)
                 pcall(UnitFrameManaBar_Update, VehicleMenuBarPowerBar, 'vehicle')
             end
             -- Schedule empty-button hiding AND button styling retries.
-            -- Action data arrives after a short delay; __styled flag prevents
+            -- Action data arrives after a short delay; _duiStyled flag prevents
             -- double-styling if the immediate call already succeeded.
             if addon.core and addon.core.ScheduleTimer then
                 addon.core:ScheduleTimer(HideEmptyVehicleButtons, 0.3)
                 addon.core:ScheduleTimer(HideEmptyVehicleButtons, 0.6)
                 addon.core:ScheduleTimer(HideEmptyVehicleButtons, 1.0)
                 -- Retry button styling in case buttons weren't ready yet
-                local function retryVehicleButtons() addon.vehiclebuttons_template(true) end
+                local function retryVehicleButtons() addon.StyleVehicleButtons(true) end
                 addon.core:ScheduleTimer(retryVehicleButtons, 0.3)
                 addon.core:ScheduleTimer(retryVehicleButtons, 0.6)
             end
             return
         end
 
-        vehiclebar_layout_setup()
-        vehiclebutton_position()
-        if addon.vehiclebuttons_template then
-            addon.vehiclebuttons_template()
+        layoutVehicleBar()
+        positionVehicleButtons()
+        if addon.StyleVehicleButtons then
+            addon.StyleVehicleButtons()
         end
         UnitFrameHealthBar_Update(VehicleMenuBarHealthBar, 'vehicle')
         UnitFrameManaBar_Update(VehicleMenuBarPowerBar, 'vehicle')
@@ -798,9 +800,9 @@ end
 -- ============================================================================
 -- ARTSTYLE VISIBILITY STATE DRIVERS
 -- ============================================================================
--- vehiclebar inherits visibility from vehicleBarBackground (SetAllPoints,
+-- vehiclebar inherits visibility from vehicleArt (SetAllPoints,
 -- NOT explicitly hidden) so buttons parented to it become visible when
--- vehicleBarBackground is shown.
+-- vehicleArt is shown.
 
 -- ============================================================================
 -- BAR HIDING DURING VEHICLE (common to both artstyle modes)
@@ -813,14 +815,14 @@ end
 --   3) InCombatLockdown() blocked event handler during combat vehicle entry
 
 local function SetupVehicleBarHiding(hideMainBar)
-    local mainBar = pUiMainBar or addon.pUiMainBar or _G.pUiMainBar
+    local mainBar = mainBarFrame or addon.MainBar or _G.DragonUI_MainActionBar
     if not mainBar then return end
 
-    -- 1) pUiMainBar: hide during vehicle ONLY if artstyle=true.
+    -- 1) DragonUI_MainActionBar: hide during vehicle ONLY if artstyle=true.
     --    When artstyle=false, the main bar stays visible because it shows
     --    vehicle abilities via BonusActionBar page switching (bonusbar:5 → page 11).
     --    Uses custom state name 'vehicleupdate' with secure snippet (NOT
-    --    'visibility') to avoid conflicts with other state drivers on pUiMainBar.
+    --    'visibility') to avoid conflicts with other state drivers on DragonUI_MainActionBar.
     if hideMainBar and not VehicleModule.stateDrivers.mainBarVehicle then
         ArmStateDriver("mainBarVehicle", mainBar, "vehicleupdate", MAINBAR_TOGGLE_SNIPPET, "[vehicleui] 1; 2")
     end
@@ -866,13 +868,13 @@ end
 -- ============================================================================
 
 local function SetupArtStyleStateDrivers()
-    if not vehiclebar or not vehicleBarBackground then return end
+    if not vehiclebar or not vehicleArt then return end
 
     -- Show/hide vehicle art via secure snippet on vehiclebar — the child's
     -- _onstate-vehicleupdate snippet calls Show()/Hide() on parent
-    -- (vehicleBarBackground). This is combat-safe and avoids 'visibility'
+    -- (vehicleArt). This is combat-safe and avoids 'visibility'
     -- state driver conflicts.
-    vehiclebutton_state()
+    updateVehicleButtons()
 end
 
 -- ============================================================================
@@ -883,7 +885,7 @@ local function SetupBonusBarVehicle()
     -- Mainbars owns the page driver so bonus/stance bars keep working even
     -- when vehicle module is disabled.
     if addon.SetupMainBarPageDriver then
-        addon.SetupMainBarPageDriver(pUiMainBar or addon.pUiMainBar or _G.pUiMainBar)
+        addon.SetupMainBarPageDriver(mainBarFrame or addon.MainBar or _G.DragonUI_MainActionBar)
         return
     end
 end
@@ -891,26 +893,6 @@ end
 -- ============================================================================
 -- APPLY / RESTORE
 -- ============================================================================
-
-local function CleanupVehicleFrames()
-    local globalFrames = {
-        'mixin2template',
-        'pUiVehicleBar',
-        'vehicleExit',
-        'pUiVehicleLeaveButton'
-    }
-    for _, frameName in ipairs(globalFrames) do
-        local frame = _G[frameName]
-        if frame and frame.Hide then
-            frame:Hide()
-            frame:SetParent(nil)
-            if frame.UnregisterAllEvents then
-                frame:UnregisterAllEvents()
-            end
-            _G[frameName] = nil
-        end
-    end
-end
 
 local function ApplyVehicleSystem()
     if VehicleModule.applied or not IsModuleEnabled() then return end
@@ -967,8 +949,7 @@ local function ApplyVehicleSystem()
         return
     end
 
-    pUiMainBar = addon.pUiMainBar or _G.pUiMainBar
-    CleanupVehicleFrames()
+    mainBarFrame = addon.MainBar or _G.DragonUI_MainActionBar
 
     -- 1. Bonus bar page switching (always needed for action page management)
     SetupBonusBarVehicle()
@@ -981,18 +962,18 @@ local function ApplyVehicleSystem()
         -- artstyle=true: full vehicle art overlay + built-in leave button
         -- Exit button stays hidden (art has VehicleMenuBarLeaveButton)
         CreateVehicleArtFrames()
-        vehiclebar_power_setup()
+        setupVehiclePower()
 
         -- Pre-parent now: SetParent/SetPoint on secure frames are blocked in combat, and the [vehicleui]
         -- driver can Show the bar mid-combat (Malygos drakes). The skin is applied on UNIT_ENTERING_VEHICLE.
-        vehiclebutton_position()
+        positionVehicleButtons()
 
         -- Pre-style vehicle buttons NOW so they already have Dragonflight
         -- borders when the state driver shows them. Without this, buttons
         -- flash with Blizzard's default large borders for a split second
         -- before UNIT_ENTERED_VEHICLE handler styles them.
-        if addon.vehiclebuttons_template then
-            addon.vehiclebuttons_template(true)
+        if addon.StyleVehicleButtons then
+            addon.StyleVehicleButtons(true)
         end
 
         -- Register vehicle events for layout and health bar updates
@@ -1072,11 +1053,11 @@ local function ApplyVehicleSystem()
         -- If player is ALREADY in a vehicle (e.g. after /reload), immediately
         -- apply vehicle layout — UNIT_ENTERED_VEHICLE won't fire again.
         if UnitHasVehicleUI('player') then
-            vehiclebar_layout_setup()
-            vehiclebutton_position()
+            layoutVehicleBar()
+            positionVehicleButtons()
             HideEmptyVehicleButtons()  -- Action data is ready on reload
-            if addon.vehiclebuttons_template then
-                addon.vehiclebuttons_template()
+            if addon.StyleVehicleButtons then
+                addon.StyleVehicleButtons()
             end
             -- Safe to call only if VehicleMenuBarHealthBar exists (it should in vehicle UI)
             if VehicleMenuBarHealthBar then
@@ -1212,11 +1193,11 @@ local function RestoreVehicleSystem()
     VehicleModule.stateDrivers = {}
 
     -- Hide custom frames
-    if vehicleBarBackground then vehicleBarBackground:Hide() end
+    if vehicleArt then vehicleArt:Hide() end
     if vehicleExitButton then vehicleExitButton:Hide() end
 
     -- Clean up secure handler attributes
-    local mainBar = pUiMainBar or addon.pUiMainBar or _G.pUiMainBar
+    local mainBar = mainBarFrame or addon.MainBar or _G.DragonUI_MainActionBar
     if mainBar then
         mainBar:SetAttribute('_onstate-vehicleupdate', nil)
     end
@@ -1247,14 +1228,13 @@ local function RestoreVehicleSystem()
         pcall(MultiActionBar_Update)
     end
 
-    CleanupVehicleFrames()
     if VehicleMenuBar then VehicleMenuBar:Show() end
 
     VehicleModule.frames = {}
-    vehicleBarBackground = nil
+    vehicleArt = nil
     vehiclebar = nil
     vehicleExitButton = nil
-    pUiMainBar = nil
+    mainBarFrame = nil
 
     VehicleModule.applied = false
     VehicleModule.hooks = {}
@@ -1295,8 +1275,8 @@ function addon.RefreshVehicle()
         PositionVehicleExitButton()
     end
 
-    if vehicleBarBackground then
-        vehicleBarBackground:SetScale(config.mainbars.scale_vehicle or 1)
+    if vehicleArt then
+        vehicleArt:SetScale(config.mainbars.scale_vehicle or 1)
     end
 end
 
@@ -1311,8 +1291,8 @@ function addon.DebugVehicle()
     p("Module enabled: " .. tostring(IsModuleEnabled()))
     p("Module applied: " .. tostring(VehicleModule.applied))
     p("artstyle: " .. tostring(config.additional.vehicle.artstyle))
-    p("pUiMainBar: " .. tostring(pUiMainBar ~= nil) .. (pUiMainBar and (" shown=" .. tostring(pUiMainBar:IsShown())) or ""))
-    p("vehicleBarBackground: " .. tostring(vehicleBarBackground ~= nil) .. (vehicleBarBackground and (" shown=" .. tostring(vehicleBarBackground:IsShown())) or ""))
+    p("DragonUI_MainActionBar: " .. tostring(mainBarFrame ~= nil) .. (mainBarFrame and (" shown=" .. tostring(mainBarFrame:IsShown())) or ""))
+    p("vehicleArt: " .. tostring(vehicleArt ~= nil) .. (vehicleArt and (" shown=" .. tostring(vehicleArt:IsShown())) or ""))
     p("vehiclebar: " .. tostring(vehiclebar ~= nil) .. (vehiclebar and (" shown=" .. tostring(vehiclebar:IsShown()) .. " visible=" .. tostring(vehiclebar:IsVisible())) or ""))
     p("vehicleExitButton: " .. tostring(vehicleExitButton ~= nil) .. (vehicleExitButton and (" shown=" .. tostring(vehicleExitButton:IsShown()) .. " visible=" .. tostring(vehicleExitButton:IsVisible()) .. " parent=" .. tostring(vehicleExitButton:GetParent() and vehicleExitButton:GetParent():GetName())) or ""))
     p("UnitInVehicle: " .. tostring(UnitInVehicle("player")))

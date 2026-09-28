@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -18,11 +20,10 @@ local UNLEARN_GLYPH = 14
 local UNLEARN_HIT = 20
 local UNLEARN_IDLE_ALPHA = 0.35
 
--- Stock paints every ordinary skill bar flat grey because it colours by skillCostType, which is nil
--- for almost everything; the reference reads progress off the colour instead.
-local CAPPED = { 1.0, 0.94, 0.1 }
-local TRAINABLE = { 0.2, 0.85, 0.2 }
-local DORMANT = { 0.5, 0.5, 0.5 }
+-- SkillFrame tints by skillCostType, nil for nearly every skill; here the tint tells progress.
+local SHADE_CAPPED = { 1.0, 0.94, 0.1 }
+local SHADE_TRAINABLE = { 0.2, 0.85, 0.2 }
+local SHADE_DORMANT = { 0.5, 0.5, 0.5 }
 
 local pane, scroll, content
 
@@ -90,7 +91,7 @@ local function buildEntry(parent)
     unlearn:Hide()
 
     local glyph = unlearn:CreateTexture(nil, "OVERLAY")
-    glyph:set_atlas("common-icon-delete")
+    glyph:SetAtlasTexture("common-icon-delete")
     glyph:SetSize(UNLEARN_GLYPH, UNLEARN_GLYPH)
     glyph:SetPoint("CENTER", unlearn, "CENTER", 0, 0)
     glyph:SetAlpha(UNLEARN_IDLE_ALPHA)
@@ -116,49 +117,26 @@ local function buildEntry(parent)
     end)
     row.Unlearn = unlearn
 
-    local bar = CreateFrame("StatusBar", nil, row)
-    bar:SetSize(BAR_W, BAR_H)
-    bar:SetPoint("RIGHT", unlearn, "LEFT", -2, 0)
-    bar:SetStatusBarTexture(FILL)
-    bar:SetMinMaxValues(0, 1)
-    bar:SetValue(1)
-    -- Pushed to BORDER so the outline below can sit above it without hiding the fill.
-    local fill = bar:GetStatusBarTexture()
-    if fill then fill:SetDrawLayer("BORDER") end
+    -- Hung off the unlearn slot even while it is hidden, so every bar in the column lines up.
+    row.Meter = CP.BuildRowBar(row, unlearn, "LEFT", -2, {
+        width = BAR_W,
+        height = BAR_H,
+        fill = FILL,
+        frame = FRAME_TEX,
+        capWidth = FRAME_LEFT_W,
+        frameHeight = FRAME_H,
+    })
 
-    local back = bar:CreateTexture(nil, "BACKGROUND")
-    back:SetAllPoints(bar)
-    back:SetTexture(0, 0, 0)
+    local title = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    title:SetJustifyH("LEFT")
+    title:SetPoint("RIGHT", row.Meter, "LEFT", -8, 0)
+    title:SetPoint("LEFT", row, "LEFT", CHILD_INDENT, 0)
+    row.Title = title
 
-    -- The reputation frame's two-piece art, so both list tabs wear the same bar. Skills has its own
-    -- UI-Character-Skills-BarBorder, but it is a different shape and the two read as unrelated.
-    local left = bar:CreateTexture(nil, "OVERLAY")
-    left:SetTexture(FRAME_TEX)
-    left:SetSize(FRAME_LEFT_W, FRAME_H)
-    left:SetPoint("LEFT", bar, "LEFT", 0, 0)
-    left:SetTexCoord(0.765625, 1, 0.046875, 0.28125)
-
-    local right = bar:CreateTexture(nil, "OVERLAY")
-    right:SetTexture(FRAME_TEX)
-    right:SetSize(BAR_W - FRAME_LEFT_W, FRAME_H)
-    right:SetPoint("LEFT", left, "RIGHT", 0, 0)
-    right:SetTexCoord(0, 0.15234375, 0.390625, 0.625)
-
-    bar.Text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    bar.Text:SetPoint("CENTER", bar, "CENTER", 0, 0)
-    row.Bar = bar
-
-    local name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    name:SetPoint("LEFT", row, "LEFT", CHILD_INDENT, 0)
-    -- Bounded by the bar so a long skill name truncates instead of running under it.
-    name:SetPoint("RIGHT", bar, "LEFT", -8, 0)
-    name:SetJustifyH("LEFT")
-    row.Text = name
-
-    local hl = row:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetTexture(1, 1, 1)
-    hl:SetAlpha(0.1)
-    hl:SetAllPoints(row)
+    local wash = row:CreateTexture(nil, "HIGHLIGHT")
+    wash:SetTexture(1, 1, 1)
+    wash:SetAlpha(0.1)
+    wash:SetAllPoints(row)
 
     -- Blizzard puts the skill description in a detail pane below the list. There is no room for one
     -- at this width, and it is the only thing that pane carried, so it moves into the tooltip.
@@ -186,39 +164,34 @@ local function rankText(rank, modifier, maxRank)
 end
 
 local function updateEntry(row, info)
-    row.Text:SetText(info.name or "")
-    row._skillName, row._description = info.name, info.description
-
-    local unlearn = row.Unlearn
-    unlearn._index, unlearn._name = info.index, info.name
+    local unlearn, name = row.Unlearn, info.name
+    unlearn._index, unlearn._name = info.index, name
     unlearn.Glyph:SetAlpha(UNLEARN_IDLE_ALPHA)
-    if info.isAbandonable then unlearn:Show() else unlearn:Hide() end
+    unlearn:SetShownCompat(info.isAbandonable)
 
-    local bar = row.Bar
-    local maxRank = info.maxRank or 0
+    row.Title:SetText(name or "")
+    row._skillName, row._description = name, info.description
+
+    local ceiling = info.maxRank or 0
     local rank = (info.rank or 0) + (info.tempPoints or 0)
 
-    -- A max rank of one is a proficiency, not a track: it is either known or absent, so it shows
-    -- as a full dormant bar with no numbers rather than as "1/1".
-    if maxRank <= 1 then
-        bar:SetMinMaxValues(0, 1)
-        bar:SetValue(1)
-        bar:SetStatusBarColor(DORMANT[1], DORMANT[2], DORMANT[3])
-        bar.Text:SetText("")
-        return
+    -- A max of one is a proficiency: known or not, there is no track to show.
+    local span, filled, shade, caption = 1, 1, SHADE_DORMANT, ""
+    if ceiling > 1 then
+        span, filled = ceiling, rank
+        caption = rankText(rank, info.modifier, ceiling)
+        if rank >= ceiling then
+            shade = SHADE_CAPPED
+        elseif rank > 0 then
+            shade = SHADE_TRAINABLE
+        end
     end
 
-    bar:SetMinMaxValues(0, maxRank)
-    bar:SetValue(rank)
-
-    local color = DORMANT
-    if rank >= maxRank then
-        color = CAPPED
-    elseif rank > 0 then
-        color = TRAINABLE
-    end
-    bar:SetStatusBarColor(color[1], color[2], color[3])
-    bar.Text:SetText(rankText(rank, info.modifier, maxRank))
+    local meter = row.Meter
+    meter:SetMinMaxValues(0, span)
+    meter:SetValue(filled)
+    meter:SetStatusBarColor(shade[1], shade[2], shade[3])
+    meter.Caption:SetText(caption)
 end
 
 repaint = function()

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local NP = addon.Nameplates
 local C = NP.const
@@ -453,57 +455,48 @@ end
 local MIRROR_IMAGE_MAX_HEALTH_THRESHOLD = 10000
 
 function identity.GetPlateMaxHealth(plateData)
-    local hb = plateData and plateData.healthBar
-    if hb and hb.GetMinMaxValues then
-        local _, maxHealth = hb:GetMinMaxValues()
-        maxHealth = tonumber(maxHealth)
-        if maxHealth and maxHealth > 0 then
-            return maxHealth
-        end
+    local bar = plateData and plateData.healthBar
+    if not (bar and bar.GetMinMaxValues) then
+        return nil
+    end
+    local ceiling = tonumber((select(2, bar:GetMinMaxValues())))
+    if ceiling and ceiling > 0 then
+        return ceiling
     end
     return nil
 end
 
 function identity.CountVisiblePlatesByName(name)
-    if not name or name == "" then
-        return 0
+    local shown = 0
+    if name == nil or name == "" then
+        return shown
     end
-    local count = 0
-    for _, pd in pairs(NP.module.plates) do
-        if pd and pd.plateName == name then
-            local plate = pd.plate
-            if plate and plate.IsShown and plate:IsShown() then
-                count = count + 1
-            end
+    for _, entry in pairs(NP.module.plates) do
+        local frame = entry.plateName == name and entry.plate
+        if frame and frame.IsShown and frame:IsShown() then
+            shown = shown + 1
         end
     end
-    return count
+    return shown
 end
 
+-- Mirror Image clones carry the mage's name on low-health plates; keep the arena token off them.
 function identity.IsMageMirrorImagePlate(plateData, arenaUnit)
-    if not plateData or not arenaUnit or not UnitExists(arenaUnit) then
+    if not (plateData and arenaUnit and UnitExists(arenaUnit)) then
         return false
     end
-    if not string.find(arenaUnit, "^arena%d$") then
+    if not arenaUnit:match("^arena%d$") or select(2, UnitClass(arenaUnit)) ~= "MAGE" then
         return false
     end
-    local _, class = UnitClass(arenaUnit)
-    if class ~= "MAGE" then
+    local plateName, mageName = plateData.plateName, UnitName(arenaUnit)
+    if not (plateName and mageName and NP.native_style.UnitNameEquals(mageName, plateName)) then
         return false
     end
-    local arenaName = UnitName(arenaUnit)
-    local plateName = plateData.plateName
-    if not arenaName or not plateName or not NP.native_style.UnitNameEquals(arenaName, plateName) then
+    if identity.CountVisiblePlatesByName(plateName) < 2 then
         return false
     end
-    if identity.CountVisiblePlatesByName(plateName) <= 1 then
-        return false
-    end
-    local maxHealth = identity.GetPlateMaxHealth(plateData)
-    if maxHealth and maxHealth > 0 and maxHealth < MIRROR_IMAGE_MAX_HEALTH_THRESHOLD then
-        return true
-    end
-    return false
+    local ceiling = identity.GetPlateMaxHealth(plateData)
+    return ceiling ~= nil and ceiling > 0 and ceiling < MIRROR_IMAGE_MAX_HEALTH_THRESHOLD
 end
 
 -- Likely mage mirror / clone: shared name, low max HP, another same-name plate is full-size.
@@ -535,42 +528,46 @@ function identity.IsLikelyMirrorImagePlate(plateData)
     return sameName > 1 and hasOwner
 end
 
+local ARENA_MAP_MAX_AGE = 0.5
+
+-- Plate text may run past the arena name; only a "-" or space boundary keeps "Bob" off "Bobby".
+local function ArenaNameFitsPlate(arenaName, plateName)
+    if arenaName == plateName then
+        return true
+    end
+    local cut = #arenaName
+    if plateName:sub(1, cut) ~= arenaName then
+        return false
+    end
+    local follower = plateName:sub(cut + 1, cut + 1)
+    return follower == "-" or follower == " "
+end
+
 function identity.ResolveArenaTokenByName(plateName)
-    if not plateName or plateName == "" then
+    if plateName == nil or plateName == "" then
         return nil
     end
-
-    local now = GetTime and GetTime() or 0
-    if not NP.module._arenaMapLastUpdate or (now - NP.module._arenaMapLastUpdate) > 0.5 then
-        if NP.engine and NP.engine.UpdatePartyArenaTokenMaps then
-            NP.engine.UpdatePartyArenaTokenMaps()
+    local now = (GetTime and GetTime()) or 0
+    local builtAt = NP.module._arenaMapLastUpdate
+    if builtAt == nil or now - builtAt > ARENA_MAP_MAX_AGE then
+        local rebuild = NP.engine and NP.engine.UpdatePartyArenaTokenMaps
+        if rebuild then
+            rebuild()
         end
     end
-
-    local arenaMap = NP.module.arenaTokenByName
-    if not arenaMap then
+    local tokenByName = NP.module.arenaTokenByName
+    if not tokenByName then
         return nil
     end
-
-    local direct = arenaMap[plateName]
-    if direct and UnitExists(direct) then
-        return direct
+    local exact = tokenByName[plateName]
+    if exact and UnitExists(exact) then
+        return exact
     end
-
-    for arenaName, token in pairs(arenaMap) do
-        if plateName == arenaName and UnitExists(token) then
+    for arenaName, token in pairs(tokenByName) do
+        if ArenaNameFitsPlate(arenaName, plateName) and UnitExists(token) then
             return token
         end
-        if string.find(plateName, arenaName, 1, true) == 1 then
-            local nextChar = string.sub(plateName, string.len(arenaName) + 1, string.len(arenaName) + 1)
-            if nextChar == "" or nextChar == "-" or nextChar == " " then
-                if UnitExists(token) then
-                    return token
-                end
-            end
-        end
     end
-
     return nil
 end
 

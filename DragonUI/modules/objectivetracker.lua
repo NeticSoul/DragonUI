@@ -561,7 +561,7 @@ end
 local function refreshHeaderArt(count, width, wide)
     local btnW, btnH = wide and 18 or 13, wide and 19 or 14
 
-    header.background:set_atlas("QuestTracker-Header", true)
+    header.background:SetAtlasTexture("QuestTracker-Header", true)
     header.background:SetSize(width, width / 8)
     header.background:SetAlpha(0.9)
     header.background:ClearAllPoints()
@@ -580,8 +580,8 @@ local function refreshHeaderArt(count, width, wide)
     local normal = OT.collapsed and "QuestTracker-Expand" or "QuestTracker-Collapse"
     local pushed = OT.collapsed and "QuestTracker-Expand-Pressed" or "QuestTracker-Collapse-Pressed"
     local function skin(tex, atlas, blend)
-        if not (tex and addon.functions and addon.functions.atlas_unpack) then return end
-        local file, _, _, left, right, top, bottom = addon.functions.atlas_unpack(atlas)
+        if not (tex and addon.functions and addon.functions.UnpackAtlas) then return end
+        local file, _, _, left, right, top, bottom = addon.functions.UnpackAtlas(atlas)
         if not file then return end
         tex:SetTexture(file)
         tex:SetTexCoord(left, right, top, bottom)
@@ -597,7 +597,7 @@ end
 -- LAYOUT
 -- ============================================================================
 
--- pUiBagsBar has no rect of its own; the backpack is its tallest button, so its top is the bar's.
+-- DragonUI_BagButtonBar has no rect of its own; the backpack is its tallest button, so its top is the bar's.
 local function bagsFloor(scale)
     local bags = MainMenuBarBackpackButton
     local top = bags and bags:IsVisible() and bags:GetTop()

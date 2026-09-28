@@ -3,7 +3,7 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- TankadinTV's GearScore, the number every 3.3.5a player already recognises. Ported from the
+-- Mirrikat45's GearScore, the number every 3.3.5a player already recognises. Ported from the
 -- algorithm KPack's GearScoreLite carries; the optional enchant bonus is left out on purpose, so
 -- this reports the plain score rather than that fork's inflated one.
 

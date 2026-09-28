@@ -455,7 +455,7 @@ end
 function ns.UpdateGlyphSwitch()
     if not switch then return end
     local shown = ns.GlyphView() and ns.PlayerGroups() >= 2
-    switch:SetShownReq(shown)
+    switch:SetShownCompat(shown)
     if not shown then return end
     local widths = {}
     for group = 1, 2 do

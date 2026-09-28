@@ -1,7 +1,7 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- =============================================================================
 -- DRAGONUI LOOT WINDOW MODULE
--- Copyright (c) 2026 NeticSoul and DragonUI contributors. Released under the MIT
--- License; see LICENSE at the repository root.
 --
 -- Rewritten from a base module contributed by PentSec, with thanks.
 -- =============================================================================
@@ -429,7 +429,7 @@ local function WheelScroll(self, delta)
     scroller:Show()
 end
 
--- set_atlas would stamp the unflipped rect straight back over a SetTexCoord, so read it by hand.
+-- SetAtlasTexture would stamp the unflipped rect straight back over a SetTexCoord, so read it by hand.
 local function SetFlippedAtlas(texture, name)
     local info = addon.atlasinfo and addon.atlasinfo[name]
     if not info then
@@ -462,7 +462,7 @@ local function BuildPanel(frame)
         SavePosition(frame)
     end)
 
-    NineSliceUtils.ApplyLayout(panel, NineSliceUtils.GetLayout("NoPortraitFrameTemplate"))
+    DragonUI_NineSlice.ApplyLayout(panel, DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate"))
 
     local background = panel:CreateTexture(nil, "BACKGROUND")
     background:SetTexture(textures.background)

@@ -1,141 +1,155 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- The gear under the close button and the display options it opens. The settings themselves live
--- with the feature that owns them, so this file stays presentation-only.
-local COG_SIZE = 20
--- Measured from the close button rather than the frame corner so the pair travels together.
-local COG_X, COG_Y = -6, -3
-
--- The cogwheel the equipment manager's rename button uses, so both gears in the panel are the same
--- icon. (Interface\Buttons\UI-OptionsButton, tried before this, renders nothing on this client.)
-local GEAR = "Interface\\WorldMap\\Gear_64Grey"
+-- The equipment manager's rename button draws this gear too; UI-OptionsButton renders blank here.
+local GEAR_ART = "Interface\\WorldMap\\Gear_64Grey"
+local RESET_POPUP = "DRAGONUI_RESET_STAT_ORDER"
+-- Muted red, never grey: grey is how a disabled entry looks, and this action is live.
+local ACTION_COLOR = "|cffd07070"
 
 local cog
 
-local function setDarkBackground(dark)
-    CP:Config().dark_background = dark and true or false
-    CP.ApplyBodyBackground()
+local function resetStatOrder()
+    local reset = CP.ResetSidebarOrder
+    if reset then reset() end
 end
 
-local function setGreyBackdrop(grey)
-    CP:Config().grey_model_backdrop = grey and true or false
-    if CP.ApplyModelBackdrop then CP.ApplyModelBackdrop() end
-end
-
-local function addTitle(text, entries)
-    entries[#entries + 1] = { text = text, isTitle = true }
-end
-
--- checked is a function: the menu stays open on click, so a captured value would freeze the tick.
-local function addOption(text, checked, onClick, entries)
-    entries[#entries + 1] = { text = text, checked = checked, keepShown = true, func = onClick }
-end
-
--- Never grey: disabled entries are grey, so a greyed action reads as unclickable.
-local ACTION_COLOR = "|cffd07070"
-
-local function addAction(text, colorCode, onClick, entries)
-    entries[#entries + 1] = { text = colorCode .. text .. "|r", func = onClick }
-end
-
-local function setStatShown(key, shown)
-    CP:Config()[key] = shown and true or false
-    if CP.ApplyGearSummaryVisibility then CP.ApplyGearSummaryVisibility() end
-end
-
-StaticPopupDialogs["DRAGONUI_RESET_STAT_ORDER"] = {
+StaticPopupDialogs[RESET_POPUP] = {
     text = addon.L["Restore the stat categories to their default order?"],
-    button1 = YES,
-    button2 = NO,
-    OnAccept = function()
-        if CP.ResetSidebarOrder then CP.ResetSidebarOrder() end
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
+    OnAccept = resetStatOrder,
+    button1 = YES, button2 = NO, timeout = 0, preferredIndex = 3,
+    whileDead = true, hideOnEscape = true,
 }
 
-local function menuEntries(entries)
-    local function isDark() return CP:Config().dark_background and true or false end
-    local function isGrey() return CP:Config().grey_model_backdrop and true or false end
+local PAINTER_OF = {
+    dark_background = "ApplyBodyBackground",
+    grey_model_backdrop = "ApplyModelBackdrop",
+    show_item_level = "ApplyGearSummaryVisibility",
+    show_gear_score = "ApplyGearSummaryVisibility",
+}
 
-    addTitle(addon.L["Background"], entries)
-    addOption(addon.L["Stone"], function() return not isDark() end, function() setDarkBackground(false) end, entries)
-    addOption(addon.L["Dark"], isDark, function() setDarkBackground(true) end, entries)
-
-    -- Only where there is a model to put a backdrop behind.
-    local paperdoll = (CP.ActiveTabName and CP.ActiveTabName()) == "PaperDollFrame"
-    if not paperdoll then return end
-
-    addTitle(addon.L["Model backdrop"], entries)
-    addOption(addon.L["Greyscale"], isGrey, function() setGreyBackdrop(true) end, entries)
-    addOption(addon.L["Full colour"], function() return not isGrey() end, function() setGreyBackdrop(false) end, entries)
-
-    addTitle(addon.L["Gear summary"], entries)
-    addOption(addon.L["Item Level"], function() return CP:Config().show_item_level ~= false end, function()
-        setStatShown("show_item_level", CP:Config().show_item_level == false)
-    end, entries)
-    addOption(addon.L["GearScore"], function() return CP:Config().show_gear_score and true or false end, function()
-        setStatShown("show_gear_score", not CP:Config().show_gear_score)
-    end, entries)
-
-    -- Only where the stats pane exists, which is the same tab that gates this whole block. Set
-    -- apart by colour, not a blank row: every entry costs a fixed 16px whatever is drawn in it.
-    addAction(addon.L["Reset stat order"], ACTION_COLOR, function()
-        StaticPopup_Show("DRAGONUI_RESET_STAT_ORDER")
-    end, entries)
+local function store(key, value)
+    CP:Config()[key] = not not value
+    local repaint = CP[PAINTER_OF[key]]
+    if repaint then repaint() end
 end
 
-local function build()
-    local cf = _G.CharacterFrame
-    if cog or not cf then return end
+local function heading(text)
+    return { text = text, isTitle = true }
+end
 
-    cog = CreateFrame("Button", "DragonUICharacterSettingsCog", cf)
-    cog:SetSize(COG_SIZE, COG_SIZE)
-    -- The nineslice corner and the title band both paint over this corner otherwise, the same way
-    -- the close button has to clear them.
-    cog:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 20)
+local function choice(text, key, side)
+    return {
+        text = text,
+        keepShown = true,
+        checked = function() return (not CP:Config()[key]) == (not side) end,
+        func = function() store(key, side) end,
+    }
+end
 
-    local close = _G.CharacterFrameCloseButton
-    if close then
-        cog:SetPoint("TOPRIGHT", close, "BOTTOMRIGHT", COG_X, COG_Y)
+-- `reads` turns the stored value into a tick, so each key keeps its own meaning for "absent".
+local function toggle(text, key, reads)
+    local function ticked() return reads(CP:Config()[key]) end
+    return {
+        text = text,
+        keepShown = true,
+        checked = ticked,
+        func = function() store(key, not ticked()) end,
+    }
+end
+
+local function absentMeansOn(value)
+    return value ~= false
+end
+
+local function absentMeansOff(value)
+    return value and true or false
+end
+
+local function menuEntries()
+    local L = addon.L
+    local list = {}
+    local function add(entry) list[#list + 1] = entry end
+
+    add(heading(L["Background"]))
+    add(choice(L["Stone"], "dark_background", false))
+    add(choice(L["Dark"], "dark_background", true))
+
+    -- Only the paper doll has a model to back and a sidebar to summarise.
+    local tab = CP.ActiveTabName and CP.ActiveTabName()
+    if tab ~= "PaperDollFrame" then return list end
+
+    add(heading(L["Model backdrop"]))
+    add(choice(L["Greyscale"], "grey_model_backdrop", true))
+    add(choice(L["Full colour"], "grey_model_backdrop", false))
+
+    add(heading(L["Gear summary"]))
+    add(toggle(L["Item Level"], "show_item_level", absentMeansOn))
+    add(toggle(L["GearScore"], "show_gear_score", absentMeansOff))
+
+    add({
+        text = ACTION_COLOR .. L["Reset stat order"] .. "|r",
+        func = function() StaticPopup_Show(RESET_POPUP) end,
+    })
+    return list
+end
+
+local function gearLayer(layer, alpha, blend)
+    local tex = cog:CreateTexture(nil, layer)
+    tex:SetTexture(GEAR_ART)
+    tex:SetAllPoints()
+    tex:SetAlpha(alpha)
+    tex:SetBlendMode(blend or "BLEND")
+    return tex
+end
+
+local function openMenu(self)
+    addon.Menu.Open(self, menuEntries())
+end
+
+-- Neutral wording: the same gear serves every tab DragonUI draws.
+local function showTip(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(addon.L["Panel settings"], 1, 1, 1)
+    GameTooltip:Show()
+end
+
+local function hideTip()
+    GameTooltip:Hide()
+end
+
+local function createCog()
+    local frame = _G.CharacterFrame
+    if cog or not frame then return end
+
+    cog = CreateFrame("Button", "DragonUICharacterSettingsCog", frame)
+    cog:SetSize(20, 20)
+    -- Like the close button, it has to clear the nine-slice corner and the title band.
+    cog:SetFrameLevel(frame:GetFrameLevel() + CP.SUBFRAME_LEVEL + 20)
+
+    local closeButton = _G.CharacterFrameCloseButton
+    if closeButton then
+        cog:SetPoint("TOPRIGHT", closeButton, "BOTTOMRIGHT", -6, -3)
     else
-        cog:SetPoint("TOPRIGHT", cf, "TOPRIGHT", COG_X - 6, COG_Y - 24)
+        cog:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -27)
     end
 
-    local icon = cog:CreateTexture(nil, "ARTWORK")
-    icon:SetTexture(GEAR)
-    icon:SetAllPoints(cog)
-    cog.Icon = icon
+    cog.Icon = gearLayer("ARTWORK", 1)
+    gearLayer("HIGHLIGHT", 0.4, "ADD")
 
-    local hl = cog:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetTexture(GEAR)
-    hl:SetAllPoints(cog)
-    hl:SetBlendMode("ADD")
-    hl:SetAlpha(0.4)
-
-    cog:SetScript("OnClick", function(self)
-        local entries = {}
-        menuEntries(entries)
-        addon.Menu.Open(self, entries)
-    end)
-    cog:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        -- Neutral wording: the same gear serves every tab we draw, so naming one of them is wrong
-        -- on the others and would go stale again as more arrive.
-        GameTooltip:SetText(addon.L["Panel settings"], 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    cog:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    cog:SetScript("OnClick", openMenu)
+    cog:SetScript("OnEnter", showTip)
+    cog:SetScript("OnLeave", hideTip)
 end
 
-CP.SettingsCog = function() return cog end
+function CP.SettingsCog()
+    return cog
+end
 
--- Only on the tabs we draw: on Blizzard's own the menu would have nothing to change.
 function CP.SetSettingsCogShown(visible)
-    if cog then cog:SetShownReq(visible) end
+    if cog then cog:SetShownCompat(visible) end
 end
 
-CP:RegisterBuilder("settingscog", build)
+CP:RegisterBuilder("settingscog", createCog)

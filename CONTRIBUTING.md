@@ -19,7 +19,8 @@ there is no doubt.
     `DragonUI_Options/LICENSES/` if the material lives in `DragonUI_Options/`);
   - an entry in `THIRD_PARTY_NOTICES.md` (and its copy `DragonUI/THIRD_PARTY_NOTICES.md`) naming
     the files that contain it;
-  - one header line in each such file, e.g. `-- Portions adapted from <Project> (MIT).`
+  - one header line in each such file, below its copyright line, e.g.
+    `-- Portions adapted from <Project> (MIT, (c) <year> <holder>); see THIRD_PARTY_NOTICES.`
 - Never copy code or art from a source marked "All Rights Reserved" or from one with no license at
   all. That includes GitHub repositories without a LICENSE file and addons whose download page
   gives no license. You may study such projects for ideas, but write your own code.

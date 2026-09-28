@@ -119,7 +119,7 @@ function ns.RefreshTabs()
     for index = 1, 4 do
         local button = tab(index)
         button:SetText(labels[index])
-        button:SetShownReq(wanted[index])
+        button:SetShownCompat(wanted[index])
         if wanted[index] then
             if CP and CP.ReskinTab then
                 CP.ReskinTab(button)
@@ -149,12 +149,12 @@ function ns.BuildSpecCog(footer)
     renameGear:SetScript("OnClick", function()
         StaticPopup_Show("DUI_TALENT_RENAME_SPEC", NAME_LETTERS, nil, ns.viewGroup)
     end)
-    renameGear:SetShownReq(false)
+    renameGear:SetShownCompat(false)
 end
 
 function ns.UpdateSpecCog()
     if not renameGear then return end
-    renameGear:SetShownReq(ns.inspectUnit == nil and not ns.GlyphView() and not ns.PetView()
+    renameGear:SetShownCompat(ns.inspectUnit == nil and not ns.GlyphView() and not ns.PetView()
         and not ns.edit and ns.PlayerGroups() >= 2)
 end
 

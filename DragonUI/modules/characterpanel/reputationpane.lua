@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -138,91 +140,116 @@ function CP.PopulateReputationDetail(index)
     _G.ReputationDetailMainScreenCheckBox:SetChecked(isWatched and 1 or nil)
 end
 
-local function buildEntry(parent)
-    local row = CreateFrame("Button", nil, parent)
-    row:SetHeight(ROW_H)
+-- Left piece first: CP.BuildRowBar indexes its piece widths in this same order.
+local BAR_FRAME_COORDS = {
+    { 0.765625, 1, 0.046875, 0.28125 },
+    { 0, 0.15234375, 0.390625, 0.625 },
+}
 
-    local bar = CreateFrame("StatusBar", nil, row)
-    bar:SetSize(BAR_W, BAR_H)
-    bar:SetPoint("RIGHT", row, "RIGHT", -4, 0)
-    bar:SetStatusBarTexture(FILL)
-    bar:SetMinMaxValues(0, 1)
-    bar:SetValue(1)
-    -- Pushed to BORDER so the outline below can sit above it without hiding the fill.
-    local fill = bar:GetStatusBarTexture()
-    if fill then fill:SetDrawLayer("BORDER") end
+-- Shared with skillspane.lua, which loads after this file and wears the very same bar.
+function CP.BuildRowBar(row, relativeTo, relativePoint, offsetX, look)
+    local meter = CreateFrame("StatusBar", nil, row)
+    meter:SetMinMaxValues(0, 1)
+    meter:SetValue(1)
+    meter:SetStatusBarTexture(look.fill)
+    local fillTexture = meter:GetStatusBarTexture()
+    if fillTexture then fillTexture:SetDrawLayer("BORDER") end
+    meter:SetSize(look.width, look.height)
+    meter:SetPoint("RIGHT", relativeTo, relativePoint, offsetX, 0)
 
-    local back = bar:CreateTexture(nil, "BACKGROUND")
-    back:SetAllPoints(bar)
-    back:SetTexture(0, 0, 0)
+    local backing = meter:CreateTexture(nil, "BACKGROUND")
+    backing:SetTexture(0, 0, 0)
+    backing:SetAllPoints(meter)
 
-    -- Retail's own two-piece frame, and its texcoords: the sheet is a 3.3.5a path the client already
-    -- ships, so this is the real art rather than the hand-drawn outline it replaces.
-    local left = bar:CreateTexture(nil, "OVERLAY")
-    left:SetTexture(FRAME_TEX)
-    left:SetSize(FRAME_LEFT_W, FRAME_H)
-    left:SetPoint("LEFT", bar, "LEFT", 0, 0)
-    left:SetTexCoord(0.765625, 1, 0.046875, 0.28125)
+    local widths = { look.capWidth, look.width - look.capWidth }
+    local hangFrom, hangPoint = meter, "LEFT"
+    for i, coords in ipairs(BAR_FRAME_COORDS) do
+        local piece = meter:CreateTexture(nil, "OVERLAY")
+        piece:SetTexture(look.frame)
+        piece:SetTexCoord(unpack(coords))
+        piece:SetSize(widths[i], look.frameHeight)
+        piece:SetPoint("LEFT", hangFrom, hangPoint, 0, 0)
+        hangFrom, hangPoint = piece, "RIGHT"
+    end
 
-    local right = bar:CreateTexture(nil, "OVERLAY")
-    right:SetTexture(FRAME_TEX)
-    right:SetSize(BAR_W - FRAME_LEFT_W, FRAME_H)
-    right:SetPoint("LEFT", left, "RIGHT", 0, 0)
-    right:SetTexCoord(0, 0.15234375, 0.390625, 0.625)
+    -- Created after the frame pieces so it draws over them in the shared OVERLAY layer.
+    local caption = meter:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    caption:SetPoint("CENTER", meter, "CENTER", 0, 0)
+    meter.Caption = caption
+    return meter
+end
 
-    bar.Text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    bar.Text:SetPoint("CENTER", bar, "CENTER", 0, 0)
-    row.Bar = bar
+local REP_BAR_LOOK = {
+    width = BAR_W,
+    height = BAR_H,
+    fill = FILL,
+    frame = FRAME_TEX,
+    capWidth = FRAME_LEFT_W,
+    frameHeight = FRAME_H,
+}
 
-    local name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    name:SetPoint("LEFT", row, "LEFT", CHILD_INDENT, 0)
-    -- Bounded by the bar so a long faction name truncates instead of running under it.
-    name:SetPoint("RIGHT", bar, "LEFT", -8, 0)
-    name:SetJustifyH("LEFT")
-    row.Text = name
+local function showProgress(self)
+    self.Meter.Caption:SetText(self._progress or "")
+end
 
-    local hl = row:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetTexture(1, 1, 1)
-    hl:SetAlpha(0.1)
-    hl:SetAllPoints(row)
+local function showStanding(self)
+    self.Meter.Caption:SetText(self._standing or "")
+end
 
-    -- Blizzard's ReputationBar_OnClick gates on a hasRep that is only true for headers carrying a
-    -- bar, which left every ordinary faction inert. Every row here is already a faction.
-    row:RegisterForClicks("LeftButtonUp")
-    row:SetScript("OnClick", function(self)
-        local detail = _G.ReputationDetailFrame
-        if not detail or not self._index then return end
-        if detail:IsShown() and GetSelectedFaction() == self._index then
-            detail:Hide()
-        else
-            SetSelectedFaction(self._index)
-            detail:Show()
-            CP.PopulateReputationDetail(self._index)
-        end
-    end)
-    -- Hovering trades the standing label for the raw numbers, which is the only place they appear.
-    row:SetScript("OnEnter", function(self) self.Bar.Text:SetText(self.Bar._progress or "") end)
-    row:SetScript("OnLeave", function(self) self.Bar.Text:SetText(self.Bar._standing or "") end)
-    return row
+local function openFactionDetail(self)
+    local detail, faction = _G.ReputationDetailFrame, self._factionIndex
+    if not (detail and faction) then return end
+
+    if detail:IsShown() and GetSelectedFaction() == faction then
+        detail:Hide()
+        return
+    end
+    -- Selection before Show feeds the OnShow hook; the explicit fill covers an already-open frame.
+    SetSelectedFaction(faction)
+    detail:Show()
+    CP.PopulateReputationDetail(faction)
 end
 
 local function updateEntry(row, info)
-    row.Text:SetText(info.name or "")
-    row._index, row._hasRep = info.index, info.hasRep
+    local base = info.barMin or 0
+    local span, earned = (info.barMax or 0) - base, (info.barValue or 0) - base
+    if span <= 0 then span, earned = 1, 0 end
+    local meter = row.Meter
+    meter:SetMinMaxValues(0, span)
+    meter:SetValue(earned)
 
-    local bar = row.Bar
-    local max = (info.barMax or 0) - (info.barMin or 0)
-    local value = (info.barValue or 0) - (info.barMin or 0)
-    if max <= 0 then max, value = 1, 0 end
-    bar:SetMinMaxValues(0, max)
-    bar:SetValue(value)
+    row.Title:SetText(info.name or "")
+    row._factionIndex = info.index
 
-    local color = FACTION_BAR_COLORS and FACTION_BAR_COLORS[info.standingID or 4]
-    if color then bar:SetStatusBarColor(color.r, color.g, color.b) end
+    local standing = info.standingID or 4
+    local tint = FACTION_BAR_COLORS and FACTION_BAR_COLORS[standing]
+    if tint then meter:SetStatusBarColor(tint.r, tint.g, tint.b) end
 
-    bar._standing = _G["FACTION_STANDING_LABEL" .. (info.standingID or 4)] or ""
-    bar._progress = string.format("%d / %d", value, max)
-    bar.Text:SetText(bar._standing)
+    row._standing = _G["FACTION_STANDING_LABEL" .. standing] or ""
+    meter.Caption:SetText(row._standing)
+    row._progress = string.format("%d / %d", earned, span)
+end
+
+local function buildEntry(parent)
+    local line = CreateFrame("Button", nil, parent)
+    line:RegisterForClicks("LeftButtonUp")
+    line:SetScript("OnClick", openFactionDetail)
+    line:SetScript("OnEnter", showProgress)
+    line:SetScript("OnLeave", showStanding)
+    line:SetHeight(ROW_H)
+    line.Meter = CP.BuildRowBar(line, line, "RIGHT", -4, REP_BAR_LOOK)
+
+    local title = line:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    title:SetJustifyH("LEFT")
+    title:SetPoint("RIGHT", line.Meter, "LEFT", -8, 0)
+    title:SetPoint("LEFT", line, "LEFT", CHILD_INDENT, 0)
+    line.Title = title
+
+    local wash = line:CreateTexture(nil, "HIGHLIGHT")
+    wash:SetTexture(1, 1, 1)
+    wash:SetAlpha(0.1)
+    wash:SetAllPoints(line)
+    return line
 end
 
 -- ReputationSubHeaderTemplate inherits the ENTRY template, not the header one: a nested header is
@@ -269,8 +296,8 @@ local function updateSubHeader(row, info)
     row._index, row._collapsed = info.index, info.isCollapsed
     row.Text:SetText(info.name or "")
     local state = info.isCollapsed and "closed" or "open"
-    row.Toggle:GetNormalTexture():set_atlas("campaign_headericon_" .. state)
-    row.Toggle:GetPushedTexture():set_atlas("campaign_headericon_" .. state .. "pressed")
+    row.Toggle:GetNormalTexture():SetAtlasTexture("campaign_headericon_" .. state)
+    row.Toggle:GetPushedTexture():SetAtlasTexture("campaign_headericon_" .. state .. "pressed")
 end
 
 repaint = function()

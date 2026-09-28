@@ -1,9 +1,11 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- Adapted from Blizzard's retail FrameXML NineSlice system for DragonUI.
+
 local addon = select(2, ...)
 
 local ipairs, error = ipairs, error
 
-local atlasShim = addon.c_texture
+local atlasShim = addon.AtlasShim
 
 -- Kept in apply order: corners first, since edges and the centre anchor to them.
 local pieceRules = {}
@@ -208,21 +210,21 @@ local function dressPiece(tex, rule, spec, layout, textureKit)
 			top, bottom = 1, 0
 		end
 	end
-	-- set_atlas replaces these texcoords; they only survive while the D3D9Ex bypass skips it.
+	-- SetAtlasTexture replaces these texcoords; they only survive while the D3D9Ex bypass skips it.
 	tex:SetSubTexCoord(left, right, top, bottom)
 
 	local atlasName = atlasShim.GetFinalNameFromTextureKit(spec.atlas, textureKit)
 	local info = atlasShim.GetAtlasInfo(atlasName)
 	local across, down = info.tilesHorizontally, info.tilesVertically
-	-- Set here as well because the D3D9Ex bypass turns set_atlas into a no-op for action-bar art.
+	-- Set here as well because the D3D9Ex bypass turns SetAtlasTexture into a no-op for action-bar art.
 	tex:SetHorizTile(across or false)
 	tex:SetVertTile(down or false)
-	tex:set_atlas(atlasName, true)
+	tex:SetAtlasTexture(atlasName, true)
 end
 
 local function applyLayout(container, layout, textureKit)
 	if not layout then
-		error("NineSliceUtils.ApplyLayout: layout is nil", 2)
+		error("DragonUI_NineSlice.ApplyLayout: layout is nil", 2)
 	end
 	local mode = threeSliceMode(container)
 	for _, rule in ipairs(pieceRules) do
@@ -238,7 +240,7 @@ local function applyLayout(container, layout, textureKit)
 	end
 end
 
-_G.NineSliceUtils = {
+_G.DragonUI_NineSlice = {
 	ApplyLayout = applyLayout,
 	GetLayout = getLayout,
 }
@@ -247,7 +249,7 @@ local function inheritedAttribute(frame, key)
 	return frame:GetAttribute(key) or frame:GetParent():GetAttribute(key)
 end
 
-_G.NineSlicePanelUiMixin = {
+_G.DragonUI_NineSlicePanelMixin = {
 	GetFrameLayoutType = function(self)
 		return inheritedAttribute(self, "layoutType")
 	end,

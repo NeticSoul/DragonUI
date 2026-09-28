@@ -1,3 +1,6 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from RetailUI (MIT, (c) 2024 Dmitriy); see THIRD_PARTY_NOTICES.
+
 -- SUPERSEDED, KEPT AS A BACKUP. Not listed in modules.xml, so nothing here loads or runs.
 -- Replaced by modules/objectivetracker.lua, which draws the tracker itself instead of moving
 -- Blizzard's WatchFrame. Moving it made WatchFrame_Update read our geometry (WatchFrame.lua:365),
@@ -173,7 +176,7 @@ end
 -- =============================================================================
 -- QUEST TRACKER STYLING (NON-INTRUSIVE APPROACH)
 -- =============================================================================
--- Re-apply after Collapse/Expand SetTexCoord; skip set_atlas (SetWidth can resize the button).
+-- Re-apply after Collapse/Expand SetTexCoord; skip SetAtlasTexture (SetWidth can resize the button).
 local function ApplyCollapseExpandButtonArt()
     local btn = WatchFrameCollapseExpandButton
     if not btn then return end
@@ -183,8 +186,8 @@ local function ApplyCollapseExpandButtonArt()
     local pushedAtlas = collapsed and 'QuestTracker-Expand-Pressed' or 'QuestTracker-Collapse-Pressed'
 
     local function skinTex(tex, atlas)
-        if not tex or not addon.functions.atlas_unpack then return end
-        local path, _, _, left, right, top, bottom = addon.functions.atlas_unpack(atlas)
+        if not tex or not addon.functions.UnpackAtlas then return end
+        local path, _, _, left, right, top, bottom = addon.functions.UnpackAtlas(atlas)
         if not path then return end
         tex:SetTexture(path)
         tex:SetTexCoord(left, right, top, bottom)
@@ -224,7 +227,7 @@ local function ApplyQuestTrackerStyling()
     watchFrame.background = watchFrame.background or watchFrame:CreateTexture(nil, 'BACKGROUND')
     local background = watchFrame.background
 
-    local success, _ = pcall(background.set_atlas, background, 'QuestTracker-Header', true)
+    local success, _ = pcall(background.SetAtlasTexture, background, 'QuestTracker-Header', true)
     if not success then
         return
     end
@@ -911,15 +914,15 @@ local function OnQuestLogUpdate()
 end
 
 -- Initialize module
-addon.package:RegisterEvents(function()
+addon.package:Subscribe(function()
     if IsModuleEnabled() then
         QuestTrackerModule:Initialize()
     end
 end, 'PLAYER_LOGIN')
 
 -- Register PLAYER_ENTERING_WORLD 
-addon.package:RegisterEvents(OnPlayerEnteringWorld, 'PLAYER_ENTERING_WORLD')
+addon.package:Subscribe(OnPlayerEnteringWorld, 'PLAYER_ENTERING_WORLD')
 
 -- Register quest log update event
-addon.package:RegisterEvents(OnQuestLogUpdate, 'QUEST_LOG_UPDATE')
+addon.package:Subscribe(OnQuestLogUpdate, 'QUEST_LOG_UPDATE')
 

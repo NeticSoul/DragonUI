@@ -1,127 +1,122 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
+-- Retail's slot metal from Char-Paperdoll-Parts: 3.3.5a slots are a bare ItemButtonTemplate.
 local PARTS = addon._dir .. "CharacterPanel\\charpaperdollparts"
 
--- Slices of Char-Paperdoll-Parts per retail's PaperDollItemSlotButton templates: 3.3.5a's slot
--- buttons inherit bare ItemButtonTemplate, so the metal frame simply does not exist on this client.
-local LEFT_SLICE = { w = 49, h = 44, 0.20703125, 0.39843750, 0.59375, 0.93750 }
-local RIGHT_SLICE = { w = 50, h = 44, 0.00390625, 0.19921875, 0.59375, 0.93750 }
-local BOTTOM_SLICE = { w = 42, h = 53, 0.67187500, 0.83593750, 0.00781, 0.42188 }
-local GAP_LEFT = { w = 6, h = 54, 0.70703125, 0.73046875, 0.43750, 0.85938 }
-local GAP_RIGHT = { w = 7, h = 54, 0.67187500, 0.69921875, 0.43750, 0.85938 }
-
-local LEFT_COLUMN = {
-    "CharacterHeadSlot", "CharacterNeckSlot", "CharacterShoulderSlot", "CharacterBackSlot",
-    "CharacterChestSlot", "CharacterShirtSlot", "CharacterTabardSlot", "CharacterWristSlot",
+-- Width, height, then left/right/top/bottom texcoords; some are rounded on purpose, keep them.
+local SLICE = {
+    left = { 49, 44, 0.20703125, 0.3984375, 0.59375, 0.9375 },
+    right = { 50, 44, 0.00390625, 0.19921875, 0.59375, 0.9375 },
+    bottom = { 42, 53, 0.671875, 0.8359375, 0.00781, 0.42188 },
+    gapLeft = { 6, 54, 0.70703125, 0.73046875, 0.4375, 0.85938 },
+    gapRight = { 7, 54, 0.671875, 0.69921875, 0.4375, 0.85938 },
 }
-local RIGHT_COLUMN = {
-    "CharacterHandsSlot", "CharacterWaistSlot", "CharacterLegsSlot", "CharacterFeetSlot",
-    "CharacterFinger0Slot", "CharacterFinger1Slot", "CharacterTrinket0Slot", "CharacterTrinket1Slot",
+
+local function slotNames(...)
+    local names = {}
+    for i = 1, select("#", ...) do
+        names[i] = "Character" .. select(i, ...) .. "Slot"
+    end
+    return names
+end
+
+CP.LEFT_COLUMN = slotNames("Head", "Neck", "Shoulder", "Back", "Chest", "Shirt", "Tabard", "Wrist")
+CP.RIGHT_COLUMN = slotNames("Hands", "Waist", "Legs", "Feet", "Finger0", "Finger1", "Trinket0", "Trinket1")
+CP.WEAPON_ROW = slotNames("MainHand", "SecondaryHand", "Ranged")
+
+local GROUPS = {
+    { list = "LEFT_COLUMN", slice = SLICE.left, point = "TOPLEFT", x = -4, y = 0 },
+    { list = "RIGHT_COLUMN", slice = SLICE.right, point = "TOPRIGHT", x = 4, y = 0 },
+    { list = "WEAPON_ROW", slice = SLICE.bottom, point = "TOPLEFT", x = -4, y = 8 },
 }
-local WEAPON_ROW = { "CharacterMainHandSlot", "CharacterSecondaryHandSlot", "CharacterRangedSlot" }
 
-local function decorate(slotName, slice, point, x, y)
-    local slot = _G[slotName]
-    if not slot or slot._duiSlotFrame then return end
+-- Only each chain's head moves; the rest of a column follows it through Blizzard's own anchors.
+local HEADS = {
+    { "CharacterHeadSlot", "TOPLEFT", "TOPLEFT", 4, -2 },
+    { "CharacterHandsSlot", "TOPRIGHT", "TOPRIGHT", -4, -2 },
+    -- Three 37px weapons plus two 5px gaps are 121 wide; Ammo hangs off the right of that.
+    { "CharacterMainHandSlot", "BOTTOMLEFT", "BOTTOM", -60, 20 },
+}
 
-    local tex = slot:CreateTexture(nil, "BACKGROUND", nil, -1)
-    tex:SetTexture(PARTS)
-    tex:SetTexCoord(slice[1], slice[2], slice[3], slice[4])
-    tex:SetSize(slice.w, slice.h)
-    tex:SetPoint(point, slot, point, x, y)
-    slot._duiSlotFrame = tex
+-- The sidebar replaces these readouts; at the panel's 338 width they would sit on the model.
+local STAT_FRAMES = { "CharacterAttributesFrame", "CharacterResistanceFrame" }
+
+local GAPS = {
+    { "CharacterMainHandSlot", SLICE.gapLeft, "TOPRIGHT", "TOPLEFT" },
+    { "CharacterRangedSlot", SLICE.gapRight, "TOPLEFT", "TOPRIGHT" },
+}
+
+local function cutPiece(slot, slice, point, anchor, anchorPoint, x, y)
+    local piece = slot:CreateTexture(nil, "BACKGROUND", nil, -1)
+    piece:SetSize(slice[1], slice[2])
+    piece:SetTexture(PARTS)
+    piece:SetTexCoord(unpack(slice, 3))
+    piece:SetPoint(point, anchor, anchorPoint, x, y)
+    return piece
 end
 
-local function decorateAll()
-    for _, name in ipairs(LEFT_COLUMN) do decorate(name, LEFT_SLICE, "TOPLEFT", -4, 0) end
-    for _, name in ipairs(RIGHT_COLUMN) do decorate(name, RIGHT_SLICE, "TOPRIGHT", 4, 0) end
-    for _, name in ipairs(WEAPON_ROW) do decorate(name, BOTTOM_SLICE, "TOPLEFT", -4, 8) end
-end
-
-local function gapFiller(slot, slice, point, relPoint)
-    if not slot or not slot._duiSlotFrame or slot._duiGap then return end
-    local tex = slot:CreateTexture(nil, "BACKGROUND", nil, -1)
-    tex:SetTexture(PARTS)
-    tex:SetTexCoord(slice[1], slice[2], slice[3], slice[4])
-    tex:SetSize(slice.w, slice.h)
-    tex:SetPoint(point, slot._duiSlotFrame, relPoint, 0, 0)
-    slot._duiGap = tex
-end
-
--- Blizzard anchors the columns to PaperDollFrame with offsets built for a 384-wide frame. Re-pin
--- both to the Inset; the rest of each column chains off the first slot, so only the heads move.
-local function anchorColumns()
-    local cf = _G.CharacterFrame
-    if not cf or not cf.Inset then return end
-    local inset = cf.Inset
-
-    local head = _G.CharacterHeadSlot
-    if head and not head._duiAnchored then
-        head._duiAnchored = true
-        head:ClearAllPoints()
-        head:SetPoint("TOPLEFT", inset, "TOPLEFT", 4, -2)
-    end
-
-    local hands = _G.CharacterHandsSlot
-    if hands and not hands._duiAnchored then
-        hands._duiAnchored = true
-        hands:ClearAllPoints()
-        hands:SetPoint("TOPRIGHT", inset, "TOPRIGHT", -4, -2)
-    end
-
-    -- Only the three weapons are centred (37+5+37+5+37 = 121): ammo hangs off the right, hidden for relic classes.
-    local mh = _G.CharacterMainHandSlot
-    if mh and not mh._duiAnchored then
-        mh._duiAnchored = true
-        mh:ClearAllPoints()
-        mh:SetPoint("BOTTOMLEFT", inset, "BOTTOM", -60, 20)
-    end
-
-    gapFiller(mh, GAP_LEFT, "TOPRIGHT", "TOPLEFT")
-    gapFiller(_G.CharacterRangedSlot, GAP_RIGHT, "TOPLEFT", "TOPRIGHT")
-end
-
--- Wrath's stat readouts are replaced wholesale by the sidebar, and at 338 wide they would
--- otherwise sit on top of the model.
-local VANILLA_STAT_FRAMES = { "CharacterAttributesFrame", "CharacterResistanceFrame" }
-
-local function hideVanillaStats()
-    for _, name in ipairs(VANILLA_STAT_FRAMES) do
-        local f = _G[name]
-        if f and not f._duiStatsHidden then
-            f._duiStatsHidden = true
-            f:Hide()
-            f:HookScript("OnShow", function(self) self:Hide() end)
+local function eachGroupSlot(fn)
+    for _, group in ipairs(GROUPS) do
+        for _, name in ipairs(CP[group.list]) do
+            if _G[name] then fn(_G[name], group) end
         end
     end
 end
 
--- Model and slot buttons are siblings at the same frame level, so draw order falls to creation
--- order -- and a zoomed-in model paints straight over the weapon row beneath it.
-local function raiseSlots()
-    local model = _G.CharacterModelFrame
-    if not model then return end
+local function dressSlot(slot, group)
+    slot._duiSlotFrame = slot._duiSlotFrame
+        or cutPiece(slot, group.slice, group.point, slot, group.point, group.x, group.y)
+end
+
+local function fillWeaponGaps()
+    for _, gap in ipairs(GAPS) do
+        local slot = _G[gap[1]]
+        local metal = slot and slot._duiSlotFrame
+        if metal and not slot._duiGap then
+            slot._duiGap = cutPiece(slot, gap[2], gap[3], metal, gap[4], 0, 0)
+        end
+    end
+end
+
+local function pinColumnHeads(inset)
+    for _, head in ipairs(HEADS) do
+        local slot = _G[head[1]]
+        if slot and not slot._duiAnchored then
+            slot._duiAnchored = true
+            slot:ClearAllPoints()
+            slot:SetPoint(head[2], inset, head[3], head[4], head[5])
+        end
+    end
+    fillWeaponGaps()
+end
+
+local function hideAgain(self)
+    self:Hide()
+end
+
+local function retireStatFrame(stats)
+    if stats and not stats._duiStatsHidden then
+        stats._duiStatsHidden = true
+        stats:Hide()
+        stats:HookScript("OnShow", hideAgain)
+    end
+end
+
+-- Model and slots are siblings at one level, so a zoomed model would paint over the weapon row.
+local function raiseOverModel(model)
     local level = model:GetFrameLevel() + 2
-
-    for _, group in ipairs({ CP.LEFT_COLUMN, CP.RIGHT_COLUMN, CP.WEAPON_ROW }) do
-        for _, name in ipairs(group) do
-            local slot = _G[name]
-            if slot then slot:SetFrameLevel(level) end
-        end
-    end
-    if _G.CharacterAmmoSlot then _G.CharacterAmmoSlot:SetFrameLevel(level) end
+    eachGroupSlot(function(slot) slot:SetFrameLevel(level) end)
+    local ammo = _G.CharacterAmmoSlot
+    if ammo then ammo:SetFrameLevel(level) end
 end
 
-local function build()
-    decorateAll()
-    anchorColumns()
-    hideVanillaStats()
-    raiseSlots()
-end
-
-CP.LEFT_COLUMN = LEFT_COLUMN
-CP.RIGHT_COLUMN = RIGHT_COLUMN
-CP.WEAPON_ROW = WEAPON_ROW
-
-CP:RegisterBuilder("slots", build)
+CP:RegisterBuilder("slots", function()
+    eachGroupSlot(dressSlot)
+    local panel = _G.CharacterFrame
+    if panel and panel.Inset then pinColumnHeads(panel.Inset) end
+    for _, name in ipairs(STAT_FRAMES) do retireStatFrame(_G[name]) end
+    if _G.CharacterModelFrame then raiseOverModel(_G.CharacterModelFrame) end
+end)

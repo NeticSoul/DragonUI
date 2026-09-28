@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Atlas Definitions (Legacy)
 -- Texture atlas lookup table mapping sprite names to texture coordinates.
@@ -806,7 +808,7 @@ local function resolveKitName(pattern, kits)
 end
 
 -- Private stand-in for retail's C_Texture; a global one may belong to another backport addon.
-addon.c_texture = {
+addon.AtlasShim = {
 	GetAtlasInfo = describeAtlas,
 	GetFinalNameFromTextureKit = resolveKitName,
 }

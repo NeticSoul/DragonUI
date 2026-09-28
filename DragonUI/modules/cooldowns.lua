@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Cooldown Text Module
 -- Displays countdown timers on action buttons via metatable hooking.
@@ -24,7 +26,7 @@ if addon.RegisterModule then
 end
 
 -- Create a table within the main addon object to hold our functions
-addon.cooldownMixin = {}
+addon.CooldownText = {}
 
 -- Tenths are only drawn under 5s; above that the text changes once a second.
 local TICK_FAST, TICK_SLOW = 0.05, 0.25
@@ -75,7 +77,7 @@ local function StopCountdown(cooldown, blankText)
     end
 end
 
-function addon.cooldownMixin:update_cooldown(elapsed)
+function addon.CooldownText:UpdateText(elapsed)
     if not self:GetParent().action or not self.remain then
         return
     end
@@ -101,17 +103,17 @@ function addon.cooldownMixin:update_cooldown(elapsed)
     PaintCountdown(self.text, StepFor(secondsLeft), secondsLeft, settings.color)
 end
 
-function addon.cooldownMixin:create_string()
+function addon.CooldownText:CreateText()
     -- The template guarantees a font even when the SetFont path below fails on this locale.
     local label = self:CreateFontString(nil, 'OVERLAY', 'GameFontNormalLarge')
     label:SetFont(addon.Fonts.ACTIONBAR, 16, 'OUTLINE')
     label:SetPoint('CENTER', self, 'CENTER')
     self.text = label
-    self:SetScript('OnUpdate', addon.cooldownMixin.update_cooldown)
+    self:SetScript('OnUpdate', addon.CooldownText.UpdateText)
     return label
 end
 
-function addon.cooldownMixin:set_cooldown(start, duration)
+function addon.CooldownText:OnSetCooldown(start, duration)
     -- Only process action button cooldowns, not buff/debuff cooldowns.
     -- The metatable hook fires for ALL CooldownFrame:SetCooldown calls.
     -- Buff frames lack .action, and processing them causes unnecessary
@@ -159,10 +161,10 @@ function addon.cooldownMixin:set_cooldown(start, duration)
 
     self.remain = start + duration
     self.duiNextTick = 0
-    local label = self.text or addon.cooldownMixin.create_string(self)
+    local label = self.text or addon.CooldownText.CreateText(self)
     local font = db.font or NO_FONT
     label:SetFont(font[1] or addon.Fonts.ACTIONBAR, db.font_size or font[2] or 16, font[3] or 'OUTLINE')
-    -- No ClearAllPoints: the DB point is layered on top of create_string's CENTER anchor.
+    -- No ClearAllPoints: the DB point is layered on top of CreateText's CENTER anchor.
     label:SetPoint(unpack(db.position or DEFAULT_TEXT_ANCHOR))
     label:Show()
 end
@@ -201,7 +203,7 @@ function addon.RefreshCooldowns()
                     local start, duration = cooldown:GetCooldown()
                     if start and start > 0 then
                         -- Always reapply cooldown to update settings
-                        addon.cooldownMixin.set_cooldown(cooldown, start, duration)
+                        addon.CooldownText.OnSetCooldown(cooldown, start, duration)
                     elseif moduleDb.enabled and cooldown.text then
                         -- If cooldowns are enabled but no active cooldown, ensure text is hidden
                         cooldown.text:Hide()
@@ -228,7 +230,7 @@ function addon.InitializeCooldowns()
     local widgetMeta = getmetatable(_G.ActionButton1Cooldown)
     local cooldownMethods = widgetMeta and widgetMeta.__index
     if type(cooldownMethods) == 'table' and cooldownMethods.SetCooldown then
-        hooksecurefunc(cooldownMethods, 'SetCooldown', addon.cooldownMixin.set_cooldown)
+        hooksecurefunc(cooldownMethods, 'SetCooldown', addon.CooldownText.OnSetCooldown)
         isHooked = true
     end
 

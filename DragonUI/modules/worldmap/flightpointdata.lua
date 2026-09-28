@@ -1,6 +1,5 @@
--- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
-
 -- GENERATED from TaxiNodes.dbc and WorldMapArea.dbc. Do not edit.
+-- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
 
 local addon = select(2, ...)
 

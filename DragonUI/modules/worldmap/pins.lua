@@ -318,13 +318,13 @@ local function buildFilterButton()
 
     -- Blizzard's tracking button: a 54px ring hung off the top-left corner of a 32px button.
     local border = button:CreateTexture(nil, "OVERLAY")
-    border:set_atlas("map-tracking-border", true)
+    border:SetAtlasTexture("map-tracking-border", true)
     border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
 
     local function face(setter, getter, atlas)
         button[setter](button, ROCK)
         local tex = button[getter](button)
-        tex:set_atlas(atlas)
+        tex:SetAtlasTexture(atlas)
         tex:ClearAllPoints()
         tex:SetSize(FILTER_ICON, FILTER_ICON)
         tex:SetPoint("CENTER", button, "CENTER", FILTER_ICON_X, FILTER_ICON_Y)
@@ -335,7 +335,7 @@ local function buildFilterButton()
     -- MiniMapTracking's highlight fills the button unoffset; only the icon needs the nudge.
     button:SetHighlightTexture(ROCK)
     local highlight = button:GetHighlightTexture()
-    highlight:set_atlas("map-zoom-highlight")
+    highlight:SetAtlasTexture("map-zoom-highlight")
     highlight:SetBlendMode("ADD")
     highlight:ClearAllPoints()
     highlight:SetAllPoints(button)
@@ -361,7 +361,7 @@ end
 -- Where Blizzard's "show quest objectives" box sat before it moved into the filter menu.
 local function buildCanvasShadow()
     objectivesPlate = WM.border:CreateTexture(nil, "ARTWORK")
-    objectivesPlate:set_atlas("mapcornershadow-left", true)
+    objectivesPlate:SetAtlasTexture("mapcornershadow-left", true)
     objectivesPlate:SetPoint("BOTTOMLEFT", WM.spacer, "BOTTOMLEFT", 0, -(WM.canvasH or 465))
 end
 

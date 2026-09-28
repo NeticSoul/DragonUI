@@ -259,8 +259,8 @@ StaticPopupDialogs["DRAGONUI_SAVE_EQUIPMENT_SET"] = {
 -- true over a child) instead of hiding blind.
 local function updateRowActions(row)
     local wanted = row.setName ~= nil and row:IsMouseOver()
-    row.Edit:SetShownReq(wanted)
-    row.Delete:SetShownReq(wanted)
+    row.Edit:SetShownCompat(wanted)
+    row.Delete:SetShownCompat(wanted)
 end
 
 local function buildActionButton(row, texture, tooltip, warning, onClick)
@@ -321,7 +321,7 @@ function CP.BuildEquipmentRow(parent, index)
 
     -- The vanilla UI-CheckBox-Check has uneven padding inside its art; the atlas glyph is cut tight.
     local check = row:CreateTexture(nil, "OVERLAY")
-    check:set_atlas("common-icon-checkmark")
+    check:SetAtlasTexture("common-icon-checkmark")
     check:SetSize(CHECK_SIZE, CHECK_SIZE)
     check:SetPoint("RIGHT", row, "RIGHT", -8, 0)
     check:Hide()
@@ -417,8 +417,8 @@ function refresh()
             row.Text:SetTextColor(NORMAL.r, NORMAL.g, NORMAL.b)
         end
 
-        row.Check:SetShownReq(isEquipped(info.name))
-        row.Selected:SetShownReq(info.name == selectedName)
+        row.Check:SetShownCompat(isEquipped(info.name))
+        row.Selected:SetShownCompat(info.name == selectedName)
         updateRowActions(row)
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -(i - 1) * ROW_H)
@@ -430,7 +430,7 @@ function refresh()
     newRow:ClearAllPoints()
     newRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -#sets * ROW_H)
     newRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -#sets * ROW_H)
-    newRow:SetShownReq(#sets < maxSets())
+    newRow:SetShownCompat(#sets < maxSets())
 
     scrollChild:SetHeight(math.max(1, (#sets + 1) * ROW_H))
     if CP.SyncScrollBarVisibility then CP.SyncScrollBarVisibility(scroll) end

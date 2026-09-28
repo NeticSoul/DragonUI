@@ -74,8 +74,8 @@ function ns.RefreshOrbState()
     if not art then return end
     local on = pvpOn()
     local suffix = on and "" or "-disabled"
-    swords:set_atlas("pvptalents-warmode-swords" .. suffix, true)
-    ring:set_atlas("talents-warmode-ring" .. suffix)
+    swords:SetAtlasTexture("pvptalents-warmode-swords" .. suffix, true)
+    ring:SetAtlasTexture("talents-warmode-ring" .. suffix)
     ring:SetSize(94, 100)
     if on then ignite() else douse() end
 end
@@ -160,7 +160,7 @@ end
 function ns.ShowOrb(shown)
     if not art then return end
     local was = art:IsShown()
-    art:SetShownReq(shown)
+    art:SetShownCompat(shown)
     if shown and not was and ns.win:IsShown() then ns.RefreshOrbState() end
 end
 
@@ -178,13 +178,13 @@ function ns.BuildOrb(win, level)
     art.wait = 0
 
     local indent = art:CreateTexture(nil, "BACKGROUND")
-    indent:set_atlas("talents-warmode-indent", true)
+    indent:SetAtlasTexture("talents-warmode-indent", true)
     indent:SetPoint("BOTTOM", art, "BOTTOM", 0, 6)
     swords = art:CreateTexture(nil, "BORDER", nil, 0)
-    swords:set_atlas("pvptalents-warmode-swords", true)
+    swords:SetAtlasTexture("pvptalents-warmode-swords", true)
     swords:SetPoint("BOTTOM", art, "BOTTOM", 0, 39)
     local orb = art:CreateTexture(nil, "BORDER", nil, 1)
-    orb:set_atlas("pvptalents-warmode-orb", true)
+    orb:SetAtlasTexture("pvptalents-warmode-orb", true)
     orb:SetPoint("BOTTOM", art, "BOTTOM", 0, 14)
     orb:SetAlpha(0.4)
 
@@ -207,11 +207,11 @@ function ns.BuildOrb(win, level)
     holder:SetFrameLevel(level + 2)
     holder:SetAllPoints(art)
     ring = holder:CreateTexture(nil, "ARTWORK")
-    ring:set_atlas("talents-warmode-ring")
+    ring:SetAtlasTexture("talents-warmode-ring")
     ring:SetSize(94, 100)
     ring:SetPoint("BOTTOM", art, "BOTTOM", 0, 5)
     glow = holder:CreateTexture(nil, "OVERLAY")
-    glow:set_atlas("pvptalents-warmode-glow", true)
+    glow:SetAtlasTexture("pvptalents-warmode-glow", true)
     glow:SetPoint("CENTER", orb, "CENTER", 0, 0)
     glow:SetBlendMode("ADD")
     glow:SetAlpha(0)

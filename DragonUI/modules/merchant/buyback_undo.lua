@@ -22,7 +22,7 @@ function parts.buildUndoArrow()
     overlay:SetFrameLevel(slot:GetFrameLevel() + 2)
 
     local arrow = overlay:CreateTexture(nil, "ARTWORK")
-    arrow:set_atlas("common-icon-undo", false)
+    arrow:SetAtlasTexture("common-icon-undo", false)
     arrow:SetSize(20, 20)
     arrow:SetPoint("CENTER", overlay, "CENTER", 0, -1)
 

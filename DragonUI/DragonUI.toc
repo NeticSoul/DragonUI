@@ -5,7 +5,7 @@
 ## Author: NeticSoul
 ## SavedVariables: DragonUIDB
 ## OptionalDeps: Blizzard_TimeManager
-## X-License: MIT for project-authored code; bundled dependencies retain their own licenses
+## X-License: MIT for project-authored code; Blizzard art, fonts and bundled libraries keep their own terms (see THIRD_PARTY_NOTICES)
 
 # Core libraries (always loaded)
 libs\LibStub\LibStub.lua

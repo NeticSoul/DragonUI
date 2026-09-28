@@ -123,7 +123,7 @@ function parts.buildSellButton()
     button:SetPoint("BOTTOMRIGHT", window, "BOTTOMLEFT", 160, 33)
 
     local icon = button:CreateTexture(nil, "BORDER")
-    icon:set_atlas("spellicon-256x256-selljunk", false)
+    icon:SetAtlasTexture("spellicon-256x256-selljunk", false)
     icon:SetAllPoints(button)
     button.Icon = icon
 

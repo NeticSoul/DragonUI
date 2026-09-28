@@ -19,12 +19,13 @@ World of Warcraft. The same applies to any World of Warcraft artwork under
 `DragonUI_Options/Textures/`. A texture that DragonUI or another project cropped, recoloured,
 re-encoded, repacked or pre-rendered is still Blizzard's artwork.
 
-The projects named below are the addons the files were obtained via. They are credited as
-conduits, not as the authors of the art.
+The projects named below (DragonflightUI, DragonUI_NewEra and its upstream New Era by Ashgaroth,
+pretty_actionbar and pretty_minimap by s0h2x, RetailUI, UnitFrameLayers) are the addons the files
+were obtained via. They are credited as conduits, not as the authors of the art.
 
 | Folder under `DragonUI/Textures/` | Obtained via |
 |---|---|
-| `ActionBars/` | pretty_actionbar (s0h2x) |
+| `ActionBars/` | pretty_actionbar (s0h2x); some sheets carry his small repacking edits, which leave them Blizzard's art |
 | `Bags/` | DragonflightUI (`bagborder2`, `bagslotCutout`, `bagsitemslot2x`, `bagsitembankslot2x`), pretty_actionbar (`bagslots2x`, `bagslots2key`); `INV_Misc_Bag_08_round` is the retail bag icon, cropped round |
 | `Castbar/`, `Editmode/`, `Reputation/` | DragonflightUI |
 | `CharacterPanel/` | DragonUI_NewEra; `resistanceicons.tga` is cut from 3.3.5a client art |

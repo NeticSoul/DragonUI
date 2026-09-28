@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -24,24 +26,25 @@ local function racePath()
     return "Interface\\DressUpFrame\\DressUpBackground-" .. fileName
 end
 
--- Retail's own per-race dimming: the backdrops differ in brightness, so one flat value washes out
--- the pale ones. Keyed off the RESOLVED race, so a Gnome drawn on Dwarf art gets Dwarf's value.
-local RACE_OVERLAY_ALPHA = {
-    BLOODELF = 0.8, NIGHTELF = 0.6, SCOURGE = 0.3,
-    TROLL = 0.6, ORC = 0.6, WORGEN = 0.5, GOBLIN = 0.6,
+-- How dark retail's paperdoll shades each race's art.
+local SHADE_BY_RACE = {
+    BLOODELF = 0.8, SCOURGE = 0.3, WORGEN = 0.5,
+    NIGHTELF = 0.6, ORC = 0.6, TROLL = 0.6, GOBLIN = 0.6,
 }
-local OVERLAY_ALPHA_DEFAULT = 0.7
+local SHADE_DEFAULT = 0.7
 
-local function resizeModel()
-    local model = _G.CharacterModelFrame
-    local cf = _G.CharacterFrame
-    if not model or not cf or not cf.Inset or model._duiResized then return end
-    model._duiResized = true
+-- Retail's viewport sits at (52, -66) of the frame and the Inset starts at (4, -60).
+local FROM_INSET_X, FROM_INSET_Y = 48, -6
 
-    model:SetSize(MODEL_W, MODEL_H)
-    model:ClearAllPoints()
-    -- Retail puts it at (52,-66) of the frame; the Inset starts at (4,-60), so that is (48,-6) here.
-    model:SetPoint("TOPLEFT", cf.Inset, "TOPLEFT", 48, -6)
+local function resizeViewport()
+    local viewport, owner = _G.CharacterModelFrame, _G.CharacterFrame
+    local inset = owner and owner.Inset
+    if viewport == nil or inset == nil or viewport._duiResized then return end
+
+    viewport._duiResized = true
+    viewport:SetSize(MODEL_W, MODEL_H)
+    viewport:ClearAllPoints()
+    viewport:SetPoint("TOPLEFT", inset, "TOPLEFT", FROM_INSET_X, FROM_INSET_Y)
 end
 
 -- Cropped to the viewport: 245 + 75 = 320, the model's exact height. Retail runs the bottom pair
@@ -58,60 +61,70 @@ local QUARTERS = {
       point = "TOPLEFT", rel = "BOTTOMRIGHT" },
 }
 
--- The race backdrops are strongly coloured and the model reads as a cutout pasted on them. Retail
--- desaturates then dims under black, so the character is the only colour in the viewport.
-local function overlayAlpha()
-    return RACE_OVERLAY_ALPHA[raceKey()] or OVERLAY_ALPHA_DEFAULT
+local function shadeFor(key)
+    return SHADE_BY_RACE[key] or SHADE_DEFAULT
 end
 
-local function buildBackground()
-    local model = _G.CharacterModelFrame
-    if not model or model._duiRaceBg then return end
-    model._duiRaceBg = {}
+local function addQuarter(viewport, entry, relativeTo)
+    local piece = viewport:CreateTexture(nil, "BACKGROUND")
+    local coords = entry.tc
+    piece:SetWidth(entry.w)
+    piece:SetHeight(entry.h)
+    piece:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+    piece:SetPoint(entry.point, relativeTo, entry.rel, 0, 0)
+    return piece
+end
 
-    local topLeft
-    for _, q in ipairs(QUARTERS) do
-        local tex = model:CreateTexture(nil, "BACKGROUND")
-        tex:SetSize(q.w, q.h)
-        tex:SetTexCoord(unpack(q.tc))
-        if q.key == "TopLeft" then
-            tex:SetPoint(q.point, model, q.rel, 0, 0)
-            topLeft = tex
-        else
-            tex:SetPoint(q.point, topLeft, q.rel, 0, 0)
+local function createBackdrop()
+    local viewport = _G.CharacterModelFrame
+    if viewport == nil or viewport._duiRaceBg then return end
+
+    -- Every other quarter anchors to the top-left one, so it is made before the rest.
+    local anchorEntry
+    for _, entry in ipairs(QUARTERS) do
+        if entry.key == "TopLeft" then anchorEntry = entry break end
+    end
+    if not anchorEntry then return end
+
+    local bySuffix = {}
+    viewport._duiRaceBg = bySuffix
+    local anchorPiece = addQuarter(viewport, anchorEntry, viewport)
+    bySuffix[anchorEntry.suffix] = anchorPiece
+    for _, entry in ipairs(QUARTERS) do
+        if entry ~= anchorEntry then
+            bySuffix[entry.suffix] = addQuarter(viewport, entry, anchorPiece)
         end
-        model._duiRaceBg[q.suffix] = tex
     end
 
-    -- Bounded by the MODEL, not the backdrop grid: the grid runs 53px past the viewport, and
-    -- measuring up from its floor left the two edges a pixel apart. BORDER is retail's layer.
-    local overlay = model:CreateTexture(nil, "BORDER")
-    overlay:SetTexture(0, 0, 0)
-    overlay:SetPoint("TOPLEFT", model._duiRaceBg[1], "TOPLEFT", 0, 0)
-    overlay:SetPoint("BOTTOMRIGHT", model, "BOTTOMRIGHT", 0, 0)
-    model._duiRaceBgOverlay = overlay
+    -- Held to the viewport's corner, not the art's, so the shade ends exactly where the model does.
+    local shade = viewport:CreateTexture(nil, "BORDER")
+    viewport._duiRaceBgOverlay = shade
+    shade:SetPoint("BOTTOMRIGHT", viewport)
+    shade:SetPoint("TOPLEFT", anchorPiece)
+    shade:SetTexture(0, 0, 0)
 end
 
-local function applyRaceBackground()
-    local model = _G.CharacterModelFrame
-    if not model or not model._duiRaceBg then return end
+local function paintBackdrop()
+    local viewport = _G.CharacterModelFrame
+    if not (viewport and viewport._duiRaceBg) then return end
 
-    -- Read plainly, never as `~= false`: Config() falls back to an empty table before the database
-    -- is up, and under that idiom a missing value would read as ENABLED.
-    local grey = CP:Config().grey_model_backdrop and true or false
-    local base = racePath()
-    for suffix, tex in pairs(model._duiRaceBg) do
-        tex:SetTexture(base .. suffix)
-        tex:SetDesaturated(grey)
-        tex:Show()
+    -- Plain truth test: the pre-database config is {}, and a missing key must read as colour.
+    local desaturate = CP:Config().grey_model_backdrop and true or false
+    local artBase = racePath()
+    for suffix, piece in pairs(viewport._duiRaceBg) do
+        piece:SetTexture(artBase .. suffix)
+        piece:SetDesaturated(desaturate)
+        piece:Show()
     end
-    if model._duiRaceBgOverlay then
-        model._duiRaceBgOverlay:SetAlpha(grey and overlayAlpha() or 0)
-        model._duiRaceBgOverlay:Show()
+
+    local shade = viewport._duiRaceBgOverlay
+    if shade then
+        shade:SetAlpha(desaturate and shadeFor(raceKey()) or 0)
+        shade:Show()
     end
 end
 
-CP.ApplyModelBackdrop = applyRaceBackground
+CP.ApplyModelBackdrop = paintBackdrop
 
 -- Blizzard anchors the viewport in XML only, so a disable that does not reload leaves the model
 -- sitting where the retail inset used to be.
@@ -130,12 +143,13 @@ function CP.RestoreModel()
     if model._duiRaceBgOverlay then model._duiRaceBgOverlay:Hide() end
 end
 
+-- The art hangs off the viewport, so the viewport has to be at its final size first.
 local function build()
-    resizeModel()
-    buildBackground()
-    applyRaceBackground()
+    resizeViewport()
+    createBackdrop()
+    paintBackdrop()
 end
 
-CP.RefreshRaceBackground = applyRaceBackground
+CP.RefreshRaceBackground = CP.ApplyModelBackdrop
 
 CP:RegisterBuilder("model", build)

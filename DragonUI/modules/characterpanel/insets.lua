@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -13,46 +15,43 @@ local function paintPanelGround(inset)
         inset._duiPanelGroundTex = inset:CreateTexture(nil, "BACKGROUND", nil, -4)
     end
     local bg = inset._duiPanelGroundTex
-    bg:set_atlas("character-panel-background")
+    bg:SetAtlasTexture("character-panel-background")
     bg:ClearAllPoints()
     bg:SetPoint("TOPLEFT", inset, "TOPLEFT", 0, 0)
     bg:SetWidth(inset:GetWidth())
     bg:SetHeight(inset:GetHeight())
 end
 
+local function newInset(cf, name, first, second)
+    local frame = CreateFrame("Frame", name, cf)
+    frame:SetPoint(unpack(first))
+    frame:SetPoint(unpack(second))
+    return frame
+end
+
 local function buildInset()
-    local cf = _G.CharacterFrame
-    if not cf or cf.Inset then return cf and cf.Inset end
-
-    local inset = CreateFrame("Frame", "DragonUICharacterFrameInset", cf)
-    inset:SetPoint("TOPLEFT", cf, "TOPLEFT", INSET_LEFT, INSET_ATTIC)
-    -- Pinned to the frame's LEFT, not its RIGHT, so slots and model hold still when the
-    -- sidebar widens the panel.
-    inset:SetPoint("BOTTOMRIGHT", cf, "BOTTOMLEFT", CP.PANEL_WIDTH + INSET_RIGHT, INSET_BOTTOM)
-    -- Stays at the default child level: it must sit above CharacterFrame's own rock backdrop
-    -- but below the tab subframes, which chrome.lua raises to make room.
-    cf.Inset = inset
-
-    paintPanelGround(inset)
-    return inset
+    local owner = _G.CharacterFrame
+    if owner and owner.Inset == nil then
+        owner.Inset = newInset(owner, "DragonUICharacterFrameInset",
+            { "TOPLEFT", owner, "TOPLEFT", INSET_LEFT, INSET_ATTIC },
+            { "BOTTOMRIGHT", owner, "BOTTOMLEFT", CP.PANEL_WIDTH + INSET_RIGHT, INSET_BOTTOM })
+        paintPanelGround(owner.Inset)
+    end
+    return owner and owner.Inset
 end
 
 local function buildInsetRight()
-    local cf = _G.CharacterFrame
-    if not cf or cf.InsetRight then return cf and cf.InsetRight end
-    local inset = cf.Inset
-    if not inset then return nil end
-
-    local insetRight = CreateFrame("Frame", "DragonUICharacterFrameInsetRight", cf)
-    insetRight:SetPoint("TOPLEFT", inset, "TOPRIGHT", 1, 0)
-    insetRight:SetPoint("BOTTOMRIGHT", cf, "BOTTOMRIGHT", -4, 4)
-    -- PaperDollFrame is setAllPoints, so once the panel expands it covers this pane too and
-    -- would swallow the stat rows' mouseover unless the sidebar sits above it.
-    insetRight:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 10)
-    insetRight:Hide()
-    cf.InsetRight = insetRight
-
-    return insetRight
+    local owner = _G.CharacterFrame
+    if owner and owner.Inset and owner.InsetRight == nil then
+        local pane = newInset(owner, "DragonUICharacterFrameInsetRight",
+            { "TOPLEFT", owner.Inset, "TOPRIGHT", 1, 0 },
+            { "BOTTOMRIGHT", owner, "BOTTOMRIGHT", -4, 4 })
+        -- PaperDollFrame spans the whole window and would otherwise eat the stat rows' mouseover.
+        pane:SetFrameLevel(owner:GetFrameLevel() + CP.SUBFRAME_LEVEL + 10)
+        pane:Hide()
+        owner.InsetRight = pane
+    end
+    return owner and owner.InsetRight
 end
 
 -- Only PaperDoll gets the retail geometry, the only tab whose contents we re-anchored. The rest run

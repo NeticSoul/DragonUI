@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -13,18 +15,18 @@ local function levelString()
                          classColored(classDisplay or "", classFile))
 end
 
--- Retail lifts the level line from -42 to -36 whenever a second line sits under it, so the
--- pair centers as a block; our second line is Blizzard's guild text.
-local function levelY()
-    local guild = _G.CharacterGuildText
-    return (guild and guild:IsShown()) and -36 or -42
-end
+-- Retail lifts the level line from -42 to -36 when a second line shows under it, centring the pair.
+local LEVEL_Y_ALONE, LEVEL_Y_PAIRED = -42, -36
 
-local function reposition()
-    local fs = _G.CharacterLevelText
-    if not fs or not _G.PaperDollFrame or not CP:Enabled() then return end
-    fs:ClearAllPoints()
-    fs:SetPoint("CENTER", _G.PaperDollFrame, "TOP", 0, levelY())
+local function placeLevelLine()
+    local line, pane = _G.CharacterLevelText, _G.PaperDollFrame
+    if not (line and pane) or not CP:Enabled() then return end
+
+    local guildLine = _G.CharacterGuildText
+    local y = LEVEL_Y_ALONE
+    if guildLine and guildLine:IsShown() then y = LEVEL_Y_PAIRED end
+    line:ClearAllPoints()
+    line:SetPoint("CENTER", pane, "TOP", 0, y)
 end
 
 -- Wrath dropped the guild line: PaperDollFrame.lua has the SetGuild call commented out, so
@@ -34,14 +36,14 @@ local function rewriteGuild()
     PaperDollFrame_SetGuild()
 end
 
--- Gated here, not at the builder: the hooks and the event frame below survive a disable, and both
--- kept the guild line filled and the level line lifted on a window that no longer has room for it.
-local function rewrite()
-    local fs = _G.CharacterLevelText
-    if not fs or not CP:Enabled() then return end
-    if CP:Config().class_level_text then fs:SetText(levelString()) end
+-- Guild line before placement: the level line's Y depends on whether that line ended up shown.
+local function rewriteLevelLine()
+    local line = _G.CharacterLevelText
+    if line == nil or not CP:Enabled() then return end
+
+    if CP:Config().class_level_text then line:SetText(levelString()) end
     rewriteGuild()
-    reposition()
+    placeLevelLine()
 end
 
 -- Blizzard anchors the pair in XML only, so nothing but this puts them back.
@@ -55,28 +57,29 @@ function CP.RestoreLevelText()
     if _G.CharacterGuildText then _G.CharacterGuildText:SetText("") end
 end
 
-local setLevelHooked, setGuildHooked
+local hookedSetLevel, hookedSetGuild = false, false
 
 local function build()
-    if not _G.CharacterLevelText then return end
+    if _G.CharacterLevelText == nil then return end
+    rewriteLevelLine()
 
-    rewrite()
-
-    if _G.PaperDollFrame_SetLevel and not setLevelHooked then
-        setLevelHooked = true
-        hooksecurefunc("PaperDollFrame_SetLevel", rewrite)
+    if not hookedSetLevel and _G.PaperDollFrame_SetLevel then
+        hooksecurefunc("PaperDollFrame_SetLevel", rewriteLevelLine)
+        hookedSetLevel = true
     end
-    if _G.PaperDollFrame_SetGuild and not setGuildHooked then
-        setGuildHooked = true
-        hooksecurefunc("PaperDollFrame_SetGuild", reposition)
+    -- Placement only: the rewrite step calls PaperDollFrame_SetGuild itself and would recurse.
+    if not hookedSetGuild and _G.PaperDollFrame_SetGuild then
+        hooksecurefunc("PaperDollFrame_SetGuild", placeLevelLine)
+        hookedSetGuild = true
     end
 end
 
-CP.RefreshLevelText = rewrite
+CP.RefreshLevelText = rewriteLevelLine
 
-local events = CreateFrame("Frame")
-events:RegisterEvent("PLAYER_GUILD_UPDATE")
-events:RegisterEvent("PLAYER_ENTERING_WORLD")
-events:SetScript("OnEvent", function() rewrite() end)
+local levelEvents = CreateFrame("Frame")
+for _, event in ipairs({ "PLAYER_GUILD_UPDATE", "PLAYER_ENTERING_WORLD" }) do
+    levelEvents:RegisterEvent(event)
+end
+levelEvents:SetScript("OnEvent", rewriteLevelLine)
 
 CP:RegisterBuilder("leveltext", build)

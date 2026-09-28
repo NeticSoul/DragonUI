@@ -42,7 +42,7 @@ local function syncArrow(button)
     local state = arrowState(button)
     if state == button.arrowState then return end
     button.arrowState = state
-    button.arrow:set_atlas("common-dropdown-a-button" .. state)
+    button.arrow:SetAtlasTexture("common-dropdown-a-button" .. state)
     button.arrow:SetSize(21.6, 21.6)
 end
 

@@ -11,8 +11,9 @@ local ClearCursor = ClearCursor;
 local UnitExists = UnitExists;
 local config = addon.config;
 
--- ARIALN: RANGE_INDICATOR glyph (expressway lacks it); CJK/ruRU remapped in fonts.lua.
+-- ARIALN (remapped for CJK/ruRU in fonts.lua); buttons.lua picks the range dot's own font.
 local HOTKEY_FONT = addon.Fonts.ARIALN
+local HOTKEY_TOP, DOT_CENTER = -3, -7
 local LibKeyBound = LibStub("LibKeyBound-1.0", true) -- same short labels as keybinding.lua
 
 local bars = {}
@@ -172,12 +173,12 @@ local function SkinButton(button)
     normal:SetDrawLayer('OVERLAY')
     normal:SetVertexColor(1, 1, 1, 1)
 
-    -- A bare CheckButton has no checked/pushed region until a path is set, so set_atlas needs one first.
+    -- A bare CheckButton has no checked/pushed region until a path is set, so SetAtlasTexture needs one first.
     button:SetCheckedTexture(art.normal)
     button:SetPushedTexture(art.normal)
     local checked, pushed = button:GetCheckedTexture(), button:GetPushedTexture()
-    checked:set_atlas('_ui-hud-actionbar-iconborder-checked')
-    pushed:set_atlas('_ui-hud-actionbar-iconborder-pushed')
+    checked:SetAtlasTexture('_ui-hud-actionbar-iconborder-checked')
+    pushed:SetAtlasTexture('_ui-hud-actionbar-iconborder-pushed')
     button:SetHighlightTexture(art.highlight)
 
     local highlight = button:GetHighlightTexture()
@@ -194,7 +195,7 @@ local function SkinButton(button)
         border:Hide()
         button.border = border
     end
-    button.border:set_atlas('_ui-hud-actionbar-iconborder-checked')
+    button.border:SetAtlasTexture('_ui-hud-actionbar-iconborder-checked')
     button.border:SetAllPoints(normal)
     button.border:SetVertexColor(0, 1, 0, 0.35)
 
@@ -206,13 +207,13 @@ local function SkinButton(button)
         local shadow = button:CreateTexture(nil, 'ARTWORK', nil, 1)
         shadow:SetPoint('TOPRIGHT', normal, 'TOPRIGHT', 3.8, 3.8)
         shadow:SetPoint('BOTTOMLEFT', normal, 'BOTTOMLEFT', -3.8, -3.8)
-        shadow:set_atlas('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
+        shadow:SetAtlasTexture('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
         button.shadow = shadow
     end
     if not button.background then
         local slotFill = button:CreateTexture(nil, 'BACKGROUND')
         slotFill:SetAllPoints(normal)
-        slotFill:set_atlas('ui-hud-actionbar-iconframe-slot')
+        slotFill:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
         button.background = slotFill
     end
     -- Hide slot fill when only_actionbackground (same as pet/stance in buttons.lua).
@@ -1362,10 +1363,6 @@ function ButtonProto:UpdateHotkey()
         return
     end
 
-    if addon.ApplyHotkeyTypography then
-        addon.ApplyHotkeyTypography(self.hotkey)
-    end
-
     local key = GetBindingKey("CLICK " .. self:GetName() .. ":LeftButton")
     if key then
         self.hotkeyBound = true
@@ -1379,6 +1376,17 @@ function ButtonProto:UpdateHotkey()
         self.hotkey:SetText(self.hotkeyDotEligible and RANGE_INDICATOR or "")
         self.hotkey:Hide()
     end
+
+    -- After the text: the range dot takes a different font from a key label.
+    if addon.ApplyHotkeyTypography then
+        addon.ApplyHotkeyTypography(self.hotkey)
+    end
+
+    -- Blizzard centres the dot in a 10px box 2px below the top; this label sizes to its text instead.
+    local top = HOTKEY_TOP
+    local height = self.hotkeyDotEligible and self.hotkey:GetStringHeight()
+    if height and height > 0 then top = DOT_CENTER + height / 2 end
+    self.hotkey:SetPoint("TOPRIGHT", self, "TOPRIGHT", -2, top)
 end
 
 -- Button script handlers (shared, not per-button closures)
@@ -1602,7 +1610,7 @@ function BarProto:CreateButton(index)
         local hotkey = button:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmallGray")
         hotkey:SetDrawLayer("OVERLAY", 7)
         -- Same corner inset as buttons.lua NormalizeAdditionalHotkeyVisual (TOPRIGHT -2, -3).
-        hotkey:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, -3)
+        hotkey:SetPoint("TOPRIGHT", button, "TOPRIGHT", -2, HOTKEY_TOP)
         hotkey:SetJustifyH("RIGHT")
         if addon.ApplyHotkeyTypography then
             addon.ApplyHotkeyTypography(hotkey)

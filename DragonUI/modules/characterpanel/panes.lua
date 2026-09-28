@@ -14,9 +14,9 @@ function CP.ShowSidebarPane(index)
     local titles = CP.TitlesPane and CP.TitlesPane()
     local equipment = CP.EquipmentPane and CP.EquipmentPane()
 
-    if stats then stats:SetShownReq(index == STATS) end
-    if titles then titles:SetShownReq(index == TITLES) end
-    if equipment then equipment:SetShownReq(index == EQUIPMENT) end
+    if stats then stats:SetShownCompat(index == STATS) end
+    if titles then titles:SetShownCompat(index == TITLES) end
+    if equipment then equipment:SetShownCompat(index == EQUIPMENT) end
 
     if index == TITLES and CP.RefreshTitlesPane then CP.RefreshTitlesPane() end
     if index == STATS and CP.RefreshSidebar then CP.RefreshSidebar() end

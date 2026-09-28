@@ -9,21 +9,21 @@
     <Script file="redbutton.lua"/>
     <Script file="vehicleart.lua"/>
 
-    <Frame name="NineSlicePanelUiTemplate" frameLevel="10" setAllPoints="true" virtual="true">
+    <Frame name="DragonUINineSlicePanelTemplate" frameLevel="10" setAllPoints="true" virtual="true">
         <Scripts>
-            <OnLoad>addon_mixin(self, NineSlicePanelUiMixin); self:OnLoad()</OnLoad>
+            <OnLoad>DragonUI_Mixin(self, DragonUI_NineSlicePanelMixin); self:OnLoad()</OnLoad>
         </Scripts>
     </Frame>
 
     <!-- Bar roots take no scripts: one would replace SecureHandlerStateTemplate's OnLoad. -->
-    <Frame name="MainMenuBarUiTemplate" frameLevel="50" toplevel="true" inherits="SecureHandlerStateTemplate" virtual="true">
+    <Frame name="DragonUIMainBarTemplate" frameLevel="50" toplevel="true" inherits="SecureHandlerStateTemplate" virtual="true">
         <Size x="526" y="42"/>
         <Anchors>
             <Anchor point="BOTTOM" x="0" y="18"/>
         </Anchors>
         <Frames>
             <!-- Keep both children unnamed: the main bar fader treats unnamed children as decorative art. -->
-            <Frame parentKey="BorderArt" frameLevel="52" inherits="NineSlicePanelUiTemplate">
+            <Frame parentKey="BorderArt" frameLevel="52" inherits="DragonUINineSlicePanelTemplate">
                 <Anchors>
                     <Anchor point="TOPLEFT" x="-4" y="4"/>
                     <Anchor point="BOTTOMRIGHT" x="8" y="-7"/>
@@ -33,7 +33,7 @@
                     <Attribute name="layoutType" value="UniqueCornersLayout"/>
                 </Attributes>
             </Frame>
-            <Frame parentKey="Background" frameLevel="1" setAllPoints="true" inherits="NineSlicePanelUiTemplate">
+            <Frame parentKey="Background" frameLevel="1" setAllPoints="true" inherits="DragonUINineSlicePanelTemplate">
                 <Attributes>
                     <Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame-background"/>
                     <Attribute name="layoutTextureLayer" value="BACKGROUND"/>
@@ -44,18 +44,18 @@
         </Frames>
     </Frame>
 
-    <Frame name="VehicleBarUiTemplate" frameLevel="54" toplevel="true" inherits="SecureHandlerStateTemplate" virtual="true">
+    <Frame name="DragonUIVehicleBarTemplate" frameLevel="54" toplevel="true" inherits="SecureHandlerStateTemplate" virtual="true">
         <Size x="800" y="56"/>
         <Anchors>
             <Anchor point="BOTTOM" x="0" y="0"/>
         </Anchors>
         <Frames>
-            <Frame parentKey="OrganicUi" hidden="true" setAllPoints="true">
+            <Frame parentKey="OrganicArt" hidden="true" setAllPoints="true">
                 <Scripts>
                     <OnLoad>DragonUI.BuildVehicleArt(self, "organic")</OnLoad>
                 </Scripts>
             </Frame>
-            <Frame parentKey="MechanicUi" hidden="true" setAllPoints="true">
+            <Frame parentKey="MechanicalArt" hidden="true" setAllPoints="true">
                 <Scripts>
                     <OnLoad>DragonUI.BuildVehicleArt(self, "mechanical")</OnLoad>
                 </Scripts>

@@ -24,7 +24,7 @@ local function build()
     local function corner(atlas, point, x, y)
         local t = pd:CreateTexture(nil, "OVERLAY")
         t._duiOwned = true
-        t:set_atlas(atlas, true)
+        t:SetAtlasTexture(atlas, true)
         t:SetSize(CORNER_SIZE, CORNER_SIZE)
         t:SetPoint(point, model, point, x, y)
         pieces[#pieces + 1] = t
@@ -41,7 +41,7 @@ local function build()
     local function edge(atlas, vertical, p1, a1, r1, p2, a2, r2)
         local t = pd:CreateTexture(nil, "OVERLAY")
         t._duiOwned = true
-        t:set_atlas(atlas)
+        t:SetAtlasTexture(atlas)
         if vertical then t:SetWidth(EDGE_THICKNESS) else t:SetHeight(EDGE_THICKNESS) end
         t:SetPoint(p1, a1, r1)
         t:SetPoint(p2, a2, r2)
@@ -57,7 +57,7 @@ local function build()
     -- Full-width rule level with the bottom of the columns, which end where the model does.
     local divider = pd:CreateTexture(nil, "OVERLAY")
     divider._duiOwned = true
-    divider:set_atlas("_UI-Frame-InnerBotTile")
+    divider:SetAtlasTexture("_UI-Frame-InnerBotTile")
     divider:SetHeight(EDGE_THICKNESS)
     divider:SetPoint("LEFT", inset, "LEFT", 0, 0)
     divider:SetPoint("RIGHT", inset, "RIGHT", 0, 0)

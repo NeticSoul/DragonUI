@@ -36,15 +36,15 @@ local function buildTrack(bar)
     local gap = arrowSpace(bar)
 
     local top = bar:CreateTexture(nil, "BACKGROUND")
-    top:set_atlas("minimal-scrollbar-track-top", true)
+    top:SetAtlasTexture("minimal-scrollbar-track-top", true)
     top:SetPoint("TOP", bar, "TOP", 0, -gap)
 
     local bottom = bar:CreateTexture(nil, "BACKGROUND")
-    bottom:set_atlas("minimal-scrollbar-track-bottom", true)
+    bottom:SetAtlasTexture("minimal-scrollbar-track-bottom", true)
     bottom:SetPoint("BOTTOM", bar, "BOTTOM", 0, gap)
 
     local middle = bar:CreateTexture(nil, "BACKGROUND")
-    middle:set_atlas("!minimal-scrollbar-track-middle")
+    middle:SetAtlasTexture("!minimal-scrollbar-track-middle")
     middle:SetPoint("TOPLEFT", top, "BOTTOMLEFT", 0, 0)
     middle:SetPoint("BOTTOMRIGHT", bottom, "TOPRIGHT", 0, 0)
 end
@@ -64,18 +64,18 @@ local function buildThumb(bar, thumb)
     grip:SetWidth(BAR_W)
 
     local top = bar:CreateTexture(nil, "ARTWORK")
-    top:set_atlas("minimal-scrollbar-thumb-top", true)
+    top:SetAtlasTexture("minimal-scrollbar-thumb-top", true)
     top:SetPoint("TOP", grip, "TOP", 0, 0)
 
     local bottom = bar:CreateTexture(nil, "ARTWORK")
-    bottom:set_atlas("minimal-scrollbar-thumb-bottom", true)
+    bottom:SetAtlasTexture("minimal-scrollbar-thumb-bottom", true)
     bottom:SetPoint("BOTTOM", grip, "BOTTOM", 0, 0)
 
     -- Under the caps and a pixel into each. Butted edge to edge, the middle and the cap round their
     -- shared edge independently once the UI scale is not 1, and a hairline of track blinks through
     -- as the grip travels. Only one pixel, so it never reaches the rounded ends and show through.
     local mid = bar:CreateTexture(nil, "ARTWORK", nil, -1)
-    mid:set_atlas("minimal-scrollbar-thumb-middle")
+    mid:SetAtlasTexture("minimal-scrollbar-thumb-middle")
     mid:SetWidth(BAR_W)
     mid:SetPoint("TOP", top, "BOTTOM", 0, THUMB_OVERLAP)
     mid:SetPoint("BOTTOM", bottom, "TOP", 0, -THUMB_OVERLAP)
@@ -126,7 +126,7 @@ local function skinArrow(button, bar, atlas, point)
 
     -- Its own texture rather than the button's: the template re-asserts those on every state change.
     local art = button:CreateTexture(nil, "ARTWORK")
-    art:set_atlas(atlas, true)
+    art:SetAtlasTexture(atlas, true)
     art:SetPoint("CENTER", button, "CENTER", 0, 0)
     button._duiArt = art
 end

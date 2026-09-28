@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local config, _G = addon.config, _G
 local unpack, format, gsub, hooksecurefunc = unpack, string.format, string.gsub, hooksecurefunc
@@ -86,10 +88,19 @@ local function EnsureHotkeyStyleCache()
     end
 end
 
+-- ruRU's FRIZQT__ and our bundled fonts lack ●; Blizzard's own hotkey font has it in every locale.
+local function HotkeyFontFor(hotkey, font)
+    if RANGE_INDICATOR and hotkey:GetText() == RANGE_INDICATOR then
+        local blizzard = _G.NumberFontNormalSmallGray
+        return (blizzard and blizzard:GetFont()) or font
+    end
+    return font
+end
+
 local function ApplyHotkeyTypography(hotkey)
     if not hotkey then return end
     EnsureHotkeyStyleCache()
-    hotkey:SetFont(hotkeyStyle.font, hotkeyStyle.size, hotkeyStyle.flags)
+    hotkey:SetFont(HotkeyFontFor(hotkey, hotkeyStyle.font), hotkeyStyle.size, hotkeyStyle.flags)
     hotkey:SetShadowOffset(-1.3, -1.1)
     hotkey:SetShadowColor(hotkeyStyle.sr, hotkeyStyle.sg, hotkeyStyle.sb, hotkeyStyle.sa)
 end
@@ -193,7 +204,7 @@ local function NormalizeAdditionalHotkeyVisual(button, hotkey)
     if font and size then
         local referenceScale = GetSafeEffectiveScale(referenceButton, 1)
         local buttonScale = GetSafeEffectiveScale(button, referenceScale)
-        hotkey:SetFont(font, size * (referenceScale / buttonScale), flags)
+        hotkey:SetFont(HotkeyFontFor(hotkey, font), size * (referenceScale / buttonScale), flags)
     end
 end
 
@@ -217,7 +228,7 @@ function addon.buttons_iterator()
     return advance
 end
 
-function addon.actionbuttons_grid()
+function addon.RefreshButtonGrid()
     if not IsModuleEnabled() then return end
     if InCombatLockdown() then
         ButtonsModule.pendingRefresh = true
@@ -255,12 +266,12 @@ local function AddSlotBackdrop(owner, frameRegion, withShadow)
     if withShadow then
         local glow = owner:CreateTexture(nil, 'ARTWORK', nil, 1)
         PinCorners(glow, frameRegion, 3.8, 3.8, -3.8, -3.8)
-        glow:set_atlas('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
+        glow:SetAtlasTexture('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
         owner.shadow = glow
     end
     local backdrop = owner:CreateTexture(nil, 'BACKGROUND')
     backdrop:SetAllPoints(frameRegion)
-    backdrop:set_atlas('ui-hud-actionbar-iconframe-slot')
+    backdrop:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
     backdrop:Show()
     return backdrop
 end
@@ -288,7 +299,7 @@ for digit = 0, 5 do
     KEY_SHORTHANDS[#KEY_SHORTHANDS + 1] = { digit .. ' (цифр. кл.)', 'N' .. digit }
 end
 
-function addon.GetKeyText(key)
+function addon.GetHotkeyText(key)
     local text = key
     if not text then
         return ''
@@ -299,13 +310,13 @@ function addon.GetKeyText(key)
     end
     return text
 end
-local GetKeyText = addon.GetKeyText
+local GetHotkeyText = addon.GetHotkeyText
 
 -- ============================================================================
 -- BUTTON STYLING FUNCTIONS
 -- ============================================================================
 
-local function actionbuttons_hotkey(button)
+local function styleHotkey(button)
     if not IsModuleEnabled() then return end
     
 	if not button then return end
@@ -418,7 +429,7 @@ local function actionbuttons_hotkey(button)
             hotkey:Hide()
         end
     else
-        local formattedText = GetKeyText(text)
+        local formattedText = GetHotkeyText(text)
         hotkey:SetText(formattedText)
         hotkey:Show()
         ApplyHotkeyBoundColor(hotkey)
@@ -433,7 +444,7 @@ local function RefreshAdditionalBarHotkeys()
     for index = 1, NUM_SHAPESHIFT_SLOTS do
         local button = _G['ShapeshiftButton' .. index]
         if button then
-            actionbuttons_hotkey(button)
+            styleHotkey(button)
         end
     end
 
@@ -441,7 +452,7 @@ local function RefreshAdditionalBarHotkeys()
     for index = 1, NUM_PET_ACTION_SLOTS do
         local button = _G['PetActionButton' .. index]
         if button then
-            actionbuttons_hotkey(button)
+            styleHotkey(button)
         end
     end
 
@@ -449,7 +460,7 @@ local function RefreshAdditionalBarHotkeys()
     for index = 1, NUM_POSSESS_SLOTS do
         local button = _G['PossessButton' .. index]
         if button then
-            actionbuttons_hotkey(button)
+            styleHotkey(button)
         end
     end
 
@@ -457,16 +468,16 @@ local function RefreshAdditionalBarHotkeys()
     for index = 1, 12 do
         local button = _G['MultiCastActionButton' .. index]
         if button then
-            actionbuttons_hotkey(button)
+            styleHotkey(button)
         end
     end
 
     if _G.MultiCastSummonSpellButton then
-        actionbuttons_hotkey(_G.MultiCastSummonSpellButton)
+        styleHotkey(_G.MultiCastSummonSpellButton)
     end
 
     if _G.MultiCastRecallSpellButton then
-        actionbuttons_hotkey(_G.MultiCastRecallSpellButton)
+        styleHotkey(_G.MultiCastRecallSpellButton)
     end
 end
 
@@ -533,7 +544,7 @@ end
 
 local function DressLayer(layer, atlas, target, onOverlay)
     if atlas then
-        layer:set_atlas(atlas)
+        layer:SetAtlasTexture(atlas)
     end
     if onOverlay then
         layer:SetDrawLayer('OVERLAY')
@@ -559,7 +570,7 @@ end
 local function StyleActionSlot(slotButton, skipCombatGuard)
     if not IsModuleEnabled() then return end
     if not skipCombatGuard and InCombatLockdown() then return end
-    if not slotButton or slotButton.__styled then return end
+    if not slotButton or slotButton._duiStyled then return end
 
     local id = slotButton:GetName()
     if not skipCombatGuard and not (id and id:match('^ActionButton%d+$')) then
@@ -574,7 +585,7 @@ local function StyleActionSlot(slotButton, skipCombatGuard)
 
     local flash, face = Part(id, 'Flash'), Part(id, 'Icon')
     local swipe, equipRing = Part(id, 'Cooldown'), Part(id, 'Border')
-    if flash then flash:set_atlas(ATLAS_FLASH) end
+    if flash then flash:SetAtlasTexture(ATLAS_FLASH) end
     if face then
         face:SetTexCoord(unpack(ICON_CROP))
         face:SetDrawLayer('BORDER')
@@ -584,7 +595,7 @@ local function StyleActionSlot(slotButton, skipCombatGuard)
     SeatStateArt(slotButton, art, true)
 
     slotButton.background = AddSlotBackdrop(slotButton, art, true)
-    slotButton.__styled = true
+    slotButton._duiStyled = true
 end
 
 local function StyleExtraSlot(slotButton)
@@ -609,7 +620,7 @@ local function StyleExtraSlot(slotButton)
         face:SetAllPoints(slotButton)
         face:SetDrawLayer('BORDER')
     end
-    if flash then flash:set_atlas(ATLAS_FLASH) end
+    if flash then flash:SetAtlasTexture(ATLAS_FLASH) end
     if autocast then
         autocast:ClearAllPoints()
         for _, edge in ipairs(AUTOCAST_EDGES) do
@@ -680,7 +691,7 @@ local function RestoreButtonToOriginal(button)
     end
     
     -- Reset styled flag
-    button.__styled = nil
+    button._duiStyled = nil
     
     -- Clear original values
     ButtonsModule.originalValues[button] = nil
@@ -762,7 +773,7 @@ local function KeyBindModeActive()
     return keyBound ~= nil and keyBound:IsShown() and true or false
 end
 
-local function actionbuttons_update(slotButton)
+local function refreshSlotButton(slotButton)
     if not IsModuleEnabled() then return end
     if KeyBindModeActive() and slotButton and slotButton.GetName then
         local macroLabel = Part(slotButton:GetName(), 'Name')
@@ -802,7 +813,7 @@ function addon.RefreshButtons()
                 end
 
                 -- update hotkeys and range indicators
-                pcall(actionbuttons_hotkey, button)
+                pcall(styleHotkey, button)
 
                 -- handle macro text
                 local macros = _G[buttonName .. 'Name']
@@ -867,14 +878,14 @@ end
 -- ============================================================================
 
 -- Texture-only work, so a vehicle entered mid-combat can still be skinned with the skip flag.
-function addon.vehiclebuttons_template(skipCombatGuard)
+function addon.StyleVehicleButtons(skipCombatGuard)
     if not IsModuleEnabled() then return end
     if skipCombatGuard or UnitHasVehicleUI('player') then
         for seat = 1, VEHICLE_MAX_ACTIONBUTTONS do
             local vehicleSlot = NumberedGlobal('VehicleMenuBarActionButton', seat)
             if vehicleSlot then
                 StyleActionSlot(vehicleSlot, skipCombatGuard)
-                actionbuttons_hotkey(vehicleSlot)
+                styleHotkey(vehicleSlot)
             end
         end
     end
@@ -888,7 +899,7 @@ function addon.RefreshAllHotkeys()
 
     for button in addon.buttons_iterator() do
         if button then
-            actionbuttons_hotkey(button)
+            styleHotkey(button)
         end
     end
 
@@ -942,22 +953,22 @@ local function StyleExtraRow(prefix, count, withHotkeys)
         local extra = NumberedGlobal(prefix, index)
         StyleExtraSlot(extra)
         if extra and withHotkeys then
-            actionbuttons_hotkey(extra)
+            styleHotkey(extra)
         end
     end
 end
 
 -- Hotkeys only: restyling the multicast buttons left Blizzard's totem bar invisible.
-function addon.totembuttons_template()
+function addon.StyleTotemButtons()
     if not IsModuleEnabled() then return end
     RefreshAdditionalBarHotkeys()
 end
 
 -- export name -> { button prefix, slot count, refresh hotkeys too }
 local EXTRA_ROW_EXPORTS = {
-    possessbuttons_template = { 'PossessButton', NUM_POSSESS_SLOTS, false },
-    petbuttons_template = { 'PetActionButton', NUM_PET_ACTION_SLOTS, true },
-    stancebuttons_template = { 'ShapeshiftButton', NUM_SHAPESHIFT_SLOTS, true },
+    StylePossessButtons = { 'PossessButton', NUM_POSSESS_SLOTS, false },
+    StylePetButtons = { 'PetActionButton', NUM_PET_ACTION_SLOTS, true },
+    StyleStanceButtons = { 'ShapeshiftButton', NUM_SHAPESHIFT_SLOTS, true },
 }
 for exportName, row in pairs(EXTRA_ROW_EXPORTS) do
     addon[exportName] = function()
@@ -973,13 +984,13 @@ end
 local function SetupHooks()
     if ButtonsModule.hooked or not IsModuleEnabled() then return end
     
-    hooksecurefunc('ActionButton_Update', actionbuttons_update)
+    hooksecurefunc('ActionButton_Update', refreshSlotButton)
 
     if type(_G.ActionButton_UpdateHotkeys) == 'function' then
         hooksecurefunc('ActionButton_UpdateHotkeys', function(button)
             if not IsModuleEnabled() then return end
             if button then
-                actionbuttons_hotkey(button)
+                styleHotkey(button)
             end
         end)
     end
@@ -1051,11 +1062,11 @@ function addon.RefreshButtonStyling()
         ApplyButtonStyling()
         
         -- Refresh all templates
-        addon.vehiclebuttons_template()
-        addon.possessbuttons_template()
-        addon.petbuttons_template()
-        addon.stancebuttons_template()
-        addon.totembuttons_template()
+        addon.StyleVehicleButtons()
+        addon.StylePossessButtons()
+        addon.StylePetButtons()
+        addon.StyleStanceButtons()
+        addon.StyleTotemButtons()
         
         -- Refresh button states
         addon.RefreshButtons()
@@ -1101,12 +1112,12 @@ end
 
 local function OnLoginGridPass()
     if IsModuleEnabled() then
-        addon.actionbuttons_grid()
+        addon.RefreshButtonGrid()
         addon.RefreshButtons()
     end
     collectgarbage()
 end
-addon.package:RegisterEvents(OnLoginGridPass, 'PLAYER_LOGIN')
+addon.package:Subscribe(OnLoginGridPass, 'PLAYER_LOGIN')
 
 -- Auto-initialize when addon loads and handle post-combat refresh
 local initFrame = CreateFrame("Frame")
@@ -1121,13 +1132,13 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     elseif event == "PLAYER_ENTERING_WORLD" then
         -- Re-enforce main bar grid on every zone / instance / reload.
         if IsModuleEnabled() then
-            addon.actionbuttons_grid()
+            addon.RefreshButtonGrid()
         end
     elseif event == "PLAYER_REGEN_ENABLED" then
         -- Execute pending refreshes after combat ends
         if IsModuleEnabled() and ButtonsModule.pendingRefresh then
             ButtonsModule.pendingRefresh = false
-            addon.actionbuttons_grid()
+            addon.RefreshButtonGrid()
             addon.RefreshButtons()
         end
     elseif event == "UPDATE_BINDINGS" then

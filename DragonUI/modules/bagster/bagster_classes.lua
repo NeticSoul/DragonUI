@@ -1,3 +1,6 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from Combuctor via KPack and DragonflightUI (both MIT); see THIRD_PARTY_NOTICES.
+
 -- UI classes: ItemSlot, ItemFrame, Bag, MoneyFrame, TokenBar, quality/side/bottom filters.
 local addon = select(2, ...)
 local mod = addon.BagsterModule

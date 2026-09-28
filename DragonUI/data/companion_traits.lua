@@ -1,3 +1,5 @@
+-- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
+
 local addon = select(2, ...)
 
 -- Spell ids read from the client's own Spell.dbc (build 12340): mounts are the spells applying aura

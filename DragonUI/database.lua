@@ -375,13 +375,6 @@ local defaults = {
             bar_width = 466,
             bar_height_dfui = 14,
             bar_height_retailui = 9,
-            -- Positioning offsets (used by both styles)
-            bothbar_offset = 39,
-            singlebar_offset = 24,
-            nobar_offset = 18,
-            repbar_abovexp_offset = 16,
-            repbar_offset = 2,
-            dual_bar_gap = 2,
             -- Configurable scales for the bars
             expbar_scale = 1.0,
             repbar_scale = 1.0,

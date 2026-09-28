@@ -3,7 +3,7 @@
 DragonUI Options - Core
 ================================================================================
 This file provides the options registration system and initialization.
-Based on ElvUI_OptionsUI pattern - accesses DragonUI addon via global.
+Inspired by the ElvUI_OptionsUI pattern - accesses DragonUI addon via global.
 ================================================================================
 ]]
 

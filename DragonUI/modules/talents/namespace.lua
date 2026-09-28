@@ -175,7 +175,7 @@ function ns.MakeCog(parent, frameName)
     gear:SetHeight(18)
     for _, layer in ipairs({ "ARTWORK", "HIGHLIGHT" }) do
         local art = gear:CreateTexture(nil, layer)
-        art:set_atlas("questlog-icon-setting", true)
+        art:SetAtlasTexture("questlog-icon-setting", true)
         art:SetPoint("CENTER", gear, "CENTER", 0, 0)
         if layer == "HIGHLIGHT" then
             art:SetBlendMode("ADD")

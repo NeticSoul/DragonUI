@@ -105,14 +105,13 @@ local function buildStatRow(column, previous, index)
         row:SetPoint("TOPRIGHT", column, "TOPRIGHT", 0, 0)
     end
 
-    -- Same zebra wash the character sidebar uses: a flat white at 5%, never the brown Line-Bounce
-    -- strip, which tints every other row. Only the even rows carry it.
+    -- The sidebar's wash, so both stat panes stripe alike; spills into the column padding.
     if index % 2 == 0 then
-        local bg = row:CreateTexture(nil, "BACKGROUND")
-        bg:SetPoint("TOPLEFT", row, "TOPLEFT", -6, 0)
-        bg:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 6, 0)
-        bg:SetTexture(1, 1, 1)
-        bg:SetAlpha(0.05)
+        local stripe = row:CreateTexture(nil, "BACKGROUND")
+        stripe:SetAlpha(0.05)
+        stripe:SetPoint("TOPLEFT", row, -6, 0)
+        stripe:SetPoint("BOTTOMRIGHT", row, 6, 0)
+        stripe:SetTexture(1, 1, 1)
     end
 
     local value = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -345,14 +344,14 @@ local function refresh()
     emptyText:Hide()
     setContentShown(true)
 
-    -- Only on a real swap: UNIT_STATS fires constantly in combat and each SetUnit reloads the model.
-    local guid = UnitGUID and UnitGUID("pet")
-    -- Reloaded on either count, but only a real swap throws the view away: an imp is not a felguard.
-    if model._duiStale or guid ~= model._duiGUID then
+    -- Stat events fire all fight; each SetUnit reloads the model, flickering and dropping the pose.
+    local petGUID = UnitGUID and UnitGUID("pet")
+    local newPet = petGUID ~= model._duiPetGUID
+    if newPet or model._duiStale then
         model._duiStale = nil
-        if guid ~= model._duiGUID then
-            model._duiGUID = guid
-            -- The zoom resets itself on the reload below; the pose is ours to put back.
+        if newPet then
+            model._duiPetGUID = petGUID
+            -- The reload resets the zoom by itself; only the facing needs a default.
             addon:ResetModelRotation(model)
         end
         model:SetUnit("pet")

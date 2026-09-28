@@ -21,7 +21,7 @@ end
 -- Search box --------------------------------------------------------------------------------------
 
 local function syncHint(box)
-    bar.hint:SetShownReq(box:GetText() == "")
+    bar.hint:SetShownCompat(box:GetText() == "")
 end
 
 local function buildSearch(footer, after)
@@ -118,14 +118,14 @@ local function buildActivate(footer, apply)
     end)
     activate:SetScript("OnHide", function(self) self:UnregisterEvent("CURRENT_SPELL_CAST_CHANGED") end)
     activate:SetScript("OnEvent", refreshActivate)
-    activate:SetShownReq(false)
+    activate:SetShownCompat(false)
     if addon.SkinRedButton then addon.SkinRedButton(activate) end
     bar.activate = activate
 end
 
 local function iconControl(footer, atlas, anchor, gap, tip, onClick)
     local art = footer:CreateTexture(nil, "ARTWORK")
-    art:set_atlas(atlas, true)
+    art:SetAtlasTexture(atlas, true)
     art:SetPoint("LEFT", anchor, "RIGHT", gap, 0)
     local hit = CreateFrame("Button", nil, footer)
     hit:SetSize(25, 25)
@@ -191,8 +191,8 @@ end
 -- Visibility per mode -----------------------------------------------------------------------------
 
 local function showIcon(hit, shown, enabled)
-    hit:SetShownReq(shown)
-    hit.art:SetShownReq(shown)
+    hit:SetShownCompat(shown)
+    hit.art:SetShownCompat(shown)
     setEnabled(hit, enabled)
     hit.art:SetDesaturated(not enabled)
 end
@@ -210,7 +210,7 @@ function ns.UpdateFooter()
 
     local apply = bar.apply
     apply:SetText(edit and L["Save Build"] or L["Apply Changes"])
-    apply:SetShownReq(live)
+    apply:SetShownCompat(live)
     setEnabled(apply, edit or staged)
 
     local glow = bar.applyGlow
@@ -226,7 +226,7 @@ function ns.UpdateFooter()
     showIcon(bar.reset, icons, staged)
     showIcon(bar.undo, icons, staged and ns.UndoDepth(ctx) > 0)
 
-    bar.activate:SetShownReq(browsing)
+    bar.activate:SetShownCompat(browsing)
     if browsing then refreshActivate(bar.activate) end
 
     local points = bar.points
@@ -236,12 +236,12 @@ function ns.UpdateFooter()
     else
         points:SetPoint("LEFT", bar.undo.art, "RIGHT", 16, 0)
     end
-    points:SetShownReq(live)
+    points:SetShownCompat(live)
 
-    bar.exit:SetShownReq(edit)
-    bar.import:SetShownReq(inspect)
-    bar.dropdown:SetShownReq(live and not pet)
-    bar.search:SetShownReq(live or browsing)
+    bar.exit:SetShownCompat(edit)
+    bar.import:SetShownCompat(inspect)
+    bar.dropdown:SetShownCompat(live and not pet)
+    bar.search:SetShownCompat(live or browsing)
 
     ns.Call("ShowOrb", not inspect and not glyph and not edit)
     ns.Call("UpdateSpecCog")

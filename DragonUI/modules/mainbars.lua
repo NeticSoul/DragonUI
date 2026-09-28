@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local L = addon.L
 addon._dir = "Interface\\AddOns\\DragonUI\\Textures\\"
@@ -40,7 +42,7 @@ end
 
 -- Bar sizing constants (used by CalculateFrameSize, ArrangeActionBarButtons, and grid layout)
 local ACTION_BUTTON_SIZE = 36  -- Default WoW 3.3.5a action button size
-local ACTION_BUTTON_SPACING = 7  -- Spacing between buttons (matches actionbutton_setup)
+local ACTION_BUTTON_SPACING = 7  -- Spacing between buttons (matches SetupActionButtons)
 -- Horizontal padding: 2px each side, the same inset as ActionButton1's (2, 2) anchor on the main bar.
 local DEFAULT_PADDING = 4
 -- Vertical padding: 2px bottom + 4px top.  The extra top pixels compensate for
@@ -410,7 +412,7 @@ end
 -- Frames and per-login state are created by InitializeMainbars(); these are
 -- declared here so the functions below close over them at file scope.
 
-local config, event, do_action = addon.config, addon.package, addon.functions
+local config, event, functions = addon.config, addon.package, addon.functions
 local select, pairs, ipairs, format = select, pairs, ipairs, string.format
 local _G, UIParent, hooksecurefunc, UnitFactionGroup = _G, UIParent, hooksecurefunc, UnitFactionGroup
 local MainMenuBarMixin = {}
@@ -437,7 +439,7 @@ local defaultBottomPositions = {
 }
 local dfXpBar = nil   -- custom XP bar frame
 local dfRepBar = nil  -- custom Rep bar frame
-local pUiMainBar, pUiMainBarArt, UpdateGryphonStyle, xpRepEventFrame, mainbarsEventFrame
+local mainBarFrame, mainBarArt, UpdateGryphonStyle, xpRepEventFrame, mainbarsEventFrame
 
 -- Container frames, filled in by InitializeMainbars. Declared here because the functions below run from
 -- the module registry, which can refresh before initialization on a profile load.
@@ -452,7 +454,7 @@ addon.ActionBarFrames = addon.ActionBarFrames or {
 }
 
 local function SetupMainBarPageDriver(mainBar)
-    mainBar = mainBar or addon.pUiMainBar or _G.pUiMainBar
+    mainBar = mainBar or addon.MainBar or _G.DragonUI_MainActionBar
     if not mainBar then return end
 
     if InCombatLockdown() then
@@ -517,7 +519,7 @@ local function RefreshMainBarPageState()
     RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
 end
 
-local DIVIDER_PIECES = { top = "divider_top", mid = "divider_mid", bottom = "divider_bottom" }
+local DIVIDER_PIECES = { top = "dividerTop", mid = "dividerMid", bottom = "dividerBottom" }
 
 local CHAINED_ROWS = {
     { prefix = "ActionButton", spacingKey = "player", adopt = true },
@@ -541,7 +543,7 @@ end
 local function RecordMainBarDivider(slot)
     local record = {}
     for key, field in pairs(DIVIDER_PIECES) do
-        local piece = pUiMainBar[field]
+        local piece = mainBarFrame[field]
         if piece then
             piece._isDragonUIDivider = true
         end
@@ -550,17 +552,17 @@ local function RecordMainBarDivider(slot)
     addon.MainBarDividers[slot] = record
 end
 
-function MainMenuBarMixin:actionbutton_setup()
+function MainMenuBarMixin:SetupActionButtons()
     if InCombatLockdown() then return end
 
-    AdoptBlizzardBarChildren(pUiMainBar)
-    ShareActionButtonRefs(pUiMainBar, NUM_ACTIONBAR_BUTTONS)
+    AdoptBlizzardBarChildren(mainBarFrame)
+    ShareActionButtonRefs(mainBarFrame, NUM_ACTIONBAR_BUTTONS)
 
     addon.MainBarDividers = addon.MainBarDividers or {}
-    -- SetThreeSlice hangs the pieces on the button's parent, so the buttons must already be ours.
+    -- AddBarDividers hangs the pieces on the button's parent, so the buttons must already be ours.
     if not config.buttons.hide_main_bar_background then
         for slot = 1, 11 do
-            do_action.SetThreeSlice(_G["ActionButton" .. slot])
+            functions.AddBarDividers(_G["ActionButton" .. slot])
             RecordMainBarDivider(slot)
         end
     end
@@ -576,17 +578,17 @@ function MainMenuBarMixin:actionbutton_setup()
             local current, previous = _G[row.prefix .. slot], _G[row.prefix .. (slot - 1)]
             if current and previous then
                 if row.adopt then
-                    current:SetParent(pUiMainBar)
+                    current:SetParent(mainBarFrame)
                 end
-                current:SetClearPoint("LEFT", previous, "RIGHT", gapFor[row.spacingKey], 0)
+                current:SetSinglePoint("LEFT", previous, "RIGHT", gapFor[row.spacingKey], 0)
             end
         end
     end
 end
 
-function MainMenuBarMixin:actionbar_art_setup()
+function MainMenuBarMixin:SetupActionBarArt()
     for _, region in ipairs({ MainMenuBarArtFrame, MainMenuBarLeftEndCap, MainMenuBarRightEndCap }) do
-        region:SetParent(pUiMainBarArt)
+        region:SetParent(mainBarArt)
         if region.SetDrawLayer then
             region:SetDrawLayer("OVERLAY", 7)
         end
@@ -615,20 +617,20 @@ local SECONDARY_BAR_SCALES = {
     { bar = "MultiBarBottomRight", key = "scale_bottomright", fallback = 0.9 },
 }
 
-function MainMenuBarMixin:actionbar_setup()
-    local homeBar = pUiMainBar
+function MainMenuBarMixin:SetupActionBar()
+    local homeBar = mainBarFrame
     local leadButton = ActionButton1
     leadButton:SetParent(homeBar)
-    leadButton:SetClearPoint("BOTTOMLEFT", homeBar, "BOTTOMLEFT", 2, 2)
+    leadButton:SetSinglePoint("BOTTOMLEFT", homeBar, "BOTTOMLEFT", 2, 2)
 
     local pageCfg = config.buttons.pages
     local pageLabel = MainMenuBarPageNumber
     if pageCfg.show then
         for _, arrow in ipairs(PAGE_ARROWS) do
-            do_action.SetNumPagesButton(_G[arrow.button], pUiMainBarArt, arrow.art, arrow.y)
+            functions.SetupPageArrow(_G[arrow.button], mainBarArt, arrow.art, arrow.y)
         end
-        pageLabel:SetParent(pUiMainBarArt)
-        pageLabel:SetClearPoint("CENTER", ActionBarDownButton, "CENTER", -1, 12)
+        pageLabel:SetParent(mainBarArt)
+        pageLabel:SetSinglePoint("CENTER", ActionBarDownButton, "CENTER", -1, 12)
         local fontPath, fontSize, fontFlags = unpack(pageCfg.font)
         pageLabel:SetFont(fontPath, fontSize, fontFlags)
         pageLabel:SetDrawLayer("OVERLAY", 7)
@@ -812,14 +814,14 @@ function addon.UpdateOverlaySizes()
     local db = addon.db and addon.db.profile and addon.db.profile.mainbars
     if not db then return end
 
-    if addon.ActionBarFrames.mainbar and addon.pUiMainBar then
-        local w, h = addon.pUiMainBar:GetSize()
+    if addon.ActionBarFrames.mainbar and addon.MainBar then
+        local w, h = addon.MainBar:GetSize()
         local scale = db.scale_actionbar or 0.9
         ResizeContainerStable(addon.ActionBarFrames.mainbar, w * scale, h * scale)
         if not InCombatLockdown() then
             local oy = GetMainBarButtonCenterOffsetY() * scale
-            addon.pUiMainBar:ClearAllPoints()
-            addon.pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
+            addon.MainBar:ClearAllPoints()
+            addon.MainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
         end
     end
 
@@ -891,7 +893,7 @@ local function GetDualBarVerticalOffset()
     return barH + 2 -- bar height + 2px gap
 end
 
-function MainMenuBarMixin:statusbar_setup()
+function MainMenuBarMixin:SetupStatusBars()
     if PetActionBarFrame then
         local db = addon.db and addon.db.profile and addon.db.profile.mainbars
         if db and db.scale_petbar then
@@ -965,7 +967,7 @@ end
 -- The tick overhangs the main bar, so it rides just under the gryphons instead of with its own bar.
 local function GetExhaustionTickLevel(fill)
     local level = fill:GetFrameLevel() + 1
-    if pUiMainBarArt then level = math.max(level, pUiMainBarArt:GetFrameLevel() - 1) end
+    if mainBarArt then level = math.max(level, mainBarArt:GetFrameLevel() - 1) end
     return level
 end
 
@@ -1353,7 +1355,7 @@ local function ApplyRetailUIExpRepBarStyling()
         end
 
         -- Border: MainMenuXPBarTexture0 (noop.lua clears with SetTexture(nil), we re-apply)
-        -- Reference: SetAllPoints first, then override with offset anchors, then set_atlas
+        -- Reference: SetAllPoints first, then override with offset anchors, then SetAtlasTexture
         local borderTex = MainMenuXPBarTexture0
         if borderTex then
             borderTex:ClearAllPoints()
@@ -1808,7 +1810,7 @@ local function RemoveBlizzardFrames()
     end
 end
 
-local MIXIN_SETUP_ORDER = { "actionbutton_setup", "actionbar_setup", "actionbar_art_setup", "statusbar_setup" }
+local MIXIN_SETUP_ORDER = { "SetupActionButtons", "SetupActionBar", "SetupActionBarArt", "SetupStatusBars" }
 
 function MainMenuBarMixin:initialize()
     for _, stepName in ipairs(MIXIN_SETUP_ORDER) do
@@ -1822,8 +1824,8 @@ local function CreateActionBarFrames()
     -- Main bar - create a NEW container frame scaled to match the visible bar
     local mainScale = db and db.scale_actionbar or 0.9
     addon.ActionBarFrames.mainbar = addon.CreateUIFrame(
-        pUiMainBar:GetWidth()  * mainScale,
-        pUiMainBar:GetHeight() * mainScale,
+        mainBarFrame:GetWidth()  * mainScale,
+        mainBarFrame:GetHeight() * mainScale,
         "MainBar")
 
     local rightCfg = db and db.right or {}
@@ -1857,12 +1859,12 @@ end
 local function PositionActionBarsToContainers_Initial()
     local mb = addon.db and addon.db.profile and addon.db.profile.mainbars
 
-    if pUiMainBar and addon.ActionBarFrames.mainbar then
+    if mainBarFrame and addon.ActionBarFrames.mainbar then
         local scale = (mb and mb.scale_actionbar) or 0.9
         local oy = GetMainBarButtonCenterOffsetY() * scale
-        pUiMainBar:SetParent(UIParent)
-        pUiMainBar:ClearAllPoints()
-        pUiMainBar:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
+        mainBarFrame:SetParent(UIParent)
+        mainBarFrame:ClearAllPoints()
+        mainBarFrame:SetPoint("CENTER", addon.ActionBarFrames.mainbar, "CENTER", 0, oy)
     end
 
     if MultiBarRight and addon.ActionBarFrames.rightbar then
@@ -2144,8 +2146,8 @@ local function ApplyMainbarsSystem()
     end
 
     MainMenuBarMixin:initialize()
-    addon.pUiMainBar = pUiMainBar
-    SetupMainBarPageDriver(pUiMainBar)
+    addon.MainBar = mainBarFrame
+    SetupMainBarPageDriver(mainBarFrame)
     EnsureBonusButtonsClickThrough()
 
     CreateActionBarFrames()
@@ -2311,10 +2313,10 @@ local function ApplyMainbarsSystem()
 
     -- CRITICAL: Ensure gryphons are above all action bars after everything is positioned
     local function EnsureGryphonsOnTop()
-        if pUiMainBarArt then
+        if mainBarArt then
             -- Get the highest frame level from all action bars including containers
             local maxLevel = 1
-            local bars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarLeft, MultiBarRight, pUiMainBar}
+            local bars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarLeft, MultiBarRight, mainBarFrame}
             for _, bar in pairs(bars) do
                 if bar then
                     maxLevel = math.max(maxLevel, bar:GetFrameLevel())
@@ -2322,7 +2324,7 @@ local function ApplyMainbarsSystem()
             end
 
             -- Only the bars count: the editor containers sit at level 100 in FULLSCREEN and parent nothing.
-            pUiMainBarArt:SetFrameLevel(maxLevel + 15)
+            mainBarArt:SetFrameLevel(maxLevel + 15)
             
             -- Also ensure individual gryphons have high draw layers
             if MainMenuBarLeftEndCap then
@@ -2338,8 +2340,8 @@ local function ApplyMainbarsSystem()
     EnsureGryphonsOnTop()
 
     -- Store module state
-    MainbarsModule.frames.pUiMainBar = pUiMainBar
-    MainbarsModule.frames.pUiMainBarArt = pUiMainBarArt
+    MainbarsModule.frames.mainBar = mainBarFrame
+    MainbarsModule.frames.mainBarArt = mainBarArt
     MainbarsModule.actionBarFrames = addon.ActionBarFrames
     MainbarsModule.applied = true
 end
@@ -2362,22 +2364,22 @@ local function InitializeMainbars()
 
     -- constants
     addon.MainMenuBarMixin = MainMenuBarMixin;  -- Store globally for access
-    pUiMainBar = CreateFrame('Frame', 'pUiMainBar', UIParent, 'MainMenuBarUiTemplate');
-    addon.pUiMainBar = pUiMainBar;  -- Store globally for access
+    mainBarFrame = CreateFrame('Frame', 'DragonUI_MainActionBar', UIParent, 'DragonUIMainBarTemplate');
+    addon.MainBar = mainBarFrame;  -- Store globally for access
 
-    pUiMainBarArt = CreateFrame('Frame', 'pUiMainBarArt', pUiMainBar);
+    mainBarArt = CreateFrame('Frame', 'DragonUI_MainActionBarArt', mainBarFrame);
 
     -- Main bar page driver owner (bug #251): keep bonus/stance page switching
     -- available even when the vehicle module is disabled.
 
     addon.SetupMainBarPageDriver = SetupMainBarPageDriver
 
-    pUiMainBar:SetScale(config.mainbars.scale_actionbar)
-    pUiMainBarArt:EnableMouse(false)
-    pUiMainBarArt:SetAllPoints(pUiMainBar)
+    mainBarFrame:SetScale(config.mainbars.scale_actionbar)
+    mainBarArt:EnableMouse(false)
+    mainBarArt:SetAllPoints(mainBarFrame)
     -- HIGH would draw the gryphons over the windows the panel manager raises to the top of MEDIUM.
-    pUiMainBarArt:SetFrameStrata("MEDIUM")
-    pUiMainBarArt:SetFrameLevel(pUiMainBar:GetFrameLevel() + 4)
+    mainBarArt:SetFrameStrata("MEDIUM")
+    mainBarArt:SetFrameLevel(mainBarFrame:GetFrameLevel() + 4)
 
     -- ============================================================================
     -- ALL THE MAINBARS FUNCTIONS (ONLY WHEN ENABLED)
@@ -2401,7 +2403,7 @@ local function InitializeMainbars()
         MainMenuBarPageNumber:SetText(GetActionBarPage())
         EnsureBonusButtonsClickThrough()
     end
-    event:RegisterEvents(OnActionPageEvent, "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR", "UPDATE_SHAPESHIFT_FORM")
+    event:Subscribe(OnActionPageEvent, "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR", "UPDATE_SHAPESHIFT_FORM")
 
     -- Helper: position side bar (left/right) buttons in a grid layout using columns.
     -- buttonOrder sets which corner slot 1 grows from (see SetBarGridButtonPoint).
@@ -2698,16 +2700,16 @@ local function InitializeMainbars()
                 end
                 
                 -- Ensure gryphons are on top after all setup is complete
-                if pUiMainBarArt then
+                if mainBarArt then
                     local maxLevel = 1
-                    local bars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarLeft, MultiBarRight, pUiMainBar}
+                    local bars = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarLeft, MultiBarRight, mainBarFrame}
                     for _, bar in pairs(bars) do
                         if bar then
                             maxLevel = math.max(maxLevel, bar:GetFrameLevel())
                         end
                     end
                     
-                    pUiMainBarArt:SetFrameLevel(maxLevel + 15)
+                    mainBarArt:SetFrameLevel(maxLevel + 15)
                 end
             end
 
@@ -2767,7 +2769,7 @@ local function InitializeMainbars()
                 PositionActionBarsToContainers()
                 StabilizeSecondaryBarLayering()
                 if addon.SetupMainBarPageDriver then
-                    addon.SetupMainBarPageDriver(addon.pUiMainBar)
+                    addon.SetupMainBarPageDriver(addon.MainBar)
                 end
             end
 
@@ -2964,7 +2966,7 @@ local function SyncBarGlobalsToProfile()
     config.bottom_right_enabled = (SHOW_MULTI_ACTIONBAR_2 == 1 or SHOW_MULTI_ACTIONBAR_2 == "1")
     config.right_enabled        = (SHOW_MULTI_ACTIONBAR_3 == 1 or SHOW_MULTI_ACTIONBAR_3 == "1")
     config.left_enabled         = (SHOW_MULTI_ACTIONBAR_4 == 1 or SHOW_MULTI_ACTIONBAR_4 == "1")
-    -- MultiActionBar_Update runs on every loading screen; with mainbars off there is no pUiMainBar.
+    -- MultiActionBar_Update runs on every loading screen; with mainbars off there is no DragonUI_MainActionBar.
     if not InCombatLockdown() and MainbarsModule.applied then
         if addon.PositionActionBarsToContainers then
             addon.PositionActionBarsToContainers()
@@ -3016,10 +3018,10 @@ local BAG_BUTTON_NAMES = {
     "CharacterBag2Slot",
     "CharacterBag3Slot",
     "KeyRingButton",
-    "pUiArrowManager", -- collapse/expand arrow for the small bags + keyring; hover on it must also reveal them
+    "DragonUI_BagsToggle", -- collapse/expand arrow for the small bags + keyring; hover on it must also reveal them
 }
 
--- MainMenuBarArtFrame is always reparented onto pUiMainBarArt, so we only ever fade the parent's
+-- MainMenuBarArtFrame is always reparented onto DragonUI_MainActionBarArt, so we only ever fade the parent's
 -- alpha (never MainMenuBarArtFrame's own) — WoW's cascade keeps it hidden no matter what else touches it.
 local function GetMainBarVisibilityDBTable()
     local ab = addon.db and addon.db.profile and addon.db.profile.actionbars
@@ -3042,7 +3044,7 @@ local function ReassertMainBarShown()
     if InCombatLockdown() then return end
     -- The fade engine's own triggers (combat, hover) can fire mid-vehicle; never undo its Hide().
     if UnitHasVehicleUI and UnitHasVehicleUI("player") then return end
-    if addon.pUiMainBar then addon.pUiMainBar:Show() end
+    if addon.MainBar then addon.MainBar:Show() end
     for i = 1, 12 do
         local btn = _G["ActionButton" .. i]
         if btn then btn:Show() end
@@ -3050,9 +3052,9 @@ local function ReassertMainBarShown()
 end
 
 -- Names update_main_bar_background() also protects from being faded — functional bars/buttons that
--- happen to be parented under pUiMainBar, not decorative art.
+-- happen to be parented under DragonUI_MainActionBar, not decorative art.
 local MAINBAR_PROTECTED_CHILD_NAMES = {
-    pUiMainBarArt = true,
+    DragonUI_MainActionBarArt = true,
     MultiBarBottomLeft = true,
     MultiBarBottomRight = true,
     MicroButtonAndBagsBar = true,
@@ -3082,12 +3084,12 @@ local function IsMainBarProtectedChild(name)
     return false
 end
 
--- Border/background art also lives as loose regions on pUiMainBar and on unnamed child frames
+-- Border/background art also lives as loose regions on DragonUI_MainActionBar and on unnamed child frames
 -- (shows up in /fstack only as "table: 0x..."), so walk both — same as update_main_bar_background().
-local function CollectMainBarLooseArtRegions(pUiMainBar)
+local function CollectMainBarLooseArtRegions(mainBarFrame)
     local regions = {}
-    for i = 1, pUiMainBar:GetNumRegions() do
-        local region = select(i, pUiMainBar:GetRegions())
+    for i = 1, mainBarFrame:GetNumRegions() do
+        local region = select(i, mainBarFrame:GetRegions())
         if region and region:GetObjectType() == "Texture" and not region._isDragonUIDivider then
             local texPath = region:GetTexture()
             if texPath and not string.find(texPath, "ICON") then
@@ -3095,8 +3097,8 @@ local function CollectMainBarLooseArtRegions(pUiMainBar)
             end
         end
     end
-    for i = 1, pUiMainBar:GetNumChildren() do
-        local child = select(i, pUiMainBar:GetChildren())
+    for i = 1, mainBarFrame:GetNumChildren() do
+        local child = select(i, mainBarFrame:GetChildren())
         local name = child and child:GetName()
         if child and not IsMainBarProtectedChild(name) then
             for j = 1, child:GetNumRegions() do
@@ -3111,9 +3113,9 @@ local function CollectMainBarLooseArtRegions(pUiMainBar)
 end
 
 local function SyncMainBarVisibility()
-    local pUiMainBar = addon.pUiMainBar
+    local mainBarFrame = addon.MainBar
     local mainAlphaAnchor = ActionButton1
-    if not pUiMainBar or not mainAlphaAnchor or not addon.VisibilityFade then return end
+    if not mainBarFrame or not mainAlphaAnchor or not addon.VisibilityFade then return end
 
     -- Buttons always fade with hover/combat state, regardless of the background toggle.
     local alphaFrames = {}
@@ -3125,10 +3127,10 @@ local function SyncMainBarVisibility()
     -- Decorative background art (gryphons, NineSlice border, loose textures) — Hide Main Bar
     -- Background pins all of it to 0 and skips the fade; otherwise it fades with the rest of the bar.
     local backgroundFrames = {}
-    if addon.pUiMainBarArt then table.insert(backgroundFrames, addon.pUiMainBarArt) end
+    if addon.MainBarArt then table.insert(backgroundFrames, addon.MainBarArt) end
     if MainMenuBarLeftEndCap then table.insert(backgroundFrames, MainMenuBarLeftEndCap) end
     if MainMenuBarRightEndCap then table.insert(backgroundFrames, MainMenuBarRightEndCap) end
-    for _, region in ipairs(CollectMainBarLooseArtRegions(pUiMainBar)) do
+    for _, region in ipairs(CollectMainBarLooseArtRegions(mainBarFrame)) do
         table.insert(backgroundFrames, region)
     end
 
@@ -3146,7 +3148,7 @@ local function SyncMainBarVisibility()
     if ActionBarDownButton and ActionBarDownButton:IsShown() then table.insert(alphaFrames, ActionBarDownButton) end
     if MainMenuBarPageNumber and MainMenuBarPageNumber:IsShown() then table.insert(alphaFrames, MainMenuBarPageNumber) end
 
-    -- Dividers live on pUiMainBar, not pUiMainBarArt, so they don't inherit its cascade — fade them
+    -- Dividers live on DragonUI_MainActionBar, not DragonUI_MainActionBarArt, so they don't inherit its cascade — fade them
     -- explicitly or they're left behind, fully opaque, between buttons that have already faded out.
     if addon.MainBarDividers then
         for _, div in pairs(addon.MainBarDividers) do
@@ -3156,7 +3158,7 @@ local function SyncMainBarVisibility()
         end
     end
 
-    local hoverFrames = { pUiMainBar }
+    local hoverFrames = { mainBarFrame }
     for i = 1, 12 do
         local btn = _G["ActionButton" .. i]
         if btn then table.insert(hoverFrames, btn) end
@@ -3189,17 +3191,17 @@ local MIGRATED_VISIBILITY_BARS = {
     { key = "right",        frame = function() return MultiBarRight end,       buttonPrefix = "MultiBarRightButton",       secondary = true },
     { key = "left",         frame = function() return MultiBarLeft end,        buttonPrefix = "MultiBarLeftButton",        secondary = true },
     -- Micro menu and bag buttons just open panels — not secure, so EnableMouse can react live in combat.
-    { key = "micro", frame = function() return _G.pUiMicroMenu end, buttonNames = MICROMENU_BUTTON_NAMES, mouseSafeInCombat = true },
-    -- MainMenuBarBackpackButton and KeyRingButton aren't children of pUiBagsBar, so their alpha
+    { key = "micro", frame = function() return _G.DragonUI_MicroButtonBar end, buttonNames = MICROMENU_BUTTON_NAMES, mouseSafeInCombat = true },
+    -- MainMenuBarBackpackButton and KeyRingButton aren't children of DragonUI_BagButtonBar, so their alpha
     -- doesn't cascade from it — fade them explicitly or only the small bag slots ever fade.
     {
-        key = "bag", frame = function() return _G.pUiBagsBar end, buttonNames = BAG_BUTTON_NAMES,
+        key = "bag", frame = function() return _G.DragonUI_BagButtonBar end, buttonNames = BAG_BUTTON_NAMES,
         mouseSafeInCombat = true,
         extraAlphaFrames = function()
             local frames = {}
             if MainMenuBarBackpackButton then table.insert(frames, MainMenuBarBackpackButton) end
             if KeyRingButton then table.insert(frames, KeyRingButton) end
-            if _G.pUiArrowManager then table.insert(frames, _G.pUiArrowManager) end
+            if _G.DragonUI_BagsToggle then table.insert(frames, _G.DragonUI_BagsToggle) end
             return frames
         end,
         -- Collapsed bag slots sit stacked under the main backpack button — fading both at once
@@ -3322,7 +3324,7 @@ end
 
 -- Initialize the main bar's visibility system (called once after all bars exist)
 local function InitializeActionBarVisibility()
-    if not addon.pUiMainBar then return end
+    if not addon.MainBar then return end
 
     SyncMainBarVisibility()
 
@@ -3392,11 +3394,11 @@ function addon.UpdateGryphonStyle()
     local offsetY = db_style.gryphonOffsetY or 0
 
     -- Endcaps are Textures, not Frames: no SetScale. Resize relative to the atlas's native
-    -- size (fixed by set_atlas right before this runs) so repeated calls don't compound.
+    -- size (fixed by SetAtlasTexture right before this runs) so repeated calls don't compound.
     -- Left/right offsetX mirrors so a positive value pulls both gryphons inward symmetrically.
     local function ApplyEndCapTransform(baseLeftX, baseLeftY, baseRightX, baseRightY)
-        MainMenuBarLeftEndCap:SetClearPoint('BOTTOMLEFT', baseLeftX + offsetX, baseLeftY + offsetY)
-        MainMenuBarRightEndCap:SetClearPoint('BOTTOMRIGHT', baseRightX - offsetX, baseRightY + offsetY)
+        MainMenuBarLeftEndCap:SetSinglePoint('BOTTOMLEFT', baseLeftX + offsetX, baseLeftY + offsetY)
+        MainMenuBarRightEndCap:SetSinglePoint('BOTTOMRIGHT', baseRightX - offsetX, baseRightY + offsetY)
         local lw, lh = MainMenuBarLeftEndCap:GetWidth(), MainMenuBarLeftEndCap:GetHeight()
         local rw, rh = MainMenuBarRightEndCap:GetWidth(), MainMenuBarRightEndCap:GetHeight()
         MainMenuBarLeftEndCap:SetWidth(lw * scale)
@@ -3414,8 +3416,8 @@ function addon.UpdateGryphonStyle()
     local look = endCapLooks[db_style.gryphons]
     if look then
         local stem = "ui-hud-actionbar-" .. look[1]
-        MainMenuBarLeftEndCap:set_atlas(stem .. "-left", true)
-        MainMenuBarRightEndCap:set_atlas(stem .. "-right", true)
+        MainMenuBarLeftEndCap:SetAtlasTexture(stem .. "-left", true)
+        MainMenuBarRightEndCap:SetAtlasTexture(stem .. "-right", true)
         ApplyEndCapTransform(look[2], look[3], look[4], look[5])
     end
     for _, cap in ipairs({ MainMenuBarLeftEndCap, MainMenuBarRightEndCap }) do
@@ -3429,7 +3431,7 @@ function addon.UpdateGryphonStyle()
     -- Style refresh Shows endcaps; keep them invisible when background hide is on.
     local buttonsCfg = addon.db and addon.db.profile and addon.db.profile.buttons
     if buttonsCfg and buttonsCfg.hide_main_bar_background then
-        if addon.pUiMainBarArt then addon.pUiMainBarArt:SetAlpha(0) end
+        if addon.MainBarArt then addon.MainBarArt:SetAlpha(0) end
         MainMenuBarLeftEndCap:SetAlpha(0)
         MainMenuBarRightEndCap:SetAlpha(0)
     end
@@ -3458,13 +3460,13 @@ function addon.ApplyAllBarButtonCounts()
 
     -- Main bar uses ArrangeActionBarButtons for grid layout
     addon.ArrangeActionBarButtons("ActionButton",
-        addon.pUiMainBar, addon.pUiMainBar,
+        addon.MainBar, addon.MainBar,
         mainRows, mainColumns, mainCount,
         nil, nil, playerSpacing, mainOrder)
 
     -- Also apply same layout to BonusActionButtons (vehicle/shapeshift override bar)
     addon.ArrangeActionBarButtons("BonusActionButton",
-        nil, addon.pUiMainBar,
+        nil, addon.MainBar,
         mainRows, mainColumns, mainCount,
         nil, nil, playerSpacing, mainOrder)
     EnsureBonusButtonsClickThrough()
@@ -3477,7 +3479,7 @@ function addon.ApplyAllBarButtonCounts()
 
     -- NOTE: Container frames (editor overlays) are NOT resized here.
     -- Resizing containers shifts bars depending on their anchor point.
-    -- Only pUiMainBar (with NineSlice/gryphons) resizes via ArrangeActionBarButtons above.
+    -- Only DragonUI_MainActionBar (with NineSlice/gryphons) resizes via ArrangeActionBarButtons above.
     -- Containers keep their initial size set by CreateActionBarFrames / PositionActionBars.
 
     -- Bottom Left bar — use grid layout (no padding)
@@ -3545,8 +3547,8 @@ function addon.RefreshMainbarsSystem()
     end
 
     -- Apply main bar scale
-    if addon.pUiMainBar and db.scale_actionbar then
-        addon.pUiMainBar:SetScale(db.scale_actionbar)
+    if addon.MainBar and db.scale_actionbar then
+        addon.MainBar:SetScale(db.scale_actionbar)
     end
 
     -- Apply scales to other bars

@@ -41,8 +41,8 @@ local function CP()
 end
 
 local function buildChrome()
-    local layout = NineSliceUtils and NineSliceUtils.GetLayout("PortraitFrameTemplate")
-    if layout then NineSliceUtils.ApplyLayout(frame, layout) end
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    if layout then DragonUI_NineSlice.ApplyLayout(frame, layout) end
 
     local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
     bg:SetTexture(ROCK, "REPEAT", "REPEAT")
@@ -52,7 +52,7 @@ local function buildChrome()
     bg:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
 
     local streaks = frame:CreateTexture(nil, "BORDER")
-    streaks:set_atlas("_UI-Frame-TopTileStreaks")
+    streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
     streaks:SetHorizTile(true)
     streaks:SetHeight(STREAK_H)
     streaks:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -STREAK_Y)

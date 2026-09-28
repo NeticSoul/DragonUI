@@ -1,8 +1,10 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from KPack ChatMods by bkader (MIT/X); see THIRD_PARTY_NOTICES.
+
     local addon = select(2, ...)
 
     -- ============================================================================
     -- CHAT MODS MODULE FOR DRAGONUI
-    -- Ported from KPack ChatMods by bkader
     -- Features: hide chat buttons, editbox positioning, mousewheel scroll,
     -- tell target (/tt), URL detection & copy, link hover tooltips,
     -- chat copy (double-click tab), unlimited resizing, AFK/DND dedup.

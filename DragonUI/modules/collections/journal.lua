@@ -621,7 +621,7 @@ local function dressFilterButton(btn)
         if tex then tex:SetTexture(nil) end
     end
     local holder = btn:CreateTexture(nil, "BACKGROUND")
-    holder:set_atlas("common-dropdown-b-button")
+    holder:SetAtlasTexture("common-dropdown-b-button")
     holder:SetPoint("TOPLEFT", btn, "TOPLEFT", -HOLDER_PAD, HOLDER_PAD)
     holder:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", HOLDER_PAD, -HOLDER_PAD)
 
@@ -641,7 +641,7 @@ local function dressFilterButton(btn)
         elseif over then
             suffix = "-hover"
         end
-        holder:set_atlas("common-dropdown-b-button" .. suffix)
+        holder:SetAtlasTexture("common-dropdown-b-button" .. suffix)
     end
 
     btn:HookScript("OnEnter", function() over = true; restate() end)

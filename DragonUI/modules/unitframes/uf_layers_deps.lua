@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- Building blocks for unitframe_layers.lua: mana-cost data, the player loss bar and power feedback.

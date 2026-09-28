@@ -1,3 +1,6 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from DragonflightUI (MIT, (c) 2022 Karl-HeinzSchneider); see THIRD_PARTY_NOTICES.
+
 --[[
     DragonUI MicroMenu Module
     Refactored version maintaining all functionality with better organization
@@ -189,7 +192,7 @@ end
 
 
 -- ============================================================================
--- SECTION 3: UTILITY FUNCTIONS (ALL ORIGINAL CODE PRESERVED)
+-- SECTION 3: UTILITY FUNCTIONS
 -- ============================================================================
 
 -- Database persistence helpers
@@ -960,14 +963,14 @@ local function RestoreMicromenuSystem()
     end
 
     -- Hide custom frames
-    if _G.pUiMicroMenu then
-        _G.pUiMicroMenu:Hide()
+    if _G.DragonUI_MicroButtonBar then
+        _G.DragonUI_MicroButtonBar:Hide()
     end
-    if _G.pUiBagsBar then
-        _G.pUiBagsBar:Hide()
+    if _G.DragonUI_BagButtonBar then
+        _G.DragonUI_BagButtonBar:Hide()
     end
-    if addon.pUiArrowManager then
-        addon.pUiArrowManager:Hide()
+    if addon.BagsToggle then
+        addon.BagsToggle:Hide()
     end
 
     -- Unregister all event frames
@@ -1014,7 +1017,7 @@ end
 local hidePendingTime = nil
 local charPushHooksRegistered = false
 local MICRO_LAYOUT_BASE_Y = 55
-local hideFramesScheduler, pUiBagsBar, eventFrame3
+local hideFramesScheduler, bagsBar, eventFrame3
 
 local function HideUnwantedBagFrames()
     -- Process all secondary bag slots
@@ -1146,7 +1149,7 @@ local function SetupPVPButton(button)
         icon:SetTexCoord(118 / 256, 236 / 256, 0, 151 / 256)
     else
         -- Faction unknown: use atlas grayscale fallback
-        icon:set_atlas('ui-hud-micromenu-pvp-up-2x')
+        icon:SetAtlasTexture('ui-hud-micromenu-pvp-up-2x')
     end
     icon:ClearAllPoints()
     icon:SetPoint('CENTER', button, 'CENTER', 0, 0)
@@ -1165,7 +1168,7 @@ local function SetupPVPButton(button)
             highlightTexture:SetTexture(microTexture)
             highlightTexture:SetTexCoord(118 / 256, 236 / 256, 0, 151 / 256)
         else
-            highlightTexture:set_atlas('ui-hud-micromenu-pvp-mouseover-2x')
+            highlightTexture:SetAtlasTexture('ui-hud-micromenu-pvp-mouseover-2x')
         end
         highlightTexture:ClearAllPoints()
         highlightTexture:SetAllPoints(button)
@@ -1466,7 +1469,7 @@ local function SetupCharacterButton(button)
     end
 end
 
-function MainMenuMicroButtonMixin:bagbuttons_setup()
+function MainMenuMicroButtonMixin:SetupBagButtons()
     MicromenuModule.hooks = MicromenuModule.hooks or {}
 
     local BORDER_GLOW = "bag-border-highlight-2x"
@@ -1491,12 +1494,12 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
         local hover = button:GetHighlightTexture()
         StretchAdditive(hover, button)
         hover:SetAlpha(0.4)
-        hover:set_atlas(BORDER_GLOW, true)
+        hover:SetAtlasTexture(BORDER_GLOW, true)
 
         local pressed = button:GetCheckedTexture()
         StretchAdditive(pressed, button)
         pressed:SetDrawLayer("OVERLAY", 7)
-        pressed:set_atlas(BORDER_GLOW)
+        pressed:SetAtlasTexture(BORDER_GLOW)
     end
 
     local function DressIconAndCount(button)
@@ -1510,7 +1513,7 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
         end
         local stackCount = _G[buttonName .. "Count"]
         if stackCount then
-            stackCount:SetClearPoint("CENTER", button, "CENTER", 0, -10)
+            stackCount:SetSinglePoint("CENTER", button, "CENTER", 0, -10)
             stackCount:SetDrawLayer("OVERLAY")
         end
     end
@@ -1519,20 +1522,20 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
     backpack:SetSize(50, 50)
     ResetFaces(backpack, BUTTON_FACE_ORDER, { Highlight = "", Checked = "" })
     StretchAdditive(backpack:GetHighlightTexture(), backpack)
-    backpack:GetHighlightTexture():set_atlas(BACKPACK_GLOW)
+    backpack:GetHighlightTexture():SetAtlasTexture(BACKPACK_GLOW)
     local backpackChecked = backpack:GetCheckedTexture()
     StretchAdditive(backpackChecked, backpack)
     backpackChecked:SetDrawLayer("OVERLAY", 7)
-    backpackChecked:set_atlas(BACKPACK_GLOW)
-    _G.MainMenuBarBackpackButtonIconTexture:set_atlas("bag-main-2x")
-    _G.MainMenuBarBackpackButtonCount:SetClearPoint("CENTER", backpack, "BOTTOM", 0, 14)
-    CharacterBag0Slot:SetClearPoint("RIGHT", backpack, "LEFT", -14, -2)
+    backpackChecked:SetAtlasTexture(BACKPACK_GLOW)
+    _G.MainMenuBarBackpackButtonIconTexture:SetAtlasTexture("bag-main-2x")
+    _G.MainMenuBarBackpackButtonCount:SetSinglePoint("CENTER", backpack, "BOTTOM", 0, 14)
+    CharacterBag0Slot:SetSinglePoint("RIGHT", backpack, "LEFT", -14, -2)
 
     if KeyRingButton then
         KeyRingButton:SetSize(34, 34)
-        KeyRingButton:SetClearPoint("RIGHT", CharacterBag3Slot, "LEFT", -4, 0)
+        KeyRingButton:SetSinglePoint("RIGHT", CharacterBag3Slot, "LEFT", -4, 0)
         ResetFaces(KeyRingButton, BUTTON_FACE_ORDER, { Normal = "", Highlight = "", Checked = "" })
-        KeyRingButton:GetNormalTexture():set_atlas("bag-reagent-border-2x")
+        KeyRingButton:GetNormalTexture():SetAtlasTexture("bag-reagent-border-2x")
         StyleBorderGlows(KeyRingButton)
     end
 
@@ -1586,7 +1589,7 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
         if not ring then
             ring = slot:CreateTexture(nil, "OVERLAY")
             ring:SetPoint("CENTER", slot, "CENTER")
-            ring:set_atlas("bag-border-2x", true)
+            ring:SetAtlasTexture("bag-border-2x", true)
             slot.customBorder = ring
         end
 
@@ -1606,7 +1609,7 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
         end
     end
 
-    if not pUiBagsBar.registeredInEditor then
+    if not bagsBar.registeredInEditor then
         -- Calculate overlay size to exactly match the visible bag elements.
         -- Layout (right to left from backpack right edge):
         --   Backpack(50) + gap(14) + 4xBag(28)+3xgap(4) = 188
@@ -1671,7 +1674,7 @@ function MainMenuMicroButtonMixin:bagbuttons_setup()
             module = addon.BagsModule or {}
         })
 
-        pUiBagsBar.registeredInEditor = true
+        bagsBar.registeredInEditor = true
 
     end
 
@@ -1687,7 +1690,7 @@ function MainMenuMicroButtonMixin:bagbuttons_reposition()
     local bagScale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale or 1.0
     MainMenuBarBackpackButton:SetScale(bagScale)
 
-    CharacterBag0Slot:SetClearPoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
+    CharacterBag0Slot:SetSinglePoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
 
     if not GetBagCollapseState() then
         StopCollapsedSecondaryFade()
@@ -1702,11 +1705,11 @@ function MainMenuMicroButtonMixin:bagbuttons_reposition()
             if i == 1 then
                 -- Already positioned above
             elseif i == 2 then
-                bags:SetClearPoint('RIGHT', CharacterBag0Slot, 'LEFT', -4, 0)
+                bags:SetSinglePoint('RIGHT', CharacterBag0Slot, 'LEFT', -4, 0)
             elseif i == 3 then
-                bags:SetClearPoint('RIGHT', CharacterBag1Slot, 'LEFT', -4, 0)
+                bags:SetSinglePoint('RIGHT', CharacterBag1Slot, 'LEFT', -4, 0)
             elseif i == 4 then
-                bags:SetClearPoint('RIGHT', CharacterBag2Slot, 'LEFT', -4, 0)
+                bags:SetSinglePoint('RIGHT', CharacterBag2Slot, 'LEFT', -4, 0)
             end
 
             if bags.customBorder then
@@ -1718,7 +1721,7 @@ function MainMenuMicroButtonMixin:bagbuttons_reposition()
         end
 
         if KeyRingButton then
-            KeyRingButton:SetClearPoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
+            KeyRingButton:SetSinglePoint('RIGHT', CharacterBag3Slot, 'LEFT', -4, 0)
             KeyRingButton:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel())
             KeyRingButton:SetScale(1.0)
             KeyRingButton:SetSize(34, 34)
@@ -1755,23 +1758,23 @@ function MainMenuMicroButtonMixin:bagbuttons_reposition()
             KeyRingButton:SetFrameLevel(MainMenuBarBackpackButton:GetFrameLevel() - 1)
         end
 
-        if not forceHideCollapsed and addon.RefreshCollapsedSecondaryBagsVisibility and _G.pUiBagsBar then
-            addon.RefreshCollapsedSecondaryBagsVisibility((_G.pUiBagsBar:GetAlpha() or 1) > 0.01)
+        if not forceHideCollapsed and addon.RefreshCollapsedSecondaryBagsVisibility and _G.DragonUI_BagButtonBar then
+            addon.RefreshCollapsedSecondaryBagsVisibility((_G.DragonUI_BagButtonBar:GetAlpha() or 1) > 0.01)
         end
     end
 
 end
 
 function MainMenuMicroButtonMixin:bagbuttons_refresh()
-    if _G.pUiBagsBar then
+    if _G.DragonUI_BagButtonBar then
         for _, bags in pairs(bagslots) do
-            if bags:GetParent() ~= _G.pUiBagsBar then
-                bags:SetParent(_G.pUiBagsBar);
+            if bags:GetParent() ~= _G.DragonUI_BagButtonBar then
+                bags:SetParent(_G.DragonUI_BagButtonBar);
             end
         end
     end
 
-    self:bagbuttons_setup();
+    self:SetupBagButtons();
 
     SyncKeyRingToKeys()
 
@@ -1834,7 +1837,7 @@ local function GetMicroLayoutMetrics(config, useGrayscale, numButtons)
 end
 
 local function LayoutMicroButtons()
-    local menu = _G.pUiMicroMenu
+    local menu = _G.DragonUI_MicroButtonBar
     if not menu or not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
         return
     end
@@ -1906,7 +1909,7 @@ local function SetMicroStateTexture(button, getter, setter, path, coords)
     tex:SetAllPoints(button)
 end
 
-local function setupMicroButtons(xOffset)
+local function layoutMicroButtons(xOffset)
     MigrateMicroIconSpacingToPadding()
 
     local useGrayscale = addon.db.profile.micromenu.grayscale_icons
@@ -1915,9 +1918,9 @@ local function setupMicroButtons(xOffset)
 
     local menuScale = config.scale_menu
 
-    local menu = _G.pUiMicroMenu
+    local menu = _G.DragonUI_MicroButtonBar
     if not menu then
-        menu = CreateFrame('Frame', 'pUiMicroMenu', UIParent)
+        menu = CreateFrame('Frame', 'DragonUI_MicroButtonBar', UIParent)
     end
     menu:SetScale(menuScale)
     menu:SetSize(10, 10)
@@ -1997,7 +2000,7 @@ local function setupMicroButtons(xOffset)
             local wasEnabled = button.IsEnabled and button:IsEnabled() or true
             local wasVisible = button.IsVisible and button:IsVisible() or true
 
-            button:texture_strip()
+            button:StripOwnTextures()
             CharacterMicroButton:SetDisabledTexture ''
 
             button:SetParent(menu)
@@ -2044,16 +2047,16 @@ local function setupMicroButtons(xOffset)
                 end
 
                 if normalTexture then
-                    normalTexture:set_atlas('ui-hud-micromenu-' .. name .. '-up-2x')
+                    normalTexture:SetAtlasTexture('ui-hud-micromenu-' .. name .. '-up-2x')
                 end
                 if pushedTexture then
-                    pushedTexture:set_atlas('ui-hud-micromenu-' .. name .. '-down-2x')
+                    pushedTexture:SetAtlasTexture('ui-hud-micromenu-' .. name .. '-down-2x')
                 end
                 if disabledTexture then
-                    disabledTexture:set_atlas('ui-hud-micromenu-' .. name .. '-disabled-2x')
+                    disabledTexture:SetAtlasTexture('ui-hud-micromenu-' .. name .. '-disabled-2x')
                 end
                 if highlightTexture then
-                    highlightTexture:set_atlas('ui-hud-micromenu-' .. name .. '-mouseover-2x')
+                    highlightTexture:SetAtlasTexture('ui-hud-micromenu-' .. name .. '-mouseover-2x')
                 end
             elseif isPVPButton then
                 SetupPVPButton(button)
@@ -2317,11 +2320,11 @@ function addon.RefreshMicromenuSpacing()
 end
 
 function addon.RefreshMicromenuPosition()
-if not _G.pUiMicroMenu then
+if not _G.DragonUI_MicroButtonBar then
     return
 end
 
-local menu = _G.pUiMicroMenu
+local menu = _G.DragonUI_MicroButtonBar
 local frameInfo = addon:GetEditableFrameInfo("micromenu")
 if frameInfo and frameInfo.frame then
     -- Position the OVERLAY from saved config or defaults
@@ -2365,13 +2368,13 @@ updateMicroButtonSpacing()
 end
 
 function addon.RefreshBagsPosition()
-    if not _G.pUiBagsBar then
+    if not _G.DragonUI_BagButtonBar then
         return
     end
 
     local scale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale
     if scale then
-        _G.pUiBagsBar:SetScale(scale)
+        _G.DragonUI_BagButtonBar:SetScale(scale)
         MainMenuBarBackpackButton:SetScale(scale)
     end
 
@@ -2399,7 +2402,7 @@ function addon.RefreshBagsPosition()
         end
 
         local bagsConfig = addon.db.profile.bags
-        _G.pUiBagsBar:SetScale(bagsConfig.scale)
+        _G.DragonUI_BagButtonBar:SetScale(bagsConfig.scale)
 
         local originalSetPoint = MainMenuBarBackpackButton.SetPoint
         if MainMenuBarBackpackButton.SetPoint == addon._noop then
@@ -2417,7 +2420,7 @@ function addon.RefreshBagsPosition()
 end
 
 function addon.RefreshMicromenuVehicle()
-    if not _G.pUiMicroMenu then
+    if not _G.DragonUI_MicroButtonBar then
         return
     end
 
@@ -2429,14 +2432,14 @@ function addon.RefreshMicromenuVehicle()
     end
 
     if addon.db.profile.micromenu.hide_on_vehicle then
-        RegisterStateDriver(_G.pUiMicroMenu, 'visibility', '[vehicleui] hide;show')
+        RegisterStateDriver(_G.DragonUI_MicroButtonBar, 'visibility', '[vehicleui] hide;show')
     else
-        UnregisterStateDriver(_G.pUiMicroMenu, 'visibility')
+        UnregisterStateDriver(_G.DragonUI_MicroButtonBar, 'visibility')
     end
 end
 
 function addon.RefreshBagsVehicle()
-    if not _G.pUiBagsBar then
+    if not _G.DragonUI_BagButtonBar then
         return
     end
 
@@ -2448,9 +2451,9 @@ function addon.RefreshBagsVehicle()
     end
 
     if addon.db.profile.micromenu.hide_on_vehicle then
-        RegisterStateDriver(_G.pUiBagsBar, 'visibility', '[vehicleui] hide;show')
+        RegisterStateDriver(_G.DragonUI_BagButtonBar, 'visibility', '[vehicleui] hide;show')
     else
-        UnregisterStateDriver(_G.pUiBagsBar, 'visibility')
+        UnregisterStateDriver(_G.DragonUI_BagButtonBar, 'visibility')
     end
 end
 
@@ -2463,7 +2466,7 @@ if not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
     return
 end
 
-if not _G.pUiMicroMenu then
+if not _G.DragonUI_MicroButtonBar then
     return
 end
 
@@ -2472,11 +2475,11 @@ local configMode = useGrayscale and "grayscale" or "normal"
 local config = addon.db.profile.micromenu[configMode]
 
 -- FIXED: Only apply scale, NOT position (editor handles that)
-_G.pUiMicroMenu:SetScale(config.scale_menu)
+_G.DragonUI_MicroButtonBar:SetScale(config.scale_menu)
 
 -- REMOVED: Don't overwrite editor position
--- _G.pUiMicroMenu:ClearAllPoints()
--- _G.pUiMicroMenu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT', xOffset + config.x_position, config.y_position)
+-- _G.DragonUI_MicroButtonBar:ClearAllPoints()
+-- _G.DragonUI_MicroButtonBar:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT', xOffset + config.x_position, config.y_position)
 
 addon.RefreshMicromenuIcons()
 
@@ -2487,7 +2490,7 @@ UpdateCharacterPortraitVisibility()
 end
 
 function addon.RefreshBags()
-    if not _G.pUiBagsBar then
+    if not _G.DragonUI_BagButtonBar then
         return
     end
 
@@ -2497,7 +2500,7 @@ function addon.RefreshBags()
         MainMenuMicroButtonMixin:bagbuttons_refresh();
     end
 
-    local arrow = addon.pUiArrowManager
+    local arrow = addon.BagsToggle
     if arrow then
         local folded = GetBagCollapseState()
         arrow:PaintFold(folded)
@@ -2553,12 +2556,12 @@ local function ApplyMicromenuSystem()
     -- ============================================================================
 
     -- Create global bags bar
-    _G.pUiBagsBar = CreateFrame('Frame', 'pUiBagsBar', UIParent);
-    pUiBagsBar = _G.pUiBagsBar;
+    _G.DragonUI_BagButtonBar = CreateFrame('Frame', 'DragonUI_BagButtonBar', UIParent);
+    bagsBar = _G.DragonUI_BagButtonBar;
     -- DON'T parent automatically - will be done in setup when necessary
     KeyRingButton:SetParent(_G.CharacterBag3Slot);
 
-    -- Buttons layout as a grid; hover/combat visibility stays on pUiMicroMenu.
+    -- Buttons layout as a grid; hover/combat visibility stays on DragonUI_MicroButtonBar.
 
     -- ============================================================================
     -- SECTION 7: REFRESH FUNCTIONS
@@ -2568,9 +2571,9 @@ local function ApplyMicromenuSystem()
     -- SECTION 8: SPECIAL UI ELEMENTS
     -- ============================================================================
 
-    local foldToggle = addon.pUiArrowManager
-        or CreateFrame("CheckButton", "pUiArrowManager", MainMenuBarBackpackButton)
-    addon.pUiArrowManager = foldToggle
+    local foldToggle = addon.BagsToggle
+        or CreateFrame("CheckButton", "DragonUI_BagsToggle", MainMenuBarBackpackButton)
+    addon.BagsToggle = foldToggle
     foldToggle:SetSize(12, 18)
     foldToggle:SetPoint("RIGHT", MainMenuBarBackpackButton, "LEFT", 0, -2)
     foldToggle:SetNormalTexture("")
@@ -2585,7 +2588,7 @@ local function ApplyMicromenuSystem()
     function foldToggle:PaintFold(folded)
         local atlas = folded and "bag-arrow-2x" or "bag-arrow-invert-2x"
         for _, face in ipairs(foldFaces) do
-            face:set_atlas(atlas)
+            face:SetAtlasTexture(atlas)
         end
     end
 
@@ -2620,7 +2623,7 @@ local function ApplyMicromenuSystem()
     -- SECTION 9: EVENT HANDLERS
     -- ============================================================================
 
-    addon.package:RegisterEvents(function(_, eventName)
+    addon.package:Subscribe(function(_, eventName)
         if not IsModuleEnabled() then return end
         if eventName == "BAG_UPDATE" then
             SyncKeyRingToKeys()
@@ -2640,7 +2643,7 @@ local function ApplyMicromenuSystem()
         return -180
     end
 
-    addon.package:RegisterEvents(function(self, event)
+    addon.package:Subscribe(function(self, event)
         if not IsModuleEnabled() then return end
 
         ScheduleBagSlotIconRefreshes()
@@ -2657,10 +2660,10 @@ local function ApplyMicromenuSystem()
     -- icon refresh there. The BAG_UPDATE handler above is intentionally
     -- lightweight to avoid unnecessary work on frequent inventory events.
 
-    addon.package:RegisterEvents(function()
+    addon.package:Subscribe(function()
         local xOffset = ResolveMicroStripOffset()
 
-        setupMicroButtons(xOffset);
+        layoutMicroButtons(xOffset);
 
         if addon.RefreshBags then
             addon.RefreshBags();
@@ -2668,15 +2671,15 @@ local function ApplyMicromenuSystem()
 
         addon.core:ScheduleTimer(function()
             -- Check if frames need to be registered
-            if _G.pUiMicroMenu and not _G.pUiMicroMenu.registeredInEditor then
+            if _G.DragonUI_MicroButtonBar and not _G.DragonUI_MicroButtonBar.registeredInEditor then
                 -- Force re-setup to register frames
-                setupMicroButtons(xOffset)
+                layoutMicroButtons(xOffset)
             end
 
-            if _G.pUiBagsBar and not _G.pUiBagsBar.registeredInEditor then
+            if _G.DragonUI_BagButtonBar and not _G.DragonUI_BagButtonBar.registeredInEditor then
                 -- Force bags setup
-                if MainMenuMicroButtonMixin.bagbuttons_setup then
-                    MainMenuMicroButtonMixin:bagbuttons_setup()
+                if MainMenuMicroButtonMixin.SetupBagButtons then
+                    MainMenuMicroButtonMixin:SetupBagButtons()
                 end
             end
         end, 0.5)
@@ -2689,10 +2692,10 @@ local function ApplyMicromenuSystem()
     if IsLoggedIn() then
         local xOffset = ResolveMicroStripOffset()
 
-        setupMicroButtons(xOffset)
+        layoutMicroButtons(xOffset)
 
-        if MainMenuMicroButtonMixin.bagbuttons_setup then
-            MainMenuMicroButtonMixin:bagbuttons_setup()
+        if MainMenuMicroButtonMixin.SetupBagButtons then
+            MainMenuMicroButtonMixin:SetupBagButtons()
         end
 
         if addon.RefreshBags then
@@ -2706,7 +2709,7 @@ local function ApplyMicromenuSystem()
         -- Late stabilization pass for startup race conditions.
         addon.core:ScheduleTimer(function()
             if IsModuleEnabled() then
-                setupMicroButtons(xOffset)
+                layoutMicroButtons(xOffset)
                 if addon.RefreshMicromenu then addon.RefreshMicromenu() end
                 if addon.RefreshBags then addon.RefreshBags() end
             end
@@ -2730,14 +2733,14 @@ local function ApplyMicromenuSystem()
 
     eventFrame3 = MicromenuModule.eventFrames.playerEquipmentChanged or CreateFrame("Frame")
     MicromenuModule.eventFrames.playerEquipmentChanged = eventFrame3
-    addon.package:RegisterEvents(function(self, event, slotID)
+    addon.package:Subscribe(function(self, event, slotID)
         if not IsModuleEnabled() then return end
 
         -- Bag slot swaps (equipped container changes) must refresh icons explicitly.
         -- Container 0 is the backpack (no inventory slot); equipped bags are 1-4.
         if slotID and slotID >= ContainerIDToInventoryID(1) and slotID <= ContainerIDToInventoryID(4) then
-            if MainMenuMicroButtonMixin.bagbuttons_setup then
-                MainMenuMicroButtonMixin:bagbuttons_setup()
+            if MainMenuMicroButtonMixin.SetupBagButtons then
+                MainMenuMicroButtonMixin:SetupBagButtons()
             end
             RefreshBagSlotIcons()
             UpdateBagSlotAlpha()
@@ -2820,7 +2823,7 @@ local function Initialize()
     -- Only apply if module is enabled
     if IsModuleEnabled() then
         -- Wait for PLAYER_LOGIN to apply system
-        addon.package:RegisterEvents(function()
+        addon.package:Subscribe(function()
             ApplyMicromenuSystem()
         end, 'PLAYER_LOGIN')
     end

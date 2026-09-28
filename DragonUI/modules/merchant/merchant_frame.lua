@@ -48,7 +48,7 @@ local SESSION_ANCHORS = {
     { "MerchantItem1", "TOPLEFT", "MerchantFrame", "TOPLEFT", 11, -69 },
     { "MerchantPrevPageButton", "CENTER", "MerchantFrame", "BOTTOMLEFT", 25, 96 },
     { "MerchantNextPageButton", "CENTER", "MerchantFrame", "BOTTOMLEFT", 310, 96 },
-    { "MerchantMoneyFrame", "BOTTOMRIGHT", "MerchantFrame", "BOTTOMRIGHT", -6, 10 },
+    { "MerchantMoneyFrame", "BOTTOMRIGHT", "MerchantFrame", "BOTTOMRIGHT", -6, 9 },
     { "MerchantBuyBackItem", "TOPLEFT", "MerchantItem10", "BOTTOMLEFT", 30, -53 },
 }
 
@@ -144,7 +144,7 @@ local function texturesOf(frame)
 end
 
 local function applySlices(host, layoutName)
-    local slicer = _G.NineSliceUtils
+    local slicer = _G.DragonUI_NineSlice
     if not slicer or not slicer.GetLayout or not slicer.ApplyLayout then
         return
     end
@@ -262,7 +262,7 @@ end
 
 local function addStreaks(frame)
     local streaks = frame:CreateTexture(nil, "BORDER")
-    streaks:set_atlas("_UI-Frame-TopTileStreaks", false)
+    streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks", false)
     streaks:SetHorizTile(true)
     streaks:SetHeight(43)
     streaks:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -21)
@@ -323,7 +323,7 @@ local function buildBand(frame, level)
     band:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 26)
 
     local plate = band:CreateTexture(nil, "ARTWORK")
-    plate:set_atlas("ui-merchant-botframe", false)
+    plate:SetAtlasTexture("ui-merchant-botframe", false)
     plate:SetAllPoints(band)
     chrome.band = band
 end
@@ -687,7 +687,7 @@ local function fitRepairIcons()
             end
         end
         if button and icon then
-            icon:set_atlas(entry[3], false)
+            icon:SetAtlasTexture(entry[3], false)
             span(icon, button, 0, 0, 0, 0)
         end
     end

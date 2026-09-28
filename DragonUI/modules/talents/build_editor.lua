@@ -15,6 +15,49 @@ local function className(classToken)
     return LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classToken] or classToken
 end
 
+-- Saved state of the build being edited -------------------------------------------------------------
+
+local function copyRanks(ranks)
+    local copy = {}
+    for tab, bucket in pairs(type(ranks) == "table" and ranks or {}) do
+        if type(bucket) == "table" then
+            local inner = {}
+            for index, rank in pairs(bucket) do inner[index] = rank end
+            copy[tab] = inner
+        end
+    end
+    return copy
+end
+
+local function ranksCovered(a, b)
+    for tab, bucket in pairs(a) do
+        if type(bucket) == "table" then
+            local other = type(b[tab]) == "table" and b[tab] or {}
+            for index, rank in pairs(bucket) do
+                if (tonumber(rank) or 0) ~= (tonumber(other[index]) or 0) then return false end
+            end
+        end
+    end
+    return true
+end
+
+local function snapshot(build)
+    return { ranks = copyRanks(build.ranks), reqLevel = build.reqLevel }
+end
+
+-- The editor works on the stored record itself, so this is what Discard puts back.
+function ns.MarkEditorSaved()
+    if ns.edit then ns.editBaseline = snapshot(ns.edit) end
+end
+
+function ns.EditorDirty()
+    local build, base = ns.edit, ns.editBaseline
+    if not build then return false end
+    if not base then return ns.BuildPoints(build) > 0 end
+    local ranks = type(build.ranks) == "table" and build.ranks or {}
+    return build.reqLevel ~= base.reqLevel or not ranksCovered(ranks, base.ranks) or not ranksCovered(base.ranks, ranks)
+end
+
 -- Entering and leaving ----------------------------------------------------------------------------
 
 function ns.EnterEditor(build)
@@ -29,7 +72,11 @@ function ns.EnterEditor(build)
         return
     end
     ns.LeaveInspect()
-    ns.edit = build
+    if ns.edit ~= build then
+        ns.LeaveEditorNow()
+        ns.edit = build
+        ns.editBaseline = ns.IsStored(build) and snapshot(build) or nil
+    end
     ns.wantPet = false
     ns.SetGlyphPage(false)
     ns.viewGroup = ns.ActiveGroup()
@@ -45,23 +92,67 @@ end
 function ns.ExitEditor()
     if not ns.edit then return end
     ns.edit = nil
+    ns.editBaseline = nil
     ns.Call("SetDropdownLabel", L["Talent Builds"])
     ns.Refresh()
 end
 
+local function pendingJob()
+    local build = ns.edit
+    return { build = build, base = ns.editBaseline }
+end
+
+local function saveAndLeave(_, job)
+    if not job then return end
+    local build = job.build
+    if ns.IsStored(build) then
+        ns.Notify(format(L["Build saved: %s"], build.name or "?"), "ok")
+        if ns.edit == build then ns.ExitEditor() end
+    else
+        StaticPopup_Show("DUI_TALENT_BUILD_NAME", nil, nil, { build = build, storing = true, leave = true })
+    end
+end
+
+local function discardAndLeave(_, job)
+    if not job then return end
+    local build, base = job.build, job.base
+    if base then
+        build.ranks = copyRanks(base.ranks)
+        build.reqLevel = base.reqLevel
+    end
+    if ns.edit == build then ns.ExitEditor() end
+end
+
+-- Asked from inside the window: Cancel and Escape keep editing.
 function ns.RequestExitEditor()
     local build = ns.edit
     if not build then return end
-    if not ns.IsStored(build) and ns.BuildPoints(build) > 0 then
-        StaticPopup_Show("DUI_TALENT_EXIT_EDITOR")
+    if ns.EditorDirty() then
+        StaticPopup_Show("DUI_TALENT_UNSAVED", build.name or "?", nil, pendingJob())
     else
         ns.ExitEditor()
     end
 end
 
-ns.DefinePopup("DUI_TALENT_EXIT_EDITOR", L["This build isn't saved — exit and discard it?"], L["Discard"], CANCEL, {
-    OnAccept = function() ns.ExitEditor() end,
+-- The window or the view is already gone, so the choice comes after leaving and cannot be escaped.
+function ns.LeaveEditorNow()
+    local build = ns.edit
+    if not build then return end
+    local job = ns.EditorDirty() and pendingJob()
+    ns.ExitEditor()
+    if job then StaticPopup_Show("DUI_TALENT_UNSAVED_LEFT", build.name or "?", nil, job) end
+end
+
+ns.DefinePopup("DUI_TALENT_UNSAVED", L["You have unsaved changes in '%s'. Save them?"], SAVE, CANCEL, {
+    button3 = L["Discard"],
+    OnAccept = saveAndLeave,
+    OnAlt = discardAndLeave,
 }, "dead")
+
+ns.DefinePopup("DUI_TALENT_UNSAVED_LEFT", L["You have unsaved changes in '%s'. Save them?"], SAVE, L["Discard"], {
+    OnAccept = saveAndLeave,
+    OnCancel = discardAndLeave,
+}, "dead").hideOnEscape = nil
 
 -- Painting ----------------------------------------------------------------------------------------
 
@@ -165,6 +256,7 @@ end
 function ns.SaveBuild(build)
     if not build then return end
     if ns.IsStored(build) then
+        if ns.edit == build then ns.MarkEditorSaved() end
         ns.Notify(format(L["Build saved: %s"], build.name or "?"), "ok")
         return
     end
@@ -194,9 +286,14 @@ ns.DefinePopup("DUI_TALENT_BUILD_NAME", L["Name this build:"], SAVE, CANCEL, {
         build.name = name
         if job.storing then
             if not ns.IsStored(build) then table.insert(ns.OwnBuilds(), build) end
+            if ns.edit == build then ns.MarkEditorSaved() end
             ns.Notify(format(L["Build saved: %s"], name), "ok")
         end
-        if ns.edit == build then ns.Repaint() end
+        if job.leave and ns.edit == build then
+            ns.ExitEditor()
+        elseif ns.edit == build then
+            ns.Repaint()
+        end
     end,
     EditBoxOnEnterPressed = ns.EnterAccepts,
     EditBoxOnEscapePressed = ns.EscapeCloses,

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Core Utilities
 -- Base runtime setup: event frame, noop, class detection, API tables.
@@ -19,13 +21,13 @@ local api, functions = {}, {}
 addon.api = api
 addon.functions = functions
 
--- Global on purpose: the NineSlicePanelUiTemplate OnLoad in utils.xml calls it by bare name.
-_G.addon_mixin = function(target, ...)
+-- Global on purpose: the DragonUINineSlicePanelTemplate OnLoad in utils.xml calls it by bare name.
+_G.DragonUI_Mixin = function(target, ...)
 	for position = 1, select("#", ...) do
 		local source = select(position, ...)
 		if source ~= nil then
 			if type(source) ~= "table" then
-				error(("addon_mixin: mixin #%d is a %s, expected a table"):format(position, type(source)), 2)
+				error(("DragonUI_Mixin: mixin #%d is a %s, expected a table"):format(position, type(source)), 2)
 			end
 			for key, value in pairs(source) do
 				target[key] = value
@@ -64,7 +66,7 @@ local function requireAtlas(name)
 end
 
 -- Entries have nil holes, so the count is explicit rather than taken from the length operator.
-functions.atlas_unpack = function(name)
+functions.UnpackAtlas = function(name)
 	return unpack(requireAtlas(name), 1, 9)
 end
 
@@ -129,10 +131,10 @@ local function clearThenPoint(region, ...)
 end
 
 api.noop = hideForGood
-api.set_atlas = setAtlas
-api.SetClearPoint = clearThenPoint
+api.SetAtlasTexture = setAtlas
+api.SetSinglePoint = clearThenPoint
 
-api.texture_strip = function(frame, mode)
+api.StripOwnTextures = function(frame, mode)
 	eachOwnTexture(frame, stripTexture, mode)
 end
 
@@ -144,7 +146,7 @@ api.SetSubTexCoord = function(texture, left, right, top, bottom)
 	texture:SetTexCoord(x1, y1, x1, y2, x2, y1, x2, y2)
 end
 
-api.SetShownReq = function(widget, show)
+api.SetShownCompat = function(widget, show)
 	if show then
 		widget:Show()
 	else
@@ -154,8 +156,8 @@ end
 
 local DIVIDER_PREFIX = "ui-hud-actionbar-frame-divider-threeslice-"
 local DIVIDER_EDGES = {
-	{ field = "divider_top", suffix = "edgetop", y = 39 },
-	{ field = "divider_bottom", suffix = "edgebottom", y = 9 },
+	{ field = "dividerTop", suffix = "edgetop", y = 39 },
+	{ field = "dividerBottom", suffix = "edgebottom", y = 9 },
 }
 
 local function newBorderTexture(holder, field)
@@ -164,7 +166,7 @@ local function newBorderTexture(holder, field)
 	return texture
 end
 
-functions.SetThreeSlice = function(button)
+functions.AddBarDividers = function(button)
 	local holder = button:GetParent()
 	local edges = {}
 	for index, edge in ipairs(DIVIDER_EDGES) do
@@ -175,7 +177,7 @@ functions.SetThreeSlice = function(button)
 	end
 
 	-- The second CENTER anchor replaces the first, so the middle piece hangs off the bottom edge.
-	local middle = newBorderTexture(holder, "divider_mid")
+	local middle = newBorderTexture(holder, "dividerMid")
 	middle:SetPoint("CENTER", edges[1], "CENTER", 0, -15)
 	middle:SetPoint("CENTER", edges[2], "CENTER", 0, 15)
 	setAtlas(middle, "!" .. DIVIDER_PREFIX .. "center", true)
@@ -187,7 +189,7 @@ end
 
 local PAGE_ARROW_STATES = { "Normal", "Pushed", "Highlight" }
 
-functions.SetNumPagesButton = function(button, parent, direction, yOffset)
+functions.SetupPageArrow = function(button, parent, direction, yOffset)
 	eachOwnTexture(button, centerOnParent)
 	button:SetParent(parent)
 	clearThenPoint(button, "TOPLEFT", parent, "TOPLEFT", -30, yOffset)
@@ -197,7 +199,7 @@ functions.SetNumPagesButton = function(button, parent, direction, yOffset)
 	end
 end
 
-functions.inject_api = function(object)
+functions.InjectWidgetAPI = function(object)
 	local methods = getmetatable(object).__index
 	for name, method in pairs(api) do
 		if not object[name] then
@@ -213,7 +215,7 @@ function addon:initialize()
 		local kind = object:GetObjectType()
 		if not covered[kind] then
 			covered[kind] = true
-			functions.inject_api(object)
+			functions.InjectWidgetAPI(object)
 		end
 	end
 

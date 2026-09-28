@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -6,25 +8,18 @@ local REDBUTTON = addon._dir .. "UI\\redbutton2x"
 
 local STREAK_Y, STREAK_H = 21, 43
 
--- Every 4-corner chrome family the five 3.3.5a subframes declare, verified against FrameXML.
-local VANILLA_CHROME = {
-    "ui%-character%-charactertab",
-    "ui%-character%-general",
-    "ui%-petpaperdollframe%-bot",
-    "skillframe%-bot",
-    "ui%-talentframe%-bot",
-    "ui%-character%-statbackground",
-    -- Wooden decoration the list tabs draw over their body; reads as vanilla against metal chrome.
-    "ui%-classtrainer%-horizontalbar",
-    "ui%-classtrainer%-scrollbar",
-    "ui%-character%-scrollbar",
+-- Blizzard declares this panel art without names, so it can only be recognised by texture file.
+local STOCK_ART_NAMES = {
+    "ui-character-charactertab", "ui-character-general", "ui-character-statbackground",
+    "ui-petpaperdollframe-bot", "skillframe-bot", "ui-talentframe-bot",
+    "ui-classtrainer-horizontalbar", "ui-classtrainer-scrollbar", "ui-character-scrollbar",
 }
 
-local function isVanillaChrome(file)
-    if type(file) ~= "string" then return false end
-    local lower = file:lower()
-    for _, pat in ipairs(VANILLA_CHROME) do
-        if lower:find(pat) then return true end
+local function isStockPanelArt(texturePath)
+    local lowered = type(texturePath) == "string" and strlower(texturePath)
+    if not lowered then return false end
+    for _, fragment in ipairs(STOCK_ART_NAMES) do
+        if strfind(lowered, fragment, 1, true) then return true end
     end
     return false
 end
@@ -75,7 +70,7 @@ local function walkChrome(frame, hide, isSubframe)
         for i = 1, #regions do
             local region = regions[i]
             if region.GetObjectType and region:GetObjectType() == "Texture"
-                and isVanillaChrome(region:GetTexture()) then
+                and isStockPanelArt(region:GetTexture()) then
                 if hide then
                     neuter(region)
                     region:Hide()
@@ -147,7 +142,7 @@ local function applyBackgrounds(cf)
     -- The worn strip retail tiles under the title bar, which stops the rock reading as wallpaper.
     if not cf._duiStreaks then
         local streaks = cf:CreateTexture(nil, "BORDER")
-        streaks:set_atlas("_UI-Frame-TopTileStreaks")
+        streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
         streaks:SetHorizTile(true)
         streaks:SetHeight(STREAK_H)
         streaks:SetPoint("TOPLEFT", cf, "TOPLEFT", 6, -STREAK_Y)
@@ -188,9 +183,9 @@ end
 
 local function applyNineSlice(cf)
     if cf._duiNineSlice then return end
-    local layout = NineSliceUtils and NineSliceUtils.GetLayout("PortraitFrameTemplate")
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
     if not layout then return end
-    NineSliceUtils.ApplyLayout(cf, layout)
+    DragonUI_NineSlice.ApplyLayout(cf, layout)
     cf._duiNineSlice = true
 end
 

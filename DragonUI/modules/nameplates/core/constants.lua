@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local NP = addon.Nameplates
 
@@ -129,18 +131,11 @@ C.EXCLUDED_FRAME_NAMES = {
     ["BNToastFrame"] = true,
 }
 
+-- Baked, not built from RAID_CLASS_COLORS: addons repaint that table, the client's plate bars don't.
 C.CLASS_BY_BAR_COLOR = {
-    [000] = "FRIENDLY_PLAYER",
-    [019] = "DEATHKNIGHT",
-    [058] = "DRUID",
-    [089] = "HUNTER",
-    [085] = "MAGE",
-    [065] = "PALADIN",
-    [110] = "PRIEST",
-    [106] = "ROGUE",
-    [044] = "SHAMAN",
-    [057] = "WARLOCK",
-    [068] = "WARRIOR",
+    [0] = "FRIENDLY_PLAYER", [19] = "DEATHKNIGHT", [44] = "SHAMAN", [57] = "WARLOCK",
+    [58] = "DRUID", [65] = "PALADIN", [68] = "WARRIOR", [85] = "MAGE",
+    [89] = "HUNTER", [106] = "ROGUE", [110] = "PRIEST",
 }
 
 C.AGGRO_COLORS = {

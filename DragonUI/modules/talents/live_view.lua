@@ -206,7 +206,7 @@ ns.DefinePopup("DUI_TALENTS_LEARN", CONFIRM_LEARN_PREVIEW_TALENTS, YES, NO, { On
 
 function ns.ShowInspect(unit)
     if not TM.applied or not ns.win or not unit or not UnitExists(unit) then return end
-    if ns.edit then ns.Call("ExitEditor") end
+    if ns.edit then ns.Call("LeaveEditorNow") end
     ns.inspectUnit = unit
     ns.wantPet = false
     ns.SetGlyphPage(false)

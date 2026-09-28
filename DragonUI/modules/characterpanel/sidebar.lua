@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -167,7 +169,7 @@ local function buildBar(parent, layer, sublevel)
     local tex = parent:CreateTexture(nil, layer, nil, sublevel)
     tex:SetSize(HEADER_W, HEADER_H)
     tex:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    tex:set_atlas("UI-Character-Info-Title")
+    tex:SetAtlasTexture("UI-Character-Info-Title")
     return tex
 end
 
@@ -186,9 +188,9 @@ local function refreshHover(header)
 end
 
 local function applyArrow(tex, atlas, flip)
-    tex:set_atlas(atlas)
+    tex:SetAtlasTexture(atlas)
     if not flip then return end
-    local _, _, _, left, right, top, bottom = addon.functions.atlas_unpack(atlas)
+    local _, _, _, left, right, top, bottom = addon.functions.UnpackAtlas(atlas)
     -- Swapping top and bottom mirrors the cell, so both directions are the very same glyph.
     if left then tex:SetTexCoord(left, right, bottom, top) end
 end
@@ -259,18 +261,15 @@ local function buildStatRow(parent, name, isEven, ownerStatIndex)
     local row = CreateFrame("Frame", name, parent)
     row:SetSize(ROW_W, ROW_H)
 
-    -- A flat neutral wash, not the Line-Bounce strip: that art is brown and tints every other row.
-    -- Left-anchored and widened past the row's own right edge rather than centered: the row stops
-    -- ROW_INSET short of the scroll viewport, which reads closer to the left border than to the
-    -- scrollbar. Bleeding the wash out to the viewport's clip edge (bleeding further gets clipped
-    -- by the ScrollFrame) puts it the same distance from the scrollbar as the row is from the left.
-    local bg = row:CreateTexture(nil, "BACKGROUND")
-    bg:SetPoint("LEFT", row, "LEFT", 0, 0)
-    bg:SetSize(ROW_W + ROW_INSET, ROW_H)
-    bg:SetTexture(1, 1, 1)
-    bg:SetAlpha(0.05)
-    if not isEven then bg:Hide() end
-    row.Bg = bg
+    -- Bleeds ROW_INSET past the row, to end as far from the scrollbar as it starts from the border.
+    local wash = row:CreateTexture(nil, "BACKGROUND", nil, 0)
+    wash:SetAlpha(0.05)
+    wash:SetWidth(ROW_W + ROW_INSET)
+    wash:SetHeight(ROW_H)
+    wash:SetPoint("LEFT", row, 0, 0)
+    wash:SetTexture(1, 1, 1)
+    wash:SetShownCompat(isEven)
+    row.Bg = wash
 
     -- Sublevel above the zebra wash, so the glow reads the same on odd and even rows.
     if ownerStatIndex then
@@ -294,24 +293,23 @@ local function buildStatRow(parent, name, isEven, ownerStatIndex)
     return row
 end
 
--- Retail colours this by content tier, which 3.3.5a has no data for; the average quality of what is
--- equipped is the closest honest stand-in.
-local ILVL_SLOTS = { 1, 2, 3, 15, 5, 9, 10, 6, 7, 8, 11, 12, 13, 14, 16, 17, 18 }
-
+-- 3.3.5a has no content-tier data for item levels, so the gear's mean quality stands in for it.
 local function averageQuality()
-    local total, count = 0, 0
-    for _, slot in ipairs(ILVL_SLOTS) do
-        local link = GetInventoryItemLink("player", slot)
+    local sum, seen = 0, 0
+    -- Shirt, tabard and ammo are left out: they say nothing about the gear's tier.
+    for slot = 1, 18 do
+        local link = slot ~= 4 and GetInventoryItemLink("player", slot)
         if link then
-            local ok, _, _, quality = pcall(GetItemInfo, link)
-            if ok and quality then
-                total = total + quality
-                count = count + 1
+            -- A lookup that raises costs one slot, not the whole item-level refresh.
+            local fine, _, _, rarity = pcall(GetItemInfo, link)
+            if fine and rarity then
+                sum, seen = sum + rarity, seen + 1
             end
         end
     end
-    if count == 0 then return nil end
-    return math.floor(total / count + 0.5)
+    if seen > 0 then
+        return math.floor(sum / seen + 0.5)
+    end
 end
 
 -- A headline block rather than a label:value row: just the number, large and centred.
@@ -607,7 +605,7 @@ function CP.ResetSidebarOrder()
 end
 
 -- Re-picks the class/spec order (talents, form, or a Settings override may have changed) and re-flows.
--- A saved order is a hint the user set on purpose, so it still outranks this, same as applySavedOrder.
+-- An order the user saved still outranks this pick, as in applySavedOrder.
 function CP.ApplyStatsAutoSort()
     if not scrollChild or CP:Config().stats_order then return end
 
@@ -624,8 +622,7 @@ function CP.ApplyStatsAutoSort()
     CP.RelayoutSidebar()
 end
 
--- A saved order is a hint, never the list itself: an unknown key is dropped and a section the saved
--- order predates keeps its build position, so a future section can never go missing.
+-- Unknown saved keys are dropped and sections newer than the save keep their build slot.
 local function applySavedOrder()
     local order = CP:Config().stats_order
     if type(order) ~= "table" then return end
@@ -749,30 +746,25 @@ function CP.RelayoutSidebar()
     relayouting = false
 end
 
--- The class plate is opaque and dark at full strength, so at alpha 1 it buries the pane. Just over
--- half reads as a crest showing through the rock and keeps the stat text legible.
-local CLASS_BG_ALPHA = 0.55
+-- Dark, opaque art: full strength buries the pane, about half reads as a crest behind the stats.
+local CLASS_PLATE_ALPHA = 0.55
+local classPlate
 
 local function applyClassBackground()
-    if not pane then return end
-    local _, classFile = UnitClass("player")
-    if not classFile then return end
+    local classFile = pane and select(2, UnitClass("player"))
+    local atlas = classFile and string.format("ui-character-info-%s-bg", string.lower(classFile))
+    local registry = addon.atlasinfo
+    if not (atlas and registry and registry[atlas]) then return end
 
-    local atlas = "ui-character-info-" .. classFile:lower() .. "-bg"
-    if not addon.atlasinfo[atlas] then return end
-
-    local bg = pane._duiClassBg
-    if not bg then
-        -- Below every other background piece, not level with them.
-        bg = pane:CreateTexture(nil, "BACKGROUND", nil, -3)
-        bg:SetAlpha(CLASS_BG_ALPHA)
-        pane._duiClassBg = bg
+    if not classPlate then
+        classPlate = pane:CreateTexture(nil, "BACKGROUND", nil, -3)
+        classPlate:SetAlpha(CLASS_PLATE_ALPHA)
     end
-    -- set_atlas stamps the width too, so the spanning anchors go on afterwards and win.
-    bg:set_atlas(atlas, true)
-    bg:ClearAllPoints()
-    bg:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, 0)
-    bg:SetPoint("TOPRIGHT", pane, "TOPRIGHT", 0, 0)
+    -- Atlas first: it stamps 197x355; the two top anchors then span the width and keep that height.
+    classPlate:SetAtlasTexture(atlas, true)
+    classPlate:ClearAllPoints()
+    classPlate:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, 0)
+    classPlate:SetPoint("TOPRIGHT", pane, "TOPRIGHT", 0, 0)
 end
 
 local function buildSidebar()

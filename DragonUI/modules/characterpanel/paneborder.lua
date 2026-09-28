@@ -23,7 +23,7 @@ function CP.DrawPaneBorder(host, target, outset)
 
     local function corner(atlas, point, drop)
         local t = host:CreateTexture(nil, "BORDER", nil, -5)
-        t:set_atlas(atlas, true)
+        t:SetAtlasTexture(atlas, true)
         t:SetSize(CORNER_SIZE, CORNER_SIZE)
         local sign = OUTSET_SIGN[point]
         t:SetPoint(point, target, point, sign[1] * outset, sign[2] * outset + (drop or 0))
@@ -35,10 +35,10 @@ function CP.DrawPaneBorder(host, target, outset)
     local bl = corner("UI-Frame-InnerBotLeftCorner", "BOTTOMLEFT", BOTTOM_DROP)
     local br = corner("UI-Frame-InnerBotRight", "BOTTOMRIGHT", BOTTOM_DROP)
 
-    -- Corner to corner, the way the nine-slice chains them; set_atlas carries the tiling flag.
+    -- Corner to corner, the way the nine-slice chains them; SetAtlasTexture carries the tiling flag.
     local function edge(atlas, vertical, p1, a1, r1, p2, a2, r2)
         local t = host:CreateTexture(nil, "BORDER", nil, -5)
-        t:set_atlas(atlas)
+        t:SetAtlasTexture(atlas)
         if vertical then t:SetWidth(EDGE_THICKNESS) else t:SetHeight(EDGE_THICKNESS) end
         t:SetPoint(p1, a1, r1)
         t:SetPoint(p2, a2, r2)

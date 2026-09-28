@@ -121,25 +121,43 @@ Extensive customization available directly in-game through the configuration pan
 
 ## 🙏 Credits And References
 
-DragonUI builds on original work and adapted ideas from these addon authors and projects:
+DragonUI builds on original work, adapted code and ideas from these addon authors and projects. Each entry says what was used; the licenses are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 | Project | Author | Contribution |
 |---------|--------|-------------|
-| [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider) | Karl-HeinzSchneider | Primary design reference |
-| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Character panel art and layout reference |
-| [pretty_actionbar / pretty_minimap](https://github.com/s0h2x) | s0h2x | Action bar and minimap patterns |
-| [RetailUI](https://github.com/a3st) | a3st (Dmitriy) | UI styling reference |
-| [KPack](https://github.com/bkader/KPack) | bkader | Utility patterns, GearScore reference implementation |
-| GearScore | TankadinTV | Character panel gear score formula |
-| [Combuctor](https://github.com/Jaliborc) | Jaliborc | Bag integration |
-| [BankStack](https://github.com/kemayo/) | kemayo | Bank sort logic |
-| [UnitFrameLayers](https://github.com/RomanSpector) | RomanSpector | Heal/absorb overlay reference |
-| [oGlow](https://github.com/haste) | haste | Item quality border reference |
-| [ElvUI-WotLK](https://github.com/ElvUI-WotLK/) | ElvUI team | Pattern reference |
-| [Quartz](https://github.com/Nevcairiel/Quartz) | Hendrik Leppkes | Latency indicator concept |
+| [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI) | Karl-HeinzSchneider | Primary design reference; code snippets and textures adapted (MIT) |
+| [New Era](https://www.curseforge.com/wow/addons/new-era-retail-ui-in-classic) | Ashgaroth | Upstream of DragonUI_NewEra; design reference for the talents, merchant, character panel, world map and retail nameplates (no code); talent textures obtained via it (Blizzard art) |
+| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Art and geometry reference for the character panel, talents, merchant, collections and world map (no code); Blizzard textures obtained via it |
+| [pretty_actionbar](https://github.com/s0h2x/pretty_actionbar) | s0h2x | Original inspiration; no code remains |
+| [pretty_minimap](https://github.com/s0h2x/pretty_minimap) | s0h2x | Minimap textures obtained via it (Blizzard art; no code) |
+| [RetailUI](https://github.com/a3st/RetailUI) | a3st (Dmitriy) | Minimap, buff frame and API helper code and textures adapted (MIT) |
+| [KPack](https://github.com/bkader/KPack) | bkader | Chat mods code adapted (MIT/X); source of the Combuctor code in Bagster and of the GearScoreLite formula |
+| [Combuctor](https://github.com/Jaliborc) | Jason Greer (Tuller), João Cardoso (Jaliborc) | Bagster code adapted from Combuctor 4.2 via KPack (MIT) |
+| [NotPlater](https://github.com/RichSteini/NotPlater) | RichSteini | Options panel spell-filter dialog code adapted (MIT) |
+| [SexyMap](https://github.com/funkydude/SexyMap) | funkydude | Minimap border presets and rotation helper, used with permission |
+| [GearScore / GearScoreLite](https://www.wowinterface.com/downloads/info14865-GearScoreLite.html) | Mirrikat45 | Character panel gear score formula, reimplemented (no code) |
+| [BankStack](https://github.com/kemayo/wow-bankstack) | kemayo | Idea / inspiration for the bag sort (no code) |
+| [UnitFrameLayers](https://github.com/RomanSpector/UnitFrameLayers) | RomanSpector | Idea / inspiration for the heal/absorb overlays (no code); layer textures obtained via it (Blizzard art) |
+| [SnowfallKeyPress](https://www.wowinterface.com/downloads/info15078-SnowfallKeyPress.html) | Dayn | Idea / inspiration for casting on key down (no code) |
+| [oGlow](https://github.com/haste) | haste | Item quality border concept (no code) |
+| [ElvUI-WotLK](https://github.com/ElvUI-WotLK/) | ElvUI team | Pattern reference: load-on-demand options, slash commands, combat queue (no code) |
+| [Quartz](https://github.com/Nevcairiel/Quartz) | Hendrik Leppkes | Latency indicator concept (no code) |
+| [PentSec](https://github.com/PentSec) | PentSec | Collaborator: original drafts of the loot skin and world map modules |
 | [CrimsonHollow](https://github.com/CrimsonHollow) | CrimsonHollow | Fat Health Bar contribution |
 | [RovBot](https://github.com/RovxBot) | RovBot | Action bar grid/preset system |
-| [Raz0r](https://github.com/Raz0r1337) | Raz0r | German localization |
+| [Marrow](https://github.com/MarrowB83) | Marrow (Pexie) | Micro menu and unit frame contributions |
+| [Andrew Kawula](https://github.com/akawula) | Andrew Kawula | Capture bar and faction progress bar fixes |
+| [WYPanda](https://github.com/1825679767) | WYPanda | Chinese localization; minimap addon-button collector, LFG and party glow fixes |
+| [Štefan](https://github.com/Stefan2102) | Štefan | Default profile for new characters, chat link tooltips, nameplate fixes |
+| yetanotherneuron | yetanotherneuron (yan) | Player buff layout options and aura source tooltips; nameplate name fix |
+| [migwynkriid](https://github.com/migwynkriid) | migwynkriid | 3D animated unit frame portraits, quest ability button in editor mode |
+| [ZephZae](https://github.com/thezephyrsong) | ZephZae | AbsorbsMonitor zone and scaling fixes, bank stacking, collections micro button |
+| Melquisdeq | Melquisdeq | UI warmup module; item level, unusable-item tint and quest starter icon fixes |
+| [WillScarlettOhara](https://github.com/WillScarlettOhara) | WillScarlettOhara | Cast bar event matching fixes |
+| [Ambitosis](https://github.com/Ambitosis) | Ambitosis | Questie compatibility fix |
+| [perks](https://github.com/perks) | perks | Transmog cache fix |
+| Chill Guy | Chill Guy | Always-hidden option for the micro menu and bag bar |
+| [Raz0r](https://github.com/Raz0r1337) | Raz0r (St0ny) | German localization |
 | [nadugi](https://github.com/nadugi) | nadugi | Korean localization |
 
 Missing from the list? [Let me know](https://github.com/NeticSoul/DragonUI/issues).
@@ -152,7 +170,7 @@ Missing from the list? [Let me know](https://github.com/NeticSoul/DragonUI/issue
 
 ## 📜 License
 
-DragonUI is released under the [MIT License](LICENSE). Bundled third-party components have their own licenses - see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`LICENSES/`](LICENSES/). World of Warcraft game artwork included in the addon (most textures under `DragonUI/Textures/`) is © Blizzard Entertainment, is not covered by the MIT License, and is included only for use with the game.
+DragonUI's own code is released under the [MIT License](LICENSE). Bundled libraries, fonts and code adapted from other projects keep their own licenses, and the SexyMap border presets are included with their author's permission - see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`LICENSES/`](LICENSES/) (copies of both ship inside the `DragonUI/` addon folder). World of Warcraft game artwork included in the addon (most textures under `DragonUI/Textures/`) is © Blizzard Entertainment, is not covered by the MIT License, and is included only for use with the game.
 
 ## 📎 Disclaimer
 

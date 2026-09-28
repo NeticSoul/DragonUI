@@ -1,3 +1,6 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from Combuctor via KPack (MIT, (c) 2010 Jason Greer and João Cardoso); see THIRD_PARTY_NOTICES.
+
 local addon = select(2, ...)
 
 -- ============================================================================

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Event Package System
 -- Centralized event registration and dispatch for addon subsystems.
@@ -22,7 +24,7 @@ end
 local hub = CreateFrame("Frame")
 hub:SetScript("OnEvent", dispatch)
 
-local eventPackage = { events = hub, fire_event = dispatch }
+local eventPackage = { events = hub, Dispatch = dispatch }
 addon.package = eventPackage
 
 local function isSubscribed(queue, callback)
@@ -34,14 +36,14 @@ local function isSubscribed(queue, callback)
 	return false
 end
 
-function eventPackage:RegisterEvents(callback, ...)
+function eventPackage:Subscribe(callback, ...)
 	if type(callback) ~= "function" then
-		error("RegisterEvents: callback must be a function, got " .. type(callback), 2)
+		error("Subscribe: callback must be a function, got " .. type(callback), 2)
 	end
 	for position = 1, select("#", ...) do
 		local event = select(position, ...)
 		if type(event) ~= "string" then
-			error(("RegisterEvents: event #%d is %s, expected a string"):format(position, tostring(event)), 2)
+			error(("Subscribe: event #%d is %s, expected a string"):format(position, tostring(event)), 2)
 		end
 		local queue = subscribers[event]
 		if not queue then

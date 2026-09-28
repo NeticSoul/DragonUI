@@ -346,7 +346,7 @@ function WM.BuildQuestDetail(panel)
     header:SetPoint("TOPRIGHT", detail, "TOPRIGHT", 0, 0)
     header:SetHeight(HEADER_H)
     header.bg = header:CreateTexture(nil, "BACKGROUND")
-    header.bg:set_atlas("questlog-reward-top-frame")
+    header.bg:SetAtlasTexture("questlog-reward-top-frame")
     header.bg:SetAllPoints(header)
 
     local back = CreateFrame("Button", nil, header, "UIPanelButtonTemplate")
@@ -358,7 +358,7 @@ function WM.BuildQuestDetail(panel)
 
     -- Up behind the band: the sheet's top edge is torn, and retail hides it the same way.
     local page = detail:CreateTexture(nil, "BACKGROUND")
-    page:set_atlas("questbg-parchment")
+    page:SetAtlasTexture("questbg-parchment")
     page:SetPoint("TOPLEFT", detail, "TOPLEFT", 0, 0)
 
     footer = CreateFrame("Frame", nil, detail)
@@ -367,13 +367,13 @@ function WM.BuildQuestDetail(panel)
     footer:SetPoint("BOTTOMRIGHT", detail, "BOTTOMRIGHT", 0, 0)
     footer:SetHeight(1)
     footer.divider = footer:CreateTexture(nil, "ARTWORK")
-    footer.divider:set_atlas("questlog-reward-header-top")
+    footer.divider:SetAtlasTexture("questlog-reward-header-top")
     footer.divider:SetHeight(DIVIDER_H)
     footer.divider:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
     footer.divider:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
     -- Below the band, never behind it: its top 11px are clear and would show this as a black strip.
     footer.bg = footer:CreateTexture(nil, "BACKGROUND")
-    footer.bg:set_atlas("questlog-reward-tile-vertical")
+    footer.bg:SetAtlasTexture("questlog-reward-tile-vertical")
     footer.bg:SetPoint("TOPLEFT", footer.divider, "BOTTOMLEFT", 0, 0)
     footer.bg:SetPoint("BOTTOMRIGHT", footer, "BOTTOMRIGHT", 0, 0)
     -- The carving sits in the band's lower two thirds; the word rides with it.

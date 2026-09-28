@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local NP = addon.Nameplates
 local C = NP.const
@@ -769,34 +771,35 @@ local function IsCastNotInterruptibleFlag(value)
     return value == true
 end
 
--- Buff spell IDs with interrupt immunity not reflected in native notInterruptible.
-local PROTECTED_CAST_AURAS = {
-    [642] = true, -- Divine Shield
-    [54748] = true, -- Burning Determination (Dwarf racial: interrupt immunity after stun/fear)
-    [45438] = true, -- Ice Block
-    [31224] = true, -- Cloak of Shadows (spell immunity; imprecise for melee-based interrupts
-                     -- like Kick/Pummel, same tolerance already accepted by this table)
-}
-local AURA_MASTERY_SPELLID = 31821
-local CONCENTRATION_AURA_SPELLID = 19746
+-- Divine Shield, Cloak of Shadows (melee kicks still land), Ice Block, Burning Determination.
+local INTERRUPT_IMMUNITY_BUFFS = { [642] = true, [31224] = true, [45438] = true, [54748] = true }
+local AURA_MASTERY_ID, CONCENTRATION_AURA_ID = 31821, 19746
+
+local function NameAndEleventh(name, ...)
+    return name, (select(10, ...))
+end
 
 local function IsUnitProtectedFromInterrupt(unit)
-    if not unit or not UnitExists(unit) then
+    if not (unit and UnitExists(unit)) then
         return false
     end
-    local hasAuraMastery, hasConcentrationAura = false, false
-    for i = 1, 40 do
-        local name, _, _, _, _, _, _, _, _, _, spellID = UnitBuff(unit, i)
-        if not name then break end
-        if PROTECTED_CAST_AURAS[spellID] then
+    -- Aura Mastery grants interrupt immunity only while Concentration Aura is also up.
+    local mastery, concentration = false, false
+    for slot = 1, 40 do
+        local buffName, buffId = NameAndEleventh(UnitBuff(unit, slot))
+        if not buffName then
+            break
+        end
+        if INTERRUPT_IMMUNITY_BUFFS[buffId] then
             return true
-        elseif spellID == AURA_MASTERY_SPELLID then
-            hasAuraMastery = true
-        elseif spellID == CONCENTRATION_AURA_SPELLID then
-            hasConcentrationAura = true
+        end
+        if buffId == AURA_MASTERY_ID then
+            mastery = true
+        elseif buffId == CONCENTRATION_AURA_ID then
+            concentration = true
         end
     end
-    return hasAuraMastery and hasConcentrationAura
+    return mastery and concentration
 end
 
 local function ShouldInterruptPartyEarlyEnd(unit, bar)

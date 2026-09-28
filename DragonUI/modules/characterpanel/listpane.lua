@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -27,33 +29,33 @@ function CP.BuildListHeader(parent, onToggle)
     header:SetFrameLevel(parent:GetFrameLevel() + 2)
 
     local left = header:CreateTexture(nil, "BACKGROUND")
-    left:set_atlas("options_listexpand_left", true)
+    left:SetAtlasTexture("options_listexpand_left", true)
     left:SetPoint("LEFT", header, "LEFT", 0, 0)
 
     local right = header:CreateTexture(nil, "BACKGROUND")
-    right:set_atlas("options_listexpand_right", true)
+    right:SetAtlasTexture("options_listexpand_right", true)
     right:SetPoint("RIGHT", header, "RIGHT", 0, 0)
 
     local middle = header:CreateTexture(nil, "BACKGROUND")
-    middle:set_atlas("_options_listexpand_middle")
+    middle:SetAtlasTexture("_options_listexpand_middle")
     middle:SetPoint("TOPLEFT", left, "TOPRIGHT", 0, 0)
     middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT", 0, 0)
 
     -- Three pieces, not one wash: the caps are shaped, so a rectangle stops at their inner edge.
     local hlLeft = header:CreateTexture(nil, "HIGHLIGHT")
-    hlLeft:set_atlas("options_listexpand_left", true)
+    hlLeft:SetAtlasTexture("options_listexpand_left", true)
     hlLeft:SetPoint("LEFT", header, "LEFT", 0, 0)
     hlLeft:SetBlendMode("ADD")
     hlLeft:SetAlpha(HEADER_HL_ALPHA)
 
     local hlRight = header:CreateTexture(nil, "HIGHLIGHT")
-    hlRight:set_atlas("options_listexpand_right", true)
+    hlRight:SetAtlasTexture("options_listexpand_right", true)
     hlRight:SetPoint("RIGHT", header, "RIGHT", 0, 0)
     hlRight:SetBlendMode("ADD")
     hlRight:SetAlpha(HEADER_HL_ALPHA)
 
     local hlMiddle = header:CreateTexture(nil, "HIGHLIGHT")
-    hlMiddle:set_atlas("_options_listexpand_middle")
+    hlMiddle:SetAtlasTexture("_options_listexpand_middle")
     hlMiddle:SetPoint("TOPLEFT", left, "TOPRIGHT", 0, 0)
     hlMiddle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT", 0, 0)
     hlMiddle:SetBlendMode("ADD")
@@ -75,9 +77,9 @@ function CP.UpdateListHeader(header, name, index, collapsed)
     header.Text:SetText(name or "")
     header._index, header._collapsed = index, collapsed
     local cap = collapsed and "options_listexpand_right" or "options_listexpand_right_expanded"
-    header.Chevron:set_atlas(cap, true)
+    header.Chevron:SetAtlasTexture(cap, true)
     -- The two cap variants are different shapes, so the glow has to follow the chevron.
-    header.ChevronHighlight:set_atlas(cap, true)
+    header.ChevronHighlight:SetAtlasTexture(cap, true)
 end
 
 -- Retail's WowStyle1DropdownTemplate, which is what Reputation and Currency hang top right: a
@@ -166,7 +168,7 @@ local function acquireMenuRow(menu, i)
     local box = row:CreateTexture(nil, "ARTWORK")
     box:SetSize(MENU_CHECK, MENU_CHECK)
     box:SetPoint("LEFT", row, "LEFT", 0, 0)
-    box:set_atlas("checkbox-minimal")
+    box:SetAtlasTexture("checkbox-minimal")
     box:Hide()
     row.Box = box
 
@@ -174,7 +176,7 @@ local function acquireMenuRow(menu, i)
     local check = row:CreateTexture(nil, "OVERLAY")
     check:SetSize(MENU_CHECK, MENU_CHECK)
     check:SetPoint("LEFT", row, "LEFT", 0, 0)
-    check:set_atlas("checkmark-minimal")
+    check:SetAtlasTexture("checkmark-minimal")
     row.Check = check
 
     local line = row:CreateTexture(nil, "ARTWORK")
@@ -240,10 +242,10 @@ local function buildFilterMenu(btn, name, build)
             local row = acquireMenuRow(self, i)
             local divider = entry.divider and true or false
 
-            row.Line:SetShownReq(divider)
-            row.Text:SetShownReq(not divider)
-            row.Box:SetShownReq(not divider and entry.isCheckbox)
-            row.Check:SetShownReq(not divider and entry.checked)
+            row.Line:SetShownCompat(divider)
+            row.Text:SetShownCompat(not divider)
+            row.Box:SetShownCompat(not divider and entry.isCheckbox)
+            row.Check:SetShownCompat(not divider and entry.checked)
             row:EnableMouse(not divider)
             row:SetHeight(divider and MENU_DIVIDER_H or MENU_ROW_H)
 
@@ -277,24 +279,24 @@ function CP.CreateFilterDropdown(parent, name, width, build)
 
     -- Three pieces, never one: the caps hold the corner aspect by taking their width from the row
     -- height, and only the flat middle stretches, which it does invisibly.
-    -- Atlas before the anchors throughout: set_atlas re-asserts whatever size the region already had.
+    -- Atlas before the anchors throughout: SetAtlasTexture re-asserts whatever size the region already had.
     local left = btn:CreateTexture(nil, "BACKGROUND")
-    left:set_atlas("common-dropdown-textholder-left")
+    left:SetAtlasTexture("common-dropdown-textholder-left")
     left:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
     left:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, 0)
 
     local right = btn:CreateTexture(nil, "BACKGROUND")
-    right:set_atlas("common-dropdown-textholder-right")
+    right:SetAtlasTexture("common-dropdown-textholder-right")
     right:SetPoint("TOPRIGHT", btn, "TOPRIGHT", 0, 0)
     right:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", 0, 0)
 
     local body = btn:CreateTexture(nil, "BACKGROUND")
-    body:set_atlas("common-dropdown-textholder-center")
+    body:SetAtlasTexture("common-dropdown-textholder-center")
     body:SetPoint("TOPLEFT", left, "TOPRIGHT", 0, 0)
     body:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT", 0, 0)
 
     local arrow = btn:CreateTexture(nil, "ARTWORK")
-    arrow:set_atlas("common-dropdown-a-button")
+    arrow:SetAtlasTexture("common-dropdown-a-button")
 
     -- Retail's font. The text is the CURRENT SELECTION, not a static "Filter": this is a
     -- selection dropdown, which is why theirs reads "All" rather than naming itself.
@@ -336,7 +338,7 @@ function CP.CreateFilterDropdown(parent, name, width, build)
         elseif over then
             suffix = "-hover"
         end
-        arrow:set_atlas("common-dropdown-a-button" .. suffix)
+        arrow:SetAtlasTexture("common-dropdown-a-button" .. suffix)
     end
 
     btn:HookScript("OnEnter", function() over = true; restate() end)
@@ -448,16 +450,18 @@ function CP.BuildListPane(host, scrollName, rowHeight, repaint, bottomInset, top
         FauxScrollFrame_OnVerticalScroll(self, offset, rowHeight, repaint)
     end)
 
-    -- The template's own slider drives the offset; the wheel has to be wired to it by hand.
-    scroll:EnableMouseWheel(true)
-    scroll:SetScript("OnMouseWheel", function(self, delta)
-        local bar = _G[(self:GetName() or "") .. "ScrollBar"]
-        if not bar then return end
-        local min, max = bar:GetMinMaxValues()
-        local value = bar:GetValue() - delta * rowHeight
-        if value < min then value = min elseif value > max then value = max end
-        bar:SetValue(value)
+    -- The template's own wheel handler steps half the bar; this steps one row per notch instead.
+    local wheelBar = scrollName and _G[scrollName .. "ScrollBar"]
+    local function clampToBar(value, low, high)
+        return math.min(math.max(value, low), high)
+    end
+    scroll:SetScript("OnMouseWheel", function(_, delta)
+        if wheelBar == nil then return end
+        local wanted = wheelBar:GetValue() - delta * rowHeight
+        wheelBar:SetValue(clampToBar(wanted, wheelBar:GetMinMaxValues()))
     end)
+    scroll:EnableMouseWheel(true)
+
     if CP.ReskinScrollBar then
         CP.ReskinScrollBar(scroll, host, topInset, CP.LIST_SCROLLBAR_X, bottomInset, true)
     end

@@ -1,6 +1,8 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from RetailUI (MIT, (c) 2024 Dmitriy); see THIRD_PARTY_NOTICES.
+
 -- ============================================================================
 -- DragonUI - Buff Frame Module
--- Based on RetailUI by Dmitriy (MIT License)
 -- Adapted for DragonUI with Dragonflight-inspired positioning control.
 -- ============================================================================
 
@@ -304,11 +306,11 @@ local function SetBuffsCollapsed(collapsed)
         local atlas = collapsed and 'CollapseButton-Left' or 'CollapseButton-Right'
         local normalTexture = toggleButton:GetNormalTexture()
         if normalTexture then
-            normalTexture:set_atlas(atlas, true)
+            normalTexture:SetAtlasTexture(atlas, true)
         end
         local highlightTexture = toggleButton:GetHighlightTexture()
         if highlightTexture then
-            highlightTexture:set_atlas(atlas, true)
+            highlightTexture:SetAtlasTexture(atlas, true)
         end
     end
 
@@ -335,12 +337,12 @@ local function ReplaceBlizzardFrame(frame)
 
     local normalTexture = toggleButton:GetNormalTexture() or toggleButton:CreateTexture(nil, "BORDER")
     normalTexture:SetAllPoints(toggleButton)
-    normalTexture:set_atlas('CollapseButton-Right', true)
+    normalTexture:SetAtlasTexture('CollapseButton-Right', true)
     toggleButton:SetNormalTexture(normalTexture)
 
     local highlightTexture = toggleButton:GetHighlightTexture() or toggleButton:CreateTexture(nil, "HIGHLIGHT")
     highlightTexture:SetAllPoints(toggleButton)
-    highlightTexture:set_atlas('CollapseButton-Right', true)
+    highlightTexture:SetAtlasTexture('CollapseButton-Right', true)
     toggleButton:SetHighlightTexture(highlightTexture)
 
     toggleButton:SetScript("OnClick", function(self)

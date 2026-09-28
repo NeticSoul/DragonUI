@@ -56,8 +56,8 @@ function CP.SkinCheckbox(btn, checked)
     -- Inset rather than SetAllPoints: this art fills 27 of its 30px canvas where the classic box it
     -- replaces left a wide margin, so filling the button outright reads a size too big.
     local function dress(tex, atlas, add)
-        if not tex or not tex.set_atlas then return end
-        tex:set_atlas(atlas)
+        if not tex or not tex.SetAtlasTexture then return end
+        tex:SetAtlasTexture(atlas)
         tex:ClearAllPoints()
         tex:SetPoint("TOPLEFT", btn, "TOPLEFT", CHECK_ART_INSET, -CHECK_ART_INSET)
         tex:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -CHECK_ART_INSET, CHECK_ART_INSET)
@@ -124,8 +124,8 @@ local function build()
     local border = CreateFrame("Frame", nil, detail)
     border:SetAllPoints(detail)
     border:SetFrameLevel(detail:GetFrameLevel() + 2)
-    local layout = NineSliceUtils and NineSliceUtils.GetLayout("Dialog")
-    if layout then NineSliceUtils.ApplyLayout(border, layout) end
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("Dialog")
+    if layout then DragonUI_NineSlice.ApplyLayout(border, layout) end
 
     -- The rule under the paper, between it and the checkboxes.
     local divider = detail:CreateTexture(nil, "OVERLAY")

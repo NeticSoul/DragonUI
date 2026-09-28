@@ -1,3 +1,6 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+-- Portions adapted from RetailUI and DragonflightUI (both MIT); see THIRD_PARTY_NOTICES.
+
 --[[
 ================================================================================
 DragonUI - API Functions
@@ -1257,8 +1260,8 @@ function addon:SafeSetAtlas(texture, atlasName, useAtlasSize)
         return false
     end
 
-    if texture.set_atlas then
-        local ok = pcall(texture.set_atlas, texture, atlasName, useAtlasSize)
+    if texture.SetAtlasTexture then
+        local ok = pcall(texture.SetAtlasTexture, texture, atlasName, useAtlasSize)
         return ok
     end
 

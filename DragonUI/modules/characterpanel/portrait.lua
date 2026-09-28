@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
@@ -55,26 +57,24 @@ local function setClassPortrait()
     p._duiMode = "class"
 end
 
-local function setFacePortrait()
-    local p = _G.CharacterFramePortrait
-    local cf = _G.CharacterFrame
-    if not p or not cf then return end
-    -- The class icon leaves a sub-rect texcoord behind; SetPortraitTexture does not reset it,
-    -- so the face would render sampled down to a sliver.
-    p:SetTexCoord(0, 1, 0, 1)
-    applySquareArt(p, cf)
-    if SetPortraitTexture then SetPortraitTexture(p, "player") end
-    p._duiMode = "face"
+-- Coords reset first: the class icon leaves a sub-rect behind that SetPortraitTexture keeps.
+local function showPlayerFace()
+    local icon, owner = _G.CharacterFramePortrait, _G.CharacterFrame
+    if icon == nil or owner == nil then return end
+
+    icon:SetTexCoord(0, 1, 0, 1)
+    applySquareArt(icon, owner)
+    if SetPortraitTexture then SetPortraitTexture(icon, "player") end
+    icon._duiMode = "face"
 end
 
--- Gated here rather than at the builder: the event frame and the CharacterFrame_OnEvent hook below
--- outlive a disable, and both kept dragging Blizzard's portrait onto the retail ring's offsets.
-local function reapply()
+local function refreshPortrait()
     if not CP:Enabled() then return end
-    if CP:Config().class_portrait then setClassPortrait() else setFacePortrait() end
+    local useClassArt = CP:Config().class_portrait
+    if useClassArt then setClassPortrait() else showPlayerFace() end
 end
 
-CP.UpdatePortrait = reapply
+CP.UpdatePortrait = refreshPortrait
 
 function CP.RestorePortrait()
     local p = _G.CharacterFramePortrait
@@ -91,36 +91,33 @@ function CP.RestorePortrait()
     if SetPortraitTexture then SetPortraitTexture(p, "player") end
 end
 
--- DISPLAY_SIZE_CHANGED drives Blizzard back through its own portrait setup without going through
--- CharacterFrame_OnEvent, so the hook below never saw it and the class icon reverted to the face.
-local events = CreateFrame("Frame")
-events:RegisterEvent("DISPLAY_SIZE_CHANGED")
-events:RegisterEvent("UNIT_PORTRAIT_UPDATE")
-events:RegisterEvent("PLAYER_ENTERING_WORLD")
-events:SetScript("OnEvent", function(_, event, unit)
-    if event == "UNIT_PORTRAIT_UPDATE" and unit ~= "player" then return end
-    reapply()
+-- Blizzard redoes its portrait on a display resize without going through CharacterFrame_OnEvent.
+local portraitEvents = CreateFrame("Frame")
+for _, event in ipairs({ "DISPLAY_SIZE_CHANGED", "UNIT_PORTRAIT_UPDATE", "PLAYER_ENTERING_WORLD" }) do
+    portraitEvents:RegisterEvent(event)
+end
+portraitEvents:SetScript("OnEvent", function(_, event, unit)
+    if event ~= "UNIT_PORTRAIT_UPDATE" or unit == "player" then refreshPortrait() end
 end)
 
-local eventHooked
+local showHookInstalled, eventHookInstalled = false, false
 
 local function build()
-    local cf = _G.CharacterFrame
-    if not cf then return end
-
+    local owner = _G.CharacterFrame
+    if owner == nil then return end
     applyGeometry()
 
-    if not cf._duiPortraitWired then
-        cf._duiPortraitWired = true
-        cf:HookScript("OnShow", reapply)
+    if not showHookInstalled then
+        owner:HookScript("OnShow", refreshPortrait)
+        showHookInstalled = true
     end
-    -- Blizzard re-runs SetPortraitTexture on UNIT_PORTRAIT_UPDATE, wiping the class icon.
-    if _G.CharacterFrame_OnEvent and not eventHooked then
-        eventHooked = true
-        hooksecurefunc("CharacterFrame_OnEvent", reapply)
+    -- Blizzard's OnEvent calls SetPortraitTexture on UNIT_PORTRAIT_UPDATE, over our art.
+    if not eventHookInstalled and _G.CharacterFrame_OnEvent then
+        hooksecurefunc("CharacterFrame_OnEvent", refreshPortrait)
+        eventHookInstalled = true
     end
 
-    reapply()
+    refreshPortrait()
 end
 
 CP:RegisterBuilder("portrait", build)

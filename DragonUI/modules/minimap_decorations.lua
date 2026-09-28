@@ -1,10 +1,7 @@
 ﻿-- ============================================================================
 -- DragonUI - Minimap Decorations
 -- ============================================================================
--- Preset attribution note:
--- Original preset work credited to the SexyMap author:
--- https://github.com/funkydude
--- https://www.curseforge.com/members/funkehdude
+-- Border presets and rotation helper from SexyMap by funkydude, used with permission (2026-09-27).
 
 local addon = select(2, ...)
 if not addon then return end

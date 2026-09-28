@@ -123,8 +123,8 @@ local function updateRing(m)
     local ring = faction and ("honorsystem-portrait-" .. faction:lower())
     -- Only if the ring art is actually installed; the badge stands on its own without it.
     if ring and addon.atlasinfo and addon.atlasinfo[ring] then
-        m.ring:set_atlas(ring, true)
-        -- After, always: set_atlas re-stamps the atlas's own 50x52 and would undo the size this
+        m.ring:SetAtlasTexture(ring, true)
+        -- After, always: SetAtlasTexture re-stamps the atlas's own 50x52 and would undo the size this
         -- pane draws the ring at.
         m.ring:SetSize(RING_W, RING_H)
         m.ring:Show()

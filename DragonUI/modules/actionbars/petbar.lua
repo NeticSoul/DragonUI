@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- ============================================================================
@@ -154,7 +156,7 @@ local function UpdateAnchorPosition()
     
     local cfg = GetDynamicConfig()
     local holder = PetbarModule.anchor
-    local mainBar = addon.pUiMainBar
+    local mainBar = addon.MainBar
     local onMainBar = mainBar and mainBar:IsShown()
     local locked = InCombatLockdown()
     local offsetY = cfg.y_position
@@ -205,7 +207,7 @@ end
 local FOLLOW_TOKEN = 'PET_ACTION_FOLLOW'
 
 -- Must never write PetActionBarFrame.showgrid: an insecure write there taints the pet bar.
-local function petbutton_updatestate()
+local function updatePetButtonStates()
     if not IsModuleEnabled() then return end
     local showEmpty = GetDynamicConfig().grid
     for index = 1, NUM_PET_ACTION_SLOTS do
@@ -273,12 +275,12 @@ local function PetSlotPoint(index, previous, gap)
 end
 
 -- Position pet buttons (legacy approach - this is what makes it work!)
-local function petbutton_position()
+local function positionPetButtons()
     if not IsModuleEnabled() then return end
 
     -- PLAYER_LOGIN also fires on a mid-combat /reload; reparenting secure buttons there is blocked.
     if InCombatLockdown() then
-        addon.CombatQueue:Add("petbar_position_buttons", petbutton_position)
+        addon.CombatQueue:Add("petbar_position_buttons", positionPetButtons)
         return
     end
 
@@ -300,8 +302,8 @@ local function petbutton_position()
             slotButton:SetPoint(PetSlotPoint(index, previous, space))
             slotButton:Show()
             petbar:SetAttribute('addchild', slotButton)
-            if addon.petbuttons_template then
-                addon.petbuttons_template()
+            if addon.StylePetButtons then
+                addon.StylePetButtons()
             end
         end
         previous = slotButton
@@ -335,7 +337,7 @@ local function petbutton_position()
 
     -- Hook for pet action updates
     if not PetbarModule.hooks.PetActionBar_Update then
-        hooksecurefunc('PetActionBar_Update', petbutton_updatestate)
+        hooksecurefunc('PetActionBar_Update', updatePetButtonStates)
         PetbarModule.hooks.PetActionBar_Update = true
     end
 end
@@ -371,11 +373,11 @@ local function CreateEventFrame()
         if addon.EditorMode and addon.EditorMode:IsActive() then return end
 
         if eventName == 'PLAYER_LOGIN' then
-            petbutton_position()
+            positionPetButtons()
         elseif eventName == 'PET_BAR_UPDATE_COOLDOWN' then
             PetActionBar_UpdateCooldowns()
         elseif RefreshesSlotState(eventName, unit) then
-            petbutton_updatestate()
+            updatePetButtonStates()
         end
         UpdateAnchorPosition()
     end
@@ -474,7 +476,7 @@ local function ApplyPetbarSystem()
     end
 
     -- Initialize pet bar system
-    petbutton_position()
+    positionPetButtons()
     
     -- Register legacy event system
     CreateEventFrame()
@@ -623,7 +625,7 @@ end
 -- Re-runs the per-slot alpha logic after the "Show Empty Slots" (grid) toggle changes.
 function addon.RefreshPetbarGrid()
     if not IsModuleEnabled() then return end
-    petbutton_updatestate()
+    updatePetButtonStates()
 end
 
 -- Refresh function for size and position updates
@@ -659,7 +661,7 @@ function addon.RefreshPetbarFrame()
     
     -- Reposition buttons with new size
     if PetbarModule.petbar then
-        petbutton_position()
+        positionPetButtons()
     end
 end
 

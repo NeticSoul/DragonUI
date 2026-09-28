@@ -267,7 +267,7 @@ local function onHide()
     ns.Call("StopSheen")
     PlaySound("TalentScreenClose")
     UpdateMicroButtons()
-    if ns.edit then ns.Call("ExitEditor") end
+    if ns.edit then ns.Call("LeaveEditorNow") end
     wipe(ns.undo)
     ResetGroupPreviewTalentPoints(false, ns.ActiveGroup())
     if ns.PetHasTalents() then
@@ -315,8 +315,8 @@ local function buildChrome(win, level)
     local chrome = CreateFrame("Frame", nil, win)
     chrome:SetAllPoints(win)
     chrome:SetFrameLevel(level)
-    local layout = NineSliceUtils and NineSliceUtils.GetLayout("PortraitFrameTemplate")
-    if layout then NineSliceUtils.ApplyLayout(chrome, layout) end
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    if layout then DragonUI_NineSlice.ApplyLayout(chrome, layout) end
 
     local title = chrome:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", chrome, "TOPLEFT", 58, -6)
@@ -377,6 +377,11 @@ function ns.BuildWindow()
     win:RegisterForDrag("LeftButton")
     win:SetPoint("CENTER", UIParent, "CENTER", 0, 17)
     tinsert(UISpecialFrames, win:GetName())
+
+    -- UIErrorsFrame shares HIGH with this toplevel window, which rises above it on every show or click.
+    hooksecurefunc(UIErrorsFrame, "AddMessage", function(messages)
+        if win:IsShown() then messages:Raise() end
+    end)
 
     local base = win:GetFrameLevel()
 

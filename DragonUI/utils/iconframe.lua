@@ -1,9 +1,9 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Icon Frame Utility
 -- Shared action-bar icon chrome (buttons.lua) for icons that are plain Textures
 -- rather than Buttons: castbars, nameplate castbars.
---
--- Copyright (c) 2026 NeticSoul. Released under the MIT License.
 -- ============================================================================
 
 local addon = select(2, ...)

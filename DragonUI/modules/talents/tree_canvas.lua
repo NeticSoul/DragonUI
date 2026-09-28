@@ -149,10 +149,10 @@ local function setShape(node, key)
     if node.shapeKey == key then return end
     node.shapeKey = key
     local look, glint = SHAPES[key], SHEENS[key]
-    node.shadow:set_atlas(look.shadow)
+    node.shadow:SetAtlasTexture(look.shadow)
     node.shadow:SetSize(look.shadowSize, look.shadowSize)
     node.icon:SetSize(look.icon, look.icon)
-    node.glow:set_atlas(look.glow)
+    node.glow:SetAtlasTexture(look.glow)
     node.glow:SetSize(look.ring + 22, look.ring + 22)
     node:SetHitRectInsets(look.inset, look.inset, look.inset, look.inset)
     for _, tex in ipairs({ node.sheenLow, node.sheenHigh }) do
@@ -181,9 +181,9 @@ local function dressNode(node, entry)
 
     local state = entry.state
     local ringAtlas = "talents-node-" .. look.family .. "-" .. state
-    node.ring:set_atlas(ringAtlas)
+    node.ring:SetAtlasTexture(ringAtlas)
     node.ring:SetSize(look.ring, look.ring)
-    node.hover:set_atlas(ringAtlas)
+    node.hover:SetAtlasTexture(ringAtlas)
     node.hover:SetSize(look.ring, look.ring)
 
     local dim = state == "gray" or state == "locked"

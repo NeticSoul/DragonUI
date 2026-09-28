@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local NP = addon.Nameplates
 local C = NP.const
@@ -350,20 +352,31 @@ function NP.native_style.ClassKeyFromBarColor(r, g, b)
     return C.CLASS_BY_BAR_COLOR[math.floor(r * 10 + g * 100 + b)]
 end
 
--- Reaction and unit type from health bar color.
+local function ChannelLevel(value)
+    if value < 0.01 then
+        return 0
+    elseif value > 0.99 then
+        return 2
+    end
+    return 1
+end
+
+-- Only the client's pure plate colours map; class-coloured players fall through to HOSTILE, PLAYER.
+local PURE_PLATE_COLOR_REACTION = {
+    [6] = { "FRIENDLY", "NPC" },
+    [2] = { "FRIENDLY", "PLAYER" },
+    [24] = { "NEUTRAL", "NPC" },
+    [18] = { "HOSTILE", "NPC" },
+}
+
 function NP.native_style.GetPlateReaction(plateData)
-    local r, g, b = plateData.barR, plateData.barG, plateData.barB
-    if not r then
+    local red, green, blue = plateData.barR, plateData.barG, plateData.barB
+    if red == nil then
         return nil, nil
     end
-    if r < 0.01 and b < 0.01 and g > 0.99 then
-        return "FRIENDLY", "NPC"
-    elseif r < 0.01 and b > 0.99 and g < 0.01 then
-        return "FRIENDLY", "PLAYER"
-    elseif r > 0.99 and b < 0.01 and g > 0.99 then
-        return "NEUTRAL", "NPC"
-    elseif r > 0.99 and b < 0.01 and g < 0.01 then
-        return "HOSTILE", "NPC"
+    local pair = PURE_PLATE_COLOR_REACTION[ChannelLevel(red) * 9 + ChannelLevel(green) * 3 + ChannelLevel(blue)]
+    if pair then
+        return pair[1], pair[2]
     end
     return "HOSTILE", "PLAYER"
 end

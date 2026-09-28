@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local _G, pairs, select = _G, pairs, select
 local class = addon._class
@@ -77,7 +79,7 @@ local MultiBarBottomRight = _G["MultiBarBottomRight"]
 local stanceBarInitialized = false;
 
 -- SIMPLE STATIC POSITIONING - NO DYNAMIC LOGIC
-local function stancebar_update()
+local function updateStanceBar()
     if not IsModuleEnabled() or not anchor then return end
     if InCombatLockdown() then return end  -- Cannot modify secure frame in combat
     
@@ -111,7 +113,7 @@ end
 -- Simple update function - no queues needed
 local function UpdateStanceBar()
     if not IsModuleEnabled() then return end
-    stancebar_update()
+    updateStanceBar()
 end
 
 -- Export for external modules (mainbars.lua calls this when dual-bar offset changes)
@@ -129,15 +131,15 @@ addon.UpdateStanceBarPosition = UpdateStanceBar
 local function CreateStanceFrames()
     if StanceModule.frames.anchor or not IsModuleEnabled() then return end
     
-    local holder = CreateFrame('Frame', 'pUiStanceHolder', UIParent)
+    local holder = CreateFrame('Frame', 'DragonUI_StanceHolder', UIParent)
     holder:SetSize(HOLDER_EDGE, HOLDER_EDGE)
-    local bar = CreateFrame('Frame', 'pUiStanceBar', holder, 'SecureHandlerStateTemplate')
+    local bar = CreateFrame('Frame', 'DragonUI_StanceBar', holder, 'SecureHandlerStateTemplate')
     anchor, stancebar = holder, bar
     StanceModule.frames.anchor, StanceModule.frames.stancebar = holder, bar
     bar:SetAllPoints(holder)
     
     -- Expose globally for compatibility
-    _G.pUiStanceBar = stancebar
+    _G.DragonUI_StanceBar = stancebar
     
     -- Create editor overlay using centralized CreateUIFrame (with nineslice support)
     -- Initial size is a placeholder; real size is set in showTest based on active forms
@@ -177,7 +179,7 @@ local function CreateStanceFrames()
         stanceCfg.x_position = math.floor((stanceCfg.x_position or -211) + deltaX + 0.5)
         stanceCfg.y_offset = math.floor((stanceCfg.y_offset or -58) + deltaY + 0.5)
 
-        stancebar_update()
+        updateStanceBar()
 
         -- Keep overlay glued to the real anchor after applying DB delta.
         self:ClearAllPoints()
@@ -239,7 +241,7 @@ local function CreateStanceFrames()
             addon.db.profile.additional.stance.y_offset = math.floor(configStartY + deltaY + 0.5)
             
             -- Update anchor position in real-time (move the actual stance bar)
-            stancebar_update()
+            updateStanceBar()
             
             -- Keep overlay aligned to BOTTOMLEFT of anchor (buttons start there)
             self:ClearAllPoints()
@@ -261,7 +263,7 @@ local function CreateStanceFrames()
     end)
     
     -- Apply static positioning immediately
-    stancebar_update()
+    updateStanceBar()
     
     
 end
@@ -283,7 +285,7 @@ local function FormSlot(index)
 end
 
 local function RestyleFormSlots()
-    local restyle = addon.stancebuttons_template
+    local restyle = addon.StyleStanceButtons
     if restyle then
         restyle()
     end
@@ -312,7 +314,7 @@ local function SyncFormVisibility(slotButton, index)
     end
 end
 
-local stancebutton_update = function()
+local refreshStanceButtons = function()
     if not (IsModuleEnabled() and anchor) or InCombatLockdown() then return end
     local lead = FormSlot(1)
     if lead then
@@ -321,12 +323,12 @@ local stancebutton_update = function()
     end
 end
 
-local function stancebutton_position()
+local function positionStanceButtons()
     if not IsModuleEnabled() or not stancebar or not anchor then return end
 
     -- PLAYER_LOGIN also fires on a mid-combat /reload; reparenting secure buttons there is blocked.
     if InCombatLockdown() then
-        addon.CombatQueue:Add("stance_position_buttons", stancebutton_position)
+        addon.CombatQueue:Add("stance_position_buttons", positionStanceButtons)
         return
     end
 
@@ -398,7 +400,7 @@ end
 local function RebuildFormSlots()
     if not IsModuleEnabled() or InCombatLockdown() then return end
     RestyleFormSlots()
-    stancebutton_position()
+    positionStanceButtons()
     for index = 1, NUM_SHAPESHIFT_SLOTS do
         local slotButton = FormSlot(index)
         if slotButton then
@@ -410,7 +412,7 @@ end
 
 -- Unlisted events only refresh slot states; the form-count events rebuild the whole bar.
 local STANCE_EVENT_ACTIONS = {
-    PLAYER_LOGIN = stancebutton_position,
+    PLAYER_LOGIN = positionStanceButtons,
     UPDATE_SHAPESHIFT_FORMS = RebuildFormSlots,
     ACTIVE_TALENT_GROUP_CHANGED = RebuildFormSlots,
     CHARACTER_POINTS_CHANGED = RebuildFormSlots,
@@ -435,13 +437,13 @@ local function InitializeStanceBar()
     if not IsModuleEnabled() then return end
     
     -- IMPORTANT: Apply button textures FIRST (from buttons.lua)
-    if addon.stancebuttons_template then
-        addon.stancebuttons_template()
+    if addon.StyleStanceButtons then
+        addon.StyleStanceButtons()
     end
     
     -- Then position and scale
-    stancebutton_position()
-    stancebar_update()
+    positionStanceButtons()
+    updateStanceBar()
     
     if stancebar then
         stancebar:Show()
@@ -486,7 +488,7 @@ local function ApplyStanceSystem()
         StanceModule.hooks.ShapeshiftBar_Update = true
         hooksecurefunc('ShapeshiftBar_Update', function()
             if IsModuleEnabled() then
-                stancebutton_update()
+                refreshStanceButtons()
             end
         end)
     end
@@ -599,7 +601,7 @@ local function RestoreStanceSystem()
     end
     
     -- Clear global reference
-    _G.pUiStanceBar = nil
+    _G.DragonUI_StanceBar = nil
     
     -- Reset variables
     stanceBarInitialized = false
@@ -641,11 +643,11 @@ function addon.RefreshStance()
 	end
 	
 	-- First apply button textures (from buttons.lua)
-	if addon.stancebuttons_template then
-	    addon.stancebuttons_template()
+	if addon.StyleStanceButtons then
+	    addon.StyleStanceButtons()
 	end
 	
-	-- Update button size and spacing (scale-based - matching stancebutton_position)
+	-- Update button size and spacing (scale-based - matching positionStanceButtons)
 	local stanceConfig = GetStanceConfig()
 	local additionalConfig = (addon.db and addon.db.profile and addon.db.profile.additional) or {}
 	local btnsize = stanceConfig.button_size or additionalConfig.size or 36
@@ -664,7 +666,7 @@ function addon.RefreshStance()
 	end
 	
 	-- Update position
-	stancebar_update()
+	updateStanceBar()
 
 	if addon.VisibilityFade then
 		addon.VisibilityFade.Update("stancebar")

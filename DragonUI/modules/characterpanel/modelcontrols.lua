@@ -33,27 +33,27 @@ local function styleButton(btn, glyph)
 
     -- Pinned below the glyph explicitly rather than trusting the widget's default layer.
     local normal = btn:GetNormalTexture()
-    normal:set_atlas("common-button-square-gray-up")
+    normal:SetAtlasTexture("common-button-square-gray-up")
     normal:SetDrawLayer("BORDER")
     normal:ClearAllPoints()
     normal:SetAllPoints(btn)
 
     local pushed = btn:GetPushedTexture()
-    pushed:set_atlas("common-button-square-gray-down")
+    pushed:SetAtlasTexture("common-button-square-gray-down")
     pushed:SetDrawLayer("BORDER")
     pushed:ClearAllPoints()
     pushed:SetAllPoints(btn)
 
     -- OVERLAY, not ARTWORK: a button's normal texture sits there too and creation order decides.
     local icon = btn:CreateTexture(nil, "OVERLAY")
-    icon:set_atlas(glyph)
+    icon:SetAtlasTexture(glyph)
     icon:SetSize(GLYPH_SIZE, GLYPH_SIZE)
     icon:SetPoint("CENTER", btn, "CENTER", 0, 0)
     btn._duiGlyph = icon
 
     if not btn:GetHighlightTexture() then btn:SetHighlightTexture(ICON_SHEET) end
     local hl = btn:GetHighlightTexture()
-    hl:set_atlas(glyph)
+    hl:SetAtlasTexture(glyph)
     hl:ClearAllPoints()
     hl:SetAllPoints(icon)
     hl:SetBlendMode("ADD")

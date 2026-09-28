@@ -55,7 +55,7 @@ local function makeRow(index)
 
     -- The gold tick, not the green one: this marks the title you are wearing, not a completed task.
     local check = row:CreateTexture(nil, "OVERLAY")
-    check:set_atlas("common-icon-checkmark-yellow")
+    check:SetAtlasTexture("common-icon-checkmark-yellow")
     check:SetSize(CHECK_SIZE, CHECK_SIZE)
     check:SetPoint("RIGHT", row, "RIGHT", -8, 0)
     check:Hide()
@@ -89,7 +89,7 @@ local function refresh()
         local row = rows[i] or makeRow(i)
         row.titleId = entry.id
         row.Text:SetText(entry.name)
-        row.Check:SetShownReq(entry.id == current)
+        row.Check:SetShownCompat(entry.id == current)
         row.Stripe:SetAlpha(i % 2 == 0 and 0.06 or 0)
         row:Show()
     end

@@ -1,6 +1,5 @@
--- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
-
 -- GENERATED from AzerothCore's innkeeper spawns and the client's ADT, WMO and DBC data. Do not edit.
+-- Game data (c) Blizzard Entertainment; innkeeper spawns via AzerothCore's world database. Not covered by DragonUI's MIT license.
 
 local addon = select(2, ...)
 

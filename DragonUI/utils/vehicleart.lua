@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 local unpack = unpack
@@ -55,7 +57,7 @@ local function GlobalPrefix(container)
     return root and root:GetName()
 end
 
--- utils.xml declares OrganicUi first, so MechanicUi wins the shared globals vehicle.lua reads.
+-- utils.xml declares OrganicArt first, so MechanicalArt wins the shared globals vehicle.lua reads.
 local function BuildVehicleArt(container, skin)
     local pieces = SKIN_PIECES[skin]
     if not pieces then

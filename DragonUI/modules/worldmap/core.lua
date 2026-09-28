@@ -288,7 +288,7 @@ local function buildChrome()
     rock:SetVertTile(true)
     rock:SetAllPoints(ground)
 
-    NineSliceUtils.ApplyLayout(border, NineSliceUtils.GetLayout("PortraitFrameTemplateMinimizable"))
+    DragonUI_NineSlice.ApplyLayout(border, DragonUI_NineSlice.GetLayout("PortraitFrameTemplateMinimizable"))
 
     -- Retail's TitleCanvasSpacerFrame: the band the breadcrumb lives in, stopping at the canvas.
     local spacer = CreateFrame("Frame", "DragonUIWorldMapSpacer", border)
@@ -298,7 +298,7 @@ local function buildChrome()
     WM.spacer = spacer
 
     local separator = border:CreateTexture(nil, "BACKGROUND", nil, -5)
-    separator:set_atlas("_UI-Frame-InnerTopTile")
+    separator:SetAtlasTexture("_UI-Frame-InnerTopTile")
     separator:SetHeight(3)
     separator:SetPoint("TOPLEFT", border, "TOPLEFT", WM.INSET_L, -(WM.SPACER_H - 4))
     separator:SetPoint("RIGHT", spacer, "RIGHT", 0, 0)
@@ -360,9 +360,9 @@ end
 -- ============================================================================
 
 local function setButtonState(button, atlas)
-    button:GetNormalTexture():set_atlas(atlas)
-    button:GetPushedTexture():set_atlas(atlas .. "-pressed")
-    button:GetDisabledTexture():set_atlas(atlas .. "-disabled")
+    button:GetNormalTexture():SetAtlasTexture(atlas)
+    button:GetPushedTexture():SetAtlasTexture(atlas .. "-pressed")
+    button:GetDisabledTexture():SetAtlasTexture(atlas .. "-disabled")
 end
 
 function WM.BuildMaxMinButton(border, close)
@@ -374,7 +374,7 @@ function WM.BuildMaxMinButton(border, close)
     button:SetPushedTexture(ROCK)
     button:SetDisabledTexture(ROCK)
     button:SetHighlightTexture(ROCK)
-    button:GetHighlightTexture():set_atlas("redbutton-highlight")
+    button:GetHighlightTexture():SetAtlasTexture("redbutton-highlight")
     button:GetHighlightTexture():SetBlendMode("ADD")
 
     local function refresh()
@@ -411,19 +411,19 @@ function WM.BuildSideToggle(border)
 
     -- On the frame like its left twin, not the button: the button's level put it over the bottom rail.
     local shadow = border:CreateTexture(nil, "ARTWORK")
-    shadow:set_atlas("mapcornershadow-right", true)
+    shadow:SetAtlasTexture("mapcornershadow-right", true)
     shadow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 5, -5)
 
     -- No highlight cell in the sheet, so the arrow brightens itself and follows the pressed art.
     function button:SetHighlightArt(pressed)
         local state = WM.PanelShown() and "hide" or "show"
-        self:GetHighlightTexture():set_atlas("questcollapse-" .. state .. (pressed and "-down" or "-up"))
+        self:GetHighlightTexture():SetAtlasTexture("questcollapse-" .. state .. (pressed and "-down" or "-up"))
     end
 
     function button:Refresh()
         local state = WM.PanelShown() and "hide" or "show"
-        self:GetNormalTexture():set_atlas("questcollapse-" .. state .. "-up")
-        self:GetPushedTexture():set_atlas("questcollapse-" .. state .. "-down")
+        self:GetNormalTexture():SetAtlasTexture("questcollapse-" .. state .. "-up")
+        self:GetPushedTexture():SetAtlasTexture("questcollapse-" .. state .. "-down")
         self:SetHighlightArt(false)
     end
     button:SetScript("OnMouseDown", function(self) self:SetHighlightArt(true) end)

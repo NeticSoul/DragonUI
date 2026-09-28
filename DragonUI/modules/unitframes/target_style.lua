@@ -380,19 +380,19 @@ function UF.TargetStyle.Create(opts)
     local function ForceReapplyLayout()
         if Portrait then
             Portrait:ClearAllPoints()
-            Portrait:SetSize(56, 56)
+            Portrait:SetSize(54, 54)
             Portrait:SetPoint("TOPRIGHT", BlizzFrame, "TOPRIGHT", -47, -15)
         end
         if HealthBar then
             HealthBar:ClearAllPoints()
             HealthBar:SetSize(125, 20)
-            HealthBar:SetPoint("RIGHT", Portrait, "LEFT", -1, 0)
+            HealthBar:SetPoint("RIGHT", Portrait, "LEFT", -3, -1)
             HealthBar:SetFrameLevel(BlizzFrame:GetFrameLevel())
         end
         if ManaBar then
             ManaBar:ClearAllPoints()
             ManaBar:SetSize(132, 9.5)
-            ManaBar:SetPoint("RIGHT", Portrait, "LEFT", 6.5, -16.5)
+            ManaBar:SetPoint("RIGHT", Portrait, "LEFT", 4.5, -17.5)
             ManaBar:SetFrameLevel(BlizzFrame:GetFrameLevel())
         end
         if NameText then
@@ -662,7 +662,7 @@ function UF.TargetStyle.Create(opts)
             frameElements.elite:SetSize(coords[5], coords[6])
             frameElements.elite:ClearAllPoints()
             frameElements.elite:SetPoint(
-                "CENTER", Portrait, "CENTER", coords[7], coords[8])
+                "CENTER", Portrait, "CENTER", coords[7] - 1, coords[8] - 1)
             frameElements.elite:Show()
         else
             frameElements.elite:Hide()
@@ -909,8 +909,9 @@ function UF.TargetStyle.Create(opts)
         end
 
         -- ---- Configure portrait ----
+        -- 54px fits inside the border's ring; bar and elite offsets absorb the 2px so they don't move.
         Portrait:ClearAllPoints()
-        Portrait:SetSize(56, 56)
+        Portrait:SetSize(54, 54)
         Portrait:SetPoint("TOPRIGHT", BlizzFrame, "TOPRIGHT", -47, -15)
         Portrait:SetDrawLayer("ARTWORK", 0)
 
@@ -922,13 +923,13 @@ function UF.TargetStyle.Create(opts)
         -- so the mana bar overlap doesn't render on top of the portrait.
         HealthBar:ClearAllPoints()
         HealthBar:SetSize(125, 20)
-        HealthBar:SetPoint("RIGHT", Portrait, "LEFT", -1, 0)
+        HealthBar:SetPoint("RIGHT", Portrait, "LEFT", -3, -1)
         HealthBar:SetFrameLevel(BlizzFrame:GetFrameLevel())
 
         -- ---- Configure power bar ----
         ManaBar:ClearAllPoints()
         ManaBar:SetSize(132, 9.5)
-        ManaBar:SetPoint("RIGHT", Portrait, "LEFT", 6.5, -16.5)
+        ManaBar:SetPoint("RIGHT", Portrait, "LEFT", 4.5, -17.5)
         ManaBar:SetFrameLevel(BlizzFrame:GetFrameLevel())
 
         -- ---- Configure text elements ----
@@ -1144,7 +1145,7 @@ function UF.TargetStyle.Create(opts)
                         frameElements.elite:ClearAllPoints()
                         frameElements.elite:SetPoint(
                             "CENTER", Portrait, "CENTER",
-                            eCoords[7], eCoords[8])
+                            eCoords[7] - 1, eCoords[8] - 1)
                         frameElements.elite:Show()
                     else
                         frameElements.elite:Hide()

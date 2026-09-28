@@ -315,10 +315,10 @@ local function DarkenMainBarArt(tint)
     DarkenGlobal("MainMenuBarLeftEndCap", tint)
     DarkenGlobal("MainMenuBarRightEndCap", tint)
 
-    -- DragonUI custom mainbar art frame (pUiMainBarArt)
-    local pUiMainBarArt = _G["pUiMainBarArt"]
-    if pUiMainBarArt and pUiMainBarArt.GetRegions then
-        local regions = { pUiMainBarArt:GetRegions() }
+    -- DragonUI custom mainbar art frame (DragonUI_MainActionBarArt)
+    local mainBarArt = _G["DragonUI_MainActionBarArt"]
+    if mainBarArt and mainBarArt.GetRegions then
+        local regions = { mainBarArt:GetRegions() }
         for _, region in ipairs(regions) do
             if region and region.GetObjectType and region:GetObjectType() == "Texture" then
                 DarkenTexture(region, tint)
@@ -326,11 +326,11 @@ local function DarkenMainBarArt(tint)
         end
     end
 
-    -- DragonUI custom main bar textures (on pUiMainBar itself, marked as dividers)
-    local pUiMainBar = _G["pUiMainBar"]
-    if pUiMainBar then
-        if pUiMainBar.GetRegions then
-            local regions = { pUiMainBar:GetRegions() }
+    -- DragonUI custom main bar textures (on DragonUI_MainActionBar itself, marked as dividers)
+    local mainBarFrame = _G["DragonUI_MainActionBar"]
+    if mainBarFrame then
+        if mainBarFrame.GetRegions then
+            local regions = { mainBarFrame:GetRegions() }
             for _, region in ipairs(regions) do
                 if region and region.GetObjectType and region:GetObjectType() == "Texture" then
                     -- Only darken if it's a divider or background, not a button icon
@@ -346,18 +346,18 @@ local function DarkenMainBarArt(tint)
             "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner",
             "TopEdge", "BottomEdge", "LeftEdge", "RightEdge", "Center"
         }
-        if pUiMainBar.BorderArt then
+        if mainBarFrame.BorderArt then
             for _, pieceName in ipairs(NINESLICE_PIECES) do
-                local piece = pUiMainBar.BorderArt[pieceName]
+                local piece = mainBarFrame.BorderArt[pieceName]
                 if piece and piece.GetObjectType and piece:GetObjectType() == "Texture" then
                     DarkenTexture(piece, tint)
                 end
             end
         end
         -- NineSlice Background frame
-        if pUiMainBar.Background then
+        if mainBarFrame.Background then
             for _, pieceName in ipairs(NINESLICE_PIECES) do
-                local piece = pUiMainBar.Background[pieceName]
+                local piece = mainBarFrame.Background[pieceName]
                 if piece and piece.GetObjectType and piece:GetObjectType() == "Texture" then
                     DarkenTexture(piece, tint)
                 end
@@ -366,20 +366,9 @@ local function DarkenMainBarArt(tint)
     end
 
     -- DragonUI stance bar frame textures
-    local pUiStanceBar = _G["pUiStanceBar"]
-    if pUiStanceBar and pUiStanceBar.GetRegions then
-        local regions = { pUiStanceBar:GetRegions() }
-        for _, region in ipairs(regions) do
-            if region and region.GetObjectType and region:GetObjectType() == "Texture" then
-                DarkenTexture(region, tint)
-            end
-        end
-    end
-
-    -- DragonUI pet bar frame textures
-    local pUiPetBar = _G["pUiPetBar"]
-    if pUiPetBar and pUiPetBar.GetRegions then
-        local regions = { pUiPetBar:GetRegions() }
+    local stanceBar = _G["DragonUI_StanceBar"]
+    if stanceBar and stanceBar.GetRegions then
+        local regions = { stanceBar:GetRegions() }
         for _, region in ipairs(regions) do
             if region and region.GetObjectType and region:GetObjectType() == "Texture" then
                 DarkenTexture(region, tint)
@@ -636,7 +625,7 @@ local function DarkenBagBorders(tint)
                 border:SetAllPoints(keyring)
             end
             -- Use bag-border-2x: the border ring atlas (same one used on regular bag slots)
-            border:set_atlas("bag-border-2x")
+            border:SetAtlasTexture("bag-border-2x")
             border:Hide()
             keyring.__DragonUI_DarkBorder = border
         end

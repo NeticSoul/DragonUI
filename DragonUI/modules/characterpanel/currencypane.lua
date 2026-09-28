@@ -112,7 +112,7 @@ local function buildEntry(parent)
     check:SetSize(CHECK_SIZE + 6, ROW_H)
     check:SetPoint("RIGHT", row, "RIGHT", -6, 0)
     local tick = check:CreateTexture(nil, "OVERLAY")
-    tick:set_atlas("common-icon-checkmark")
+    tick:SetAtlasTexture("common-icon-checkmark")
     tick:SetSize(CHECK_SIZE, CHECK_SIZE)
     tick:SetPoint("CENTER", check, "CENTER", 0, 0)
     check.Tick = tick
