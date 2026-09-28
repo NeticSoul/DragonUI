@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Keybinding Module
 -- Integrates LibKeyBound-1.0 for intuitive hover + key press binding.

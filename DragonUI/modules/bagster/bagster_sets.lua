@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- Item filtering / category set registry (BagsterSet/Sets).
 local addon = select(2, ...)
 local mod = addon.BagsterModule

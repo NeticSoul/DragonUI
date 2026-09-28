@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- Guild bank: bagster-styled replacement for the stock guild vault UI.
 local addon = select(2, ...)
 local mod = addon.BagsterModule

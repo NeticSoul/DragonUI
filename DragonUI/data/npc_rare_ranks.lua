@@ -1,3 +1,5 @@
+-- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
+
 -- Compact rare/rareelite lookup (510 creature entries). Names packed per locale.
 -- Runtime filter excludes dev/UNUSED/QA placeholder names from client data exports.
 local addon = select(2, ...)local M = {}

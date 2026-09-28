@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- Not UIDropDownMenu: UIDROPDOWNMENU_OPEN_MENU never clears and blocks the map blobs in combat.

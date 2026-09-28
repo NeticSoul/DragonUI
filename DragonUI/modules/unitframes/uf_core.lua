@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
   DragonUI - Unit Frame Shared Core (uf_core.lua)
 

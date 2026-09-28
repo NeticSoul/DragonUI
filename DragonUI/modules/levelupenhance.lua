@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- =============================================================================
 -- Level Up Enhance Module
 -- Enhanced level-up notification with animated frame.

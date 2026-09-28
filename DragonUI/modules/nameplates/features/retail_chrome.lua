@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local NP = addon.Nameplates
 NP.retail_chrome = NP.retail_chrome or {}

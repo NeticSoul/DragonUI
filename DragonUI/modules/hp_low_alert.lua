@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- =============================================================================
 -- Low HP Alert Module
 -- Screen-edge flash and warning sound while player health is below a threshold.

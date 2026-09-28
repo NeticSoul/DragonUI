@@ -123,6 +123,9 @@ Extensive customization available directly in-game through the configuration pan
 
 DragonUI builds on original work, adapted code and ideas from these addon authors and projects. Each entry says what was used; the licenses are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
+<details>
+<summary><b>Addons and references (16)</b></summary>
+
 | Project | Author | Contribution |
 |---------|--------|-------------|
 | [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI) | Karl-HeinzSchneider | Primary design reference; code snippets and textures adapted (MIT) |
@@ -141,6 +144,14 @@ DragonUI builds on original work, adapted code and ideas from these addon author
 | [oGlow](https://github.com/haste) | haste | Item quality border concept |
 | [ElvUI-WotLK](https://github.com/ElvUI-WotLK/) | ElvUI team | Pattern reference: load-on-demand options, slash commands, combat queue |
 | [Quartz](https://github.com/Nevcairiel/Quartz) | Hendrik Leppkes | Latency indicator concept |
+
+</details>
+
+<details>
+<summary><b>Contributors (17)</b></summary>
+
+| Contributor | Name | Contribution |
+|---------|--------|-------------|
 | [PentSec](https://github.com/PentSec) | PentSec | Collaborator: original drafts of the loot skin and world map modules |
 | [CrimsonHollow](https://github.com/CrimsonHollow) | CrimsonHollow | Fat Health Bar contribution |
 | [RovBot](https://github.com/RovxBot) | RovBot | Action bar grid/preset system |
@@ -158,6 +169,8 @@ DragonUI builds on original work, adapted code and ideas from these addon author
 | Chill Guy | Chill Guy | Always-hidden option for the micro menu and bag bar |
 | [Raz0r](https://github.com/Raz0r1337) | Raz0r (St0ny) | German localization |
 | [nadugi](https://github.com/nadugi) | nadugi | Korean localization |
+
+</details>
 
 Missing from the list? [Let me know](https://github.com/NeticSoul/DragonUI/issues).
 

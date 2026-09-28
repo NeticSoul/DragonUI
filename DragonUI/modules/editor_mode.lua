@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Editor Mode
 -- Provides a visual grid overlay and controls for repositioning UI elements.

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 -- ============================================================================
 -- DragonUI - Minimap Collector Module
 -- Isolated collector system used by minimap.lua via dependency injection.
