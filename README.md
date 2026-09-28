@@ -126,22 +126,21 @@ DragonUI builds on original work, adapted code and ideas from these addon author
 | Project | Author | Contribution |
 |---------|--------|-------------|
 | [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI) | Karl-HeinzSchneider | Primary design reference; code snippets and textures adapted (MIT) |
-| [New Era](https://www.curseforge.com/wow/addons/new-era-retail-ui-in-classic) | Ashgaroth | Upstream of DragonUI_NewEra; design reference for the talents, merchant, character panel, world map and retail nameplates (no code); talent textures obtained via it (Blizzard art) |
-| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Art and geometry reference for the character panel, talents, merchant, collections and world map (no code); Blizzard textures obtained via it |
-| [pretty_actionbar](https://github.com/s0h2x/pretty_actionbar) | s0h2x | Original inspiration; no code remains |
-| [pretty_minimap](https://github.com/s0h2x/pretty_minimap) | s0h2x | Minimap textures obtained via it (Blizzard art; no code) |
+| [New Era](https://www.curseforge.com/wow/addons/new-era-retail-ui-in-classic) | Ashgaroth | Upstream of DragonUI_NewEra; design reference for the talents, merchant, character panel, world map and retail nameplates; talent textures obtained via it (Blizzard art) |
+| [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Art and geometry reference for the character panel, talents, merchant, collections and world map; Blizzard textures obtained via it |
+| [pretty_actionbar](https://github.com/s0h2x/pretty_actionbar) / [pretty_minimap](https://github.com/s0h2x/pretty_minimap) | s0h2x | Original inspiration for the action bars and minimap |
 | [RetailUI](https://github.com/a3st/RetailUI) | a3st (Dmitriy) | Minimap, buff frame and API helper code and textures adapted (MIT) |
 | [KPack](https://github.com/bkader/KPack) | bkader | Chat mods code adapted (MIT/X); source of the Combuctor code in Bagster and of the GearScoreLite formula |
 | [Combuctor](https://github.com/Jaliborc) | Jason Greer (Tuller), João Cardoso (Jaliborc) | Bagster code adapted from Combuctor 4.2 via KPack (MIT) |
 | [NotPlater](https://github.com/RichSteini/NotPlater) | RichSteini | Options panel spell-filter dialog code adapted (MIT) |
 | [SexyMap](https://github.com/funkydude/SexyMap) | funkydude | Minimap border presets and rotation helper, used with permission |
-| [GearScore / GearScoreLite](https://www.wowinterface.com/downloads/info14865-GearScoreLite.html) | Mirrikat45 | Character panel gear score formula, reimplemented (no code) |
-| [BankStack](https://github.com/kemayo/wow-bankstack) | kemayo | Idea / inspiration for the bag sort (no code) |
-| [UnitFrameLayers](https://github.com/RomanSpector/UnitFrameLayers) | RomanSpector | Idea / inspiration for the heal/absorb overlays (no code); layer textures obtained via it (Blizzard art) |
-| [SnowfallKeyPress](https://www.wowinterface.com/downloads/info15078-SnowfallKeyPress.html) | Dayn | Idea / inspiration for casting on key down (no code) |
-| [oGlow](https://github.com/haste) | haste | Item quality border concept (no code) |
-| [ElvUI-WotLK](https://github.com/ElvUI-WotLK/) | ElvUI team | Pattern reference: load-on-demand options, slash commands, combat queue (no code) |
-| [Quartz](https://github.com/Nevcairiel/Quartz) | Hendrik Leppkes | Latency indicator concept (no code) |
+| [GearScore / GearScoreLite](https://www.wowinterface.com/downloads/info14865-GearScoreLite.html) | Mirrikat45 | Character panel gear score formula |
+| [BankStack](https://github.com/kemayo/wow-bankstack) | kemayo | Inspiration for the bag sort |
+| [UnitFrameLayers](https://github.com/RomanSpector/UnitFrameLayers) | RomanSpector | Inspiration for the heal/absorb overlays; layer textures obtained via it (Blizzard art) |
+| [SnowfallKeyPress](https://www.wowinterface.com/downloads/info15078-SnowfallKeyPress.html) | Dayn | Inspiration for casting on key down |
+| [oGlow](https://github.com/haste) | haste | Item quality border concept |
+| [ElvUI-WotLK](https://github.com/ElvUI-WotLK/) | ElvUI team | Pattern reference: load-on-demand options, slash commands, combat queue |
+| [Quartz](https://github.com/Nevcairiel/Quartz) | Hendrik Leppkes | Latency indicator concept |
 | [PentSec](https://github.com/PentSec) | PentSec | Collaborator: original drafts of the loot skin and world map modules |
 | [CrimsonHollow](https://github.com/CrimsonHollow) | CrimsonHollow | Fat Health Bar contribution |
 | [RovBot](https://github.com/RovxBot) | RovBot | Action bar grid/preset system |
