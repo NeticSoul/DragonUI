@@ -351,6 +351,7 @@ local function CreateEventFrame()
     
     local slotStateEvents = {
         PET_BAR_UPDATE = true,
+        PET_BAR_UPDATE_USABLE = true,
         PLAYER_CONTROL_LOST = true,
         PLAYER_CONTROL_GAINED = true,
         PLAYER_FARSIGHT_FOCUS_CHANGED = true,
@@ -519,7 +520,7 @@ local function RestorePetbarSystem()
     end
 
     -- Unregister state drivers
-    for frame, _ in pairs(PetbarModule.stateDrivers) do
+    for _, frame in pairs(PetbarModule.stateDrivers) do
         if frame then
             UnregisterStateDriver(frame, 'visibility')
         end

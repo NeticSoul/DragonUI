@@ -6,8 +6,6 @@ local ns = TM.ns
 
 local max, min = math.max, math.min
 
-local POINTS_PER_TIER = 5
-
 -- Storage -----------------------------------------------------------------------------------------
 
 function ns.BuildBucket(classToken)
@@ -123,8 +121,21 @@ end
 
 -- Rules -------------------------------------------------------------------------------------------
 
-local function tierOpen(build, tab, tier)
-    return ns.TreePoints(build, tab) >= (tier - 1) * POINTS_PER_TIER
+-- Only rows above the tier count, as in the game: deeper points never hold a tier open.
+local function pointsAbove(build, data, tab, tier)
+    local sum, ranks, tree = 0, build.ranks and build.ranks[tab], data[tab]
+    if type(ranks) ~= "table" or not tree then return 0 end
+    for index, rank in pairs(ranks) do
+        local talent = tree.talents[index]
+        if talent and talent.tier < tier then
+            sum = sum + max(0, tonumber(rank) or 0)
+        end
+    end
+    return sum
+end
+
+local function tierOpen(build, data, tab, tier)
+    return pointsAbove(build, data, tab, tier) >= (tier - 1) * (PLAYER_TALENTS_PER_TIER or 5)
 end
 ns.TierOpen = tierOpen
 
@@ -138,13 +149,12 @@ local function needsMet(build, data, tab, talent)
     end
     return true
 end
-ns.NeedsMet = needsMet
 
 function ns.BuildValid(build, data)
     for tab = 1, data.count do
         for _, talent in ipairs(data[tab].order) do
             if rankIn(build, tab, talent.index) > 0 then
-                if not (tierOpen(build, tab, talent.tier) and needsMet(build, data, tab, talent)) then
+                if not (tierOpen(build, data, tab, talent.tier) and needsMet(build, data, tab, talent)) then
                     return nil
                 end
             end
@@ -158,7 +168,7 @@ function ns.CanAddPoint(build, data, tab, index)
     if not talent then return false end
     return rankIn(build, tab, index) < talent.maxRank
         and ns.BuildPoints(build) < ns.BuildBudget(build)
-        and tierOpen(build, tab, talent.tier)
+        and tierOpen(build, data, tab, talent.tier)
         and needsMet(build, data, tab, talent)
 end
 

@@ -160,6 +160,8 @@ local MOVE_TINT = { 0.82, 0.85, 0.90 }
 -- One arrow for both directions, flipped for the down one: the sheet's own down arrow is a separate
 -- cut whose glyph does not sit at the same offset inside the cell, so the pair read as misaligned.
 local MOVE_ATLAS = "ui-hud-actionbar-pageuparrow"
+-- SetAtlasTexture skips action bar sheets under d3d9ex, which they can crash; this stands in there.
+local MOVE_FALLBACK_ATLAS = "minimal-scrollbar-arrow-top"
 -- Present but faint until the cursor is actually on one, so the pair never shouts over the label.
 local MOVE_ALPHA, MOVE_ALPHA_OVER = 0.45, 1
 
@@ -189,6 +191,10 @@ end
 
 local function applyArrow(tex, atlas, flip)
     tex:SetAtlasTexture(atlas)
+    if not tex:GetTexture() then
+        atlas = MOVE_FALLBACK_ATLAS
+        tex:SetAtlasTexture(atlas)
+    end
     if not flip then return end
     local _, _, _, left, right, top, bottom = addon.functions.UnpackAtlas(atlas)
     -- Swapping top and bottom mirrors the cell, so both directions are the very same glyph.

@@ -357,10 +357,6 @@ function identity.GetMouseoverPlate()
     return NP.module.mouseoverPlate
 end
 
-function identity.GetFocusPlate()
-    return NP.module.focusPlate
-end
-
 function identity.GetTargetGUID()
     return NP.module.targetGUID
 end
@@ -380,9 +376,6 @@ end
 function identity.IsFocusPlate(plateData)
     return NP.module.focusPlate == plateData
 end
-
--- Alias for threat/elite/layout.
-identity.IsPlateTargeted = identity.IsTargetPlate
 
 function identity.InvalidatePlate(plateData)
     if NP.module.targetPlate == plateData then
@@ -800,12 +793,6 @@ function identity.UpdatePlateUnitToken(plateData)
             end
             return matchedToken
         end
-    elseif plateData.namePlateUnitToken and UnitExists(plateData.namePlateUnitToken) then
-        if identity.UnitNameMatchesPlate(plateData.namePlateUnitToken, plateData)
-            and identity.UnitMatchesPlateHealth(plateData.namePlateUnitToken, plateData) then
-            return plateData.namePlateUnitToken
-        end
-        plateData.namePlateUnitToken = nil
     end
 
     return nil

@@ -1149,15 +1149,13 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     end
 end)
 
--- Monitor alwaysShowActionBars CVar changes.
--- Only refresh our custom main bar art background.  Multibar grid management
--- is handled by Blizzard’s InterfaceOptions setFunc which directly calls
--- MultiActionBar_ShowAllGrids / MultiActionBar_HideAllGrids.
+-- Multibar grids are left to Blizzard's option setFunc (MultiActionBar_ShowAllGrids/HideAllGrids).
 hooksecurefunc("SetCVar", function(name, value)
     if name == "alwaysShowActionBars" then
         if not IsModuleEnabled() then return end
-        if MainMenuBarMixin and MainMenuBarMixin.update_main_bar_background then
-            MainMenuBarMixin:update_main_bar_background()
+        local mixin = addon.MainMenuBarMixin
+        if mixin and mixin.update_main_bar_background then
+            mixin:update_main_bar_background()
         end
     end
 end)

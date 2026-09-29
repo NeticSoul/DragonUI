@@ -229,8 +229,6 @@ local function build()
     CP.RefreshEquipmentTabState()
 end
 
-CP.SidebarTabsStrip = function() return strip end
-
 -- The strip belongs to the paperdoll's right pane; elsewhere it would float over Blizzard's content.
 function CP.SetSidebarTabsShown(visible)
     if strip then strip:SetShownCompat(visible) end

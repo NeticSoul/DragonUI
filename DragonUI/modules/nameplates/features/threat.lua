@@ -94,8 +94,7 @@ local function ResolveTankLostColor(plateData)
     return nil
 end
 
--- Default: any aggro warns. Tank: hold=safe / lose=warn.
--- DPS matches ThreatPlates: LOW=green, MEDIUM=yellow, HIGH=red (no unit-token gate).
+-- Any aggro warns; tank: holding is safe; DPS: LOW/MEDIUM/HIGH = green/yellow/red, no token gate.
 local function ResolveAggroColor(plateData, status)
     if NP.threat.IsDpsMode() then
         if status >= 3 then

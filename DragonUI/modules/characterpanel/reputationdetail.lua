@@ -3,17 +3,14 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- The faction popup, framed the way retail frames it: DialogBorderTemplate, which is a nine-slice on
--- the DiamondMetal art. It used to wear DrawPaneBorder -- the INSET trim, a ribbon meant to recess a
--- pane inside a window, whose 6px bevels read as cut-off points on a floating dialog.
+-- Retail's DialogBorderTemplate frame: the inset trim's 6px bevels read as cut-offs on a dialog.
 local DIALOG_BG = "Interface\\DialogFrame\\UI-DialogBox-Background"
 local DIALOG_INSET = 7
 
 -- Every number below is ReputationDetailFrame's own, straight out of retail's XML.
 local WIDTH, HEIGHT = 212, 203
 local TITLE_X, TITLE_Y, TITLE_W = 20, -21, 160
--- Deliberately WIDER than the 212 frame: retail bleeds this art out over the dialog rail, which is
--- what gives the paper its recessed look. Cropping it to the frame is what flattened it here.
+-- Wider than the 212 frame on purpose: bleeding under the dialog rail gives the paper its recess.
 local PAPER_X, PAPER_Y, PAPER_W, PAPER_H = 11, -11, 260, 128
 -- Both shipped rather than taken from the client: 3.3.5a serves DIFFERENT art at the divider path --
 -- a ~200px visible region with gradient padding -- so the rule stops two thirds of the way across.
@@ -27,9 +24,7 @@ local SCROLLBAR_GAP = 5
 local CHECK_SIZE = 26
 local CHECK_ART_INSET = 2
 local CHECK_X, CHECK_Y = 14, -143
--- Retail's own, verbatim. It tucks the X INSIDE the corner; an earlier attempt here pushed it out
--- by the 8 the rails were moved, on the theory that Blizzard wants it riding the corner ornament.
--- It does not -- the offset is negative precisely to keep the button within the frame.
+-- Retail's own offset: negative on purpose, to keep the X inside the corner ornament.
 local CLOSE_X, CLOSE_Y = -2, -2
 
 local SWORDS = "Interface\\Buttons\\UI-CheckBox-SwordCheck"

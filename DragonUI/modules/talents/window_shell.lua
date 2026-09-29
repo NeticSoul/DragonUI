@@ -326,7 +326,6 @@ local function buildChrome(win, level)
     ns.title = title
 
     ns.portrait = chrome:CreateTexture(nil, "ARTWORK")
-    ns.chrome = chrome
 end
 
 local function buildFooter(win, level)
@@ -404,7 +403,6 @@ function ns.BuildWindow()
     local tabHolder = CreateFrame("Frame", nil, win)
     tabHolder:SetAllPoints(win)
     tabHolder:SetFrameLevel(base + 8)
-    ns.tabHolder = tabHolder
 
     buildCloseButton(win, base + 9)
     ns.Call("BuildFooterControls", ns.footer)

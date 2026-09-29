@@ -692,7 +692,7 @@ local atlasinfo = {
 	['mapcornershadow-right'] = { rui_MapCollapse, 46, 53, 64/256, 110/256, 0, 53/128 },
 	['mapcornershadow-left'] = { rui_MapCollapse, 182, 30, 0, 182/256, 64/128, 94/128 },
 
-	-- Talents (Textures/Talents/): node frames, footer and war mode pieces share New Era's 4556093 sheet.
+	-- Talents (Textures/Talents/): node frames, footer and war mode pieces share one sheet (retail 4556093).
 	['talents-background-bottombar-left'] = { rui_TalentsPack, 806, 82, 3/1024, 809/1024, 209/512, 291/512 },
 	['talents-background-bottombar-right'] = { rui_TalentsPack, 806, 82, 6/1024, 812/1024, 297/512, 379/512 },
 	['talents-button-reset'] = { rui_TalentsPack, 20, 20, 357/1024, 397/1024, 385/512, 425/512 },
@@ -724,7 +724,7 @@ local atlasinfo = {
 	['talents-animations-clouds'] = { rui_TalentsClouds, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
 	['talents-animations-particles'] = { rui_TalentsParticles, 1308, 774, 0.000488, 0.639160, 0.379395, 0.757324 },
 
-	-- Spec backgrounds: New Era's two-spec sheets, downscaled to 1024.
+	-- Spec backgrounds: two specs per sheet, downscaled to 1024.
 	['talents-background-warrior-arms'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
 	['talents-background-warrior-fury'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
 	['talents-background-warrior-protection'] = { rui_TalentsBgWarriorProtection, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },

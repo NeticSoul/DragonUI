@@ -64,7 +64,6 @@ ns.LevelCap = levelCap
 ns.PointCeiling = pointCeiling
 ns.Scrub = scrub
 ns.Trim = trim
-ns.CutBytes = cutBytes
 
 local LibDeflate = LibStub("LibDeflate")
 local Serializer = {}

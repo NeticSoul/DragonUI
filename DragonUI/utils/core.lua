@@ -2,7 +2,7 @@
 
 -- ============================================================================
 -- DragonUI - Core Utilities
--- Base runtime setup: event frame, noop, class detection, API tables.
+-- Base runtime setup: noop, class detection, API tables.
 -- ============================================================================
 
 local addon = select(2, ...)
@@ -12,7 +12,6 @@ local tostring, unpack, getmetatable, max = tostring, unpack, getmetatable, math
 
 local function doNothing() end
 
-addon._event = CreateFrame("Frame")
 addon._noop = doNothing
 addon._class = (select(2, UnitClass("player")))
 
@@ -80,20 +79,8 @@ local function eachOwnTexture(frame, action, ...)
 	end
 end
 
-local function hideForGood(widget)
-	if widget.UnregisterAllEvents then
-		widget:UnregisterAllEvents()
-	end
-	widget.Show = doNothing
-	widget:Hide()
-end
-
-local function stripTexture(region, mode)
-	if mode == true then
-		hideForGood(region)
-	else
-		region:SetTexture(nil)
-	end
+local function clearTexture(region)
+	region:SetTexture(nil)
 end
 
 local function setAtlas(texture, name, useAtlasSize)
@@ -130,12 +117,11 @@ local function clearThenPoint(region, ...)
 	region:SetPoint(...)
 end
 
-api.noop = hideForGood
 api.SetAtlasTexture = setAtlas
 api.SetSinglePoint = clearThenPoint
 
-api.StripOwnTextures = function(frame, mode)
-	eachOwnTexture(frame, stripTexture, mode)
+api.StripOwnTextures = function(frame)
+	eachOwnTexture(frame, clearTexture)
 end
 
 -- Deliberately asymmetric: right/bottom scale from 0 and are floored at the current left/top edge.

@@ -120,10 +120,7 @@ function CP.AnchorFilterDropdown(pane, btn)
     btn:SetPoint("RIGHT", band, "RIGHT", 0, 0)
 end
 
--- The list is ours, not Blizzard's: DropDownList1 is one shared frame with its own backdrop and
--- strata, so reskinning it would repaint every other menu in the game. The geometry and the
--- backdrop below are UIDropDownListTemplate's own, because the reference leaves that frame alone --
--- what it shows on screen IS this.
+-- Our own list with UIDropDownListTemplate's geometry: DropDownList1 is shared by every game menu.
 local MENU_ROW_H = 16   -- UIDROPDOWNMENU_BUTTON_HEIGHT
 local MENU_INSET = 15   -- UIDROPDOWNMENU_BORDER_HEIGHT, and where AddButton lands a checkable row
 local MENU_EDGE = 12    -- the backdrop's own right inset
@@ -149,7 +146,6 @@ local function closeFilterMenu()
     if menu.Blocker then menu.Blocker:Hide() end
     if menu.Owner and menu.Owner.Restate then menu.Owner.Restate() end
 end
-CP.CloseFilterMenu = closeFilterMenu
 
 local function acquireMenuRow(menu, i)
     local row = menu.Rows[i]

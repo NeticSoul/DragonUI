@@ -3,8 +3,8 @@ and is released under the MIT License below. Full notices for both addon
 folders: ../DragonUI/THIRD_PARTY_NOTICES.md and ../DragonUI/LICENSES/.
 
 Third-party material in this folder keeps its own license:
-  - libs/AceConfig-3.0, libs/AceDBOptions-3.0, libs/AceGUI-3.0,
-    libs/CallbackHandler-1.0: Ace3 license, see LICENSES/Ace3.txt
+  - libs/AceConfig-3.0, libs/AceGUI-3.0, libs/CallbackHandler-1.0: Ace3
+    license, see LICENSES/Ace3.txt
   - libs/LibStub: public domain
   - fonts/PTSansNarrow.ttf: SIL Open Font License 1.1, see LICENSES/OFL-1.1.txt
   - panel/controls.lua: portions adapted from NotPlater (MIT, (c) 2023

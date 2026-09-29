@@ -791,7 +791,7 @@ function NP.layout.ApplyNameplateFonts(plateData)
     -- Modern health text is sized like the name; the outline is chosen per name position.
     local modern = NP.config.IsRetailSkin()
     local hpNumSize = modern and nameSize or (7 + (cfg.healthNumberFontSize or 2))
-    -- The client matches "OUTLINE" inside the flag string, so NewEra's THINOUTLINE draws a plain outline here.
+    -- The client matches "OUTLINE" inside the flags, so THINOUTLINE draws a plain outline here.
     local outline
     if NP.config.IsNameOverlayBar() then
         outline = cfg.retailTextOutlineInside ~= false
@@ -799,7 +799,7 @@ function NP.layout.ApplyNameplateFonts(plateData)
         outline = cfg.retailTextOutlineAbove == true
     end
     local textFlags = (modern and outline) and "THINOUTLINE" or ""
-    -- NewEra rounds retail's fractional heights to whole screen pixels so the outline stays crisp.
+    -- Retail's fractional heights are rounded to whole screen pixels so the outline stays crisp.
     local pixelsPerUnit
     if modern then
         -- The UI is 768 units tall; the plate's own scale is left out so a target zoom can't bake in.

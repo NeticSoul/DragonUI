@@ -21,6 +21,4 @@ local function build()
     hideDropdown()
 end
 
-CP.RefreshTitles = build
-
 CP:RegisterBuilder("titles", build)

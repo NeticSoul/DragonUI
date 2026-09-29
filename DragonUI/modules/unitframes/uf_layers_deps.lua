@@ -470,6 +470,20 @@ local function buildTimeline(region, steps)
     return group
 end
 
+local function pulsesAtFull(token)
+    return token == "RAGE" or token == "ENERGY"
+end
+
+local function tintBlock(block, powerType, token)
+    local palette = PowerBarColor
+    local tint = palette and (palette[token] or palette[powerType] or palette.MANA)
+    if tint then
+        block:SetVertexColor(tint.r or 1, tint.g or 1, tint.b or 1)
+    else
+        block:SetVertexColor(1, 1, 1)
+    end
+end
+
 local function newFullPower(manaBar, token)
     local holder = CreateFrame("Frame", nil, manaBar)
     holder:SetSize(119, 12)
@@ -498,7 +512,7 @@ local function newFullPower(manaBar, token)
         bigSpikeAnim = buildTimeline(big, BIG_SPIKE_STEPS),
         spikeStayAnim = buildTimeline(stay, SPIKE_STAY_STEPS),
         pulseAnim = buildTimeline(pulse, PULSE_STEPS),
-        active = (token == "RAGE" or token == "ENERGY"),
+        active = pulsesAtFull(token),
     }
 end
 
@@ -523,7 +537,6 @@ function kit.FullPowerChanged(fp, value)
     fp.pulseAnim:Play()
 end
 
--- Power type, colour and maximum are captured once here and never refreshed.
 function kit.NewPowerWidgets(unitFrame, manaBar)
     local frame = CreateFrame("Frame", nil, manaBar)
     frame:SetAllPoints(manaBar)
@@ -548,13 +561,7 @@ function kit.NewPowerWidgets(unitFrame, manaBar)
     rise:SetHeight(height)
 
     local powerType, token = UnitPowerType("player")
-    local palette = PowerBarColor
-    local tint = palette and (palette[token] or palette[powerType] or palette.MANA)
-    if tint then
-        block:SetVertexColor(tint.r or 1, tint.g or 1, tint.b or 1)
-    else
-        block:SetVertexColor(1, 1, 1)
-    end
+    tintBlock(block, powerType, token)
 
     local fb = {
         frame = frame,
@@ -568,4 +575,17 @@ function kit.NewPowerWidgets(unitFrame, manaBar)
     feedbackByFrame[frame] = fb
 
     return fb, newFullPower(manaBar, token)
+end
+
+-- A shapeshift swaps the player's power under widgets built for the old one; returns true then.
+function kit.PowerWidgetsFollow(fb, fp)
+    local powerType, token = UnitPowerType("player")
+    local swapped = powerType ~= fb.powerType
+    if swapped then
+        fb.powerType = powerType
+        tintBlock(fb.block, powerType, token)
+        if fp then fp.active = pulsesAtFull(token) end
+    end
+    fb.maxPower = UnitPowerMax("player", powerType) or 0
+    return swapped
 end

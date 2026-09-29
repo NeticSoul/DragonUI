@@ -10,8 +10,7 @@ local NONE_ID = -1
 local pane, scroll, scrollChild
 local rows = {}
 
--- The scroll child had a hardcoded 180 width, so the rows stopped short of the pane whatever the
--- panel measured. Taken from the scroll frame once it has real dimensions instead.
+-- Width from the scroll frame once it has real dimensions: a fixed one stops rows short of the pane.
 local function layout()
     if not scroll or not scrollChild then return end
     local width = scroll:GetWidth() or 0
@@ -120,13 +119,10 @@ local function build()
     scrollChild = CreateFrame("Frame", "DragonUICharacterTitlesScrollChild", scroll)
     scroll:SetScrollChild(scrollChild)
     pane:SetScript("OnShow", layout)
-
-    CP._titlesPane = pane
 end
 
 CP.TitlesPane = function() return pane end
 CP.RefreshTitlesPane = refresh
-CP.BuildTitlesPane = build
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("KNOWN_TITLES_UPDATE")

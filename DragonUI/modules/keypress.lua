@@ -80,6 +80,7 @@ local TOTEM_AFTER = [[
     if totemCall then totemCall:SetID(message) end
 ]]
 
+local KeyPressModule = { initialized = false, applied = false }
 local active = false
 local hooked = false
 local selfInitiated = false
@@ -331,6 +332,7 @@ end
 local function Enable()
     if active then return end
     active = true
+    KeyPressModule.applied = true
     InstallHooks()
     owner:RegisterEvent("UPDATE_BINDINGS")
     Rebuild()
@@ -339,6 +341,7 @@ end
 local function Disable()
     if not active then return end
     active = false
+    KeyPressModule.applied = false
     owner:UnregisterEvent("UPDATE_BINDINGS")
     Rebuild()
 end
@@ -370,3 +373,16 @@ owner:RegisterEvent("PLAYER_LOGIN")
 addon.EnableKeyPress = Enable
 addon.DisableKeyPress = Disable
 addon.RefreshKeyPress = Refresh
+
+-- RefreshConfig also runs at ADDON_LOADED; the PLAYER_LOGIN handler above owns the first build.
+local function RefreshForProfile()
+    if IsLoggedIn() then
+        Refresh()
+    end
+end
+
+if addon.RegisterModule then
+    addon:RegisterModule("keypress", KeyPressModule, nil, nil, {
+        lifecycle = { refresh = RefreshForProfile, restore = RefreshForProfile },
+    })
+end

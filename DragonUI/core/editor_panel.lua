@@ -521,18 +521,17 @@ local function CreateEditorControlPanel()
     yPlus:SetScript("OnClick", function() NudgeSelectedFrame(0, 1) end)
 
     local lfgTooltipLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    local LO = addon.L
     lfgTooltipLabel:SetPoint("TOPLEFT", yLabel, "BOTTOMLEFT", 0, -8)
-    lfgTooltipLabel:SetText((LO and LO["Status Tooltip:"]) or "Status Tooltip:")
+    lfgTooltipLabel:SetText((L and L["Status Tooltip:"]) or "Status Tooltip:")
     lfgTooltipLabel:Hide()
     panel.lfgTooltipLabel = lfgTooltipLabel
 
     panel.lfgTooltipButtons = {}
     local lfgButtonLabels = {
-        TOP = (LO and LO["Top"]) or "Top",
-        BOTTOM = (LO and LO["Bottom"]) or "Bottom",
-        LEFT = (LO and LO["Left"]) or "Left",
-        RIGHT = (LO and LO["Right"]) or "Right"
+        TOP = (L and L["Top"]) or "Top",
+        BOTTOM = (L and L["Bottom"]) or "Bottom",
+        LEFT = (L and L["Left"]) or "Left",
+        RIGHT = (L and L["Right"]) or "Right"
     }
     local createdButtons = {}
     for _, position in ipairs({"TOP", "BOTTOM", "LEFT", "RIGHT"}) do
@@ -713,7 +712,6 @@ function addon:ShowAllEditableFrames()
             end
         end
     end
-    local L = addon.L
     addon:Print((L and L["All editable frames shown for editing"] or "All editable frames shown for editing"))
 
     -- Show editor control panel
@@ -757,7 +755,6 @@ function addon:HideAllEditableFrames(refresh)
             end
         end
     end
-    local L = addon.L
     addon:Print((L and L["All editable frames hidden, positions saved"] or "All editable frames hidden, positions saved"))
 end
 

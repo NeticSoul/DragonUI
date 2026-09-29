@@ -252,8 +252,6 @@ local function refresh()
     repaint()
 end
 
-CP.RefreshHonorPane = refresh
-
 -- Blizzard's strip is five buttons wired by name, so a sixth is built here. It still has to be
 -- NAMED CharacterFrameTab6: PanelTemplates_UpdateTabs finds tabs by that pattern.
 local function buildTab()
@@ -317,8 +315,6 @@ local function build()
 
     buildTab()
 end
-
-CP.HonorPane = function() return pane end
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("PLAYER_PVP_KILLS_CHANGED")

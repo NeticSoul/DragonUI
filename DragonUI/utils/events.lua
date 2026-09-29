@@ -24,7 +24,7 @@ end
 local hub = CreateFrame("Frame")
 hub:SetScript("OnEvent", dispatch)
 
-local eventPackage = { events = hub, Dispatch = dispatch }
+local eventPackage = {}
 addon.package = eventPackage
 
 local function isSubscribed(queue, callback)

@@ -47,9 +47,9 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 Data tables generated from the World of Warcraft client's database (DBC) files are game data
 © Blizzard Entertainment and are not covered by DragonUI's MIT License:
 `DragonUI/modules/worldmap/fogdata.lua`, `entrancedata.lua`, `flightpointdata.lua`,
-`graveyarddata.lua`, `mapareadata.lua`, and `DragonUI/data/aura_durations.lua`,
-`companion_traits.lua`. The inn positions in `DragonUI/modules/worldmap/inndata.lua` are derived
-from AzerothCore's world-database spawn data together with the client's map data.
+`graveyarddata.lua`, and `DragonUI/data/aura_durations.lua`, `companion_traits.lua`. The inn
+positions in `DragonUI/modules/worldmap/inndata.lua` are derived from AzerothCore's world-database
+spawn data together with the client's map data.
 
 World of Warcraft, Warcraft and Blizzard Entertainment are trademarks or registered trademarks of
 Blizzard Entertainment, Inc. DragonUI is a free, fan-made addon and is not affiliated with or
@@ -62,14 +62,13 @@ redistributing a stand-alone version without written permission. DragonUI only e
 libraries, loaded from its own TOC files, which the license allows. Full text:
 [LICENSES/Ace3.txt](LICENSES/Ace3.txt).
 
-- `DragonUI/libs/`: AceAddon-3.0, AceBucket-3.0, AceComm-3.0, AceConsole-3.0, AceDB-3.0,
-  AceEvent-3.0, AceHook-3.0, AceLocale-3.0, AceSerializer-3.0, AceTab-3.0, AceTimer-3.0,
-  CallbackHandler-1.0.
-- `DragonUI_Options/libs/`: AceConfig-3.0, AceDBOptions-3.0, AceGUI-3.0, CallbackHandler-1.0.
+- `DragonUI/libs/`: AceAddon-3.0, AceComm-3.0, AceConsole-3.0, AceDB-3.0, AceEvent-3.0,
+  AceLocale-3.0, AceSerializer-3.0, AceTimer-3.0, CallbackHandler-1.0.
+- `DragonUI_Options/libs/`: AceConfig-3.0, AceGUI-3.0, CallbackHandler-1.0.
 
 CallbackHandler-1.0 is published in the Ace3 repository and is covered by the same text.
-`DragonUI/libs/AceLocale-3.0/AceLocale-3.0-DragonUI.lua` is DragonUI's fork of AceLocale-3.0, and
-`AceTab-3.0/AceConfigTab-3.0.lua` carries one local change; both remain under the Ace3 license.
+`DragonUI/libs/AceLocale-3.0/AceLocale-3.0-DragonUI.lua` is DragonUI's fork of AceLocale-3.0 and
+remains under the Ace3 license.
 
 ## GPL-2.0-or-later: AbsorbsMonitor-1.0
 
@@ -124,7 +123,7 @@ Copyright (c) 2024 Dmitriy (a3st), https://github.com/a3st/RetailUI. Full text:
 [LICENSES/MIT-RetailUI.txt](LICENSES/MIT-RetailUI.txt).
 
 - Code adapted from RetailUI: `DragonUI/modules/minimap.lua`, `DragonUI/modules/buff_frame.lua`,
-  `DragonUI/core/api.lua`, `DragonUI/modules/questtracker.lua` (kept as a backup, not loaded).
+  `DragonUI/core/api.lua`.
 - Textures taken from RetailUI: `DragonUI/Textures/UI/UnitFrame.blp`, `MicroMenu.blp`,
   `Minimap.blp`, `CastingBar.blp`, `QuestTracker.BLP`, `BagSlotsKey.blp`, `CollapseButton.blp`;
   `DragonUI/Textures/Minimap/Calendar.blp`, `GuildBanner.blp`, `MinimapBorder.blp`;

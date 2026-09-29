@@ -1,13 +1,6 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- Portions adapted from DragonflightUI (MIT, (c) 2022 Karl-HeinzSchneider); see THIRD_PARTY_NOTICES.
 
---[[
-    DragonUI MicroMenu Module
-    Refactored version maintaining all functionality with better organization
-    Now with module enable/disable system
-
-    -- MODULAR VERSION FOR VANILLA & ASCENSION --
-]]
 local addon = select(2, ...)
 local config = addon.config
 local L = addon.L
@@ -28,9 +21,6 @@ local MicromenuModule = {
     hooks = {}, -- Track hooked functions
     stateDrivers = {}, -- Track state drivers
     frames = {}, -- Track created frames
-    originalHandlers = {}, -- Store original button handlers
-    originalSetPoints = {}, -- Store original SetPoint functions
-    originalCVars = {}, -- Store original CVar values
     eventFrames = {} -- Track event handler frames
 }
 
@@ -488,11 +478,6 @@ local function RestoreOriginalHandlers(button)
             button:SetScript('OnLeave', handlers.OnLeave)
         end
     end
-end
-
--- Loot animation helper
-local function EnsureLootAnimationToMainBag()
-    -- Simple approach: when bags are hidden, WoW should naturally redirect loot to main bag
 end
 
 -- Character/PVP: GetButtonState/GetChecked are unreliable; use panel visibility.
@@ -1017,7 +1002,7 @@ end
 local hidePendingTime = nil
 local charPushHooksRegistered = false
 local MICRO_LAYOUT_BASE_Y = 55
-local hideFramesScheduler, bagsBar, eventFrame3
+local hideFramesScheduler, bagsBar
 
 local function HideUnwantedBagFrames()
     -- Process all secondary bag slots
@@ -1283,7 +1268,7 @@ local function SetupPVPButton(button)
 end
 
 local function SetupCharacterButton(button)
-    -- STEP 1: Use Blizzard's native portrait (like RetailUI)
+    -- STEP 1: Use Blizzard's native portrait
     local portraitTexture = MicroButtonPortrait
     if not portraitTexture then
         return
@@ -1678,7 +1663,6 @@ function MainMenuMicroButtonMixin:SetupBagButtons()
 
     end
 
-    EnsureLootAnimationToMainBag()
     HideUnwantedBagFrames()
     -- A single deferred pass handles any late-created child textures
     -- (e.g. addons styling bag slots after us). The debounced scheduler
@@ -1997,9 +1981,6 @@ local function layoutMicroButtons(xOffset)
 
             CaptureOriginalHandlers(button)
 
-            local wasEnabled = button.IsEnabled and button:IsEnabled() or true
-            local wasVisible = button.IsVisible and button:IsVisible() or true
-
             button:StripOwnTextures()
             CharacterMicroButton:SetDisabledTexture ''
 
@@ -2015,12 +1996,7 @@ local function layoutMicroButtons(xOffset)
             button:SetHitRectInsets(0, 0, 0, 0)
 
             button:EnableMouse(true)
-            if button.SetEnabled and wasEnabled then
-                button:SetEnabled(true)
-            end
-            if wasVisible then
-                button:Show()
-            end
+            button:Show()
 
             local isCharacterButton = (buttonName == "Character")
             local isPVPButton = (buttonName == "PVP")
@@ -2219,9 +2195,6 @@ local function layoutMicroButtons(xOffset)
             end
 
             button:EnableMouse(true)
-            if button.SetEnabled and wasEnabled then
-                button:SetEnabled(true)
-            end
 
             if buttonName ~= "Character" then
                 RestoreOriginalHandlers(button)
@@ -2309,62 +2282,6 @@ local function layoutMicroButtons(xOffset)
     elseif MicromenuModule.frames.latencyIndicator then
         MicromenuModule.frames.latencyIndicator:Hide()
     end
-end
-
-local function updateMicroButtonSpacing()
-    LayoutMicroButtons()
-end
-
-function addon.RefreshMicromenuSpacing()
-    updateMicroButtonSpacing()
-end
-
-function addon.RefreshMicromenuPosition()
-if not _G.DragonUI_MicroButtonBar then
-    return
-end
-
-local menu = _G.DragonUI_MicroButtonBar
-local frameInfo = addon:GetEditableFrameInfo("micromenu")
-if frameInfo and frameInfo.frame then
-    -- Position the OVERLAY from saved config or defaults
-    local microMenuConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.micromenu
-
-    if microMenuConfig and microMenuConfig.posX and microMenuConfig.posY then
-        frameInfo.frame:ClearAllPoints()
-        frameInfo.frame:SetPoint(microMenuConfig.anchor or "BOTTOMRIGHT", UIParent,
-            microMenuConfig.anchor or "BOTTOMRIGHT",
-            microMenuConfig.posX, microMenuConfig.posY)
-    else
-        local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-        local configMode = useGrayscale and "grayscale" or "normal"
-        local config = addon.db.profile.micromenu[configMode]
-        local xOffset = HasCollectionsButton() and -180 or -166
-
-        frameInfo.frame:ClearAllPoints()
-        frameInfo.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT",
-            xOffset + config.x_position, config.y_position)
-    end
-
-    -- Re-anchor menu TO the overlay using stored offsets (unscaled; WoW applies frame scale automatically)
-    local offX = menu.editorOffX or -(159)
-    local offY = menu.editorOffY or -(75)
-    menu:ClearAllPoints()
-    menu:SetPoint("BOTTOMRIGHT", frameInfo.frame, "CENTER", offX, offY)
-else
-    -- Fallback: no editor frame registered yet
-    local useGrayscale = addon.db.profile.micromenu.grayscale_icons
-    local configMode = useGrayscale and "grayscale" or "normal"
-    local config = addon.db.profile.micromenu[configMode]
-
-    menu:SetScale(config.scale_menu)
-    local xOffset = HasCollectionsButton() and -180 or -166
-    menu:ClearAllPoints()
-    menu:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT',
-        xOffset + config.x_position, config.y_position)
-end
-
-updateMicroButtonSpacing()
 end
 
 function addon.RefreshBagsPosition()
@@ -2457,10 +2374,6 @@ function addon.RefreshBagsVehicle()
     end
 end
 
-function addon.RefreshMicromenuIcons()
-    -- Icon refresh handled in main setup
-end
-
 function addon.RefreshMicromenu()
 if not addon.db or not addon.db.profile or not addon.db.profile.micromenu then
     return
@@ -2474,14 +2387,8 @@ local useGrayscale = addon.db.profile.micromenu.grayscale_icons
 local configMode = useGrayscale and "grayscale" or "normal"
 local config = addon.db.profile.micromenu[configMode]
 
--- FIXED: Only apply scale, NOT position (editor handles that)
+-- Scale only: the editor overlay owns the position.
 _G.DragonUI_MicroButtonBar:SetScale(config.scale_menu)
-
--- REMOVED: Don't overwrite editor position
--- _G.DragonUI_MicroButtonBar:ClearAllPoints()
--- _G.DragonUI_MicroButtonBar:SetPoint('BOTTOMLEFT', UIParent, 'BOTTOMRIGHT', xOffset + config.x_position, config.y_position)
-
-addon.RefreshMicromenuIcons()
 
 LayoutMicroButtons()
 
@@ -2534,42 +2441,12 @@ local function ApplyMicromenuSystem()
     -- Store original states first
     StoreOriginalMicroButtonStates()
 
-    -- ============================================================================
-    -- SECTION 4: BAG FRAME CLEANUP
-    -- ============================================================================
-
-    -- Frame cleanup scheduler (debounced).
-    -- Collapses multiple calls within a burst into a single execution at the
-    -- earliest requested time. Prevents redundant region scans when several
-    -- callers schedule cleanup in quick succession.
+    -- Debounced: a burst of cleanup requests collapses into one pass at the earliest requested time.
     hideFramesScheduler = CreateFrame("Frame")
 
-    -- ============================================================================
-    -- SECTION 5: SPECIALIZED BUTTON SETUP
-    -- ============================================================================
-
-    -- Local flag: reset on every /reload (Lua state is wiped).
-    -- Frame properties survive reload, but hooksecurefunc on globals don't.
-
-    -- ============================================================================
-    -- SECTION 6: MAIN SETUP FUNCTIONS
-    -- ============================================================================
-
-    -- Create global bags bar
     _G.DragonUI_BagButtonBar = CreateFrame('Frame', 'DragonUI_BagButtonBar', UIParent);
     bagsBar = _G.DragonUI_BagButtonBar;
-    -- DON'T parent automatically - will be done in setup when necessary
     KeyRingButton:SetParent(_G.CharacterBag3Slot);
-
-    -- Buttons layout as a grid; hover/combat visibility stays on DragonUI_MicroButtonBar.
-
-    -- ============================================================================
-    -- SECTION 7: REFRESH FUNCTIONS
-    -- ============================================================================
-
-    -- ============================================================================
-    -- SECTION 8: SPECIAL UI ELEMENTS
-    -- ============================================================================
 
     local foldToggle = addon.BagsToggle
         or CreateFrame("CheckButton", "DragonUI_BagsToggle", MainMenuBarBackpackButton)
@@ -2620,7 +2497,7 @@ local function ApplyMicromenuSystem()
     end
 
     -- ============================================================================
-    -- SECTION 9: EVENT HANDLERS
+    -- EVENT HANDLERS
     -- ============================================================================
 
     addon.package:Subscribe(function(_, eventName)
@@ -2654,11 +2531,6 @@ local function ApplyMicromenuSystem()
 
         HideUnwantedBagFrames()
     end, 'PLAYER_ENTERING_WORLD');
-
-    -- NOTE: equipped-bag slot icons do not change when bag contents change;
-    -- PLAYER_EQUIPMENT_CHANGED handles real bag swaps and triggers the full
-    -- icon refresh there. The BAG_UPDATE handler above is intentionally
-    -- lightweight to avoid unnecessary work on frequent inventory events.
 
     addon.package:Subscribe(function()
         local xOffset = ResolveMicroStripOffset()
@@ -2726,13 +2598,6 @@ local function ApplyMicromenuSystem()
         end)
     end
 
-    -- Register all events
-    -- NOTE: BAG_UPDATE is handled in SECTION 9 above. A second registration
-    -- for the same event is intentionally omitted here to avoid duplicate
-    -- work per inventory event.
-
-    eventFrame3 = MicromenuModule.eventFrames.playerEquipmentChanged or CreateFrame("Frame")
-    MicromenuModule.eventFrames.playerEquipmentChanged = eventFrame3
     addon.package:Subscribe(function(self, event, slotID)
         if not IsModuleEnabled() then return end
 

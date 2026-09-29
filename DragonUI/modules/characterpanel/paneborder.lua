@@ -3,8 +3,7 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- Retail's InsetFrameTemplate nine-slice, art and geometry both: 6px corners over 3px tiles, off the
--- client's own UI-Frame-Inner sheets rather than the Char-Paperdoll edges this used to borrow.
+-- InsetFrameTemplate's nine-slice on the client's UI-Frame-Inner sheets: 6px corners, 3px tiles.
 local CORNER_SIZE = 6
 local EDGE_THICKNESS = 3
 

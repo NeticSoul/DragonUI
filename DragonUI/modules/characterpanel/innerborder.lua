@@ -38,8 +38,7 @@ local function build()
     local bl = corner("UI-Frame-InnerBotLeftCorner", "BOTTOMLEFT", -OUTSET, -OUTSET)
     local br = corner("UI-Frame-InnerBotRight", "BOTTOMRIGHT", OUTSET, -OUTSET)
 
-    -- Flush against the corners: this trim is cut to meet, unlike the paperdoll edges it replaced,
-    -- which needed a pixel of shift to reach their fatter corner.
+    -- Flush against the corners: this trim is cut to meet them, with no pixel of shift.
     local function edge(atlas, vertical, p1, a1, r1, p2, a2, r2)
         local t = pd:CreateTexture(nil, "OVERLAY")
         t._duiOwned = true

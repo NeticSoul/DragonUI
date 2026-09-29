@@ -89,10 +89,6 @@ local function walkChrome(frame, hide, isSubframe)
     end
 end
 
-local function suppressChrome(frame)
-    walkChrome(frame, true)
-end
-
 local function applyDimensions(cf)
     cf:SetWidth(CP.PANEL_WIDTH)
     cf:SetHeight(CP.PANEL_HEIGHT)
@@ -126,8 +122,7 @@ local function nudgePanel()
     if cf:IsShown() and UpdateUIPanelPositions then UpdateUIPanelPositions(cf) end
 end
 
--- The Inset's ground is its rock and nothing else; the second sheet that used to cover it is gone
--- rather than managed, because it cannot fall out of step if it does not exist.
+-- The Inset's ground is its rock alone: a second sheet over it could fall out of step with it.
 local function applyBackgrounds(cf)
     if not cf._duiRockBg then
         local bg = cf:CreateTexture(nil, "BACKGROUND", nil, -6)
@@ -199,8 +194,7 @@ function CP.ModernizeCloseButton(cb, owner, x, y)
     cb:ClearAllPoints()
     cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", cb._duiX, cb._duiY)
 
-    -- All four states UIPanelCloseButtonNoScripts declares, with the sheet's own rects. The pushed
-    -- one used to point at 41..79, which is the DISABLED art -- pressed lives further down at 81.
+    -- All four UIPanelCloseButtonNoScripts states; 41..79 on this sheet is disabled, not pushed.
     local function dress(getter, l, r, t, b, blend)
         local tex = cb[getter] and cb[getter](cb)
         if not tex then return end
@@ -343,7 +337,5 @@ function CP.RestoreChrome()
     cf:SetWidth(384)
     cf:SetHeight(512)
 end
-
-CP.SuppressChrome = suppressChrome
 
 CP:RegisterBuilder("chrome", build)

@@ -9,16 +9,12 @@ local addon = select(2, ...)
 local InCombatLockdown, UnitAffectingCombat = InCombatLockdown, UnitAffectingCombat
 local hooksecurefunc, UIParent = hooksecurefunc, UIParent
 local L = addon.L
-local NUM_POSSESS_SLOTS = NUM_POSSESS_SLOTS or 10;
 local NUM_MULTI_CAST_BUTTONS_PER_PAGE = NUM_MULTI_CAST_BUTTONS_PER_PAGE or 4;
 
 -- Get player class dynamically (addon._class may not be set yet at load time)
 local function GetPlayerClass()
     return addon._class or select(2, UnitClass('player'))
 end
-
--- noop function for protecting frames
-local noop = addon._noop
 
 -- =============================================================================
 -- MODULE STATE TRACKING
@@ -639,9 +635,9 @@ local function registerMulticastEvents()
             
         elseif event == "PLAYER_LOGOUT" then
             if addon.db and addon.db.UnregisterCallback then
-                addon.db.UnregisterCallback(addon, "OnProfileChanged")
-                addon.db.UnregisterCallback(addon, "OnProfileCopied") 
-                addon.db.UnregisterCallback(addon, "OnProfileReset")
+                addon.db.UnregisterCallback(MulticastModule, "OnProfileChanged")
+                addon.db.UnregisterCallback(MulticastModule, "OnProfileCopied")
+                addon.db.UnregisterCallback(MulticastModule, "OnProfileReset")
             end
         end
     end)

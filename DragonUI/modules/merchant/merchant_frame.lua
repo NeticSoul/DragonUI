@@ -4,6 +4,10 @@ local addon = select(2, ...)
 
 local Merchant = { initialized = false, applied = false }
 
+-- Shared with sell_junk.lua and buyback_undo.lua, which merchant.xml loads after this file.
+local parts = addon.merchantParts or {}
+addon.merchantParts = parts
+
 local function localized(key)
     local strings = addon.L
     local text = strings and strings[key]
@@ -12,6 +16,7 @@ local function localized(key)
     end
     return text
 end
+parts.localized = localized
 
 if addon.RegisterModule then
     addon:RegisterModule("merchant", Merchant, localized("Merchant"), localized("Retail-style vendor window chrome"), {
@@ -19,10 +24,6 @@ if addon.RegisterModule then
         loadOnce = true,
     })
 end
-
--- Filled by sell_junk.lua and buyback_undo.lua; read only by the first-open build.
-local parts = addon.merchantParts or {}
-addon.merchantParts = parts
 
 local windowBuilt = false
 local chrome = {}

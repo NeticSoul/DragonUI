@@ -73,9 +73,7 @@ local function buildThumb(bar, thumb)
     bottom:SetAtlasTexture("minimal-scrollbar-thumb-bottom", true)
     bottom:SetPoint("BOTTOM", grip, "BOTTOM", 0, 0)
 
-    -- Under the caps and a pixel into each. Butted edge to edge, the middle and the cap round their
-    -- shared edge independently once the UI scale is not 1, and a hairline of track blinks through
-    -- as the grip travels. Only one pixel, so it never reaches the rounded ends and show through.
+    -- A pixel into each cap: butted edges round apart off UI scale 1 and the track blinks through.
     local mid = bar:CreateTexture(nil, "ARTWORK", nil, -1)
     mid:SetAtlasTexture("minimal-scrollbar-thumb-middle")
     mid:SetWidth(BAR_W)

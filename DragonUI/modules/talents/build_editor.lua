@@ -5,7 +5,7 @@ local TM = addon.TalentModule
 local ns = TM.ns
 local L = addon.L
 
-local format, min = string.format, math.min
+local format, max, min = string.format, math.max, math.min
 local ResetGroupPreviewTalentPoints = _G.ResetGroupPreviewTalentPoints
 
 local SOUND_ADD, SOUND_REMOVE = "igMainMenuOptionCheckBoxOn", "igMainMenuOptionCheckBoxOff"
@@ -113,8 +113,9 @@ local function saveAndLeave(_, job)
     end
 end
 
-local function discardAndLeave(_, job)
-    if not job then return end
+-- StaticPopup also cancels with "override" (popup reuse, logout); only a real click may discard.
+local function discardAndLeave(_, job, reason)
+    if not job or reason ~= "clicked" then return end
     local build, base = job.build, job.base
     if base then
         build.ranks = copyRanks(base.ranks)
@@ -152,6 +153,7 @@ ns.DefinePopup("DUI_TALENT_UNSAVED", L["You have unsaved changes in '%s'. Save t
 ns.DefinePopup("DUI_TALENT_UNSAVED_LEFT", L["You have unsaved changes in '%s'. Save them?"], SAVE, L["Discard"], {
     OnAccept = saveAndLeave,
     OnCancel = discardAndLeave,
+    multiple = 1,
 }, "dead").hideOnEscape = nil
 
 -- Painting ----------------------------------------------------------------------------------------
@@ -159,7 +161,7 @@ ns.DefinePopup("DUI_TALENT_UNSAVED_LEFT", L["You have unsaved changes in '%s'. S
 local function editorState(build, data, tab, talent, rank)
     if rank > 0 then return "yellow" end
     if ns.CanAddPoint(build, data, tab, talent.index) then return "green" end
-    if ns.TierOpen(build, tab, talent.tier) then return "gray" end
+    if ns.TierOpen(build, data, tab, talent.tier) then return "gray" end
     return "locked"
 end
 
@@ -367,6 +369,14 @@ local function stagePoints(build, data, group)
             end
         end
     end
+    local unstaged = 0
+    for tab = 1, data.count do
+        for _, talent in ipairs(data[tab].order) do
+            local want = ns.BuildRank(build, tab, talent.index)
+            unstaged = unstaged + max(0, want - previewRank(tab, talent.index, group))
+        end
+    end
+    return unstaged
 end
 
 local function pointsMissing(build, data, group)
@@ -417,9 +427,14 @@ function ns.LoadOntoCharacter(build)
     SetCVar("previewTalents", "1")
     ResetGroupPreviewTalentPoints(false, group)
     wipe(ns.undo)
-    stagePoints(build, data, group)
+    local unstaged = stagePoints(build, data, group)
     ns.Refresh()
-    ns.Notify(L["Build staged — click Apply Changes to learn it."], "ok")
+    if unstaged > 0 then
+        ns.Notify(format(L["Only %d of %d points could be staged — check the trees before applying."],
+            needed - unstaged, needed), "error")
+    else
+        ns.Notify(L["Build staged — click Apply Changes to learn it."], "ok")
+    end
 end
 
 ns.DefinePopup("DUI_TALENT_NEEDS_RESET",

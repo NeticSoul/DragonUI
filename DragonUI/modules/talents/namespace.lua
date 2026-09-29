@@ -19,7 +19,6 @@ end
 
 -- Window geometry in window units; the trees draw at TREE_SCALE of these.
 ns.WIDTH = 1120
-ns.TOP_BAND = 46
 ns.FOOTER_H = 80
 ns.ART_TOP = 22
 ns.TAB_ROW = 34

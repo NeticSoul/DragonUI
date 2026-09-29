@@ -20,7 +20,6 @@ end
 local function isEnabled()
     return GetCVarBool and GetCVarBool(CVAR) and true or false
 end
-CP.IsEquipmentManagerEnabled = isEnabled
 
 StaticPopupDialogs["DRAGONUI_ENABLE_EQUIPMENT_MANAGER"] = {
     text = addon.L["Equipment Manager is turned off. Enable it now?"],
@@ -56,7 +55,5 @@ local function build()
     hookRecheckOnShow()
     if CP.RefreshEquipmentTabState then CP.RefreshEquipmentTabState() end
 end
-
-CP.RefreshEquipmentManager = build
 
 CP:RegisterBuilder("equipment", build)

@@ -3,9 +3,7 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- Mirrikat45's GearScore, the number every 3.3.5a player already recognises. Ported from the
--- algorithm KPack's GearScoreLite carries; the optional enchant bonus is left out on purpose, so
--- this reports the plain score rather than that fork's inflated one.
+-- Mirrikat45's GearScore formula, without the optional enchant bonus some variants add on top.
 
 local SCALE = 1.8618
 
@@ -128,5 +126,3 @@ function CP.GetGearScore(unit)
 
     return math.floor(total > 0 and total or 0)
 end
-
-addon.GetGearScore = CP.GetGearScore

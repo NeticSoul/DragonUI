@@ -126,8 +126,7 @@ end
 
 CP.ApplyModelBackdrop = paintBackdrop
 
--- Blizzard anchors the viewport in XML only, so a disable that does not reload leaves the model
--- sitting where the retail inset used to be.
+-- Blizzard anchors the viewport in XML only; nothing else undoes our placement without a reload.
 function CP.RestoreModel()
     local model = _G.CharacterModelFrame
     if not model then return end

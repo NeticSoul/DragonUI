@@ -438,7 +438,7 @@ function refresh()
     if CP.SyncScrollBarVisibility then CP.SyncScrollBarVisibility(scroll) end
     if CP.SyncScrollThumb then CP.SyncScrollThumb(scroll) end
 
-    -- Matches the reference: a set you are already wearing offers neither action.
+    -- A set you are already wearing offers neither action.
     local actionable = selectedName ~= nil and not isEquipped(selectedName)
     if actionable then equipButton:Enable() else equipButton:Disable() end
     if actionable then saveButton:Enable() else saveButton:Disable() end
@@ -507,8 +507,6 @@ local function build()
     newRow.Text:SetText(addon.L["New Equipment Set"])
     newRow.Text:SetTextColor(GREEN.r, GREEN.g, GREEN.b)
     newRow:SetScript("OnDoubleClick", nil)
-
-    CP._equipmentPane = pane
 end
 
 CP.EquipmentPane = function() return pane end

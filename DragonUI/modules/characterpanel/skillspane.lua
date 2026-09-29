@@ -305,8 +305,6 @@ local function build()
     end
 end
 
-CP.SkillsPane = function() return pane end
-
 local events = CreateFrame("Frame")
 events:RegisterEvent("SKILL_LINES_CHANGED")
 events:RegisterEvent("CHARACTER_POINTS_CHANGED")

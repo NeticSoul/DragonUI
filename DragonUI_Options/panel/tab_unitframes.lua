@@ -182,14 +182,6 @@ local function AddCommonControls(parent, unitKey, refreshFunc, opts)
         dbPath = "unitframe." .. unitKey .. ".showManaTextAlways",
         callback = refreshFunc,
     })
-
-    if opts.hasThreatGlow then
-        C:AddToggle(parent, {
-            label = LO["Threat Glow"],
-            dbPath = "unitframe." .. unitKey .. ".enableThreatGlow",
-            callback = refreshFunc,
-        })
-    end
 end
 
 -- ============================================================================

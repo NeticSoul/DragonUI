@@ -120,26 +120,12 @@ local function dump()
         fmt(CP.TabStripRight and CP.TabStripRight())))
 end
 
-CP.Dump = dump
 addon.DumpCharacterPanel = dump
 
 local CONTROL_NAMES = {
     "CharacterModelFrameRotateLeftButton", "CharacterModelFrameRotateRightButton",
     "DragonUIModelZoomOut", "DragonUIModelZoomIn", "DragonUIModelReset",
 }
-
--- Where a texture actually lands, measured against the Inset floor. Identical-looking state with a
--- different result means the difference is in geometry, not in the texture's own fields.
-local function describeRect(tex)
-    local inset = _G.CharacterFrame and _G.CharacterFrame.Inset
-    if not inset or not inset:GetBottom() or not tex:GetBottom() then
-        addon:Print("          rect: |cffff5555unresolved|r")
-        return
-    end
-    addon:Print(string.format("          rect: %sx%s  top=%s bottom=%s (above inset floor)",
-        fmt(tex:GetWidth()), fmt(tex:GetHeight()),
-        fmt(tex:GetTop() - inset:GetBottom()), fmt(tex:GetBottom() - inset:GetBottom())))
-end
 
 local function describeTexture(label, tex)
     if not tex then
@@ -190,8 +176,6 @@ local function dumpControls()
         end
     end
 end
-
-CP.DumpControls = dumpControls
 
 -- Everything stacked in the strip under the model, which renders dark on some loads and light on
 -- others. Frame level decides across frames, draw layer within one, so both are reported.

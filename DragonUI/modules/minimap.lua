@@ -48,11 +48,12 @@ local function IsDragonUIMinimapControlling()
     return MinimapModule.applied or MinimapModule._initializingMinimapSystem
 end
 
-local DEFAULT_MINIMAP_WIDTH = Minimap:GetWidth() * 1.36
-local DEFAULT_MINIMAP_HEIGHT = Minimap:GetHeight() * 1.36
 local blipScale = 1.12
-local BORDER_SIZE = 71 * 2 * 2 ^ 1
-local BORDER_TO_MAP_RATIO = BORDER_SIZE / (DEFAULT_MINIMAP_WIDTH / blipScale)
+-- Sampled at load: ReplaceBlizzardFrame runs on every apply and would grow the map each time.
+local mapUnscaledWidth = Minimap:GetWidth() * 1.36 / blipScale
+local mapUnscaledHeight = Minimap:GetHeight() * 1.36 / blipScale
+local BORDER_TO_MAP_RATIO = 284 / mapUnscaledWidth
+
 local DRAGONUI_MINIMAP_MASK = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\uiminimapmask.tga"
 local VANILLA_MINIMAP_MASK = "Textures\\MinimapMask"
 
@@ -61,13 +62,12 @@ local DRAGONUI_SETTINGS_BUTTON_SIZE = 21
 local DRAGONUI_SETTINGS_BUTTON_ICON = "Interface\\AddOns\\DragonUI\\Textures\\UI\\INV_Misc_Head_Dragon_01"
 local DRAGONUI_CLASSIC_COLLECTOR_ICON = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\collector_toggle.tga"
 
--- Addon icon whitelist: define before ReplaceBlizzardFrame
-local WHITE_LIST = {'MiniMapBattlefieldFrame', 'MiniMapTrackingButton', 'MiniMapMailFrame', 'HelpOpenTicketButton',
-                    'GatherMatePin', 'HandyNotesPin', 'TimeManagerClockButton', 'Archy', 'GatherNote', 'MinimMap',
-                    'Spy_MapNoteList_mini', 'ZGVMarker', 'poiWorldMapPOIFrame', 'WorldMapPOIFrame', 'QuestMapPOI',
-                    'GameTimeFrame',
-                    -- Quest helper POI icons (quest markers inside the minimap)
-                    'QuestieFrame', 'Questie_MiniMapNote', 'pfQuest', 'pfquest', 'pfMap', 'pfMinimap'}
+local MAP_PIN_NAME_FRAGMENTS = {
+    "Archy", "GameTimeFrame", "GatherMatePin", "GatherNote", "HandyNotesPin", "HelpOpenTicketButton",
+    "MiniMapBattlefieldFrame", "MiniMapMailFrame", "MiniMapTrackingButton", "MinimMap", "QuestMapPOI",
+    "QuestieFrame", "Questie_MiniMapNote", "Spy_MapNoteList_mini", "TimeManagerClockButton", "WorldMapPOIFrame",
+    "ZGVMarker", "pfMap", "pfMinimap", "pfQuest", "pfquest", "poiWorldMapPOIFrame",
+}
 
 -- Keep launcher buttons skinnable while still excluding internal quest pins.
 -- Questie launcher is LibDBIcon-based (LibDBIcon10_Questie), while pfQuest
@@ -100,16 +100,9 @@ local function IsQuestAddonLauncherButton(button)
 end
 
 local function IsFrameWhitelisted(frameName)
-    if not frameName then
-        return false
-    end
-
-    for i, buttons in pairs(WHITE_LIST) do
-        if frameName ~= nil then
-            if frameName:match(buttons) then
-                return true
-            end
-        end
+    if type(frameName) ~= "string" then return false end
+    for index = 1, #MAP_PIN_NAME_FRAGMENTS do
+        if string.find(frameName, MAP_PIN_NAME_FRAGMENTS[index], 1, true) then return true end
     end
     return false
 end
@@ -709,9 +702,8 @@ local function ReplaceBlizzardFrame(frame)
     local minimapFrame = Minimap
     minimapFrame:ClearAllPoints()
     minimapFrame:SetPoint("CENTER", minimapCluster, "CENTER", 0, -25)
-    minimapFrame:SetWidth(DEFAULT_MINIMAP_WIDTH / blipScale)
-    minimapFrame:SetHeight(DEFAULT_MINIMAP_HEIGHT / blipScale)
     minimapFrame:SetScale(blipScale)
+    minimapFrame:SetSize(mapUnscaledWidth, mapUnscaledHeight)
     MinimapModule.activeMinimapScale = blipScale
 
     -- In hybrid mode, don't override SexyMap's mask (it controls shape)
@@ -801,27 +793,32 @@ local function ReplaceBlizzardFrame(frame)
         MinimapModule._origSetBlipTexture = origSetBlipTexture
     end
 
-    local MINIMAP_POINTS = {}
-    for i = 1, Minimap:GetNumPoints() do
-        MINIMAP_POINTS[i] = {Minimap:GetPoint(i)}
-    end
-
-    for _, regions in ipairs {Minimap:GetChildren()} do
-        if regions ~= WatchFrame and regions ~= _G.WatchFrame then
-            if regions:GetObjectType() == "Button" and not IsFrameWhitelisted(regions:GetName()) then
-                regions:SetScale((1 / blipScale) * (1 + ADDON_ORBIT_RADIUS / 100))
-            else
-                regions:SetScale(1 / blipScale)
+    do
+        local childScale = 1 / blipScale
+        local launcherScale = childScale * (1 + ADDON_ORBIT_RADIUS / 100)
+        local listed, mapChildren = pcall(function() return { minimapFrame:GetChildren() } end)
+        for _, child in ipairs(listed and mapChildren or {}) do
+            if child ~= WatchFrame then
+                local isLauncher = child:GetObjectType() == "Button" and not IsFrameWhitelisted(child:GetName())
+                child:SetScale(isLauncher and launcherScale or childScale)
             end
         end
-    end
 
-    for _, points in ipairs(MINIMAP_POINTS) do
-        Minimap:SetPoint(points[1], points[2], points[3], points[4] / blipScale, points[5] / blipScale)
-    end
-    if not isHybridMode then
-        function GetMinimapShape()
-            return "ROUND"
+        -- Anchor offsets are read in the map's own scaled units, so the scale is divided back out.
+        local function ShrinkAnchor(point, relativeTo, relativePoint, x, y)
+            return { point, relativeTo, relativePoint, (x or 0) / blipScale, (y or 0) / blipScale }
+        end
+        local anchors = {}
+        for index = 1, minimapFrame:GetNumPoints() do
+            anchors[#anchors + 1] = ShrinkAnchor(minimapFrame:GetPoint(index))
+        end
+        minimapFrame:ClearAllPoints()
+        for _, anchor in ipairs(anchors) do
+            minimapFrame:SetPoint(unpack(anchor, 1, 5))
+        end
+
+        if not isHybridMode then
+            _G.GetMinimapShape = function() return "ROUND" end
         end
     end
 
@@ -1108,188 +1105,167 @@ local function IsInsideCollector(button)
     return collector and button and button:GetParent() == collector
 end
 
--- Fade functions for hover effect (check setting dynamically)
-local function fadein(self)
-    if IsInsideCollector(self) then
-        self:SetAlpha(1)
-        return
+-- Blizzard's fade helpers share one global table of fading frames; securecall keeps it untainted.
+local function FadeAddonButton(frame, helperName, targetAlpha)
+    if IsInsideCollector(frame) then
+        frame:SetAlpha(1)
+    elseif IsFadeEnabled() then
+        securecall(helperName, frame, 0.2, frame:GetAlpha(), targetAlpha)
     end
-    if not IsFadeEnabled() then return end
-    securecall(UIFrameFadeIn, self, 0.2, self:GetAlpha(), 1.0)
 end
 
-local function fadeout(self)
-    if IsInsideCollector(self) then
-        self:SetAlpha(1)
-        return
-    end
-    if not IsFadeEnabled() then return end
-    securecall(UIFrameFadeOut, self, 0.2, self:GetAlpha(), 0.2)
+local function fadein(frame)
+    FadeAddonButton(frame, "UIFrameFadeIn", 1)
 end
 
--- Function to apply custom skin to addon icons
--- Non-destructive: repositions originals, creates border overlay; all reversible.
-local function ApplyAddonIconSkin(button)
-    if not button or button:GetObjectType() ~= 'Button' then
-        return
+local function fadeout(frame)
+    FadeAddonButton(frame, "UIFrameFadeOut", 0.2)
+end
+
+local ADDON_ICON_RING = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\border_buttons.tga"
+local ADDON_ICON_FADE_SCRIPTS = { OnEnter = fadein, OnLeave = fadeout }
+local DECORATION_PATH_WORDS = { "Border", "Background", "AlphaMask" }
+local addonIconLayouts = {}
+
+local function IsTextureRegion(region)
+    return region ~= nil and region:GetObjectType() == "Texture"
+end
+
+local function IsDecorationTexture(region)
+    local path = tostring(region:GetTexture() or "")
+    for _, word in ipairs(DECORATION_PATH_WORDS) do
+        if path:find(word, 1, true) then return true end
+    end
+    return false
+end
+
+-- UnskinAddonButton restores from exactly these fields.
+local function SnapshotRegion(region)
+    local anchors = {}
+    for index = 1, region:GetNumPoints() do
+        local point, relativeTo, relativePoint, x, y = region:GetPoint(index)
+        anchors[index] = { point, relativeTo, relativePoint, x, y }
+    end
+    region.DragonUI_OrigPoints = anchors
+    region.DragonUI_OrigW, region.DragonUI_OrigH = region:GetSize()
+    region.DragonUI_OrigLayer = region:GetDrawLayer()
+    region.DragonUI_OrigAlpha = region:GetAlpha()
+    region.DragonUI_OrigTexCoord = { region:GetTexCoord() }
+end
+
+local function BuildAddonIconLayout(button)
+    button.DragonUI_Skinned = true
+    button.DragonUI_OrigW, button.DragonUI_OrigH = button:GetSize()
+
+    local normal, pushed = button:GetNormalTexture(), button:GetPushedTexture()
+    local stateful = (normal and pushed and normal:GetTexture() and pushed:GetTexture()) and true or false
+    button.DragonUI_UsesStateTextures = stateful
+
+    local icons, highlights, decorations, snapshotted = {}, {}, {}, {}
+    local function Adopt(region, list)
+        if snapshotted[region] then return end
+        snapshotted[region] = true
+        SnapshotRegion(region)
+        list[#list + 1] = region
     end
 
-    local frameName = button:GetName()
-    if IsQuestMinimapPin(button) then
-        return
-    end
-
-    -- First-time setup: catalogue regions and create overlay (only once)
-    if not button.DragonUI_Skinned then
-        button.DragonUI_Skinned = true
-
-        -- Save original size
-        button.DragonUI_OrigW, button.DragonUI_OrigH = button:GetSize()
-
-        -- Classify original regions into "decoration" (border/bg), "highlight" (hover effect), and "icon"
-        button.DragonUI_DecoRegions = {}
-        button.DragonUI_HighlightRegions = {}
-        button.DragonUI_IconRegions = {}
-        button.DragonUI_PrimaryIconRegions = {}
-        button.DragonUI_ExtraIconRegions = {}
-        button.DragonUI_UsesStateTextures = false
-        local seenRegions = {}
-
-        local function SaveRegionState(region)
-            if not region or seenRegions[region] then
-                return
+    for _, region in ipairs({ button:GetRegions() }) do
+        if IsTextureRegion(region) then
+            if region:GetDrawLayer() == "HIGHLIGHT" then
+                Adopt(region, highlights)
+            elseif IsDecorationTexture(region) then
+                region.DragonUI_OrigAlpha = region:GetAlpha()
+                decorations[#decorations + 1] = region
+            else
+                Adopt(region, icons)
             end
-            seenRegions[region] = true
-
-            local numPoints = region:GetNumPoints()
-            region.DragonUI_OrigPoints = {}
-            for p = 1, numPoints do
-                region.DragonUI_OrigPoints[p] = { region:GetPoint(p) }
-            end
-            region.DragonUI_OrigW, region.DragonUI_OrigH = region:GetWidth(), region:GetHeight()
-            region.DragonUI_OrigLayer = region:GetDrawLayer()
-            region.DragonUI_OrigAlpha = region:GetAlpha()
-            region.DragonUI_OrigTexCoord = { region:GetTexCoord() }
-        end
-
-        local normalTex = button:GetNormalTexture()
-        local pushedTex = button:GetPushedTexture()
-        if normalTex and pushedTex and normalTex:GetTexture() and pushedTex:GetTexture() then
-            button.DragonUI_UsesStateTextures = true
-        end
-
-        for index = 1, button:GetNumRegions() do
-            local region = select(index, button:GetRegions())
-            if region:GetObjectType() == 'Texture' then
-                local tex = region:GetTexture()
-                local texStr = tex and tostring(tex) or ""
-                local layer = region:GetDrawLayer()
-                if layer == 'HIGHLIGHT' then
-                    -- Highlight textures: save original state for restore
-                    SaveRegionState(region)
-                    table.insert(button.DragonUI_HighlightRegions, region)
-                elseif texStr:find('Border') or texStr:find('Background') or texStr:find('AlphaMask') then
-                    region.DragonUI_OrigAlpha = region:GetAlpha()
-                    table.insert(button.DragonUI_DecoRegions, region)
-                else
-                    -- Save original anchoring/size for icon regions
-                    SaveRegionState(region)
-                    table.insert(button.DragonUI_IconRegions, region)
-                end
-            end
-        end
-
-        -- Ensure state textures are tracked even when not exposed by GetRegions().
-        if normalTex and normalTex:GetObjectType() == 'Texture' and not seenRegions[normalTex] then
-            SaveRegionState(normalTex)
-            table.insert(button.DragonUI_IconRegions, normalTex)
-        end
-        if pushedTex and pushedTex:GetObjectType() == 'Texture' and not seenRegions[pushedTex] then
-            SaveRegionState(pushedTex)
-            table.insert(button.DragonUI_IconRegions, pushedTex)
-        end
-
-        local highlightTex = button:GetHighlightTexture()
-        if highlightTex and highlightTex:GetObjectType() == 'Texture' and not seenRegions[highlightTex] then
-            SaveRegionState(highlightTex)
-            table.insert(button.DragonUI_HighlightRegions, highlightTex)
-        end
-
-        -- Select icon textures to skin: for stateful buttons use normal+pushed only.
-        if button.DragonUI_UsesStateTextures and normalTex and normalTex:GetObjectType() == 'Texture' then
-            table.insert(button.DragonUI_PrimaryIconRegions, normalTex)
-            if pushedTex and pushedTex:GetObjectType() == 'Texture' then
-                table.insert(button.DragonUI_PrimaryIconRegions, pushedTex)
-            end
-            for _, region in ipairs(button.DragonUI_IconRegions) do
-                if region ~= normalTex and region ~= pushedTex then
-                    table.insert(button.DragonUI_ExtraIconRegions, region)
-                end
-            end
-        else
-            button.DragonUI_PrimaryIconRegions = button.DragonUI_IconRegions
-        end
-
-        -- Create circle border overlay (once)
-        button.circle = button:CreateTexture(nil, 'OVERLAY')
-        button.circle:SetSize(23, 23)
-        button.circle:SetPoint('CENTER', button)
-        button.circle:SetTexture("Interface\\AddOns\\DragonUI\\Textures\\Minimap\\border_buttons.tga")
-
-        -- Hook fade (once, permanent; functions check IsFadeEnabled() dynamically)
-        if not button.DragonUI_FadeHooked then
-            button.DragonUI_FadeHooked = true
-            button:HookScript('OnEnter', fadein)
-            button:HookScript('OnLeave', fadeout)
         end
     end
+    if IsTextureRegion(normal) then Adopt(normal, icons) end
+    if IsTextureRegion(pushed) then Adopt(pushed, icons) end
+    local hover = button:GetHighlightTexture()
+    if IsTextureRegion(hover) then Adopt(hover, highlights) end
 
-    -- === ACTIVATE skinned state ===
+    button.DragonUI_IconRegions = icons
+    button.DragonUI_HighlightRegions = highlights
+    button.DragonUI_DecoRegions = decorations
+
+    local layout = { primary = icons, extra = {} }
+    if stateful and IsTextureRegion(normal) then
+        layout.primary = { normal, IsTextureRegion(pushed) and pushed or nil }
+        for _, region in ipairs(icons) do
+            if region ~= normal and region ~= pushed then
+                layout.extra[#layout.extra + 1] = region
+            end
+        end
+    end
+    addonIconLayouts[button] = layout
+
+    local ring = button:CreateTexture(nil, "OVERLAY")
+    ring:SetTexture(ADDON_ICON_RING)
+    ring:SetPoint("CENTER", button, "CENTER")
+    ring:SetWidth(23)
+    ring:SetHeight(23)
+    button.circle = ring
+
+    if not button.DragonUI_FadeHooked then
+        button.DragonUI_FadeHooked = true
+        for scriptName, handler in pairs(ADDON_ICON_FADE_SCRIPTS) do
+            button:HookScript(scriptName, handler)
+        end
+    end
+end
+
+local function ShowAddonIconLayout(button)
+    local layout = addonIconLayouts[button]
+    if not layout then return end
+    local stateful = button.DragonUI_UsesStateTextures
+    local inset = stateful and 0 or 2
+    local side = stateful and 24 or 21
+
     button.DragonUI_SkinActive = true
-    local skinSize = button.DragonUI_UsesStateTextures and 24 or 21
-    button:SetSize(skinSize, skinSize)
+    button:SetSize(side, side)
 
-    -- Hide decoration regions (borders, backgrounds)
-    for _, region in ipairs(button.DragonUI_DecoRegions) do
-        region:SetAlpha(0)
+    for _, hidden in ipairs({ button.DragonUI_DecoRegions, layout.extra }) do
+        for _, region in ipairs(hidden) do region:SetAlpha(0) end
     end
 
-    -- Keep only primary icon regions visible while skinned.
-    for _, region in ipairs(button.DragonUI_ExtraIconRegions) do
-        region:SetAlpha(0)
-    end
-
-    -- Reposition primary icon regions.
-    for _, region in ipairs(button.DragonUI_PrimaryIconRegions) do
+    for _, region in ipairs(layout.primary) do
         region:SetAlpha(1)
-        region:ClearAllPoints()
-        local inset = button.DragonUI_UsesStateTextures and 0 or 2
-        region:SetPoint('TOPLEFT', button, 'TOPLEFT', inset, -inset)
-        region:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', -inset, inset)
-
-        if button.DragonUI_UsesStateTextures and region.DragonUI_OrigTexCoord then
-            region:SetTexCoord(unpack(region.DragonUI_OrigTexCoord))
+        region:SetSinglePoint("TOPLEFT", button, "TOPLEFT", inset, -inset)
+        region:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -inset, inset)
+        local savedCoords = stateful and region.DragonUI_OrigTexCoord
+        if savedCoords then
+            region:SetTexCoord(unpack(savedCoords))
         else
             region:SetTexCoord(0.1, 0.9, 0.1, 0.9)
         end
-
-        region:SetDrawLayer('ARTWORK')
+        region:SetDrawLayer("ARTWORK")
     end
 
-    -- Reposition highlight regions to fit skinned button (auto-show on hover by WoW)
     for _, region in ipairs(button.DragonUI_HighlightRegions) do
         region:ClearAllPoints()
         region:SetAllPoints(button)
     end
 
-    -- Show DragonUI circle border
-    if button.circle then
-        button.circle:SetSize(button.DragonUI_UsesStateTextures and 26 or 23, button.DragonUI_UsesStateTextures and 26 or 23)
-        button.circle:Show()
+    local ring = button.circle
+    if ring then
+        local ringSide = stateful and 26 or 23
+        ring:SetSize(ringSide, ringSide)
+        ring:Show()
     end
 
-    -- Set alpha based on fade setting
     button:SetAlpha(IsFadeEnabled() and 0.2 or 1)
+end
+
+local function ApplyAddonIconSkin(button)
+    if not button or button:GetObjectType() ~= "Button" or IsQuestMinimapPin(button) then
+        return
+    end
+    if not button.DragonUI_Skinned then
+        BuildAddonIconLayout(button)
+    end
+    ShowAddonIconLayout(button)
 end
 
 -- Restore original button appearance (non-destructive toggle)
@@ -1794,30 +1770,29 @@ local function StylePVPBattlefieldFrame()
         return
     end
 
-    -- Configure the PVP frame like in minimapa_old.lua
-    MiniMapBattlefieldFrame:SetSize(44, 44)
-    MiniMapBattlefieldFrame:ClearAllPoints()
-    MiniMapBattlefieldFrame:SetPoint('BOTTOMLEFT', Minimap, 0, 18)
-    MiniMapBattlefieldFrame:SetNormalTexture('')
-    MiniMapBattlefieldFrame:SetPushedTexture('')
+    local pvpButton = MiniMapBattlefieldFrame
+    pvpButton:SetSize(44, 44)
+    pvpButton:SetSinglePoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 0, 18)
+    pvpButton:SetNormalTexture("")
+    pvpButton:SetPushedTexture("")
 
-    -- Detect player faction and apply appropriate textures
-    local faction = string.lower(UnitFactionGroup('player'))
-
-    -- Apply textures using SetAtlasTexture
-    if MiniMapBattlefieldFrame:GetNormalTexture() then
-        MiniMapBattlefieldFrame:GetNormalTexture():SetAtlasTexture('Minimap-PVP-' .. faction .. '-Normal', true)
-    end
-    if MiniMapBattlefieldFrame:GetPushedTexture() then
-        MiniMapBattlefieldFrame:GetPushedTexture():SetAtlasTexture('Minimap-PVP-' .. faction .. '-Pushed', true)
+    local faction = UnitFactionGroup("player")
+    if faction then
+        local atlasPrefix = "Minimap-PVP-" .. faction:lower()
+        local normal, pushed = pvpButton:GetNormalTexture(), pvpButton:GetPushedTexture()
+        if normal then normal:SetAtlasTexture(atlasPrefix .. "-Normal", true) end
+        if pushed then pushed:SetAtlasTexture(atlasPrefix .. "-Pushed", true) end
     end
 
-    -- Blizzard's OnClick stays (its menu needs secure code) but leaves the out-of-BG click alone.
-    MiniMapBattlefieldFrame:HookScript('OnClick', function(self, button)
-        if MiniMapBattlefieldFrame.status ~= "active" and button ~= "RightButton" then
-            TogglePVPFrame()
-        end
-    end)
+    -- Every module apply lands here; a second post-hook would toggle the PvP frame shut again.
+    if not MinimapModule.hooks.battlefieldClick then
+        MinimapModule.hooks.battlefieldClick = true
+        pvpButton:HookScript("OnClick", function(self, mouseButton)
+            if self.status ~= "active" and mouseButton ~= "RightButton" then
+                TogglePVPFrame()
+            end
+        end)
+    end
 end
 
 local function RemoveBlizzardFrames()
@@ -2532,23 +2507,10 @@ function MinimapModule:UpdateSettings()
     local scale = addon.db.profile.minimap.scale or 1.0
 
     if self.minimapFrame then
-        --  HANDLE POSITION: Priority to widgets (editor mode), fallback to x,y
-        local x, y, anchor
-
-        -- 1. Try to use editor mode position (widgets)
-        if addon.db.profile.widgets and addon.db.profile.widgets.minimap then
-            local widgetConfig = addon.db.profile.widgets.minimap
-            anchor = widgetConfig.anchor or "TOPRIGHT"
-            x = widgetConfig.posX or 0
-            y = widgetConfig.posY or 0
-
-        else
-            -- 2. Fallback to legacy position (x, y)
-            x = addon.db.profile.minimap.x or -7
-            y = addon.db.profile.minimap.y or 0
-            anchor = "TOPRIGHT"
-
-        end
+        local widgetConfig = addon.db.profile.widgets.minimap
+        local anchor = widgetConfig.anchor or "TOPRIGHT"
+        local x = widgetConfig.posX or 0
+        local y = widgetConfig.posY or 0
 
         -- Update DurabilityFrame position
         if DurabilityFrame then

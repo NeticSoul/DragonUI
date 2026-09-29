@@ -28,8 +28,7 @@ CP.OWNED_TABS = {
 -- is out of the row. Only PaperDoll uses these; the other tabs keep Blizzard's dimensions.
 CP.PANEL_WIDTH = 338
 CP.PANEL_HEIGHT = 424
--- The list tabs run full width with no sidebar. 338 is narrower than the tab strip itself, which
--- is why the tabs overhung the frame there; this is the reference's width for the same tabs.
+-- The list tabs have no sidebar, and at 338 the frame would be narrower than its own tab strip.
 CP.LIST_WIDTH = 430
 CP.VANILLA_WIDTH = 384
 CP.VANILLA_HEIGHT = 512

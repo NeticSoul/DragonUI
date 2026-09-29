@@ -1044,7 +1044,7 @@ local function HookKeyPushFlash(button)
 end
 
 -- ============================================================================
--- Button prototype — instance → proto → widget metatable chain (Bartender pattern)
+-- Button prototype — instance → proto → widget metatable chain
 -- ============================================================================
 
 local ButtonProto = CreateFrame("CheckButton")

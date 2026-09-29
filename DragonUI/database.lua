@@ -199,7 +199,7 @@ local defaults = {
             collapsed = false,   -- Survives reloads; Blizzard's own tracker forgets it
             font_size = 12,      -- Point size for quest tracker text (WoW default: 11)
             custom_height = false, -- Off: the tracker runs down to the bags bar or the screen bottom
-            height = 400,        -- Cap used when custom_height is on (400-1000, NewEra's range)
+            height = 400,        -- Cap used when custom_height is on (slider range 400-1000)
             show_on_hover = false,
             show_in_combat = false,
             hide_in_combat = false,
@@ -386,7 +386,6 @@ local defaults = {
             -- Text display
             always_show_text = false,
             show_xp_percent = false,
-            show_rep_text_on_hover = true,
             -- Hover/combat visibility (shared by both bars, see core/visibility_fade.lua)
             show_on_hover = false,
             show_in_combat = false,
@@ -506,8 +505,6 @@ local defaults = {
             clock_font_size = 12,
             player_arrow_size = 40,
             zonetext_font_size = 12,
-            mail_icon_x = -4,
-            mail_icon_y = -5,
             settings_button_angle = 203,
             collector_enabled = true,
             collector_style = "dragonui",
@@ -589,8 +586,7 @@ local defaults = {
                 holdTimeInterrupt = 0.8,
                 anchorFrame = 'TargetFrame',
                 anchor = 'TOP',
-                anchorParent = 'BOTTOM',
-                showTicks = false
+                anchorParent = 'BOTTOM'
             },
 
             -- FOCUS CASTBAR SETTINGS
@@ -612,8 +608,7 @@ local defaults = {
                 holdTimeInterrupt = 0.8,
                 anchorFrame = 'FocusFrame',
                 anchor = 'TOP',
-                anchorParent = 'BOTTOM',
-                showTicks = false
+                anchorParent = 'BOTTOM'
             }
         },
 
@@ -664,7 +659,6 @@ local defaults = {
                 textFormat = 'both',
                 showHealthTextAlways = false,
                 showManaTextAlways = false,
-                enableNumericThreat = true,
                 enableThreatGlow = true,
                 show_name_background = true,
                 scale = 1.0,
@@ -848,7 +842,8 @@ local defaults = {
                 enabled = true -- Retail-style vendor window chrome, sell-all-junk button, and buyback undo arrow
             },
             minimap = {
-                enabled = true -- Apply DragonUI minimap enhancements including custom styling, positioning, tracking icons, and calendar
+                enabled = true, -- Apply DragonUI minimap enhancements including custom styling, positioning, tracking icons, and calendar
+                sexymap_mode = false, -- Must stay falsy: unset means "not chosen yet", so detecting SexyMap asks again
             },
             MinimapDecorations = {
                 enabled = true -- Native animated minimap border decorations module
@@ -864,8 +859,7 @@ local defaults = {
                 buff_color_user_override = false,
             },
             keybinding = {
-                enabled = true, -- Enable LibKeyBound integration for intuitive keybinding (hover + key press)
-                auto_register_action_buttons = true -- Automatically make action buttons bindable
+                enabled = true -- Enable LibKeyBound integration for intuitive keybinding (hover + key press)
             },
             questtracker = {
                 enabled = true -- Enable DragonUI quest tracker positioning and styling

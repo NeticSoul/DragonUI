@@ -228,6 +228,7 @@ local function BuildModulesTab(scroll)
             rage_indicator = true,
             buffs = true,
             merchant = true,
+            keypress = true,
         }
 
         for _, moduleName in ipairs(MR.loadOrder) do

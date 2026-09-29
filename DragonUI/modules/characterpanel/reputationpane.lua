@@ -434,8 +434,6 @@ local function build()
     end
 end
 
-CP.ReputationPane = function() return pane end
-
 local events = CreateFrame("Frame")
 events:RegisterEvent("UPDATE_FACTION")
 events:SetScript("OnEvent", refresh)

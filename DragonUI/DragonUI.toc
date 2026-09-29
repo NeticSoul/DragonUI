@@ -14,20 +14,17 @@ libs\LibKeyBound-1.0\lib.xml
 libs\AceAddon-3.0\AceAddon-3.0.xml
 libs\AceEvent-3.0\AceEvent-3.0.xml
 libs\AceTimer-3.0\AceTimer-3.0.xml
-libs\AceBucket-3.0\AceBucket-3.0.xml
-libs\AceHook-3.0\AceHook-3.0.xml
 libs\AceDB-3.0\AceDB-3.0.xml
 libs\AceLocale-3.0\AceLocale-3.0.xml
 libs\AceLocale-3.0\AceLocale-3.0-DragonUI.lua
 libs\AceConsole-3.0\AceConsole-3.0.xml
 libs\AceComm-3.0\AceComm-3.0.xml
-libs\AceTab-3.0\AceTab-3.0.xml
 libs\AceSerializer-3.0\AceSerializer-3.0.xml
 libs\LibDeflate\LibDeflate.lua
 libs\LibHealComm-4.0\LibHealComm-4.0.xml
 libs\AbsorbsMonitor-1.0\AbsorbsMonitor-1.0.xml
 
-# Note: AceConfig-3.0, AceGUI-3.0, AceDBOptions-3.0 moved to DragonUI_Options
+# Note: AceConfig-3.0 and AceGUI-3.0 moved to DragonUI_Options
 
 # Localization (must load after AceLocale and before DragonUI.xml)
 Locales\Load_Locales.xml

@@ -1361,7 +1361,7 @@ function NP.auras.RenderDebuffWidgets(host, cachedAuras, maxIcons, cfg)
         ApplySwipeCooldown(icon, aura, cfg)
         local cdFontSize, countFontSize = cooldownFontSize, 9
         if modernText then
-            -- NewEra scales the timer and the stack count with the icon, so enlarged auras grow theirs.
+            -- As on retail, timer and stack count scale with the icon: enlarged auras grow theirs.
             cdFontSize = floor(cooldownFontSize * size / iconSize + 0.5)
             countFontSize = max(7, floor(size * 0.5 + 0.5))
         end

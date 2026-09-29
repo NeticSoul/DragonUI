@@ -447,28 +447,32 @@ local function BuildGeneralTab(scroll)
         label = LO["Dark Mode"],
         desc = LO["Configure dark tinting for all UI chrome."],
         width = 200,
-        callback = function() Panel:SelectTab("enhancements") end,
+        callback = function() Panel:SelectTab("enhancements", { label = LO["Enable Dark Mode"] }) end,
     })
 
     C:AddButton(actions, {
         label = LO["Fat Health Bar"],
         desc = LO["Full-width health bar that fills the entire player frame."],
         width = 200,
-        callback = function() Panel:SelectTab("unitframes") end,
+        callback = function()
+            Panel:SelectTab("unitframes", { subTab = "player", dbPath = "unitframe.player.fat_healthbar" })
+        end,
     })
 
     C:AddButton(actions, {
         label = LO["Dragon Decoration"],
         desc = LO["Add a decorative dragon to your player frame."],
         width = 200,
-        callback = function() Panel:SelectTab("unitframes") end,
+        callback = function()
+            Panel:SelectTab("unitframes", { subTab = "player", dbPath = "unitframe.player.dragon_decoration" })
+        end,
     })
 
     C:AddButton(actions, {
         label = LO["Unit Frame Layers"],
         desc = LO["Heal prediction, absorb shields and animated health loss."],
         width = 200,
-        callback = function() Panel:SelectTab("enhancements") end,
+        callback = function() Panel:SelectTab("enhancements", { label = LO["Enable Unit Frame Layers"] }) end,
     })
 
     C:AddButton(actions, {
@@ -476,8 +480,7 @@ local function BuildGeneralTab(scroll)
         desc = LO["Change columns, rows, and buttons shown per action bar."],
         width = 200,
         callback = function()
-            if addon.SetActionBarSubTab then addon.SetActionBarSubTab("layout") end
-            Panel:SelectTab("actionbars")
+            Panel:SelectTab("actionbars", { subTab = "layout", dbPath = "mainbars.player.columns" })
         end,
     })
 
@@ -485,7 +488,7 @@ local function BuildGeneralTab(scroll)
         label = LO["Grayscale Icons"],
         desc = LO["Switch micro menu icons between colored and grayscale style."],
         width = 200,
-        callback = function() Panel:SelectTab("micromenu") end,
+        callback = function() Panel:SelectTab("micromenu", { dbPath = "micromenu.grayscale_icons" }) end,
     })
 
     C:AddSpacer(scroll)

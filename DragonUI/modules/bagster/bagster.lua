@@ -363,16 +363,12 @@ local defaults = {
 local LKEYS = {
     InventoryTitle = "%s's Inventory",
     BankTitle = "%s's Bank",
-    Inventory = "Inventory",
-    Bank = "Bank",
     Bags = "Bags",
     BagToggle = "|cff00ff00Left-Click|r to toggle bag display",
     InventoryToggle = "|cff00ff00Right-Click|r to toggle inventory",
     BankToggle = "|cff00ff00Right-Click|r to toggle bank",
     MoveTip = "|cff00ff00Drag|r to move",
     ResetPositionTip = "|cff00ff00Alt+Right-Click|r to reset position",
-    ToggleInventory = "Toggle Inventory",
-    ToggleBank = "Toggle Bank",
     ShowBag = "|cff00ff00Left-Click|r to show this bag's items",
     HideBag = "|cff00ff00Left-Click|r to hide this bag's items",
     DragBag = "|cff00ff00Drag|r to move this bag",
@@ -389,9 +385,9 @@ local L = setmetatable({}, {
 
 local function GetSetDisplayName(name)
     if name == SET_EQUIPMENT then
-        return (addon.L and addon.L["Equipment"]) or (addon.LO and addon.LO["Equipment"]) or name
+        return (addon.L and addon.L["Equipment"]) or name
     elseif name == SET_USABLE then
-        return (addon.L and addon.L["Usable"]) or (addon.LO and addon.LO["Usable"]) or name
+        return (addon.L and addon.L["Usable"]) or name
     elseif name == SET_NORMAL then
         return (addon.L and addon.L["Normal"]) or name
     elseif name == SET_TRADE then
@@ -470,8 +466,8 @@ local function SetupDatabase()
         end
     end
 
-    local localizedEquipment = (addon.L and addon.L["Equipment"]) or (addon.LO and addon.LO["Equipment"])
-    local localizedUsable = (addon.L and addon.L["Usable"]) or (addon.LO and addon.LO["Usable"])
+    local localizedEquipment = addon.L and addon.L["Equipment"]
+    local localizedUsable = addon.L and addon.L["Usable"]
     local function NormalizeLocalizedSetName(name)
         if not name then return name end
         if name == SET_EQUIPMENT or (localizedEquipment and name == localizedEquipment) then

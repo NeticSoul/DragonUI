@@ -3,11 +3,7 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- Some 3.3.5a repacks ship a replacement PaperDollFrame in patched FrameXML. Blizzard's widget
--- names survive there as hidden, sizeless, unanchored, unscripted stubs while a parallel set does
--- the work, so every builder that reaches for a stock name silently dresses a dead frame. This puts
--- the stock topology back and stands the replacement down. Every step is gated on the deviation it
--- repairs, so on a stock client the whole file is a no-op.
+-- Repacks that replace PaperDollFrame leave stock names as dead stubs; each fix is gated on that.
 
 local SLOT_SIZE = 37
 local AMMO_SIZE = 27

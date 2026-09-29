@@ -26,7 +26,6 @@ function parts.buildUndoArrow()
     arrow:SetSize(20, 20)
     arrow:SetPoint("CENTER", overlay, "CENTER", 0, -1)
 
-    overlay.Arrow = arrow
     slot.UndoFrame = overlay
 
     greyWhenNothingStored(arrow)

@@ -63,8 +63,6 @@ local function isHunterPet()
     return (select(2, HasPetUI())) and true or false
 end
 
-CP.PetTabAvailable = hasPet
-
 local function colored(value, positive, negative)
     if negative and negative < 0 then
         return RED_FONT_COLOR_CODE .. value .. FONT_COLOR_CODE_CLOSE
@@ -428,8 +426,7 @@ local function buildContents(parent)
         resistIcons[i] = buildResistIcon(resistCol, school, i)
     end
 
-    -- The pane's own corner, on the same padding as everything else: the title no longer spans the
-    -- full width, so this corner is free and the strip reads as flush rather than floating.
+    -- The pane's own corner, on the shared padding: the title stops short of it, so it is free.
     local strip = CP.WirePetModelControls and CP.WirePetModelControls(model)
     if strip then
         strip:ClearAllPoints()
@@ -456,8 +453,7 @@ local function buildContents(parent)
     happy:SetScript("OnLeave", hideTooltip)
 end
 
--- The frame stays pinned shut for good: its secure CompanionButtons are what made the whole panel
--- protected, and ToggleCharacter checks `hidden` first, so nothing can ever bring it back up.
+-- Pinned shut for good: its secure CompanionButtons made the whole panel protected.
 function CP.RetirePetPaperDoll()
     local pet = _G.PetPaperDollFrame
     if pet then pet.hidden = true end
@@ -543,6 +539,11 @@ local function build()
         end
     end)
 
+    -- The pet-tab key binding and the pet frame's Pet Paperdoll menu still ask for the pinned frame.
+    hooksecurefunc("ToggleCharacter", function(tab)
+        if tab == "PetPaperDollFrame" and hasPet() then ToggleCharacter(FRAME_NAME) end
+    end)
+
     host = CreateFrame("Frame", nil, cf.Inset)
     host:SetAllPoints(cf.Inset)
     host:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL + 5)
@@ -595,8 +596,6 @@ local function build()
 
     CP.BuildPetTab()
 end
-
-CP.PetPane = function() return pane end
 
 local STAT_EVENTS = {
     "UNIT_PET", "PET_UI_UPDATE", "PET_BAR_UPDATE", "UNIT_STATS", "UNIT_RESISTANCES",

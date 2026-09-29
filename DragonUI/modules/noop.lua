@@ -52,7 +52,6 @@ end
 
 -- Actual implementation of noop changes (called when not in combat)
 local function ApplyNoopChangesImpl()
-    -- Phase 3D: Defensive combat guard — secure frame operations must not run in combat
     if InCombatLockdown() then return end
     for _, bar in pairs({ MainMenuBar, PetActionBarFrame, ShapeshiftBarFrame, BonusActionBarFrame }) do
         bar:EnableMouse(false)
@@ -111,9 +110,6 @@ local function ApplyNoopChangesImpl()
         VehicleMenuBar:Hide()
         VehicleMenuBar:SetAlpha(0)
         VehicleMenuBar:EnableMouse(false)
-    else
-        -- Vehicle module disabled — keep VehicleMenuBar fully functional
-        -- so Blizzard's native vehicle transitions display correctly.
     end
     
     -- Left in the table, UIParent_ManageFramePositions would drag these bars back to Blizzard's layout.
@@ -122,14 +118,6 @@ local function ApplyNoopChangesImpl()
         for index = 1, #UNMANAGED_POSITION_KEYS do
             managed[UNMANAGED_POSITION_KEYS[index]] = nil
         end
-    end
-
-    -- Prevent Blizzard from repositioning the chat dock when bar layout
-    -- changes.  DragonUI manages all bottom bars independently, so the
-    -- Blizzard bottomOffset calculation is meaningless and would move the
-    -- chat frame every time the dual-bar offset changes.
-    if FCF_UpdateDockPosition then
-        FCF_UpdateDockPosition = function() end
     end
 
     if not PlayerTalentFrame then

@@ -7,7 +7,6 @@ local NP = addon.Nameplates
 
 NP.const = {
     MINA_TEX = "Interface\\AddOns\\DragonUI\\Textures\\Nameplates\\",
-    CAST_TEX_PATH = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\",
     CAST_TEX_ATLAS = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\uicastingbar2x",
     CAST_SHIELD_UV = { 0.000976562, 0.0742188, 0.796875, 0.970703 },
     CAST_SHIELD_SIZE_W = 1.6,
@@ -18,7 +17,6 @@ NP.const = {
     CAST_NOTINT_ICON_OFFSET_X = -3,
     CAST_NOTINT_ICON_OFFSET_Y = 7,
     CAST_TEX_STANDARD = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\CastingBarStandard2",
-    CAST_TEX_INTERRUPTED = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\CastingBarInterrupted2",
     CAST_TEX_CHANNEL = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\CastingBarChannel-Plate",
     CAST_TEX_SPARK = "Interface\\AddOns\\DragonUI\\Textures\\Castbar\\CastingBarSpark",
     CAST_COLOR_STANDARD = { 1, 0.7, 0 },
@@ -42,7 +40,6 @@ NP.const = {
     CAST_AGGRESSIVE_NAME_BASE_BONUS = 50,
     CAST_AGGRESSIVE_AUTHORITATIVE_BONUS = 10000,
     CAST_AGGRESSIVE_GUID_CLAIM_PENALTY = 200,
-    CAST_AGGRESSIVE_NAME_SCORE_GAP = 0,
     CAST_AGGRESSIVE_MONITOR_MIN_CONFIDENCE = 50,
     CAST_AGGRESSIVE_WARMUP_MIN_AGE = 0.1,
     GUID_CONFIDENCE = {
@@ -147,7 +144,7 @@ C.AGGRO_COLORS = {
     tankHolding = { 0.0, 1.0, 0.0 },
     tankWarning = { 1.0, 1.0, 0.0 },
     tankLost = { 1.0, 0.0, 0.0 },
-    -- DPS-mode (ThreatPlates-style): LOW=safe, MEDIUM=warn, HIGH=danger.
+    -- DPS mode: LOW=safe, MEDIUM=warn, HIGH=danger.
     dpsSafe = { 0.0, 1.0, 0.0 },
     dpsWarning = { 1.0, 1.0, 0.0 },
     dpsDanger = { 1.0, 0.0, 0.0 },

@@ -296,8 +296,6 @@ local function build()
     if blizzard:IsShown() then pane:Show() end
 end
 
-CP.CurrencyPane = function() return pane end
-
 local events = CreateFrame("Frame")
 events:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 events:RegisterEvent("KNOWN_CURRENCY_TYPES_UPDATE")

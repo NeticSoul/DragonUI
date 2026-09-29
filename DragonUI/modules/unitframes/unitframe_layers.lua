@@ -16,7 +16,6 @@ end
 
 local ART = kit.LAYER_ART
 local BAR_FILL = kit.STATUSBAR
-local HEAL_ABSORB_FILL = "Interface\\RaidFrame\\Absorb-Fill"
 local PREDICT_HORIZON = 5
 
 local layered = {}       -- unit frame -> private state
@@ -99,7 +98,7 @@ local function updateMissingText(st, health, maxHealth)
     label:Show()
 end
 
--- Unclamped amounts: all incoming heals, the player's own casted heals, total absorb.
+-- Unclamped amounts: all incoming heals, the player's own casted heals on this unit, total absorb.
 local function incomingFor(unit)
     local guid = unit and UnitGUID(unit)
     if not guid then return 0, 0, 0 end
@@ -108,7 +107,11 @@ local function incomingFor(unit)
     if hc then
         local horizon = GetTime() + PREDICT_HORIZON
         all = hc:GetHealAmount(guid, hc.ALL_HEALS, horizon) or 0
-        mine = hc:GetCasterHealAmount(UnitGUID("player"), hc.CASTED_HEALS, horizon) or 0
+        -- A nil caster GUID would make GetHealAmount sum every caster's heals.
+        local me = UnitGUID("player")
+        if me then
+            mine = hc:GetHealAmount(guid, hc.CASTED_HEALS, horizon, me) or 0
+        end
     end
     local am = kit.absorb
     if am and am.Unit_Total then
@@ -176,12 +179,6 @@ local function paint(st)
     else
         stripes:Hide()
     end
-
-    -- WotLK has no heal absorbs, so these never qualify; they exist for the diagnostic.
-    st.healAbsorb:Hide()
-    st.healAbsorbLeft:Hide()
-    st.healAbsorbRight:Hide()
-    st.overHealAbsorbGlow:Hide()
 end
 
 local SPELLCAST_EVENTS = {
@@ -208,7 +205,7 @@ local function placeManaCost(st)
     seg:Show()
 end
 
--- Runs Blizzard's update from addon code even on party bars, which may taint them.
+-- The bar fields this taints are rewritten by Blizzard's secure updater before any secure read.
 local function settleManaCost(st)
     UnitFrameManaBar_Update(st.manaBar, unitFor(st))
     placeManaCost(st)
@@ -222,13 +219,24 @@ local function keepOrDropCost(st)
     end
 end
 
+-- The client knows the player's real cost of every rank; the share table only lists some spells.
+local function ownSpellCost(spellName, rank)
+    if not spellName then return nil end
+    local _, _, _, cost, _, powerType = GetSpellInfo((rank and rank ~= "") and (spellName .. "(" .. rank .. ")") or spellName)
+    if not cost then
+        _, _, _, cost, _, powerType = GetSpellInfo(spellName)
+    end
+    if cost and cost > 0 and powerType == 0 then return cost end
+    return nil
+end
+
 local function onSpellcast(st, event, caster)
-    local spellName, _, _, _, startTime, endTime = UnitCastingInfo(caster)
+    local spellName, rank, _, _, startTime, endTime = UnitCastingInfo(caster)
     if event == "UNIT_SPELLCAST_START" and startTime ~= endTime then
         local unit = unitFor(st)
         local amount
         if unit == "player" then
-            amount = kit.PlayerCostFor(spellName)
+            amount = ownSpellCost(spellName, rank) or kit.PlayerCostFor(spellName)
         else
             amount = kit.PredictManaCost(unit, spellName)
         end
@@ -346,7 +354,6 @@ local function buildElements(st, frame, native, small)
         glowHolder:SetFrameStrata(strata)
         glowHolder:SetFrameLevel(level + 4)
     end
-    st.container, st.glowHolder = box, glowHolder
 
     st.myHeal = newLayer(box, "BORDER", BAR_FILL)
     st.myHeal:SetVertexColor(0.0, 0.827, 0.765)
@@ -361,13 +368,6 @@ local function buildElements(st, frame, native, small)
     st.overAbsorbGlow = newLayer(glowHolder, "OVERLAY", ART .. "Shield-Overshield", small and 2 or nil)
     st.overAbsorbGlow:SetBlendMode("ADD")
 
-    st.healAbsorb = newLayer(box, "BORDER", HEAL_ABSORB_FILL)
-    st.healAbsorbLeft = newLayer(box, "ARTWORK", ART .. "Absorb-Edge")
-    st.healAbsorbRight = newLayer(box, "ARTWORK", ART .. "Absorb-Edge")
-    st.healAbsorbRight:SetTexCoord(1, 0, 0, 1)
-    st.overHealAbsorbGlow = newLayer(box, "BORDER", ART .. "Absorb-Overabsorb")
-    st.overHealAbsorbGlow:SetBlendMode("ADD")
-
     st.manaCost = newLayer(box, "BORDER", BAR_FILL)
     st.manaCost:SetVertexColor(0.0, 0.447, 1.0)
 end
@@ -377,10 +377,6 @@ local function anchorGlows(st, bar)
     over:SetPoint("TOPLEFT", bar, "TOPRIGHT", -7, 0)
     over:SetPoint("BOTTOMLEFT", bar, "BOTTOMRIGHT", -7, 0)
     over:SetWidth(16)
-    local under = st.overHealAbsorbGlow
-    under:SetPoint("TOPRIGHT", bar, "TOPLEFT", 7, 0)
-    under:SetPoint("BOTTOMRIGHT", bar, "BOTTOMLEFT", 7, 0)
-    under:SetWidth(16)
 end
 
 local function addPlayerExtras(st, frame, native, mana)
@@ -437,6 +433,7 @@ local function attach(frame)
     anchorGlows(st, shownBar)
 
     if unit == "player" or unit == "target" then
+        st.hasCostOverlay = true
         st.manaCost:ClearAllPoints()
         for event in pairs(SPELLCAST_EVENTS) do
             frame:RegisterEvent(event)
@@ -569,7 +566,8 @@ local function afterFrameUpdate(frame)
     local st = layered[frame]
     if not st then return end
     paint(st)
-    if st.manaBar then
+    -- Elsewhere this would only repeat the UnitFrameManaBar_Update that UnitFrame_Update just ran.
+    if st.manaBar and st.hasCostOverlay then
         keepOrDropCost(st)
         settleManaCost(st)
     end
@@ -581,6 +579,11 @@ local function afterManaUpdate(bar, unit)
     local fp = fullPowerOf[bar]
     if fp then
         kit.FullPowerSetMax(fp, UnitPowerMax(unit, bar.powerType))
+    end
+    local fb = feedbackOf[bar]
+    -- Reseeded on a power swap so a shapeshift is not animated as a spend or a gain.
+    if fb and unit == "player" and kit.PowerWidgetsFollow(fb, fp) then
+        lastShownPower[bar] = UnitPower(unit, bar.powerType)
     end
 end
 
@@ -632,8 +635,7 @@ local function applyLayers()
 end
 
 local ELEMENT_KEYS = {
-    "myHeal", "otherHeal", "absorbFill", "absorbStripes", "overAbsorbGlow",
-    "healAbsorb", "healAbsorbLeft", "healAbsorbRight", "overHealAbsorbGlow", "manaCost",
+    "myHeal", "otherHeal", "absorbFill", "absorbStripes", "overAbsorbGlow", "manaCost",
 }
 
 -- Leaves UNIT_* registrations, the power widgets and the attached state alone.
@@ -694,7 +696,6 @@ local DIAG_ELEMENTS = {
     { "otherHealPredictionBar", "otherHeal" },
     { "totalAbsorbBar", "absorbFill" },
     { "overAbsorbGlow", "overAbsorbGlow" },
-    { "healAbsorbBar", "healAbsorb" },
     { "myManaCostPredictionBar", "manaCost" },
 }
 

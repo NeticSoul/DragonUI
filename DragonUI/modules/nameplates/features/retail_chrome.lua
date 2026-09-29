@@ -19,7 +19,7 @@ local BG_T_UNITS, BG_B_UNITS = 3, 6
 local SEL_UNITS = 4
 -- deselected 210x12: flat 30% wash over rows 1..10, cols 1..208.
 local DESEL_UNITS = 1
--- castFrame 214x16: rail on rows 2/13; NewEra's +/-2 suits a plain stretch, not a nine-slice.
+-- castFrame 214x16: rail on rows 2/13; a +/-2 inset suits a plain stretch, not a nine-slice.
 local CAST_FRAME_UNITS = 3
 
 local MOUSEOVER_TEX = "Interface\\TargetingFrame\\UI-TargetingFrame-BarFill"
@@ -117,8 +117,7 @@ local function SetFlarePieceShown(tex, shown)
     end
 end
 
--- NewEra clips the flare with a MaskTexture the width of the bar. With no mask API we
--- clip by hand: two pieces per layer, split at the wrap seam, never wider than the bar.
+-- No MaskTexture in 3.3.5a: two pieces per layer, split at the wrap seam, never wider than the bar.
 local function PlaceFlareLayer(f, first, hp, barW, off)
     local headW = barW - off
     local head, tail = f[first], f[first + 1]

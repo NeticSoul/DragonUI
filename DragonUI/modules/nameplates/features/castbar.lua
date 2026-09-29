@@ -1377,7 +1377,7 @@ function NP.castbar.IsPetCastUnit(unit)
     if UnitIsPlayer(unit) then
         return false
     end
-    return UnitPlayerControlled(unit) == true
+    return UnitPlayerControlled(unit) and true or false
 end
 
 local function IsAuthoritativeCastUnit(unit)
@@ -1538,7 +1538,22 @@ local function BindCastSourceIdentity(plateData, unit, bar)
     return guid
 end
 
--- Incapacitate/disorient auras that stop casts without SPELL_INTERRUPT in CLEU.
+-- Polymorph, Shackle Undead: matched as prefixes, since Pig/Turtle/Cat variants extend the name.
+local CAST_BREAK_PREFIX_IDS = { 118, 9484 }
+-- Cyclone, Hibernate, Repentance, Banish, Sap, Blind.
+local CAST_BREAK_EXACT_IDS = { 33786, 2637, 20066, 710, 6770, 2094 }
+
+local castBreakPrefixes, castBreakNames = {}, {}
+for _, id in ipairs(CAST_BREAK_PREFIX_IDS) do
+    local name = GetSpellInfo(id)
+    if name and name ~= "" then castBreakPrefixes[#castBreakPrefixes + 1] = name end
+end
+for _, id in ipairs(CAST_BREAK_EXACT_IDS) do
+    local name = GetSpellInfo(id)
+    if name and name ~= "" then castBreakNames[name] = true end
+end
+
+-- CC auras that end a cast without SPELL_INTERRUPT in CLEU; client-localized names, so any locale.
 local function AuraBreaksActiveCast(spellId, combatSpellName)
     local name = combatSpellName
     if spellId then
@@ -1550,14 +1565,11 @@ local function AuraBreaksActiveCast(spellId, combatSpellName)
     if not name or name == "" then
         return false
     end
-    if name:find("^Polymorph") then return true end
-    if name == "Cyclone" then return true end
-    if name == "Hibernate" then return true end
-    if name == "Repentance" then return true end
-    if name == "Banish" then return true end
-    if name:find("^Shackle Undead") then return true end
-    if name == "Sap" then return true end
-    if name == "Blind" then return true end
+    if castBreakNames[name] then return true end
+    for i = 1, #castBreakPrefixes do
+        local prefix = castBreakPrefixes[i]
+        if name:sub(1, #prefix) == prefix then return true end
+    end
     return false
 end
 
@@ -1574,16 +1586,8 @@ local function CastEndMatchesBar(bar, endingSpellName)
     if bar.spellName == endingSpellName then
         return true
     end
-    -- Monitor already owns a newer cast; ignore stale SUCCESS from the prior spell.
-    if bar._fromCombatLog then
-        return false
-    end
+    -- The bar already shows a newer cast; a stale SUCCESS from the prior spell must not end it.
     return false
-end
-
--- Safe-only GUID binds: strong unit/token sources only (no CLEU warmup / aura hints).
-local function IsStrongSafeGUIDSource(source)
-    return IsStrongPlateGUIDSource(source)
 end
 
 local function TryGUIDMapMatch(sourceGUID, cfg)
@@ -1618,7 +1622,7 @@ local function TryGUIDMapMatch(sourceGUID, cfg)
     end
     local guidConfidence = NP.state.GetPlateGUIDConfidence(plateData) or 0
     if IsOffTargetSafeOnly(cfg) then
-        if not IsStrongSafeGUIDSource(plateData._guidSource) then
+        if not IsStrongPlateGUIDSource(plateData._guidSource) then
             return nil
         end
         return plateData, guidConfidence, "GUID_MAP"
@@ -1638,7 +1642,7 @@ local function TryCastTaughtGUIDMatch(sourceGUID, cfg)
             if NP.identity.FriendlyPlateMayUseGUID(pd, sourceGUID)
                 and (taughtGUID == sourceGUID or NP.state.GetPlateGUID(pd) == sourceGUID
                     or (bar and bar._monitorGUID == sourceGUID)) then
-                if not IsStrongSafeGUIDSource(pd._guidSource) then
+                if not IsStrongPlateGUIDSource(pd._guidSource) then
                     NP.state.SetPlateGUID(pd, sourceGUID, {
                         source = "TOKEN_MOUSEOVER",
                         confidence = C.GUID_CONFIDENCE.TOKEN_MOUSEOVER or 90,
@@ -2415,7 +2419,7 @@ function NP.castbar.CastMonitorOnCombatLog(timestamp, event, sourceGUID, sourceN
         end
 
         local plateData, sourceConfidence, route = FindPlateForCastSource(sourceGUID, sourceName, sourceFlags, cfg)
-        plateData, sourceConfidence, route = FinalizeCastPlateResult(
+        plateData, sourceConfidence = FinalizeCastPlateResult(
             plateData, sourceConfidence, route, sourceGUID, cfg)
         if not plateData then return end
         if PlateHasActivePartyCast(plateData) then return end
@@ -3291,25 +3295,17 @@ function NP.castbar.SyncTargetCastIcon(bar, plateData, texture)
     end
 end
 
--- Pet/guardian detection for the native HD path (AwesomeWotlk). Off-target
--- allied-pet casts arrive through the native nameplate castbar with no resolved
--- unit token, so the unit-based IsPetCastUnit guard never fires. Fall back to the
--- cast owner GUID type (3.3.5a: high nibble 0xF14 = pet) when no token exists.
+-- Off-target pet casts reach the native bar with no unit token; a 3.3.5a pet GUID starts 0xF14.
 local function GuidIsPet(guid)
     return type(guid) == "string" and string.sub(guid, 1, 5) == "0xF14"
 end
 
 local function NativeCastOwnerIsPet(plateData)
-    -- Use the plate's authoritative identity, which OnHideNameplate clears on
-    -- recycle, rather than bar._castSourceGUID (can linger from a previous cast).
-    -- This only matters on the no-token native path; with a token, plan A
-    -- (bar._castOwnerIsPet) already answers.
+    -- The plate's GUID, cleared on recycle; bar._castSourceGUID can linger from a previous cast.
     return GuidIsPet(NP.state.GetPlateGUID(plateData))
 end
 
--- Language-independent layer: match the cast owner by creature entry id from the
--- plate GUID (Mirror Image, Treant, ghouls... are 0xF13 guardians, not 0xF14, so
--- GuidIsPet misses them). Needs a GUID; the name table covers the no-GUID case.
+-- Guardians such as Mirror Image, Treant and ghouls are 0xF13, so GuidIsPet misses them.
 local function NativeCastNpcIsPet(plateData)
     local guid = NP.state.GetPlateGUID(plateData)
     if not guid then
@@ -3319,20 +3315,13 @@ local function NativeCastNpcIsPet(plateData)
     return entry ~= nil and C.HIDE_PET_CAST_NPCIDS[entry] == true
 end
 
--- Name blacklist (RefinedBlizzPlates-style) for pet/guardian/clone summons that
--- expose no usable token and are not 0xF14 pets (Mirror Image, Shadowfiend,
--- Treant, ghouls, ...). Last resort, gated by the Hide Pet Castbar option.
+-- Last resort for summons with no token that are not 0xF14 pets (Mirror Image, Shadowfiend, ghouls).
 local function NativeCastNameIsPet(plateData)
     local name = plateData and plateData.plateName
     return name ~= nil and C.HIDE_PET_CAST_NAMES[name] == true
 end
 
--- Sticky pet/clone snapshot (RBP-style). Mage Mirror Images spawn named
--- "Mirror Image", then the server renames them to the caster's own name. RBP
--- freezes the name at spawn and never re-reads it; we replicate that by latching
--- the blacklist match the first time the plate carries a known clone name and
--- keeping it for the plate's life, so the rename cannot un-hide the cast. The
--- latch is cleared on plate show/hide reset (PrepareNameplate / OnHideNameplate).
+-- Latched for the plate's life: Mirror Images spawn as "Mirror Image", then take the caster's name.
 function NP.castbar.NotePlateNameForPetSnapshot(plateData, name)
     if not plateData or plateData._petCloneSnapshot then
         return
@@ -3343,11 +3332,7 @@ function NP.castbar.NotePlateNameForPetSnapshot(plateData, name)
     end
 end
 
--- Single source of truth for "this plate's cast is suppressed because it is a
--- pet/clone" (Hide Pet Castbar). Used both to hide the cast in SyncCastBar and to
--- suppress the interrupt/fade visual when such a cast ends -- e.g. a Gargoyle that
--- expires mid-cast must not flash the interrupted texture even though its cast
--- bar was hidden the whole time.
+-- Also gates the interrupt flash: a Gargoyle expiring mid-cast must not flash a bar it never showed.
 function NP.castbar.PlateCastHiddenAsPet(plateData, resolvedUnit)
     if not plateData or not NP.config.HidePetCasts(NP.config.GetCfg()) then
         return false
@@ -3364,16 +3349,12 @@ function NP.castbar.PlateCastHiddenAsPet(plateData, resolvedUnit)
     if NativeCastOwnerIsPet(plateData) then return true end
     if NativeCastNpcIsPet(plateData) then return true end
     if NativeCastNameIsPet(plateData) then return true end
-    -- Own Mirror Images take the caster's exact name (unique per realm), so a
-    -- plate named like the player is our clone. Survives the
-    -- hide/re-show-while-already-renamed case the sticky snapshot cannot.
+    -- Our own Mirror Images carry our name, which also covers plates first seen after the rename.
     local name = plateData.plateName
     if name and name ~= "" and UnitName and name == UnitName("player") then
         return true
     end
-    -- Enemy Mirror Images: structural detection independent of the renamed text
-    -- (several same-name low-HP plates plus a full-size owner). Cheap for normal
-    -- units -- IsLikelyMirrorImagePlate early-outs on full max health.
+    -- Enemy Mirror Images, by shape: several same-name low-HP plates plus a full-size owner.
     if NP.identity.IsLikelyMirrorImagePlate
         and NP.identity.IsLikelyMirrorImagePlate(plateData) then
         return true
@@ -3775,9 +3756,8 @@ end
 function NP.castbar.OnCastStopEvent(event, unit, ...)
     local eventSpell = (event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET")
         and select(1, ...) or nil
-    local isHardInterrupt = (event == "UNIT_SPELLCAST_INTERRUPTED"
-        or event == "UNIT_SPELLCAST_FAILED"
-        or event == "UNIT_SPELLCAST_FAILED_QUIET")
+    -- FAILED can name another spell while this cast runs on; MarkPlateCastEnd vets those instead.
+    local isHardInterrupt = event == "UNIT_SPELLCAST_INTERRUPTED"
 
     local function HandlePlateStop(plateData)
         local bar = plateData.minaCast

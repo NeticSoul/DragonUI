@@ -4,6 +4,7 @@ local addon = select(2, ...)
 
 local parts = addon.merchantParts or {}
 addon.merchantParts = parts
+local localized = parts.localized
 
 local BUTTON_NAME = "DragonUI_MerchantSellAllJunkButton"
 local DIALOG_KEY = "DRAGONUI_SELL_ALL_JUNK"
@@ -14,15 +15,6 @@ local REFRESH_EVENTS = { "MERCHANT_SHOW", "MERCHANT_UPDATE", "BAG_UPDATE" }
 local GREY_LINK_START = "|cff9d9d9d"
 
 local stateQueued = false
-
-local function localized(key)
-    local strings = addon.L
-    local text = strings and strings[key]
-    if type(text) ~= "string" or text == "" then
-        return key
-    end
-    return text
-end
 
 local function isJunk(link)
     local grey = link ~= nil and link:sub(1, 10) == GREY_LINK_START

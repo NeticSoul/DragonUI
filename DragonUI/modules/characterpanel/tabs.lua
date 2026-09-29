@@ -6,17 +6,6 @@ local CP = addon.CharacterPanel
 -- Six, not Blizzard's five: honorpane.lua adds a Honor tab at the end.
 local NUM_TABS = 6
 
--- Blizzard's tab order is NOT CHARACTERFRAME_SUBFRAMES order: 3 is Reputation, 4 is Skills. Slot 2
--- keeps its own meaning -- petpane.lua takes it over and shows it only while there is a pet.
-local TAB_SUBFRAME = {
-    [1] = "PaperDollFrame",
-    [2] = "DragonUIPetFrame",
-    [3] = "ReputationFrame",
-    [4] = "SkillFrame",
-    [5] = "TokenFrame",
-    [6] = "DragonUIHonorFrame",
-}
-
 local TAB_START_X = 11
 local TAB_GAP = 1
 
@@ -324,7 +313,6 @@ local function build()
 end
 
 CP.RechainTabs = rechain
-CP.TAB_SUBFRAME = TAB_SUBFRAME
 
 -- Shared so a DragonUI window outside the character panel gets the same tab art. The hooks come
 -- with it: Blizzard's PanelTemplates applies the selected state, so a tab elsewhere needs re-syncing.

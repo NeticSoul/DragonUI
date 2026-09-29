@@ -4,7 +4,7 @@ local addon = select(2, ...)
 local TM = addon.TalentModule
 local ns = TM.ns
 
-local floor, min, sqrt = math.floor, math.min, math.sqrt
+local abs, floor, max, min, sqrt = math.abs, math.floor, math.max, math.min, math.sqrt
 
 -- Column left edges and the top offset in tree units: window units divided by the 0.95 tree scale.
 local COLUMN_LEFT = { 110.63158, 475.47368, 840.31579 }
@@ -47,7 +47,6 @@ local SWEEP_RATE = 20.769231
 local ENVELOPE = 0.12
 
 local trees = {}
-ns.trees = trees
 
 function ns.ShapeFor(tier, exceptional)
     if tier >= ns.depth then return exceptional and "apex" or "capstone" end
@@ -115,7 +114,8 @@ local function newNode(tree)
     node:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     node.isTalentNode = true
 
-    node.shadow = node:CreateTexture(nil, "BACKGROUND")
+    -- On the tree, not the node, so edges (BORDER/ARTWORK) draw above the shadow but under the node.
+    node.shadow = tree:CreateTexture(nil, "BACKGROUND")
     node.icon = node:CreateTexture(nil, "ARTWORK")
     node.ring = node:CreateTexture(nil, "OVERLAY")
     node.hover = node:CreateTexture(nil, "OVERLAY", nil, 1)
@@ -150,7 +150,6 @@ local function setShape(node, key)
     node.shapeKey = key
     local look, glint = SHAPES[key], SHEENS[key]
     node.shadow:SetAtlasTexture(look.shadow)
-    node.shadow:SetSize(look.shadowSize, look.shadowSize)
     node.icon:SetSize(look.icon, look.icon)
     node.glow:SetAtlasTexture(look.glow)
     node.glow:SetSize(look.ring + 22, look.ring + 22)
@@ -221,6 +220,8 @@ local function placeNode(node, tree, entry, shift)
     local x, y = cellCentre(entry.tier, entry.column, shift)
     local scale = entry.tier >= ns.depth and 1 or 1.12
     node:SetScale(scale)
+    local shadowSize = SHAPES[node.shapeKey].shadowSize * scale
+    node.shadow:SetSize(shadowSize, shadowSize)
     node:ClearAllPoints()
     -- Offsets are read in the node's own scale, so divide to land its centre on the grid point.
     node:SetPoint("CENTER", tree, "TOPLEFT", x / scale, -y / scale)
@@ -228,14 +229,32 @@ end
 
 -- Prerequisite edges ------------------------------------------------------------------------------
 
-local ARROW_HALF_U, ARROW_HALF_V = 0.125, 0.25
+-- Arrow art at 0.56 units/px (28x24 px -> 15.68 x 13.44); the solid tip ends 6 px past centre.
+local ARROW_PX = 0.56
+local ARROW_SIZE = 64 * ARROW_PX
+local ARROW_HALF_U, ARROW_HALF_V = 32 / 128, 32 / 64
+local TIP_REACH, TIP_GAP = 6 * ARROW_PX, 1
+-- Both edge textures span 8.4 * 32/30 = 8.96 units (16 rows of 0.56 or 8 of 1.12); band 2.24.
+local LINE_WIDTH, LINE_BAND = 8.4, 2.24
+local EDGE_FINE, EDGE_COARSE = "Talents\\talents-edge.tga", "Talents\\talents-edge-coarse.tga"
+-- Unsnapped or thinner shafts alias on the 4-texel band, so they take the 2-texel one.
+local FINE_BAND_PX = 2.75
+-- Unmasked square icons fill the ring's whole box; round outlines are these fractions of it.
+local ROUND_OUTLINE = { circle = 0.5, apex = 34 / 84 }
 
-local function edgeTexture(tree, pool, layer, sub)
+local function outlineReach(shapeKey, scale, along)
+    local size = SHAPES[shapeKey].ring * scale
+    local round = ROUND_OUTLINE[shapeKey]
+    if round then return size * round end
+    return size / 2 / along
+end
+
+local function edgeTexture(tree, pool, layer)
     tree.used[pool] = tree.used[pool] + 1
     local list = tree[pool]
     local tex = list[tree.used[pool]]
     if not tex then
-        tex = tree:CreateTexture(nil, layer, nil, sub)
+        tex = tree:CreateTexture(nil, layer)
         list[tree.used[pool]] = tex
     end
     return tex
@@ -256,30 +275,80 @@ local function pointArrow(tex, active, c, s)
     tex:SetTexCoord(ulx, uly, llx, lly, urx, ury, lrx, lry)
 end
 
-local function drawEdge(tree, fromX, fromY, toX, toY, active, capstoneTarget)
-    local line = edgeTexture(tree, "lines", "ARTWORK", -2)
-    line:SetTexture(addon._dir .. "Talents\\talents-line")
+-- Straight shafts sit on a pixel edge (even width) or centre (odd), so every one renders alike.
+local function snapShift(origin, at, pixels, bandPx)
+    local px = (origin + at) * pixels
+    local target = floor(bandPx + 0.5) % 2 == 1 and floor(px) + 0.5 or floor(px + 0.5)
+    return (target - px) / pixels
+end
+
+local function placeEdge(tree, line, grid)
+    local edge = line.edge
+    local shiftX, shiftY, file = 0, 0, EDGE_COARSE
+    if grid.pixels and edge.axis then
+        local bandPx = LINE_BAND * grid.pixels
+        if bandPx >= FINE_BAND_PX then file = EDGE_FINE end
+        if edge.axis == "x" then
+            shiftX = snapShift(grid.left, edge.ex, grid.pixels, bandPx)
+        else
+            shiftY = snapShift(grid.top, edge.ey, grid.pixels, bandPx)
+        end
+    end
+    line:SetTexture(addon._dir .. file)
+    -- Stop under the arrow's opaque middle; a line under the translucent tip shows past it.
+    DrawRouteLine(line, tree, edge.sx + shiftX, edge.sy + shiftY, edge.ex + shiftX, edge.ey + shiftY,
+        LINE_WIDTH, "TOPLEFT")
+    edge.arrow:ClearAllPoints()
+    edge.arrow:SetPoint("CENTER", tree, "TOPLEFT", edge.ex + shiftX, edge.ey + shiftY)
+end
+
+-- The UI is 768 units tall; dragging or rescaling moves the shafts off the grid, so this re-runs.
+local function snapEdges(tree, force)
+    local grid = tree.grid
+    local left, top, scale = tree:GetLeft(), tree:GetTop(), tree:GetEffectiveScale()
+    local mode = GetCVar("gxResolution")
+    if not force and left == grid.left and top == grid.top and scale == grid.scale and mode == grid.mode then
+        return
+    end
+    grid.left, grid.top, grid.scale, grid.mode = left, top, scale, mode
+    local height = left and top and mode and tonumber(mode:match("%d+x(%d+)"))
+    grid.pixels = height and height > 0 and scale * height / 768 or nil
+    for i = 1, tree.used.lines do
+        placeEdge(tree, tree.lines[i], grid)
+    end
+end
+
+local function drawEdge(tree, fromX, fromY, toX, toY, active, shapeKey, scale)
+    local dx, dy = toX - fromX, fromY - toY
+    local length = sqrt(dx * dx + dy * dy)
+    if length <= 0 then return end
+    dx, dy = dx / length, dy / length
+    local back = outlineReach(shapeKey, scale, max(abs(dx), abs(dy))) + TIP_GAP + TIP_REACH
+
+    -- 3.3.5a has no texture sublevels, so shaft and arrowhead need separate layers to stack reliably.
+    local line = edgeTexture(tree, "lines", "BORDER")
     if active then
         line:SetVertexColor(1, 0.82, 0, 0.95)
     else
         line:SetVertexColor(0.24, 0.24, 0.27, 0.38)
     end
-    DrawRouteLine(line, tree, fromX, -fromY, toX, -toY, 32, "TOPLEFT")
     line:Show()
 
-    local dx, dy = toX - fromX, fromY - toY
-    local length = sqrt(dx * dx + dy * dy)
-    if length <= 0 then return end
-    dx, dy = dx / length, dy / length
-    local back = capstoneTarget and 21.6 or 24.192
-    local arrow = edgeTexture(tree, "arrows", "ARTWORK", -1)
+    local arrow = edgeTexture(tree, "arrows", "ARTWORK")
     arrow:SetTexture(addon._dir .. "Talents\\talents-arrows")
-    arrow:SetSize(32, 32)
+    arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
     pointArrow(arrow, active, -dy, dx)
-    arrow:ClearAllPoints()
-    arrow:SetPoint("CENTER", tree, "TOPLEFT", toX - back * dx, -toY - back * dy)
     arrow:Show()
+
+    local edge = line.edge or {}
+    line.edge = edge
+    edge.arrow = arrow
+    edge.sx, edge.sy = fromX, -fromY
+    edge.ex, edge.ey = toX - back * dx, -toY - back * dy
+    edge.axis = dx == 0 and "x" or dy == 0 and "y" or nil
 end
+
+local drawnFrom = {}
 
 local function resetEdges(tree)
     tree.used.lines, tree.used.arrows = 0, 0
@@ -321,6 +390,7 @@ function ns.BuildTrees(win, level)
         tree:SetScale(ns.TREE_SCALE)
         tree:SetFrameLevel(level)
         tree.nodes, tree.lines, tree.arrows, tree.used = {}, {}, {}, { lines = 0, arrows = 0 }
+        tree.grid = {}
         tree.title = headerString(tree)
         tree.title:SetTextColor(1, 1, 1)
         tree.count = headerString(tree)
@@ -336,6 +406,9 @@ function ns.BuildTrees(win, level)
         if self.wait < 0.0333 then return end
         self.wait = 0
         ns.StepSheen()
+        for t = 1, 3 do
+            if trees[t]:IsShown() then snapEdges(trees[t]) end
+        end
     end)
     ns.sheenDriver = driver
     ns.LayoutTrees()
@@ -377,15 +450,25 @@ function ns.PaintTrees(view)
                 dressNode(node, entry)
                 placeNode(node, tree, entry, shift)
                 node:Show()
+                node.shadow:Show()
                 local toX, toY = cellCentre(entry.tier, entry.column, shift)
+                local shapeKey, scale = ns.ShapeFor(entry.tier, entry.exceptional), node:GetScale()
+                -- A cell can be listed twice (pet alternatives); a doubled dim line would brighten.
+                wipe(drawnFrom)
                 for _, link in ipairs(entry.links or {}) do
-                    local fromX, fromY = cellCentre(link.tier, link.column, shift)
-                    drawEdge(tree, fromX, fromY, toX, toY, link.active, entry.tier >= ns.depth)
+                    local cell = ns.CellKey(link.tier, link.column)
+                    if not drawnFrom[cell] then
+                        drawnFrom[cell] = true
+                        local fromX, fromY = cellCentre(link.tier, link.column, shift)
+                        drawEdge(tree, fromX, fromY, toX, toY, link.active, shapeKey, scale)
+                    end
                 end
             end
             for k = #data.talents + 1, #tree.nodes do
                 tree.nodes[k]:Hide()
+                tree.nodes[k].shadow:Hide()
             end
+            snapEdges(tree, true)
             trimEdges(tree)
         else
             tree:Hide()
@@ -412,6 +495,7 @@ function ns.ApplySearch()
     ns.EachNode(function(node)
         local hit = query == "" or (node.talentName or ""):lower():find(query, 1, true)
         node:SetAlpha(hit and 1 or 0.25)
+        node.shadow:SetAlpha(hit and 1 or 0.25)
     end)
 end
 

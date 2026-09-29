@@ -22,9 +22,6 @@ if not L then return end
 L["DragonUI"] = true
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = true
 L["Editor Mode"] = true
-L["Exit Editor Mode"] = true
-L["KeyBind Mode Active"] = true
-L["Move UI Elements"] = true
 L["Cannot open options during combat."] = true
 L["Open DragonUI Settings"] = true
 L["Open the DragonUI configuration panel."] = true
@@ -87,26 +84,16 @@ L["Appearance"] = true
 -- ============================================================================
 
 -- Headers & descriptions
-L["Module Control"] = true
-L["Enable or disable specific DragonUI modules"] = true
 L["Toggle individual modules on or off. Disabled modules revert to the default Blizzard UI."] = true
-L["Visual enhancements that add Dragonflight-style polish to the UI."] = true
-L["Warning: These are individual module controls. The options above may control multiple modules at once. Changes here will be reflected above and vice versa."] = true
 L["Warning:"] = true
 L["Individual overrides. The grouped toggles above take priority."] = true
 L["Advanced - Individual Module Control"] = true
 
 -- Section headers
 L["Cast Bars"] = true
-L["Other Modules"] = true
 L["UI Systems"] = true
 L["Enable All Action Bar Modules"] = true
 L["Cast Bar"] = true
-L["Custom player, target, and focus cast bars"] = true
-L["Cooldown text on action buttons"] = true
-L["Shaman totem bar positioning and styling"] = true
-L["Dragonflight-styled player unit frame"] = true
-L["Dragonflight-styled boss target frames"] = true
 
 -- Toggle labels
 L["Action Bars System"] = true
@@ -136,22 +123,14 @@ L["Quest Tracker"] = true
 L["Version Check"] = true
 
 -- Module toggle descriptions
-L["Enable DragonUI player castbar. When disabled, shows default Blizzard castbar."] = true
 L["Enable DragonUI player castbar styling."] = true
-L["Enable DragonUI target castbar. When disabled, shows default Blizzard castbar."] = true
 L["Enable DragonUI target castbar styling."] = true
-L["Enable DragonUI focus castbar. When disabled, shows default Blizzard castbar."] = true
 L["Enable DragonUI focus castbar styling."] = true
-L["Enable the complete DragonUI action bars system. This controls: Main action bars, vehicle interface, stance/shapeshift bars, pet action bars, multicast bars (totems/possess), button styling, and hide Blizzard elements. When disabled, all action bar related features will use default Blizzard interface."] = true
 L["Master toggle for the complete action bars system."] = true
 L["Includes main bars, vehicle, stance, pet, totem bars, and button styling."] = true
-L["Apply DragonUI micro menu and bags system styling and positioning. Includes character button, spellbook, talents, etc. and bag management. When disabled, these elements will use default Blizzard positioning and styling."] = true
 L["Micro menu and bags styling."] = true
-L["Show cooldown timers on action buttons. When disabled, cooldown timers will be hidden and the system will be completely deactivated."] = true
 L["Show cooldown timers on action buttons."] = true
-L["Enable DragonUI minimap enhancements including custom styling, positioning, tracking icons, and calendar. When disabled, uses default Blizzard minimap appearance and positioning."] = true
 L["Minimap styling, tracking icons, and calendar."] = true
-L["Enable DragonUI buff frame with custom styling, positioning, and toggle button functionality. When disabled, uses default Blizzard buff frame appearance and positioning."] = true
 L["Buff frame styling and toggle button."] = true
 L["Separate Weapon Enchants"] = true
 L["Detach weapon enchant icons (poisons, sharpening stones, etc.) from the buff bar into their own independently moveable frame. Position it freely using Editor Mode."] = true
@@ -260,26 +239,11 @@ L["When you have no target, show all nameplates at full opacity."] = true
 L["Party/Raid: Full Opacity"] = true
 L["Always show party and raid member nameplates at full opacity, regardless of target or fade settings. Does not affect pets or NPCs."] = true
 L["Level Format"] = true
-L["Size of debuff icons on nameplates."] = true
-L["Show Debuff Cooldown Text"] = true
-L["Show remaining debuff time on each debuff icon."] = true
-L["Show Debuff Cooldown Swipe"] = true
-L["Also show a radial cooldown sweep on each debuff icon."] = true
-L["Debuff Horizontal Offset"] = true
-L["Shifts the debuff icon row left or right relative to its default position."] = true
-L["Debuff Vertical Offset"] = true
-L["Shifts the debuff icon row up or down relative to its default position."] = true
 L["Show Debuff Position Debug Box"] = true
 L["Displays a box showing where the debuff icon row starts and ends, even when no debuffs are active."] = true
-L["Debuff Cooldown Swipe Style"] = true
-L["Choose the visual style of the cooldown sweep. These texture-based styles stay aligned while the nameplate is moving."] = true
 L["Shade Fill"] = true
 L["Quadrant Sweep"] = true
 L["Square Radial Sweep"] = true
-L["Debuff Cooldown Font Size"] = true
-L["Font size for debuff remaining time text."] = true
-L["Debuff Cooldown Text Position"] = true
-L["Choose where the debuff cooldown text is anchored on the icon."] = true
 L["Reset Aura Customization"] = true
 L["Reset Aura Timers"] = true
 L["Aura timer settings reset."] = true
@@ -290,17 +254,14 @@ L["LibKeyBound integration for intuitive hover + key press binding."] = true
 L["Broadcast and detect addon version updates across group members."] = true
 
 -- Toggle keybinding mode description
-L["Toggle keybinding mode. Hover over action buttons and press keys to bind them instantly. Press ESC to clear bindings."] = true
 
 -- Enable/disable dynamic descriptions
 L["Enable/disable "] = true
 
 -- Dark Mode
-L["Dark Mode Intensity"] = true
 L["Light (subtle)"] = true
 L["Medium (balanced)"] = true
 L["Dark (maximum)"] = true
-L["Apply darker tinted textures to all UI chrome: action bars, unit frames, minimap, bags, micro menu, and more."] = true
 L["Apply darker tinted textures to all UI elements."] = true
 L["Darkens UI borders and chrome only: action bar borders, unit frame borders, minimap border, bag slot borders, micro menu, castbar borders, and decorative elements. Icons, portraits, and abilities are never affected."] = true
 L["Enable Dark Mode"] = true
@@ -312,7 +273,6 @@ L["Tint Color"] = true
 L["Intensity"] = true
 
 -- Range Indicator
-L["Tint action button icons when target is out of range (red), not enough mana (blue), or unusable (gray)."] = true
 L["Tints action button icons based on range and usability: red = out of range, blue = not enough mana, gray = unusable."] = true
 L["Enable Range Indicator"] = true
 L["Color action button icons when target is out of range or ability is unusable."] = true
@@ -326,12 +286,10 @@ L["Enable Key Press"] = true
 L["Fire abilities on key press instead of key release."] = true
 
 -- Item Quality Borders
-L["Show colored glow borders on action buttons containing items, colored by item quality (green = uncommon, blue = rare, purple = epic, etc.)."] = true
 L["Enable Item Quality Borders"] = true
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = true
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = true
 L["Minimum Quality"] = true
-L["Only show colored borders for items at or above this quality level."] = true
 L["Poor"] = true
 L["Common"] = true
 L["Uncommon"] = true
@@ -386,9 +344,7 @@ L["Color the tooltip border by the unit's class (players) or reaction (NPCs)."] 
 L["Class-Colored Name"] = true
 L["Color the unit name text in the tooltip by class color (players only)."] = true
 L["Add a 'Targeting: <name>' line showing who the unit is targeting."] = true
-L["Add a 'Targeting: <name>' line to the tooltip showing who the unit is targeting."] = true
 L["Styled Health Bar"] = true
-L["Restyle the tooltip health bar with class/reaction colors."] = true
 L["Restyle the tooltip health bar with class/reaction colors and slimmer look."] = true
 L["Anchor to Cursor"] = true
 L["Make the tooltip follow the cursor position instead of the default anchor."] = true
@@ -413,7 +369,6 @@ L["Anchor"] = true
 L["Middle"] = true
 L["Tab & Button Fade"] = true
 L["How visible chat tabs are when not hovered. 0 = fully hidden, 1 = fully visible."] = true
-L["Opacity of tabs, buttons and chat background when not hovered. 0 = hidden, 1 = always visible."] = true
 L["Chat Style Opacity"] = true
 L["Minimum opacity of the custom chat background. At 0 it fades with tabs; above 0 it stays partially visible when idle."] = true
 L["Text Box Min Opacity"] = true
@@ -431,7 +386,6 @@ L["Nocturne"] = true
 -- Bagster
 L["Enable Bagster"] = true
 L["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."] = true
-L["Bagster Settings"] = true
 
 -- Item usability tint
 L["Item Usability"] = true
@@ -453,7 +407,6 @@ L["Sort buttons for bags and bank. Sorts items by type, rarity, level, and name.
 L["Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands."] = true
 L["Fill Bank Stacks from Bags"] = true
 L["Pull matching items from your bags into partial bank stacks when sorting the bank."] = true
-L["Sort bags and bank items with buttons"] = true
 L["Lock Toggle Hotkey"] = true
 L["Choose the modifier + mouse button used to lock or unlock a bag slot while hovering it."] = true
 L["Use /sortlock to lock or unlock the currently hovered slot from chat."] = true
@@ -479,8 +432,6 @@ L["Show Equipment Tab"] = true
 L["Show the Equipment category tab for armor and weapons."] = true
 L["Show Usable Tab"] = true
 L["Show the Usable category tab for consumables and devices."] = true
-L["Show Consumable Tab"] = true
-L["Show the Consumable category tab."] = true
 L["Show Quest Tab"] = true
 L["Show the Quest items category tab."] = true
 L["Show Trade Goods Tab"] = true
@@ -490,7 +441,6 @@ L["Show the Miscellaneous items category tab."] = true
 L["Left Side Tabs"] = true
 L["Place category filter tabs on the left side of the bag frame instead of the right."] = true
 L["Place category filter tabs on the left side of the bank frame instead of the right."] = true
-L["Changes require closing and reopening bags to take effect."] = true
 L["Subtabs"] = true
 L["Configure which bottom subtabs appear within each category tab. Applies to both inventory and bank."] = true
 L["Normal"] = true
@@ -506,12 +456,10 @@ L["Show the Trade Goods subtab."] = true
 L["Show the Gem subtab."] = true
 L["Show the Recipe subtab."] = true
 L["Configure Bagster bag replacement settings."] = true
-L["Category Tabs"] = true
 L["Inventory Tabs"] = true
 L["Bank Tabs"] = true
 L["Inventory"] = true
 L["Bank"] = true
-L["Choose which category tabs appear on the bag frame. Changes require closing and reopening bags to take effect."] = true
 L["Choose which category tabs appear on the inventory bag frame."] = true
 L["Choose which category tabs appear on the bank frame."] = true
 L["Gold Display"] = true
@@ -545,29 +493,10 @@ L["Cooldowns"] = true
 L["Micro Menu"] = true
 L["Loot Roll"] = true
 L["Key Binding"] = true
-L["Item Quality"] = true
-L["Hide Blizzard"] = true
-L["Tooltip"] = true
 
 -- Advanced modules - RegisterModule descriptions (from module files)
-L["Micro menu and bags system styling and positioning"] = true
-L["Quest tracker positioning and styling"] = true
-L["Enhanced tooltip styling with class colors and health bars"] = true
-L["Hide default Blizzard UI elements"] = true
-L["Custom minimap styling, positioning, tracking icons and calendar"] = true
-L["Main action bars, status bars, scaling and positioning"] = true
-L["LibKeyBound integration for intuitive keybinding"] = true
-L["Color item borders by quality in bags, character panel, bank, and merchant"] = true
-L["Darken UI borders and chrome"] = true
-L["Action button styling and enhancements"] = true
-L["Vehicle interface enhancements"] = true
-L["Stance/shapeshift bar positioning and styling"] = true
-L["Pet action bar positioning and styling"] = true
-L["Multicast (totem/possess) bar positioning and styling"] = true
 L["Chat Mods"] = true
-L["Chat enhancements: hide buttons, editbox position, URL copy, chat copy, link hover, tell target"] = true
 L["Bagster"] = true
-L["All-in-one bag replacement with filtering and search"] = true
 
 -- ============================================================================
 -- ACTION BARS TAB
@@ -586,19 +515,11 @@ L["Bottom Left Bar Scale"] = true
 L["Bottom Right Bar Scale"] = true
 L["Extra Bar Scale"] = true
 L["Bar"] = true
-L["Scale for main action bar"] = true
-L["Scale for right action bar (MultiBarRight)"] = true
-L["Scale for left action bar (MultiBarLeft)"] = true
-L["Scale for bottom left action bar (MultiBarBottomLeft)"] = true
-L["Scale for bottom right action bar (MultiBarBottomRight)"] = true
 L["Reset All Scales"] = true
-L["Reset all action bar scales to their default values (0.9)"] = true
-L["All action bar scales reset to default values (0.9)"] = true
 L["All action bar scales reset to 0.9"] = true
 
 -- Positions section
 L["Action Bar Positions"] = true
-L["Tip: Use the Move UI Elements button above to reposition action bars with your mouse."] = true
 L["Left Bar Horizontal"] = true
 L["Make the left secondary bar horizontal instead of vertical."] = true
 L["Right Bar Horizontal"] = true
@@ -607,53 +528,36 @@ L["Make the right secondary bar horizontal instead of vertical."] = true
 -- Button Appearance section
 L["Button Appearance"] = true
 L["Main Bar Only Background"] = true
-L["If checked, only the main action bar buttons will have a background. If unchecked, all action bar buttons will have a background."] = true
 L["Only the main action bar buttons will have a background."] = true
 L["Hide Main Bar Background"] = true
-L["Hide the background texture of the main action bar (makes it completely transparent)"] = true
 L["Hide the background texture of the main action bar."] = true
 
 -- Text visibility
 L["Text Visibility"] = true
-L["Count Text"] = true
-L["Show Count"] = true
 L["Show Count Text"] = true
-L["Hotkey Text"] = true
-L["Show Hotkey"] = true
 L["Show Hotkey Text"] = true
 L["Range Indicator"] = true
-L["Show small range indicator point on buttons"] = true
 L["Show range indicator dot on buttons."] = true
-L["Macro Text"] = true
 L["Show Macro Names"] = true
-L["Page Numbers"] = true
-L["Show Pages"] = true
 L["Show Page Numbers"] = true
 
 -- Cooldown text
 L["Cooldown Text"] = true
 L["Min Duration"] = true
-L["Minimum duration for text triggering"] = true
 L["Minimum duration for cooldown text to appear."] = true
-L["Text Color"] = true
 L["Cooldown Text Color"] = true
 L["Size of cooldown text."] = true
 
 -- Colors
 L["Colors"] = true
 L["Macro Text Color"] = true
-L["Color for macro text"] = true
 L["Hotkey Text Color"] = true
 L["Hotkey Font Size"] = true
 L["Hotkey Shadow Color"] = true
-L["Shadow color for hotkey text"] = true
 L["Border Color"] = true
-L["Border color for buttons"] = true
 
 -- Gryphons
 L["Gryphons"] = true
-L["Gryphon Style"] = true
-L["Display style for the action bar end-cap gryphons."] = true
 L["End-cap ornaments flanking the main action bar."] = true
 L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = true
 L["Style"] = true
@@ -661,10 +565,7 @@ L["Gryphon Scale"] = true
 L["Gryphon Offset X"] = true
 L["Gryphon Offset Y"] = true
 L["Moves both gryphons inward or outward, mirrored left/right."] = true
-L["Old"] = true
-L["New"] = true
 L["Flying"] = true
-L["Hide Gryphons"] = true
 L["Classic"] = true
 L["Dragonflight"] = true
 L["Hidden"] = true
@@ -750,43 +651,27 @@ L["Bag Bar"] = true
 -- ============================================================================
 
 L["Bars that appear based on your class and situation."] = true
-L["Specialized bars that appear when needed (stance/pet/vehicle/totems)"] = true
-L["Auto-show bars: Stance (Warriors/Druids/DKs) \226\128\162 Pet (Hunters/Warlocks/DKs) \226\128\162 Vehicle (All classes) \226\128\162 Totem (Shamans)"] = true
 
 -- Common settings
-L["Common Settings"] = true
 L["Button Size"] = true
-L["Size of buttons for all additional bars"] = true
 L["Button Spacing"] = true
-L["Space between buttons for all additional bars"] = true
 
 -- Stance Bar
 L["Stance Bar"] = true
-L["Warriors, Druids, Death Knights"] = true
 L["X Position"] = true
 L["Y Position"] = true
-L["Y Offset"] = true
-L["Horizontal position of stance bar from screen center. Negative values move left, positive values move right."] = true
 
 -- Pet Bar
 L["Pet Bar"] = true
-L["Hunters, Warlocks, Death Knights - Use editor mode to move"] = true
 L["Show Empty Slots"] = true
-L["Display empty action slots on pet bar"] = true
 
 -- Vehicle Bar
 L["Vehicle Bar"] = true
-L["All classes (vehicles/special mounts)"] = true
-L["Custom Art Style"] = true
-L["Use custom vehicle bar art style with health/power bars and themed skin. Requires UI reload to apply."] = true
 L["Blizzard Art Style"] = true
 L["Use Blizzard vehicle bar art with health/power display. Requires reload."] = true
 
 -- Totem Bar
-L["Totem Bar"] = true
 L["Totem Bar (Shaman)"] = true
-L["Shamans only - Totem multicast bar. Position is controlled via Editor Mode."] = true
-L["TIP: Use Editor Mode to position the totem bar (type /dragonui edit)."] = true
 
 -- Extra Bar (issue #330)
 L["Extra Bar"] = true
@@ -809,50 +694,26 @@ L["Focus"] = true
 
 -- Common options
 L["Width"] = true
-L["Width of the cast bar"] = true
 L["Height"] = true
-L["Height of the cast bar"] = true
 L["Scale"] = true
-L["Size scale of the cast bar"] = true
 L["Show Icon"] = true
-L["Show the spell icon next to the cast bar"] = true
-L["Show Spell Icon"] = true
-L["Show the spell icon next to the target castbar"] = true
 L["Icon Size"] = true
-L["Size of the spell icon"] = true
 L["Modern Icon Border"] = true
 L["Modern Icon Border Desc"] = "Frame the spell icon with the DragonUI action-bar border instead of the classic ring."
 L["Modern Icon Border Debuff Desc"] = "Frame aura icons with the DragonUI action-bar border."
 L["Text Mode"] = true
-L["Choose how to display spell text: Simple (centered spell name only) or Detailed (spell name + time)"] = true
-L["Simple (Centered Name Only)"] = true
 L["Simple (Name Only)"] = true
-L["Simple"] = true
 L["Detailed (Name + Time)"] = true
-L["Detailed"] = true
 L["Time Precision"] = true
 L["Decimal places for remaining time."] = true
 L["Max Time Precision"] = true
 L["Decimal places for total time."] = true
 L["Hold Time (Success)"] = true
-L["How long the bar stays visible after a successful cast."] = true
 L["How long the bar stays after a successful cast."] = true
-L["How long to show the castbar after successful completion"] = true
 L["Hold Time (Interrupt)"] = true
-L["How long the bar stays visible after being interrupted."] = true
 L["How long the bar stays after being interrupted."] = true
-L["How long to show the castbar after interruption/failure"] = true
-L["Auto-Adjust for Auras"] = true
-L["Automatically adjust position based on target auras (CRITICAL FEATURE)"] = true
-L["Shift castbar when buff/debuff rows are showing."] = true
-L["Automatically adjust position based on focus auras"] = true
 L["Reset Position"] = true
-L["Resets the X and Y position to default."] = true
-L["Reset target castbar position to default"] = true
-L["Reset focus castbar position to default"] = true
 L["Player castbar position reset."] = true
-L["Target castbar position reset."] = true
-L["Focus castbar position reset."] = true
 L["Castbar detached - positioned freely via Editor Mode"] = true
 L["Castbar attached - follows Target frame"] = true
 L["Castbar attached - follows Focus frame"] = true
@@ -860,15 +721,6 @@ L["Re-attach Castbar to Target"] = true
 L["Re-attach Castbar to Focus"] = true
 
 -- Width/height descriptions for target/focus
-L["Width of the target castbar"] = true
-L["Height of the target castbar"] = true
-L["Scale of the target castbar"] = true
-L["Width of the focus castbar"] = true
-L["Height of the focus castbar"] = true
-L["Scale of the focus castbar"] = true
-L["Show the spell icon next to the focus castbar"] = true
-L["Time to show the castbar after successful cast completion"] = true
-L["Time to show the castbar after cast interruption"] = true
 
 -- Latency indicator (player only)
 L["Latency Indicator"] = true
@@ -891,12 +743,8 @@ L["Visual enhancements that add Dragonflight-style polish to the UI. These are o
 -- MICRO MENU TAB
 -- ============================================================================
 
-L["Gray Scale Icons"] = true
 L["Grayscale Icons"] = true
-L["Use grayscale icons instead of colored icons for the micro menu"] = true
 L["Use grayscale icons instead of colored icons."] = true
-L["Grayscale Icons Settings"] = true
-L["Normal Icons Settings"] = true
 L["Menu Scale"] = true
 L["Icon Spacing"] = true
 L["Padding between micromenu buttons."] = true
@@ -904,36 +752,20 @@ L["Number of micromenu button columns. Set to 1 for a vertical stack."] = true
 L["Invert Button Order"] = true
 L["Reverse the order of micromenu buttons in the grid."] = true
 L["Hide on Vehicle"] = true
-L["Hide micromenu and bags if you sit on vehicle"] = true
 L["Hide micromenu and bags while in a vehicle."] = true
 L["Show Latency Indicator"] = true
 L["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."] = true
 
 -- Bags
 L["Bags"] = true
-L["Configure the position and scale of the bag bar independently from the micro menu."] = true
 L["Bag Bar Scale"] = true
 
 -- XP & Rep Bars
-L["XP & Rep Bars (Legacy Offsets)"] = true
-L["Main XP & Rep bar options have moved to the XP & Rep Bars tab."] = true
-L["These offset options are for advanced positioning adjustments."] = true
-L["Both Bars Offset"] = true
-L["Y offset when XP & reputation bar are shown"] = true
-L["Single Bar Offset"] = true
-L["Y offset when XP or reputation bar is shown"] = true
-L["No Bar Offset"] = true
-L["Y offset when no XP or reputation bar is shown"] = true
-L["Rep Bar Above XP Offset"] = true
-L["Y offset for reputation bar when XP bar is shown"] = true
-L["Rep Bar Offset"] = true
-L["Y offset when XP bar is not shown"] = true
 
 -- ============================================================================
 -- MINIMAP TAB
 -- ============================================================================
 
-L["Collector"] = true
 L["Minimap Buttons Collector"] = true
 L["Circle"] = true
 L["Arrow"] = true
@@ -941,19 +773,14 @@ L["Basic Settings"] = true
 L["Border Alpha"] = true
 L["Top border alpha (0 to hide)."] = true
 L["Addon Button Skin"] = true
-L["Apply DragonUI border styling to addon icons (e.g., bag addons)"] = true
 L["Apply DragonUI border styling to addon icons."] = true
 L["Addon Button Fade"] = true
 L["Addon icons fade out when not hovered."] = true
 L["Player Arrow Size"] = true
-L["Size of the player arrow on the minimap"] = true
 L["New Blip Style"] = true
-L["Use new DragonUI object icons on the minimap. When disabled, uses classic Blizzard icons."] = true
 L["Use newer-style minimap blip icons."] = true
-L["Animated Border"] = true
 L["Minimap Decorations"] = true
 L["Adds decorative animated texture layers around the DragonUI minimap."] = true
-L["Enable Animated Border"] = true
 L["Enable Minimap Decorations"] = true
 L["Animated Effects"] = true
 L["Rotate preset layers when the selected preset includes animation."] = true
@@ -962,11 +789,8 @@ L["Hide DragonUI Border"] = true
 -- Time & Calendar
 L["Time & Calendar"] = true
 L["Show Clock"] = true
-L["Show/hide the minimap clock"] = true
 L["Show Calendar"] = true
-L["Show/hide the calendar frame"] = true
 L["Clock Font Size"] = true
-L["Font size for the clock numbers on the minimap"] = true
 
 -- Display Settings
 L["Display Settings"] = true
@@ -974,36 +798,24 @@ L["Tracking Icons"] = true
 L["Show current tracking icons (old style)."] = true
 L["Zoom Buttons"] = true
 L["Show zoom buttons (+/-)."] = true
-L["Zone Text Size"] = true
 L["Zone Text Font Size"] = true
-L["Zone text font size on top border"] = true
 L["Font size of the zone text above the minimap."] = true
 
 -- Position
 L["Position"] = true
-L["Reset minimap to default position (top-right corner)"] = true
-L["Reset Minimap Position"] = true
-L["Minimap position reset to default"] = true
-L["Minimap position reset."] = true
 
 -- ============================================================================
 -- QUEST TRACKER TAB
 -- ============================================================================
 
-L["Configures the quest objective tracker position and behavior."] = true
 L["Position and display settings for the objective tracker."] = true
 L["Show Header Background"] = true
 L["Show/hide the decorative header background texture."] = true
-L["Anchor Point"] = true
-L["Screen anchor point for the quest tracker."] = true
 L["Top Right"] = true
 L["Top Left"] = true
 L["Bottom Right"] = true
 L["Bottom Left"] = true
 L["Center"] = true
-L["Horizontal position offset"] = true
-L["Vertical position offset"] = true
-L["Reset quest tracker to default position"] = true
 L["Font size for quest tracker text"] = true
 L["Custom Height"] = true
 L["Limit the tracker to a fixed height. When off, it stops above the bags. Quests that don't fit are hidden until there is room."] = true
@@ -1019,99 +831,51 @@ L["ToT / ToF"] = true
 L["Party"] = true
 
 -- Common options
-L["Global Scale"] = true
-L["Global scale for all unit frames"] = true
-L["Scale of the player frame"] = true
-L["Scale of the target frame"] = true
-L["Scale of the focus frame"] = true
-L["Scale of the pet frame"] = true
-L["Scale of the target of target frame"] = true
-L["Scale of the focus of target frame"] = true
-L["Scale of party frames"] = true
-L["Class Color"] = true
 L["Class Color Health"] = true
-L["Use class color for health bar"] = true
-L["Use class color for health bars in party frames"] = true
-L["Show class icon instead of 3D portrait"] = true
-L["Show class icon instead of 3D portrait (only for players)"] = true
 L["Class icon instead of 3D model for players."] = true
 L["Alternative Class Icons"] = true
 L["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."] = true
-L["Large Numbers"] = true
 L["Format Large Numbers"] = true
-L["Format large numbers (1k, 1m)"] = true
 L["Text Format"] = true
-L["How to display health and mana values"] = true
-L["Choose how to display health and mana text"] = true
 
 -- Text format values
-L["Current Value Only"] = true
 L["Current Value"] = true
-L["Percentage Only"] = true
 L["Percentage"] = true
-L["Both (Numbers + Percentage)"] = true
 L["Numbers + %"] = true
-L["Current/Max Values"] = true
 L["Current / Max"] = true
 
 -- Party text format values
-L["Current Value Only (2345)"] = true
-L["Formatted Current (2.3k)"] = true
-L["Percentage Only (75%)"] = true
-L["Percentage + Current (75% | 2.3k)"] = true
 
 -- Health/Mana text
 L["Always Show Health Text"] = true
-L["Show health text always (true) or only on hover (false)"] = true
-L["Always show health text on party frames (instead of only on hover)"] = true
-L["Always display health text (otherwise only on mouseover)"] = true
 L["Always Show Mana Text"] = true
-L["Show mana/power text always (true) or only on hover (false)"] = true
-L["Always show mana text on party frames (instead of only on hover)"] = true
-L["Always display mana/energy/rage text (otherwise only on mouseover)"] = true
 
 -- Player frame specific
 L["Player Frame"] = true
 L["Dragon Decoration"] = true
-L["Add decorative dragon to your player frame for a premium look"] = true
 L["None"] = true
-L["Elite Dragon (Golden)"] = true
 L["Elite (Golden)"] = true
-L["RareElite Dragon (Winged)"] = true
 L["RareElite (Winged)"] = true
 L["Glow Effects"] = true
 L["Show Rest Glow"] = true
-L["Show a golden glow around the player frame when resting (in an inn or city). Works with all frame modes: normal, elite, fat health bar, and vehicle."] = true
 L["Golden glow around the player frame when resting (inn or city). Works with all frame modes."] = true
-L["Combat Flash"] = true
 L["Show Combat Flash"] = true
 L["Pulsing glow effect when entering combat. Works with all frame modes."] = true
 L["Combat Flash Opacity"] = true
 L["Maximum opacity of the combat flash pulse effect."] = true
-L["Always Show Alternate Mana Text"] = true
-L["Show mana text always visible (default: hover only)"] = true
 L["Alternate Mana (Druid)"] = true
 L["Always Show"] = true
 L["Druid mana text visible at all times, not just on hover."] = true
-L["Alternate Mana Text Format"] = true
-L["Choose text format for alternate mana display"] = true
 L["Percentage + Current/Max"] = true
 
 -- Fat Health Bar
-L["Health Bar Style"] = true
 L["Fat Health Bar"] = true
 L["Enable"] = true
-L["Full-width health bar that fills the entire frame area. Uses modified border texture that removes the inner divider line. Compatible with Dragon Decoration (requires fat variant textures). Note: Automatically disabled during vehicle UI."] = true
 L["Full-width health bar. Auto-disabled in vehicles."] = true
-L["Hide Mana Bar (Fat Mode)"] = true
 L["Hide Mana Bar"] = true
 L["Completely hide the mana bar when Fat Health Bar is active."] = true
-L["Mana Bar Width (Fat Mode)"] = true
 L["Mana Bar Width"] = true
-L["Width of the mana bar when Fat Health Bar is active. Movable via Editor Mode."] = true
-L["Mana Bar Height (Fat Mode)"] = true
 L["Mana Bar Height"] = true
-L["Height of the mana bar when Fat Health Bar is active."] = true
 L["Mana Bar Texture"] = true
 L["Choose the texture style for the power/mana bar. Only applies in Fat Health Bar mode."] = true
 L["DragonUI (Default)"] = true
@@ -1135,7 +899,6 @@ L["Reset Colors to Default"] = true
 -- Target frame
 L["Target Frame"] = true
 L["Threat Glow"] = true
-L["Show threat glow effect"] = true
 L["Show Name Background"] = true
 L["Show the colored name background behind the target name."] = true
 
@@ -1145,14 +908,10 @@ L["Show the colored name background behind the focus name."] = true
 L["Show Buff/Debuff on Focus"] = true
 L["Uses the native large focus frame mode to show buffs and debuffs on the focus frame."] = true
 L["Override Position"] = true
-L["Override default positioning"] = true
 L["Move the pet frame independently from the player frame."] = true
 
 -- Pet frame
 L["Pet Frame"] = true
-L["Allows the pet frame to be moved freely. When unchecked, it will be positioned relative to the player frame."] = true
-L["Horizontal position (only active if Override is checked)"] = true
-L["Vertical position (only active if Override is checked)"] = true
 
 -- Target of Target
 L["Target of Target"] = true
@@ -1169,8 +928,6 @@ L["Re-attach to Focus"] = true
 
 -- Party Frames
 L["Party Frames"] = true
-L["Party Frames Configuration"] = true
-L["Custom styling for party member frames with automatic health/mana text display and class colors."] = true
 
 -- Boss Frames
 L["Boss Frames"] = true
@@ -1179,7 +936,6 @@ L["Enabled"] = true
 L["Orientation"] = true
 L["Vertical"] = true
 L["Horizontal"] = true
-L["Party frame orientation"] = true
 L["Vertical Padding"] = true
 L["Space between party frames in vertical mode."] = true
 L["Horizontal Padding"] = true
@@ -1252,15 +1008,12 @@ L["Profile reset to defaults."] = true
 -- UNIT FRAME LAYERS MODULE
 L["Unit Frame Layers"] = true
 L["Enable Unit Frame Layers"] = true
-L["Heal prediction, absorb shields, and animated health loss on unit frames"] = true
 L["Heal prediction bars, absorb shields, and animated health loss overlays on unit frames."] = true
 L["Show heal prediction, absorb shields, and animated health loss on all unit frames."] = true
 L["Animated Health Loss"] = true
 L["Show animated red health loss bar on player frame when taking damage."] = true
 L["Missing Health Text"] = true
 L["Show the health deficit (missing health) as red text on health bars. Useful for healers."] = true
-L["Builder/Spender Feedback"] = true
-L["Show mana gain/loss glow feedback on player mana bar (experimental)."] = true
 
 -- LAYOUT PRESETS
 L["Layout Presets"] = true
@@ -1317,10 +1070,7 @@ L["Failed to export preset."] = true
 
 L["Nameplates"] = true
 L["Enable Nameplates Module"] = true
-L["Enable Nameplates"] = true
-L["Enable or disable the DragonUI nameplate module."] = true
 L["Apply DragonUI nameplate styling."] = true
-L["DragonUI-style health bars on Blizzard nameplates (30300)."] = true
 L["Plate Style"] = true
 L["Nameplate Art"] = true
 L["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome and is still in beta."] = true
@@ -1342,18 +1092,9 @@ L["Guardians"] = true
 L["Totems"] = true
 L["Offset X"] = true
 L["Offset Y"] = true
-L["Show Level in Name"] = true
-L["Bar Size"] = true
 L["Bar Width"] = true
-L["Width of the nameplate health bar."] = true
 L["Bar Height"] = true
-L["Height of the nameplate health bar."] = true
 L["Font Size"] = true
-L["Name and health percent font scale (1-10)."] = true
-L["Stack Offset X"] = true
-L["Horizontal offset for the nameplate stack."] = true
-L["Stack Offset Y"] = true
-L["Vertical offset for the nameplate stack."] = true
 L["Display"] = true
 L["Health Text"] = true
 L["What the health text shows. With both, the value comes first."] = true
@@ -1393,7 +1134,6 @@ L["Color enemy player names by class. Needs Enemy Player Class Colors."] = true
 L["Font size of the health text inside the bar (1-10). After the name, or in the Modern style, it matches the name."] = true
 L["Text Outline"] = true
 L["Black outline on the name and health text."] = true
-L["Hides level text and health percent, and centers the unit name on the nameplate."] = true
 L["Gray Tapped Units"] = true
 L["Grays the health bar when a unit is tapped by another player or group."] = true
 L["Friendly Player Color"] = true
@@ -1439,26 +1179,16 @@ L["Class Colors on Friendly Names"] = true
 L["Class Colors on Enemy Names"] = true
 
 L["Show Target Highlight"] = true
-L["Highlight texture on the targeted nameplate."] = true
 L["Show Target Arrows"] = true
 L["Left/right arrows on the targeted nameplate."] = true
 L["Opacity"] = true
 L["Disable Non-Target Fade"] = true
-L["Keep all nameplates fully opaque when targeting."] = true
-L["Non-Target Opacity"] = true
-L["Opacity for non-target nameplates when fade is enabled (0.0-1.0)."] = true
-L["Show Debuffs"] = true
-L["Max Debuff Icons"] = true
 L["Only Show on Target & Focus"] = true
-L["Hide debuffs on every nameplate except your current target and focus."] = true
 L["Only My Debuffs"] = true
 L["Only show debuffs you applied yourself."] = true
 L["Debuff List Mode"] = true
-L["Choose whether the spell list below shows only listed debuffs or hides them."] = true
 L["Whitelist"] = true
 L["Blacklist"] = true
-L["Spell List"] = true
-L["Spell IDs separated by commas."] = true
 L["Add Debuff by Name"] = true
 L["Add Debuff by ID"] = true
 L["Export/Import Spell IDs"] = true
@@ -1471,40 +1201,21 @@ L["Click to remove."] = true
 L["Spell filter list is empty."] = true
 L["Spell ID: %d"] = true
 L["Unknown"] = true
-L["Highlight Crowd Control"] = true
-L["Adds a colored border to stuns, fears, polymorphs, silences, and other crowd control."] = true
-L["Filtering"] = true
-L["Priority Highlight"] = true
 L["Power Bar"] = true
 L["Debuffs"] = true
 L["Auras"] = true
 L["Max Aura Icons"] = true
-L["Total icons in the row. Buffs and debuffs share these slots, lowest priority drops first."] = true
 L["Always Show Others' Crowd Control"] = true
-L["Lets stuns, fears and polymorphs from anyone through the Only My Debuffs filter. Enemy crowd control matters no matter who cast it."] = true
 L["Enemy Buffs"] = true
 L["Show Enemy Buffs"] = true
-L["Show buffs on enemy plates in the same row as debuffs. They compete for the same slots, ordered by priority."] = true
 L["Which Buffs"] = true
-L["Purgeable shows what you can spellsteal or dispel, plus defensive cooldowns worth waiting out. No list to maintain."] = true
 L["Purgeable & Defensive"] = true
-L["Only My Buffs"] = true
-L["Only show buffs you applied yourself."] = true
-L["Priority"] = true
-L["Sort Order"] = true
-L["Priority puts your crowd control first, then anyone's crowd control, enemy defensives, your debuffs and the rest. Chronological sorts by time left only."] = true
 L["Time Remaining"] = true
-L["Scale Icons by Priority"] = true
-L["Draws higher-priority auras larger. Icons stay bottom-aligned, so the big ones grow upward without shifting the row."] = true
 L["Colored Aura Borders"] = true
-L["Tints the icon frame by category: crowd control, enemy defensives, purgeable buffs, and dispel type for everything else."] = true
-L["Color by Dispel Type"] = true
 L["Friendly Plates"] = true
 L["Show Auras on Allies"] = true
 L["Show All Debuffs"] = true
 L["Stuns, fears and polymorphs on an ally, listed or not."] = true
-L["Any other buff has to be listed here, or an ally in a raid fills the screen."] = true
-L["Show All Debuffs on Allies"] = true
 L["Every debuff, not just crowd control. Useful for spotting what to dispel."] = true
 L["Always Show Defensive Cooldowns"] = true
 L["Uses the defensive buff list from the Enemy Buffs section."] = true
@@ -1516,27 +1227,19 @@ L["Blizzard's dispel colors, editable below."] = true
 L["Debuff List"] = true
 L["Buff List"] = true
 L["Shows buffs you can dispel or steal, plus the defensive cooldowns listed here."] = true
-L["An ally carries dozens of auras, so only what you list here is shown."] = true
 L["Stuns, fears, roots and polymorphs are detected automatically. Add anything the game does not flag."] = true
 L["Icon Order"] = true
 L["Order Icons By"] = true
 L["Importance"] = true
-L["Decides which icons come first, and which drop off when there is no room. Importance puts crowd control first, then enemy defensives, then your own debuffs."] = true
 L["Defensive Buff List"] = true
-L["Extra Crowd Control Spells"] = true
 L["Always Show Crowd Control"] = true
-L["Show stuns, fears and polymorphs on allies even when they are not in the list."] = true
-L["Ally Aura List"] = true
-L["An ally in a raid carries dozens of auras, so nothing is shown unless you ask for it below."] = true
 L["Highlighted Auras"] = true
-L["Highlighted auras draw larger than the rest. Everything else uses the base icon size."] = true
 L["What Gets Highlighted"] = true
 L["Crowd Control + List"] = true
 L["Spell List Only"] = true
 L["Nothing"] = true
 L["Highlight Size"] = true
 L["Multiplier over the base icon size."] = true
-L["Same rule as the Blizzard target frame: each debuff takes the colour of its dispel type, and one without a type uses None."] = true
 L["Magic"] = true
 L["Curse"] = true
 L["Disease"] = true
@@ -1544,7 +1247,6 @@ L["Poison"] = true
 L["Enrage"] = true
 L["No Dispel Type"] = true
 L["Separate Color for Crowd Control"] = true
-L["Crowd control uses its own colour instead of its dispel type."] = true
 L["Aura Row"] = true
 L["Show Auras"] = true
 L["Show buffs and debuffs above nameplates."] = true
@@ -1560,33 +1262,15 @@ L["Cooldown Text Position"] = true
 L["Show Cooldown Swipe"] = true
 L["Radial sweep over the icon as it runs out."] = true
 L["Cooldown Swipe Style"] = true
-L["Order: your crowd control, others' crowd control, enemy defensives, your debuffs, purgeable buffs, others' debuffs."] = true
-L["Higher priority draws larger."] = true
 L["Border Colors"] = true
-L["Tint the icon frame by category."] = true
 L["Crowd Control"] = true
-L["Enemy Defensives"] = true
-L["Purgeable"] = true
-L["Everything else uses its Magic, Curse, Disease or Poison color."] = true
 L["Hide auras on every nameplate except your target and focus."] = true
 L["Enemy crowd control matters no matter who cast it."] = true
 L["Buffs share the row with debuffs, ordered by priority."] = true
-L["Purgeable means Magic or Enrage, plus the defensive list below."] = true
-L["Categories"] = true
-L["These lists decide which auras count as defensive or as crowd control, for both sorting and border color."] = true
-L["Extra Crowd Control"] = true
-L["Added on top of the built-in crowd control list."] = true
-L["Only the spells listed below are shown, never anything else."] = true
-L["Show auras on friendly nameplates. Only the spells listed below are ever shown: an ally in a raid carries dozens and any other rule fills the screen."] = true
-L["Tints plain debuffs by their dispel type (Magic, Curse, Disease, Poison). Crowd control and defensives keep their own color."] = true
 L["Show Threat Glow"] = true
 L["Show Power Bar"] = true
 L["Show Power Bar Text"] = true
 L["Show numeric values (current / percent) on the power bar."] = true
-L["Power Bar Players Only"] = true
-L["Hide mana/power on NPC nameplates when unit is known."] = true
-L["On 3.3.5a, enemy cast bars appear on the targeted plate only."] = true
-L["Show Cast Bar"] = true
 L["Show Cast Bars"] = true
 L["Show Spell Name"] = true
 L["Show the spell name text on the cast bar."] = true
@@ -1596,35 +1280,12 @@ L["Spell Name Offset Y"] = true
 L["Cast Bar Height"] = true
 L["Bar Stack Gap"] = true
 L["Vertical spacing between health, power, and cast bars (pixels)."] = true
-L["Show Party Cast Bars"] = true
 L["Show Party/Raid Cast Bars"] = true
-L["Show cast bars on party member nameplates even when not targeted."] = true
 L["Hide Pet Casts"] = true
 L["Hide Pet Casts Desc"] = "Hide cast bars on player pets and guardians (Water Elemental, mirror images, etc.)."
 L["Show cast bars when the unit is known for sure: your target, focus, mouseover, arena enemies, or a group member's target."] = true
 L["Also show cast bars on party and raid allies, even when you are not targeting them."] = true
-L["Show Enemy Player Cast Bars in PvP"] = true
-L["In PvP, show enemy player cast bars without needing target or mouseover."] = true
 L["Off-Target Cast Bars"] = true
-L["Uses the combat log to guess casts on units you are not targeting. Less accurate than target, focus, mouseover, and arena enemies above."] = true
-L["Off-Target Combat Log Mode"] = true
-L["Off-Target Mode Off"] = "Disabled"
-L["Off-Target Mode Hybrid"] = "Hybrid (Recommended)"
-L["Off-Target Mode Aggressive"] = "Aggressive"
-L["Off-Target Mode When Safe"] = "When Safe"
-L["Off-Target Mode Off Desc"] = "Do not use the combat log for off-target casts."
-L["Off-Target Mode Hybrid Desc"] = "Smart default: enemy and ally players use the Aggressive technique (their names are always unique), while NPCs use the safer When Safe technique (their names can repeat). Combines both for the best result in every situation."
-L["Off-Target Mode Aggressive Desc"] = "Try to show more off-target casts. Fake casts do not show as interrupted; the bar may appear on the wrong nameplate."
-L["Off-Target Mode When Safe Desc"] = "Show fewer off-target casts, only when the match is likely correct."
-L["Aggressive Filters"] = true
-L["When Safe Filters"] = true
-L["Hostile Units Only"] = true
-L["Safe Hostile Only Desc"] = "Skip friendly and neutral units in the combat log."
-L["Enemy Players Only"] = true
-L["Limit to enemy player cast bars. Useful in PvP."] = "Limit off-target casts to enemy players only."
-L["Safe Enemy Players Only Desc"] = "Enemy players only. Requires Hostile Units Only."
-L["Ignore Friendly Casts"] = true
-L["Skip party, allies, and neutral units in the combat log."] = true
 L["Enable Off-Target Detection"] = "Enable safe off-target detection"
 L["Enable Off-Target Detection Desc"] = "Show cast bars on units you are not targeting, after you have used target, focus, or mouseover on them."
 L["Off-Target Aggressive Mode"] = "Aggressive mode"
@@ -1633,15 +1294,6 @@ L["Off-Target Players Only"] = "Players only"
 L["Off-Target Players Only Desc"] = "Aggressive mode for players only. World mobs stay on safe mode."
 L["Off-Target Aggressive Warning"] = "|cffffffffWarning:|r\n- If a cast is cancelled by moving or jumping (fake cast), the bar still runs to the end.\n- Same-name mobs may show the bar on the wrong nameplate."
 L["Off-Target Players Only Warning"] = "|cffffffffWarning:|r\n- If a cast is cancelled by moving or jumping (fake cast), the bar still runs to the end."
-L["Sync From Native Cast Bar"] = true
-L["On supported clients, use the game's built-in nameplate cast bar for better timing. Safe to leave enabled."] = true
-L["Native Progress Sync for Off-Target Casts"] = true
-L["When available, off-target combat-log castbars sync their progress from Blizzard's native castbar."] = true
-L["showVKeyCastbar Mode"] = true
-L["auto: keep client value. force_on/off: DragonUI sets showVKeyCastbar while nameplates module is active."] = true
-L["Auto (Do Not Force)"] = true
-L["Force On"] = true
-L["Force Off"] = true
 L["Icons"] = true
 L["Quest"] = true
 L["Show Raid Markers"] = true
@@ -1699,8 +1351,6 @@ L["Totems Without Icon"] = true
 L["Comma-separated, exact totem names (as shown in-game) that should never get a totem icon and render as a normal nameplate instead."] = true
 L["Totem Icon Position"] = true
 L["Choose where the totem icon is anchored around the nameplate."] = true
-L["Show totem icon on shaman totem nameplates."] = true
-L["Side arrows on the targeted nameplate."] = true
 
 -- New / reorganized sections (nameplates tab UX refresh)
 L["Size & Position"] = true
@@ -1718,17 +1368,13 @@ L["Icons & Markers"] = true
 L["Power Bar \226\128\148 Players Only"] = true
 L["Always show the unit level next to the name."] = true
 L["White border glow on the current target nameplate."] = true
-L["Colored glow indicating aggro status (red = tanking, orange = losing, yellow = gaining)."] = true
 L["Tank Mode"] = true
 L["Inverts threat colors for a tank: green means you hold aggro, red means you lost it."] = true
 L["DPS Mode"] = true
 L["In combat, colors by threat for DPS: green = no aggro, yellow = transition, red = you have aggro."] = true
 L["Keep all nameplates fully opaque when you have a target."] = true
-L["Opacity for non-target nameplates when fade is enabled (0.1 - 1.0)."] = "Opacity for non-target nameplates when fade is enabled (0.0 - 1.0)."
-L["Show enemy cast bar on the targeted nameplate."] = true
 
 L["Behavior"] = true
-L["Behavior Mode"] = true
 L["Retail-like Stacking"] = true
 L["Simulates Retail's nameplate stacking for enemies."] = true
 L["May increase CPU use with many visible nameplates."] = true
@@ -1744,7 +1390,6 @@ L["Vertical offset baseline for Retail-like stacking."] = true
 L["Freeze Mouseover"] = true
 L["Keeps the hovered nameplate fixed while stacking updates around it."] = true
 L["Disable in Open World"] = true
-L["Only apply Retail-like stacking inside instances."] = true
 L["BG Healer Icon"] = true
 L["BattleGroundHealers Compatibility"] = true
 L["Keep BG healer marks attached to DragonUI nameplates."] = true
@@ -1754,9 +1399,7 @@ L["Enable Test Mode"] = true
 L["Enable manual marking for BattleGroundHealers compatibility checks."] = true
 L["Mark Target"] = true
 L["Toggle BattleGroundHealers mark on your current target while test mode is enabled."] = true
-L["DragonUI (Custom)"] = true
 L["Allow Nameplate Overlap"] = true
-L["Allow plates to overlap instead of stacking."] = true
 L["Addon Compatibility"] = true
 L["Enable this if you use an external nameplate addon (PlateBuffs, Crosshairs, ...) that isn't detecting DragonUI's nameplates correctly."] = true
 L["Nameplate Addon Compatibility"] = true
@@ -1770,20 +1413,15 @@ L["Extra clickable padding on totem nameplates (easier to click)."] = true
 L["Clamp Target to Screen"] = true
 L["Keep the target nameplate visible at the top of the screen. Extends WorldFrame height when enabled."] = "Keep the target nameplate visible on screen."
 L["Clamp Bosses to Screen"] = true
-L["Keep boss nameplates visible at the top of the screen inside party and raid instances."] = "Keeps Boss (skull-lvl / ??) nameplates visible on screen."
 L["Clamp Top Inset"] = true
 L["Distance below the top edge where clamped nameplates stop."] = true
 L["Bars"] = true
 L["Clickbox"] = true
 L["Clickbox Width Factor"] = true
 L["Clickbox Height Factor"] = true
-L["Scales the nameplate clickbox relative to its original size. Recommended to change this setting while out of combat."] = true
 L["Show Clickbox"] = true
 L["Displays the box selection space (clickbox) of nameplates."] = true
 
-L["Use Target Opacity When No Target Exists"] = true
-L["When no target exists, use target opacity instead of non-target opacity."] = true
-L["When no target exists, use full opacity instead of Non-Target Opacity."] = true
 
 -- Nameplates: production-complete descriptions
 L["Allow native nameplates to overlap. Retail-like Stacking enables this automatically because its custom stacking algorithm requires overlap."] = true
