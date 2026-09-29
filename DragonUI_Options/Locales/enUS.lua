@@ -780,6 +780,7 @@ L["Player Arrow Size"] = true
 L["New Blip Style"] = true
 L["Use newer-style minimap blip icons."] = true
 L["Minimap Decorations"] = true
+L["Border presets from SexyMap by funkydude, used with permission."] = true
 L["Adds decorative animated texture layers around the DragonUI minimap."] = true
 L["Enable Minimap Decorations"] = true
 L["Animated Effects"] = true

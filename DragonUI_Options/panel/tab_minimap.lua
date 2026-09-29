@@ -79,13 +79,13 @@ local function GetAnimatedBorderPresets()
     end
 
     return {
-        ["drg_preset_01"] = "Azure Halo",
-        ["drg_preset_02"] = "Prismatic Facet",
-        ["drg_preset_03"] = "Solar Ember",
-        ["drg_preset_04"] = "Astral Lattice",
-        ["drg_preset_05"] = "Crimson Orbit",
-        ["drg_preset_06"] = "Verdant Bloom",
-        ["drg_preset_07"] = "Elemental Crown",
+        ["drg_preset_01"] = "Blue Rune Circles",
+        ["drg_preset_02"] = "Blue Rune Diamond",
+        ["drg_preset_03"] = "Burning Sun",
+        ["drg_preset_04"] = "Stargate",
+        ["drg_preset_05"] = "Rogue",
+        ["drg_preset_06"] = "Emerald Portal by Korryna",
+        ["drg_preset_07"] = "Shamanism by Jaygoody",
     }
 end
 
@@ -286,6 +286,7 @@ local function BuildMinimapTab(scroll)
     -- ANIMATED BORDER DECORATIONS
     -- ====================================================================
     local animatedBorder = C:AddSection(scroll, LO["Minimap Decorations"])
+    C:AddDescription(animatedBorder, LO["Border presets from SexyMap by funkydude, used with permission."])
     local animatedBorderWidgets = {}
     local animatedBorderScaleSlider
 
