@@ -38,6 +38,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 | `Nameplates/Retail/` | see [Retail nameplate artwork](#retail-nameplate-artwork) |
 | `Nameplates/Totem/` | 3.3.5a spell icons with a new frame |
 | `NewLevelUp/` | retail level-up art |
+| `Spellbook/` | retail spellbook art contributed by PentSec (pull request #485); cropped to the pieces the book draws and re-encoded (`spellbook-ribbon` kept uncompressed) |
 | `Talents/` | DragonUI_NewEra and New Era by Ashgaroth; `Artifact/` holds Legion-era retail art |
 | `UI/` | RetailUI atlases (`UnitFrame`, `MicroMenu`, `Minimap`, `CastingBar`, `QuestTracker`, `BagSlotsKey`, `CollapseButton`); DragonflightUI and DragonUI_NewEra retail frame chrome; a few 3.3.5a client files |
 | `UnitFrames/` | DragonflightUI; `Layers/` via UnitFrameLayers (RomanSpector); `Player/ClassOverlayDeathKnightRunes`, `Player/LFGRoleIcons`, `Player/PlayerRestFlipbook` and `uiunitframeboss2x` via RetailUI |
@@ -49,7 +50,9 @@ Data tables generated from the World of Warcraft client's database (DBC) files a
 `DragonUI/modules/worldmap/fogdata.lua`, `entrancedata.lua`, `flightpointdata.lua`,
 `graveyarddata.lua`, and `DragonUI/data/aura_durations.lua`, `companion_traits.lua`. The inn
 positions in `DragonUI/modules/worldmap/inndata.lua` are derived from AzerothCore's world-database
-spawn data together with the client's map data.
+spawn data together with the client's map data, and the class trainer lists in
+`DragonUI/modules/spellbook/trainerdata.lua` from AzerothCore's trainer tables together with the
+client's spell data.
 
 World of Warcraft, Warcraft and Blizzard Entertainment are trademarks or registered trademarks of
 Blizzard Entertainment, Inc. DragonUI is a free, fan-made addon and is not affiliated with or

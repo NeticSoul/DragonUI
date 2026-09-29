@@ -1547,3 +1547,19 @@ L["Show Glyph Names"] = "Показывать названия символов"
 L["Name each inscribed glyph beside its socket."] = "Показывает название каждого вписанного символа рядом с его ячейкой."
 L["Show Glyph Effects"] = "Показывать эффекты символов"
 L["List what your inscribed glyphs do beside the sockets."] = "Перечисляет рядом с ячейками, что делают ваши вписанные символы."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Книга заклинаний"
+L["Scale the spellbook window."] = "Масштабировать окно книги заклинаний."
+L["Enable Spellbook"] = "Включить книгу заклинаний"
+L["Enable the DragonUI spellbook module."] = "Включить модуль книги заклинаний DragonUI."
+L["Spellbook Content Scale"] = "Масштаб содержимого книги заклинаний"
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = "Масштабирует страницы, карточки и элементы управления книги заклинаний; рамка сохраняет размер."
+L["Show Lower Rank Selector"] = "Показывать выбор низших уровней"
+L["Spell cards with lower ranks offer them through the selector chosen below."] = "Карточки заклинаний с низшими уровнями предлагают их через выбранный ниже способ."
+L["Lower rank selector"] = "Выбор низших уровней"
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = "Как карточка заклинания предлагает низшие уровни: меню под значком или боковая панель."
+L["Menu under the icon"] = "Меню под значком"
+L["Side flyout"] = "Боковая панель"

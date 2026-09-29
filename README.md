@@ -129,7 +129,7 @@ DragonUI builds on original work, adapted code and ideas from these addon author
 | Project | Author | Contribution |
 |---------|--------|-------------|
 | [Dragonflight UI (Classic)](https://github.com/Karl-HeinzSchneider/WoW-DragonflightUI) | Karl-HeinzSchneider | Primary design reference; code snippets and textures adapted (MIT) |
-| [New Era](https://www.curseforge.com/wow/addons/new-era-retail-ui-in-classic) | Ashgaroth | Upstream of DragonUI_NewEra; design reference for the talents, merchant, character panel, world map and retail nameplates; talent textures obtained via it (Blizzard art) |
+| [New Era](https://www.curseforge.com/wow/addons/new-era-retail-ui-in-classic) | Ashgaroth | Upstream of DragonUI_NewEra; design reference for the talents, spellbook, merchant, character panel, world map and retail nameplates; talent textures obtained via it (Blizzard art) |
 | [DragonUI_NewEra](https://github.com/ghbset/DragonUI_NewEra) | ghbset, [LoneBrownie](https://github.com/LoneBrownie), contributors | Art and geometry reference for the character panel, talents, merchant, collections and world map; Blizzard textures obtained via it |
 | [pretty_actionbar](https://github.com/s0h2x/pretty_actionbar) / [pretty_minimap](https://github.com/s0h2x/pretty_minimap) | s0h2x | Original inspiration for the action bars and minimap |
 | [RetailUI](https://github.com/a3st/RetailUI) | a3st (Dmitriy) | Minimap, buff frame and API helper code and textures adapted (MIT) |
@@ -152,7 +152,7 @@ DragonUI builds on original work, adapted code and ideas from these addon author
 
 | Contributor | Name | Contribution |
 |---------|--------|-------------|
-| [PentSec](https://github.com/PentSec) | PentSec | Collaborator: original drafts of the loot skin and world map modules |
+| [PentSec](https://github.com/PentSec) | PentSec | Collaborator: original drafts of the loot skin, world map and spellbook modules; the spellbook artwork |
 | [CrimsonHollow](https://github.com/CrimsonHollow) | CrimsonHollow | Fat Health Bar contribution |
 | [RovBot](https://github.com/RovxBot) | RovBot | Action bar grid/preset system |
 | [Marrow](https://github.com/MarrowB83) | Marrow (Pexie) | Micro menu and unit frame contributions |

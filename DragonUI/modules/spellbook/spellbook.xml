@@ -1,0 +1,13 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
+    <Script file="trainerdata.lua"/>
+    <Script file="book_core.lua"/>
+    <Script file="book_catalog.lua"/>
+    <Script file="book_layout.lua"/>
+    <Script file="book_frame.lua"/>
+    <Script file="book_slots.lua"/>
+    <Script file="book_secure.lua"/>
+    <Script file="book_ranks.lua"/>
+    <Script file="book_flyout.lua"/>
+    <Script file="book_controls.lua"/>
+    <Script file="book_access.lua"/>
+</Ui>

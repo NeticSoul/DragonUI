@@ -47,6 +47,21 @@ local HL_PIECES = {
 }
 local HL_MIDDLE_TC = { 0, 0.015625, 0.175781, 0.292969 }
 
+-- Tabs sitting ON a band (retail's isTabOnTop, e.g. the spellbook) mirror vertically: nose up.
+local FLIPPED_POINT = { TOPLEFT = "BOTTOMLEFT", TOPRIGHT = "BOTTOMRIGHT", TOP = "BOTTOM" }
+
+local function edge(point, onTop)
+    return onTop and FLIPPED_POINT[point] or point
+end
+
+local function setCoords(tex, tc, onTop)
+    if onTop then
+        tex:SetTexCoord(tc[1], tc[2], tc[4], tc[3])
+    else
+        tex:SetTexCoord(tc[1], tc[2], tc[3], tc[4])
+    end
+end
+
 local function tab(i)
     return _G["CharacterFrameTab" .. i]
 end
@@ -59,15 +74,17 @@ local function buildHighlight(t)
     local stock = t:GetHighlightTexture()
     if stock then stock:SetTexture(nil) end
 
+    local onTop = t._duiOnTop
     local pieces, ends = {}, {}
     for _, piece in ipairs(HL_PIECES) do
         local anchor = _G[name .. piece.key]
         if not anchor then return end
         local tex = t:CreateTexture(nil, "HIGHLIGHT")
         tex:SetTexture(TAB_TEX)
-        tex:SetTexCoord(unpack(piece.tc))
+        setCoords(tex, piece.tc, onTop)
         tex:SetSize(piece.w, piece.h)
-        tex:SetPoint(piece.p, anchor, piece.p, 0, 0)
+        local point = edge(piece.p, onTop)
+        tex:SetPoint(point, anchor, point, 0, 0)
         tex:SetBlendMode("ADD")
         tex:SetAlpha(HL_ALPHA)
         pieces[#pieces + 1] = tex
@@ -76,11 +93,11 @@ local function buildHighlight(t)
 
     local middle = t:CreateTexture(nil, "HIGHLIGHT")
     middle:SetTexture(TAB_TEX)
-    middle:SetTexCoord(unpack(HL_MIDDLE_TC))
+    setCoords(middle, HL_MIDDLE_TC, onTop)
     middle:SetHorizTile(true)
     middle:SetHeight(HL_H)
-    middle:SetPoint("TOPLEFT", ends.Left, "TOPRIGHT", 0, 0)
-    middle:SetPoint("TOPRIGHT", ends.Right, "TOPLEFT", 0, 0)
+    middle:SetPoint(edge("TOPLEFT", onTop), ends.Left, edge("TOPRIGHT", onTop), 0, 0)
+    middle:SetPoint(edge("TOPRIGHT", onTop), ends.Right, edge("TOPLEFT", onTop), 0, 0)
     middle:SetBlendMode("ADD")
     middle:SetAlpha(HL_ALPHA)
     pieces[#pieces + 1] = middle
@@ -92,15 +109,17 @@ local function reskin(t)
     if not t or t._duiReskinned then return end
     t._duiReskinned = true
     local name = t:GetName()
+    local onTop = t._duiOnTop
 
     for _, piece in ipairs(TAB_PIECES) do
         local tex = _G[name .. piece.key]
         if tex then
             tex:ClearAllPoints()
             tex:SetTexture(TAB_TEX)
-            tex:SetTexCoord(unpack(piece.tc))
+            setCoords(tex, piece.tc, onTop)
             tex:SetSize(piece.w, piece.h)
-            tex:SetPoint(piece.p, t, piece.p, piece.x, piece.y)
+            local point = edge(piece.p, onTop)
+            tex:SetPoint(point, t, point, piece.x, onTop and -piece.y or piece.y)
         end
     end
 
@@ -115,13 +134,13 @@ local function reskin(t)
         if tex and left and right then
             tex:ClearAllPoints()
             tex:SetTexture(TAB_TEX)
-            tex:SetTexCoord(unpack(m.tc))
+            setCoords(tex, m.tc, onTop)
             -- Height only, never width: the strip spans between the caps by anchor, and a width on
             -- top leaves the engine reconciling a 1px column against the span.
             tex:SetHorizTile(true)
             tex:SetHeight(m.h)
-            tex:SetPoint("TOPLEFT", left, "TOPRIGHT")
-            tex:SetPoint("TOPRIGHT", right, "TOPLEFT")
+            tex:SetPoint(edge("TOPLEFT", onTop), left, edge("TOPRIGHT", onTop))
+            tex:SetPoint(edge("TOPRIGHT", onTop), right, edge("TOPLEFT", onTop))
         end
     end
 
@@ -147,8 +166,10 @@ local function syncState(t)
 
     local text = _G[t:GetName() .. "Text"]
     if text then
+        local drop = selected and TEXT_ACTIVE_DROP or 0
+        if t._duiOnTop then drop = -drop end
         text:ClearAllPoints()
-        text:SetPoint("CENTER", t, "CENTER", TEXT_NUDGE_X, selected and TEXT_ACTIVE_DROP or 0)
+        text:SetPoint("CENTER", t, "CENTER", TEXT_NUDGE_X, drop)
     end
 
     -- Muted rather than hidden while selected: the highlight is cut for the 36px inactive body, so
@@ -316,8 +337,9 @@ CP.RechainTabs = rechain
 
 -- Shared so a DragonUI window outside the character panel gets the same tab art. The hooks come
 -- with it: Blizzard's PanelTemplates applies the selected state, so a tab elsewhere needs re-syncing.
-function CP.ReskinTab(t)
+function CP.ReskinTab(t, onTop)
     if not t then return end
+    t._duiOnTop = onTop and true or nil
     hookTabSelection()
     hookBlizzardResize()
     reskin(t)

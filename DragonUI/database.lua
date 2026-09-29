@@ -1162,6 +1162,16 @@ local defaults = {
             collections = {
                 enabled = true, -- Dedicated Pets & Mounts window opened from the micro menu
             },
+            spellbook = {
+                enabled = true, -- Modern spellbook window with learned spells, pets, categories, search
+                scale = 0.8, -- Scale of the book's content (0.5–1.2); the frame around it stays at 1
+                minimized = false, -- One page instead of two
+                hidePassives = false, -- Leave passive spells out of the book
+                hideUnlearned = false, -- Leave out the grey cards of spells not learned yet
+                rankSelector = "flyout", -- Lower ranks: "flyout" side strip or "dropdown" menu under the icon
+                rankSelectorShown = true, -- Offer the lower-rank selector on spell cards at all
+                highlightUnbound = false, -- Pulse learned spells that sit on no action bar slot
+            },
             worldmap = {
                 enabled = true, -- Retail-style world map with breadcrumb navigation and a quest log side panel
                 questLog = true, -- Quest log side panel open

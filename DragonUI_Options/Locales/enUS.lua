@@ -1531,3 +1531,19 @@ L["Show Glyph Names"] = true
 L["Name each inscribed glyph beside its socket."] = true
 L["Show Glyph Effects"] = true
 L["List what your inscribed glyphs do beside the sockets."] = true
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = true
+L["Scale the spellbook window."] = true
+L["Enable Spellbook"] = true
+L["Enable the DragonUI spellbook module."] = true
+L["Spellbook Content Scale"] = true
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = true
+L["Show Lower Rank Selector"] = true
+L["Spell cards with lower ranks offer them through the selector chosen below."] = true
+L["Lower rank selector"] = true
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = true
+L["Menu under the icon"] = true
+L["Side flyout"] = true

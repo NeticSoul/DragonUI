@@ -1546,3 +1546,19 @@ L["Show Glyph Names"] = "Glyphennamen anzeigen"
 L["Name each inscribed glyph beside its socket."] = "Zeigt den Namen jeder eingesetzten Glyphe neben ihrem Sockel."
 L["Show Glyph Effects"] = "Glypheneffekte anzeigen"
 L["List what your inscribed glyphs do beside the sockets."] = "Listet neben den Sockeln auf, was deine eingesetzten Glyphen bewirken."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Zauberbuch"
+L["Scale the spellbook window."] = "Das Zauberbuch-Fenster skalieren."
+L["Enable Spellbook"] = "Zauberbuch aktivieren"
+L["Enable the DragonUI spellbook module."] = "Das DragonUI-Zauberbuch-Modul aktivieren."
+L["Spellbook Content Scale"] = "Inhaltsskalierung des Zauberbuchs"
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = "Skaliert Seiten, Karten und Bedienelemente im Zauberbuch; der Rahmen behält seine Größe."
+L["Show Lower Rank Selector"] = "Auswahl niedrigerer Ränge anzeigen"
+L["Spell cards with lower ranks offer them through the selector chosen below."] = "Zauberkarten mit niedrigeren Rängen bieten sie über die unten gewählte Auswahl an."
+L["Lower rank selector"] = "Auswahl niedrigerer Ränge"
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = "Wie eine Zauberkarte ihre niedrigeren Ränge anbietet: ein Menü unter dem Symbol oder eine seitliche Leiste."
+L["Menu under the icon"] = "Menü unter dem Symbol"
+L["Side flyout"] = "Seitliche Leiste"

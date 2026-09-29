@@ -1546,3 +1546,19 @@ L["Show Glyph Names"] = "Mostrar nombres de glifos"
 L["Name each inscribed glyph beside its socket."] = "Muestra el nombre de cada glifo inscrito junto a su ranura."
 L["Show Glyph Effects"] = "Mostrar efectos de glifos"
 L["List what your inscribed glyphs do beside the sockets."] = "Enumera junto a las ranuras lo que hacen tus glifos inscritos."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Libro de Hechizos"
+L["Scale the spellbook window."] = "Escalar la ventana del libro de hechizos."
+L["Enable Spellbook"] = "Activar Libro de Hechizos"
+L["Enable the DragonUI spellbook module."] = "Activar el módulo de libro de hechizos de DragonUI."
+L["Spellbook Content Scale"] = "Escala del contenido del libro de hechizos"
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = "Escala las páginas, tarjetas y controles del libro de hechizos; el marco mantiene su tamaño."
+L["Show Lower Rank Selector"] = "Mostrar selector de rangos inferiores"
+L["Spell cards with lower ranks offer them through the selector chosen below."] = "Las tarjetas de hechizos con rangos inferiores los ofrecen con el selector elegido abajo."
+L["Lower rank selector"] = "Selector de rangos inferiores"
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = "Cómo ofrece una tarjeta de hechizo sus rangos inferiores: un menú bajo el icono o una tira lateral."
+L["Menu under the icon"] = "Menú bajo el icono"
+L["Side flyout"] = "Tira lateral"

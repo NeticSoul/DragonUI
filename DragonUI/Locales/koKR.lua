@@ -739,3 +739,30 @@ L["Save this build to your talent profiles."] = "이 빌드를 특성 프로필�
 L["Enabled — click to toggle"] = "활성화됨 - 클릭하여 전환"
 L["Disabled — click to toggle"] = "비활성화됨 - 클릭하여 전환"
 L["Glyph of "] = ""
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "주문서"
+L["Learned spells book with categories, search, and filters."] = "카테고리, 검색 및 필터가 있는 배운 주문서입니다."
+L["Spellbook settings"] = "주문서 설정"
+L["Show All Ranks"] = "모든 등급 표시"
+L["Hide Passives"] = "지속효과 숨기기"
+L["Training Cost"] = "훈련 비용"
+L["Show second page"] = "두 번째 페이지 표시"
+L["Show single page"] = "단일 페이지 표시"
+L["Page %d/%d"] = "페이지 %d/%d"
+L["No spells match your search"] = "검색과 일치하는 주문이 없습니다"
+L["Rank %d at trainer"] = "(전문가에게서 %d 등급)"
+L["Ranks %d-%d at trainer"] = "(전문가에게서 %d-%d 등급)"
+L["Available from your class trainer"] = "직업 전문가에게서 배울 수 있음"
+L["Highlight spells missing from action bars"] = "행동 단축바에 없는 주문 강조"
+L["Trainable"] = "배울 수 있음"
+L["Available at level %d"] = "%d 레벨에 배울 수 있음"
+L["Requires talent"] = "특성 필요"
+L["Hide Unlearned Spells"] = "배우지 않은 주문 숨기기"
+L["Show Lower Rank Selector"] = "하위 레벨 선택 표시"
+L["Menu under the icon"] = "아이콘 아래 메뉴"
+L["Side flyout"] = "측면 펼침 목록"
+L["Lower Ranks"] = "하위 레벨"

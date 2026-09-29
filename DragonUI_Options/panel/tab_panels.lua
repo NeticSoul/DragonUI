@@ -4,7 +4,7 @@
 ================================================================================
 DragonUI Options Panel - Panels Tab
 ================================================================================
-The reskinned Blizzard windows: Character Panel, Pets & Mounts, World Map, Loot Window and Talents.
+The reskinned Blizzard windows: Character Panel, Pets & Mounts, World Map, Loot Window, Talents and Spellbook.
 ================================================================================
 ]]
 
@@ -44,6 +44,7 @@ local subTabs = {
     { key = "worldmap",    label = LO["World Map"] },
     { key = "loot",        label = LO["Loot Window"] },
     { key = "talents",     label = LO["Talents"] },
+    { key = "spellbook",   label = LO["Spellbook"] },
 }
 
 -- Search navigation sub-tab setter.
@@ -557,6 +558,67 @@ local function BuildTalentsSubTab(scroll)
 end
 
 -- ============================================================================
+-- SPELLBOOK
+-- ============================================================================
+local function BuildSpellbookSubTab(scroll)
+    local sbSection = C:AddSection(scroll, LO["Spellbook"])
+    C:AddDescription(sbSection, LO["Scale the spellbook window."])
+
+    C:AddToggle(sbSection, {
+        label = LO["Enable Spellbook"],
+        desc = LO["Enable the DragonUI spellbook module."],
+        getFunc = function() return IsEnabled("spellbook") end,
+        setFunc = function(val)
+            EnsureModuleTable("spellbook").enabled = val
+            Panel:SelectTab("panels")
+        end,
+        requiresReload = true,
+    })
+
+    C:AddSlider(sbSection, {
+        label = LO["Spellbook Content Scale"],
+        desc = LO["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."],
+        dbPath = "modules.spellbook.scale",
+        min = 0.5,
+        max = 1.2,
+        step = 0.05,
+        width = 200,
+        disabled = function() return not IsEnabled("spellbook") end,
+        callback = function(val)
+            addon.RefreshSpellbookScale(val)
+        end,
+    })
+
+    C:AddToggle(sbSection, {
+        label = LO["Show Lower Rank Selector"],
+        desc = LO["Spell cards with lower ranks offer them through the selector chosen below."],
+        dbPath = "modules.spellbook.rankSelectorShown",
+        disabled = function() return not IsEnabled("spellbook") end,
+        callback = function()
+            addon.RefreshSpellbookRankSelector()
+            Panel:SelectTab("panels")
+        end,
+    })
+
+    C:AddDropdown(sbSection, {
+        label = LO["Lower rank selector"],
+        desc = LO["How a spell card offers its lower ranks: a menu under the icon or a side flyout."],
+        dbPath = "modules.spellbook.rankSelector",
+        values = {
+            dropdown = LO["Menu under the icon"],
+            flyout = LO["Side flyout"],
+        },
+        width = 200,
+        disabled = function()
+            return not IsEnabled("spellbook") or GetModuleField("spellbook", "rankSelectorShown") == false
+        end,
+        callback = function(val)
+            addon.RefreshSpellbookRankSelector(val)
+        end,
+    })
+end
+
+-- ============================================================================
 -- SUB-TAB DISPATCH
 -- ============================================================================
 
@@ -566,6 +628,7 @@ local subTabBuilders = {
     worldmap    = BuildWorldMapSubTab,
     loot        = BuildLootSubTab,
     talents     = BuildTalentsSubTab,
+    spellbook   = BuildSpellbookSubTab,
 }
 
 -- ============================================================================

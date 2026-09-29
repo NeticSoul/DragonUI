@@ -1544,3 +1544,19 @@ L["Show Glyph Names"] = "显示雕文名称"
 L["Name each inscribed glyph beside its socket."] = "在每个已铭刻雕文的插槽旁显示其名称。"
 L["Show Glyph Effects"] = "显示雕文效果"
 L["List what your inscribed glyphs do beside the sockets."] = "在插槽旁列出已铭刻雕文的效果。"
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "法术书"
+L["Scale the spellbook window."] = "缩放法术书窗口。"
+L["Enable Spellbook"] = "启用法术书"
+L["Enable the DragonUI spellbook module."] = "启用DragonUI法术书模块。"
+L["Spellbook Content Scale"] = "法术书内容缩放"
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = "缩放法术书内的页面、卡片和控件；外框大小不变。"
+L["Show Lower Rank Selector"] = "显示低等级选择"
+L["Spell cards with lower ranks offer them through the selector chosen below."] = "拥有低等级的法术卡片通过下方选择的方式提供这些等级。"
+L["Lower rank selector"] = "低等级选择方式"
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = "法术卡片提供低等级的方式：图标下方的菜单，或侧边展开栏。"
+L["Menu under the icon"] = "图标下方的菜单"
+L["Side flyout"] = "侧边展开栏"

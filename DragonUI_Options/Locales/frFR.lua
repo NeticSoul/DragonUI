@@ -1379,3 +1379,19 @@ L["Show Glyph Names"] = "Afficher le nom des glyphes"
 L["Name each inscribed glyph beside its socket."] = "Affiche le nom de chaque glyphe inscrit à côté de son emplacement."
 L["Show Glyph Effects"] = "Afficher les effets des glyphes"
 L["List what your inscribed glyphs do beside the sockets."] = "Liste à côté des emplacements ce que font vos glyphes inscrits."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "Livre de sorts"
+L["Scale the spellbook window."] = "Mettre à l'échelle la fenêtre du livre de sorts."
+L["Enable Spellbook"] = "Activer le livre de sorts"
+L["Enable the DragonUI spellbook module."] = "Activer le module de livre de sorts de DragonUI."
+L["Spellbook Content Scale"] = "Échelle du contenu du livre de sorts"
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = "Met à l'échelle les pages, cartes et contrôles du livre de sorts ; le cadre garde sa taille."
+L["Show Lower Rank Selector"] = "Afficher le sélecteur de rangs inférieurs"
+L["Spell cards with lower ranks offer them through the selector chosen below."] = "Les cartes de sorts ayant des rangs inférieurs les proposent via le sélecteur choisi ci-dessous."
+L["Lower rank selector"] = "Sélecteur de rangs inférieurs"
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = "Comment une carte de sort propose ses rangs inférieurs : un menu sous l'icône ou une barre latérale."
+L["Menu under the icon"] = "Menu sous l'icône"
+L["Side flyout"] = "Barre latérale"

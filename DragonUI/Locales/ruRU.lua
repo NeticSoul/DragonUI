@@ -741,3 +741,30 @@ L["Save this build to your talent profiles."] = "Сохранить эту сб�
 L["Enabled — click to toggle"] = "Включено — щёлкните для переключения"
 L["Disabled — click to toggle"] = "Выключено — щёлкните для переключения"
 L["Glyph of "] = "Символ "
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Книга заклинаний"
+L["Learned spells book with categories, search, and filters."] = "Книга изученных заклинаний с категориями, поиском и фильтрами."
+L["Spellbook settings"] = "Настройки книги заклинаний"
+L["Show All Ranks"] = "Показать все ранги"
+L["Hide Passives"] = "Скрыть пассивные"
+L["Training Cost"] = "Стоимость обучения"
+L["Show second page"] = "Показать вторую страницу"
+L["Show single page"] = "Показать одну страницу"
+L["Page %d/%d"] = "Страница %d/%d"
+L["No spells match your search"] = "Нет заклинаний, подходящих под поиск"
+L["Rank %d at trainer"] = "(Уровень %d у наставника)"
+L["Ranks %d-%d at trainer"] = "(Уровни %d-%d у наставника)"
+L["Available from your class trainer"] = "Доступно у вашего классового наставника"
+L["Highlight spells missing from action bars"] = "Подсвечивать заклинания, которых нет на панелях команд"
+L["Trainable"] = "Можно изучить"
+L["Available at level %d"] = "Доступно на уровне %d"
+L["Requires talent"] = "Требуется талант"
+L["Hide Unlearned Spells"] = "Скрыть неизученные заклинания"
+L["Show Lower Rank Selector"] = "Показывать выбор низших уровней"
+L["Menu under the icon"] = "Меню под значком"
+L["Side flyout"] = "Боковая панель"
+L["Lower Ranks"] = "Низшие уровни"

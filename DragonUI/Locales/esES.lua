@@ -747,3 +747,30 @@ L["Save this build to your talent profiles."] = "Guarda esta configuración en t
 L["Enabled — click to toggle"] = "Activado: haz clic para cambiar"
 L["Disabled — click to toggle"] = "Desactivado: haz clic para cambiar"
 L["Glyph of "] = "Glifo de "
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Libro de Hechizos"
+L["Learned spells book with categories, search, and filters."] = "Libro de hechizos aprendidos con categorías, búsqueda y filtros."
+L["Spellbook settings"] = "Ajustes del libro de hechizos"
+L["Show All Ranks"] = "Mostrar todos los rangos"
+L["Hide Passives"] = "Ocultar pasivas"
+L["Training Cost"] = "Coste de entrenamiento"
+L["Show second page"] = "Mostrar segunda página"
+L["Show single page"] = "Mostrar página única"
+L["Page %d/%d"] = "Página %d/%d"
+L["No spells match your search"] = "Ningún hechizo coincide con la búsqueda"
+L["Rank %d at trainer"] = "(Rango %d en el instructor)"
+L["Ranks %d-%d at trainer"] = "(Rangos %d-%d en el instructor)"
+L["Available from your class trainer"] = "Disponible en tu instructor de clase"
+L["Highlight spells missing from action bars"] = "Resaltar hechizos que no están en ninguna barra de acción"
+L["Trainable"] = "Entrenable"
+L["Available at level %d"] = "Disponible a nivel %d"
+L["Requires talent"] = "Requiere talento"
+L["Hide Unlearned Spells"] = "Ocultar hechizos no aprendidos"
+L["Show Lower Rank Selector"] = "Mostrar selector de rangos inferiores"
+L["Menu under the icon"] = "Menú bajo el icono"
+L["Side flyout"] = "Tira lateral"
+L["Lower Ranks"] = "Rangos inferiores"

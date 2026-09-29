@@ -738,3 +738,30 @@ L["Save this build to your talent profiles."] = true
 L["Enabled — click to toggle"] = true
 L["Disabled — click to toggle"] = true
 L["Glyph of "] = true
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = true
+L["Learned spells book with categories, search, and filters."] = true
+L["Spellbook settings"] = true
+L["Show All Ranks"] = true
+L["Hide Passives"] = true
+L["Training Cost"] = true
+L["Show second page"] = true
+L["Show single page"] = true
+L["Page %d/%d"] = true
+L["No spells match your search"] = true
+L["Rank %d at trainer"] = "(Rank %d at trainer)"
+L["Ranks %d-%d at trainer"] = "(Ranks %d-%d at trainer)"
+L["Available from your class trainer"] = true
+L["Highlight spells missing from action bars"] = true
+L["Trainable"] = true
+L["Available at level %d"] = true
+L["Requires talent"] = true
+L["Hide Unlearned Spells"] = true
+L["Show Lower Rank Selector"] = true
+L["Menu under the icon"] = true
+L["Side flyout"] = true
+L["Lower Ranks"] = true

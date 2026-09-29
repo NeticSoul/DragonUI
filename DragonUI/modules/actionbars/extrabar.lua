@@ -1674,6 +1674,9 @@ function BarProto:ShouldShowEmpty()
     if SpellBookFrame and SpellBookFrame:IsShown() then
         return true
     end
+    if addon.IsSpellbookWindowShown and addon.IsSpellbookWindowShown() then
+        return true
+    end
     return (self.dragGrid or 0) > 0
 end
 

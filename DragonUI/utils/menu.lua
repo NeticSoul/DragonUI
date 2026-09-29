@@ -4,15 +4,26 @@ local addon = select(2, ...)
 
 -- Not UIDropDownMenu: UIDROPDOWNMENU_OPEN_MENU never clears and blocks the map blobs in combat.
 
-local BUTTON_H = 16
 local DIVIDER_H = 9
 local INSET_X, INSET_Y = 12, 10
-local MIN_W = 100
 local CHECK_W = 16
 local ARROW_W = 16
+local ICON_W = 16
 local DETAIL_GAP = 16
 -- UIDropDownMenu's own idle timeout.
 local HIDE_DELAY = 2
+
+-- The large look is asked for per Open; it has no idle timeout and closes on outside presses.
+local STYLES = {
+    small = {
+        row = 16, minW = 100, iconGap = 4, title = "GameFontNormalSmallLeft",
+        text = "GameFontHighlightSmallLeft", disabled = "GameFontDisableSmallLeft",
+    },
+    large = {
+        row = 21, minW = 60, iconGap = 10, title = "GameFontNormal",
+        text = "GameFontHighlight", disabled = "GameFontDisable", dark = true,
+    },
+}
 
 local menu
 local levels = {}
@@ -31,6 +42,8 @@ end
 
 -- Anchors go back too (other addons hang widgets off it); ones its owner set during the loan win.
 local function releaseOverlays()
+    -- A lent frame may be protected; its records wait for the end of combat rather than half-return.
+    if InCombatLockdown() then return end
     for index = #menu.lent, 1, -1 do
         local lent = menu.lent[index]
         menu.lent[index] = nil
@@ -51,6 +64,7 @@ end
 
 -- A real click on that frame runs its own handler as its owner's code, not as ours.
 local function lendOverlay(frame, button)
+    if InCombatLockdown() then return end
     menu.lent[#menu.lent + 1] = {
         frame = frame, button = button, parent = frame:GetParent(), strata = frame:GetFrameStrata(),
         level = frame:GetFrameLevel(), insets = { frame:GetHitRectInsets() }, alpha = frame:GetAlpha(),
@@ -74,11 +88,24 @@ end
 
 local acquire
 
+local function paintBackdrop(level, style)
+    if style.dark then
+        level:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
+        level:SetBackdropBorderColor(0.5, 0.5, 0.5)
+        return
+    end
+    level:SetBackdropColor(TOOLTIP_DEFAULT_BACKGROUND_COLOR.r, TOOLTIP_DEFAULT_BACKGROUND_COLOR.g, TOOLTIP_DEFAULT_BACKGROUND_COLOR.b)
+    level:SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b)
+end
+
 local function refresh(level)
     if level == menu then releaseOverlays() end
-    local checkable, width = false, MIN_W
+    local style = menu.style
+    paintBackdrop(level, style)
+    local checkable, width = false, style.minW
     for _, entry in ipairs(level.entries) do
         if entry.checked ~= nil then checkable = true end
+        if entry.tooltip then menu.tips = true end
     end
     local indent = checkable and CHECK_W + 2 or 2
     local y = INSET_Y
@@ -86,13 +113,26 @@ local function refresh(level)
         local button = level.buttons[index] or acquire(level, index)
         button.entry = entry
         local divider = entry.isDivider
-        button:SetHeight(divider and DIVIDER_H or BUTTON_H)
+        button:SetHeight(divider and DIVIDER_H or style.row)
         if divider then button.divider:Show() else button.divider:Hide() end
-        local font = entry.isTitle and "GameFontNormalSmallLeft"
-            or entry.disabled and "GameFontDisableSmallLeft" or "GameFontHighlightSmallLeft"
+        local font = entry.isTitle and style.title or entry.disabled and style.disabled or style.text
         button.text:SetFontObject(font)
+        button.text:SetJustifyH("LEFT")
         button.text:SetText(not divider and entry.text or "")
-        button.text:SetPoint("LEFT", button, "LEFT", entry.isTitle and 2 or indent, 0)
+        local shift = entry.indent or 0
+        local textLeft = (entry.isTitle and 2 or indent) + shift
+        local pictured = entry.icon ~= nil and not divider
+        local reach = indent + shift
+        if pictured then
+            button.icon:SetTexture(entry.icon)
+            button.icon:SetPoint("LEFT", button, "LEFT", textLeft, 0)
+            button.icon:Show()
+            textLeft = textLeft + ICON_W + style.iconGap
+            reach = textLeft
+        else
+            button.icon:Hide()
+        end
+        button.text:SetPoint("LEFT", button, "LEFT", textLeft, 0)
         button.detail:SetText(not divider and entry.detail or "")
         button.detail:ClearAllPoints()
         button.detail:SetPoint("RIGHT", button, "RIGHT", entry.menu and -ARROW_W or 0, 0)
@@ -100,6 +140,7 @@ local function refresh(level)
             entry.detail and -DETAIL_GAP or 0, 0)
         local checked = entry.checked
         if type(checked) == "function" then checked = checked() end
+        button.check:SetPoint("LEFT", button, "LEFT", shift, 0)
         if checked then button.check:Show() else button.check:Hide() end
         if entry.menu then button.arrow:Show() else button.arrow:Hide() end
         button:EnableMouse(not (entry.isTitle or entry.disabled or divider))
@@ -110,11 +151,11 @@ local function refresh(level)
         button:Show()
         if entry.overlay and level == menu then lendOverlay(entry.overlay, button) end
         if not divider then
-            local w = button.text:GetStringWidth() + indent + 8 + (entry.menu and ARROW_W or 0)
+            local w = button.text:GetStringWidth() + reach + 8 + (entry.menu and ARROW_W or 0)
             if entry.detail then w = w + DETAIL_GAP + button.detail:GetStringWidth() end
             width = math.max(width, w)
         end
-        y = y + (divider and DIVIDER_H or BUTTON_H)
+        y = y + (divider and DIVIDER_H or style.row)
     end
     for index = #level.entries + 1, #level.buttons do level.buttons[index]:Hide() end
     level:SetSize(width + INSET_X * 2, y + INSET_Y)
@@ -158,7 +199,7 @@ end
 
 acquire = function(level, index)
     local button = CreateFrame("Button", nil, level)
-    button:SetHeight(BUTTON_H)
+    button:SetHeight(menu.style.row)
     button.level = level
     local highlight = button:CreateTexture(nil, "BACKGROUND")
     highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
@@ -169,6 +210,9 @@ acquire = function(level, index)
     button.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
     button.check:SetSize(CHECK_W, CHECK_W)
     button.check:SetPoint("LEFT", button, "LEFT", 0, 0)
+    button.icon = button:CreateTexture(nil, "ARTWORK")
+    button.icon:SetSize(ICON_W, ICON_W)
+    button.icon:Hide()
     button.text = button:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmallLeft")
     button.text:SetJustifyH("LEFT")
     button.detail = button:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
@@ -214,6 +258,39 @@ local function overAnyLevel()
     return false
 end
 
+local function tipRowUnderMouse()
+    for _, level in ipairs(levels) do
+        if level:IsShown() then
+            for _, button in ipairs(level.buttons) do
+                if button:IsShown() and button.entry and button.entry.tooltip and button:IsMouseOver() then
+                    return button
+                end
+            end
+        end
+    end
+end
+
+-- Polled rather than OnEnter: a lent overlay covers its row and takes the row's mouse events.
+local function syncTip()
+    local row = tipRowUnderMouse()
+    if row == menu.tipRow then return end
+    if menu.tipRow and GameTooltip:IsOwned(menu.tipRow) then GameTooltip:Hide() end
+    menu.tipRow = row
+    if not row then return end
+    GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+    row.entry.tooltip(GameTooltip, row.entry)
+    GameTooltip:Show()
+end
+
+-- Only a press that starts outside counts, so dragging out of a row keeps the menu.
+local function pressedOutside()
+    local down = IsMouseButtonDown() and true or false
+    local fresh = down and not menu.wasDown
+    menu.wasDown = down
+    if not fresh or overAnyLevel() then return false end
+    return not (type(menu.anchor) == "table" and menu.anchor:IsMouseOver())
+end
+
 newLevel = function(depth)
     local level = CreateFrame("Frame", depth == 1 and "DragonUIMenu" or ("DragonUIMenu" .. depth), UIParent)
     level.depth, level.buttons, level.entries = depth, {}, {}
@@ -226,8 +303,7 @@ newLevel = function(depth)
         tile = true, tileSize = 16, edgeSize = 16,
         insets = { left = 5, right = 5, top = 5, bottom = 5 },
     })
-    level:SetBackdropColor(TOOLTIP_DEFAULT_BACKGROUND_COLOR.r, TOOLTIP_DEFAULT_BACKGROUND_COLOR.g, TOOLTIP_DEFAULT_BACKGROUND_COLOR.b)
-    level:SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b)
+    paintBackdrop(level, STYLES.small)
     level:Hide()
     if depth > 1 then
         level:SetScript("OnHide", function(self)
@@ -252,21 +328,27 @@ local function build()
         -- Clamping alone would slide a list that does not fit below its anchor up over the anchor itself.
         local bottom = anchor:GetBottom()
         local scale = anchor:GetEffectiveScale() / UIParent:GetEffectiveScale()
-        if bottom and bottom * scale < menu:GetHeight() then
-            menu:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", 0, 0)
+        if bottom and bottom * scale + menu.dy < menu:GetHeight() then
+            menu:SetPoint("BOTTOMLEFT", anchor, (menu.at:gsub("BOTTOM", "TOP")), menu.dx, -menu.dy)
         else
-            menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+            menu:SetPoint("TOPLEFT", anchor, menu.at, menu.dx, menu.dy)
         end
     end
     menu.idle = 0
     menu.lent = {}
+    menu.style = STYLES.small
     menu:SetScript("OnUpdate", function(self, elapsed)
         -- The overlay takes the mouse, so the row under it never lights on its own.
         for _, lent in ipairs(self.lent) do
             if lent.frame:IsMouseOver() then lent.button:LockHighlight() else lent.button:UnlockHighlight() end
         end
+        if self.tips then syncTip() end
         if not anchorVisible(self.anchor) then
             self:Hide()
+            return
+        end
+        if self.style == STYLES.large then
+            if pressedOutside() then self:Hide() end
             return
         end
         if overAnyLevel() or (type(self.anchor) == "table" and self.anchor:IsMouseOver()) then
@@ -277,9 +359,20 @@ local function build()
         if self.idle >= HIDE_DELAY then self:Hide() end
     end)
     menu:SetScript("OnHide", function(self)
+        -- Hidden through an ancestor (say Alt+Z): close for real so no loan outlives the menu.
+        if self:IsShown() and not (InCombatLockdown() and #self.lent > 0) then self:Hide() end
         self.anchor = nil
         closeFrom(2)
         releaseOverlays()
+        if self.tipRow and GameTooltip:IsOwned(self.tipRow) then GameTooltip:Hide() end
+        self.tipRow = nil
+    end)
+    -- The lock is not on yet during PLAYER_REGEN_DISABLED, so lent frames can still go home then.
+    menu:RegisterEvent("PLAYER_REGEN_DISABLED")
+    menu:RegisterEvent("PLAYER_REGEN_ENABLED")
+    menu:SetScript("OnEvent", function(self)
+        if #self.lent == 0 then return end
+        if self:IsShown() then self:Hide() else releaseOverlays() end
     end)
     -- Blizzard closes its menus on most clicks around its panels; this one follows.
     hooksecurefunc("CloseDropDownMenus", function() menu:Hide() end)
@@ -287,14 +380,19 @@ end
 
 addon.Menu = {}
 
--- entries: { text, detail, func, checked, keepShown, isTitle, isDivider, disabled, overlay, menu }; anchor: frame or "cursor".
-function addon.Menu.Open(anchor, entries)
+-- entries: { text, detail, func, checked, keepShown, isTitle, isDivider, disabled, overlay, menu, icon, tooltip, indent }; anchor: frame or "cursor".
+function addon.Menu.Open(anchor, entries, options)
     if not menu then build() end
     if menu:IsShown() and menu.anchor == anchor then
         menu:Hide()
         return
     end
     closeFrom(2)
+    options = options or {}
+    menu.style = options.large and STYLES.large or STYLES.small
+    menu.at, menu.dx, menu.dy = options.at or "BOTTOMLEFT", options.x or 0, options.y or 0
+    if menu.tipRow and GameTooltip:IsOwned(menu.tipRow) then GameTooltip:Hide() end
+    menu.tips, menu.tipRow, menu.wasDown = false, nil, IsMouseButtonDown() and true or false
     menu.entries, menu.anchor, menu.idle = entries, anchor, 0
     if anchor == "cursor" then
         local x, y = GetCursorPosition()

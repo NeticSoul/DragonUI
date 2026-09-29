@@ -98,6 +98,9 @@ local rui_TalentsBgDeathKnightUnholy = assets..'Talents\\talents-bg-deathknight-
 local rui_TalentsWarmodeAtlas = assets..'Talents\\talentframeatlas';
 local rui_TalentsClouds = assets..'Talents\\talents-animations-clouds';
 local rui_TalentsParticles = assets..'Talents\\talents-animations-particles';
+local rui_SpellbookBg = assets..'Spellbook\\spellbook-background';
+local rui_SpellbookElements = assets..'Spellbook\\spellbookelements';
+local rui_SpellbookRibbon = assets..'Spellbook\\spellbook-ribbon';
 
 -- Rows: name, width, height, left/right/top/bottom in sheet pixels, optional tile flags.
 local function sheet(file, pixelsAcross, pixelsDown, rows)
@@ -147,6 +150,12 @@ local retailHudSheets = {
 		{ "_ui-hud-actionbar-iconborder-pushed", 64, 64, 359, 451, 881, 971 },
 		{ "_ui-hud-actionbar-iconborder-highlight", 64, 64, 359, 451, 1065, 1155 },
 		{ "ui-hud-actionbar-iconframe-flyoutbordershadow", 52, 52, 359, 463, 335, 439 },
+		{ "ui-hud-actionbar-flyout-2x", 18, 7, 453, 489, 899, 913 },
+		{ "ui-hud-actionbar-flyout-mouseover-2x", 18, 7, 453, 489, 915, 929 },
+		{ "ui-hud-actionbar-flyout-down-2x", 19, 8, 453, 491, 881, 897 },
+		{ "ui-hud-actionbar-iconframe-flyoutbutton-2x", 47, 29, 359, 453, 1157, 1215 },
+		{ "ui-hud-actionbar-iconframe-flyoutbottom-2x", 47, 5, 359, 453, 1217, 1227 },
+		{ "_ui-hud-actionbar-iconframe-flyoutmidleft-2x", 32, 47, 0, 64, 1, 95 },
 		{ "ui-hud-actionbar-iconframe-flash", 64, 64, 359, 451, 973, 1063 },
 		{ "ui-hud-actionbar-iconframe-slot", 64, 64, 359, 487, 209, 333 },
 	}),
@@ -755,6 +764,27 @@ local atlasinfo = {
 	['talents-background-deathknight-blood'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
 	['talents-background-deathknight-frost'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
 	['talents-background-deathknight-unholy'] = { rui_TalentsBgDeathKnightUnholy, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+
+	-- Spellbook (Textures/Spellbook/): Blizzard's retail spellbook art, cut down to the pieces the book draws.
+	['spellbook-background-evergreen-header'] = { rui_SpellbookBg, 1614, 58, 4/2048, 1618/2048, 4/1024, 62/1024 },
+	['spellbook-header-left-half'] = { rui_SpellbookBg, 807, 58, 4/2048, 811/2048, 4/1024, 62/1024 },
+	['spellbook-background-evergreen-right'] = { rui_SpellbookBg, 807, 805, 4/2048, 811/2048, 68/1024, 873/1024 },
+	-- Uncompressed on its own: block compression smeared the ribbon's gold edges and tail.
+	['spellbook-background-evergreen-ribbon'] = { rui_SpellbookRibbon, 102, 557, 0/128, 102/128, 0/1024, 557/1024 },
+	['spellbook-background-evergreen-left'] = { rui_SpellbookBg, 806, 805, 924/2048, 1730/2048, 68/1024, 873/1024 },
+	['spellbook-divider'] = { rui_SpellbookBg, 657, 11, 8/2048, 665/2048, 880/1024, 891/1024 },
+	['spellbook-list-backplate'] = { rui_SpellbookBg, 316, 106, 672/2048, 988/2048, 880/1024, 986/1024 },
+	['spellbook-item-backplate'] = { rui_SpellbookBg, 256, 64, 992/2048, 1248/2048, 880/1024, 944/1024 },
+	['spellbook-corner-flipbook-evergreen'] = { rui_SpellbookElements, 600, 310, 4/1024, 604/1024, 4/512, 314/512 },
+	['spellbook-item-needtrainer-shadow'] = { rui_SpellbookElements, 270, 270, 608/1024, 878/1024, 4/512, 274/512 },
+	['spellbook-item-iconframe'] = { rui_SpellbookElements, 138, 131, 884/1024, 1022/1024, 4/512, 135/512 },
+	['spellbook-item-needtrainer-iconframe-backplate'] = { rui_SpellbookElements, 137, 131, 4/1024, 141/1024, 320/512, 451/512 },
+	['spellbook-item-iconframe-inactive'] = { rui_SpellbookElements, 136, 127, 148/1024, 284/1024, 320/512, 447/512 },
+	['spellbook-item-iconframe-hover'] = { rui_SpellbookElements, 132, 125, 288/1024, 420/1024, 320/512, 445/512 },
+	['spellbook-item-unassigned-glow'] = { rui_SpellbookElements, 127, 127, 424/1024, 551/1024, 320/512, 447/512 },
+	['spellbook-item-needtrainer-passive-backplate'] = { rui_SpellbookElements, 113, 115, 556/1024, 669/1024, 320/512, 435/512 },
+	['spellbook-item-iconframe-passive-hover'] = { rui_SpellbookElements, 108, 108, 792/1024, 900/1024, 320/512, 428/512 },
+	['spellbook-item-petautocast-corners'] = { rui_SpellbookElements, 90, 90, 904/1024, 994/1024, 320/512, 410/512 },
 }
 
 -- Small integer pixels over power-of-two sizes divide exactly at any FPU precision.

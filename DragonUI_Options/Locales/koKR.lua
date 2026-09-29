@@ -1548,3 +1548,19 @@ L["Show Glyph Names"] = "문양 이름 표시"
 L["Name each inscribed glyph beside its socket."] = "새겨진 각 문양의 이름을 홈 옆에 표시합니다."
 L["Show Glyph Effects"] = "문양 효과 표시"
 L["List what your inscribed glyphs do beside the sockets."] = "홈 옆에 새겨진 문양의 효과를 나열합니다."
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+L["Spellbook"] = "주문서"
+L["Scale the spellbook window."] = "주문서 창 크기 조절."
+L["Enable Spellbook"] = "주문서 사용"
+L["Enable the DragonUI spellbook module."] = "DragonUI 주문서 모듈을 사용합니다."
+L["Spellbook Content Scale"] = "주문서 내용 크기"
+L["Scales the pages, cards and controls inside the spellbook; its frame keeps its size."] = "주문서 안의 페이지, 카드, 조작 버튼의 크기를 조정합니다. 테두리 크기는 그대로입니다."
+L["Show Lower Rank Selector"] = "하위 레벨 선택 표시"
+L["Spell cards with lower ranks offer them through the selector chosen below."] = "하위 레벨이 있는 주문 카드는 아래에서 고른 방식으로 하위 레벨을 보여줍니다."
+L["Lower rank selector"] = "하위 레벨 선택 방식"
+L["How a spell card offers its lower ranks: a menu under the icon or a side flyout."] = "주문 카드가 하위 레벨을 보여주는 방식: 아이콘 아래 메뉴 또는 측면 펼침 목록."
+L["Menu under the icon"] = "아이콘 아래 메뉴"
+L["Side flyout"] = "측면 펼침 목록"

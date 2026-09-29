@@ -672,3 +672,30 @@ L["Save this build to your talent profiles."] = "將此配置儲存到你的天�
 L["Enabled — click to toggle"] = "已啟用——點擊切換"
 L["Disabled — click to toggle"] = "已停用——點擊切換"
 L["Glyph of "] = ""
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "法術書"
+L["Learned spells book with categories, search, and filters."] = "已學法術書，包含分類、搜尋和篩選。"
+L["Spellbook settings"] = "法術書設定"
+L["Show All Ranks"] = "顯示所有等級"
+L["Hide Passives"] = "隱藏被動技能"
+L["Training Cost"] = "訓練費用"
+L["Show second page"] = "顯示第二頁"
+L["Show single page"] = "顯示單頁"
+L["Page %d/%d"] = "第%d/%d頁"
+L["No spells match your search"] = "沒有符合搜尋的法術"
+L["Rank %d at trainer"] = "（訓練師處可學等級%d）"
+L["Ranks %d-%d at trainer"] = "（訓練師處可學等級%d-%d）"
+L["Available from your class trainer"] = "可從你的職業訓練師處學習"
+L["Highlight spells missing from action bars"] = "高亮顯示未放在快捷列上的法術"
+L["Trainable"] = "可學習"
+L["Available at level %d"] = "%d級可學"
+L["Requires talent"] = "需要天賦"
+L["Hide Unlearned Spells"] = "隱藏未學會的法術"
+L["Show Lower Rank Selector"] = "顯示低等級選擇"
+L["Menu under the icon"] = "圖示下方的選單"
+L["Side flyout"] = "側邊展開列"
+L["Lower Ranks"] = "較低等級"

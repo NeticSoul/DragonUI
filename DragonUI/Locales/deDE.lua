@@ -741,3 +741,30 @@ L["Save this build to your talent profiles."] = "Diesen Build in deinen Talentpr
 L["Enabled — click to toggle"] = "Aktiviert – zum Umschalten klicken"
 L["Disabled — click to toggle"] = "Deaktiviert – zum Umschalten klicken"
 L["Glyph of "] = ""
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Zauberbuch"
+L["Learned spells book with categories, search, and filters."] = "Gelernte Zauber mit Kategorien, Suche und Filtern."
+L["Spellbook settings"] = "Zauberbuch-Einstellungen"
+L["Show All Ranks"] = "Alle Ränge anzeigen"
+L["Hide Passives"] = "Passive ausblenden"
+L["Training Cost"] = "Trainingskosten"
+L["Show second page"] = "Zweite Seite anzeigen"
+L["Show single page"] = "Einzelne Seite anzeigen"
+L["Page %d/%d"] = "Seite %d/%d"
+L["No spells match your search"] = "Keine Zauber entsprechen deiner Suche"
+L["Rank %d at trainer"] = "(Rang %d beim Lehrer)"
+L["Ranks %d-%d at trainer"] = "(Ränge %d-%d beim Lehrer)"
+L["Available from your class trainer"] = "Bei deinem Klassenlehrer erhältlich"
+L["Highlight spells missing from action bars"] = "Zauber hervorheben, die in keiner Aktionsleiste liegen"
+L["Trainable"] = "Erlernbar"
+L["Available at level %d"] = "Verfügbar ab Level %d"
+L["Requires talent"] = "Benötigt Talent"
+L["Hide Unlearned Spells"] = "Nicht erlernte Zauber ausblenden"
+L["Show Lower Rank Selector"] = "Auswahl niedrigerer Ränge anzeigen"
+L["Menu under the icon"] = "Menü unter dem Symbol"
+L["Side flyout"] = "Seitliche Leiste"
+L["Lower Ranks"] = "Niedrigere Ränge"

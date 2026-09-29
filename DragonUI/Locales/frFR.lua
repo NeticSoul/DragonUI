@@ -672,3 +672,30 @@ L["Save this build to your talent profiles."] = "Enregistrer cette configuration
 L["Enabled — click to toggle"] = "Activé – cliquez pour basculer"
 L["Disabled — click to toggle"] = "Désactivé – cliquez pour basculer"
 L["Glyph of "] = "Glyphe de "
+
+-- ============================================================================
+-- SPELLBOOK MODULE
+-- ============================================================================
+
+L["Spellbook"] = "Livre de sorts"
+L["Learned spells book with categories, search, and filters."] = "Livre de sorts appris avec catégories, recherche et filtres."
+L["Spellbook settings"] = "Réglages du livre de sorts"
+L["Show All Ranks"] = "Afficher tous les rangs"
+L["Hide Passives"] = "Masquer les passifs"
+L["Training Cost"] = "Coût d'entraînement"
+L["Show second page"] = "Afficher la deuxième page"
+L["Show single page"] = "Afficher une seule page"
+L["Page %d/%d"] = "Page %d/%d"
+L["No spells match your search"] = "Aucun sort ne correspond à votre recherche"
+L["Rank %d at trainer"] = "(Rang %d chez le maître)"
+L["Ranks %d-%d at trainer"] = "(Rangs %d-%d chez le maître)"
+L["Available from your class trainer"] = "Disponible auprès de votre maître de classe"
+L["Highlight spells missing from action bars"] = "Mettre en évidence les sorts absents des barres d'action"
+L["Trainable"] = "Apprenable"
+L["Available at level %d"] = "Disponible au niveau %d"
+L["Requires talent"] = "Nécessite un talent"
+L["Hide Unlearned Spells"] = "Masquer les sorts non appris"
+L["Show Lower Rank Selector"] = "Afficher le sélecteur de rangs inférieurs"
+L["Menu under the icon"] = "Menu sous l'icône"
+L["Side flyout"] = "Barre latérale"
+L["Lower Ranks"] = "Rangs inférieurs"
