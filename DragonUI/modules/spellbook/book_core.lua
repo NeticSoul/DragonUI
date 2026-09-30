@@ -23,8 +23,9 @@ function Book.Config()
     return addon:GetModuleConfig("spellbook")
 end
 
+-- IsShown gives 1/nil here, and the drag layer compares this against its own true/false state.
 function Book.IsOpen()
-    return Book.root ~= nil and Book.root:IsShown()
+    return Book.root ~= nil and not not Book.root:IsShown()
 end
 
 function addon.IsSpellbookWindowShown()
