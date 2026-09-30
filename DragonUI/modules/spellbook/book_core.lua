@@ -227,7 +227,7 @@ local function combatStarts()
     Book.CloseRanks()
     Book.CloseMenu()
     Book.search:ClearFocus()
-    Book.LiftLayer()
+    Book.ResetLayer()
     -- Last moment the secure tables can change before any category is switched to in combat.
     if next(Book.dirty) and not Book.Locked() then Book.Rebuild() end
 end

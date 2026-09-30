@@ -205,11 +205,24 @@ local function lightPetButtons(wanted)
     end
 end
 
+local petHeld, pickedIndex, pickedBook = false, nil, nil
+
+-- The pet grid events, not the cursor type, vouch for a pet ability on the cursor.
+local function heldSpell()
+    local kind, index, book = GetCursorInfo()
+    if kind == "spell" and index then return index, book or "spell" end
+    if petHeld then return pickedBook == "pet" and pickedIndex or 0, "pet" end
+end
+
+function Book.NotePickup(index, book)
+    pickedIndex, pickedBook = index, book
+end
+
 -- A spell on the cursor outranks the hovered one, so the pulse carries on through a drag.
 local function source()
     if not Book.IsOpen() then return nil, nil end
-    local kind, index, book = GetCursorInfo()
-    if kind == "spell" and index then return book or "spell", index end
+    local index, book = heldSpell()
+    if index then return book, index end
     return hovered, nil
 end
 
@@ -266,61 +279,94 @@ end
 
 -- Dragging a spell out of the book ---------------------------------------------------------------
 
-local held, lowered, homeStrata = false, false, nil
-local was = {}
+local heldIndex, heldBook = nil, nil
+local was, raised, NONE = {}, {}, {}
 local watch, sinceCheck = CreateFrame("Frame"), 0
 
-local function spellHeld()
-    return GetCursorInfo() == "spell"
-end
-
 local function record(frame)
-    was[frame] = frame:GetFrameStrata()
+    if was[frame] == nil then was[frame] = frame:GetFrameStrata() end
     for _, child in ipairs({ frame:GetChildren() }) do record(child) end
 end
 
--- Frames built mid-drag were never recorded, so they fall back to the root's own strata.
-local function paint(frame, strata)
-    local target = strata or was[frame] or homeStrata
+-- Frames built mid-drag were never recorded, so they fall back to their root's own strata.
+local function paint(frame, strata, home)
+    local target = strata or was[frame] or home
     if frame:GetFrameStrata() ~= target then frame:SetFrameStrata(target) end
-    for _, child in ipairs({ frame:GetChildren() }) do paint(child, strata) end
+    for _, child in ipairs({ frame:GetChildren() }) do paint(child, strata, home) end
 end
 
--- Lowering the book leaves every action bar above it, whichever addon draws it; protected, so combat waits.
-local function setLowered(want)
-    if want == lowered or Book.Locked() then return end
-    lowered = want
-    local root = Book.root
-    if want then
-        homeStrata = root:GetFrameStrata()
-        record(root)
-        paint(root, "LOW")
-    else
-        paint(root)
-        wipe(was)
-        UIErrorsFrame:Raise()
+local function isTotem(name)
+    for slot = 1, MAX_TOTEMS do
+        for _, id in ipairs({ GetMultiCastTotemSpells(slot) }) do
+            if GetSpellInfo(id) == name then return true end
+        end
     end
+    return false
+end
+
+-- The frames holding the buttons this spell can be dropped on, whichever module lays them out.
+local function dropTargets(index, book)
+    local targets = {}
+    local function add(frame)
+        if frame and frame ~= UIParent then targets[frame] = true end
+    end
+    if book == "pet" then
+        add(PetActionButton1:GetParent())
+        return targets
+    end
+    for _, prefix in ipairs(BUTTON_PREFIXES) do
+        local button = _G[prefix .. 1]
+        add(button and button:GetParent())
+    end
+    if addon.ForEachExtrabarButton then
+        addon.ForEachExtrabarButton(function(button) add(button:GetParent()) end)
+    end
+    local name = GetSpellName(index, book)
+    if name and isTotem(name) then add(MultiCastActionBarFrame) end
+    return targets
+end
+
+-- Only bars that can take the spell rise over the book; they are protected, so combat waits.
+local function setRaised(index, book)
+    if Book.Locked() then return end
+    local targets = index and dropTargets(index, book) or NONE
+    for frame, home in pairs(raised) do
+        if not targets[frame] then
+            raised[frame] = nil
+            paint(frame, nil, home)
+        end
+    end
+    for frame in pairs(targets) do
+        if not raised[frame] then
+            record(frame)
+            raised[frame] = was[frame]
+            paint(frame, "DIALOG")
+        end
+    end
+    if not next(raised) then wipe(was) end
 end
 
 function Book.SyncLayer()
     local open = Book.IsOpen()
     if open then watch:Show() else watch:Hide() end
-    setLowered(open and spellHeld())
+    if open then setRaised(heldSpell()) else setRaised(nil) end
 end
 
--- Last unlocked moment before a fight: a book left in LOW would sit under the HUD until it ends.
-function Book.LiftLayer()
-    setLowered(false)
+-- Last unlocked moment before a fight: raised bars would otherwise sit over every window until it ends.
+function Book.ResetLayer()
+    setRaised(nil)
 end
 
 local function tick()
     if ownerLeft() then hovered, hoverOwner = nil, nil end
     refreshMarks()
-    local now = spellHeld()
-    if now == held then return end
-    held = now
+    local index, book = heldSpell()
+    if index == heldIndex and book == heldBook then return end
+    local wasHeld = heldIndex ~= nil
+    heldIndex, heldBook = index, book
     Book.SyncLayer()
-    if not now then Book.Queue("glow") end
+    -- A drop or a swap can change what the bars hold, the Extra Bar included, which fires no slot event.
+    if wasHeld then Book.Queue("glow") end
 end
 
 watch:Hide()
@@ -336,9 +382,21 @@ local function checkSoon()
     sinceCheck = 1
 end
 
+local function petGridShown()
+    petHeld = true
+    checkSoon()
+end
+
+local function petGridHidden()
+    petHeld, pickedIndex, pickedBook = false, nil, nil
+    checkSoon()
+end
+
 function Book.ListenToBars()
     Book.On("CURSOR_UPDATE", checkSoon)
     Book.On("ACTIONBAR_SHOWGRID", checkSoon)
     Book.On("ACTIONBAR_HIDEGRID", checkSoon)
+    Book.On("PET_BAR_SHOWGRID", petGridShown)
+    Book.On("PET_BAR_HIDEGRID", petGridHidden)
     Book.On("UPDATE_MACROS", function() Book.Queue("glow") end)
 end

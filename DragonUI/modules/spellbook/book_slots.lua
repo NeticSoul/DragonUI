@@ -600,7 +600,9 @@ end
 function Book.PickUp(entry)
     if Book.Locked() or not entry or entry.grey or entry.passive then return end
     local index = liveIndex(entry)
-    if index then PickupSpell(index, entry.book) end
+    if not index then return end
+    PickupSpell(index, entry.book)
+    Book.NotePickup(index, entry.book)
 end
 
 function Book.CardClick(card)
@@ -637,4 +639,10 @@ end
 function Book.SlotRelease(slot)
     local card = cards[slot:GetID()]
     if card and card.entry then Book.SetCardPointer(card, card.over, false) end
+end
+
+function Book.SlotDragged(slot)
+    local card = cards[slot:GetID()]
+    local entry = card and card.entry
+    if entry and not entry.grey then Book.NotePickup(entry.index, entry.book) end
 end
