@@ -1169,6 +1169,7 @@ local defaults = {
                 enabled = true, -- Modern spellbook window with learned spells, pets, categories, search
                 scale = 0.8, -- Scale of the book's content (0.5–1.2); the frame around it stays at 1
                 minimized = false, -- One page instead of two
+                forceWide = false, -- Two pages kept even where they overflow the screen (content shrinks)
                 hidePassives = false, -- Leave passive spells out of the book
                 hideUnlearned = false, -- Leave out the grey cards of spells not learned yet
                 rankSelector = "flyout", -- Lower ranks: "flyout" side strip or "dropdown" menu under the icon

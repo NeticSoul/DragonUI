@@ -514,8 +514,9 @@ local function buildPager(bar)
     pager:EnableMouse(true)
     pager:SetScript("OnEnter", Book.PagerEnter)
     pageText = pager:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    pageText:SetPoint("LEFT", pager, "LEFT", 0, 0)
-    pageText:SetJustifyH("LEFT")
+    -- Ends just left of the back arrow (see PlaceArrows), so longer translations grow leftwards.
+    pageText:SetPoint("RIGHT", pager, "RIGHT", -76, 0)
+    pageText:SetJustifyH("RIGHT")
     pageText:SetTextColor(0, 0, 0)
     pageText:SetShadowOffset(0, 0)
 end

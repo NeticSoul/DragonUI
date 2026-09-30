@@ -131,7 +131,8 @@ end
 function Book.ApplyScale()
     local root = Book.root
     local wanted = min(1.2, max(0.5, tonumber(Book.Config().scale) or 0.8))
-    local wide, scale = Book.FitWindow(not Book.Config().minimized, Book.forceWide, wanted,
+    local config = Book.Config()
+    local wide, scale = Book.FitWindow(not config.minimized, config.forceWide, wanted,
         UIParent:GetWidth(), UIParent:GetHeight())
     if wide ~= Book.shownWide or scale ~= Book.contentScale then
         Book.shownWide, Book.contentScale = wide, scale
@@ -152,19 +153,14 @@ function Book.ApplyScale()
     root:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
 end
 
--- Opening, scale and screen changes re-ask whether two pages fit; only the button forces them.
-function Book.Refit()
-    Book.forceWide = nil
-    Book.ApplyScale()
-end
-
 -- The place is taken first so the left edge stays put while the width changes.
 function Book.SetMinimized(minimized)
     if Book.RefuseInCombat() then return end
     local first = Book.FirstShownKey()
     if Book.position then Book.RememberPlace() end
-    Book.Config().minimized = minimized
-    Book.forceWide = not minimized or nil
+    local config = Book.Config()
+    -- Only the button forces two pages; until then FitWindow drops to one where they overflow.
+    config.minimized, config.forceWide = minimized, not minimized
     Book.ApplyScale()
     local root = Book.root
     local cat = root:GetAttribute("cat")

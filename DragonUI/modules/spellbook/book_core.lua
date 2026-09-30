@@ -180,7 +180,7 @@ function Book.WindowShown()
         Book.ScanActionBars()
         Book.Sync(false)
     else
-        Book.Refit()
+        Book.ApplyScale()
         if next(Book.dirty) then
             Book.Rebuild()
         else
@@ -247,7 +247,7 @@ local function contentChanged()
 end
 
 local function rescale()
-    addon:SafeExecute("spellbook", "scale", Book.Refit)
+    addon:SafeExecute("spellbook", "scale", Book.ApplyScale)
     Book.PlaceMicroCatcher()
 end
 
@@ -310,7 +310,7 @@ function addon.RefreshSpellbookSystem()
     apply()
     if not Book.applied then return end
     addon:SafeExecute("spellbook", "profile", function()
-        Book.Refit()
+        Book.ApplyScale()
         Book.MarkAllDirty()
         if Book.IsOpen() then Book.Rebuild() end
     end)
@@ -322,7 +322,7 @@ end
 
 function addon.RefreshSpellbookScale(value)
     if type(value) == "number" then Book.Config().scale = value end
-    if Book.applied then addon:SafeExecute("spellbook", "scale", Book.Refit) end
+    if Book.applied then addon:SafeExecute("spellbook", "scale", Book.ApplyScale) end
 end
 
 Book.On("PLAYER_LOGIN", apply)
