@@ -73,6 +73,9 @@
 
     <!-- Retail-style vendor window reskin -->
     <Include file="merchant\merchant.xml"/>
+
+    <!-- Retail-style quest and gossip dialog reskin -->
+    <Script file="questdialog.lua"/>
     <!-- Spellbook module (own window; takes over the book's keys, micro button and Blizzard's frame after login) -->
     <Include file="spellbook\spellbook.xml"/>
 

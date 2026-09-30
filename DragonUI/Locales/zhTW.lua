@@ -563,6 +563,8 @@ L["Restore the stat categories to their default order?"] = "將屬性分類恢�
 -- MERCHANT MODULE
 L["Merchant"] = "商人"
 L["Retail-style vendor window chrome"] = "商人視窗現代風格"
+L["Quest Dialog"] = "任務對話框"
+L["Retail-style quest and gossip window chrome"] = "任務與對話視窗現代風格"
 L["Sell all junk items"] = "出售所有垃圾物品"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "您即將出售所有垃圾物品，且無法再購買回來。\n\n確定要繼續嗎？"
 L["Sold %d junk item(s)."] = "已售出 %d 件垃圾物品。"

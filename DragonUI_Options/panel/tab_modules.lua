@@ -195,6 +195,12 @@ local function BuildModulesTab(scroll)
         moduleName = "merchant",
     })
 
+    ModuleToggle(uiSection, {
+        label = LO["Quest Dialog"],
+        desc = LO["Retail-style quest and gossip window chrome"],
+        moduleName = "questdialog",
+    })
+
     -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================
@@ -228,6 +234,7 @@ local function BuildModulesTab(scroll)
             rage_indicator = true,
             buffs = true,
             merchant = true,
+            questdialog = true,
             keypress = true,
         }
 

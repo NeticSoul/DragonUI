@@ -632,6 +632,8 @@ L["Restore the stat categories to their default order?"] = "Вернуть ка�
 -- MERCHANT MODULE
 L["Merchant"] = "Торговец"
 L["Retail-style vendor window chrome"] = "Современный интерфейс окна торговца"
+L["Quest Dialog"] = "Диалог заданий"
+L["Retail-style quest and gossip window chrome"] = "Современный интерфейс окон заданий и диалогов"
 L["Sell all junk items"] = "Продать весь хлам"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "Вы собираетесь продать весь хлам и не сможете купить его обратно.\n\nВы уверены, что хотите продолжить?"
 L["Sold %d junk item(s)."] = "Продано %d предмет(а/ов) хлама."

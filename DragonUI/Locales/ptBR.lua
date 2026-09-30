@@ -563,6 +563,8 @@ L["Restore the stat categories to their default order?"] = "Restaurar as categor
 -- MERCHANT MODULE
 L["Merchant"] = "Mercador"
 L["Retail-style vendor window chrome"] = "Marco estilo Retail para a janela do vendedor"
+L["Quest Dialog"] = "Diálogo de missões"
+L["Retail-style quest and gossip window chrome"] = "Marco estilo Retail para as janelas de missão e conversa"
 L["Sell all junk items"] = "Vender todos os itens lixo"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "Você está prestes a vender todos os itens lixo e não poderá mais comprá-los de volta.\n\nTem certeza de que deseja prosseguir?"
 L["Sold %d junk item(s)."] = "Vendido %d item(ns) lixo."

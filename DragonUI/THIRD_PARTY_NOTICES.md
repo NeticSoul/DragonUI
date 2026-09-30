@@ -38,6 +38,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 | `Nameplates/Retail/` | see [Retail nameplate artwork](#retail-nameplate-artwork) |
 | `Nameplates/Totem/` | 3.3.5a spell icons with a new frame |
 | `NewLevelUp/` | retail level-up art |
+| `Quest/` | New Era by Ashgaroth (retail quest-giver icons); `repeatablequesticon` is retail's `DailyActiveQuestIcon` |
 | `Spellbook/` | retail spellbook art contributed by PentSec (pull request #485); cropped to the pieces the book draws and re-encoded (`spellbook-ribbon` kept uncompressed) |
 | `Talents/` | DragonUI_NewEra and New Era by Ashgaroth; `Artifact/` holds Legion-era retail art |
 | `UI/` | RetailUI atlases (`UnitFrame`, `MicroMenu`, `Minimap`, `CastingBar`, `QuestTracker`, `BagSlotsKey`, `CollapseButton`); DragonflightUI and DragonUI_NewEra retail frame chrome; a few 3.3.5a client files |
