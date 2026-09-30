@@ -120,7 +120,7 @@ end
 
 -- The ring is the masthead's own furniture, not part of the insignia, so it stays up with nothing
 -- to frame; only the badge inside it depends on having earned a rank.
-local function updateRing(m)
+local function updateRing(m, ranked)
     local faction = UnitFactionGroup("player")
     local ring = faction and ("honorsystem-portrait-" .. faction:lower())
     -- Only if the ring art is actually installed; the badge stands on its own without it.
@@ -129,6 +129,7 @@ local function updateRing(m)
         -- After, always: SetAtlasTexture re-stamps the atlas's own 50x52 and would undo the size this
         -- pane draws the ring at.
         m.ring:SetSize(RING_W, RING_H)
+        m.ring:SetDesaturated(not ranked)
         m.ring:Show()
     else
         m.ring:Hide()
@@ -138,10 +139,11 @@ end
 local function updateMasthead(m)
     if not m then return end
 
-    updateRing(m)
-
     local name, number = rankInfo()
-    if name and number and number > 0 then
+    local ranked = name and number and number > 0
+    updateRing(m, ranked)
+
+    if ranked then
         m.rank:SetFormattedText("%s  (%s %d)", name, RANK or "Rank", number)
         -- Only for a number vanilla shipped art for: anything else asks for a texture that does not
         -- exist and renders as the green placeholder block.

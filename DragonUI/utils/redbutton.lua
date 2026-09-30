@@ -20,8 +20,15 @@ local STATES = {
 local HL_LEFT, HL_RIGHT, HL_TOP, HL_BOTTOM = 0.001953, 0.863281, 0.190918, 0.253418
 local HL_CAP = (HL_RIGHT - HL_LEFT) * (CAP_W / 441)
 
+-- 3.3.5a's IsEnabled returns 1/0, and 0 is truthy in Lua, so `not IsEnabled()` never fires.
+local function isDisabled(btn)
+    if not btn.IsEnabled then return false end
+    local enabled = btn:IsEnabled()
+    return not enabled or enabled == 0
+end
+
 local function stateOf(btn)
-    if btn.IsEnabled and not btn:IsEnabled() then return "DISABLED" end
+    if isDisabled(btn) then return "DISABLED" end
     if btn.GetButtonState and btn:GetButtonState() == "PUSHED" then return "PUSHED" end
     return "NORMAL"
 end
@@ -106,7 +113,7 @@ function addon.SkinRedButton(btn)
     skin.hlMiddle = highlight(skin.middle, nil, HL_LEFT + HL_CAP, HL_RIGHT - HL_CAP)
 
     btn:HookScript("OnEnter", function(self)
-        if self.IsEnabled and not self:IsEnabled() then return end
+        if isDisabled(self) then return end
         skin.hlLeft:Show(); skin.hlRight:Show(); skin.hlMiddle:Show()
     end)
     btn:HookScript("OnLeave", function(self)
@@ -115,7 +122,7 @@ function addon.SkinRedButton(btn)
         apply(self)
     end)
     btn:HookScript("OnMouseDown", function(self)
-        if self.IsEnabled and not self:IsEnabled() then return apply(self, "DISABLED") end
+        if isDisabled(self) then return apply(self, "DISABLED") end
         apply(self, "PUSHED")
     end)
     -- Next frame: GetButtonState can still read PUSHED inside OnMouseUp, which re-pins the art.
