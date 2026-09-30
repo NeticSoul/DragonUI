@@ -783,6 +783,13 @@ local function refreshSlotButton(slotButton)
     local id = slotButton:GetName()
     if id and id:find('MultiCast', 1, true) then return end
     slotButton:SetNormalTexture(config.assets.normal)
+    -- Blizzard grays an empty slot's hotkey here, and the range recolor below never revisits it.
+    if hotkeyStyle.recolor and not slotButton.rangeTimer then
+        local hotkey = Part(id, 'HotKey')
+        if hotkey and hotkey:GetText() ~= RANGE_INDICATOR then
+            ApplyHotkeyBoundColor(hotkey)
+        end
+    end
 end
 
 function addon.RefreshButtons()
@@ -998,7 +1005,9 @@ local function SetupHooks()
     -- Blizzard ActionButton_OnUpdate paints in-range gray; reassert custom color only when needed.
     if type(_G.ActionButton_OnUpdate) == 'function' then
         hooksecurefunc('ActionButton_OnUpdate', function(self)
-            if not hotkeyStyle.recolor or not IsModuleEnabled() or not self then return end
+            -- Blizzard only repaints the hotkey on the frame it resets rangeTimer, so only recolor then.
+            if not hotkeyStyle.recolor or not self or self.rangeTimer ~= TOOLTIP_UPDATE_TIME then return end
+            if not IsModuleEnabled() then return end
             local name = self:GetName()
             if not name then return end
             local hotkey = _G[name .. 'HotKey']

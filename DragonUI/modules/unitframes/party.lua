@@ -29,6 +29,7 @@ local UnitName, UnitClass = UnitName, UnitClass
 local UnitExists, UnitIsConnected = UnitExists, UnitIsConnected
 local UnitInRange, UnitIsDeadOrGhost = UnitInRange, UnitIsDeadOrGhost
 local MAX_PARTY_MEMBERS = MAX_PARTY_MEMBERS or 4
+local PARTY_UNIT_TOKENS = { "party1", "party2", "party3", "party4" }
 
 -- ===============================================================
 -- MODULE NAMESPACE AND STORAGE
@@ -1689,20 +1690,21 @@ local function SetupPartyHooks()
     end)
 
     -- Additional hook for party member updates (compatible with 3.3.5a)
-    hooksecurefunc("PartyMemberFrame_OnEvent", function(frame, event)
-        if frame and frame:GetName() and frame:GetName():match("^PartyMemberFrame%d+$") then
-            if event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" then
-                local healthbar = _G[frame:GetName() .. 'HealthBar']
-                if healthbar then
-                    UpdateHealthText(healthbar, false)
-                end
+    hooksecurefunc("PartyMemberFrame_OnEvent", function(frame, event, eventUnit)
+        if event ~= "UNIT_HEALTH" and event ~= "UNIT_MAXHEALTH" then return end
+        if not frame or (eventUnit ~= frame.unit and eventUnit ~= PARTY_UNIT_TOKENS[frame:GetID()]) then return end
+        if frame:GetName() and frame:GetName():match("^PartyMemberFrame%d+$") then
+            local healthbar = _G[frame:GetName() .. 'HealthBar']
+            if healthbar then
+                UpdateHealthText(healthbar, false)
             end
         end
     end)
 
-    -- Main hook for class color (simplified)
+    -- These bars hear every unit's health/power events; Blizzard only acts on the bar's own unit.
     hooksecurefunc("UnitFrameHealthBar_Update", function(statusbar, unit)
-        if statusbar and statusbar:GetName() and statusbar:GetName():match("^PartyMemberFrame%dHealthBar$") then
+        if not statusbar or unit ~= statusbar.unit then return end
+        if statusbar:GetName() and statusbar:GetName():match("^PartyMemberFrame%dHealthBar$") then
             -- Drive our overlay from the native bar (read-only); never clip the native texture.
             ApplyHealthBarClipping(statusbar, statusbar:GetValue())
             UpdateHealthText(statusbar, false)
@@ -1711,7 +1713,8 @@ local function SetupPartyHooks()
 
     -- Hook for mana bar (without touching health)
     hooksecurefunc("UnitFrameManaBar_Update", function(statusbar, unit)
-        local id = statusbar and statusbar:GetName()
+        if not statusbar or unit ~= statusbar.unit then return end
+        local id = statusbar:GetName()
             and statusbar:GetName():match("^PartyMemberFrame(%d)ManaBar$")
         if id then
             -- Only path that sees power changes: PartyMemberFrame itself registers no power event.

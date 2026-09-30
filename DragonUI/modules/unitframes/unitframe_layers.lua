@@ -549,8 +549,9 @@ local function afterManaTick(bar)
     end
 end
 
-local function afterHealthUpdate(bar)
-    if not isLive() or not bar then return end
+-- Health bars get every unit's UNIT_HEALTH/UNIT_MAXHEALTH; Blizzard ignores the ones not for bar.unit.
+local function afterHealthUpdate(bar, unit)
+    if not bar or unit ~= bar.unit or not isLive() then return end
     local loss = lossOf[bar]
     if loss then
         kit.LossSyncRange(loss)
@@ -591,9 +592,12 @@ local function afterFrameEvent(frame, event, eventUnit)
     if not isLive() then return end
     local st = layered[frame] or attach(frame)
     if not st then return end
-    paint(st)
+    local unit = unitFor(st)
+    -- No RegisterUnitEvent in 3.3.5a: each frame hears every unit's UNIT_* events, paint reads only its own.
+    if not (eventUnit and unit and eventUnit ~= unit and strfind(event, "^UNIT_")) then
+        paint(st)
+    end
     if SPELLCAST_EVENTS[event] and st.manaBar and eventUnit then
-        local unit = unitFor(st)
         if unit and UnitIsUnit(eventUnit, unit) then
             onSpellcast(st, event, eventUnit)
         end

@@ -450,7 +450,9 @@ local function EngineOnUpdate(_, elapsed)
     if UnitExists("target") and NP.module.comboTargetPlate then
         local host = NP.module.comboTargetPlate._comboHost
         local points = NP.widgets.GetPlayerComboPoints()
-        if points > 0 and points <= 5 and host and host.IsShown and not host:IsShown() then
+        -- With the option off the host stays hidden, and re-syncing it would reflow the plate every frame.
+        if points > 0 and points <= 5 and host and host.IsShown and not host:IsShown()
+            and NP.config.GetCfg().showComboPoints ~= false then
             NP.widgets.SyncComboPoints(NP.module.comboTargetPlate)
         end
     end
@@ -562,7 +564,8 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "UNIT_TARGET" and unit then
         if unit:match("^party%d+$") or unit:match("^raid%d+$") then
-            NP.identity.RefreshGroupTargetMatches()
+            -- A raid fires this many times a second; the engine tick runs one pass before the queues drain.
+            NP.identity.RequestGroupTargetRefresh()
             E.QueueMass(CB.OnUpdateCastbar)
             return
         end
@@ -711,7 +714,10 @@ local function EngineOnEvent(_, event, unit, ...)
         return
     end
     if event == "UNIT_THREAT_SITUATION_UPDATE" then
-        E.QueueMass(CB.OnUpdateThreatSituation)
+        -- The glow is player-relative, and ProcessThreatTransitions already polls every plate in combat.
+        if unit == "player" then
+            E.QueueMass(CB.OnUpdateThreatSituation)
+        end
         return
     end
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then

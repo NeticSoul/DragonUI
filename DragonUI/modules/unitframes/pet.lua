@@ -181,7 +181,11 @@ local function PetFrame_OnUpdate(self, elapsed)
     end
 
     petFrameUpdateThrottle = 0
-    UpdatePetTextSystemUnit()
+    -- Value changes already refresh the text through the SetValue hooks; only a vehicle swap needs this.
+    local textSystem = moduleState.textSystem
+    if textSystem and textSystem.unit ~= (UnitHasVehicleUI("player") and "player" or "pet") then
+        UpdatePetTextSystemUnit()
+    end
 end
 
 -- ===============================================================

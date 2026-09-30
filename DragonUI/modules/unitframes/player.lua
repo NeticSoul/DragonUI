@@ -3119,7 +3119,8 @@ HideBlizzardPlayerTexts()
 
 -- Druid alternate mana bar: Blizzard updates the bar but never our text on it
 hooksecurefunc("UnitFrameManaBar_Update", function(statusbar, unit)
-    if unit ~= "player" then
+    -- Every unit frame's mana bar also runs this for the player's power events; one is enough.
+    if unit ~= "player" or statusbar ~= PlayerFrameManaBar then
         return
     end
     local _, playerClass = UnitClass("player")

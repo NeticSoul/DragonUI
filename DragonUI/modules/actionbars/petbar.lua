@@ -355,11 +355,10 @@ local function CreateEventFrame()
         PLAYER_CONTROL_LOST = true,
         PLAYER_CONTROL_GAINED = true,
         PLAYER_FARSIGHT_FOCUS_CHANGED = true,
-        UNIT_FLAGS = true,
     }
 
-    -- These two only count for one unit; every other event is unit-agnostic.
-    local unitFilteredEvents = { UNIT_PET = 'player', UNIT_AURA = 'pet' }
+    -- Only one unit matters for these, but without RegisterUnitEvent they arrive for every unit.
+    local unitFilteredEvents = { UNIT_PET = 'player', UNIT_AURA = 'pet', UNIT_FLAGS = 'pet' }
 
     local function RefreshesSlotState(eventName, unit)
         local wantedUnit = unitFilteredEvents[eventName]
@@ -370,6 +369,8 @@ local function CreateEventFrame()
     end
 
     local function OnEvent(_, eventName, unit)
+        local wantedUnit = unitFilteredEvents[eventName]
+        if wantedUnit and unit ~= wantedUnit then return end
         if not IsModuleEnabled() then return end
         if addon.EditorMode and addon.EditorMode:IsActive() then return end
 

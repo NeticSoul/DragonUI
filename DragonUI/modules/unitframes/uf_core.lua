@@ -179,20 +179,33 @@ UF.CLASSIC_CLASS_ICON_INSET = 0.012
 -- ============================================================================
 -- Returns config table with database defaults as metatable fallback.
 
+-- Called every frame by some OnUpdates, so one metatable per unit key instead of one per call.
+local configMetatables = {}
+local NO_DEFAULTS = {}
+
 function UF.GetConfig(unitKey)
-    local config = {}
+    local config
     if addon.GetConfigValue then
-        config = addon:GetConfigValue("unitframe", unitKey) or {}
+        config = addon:GetConfigValue("unitframe", unitKey)
     elseif addon.db and addon.db.profile and addon.db.profile.unitframe then
-        config = addon.db.profile.unitframe[unitKey] or {}
+        config = addon.db.profile.unitframe[unitKey]
     end
+    config = config or {}
 
     local defaults = addon.defaults
         and addon.defaults.profile
         and addon.defaults.profile.unitframe
-        and addon.defaults.profile.unitframe[unitKey] or {}
+        and addon.defaults.profile.unitframe[unitKey] or NO_DEFAULTS
 
-    return setmetatable(config, { __index = defaults })
+    local mt = configMetatables[unitKey or false]
+    if not mt or mt.__index ~= defaults then
+        mt = { __index = defaults }
+        configMetatables[unitKey or false] = mt
+    end
+    if getmetatable(config) ~= mt then
+        setmetatable(config, mt)
+    end
+    return config
 end
 
 function UF.IsEnabled(unitKey)

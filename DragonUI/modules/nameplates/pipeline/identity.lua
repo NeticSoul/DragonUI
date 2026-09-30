@@ -1067,6 +1067,9 @@ function identity.TickGroupTargetMatches()
     end
 end
 
+-- A raid mostly shares a few targets: fingerprint each mob against the plates once per pass.
+local groupTargetSeen = {}
+
 function identity.RefreshGroupTargetMatches()
     NP.module._groupTargetMatchDirty = nil
     NP.module._groupTargetMatchAt = GetTime and GetTime() or 0
@@ -1075,8 +1078,16 @@ function identity.RefreshGroupTargetMatches()
             plateData._matchedCastUnit = nil
         end
     end
+    wipe(groupTargetSeen)
     local tapEnabled = NP.tap and NP.tap.IsEnabled()
     ForEachGroupTargetUnit(function(unit)
+        local guid = UnitGUID(unit)
+        if guid then
+            if groupTargetSeen[guid] then
+                return
+            end
+            groupTargetSeen[guid] = true
+        end
         if tapEnabled then
             NP.tap.UpdateFromUnit(unit)
         end
@@ -1084,7 +1095,6 @@ function identity.RefreshGroupTargetMatches()
         if owner then
             owner._matchedCastUnit = unit
             if not NP.state.GetPlateGUID(owner) then
-                local guid = UnitGUID(unit)
                 if guid then
                     NP.state.SetPlateGUID(owner, guid, {
                         source = "GROUP_TARGET",

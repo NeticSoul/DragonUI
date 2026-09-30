@@ -2674,16 +2674,21 @@ local function SetupBlizzardLayoutHooks()
 
     -- DragonflightUI pattern: sync to Blizzard's final spellbar positioning callback.
     if type(Target_Spellbar_AdjustPosition) == "function" then
+        -- Runs on every target/focus UNIT_AURA; an idle bar is re-laid out anyway when its next cast starts.
+        local function IsShowing(unitType)
+            local container = CastbarModule.frames[unitType] and CastbarModule.frames[unitType].container
+            return container and container:IsShown()
+        end
         hooksecurefunc("Target_Spellbar_AdjustPosition", function(spellbar)
             if CastbarModule.suppressLayoutHook then
                 return
             end
             if spellbar == TargetFrameSpellBar then
-                if IsEnabled("target") then
+                if IsEnabled("target") and IsShowing("target") then
                     CastbarModule:RefreshCastbar("target")
                 end
             elseif spellbar == FocusFrameSpellBar then
-                if IsEnabled("focus") then
+                if IsEnabled("focus") and IsShowing("focus") then
                     CastbarModule:RefreshCastbar("focus")
                 end
             end
