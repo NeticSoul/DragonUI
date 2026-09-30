@@ -283,6 +283,12 @@ local function build()
     pane:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL)
     pane:Hide()
 
+    -- A plain frame passes clicks to the world; this one sits under every widget and catches the gaps.
+    local catcher = CreateFrame("Frame", nil, pane)
+    catcher:SetAllPoints(pane)
+    catcher:SetFrameLevel(cf:GetFrameLevel())
+    catcher:EnableMouse(true)
+
     -- Kept out of CHARACTERFRAME_SUBFRAMES: writing to that table taints the loop ToggleCharacter runs.
     hooksecurefunc("CharacterFrame_ShowSubFrame", function(frameName)
         local mine = frameName == FRAME_NAME
