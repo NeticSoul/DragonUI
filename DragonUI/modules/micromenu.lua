@@ -1973,6 +1973,9 @@ local function layoutMicroButtons(xOffset)
         end
     end
 
+    -- Above MainMenuBarArtFrame (MainMenuBar+1), whose classic art otherwise covers the buttons.
+    menu:SetFrameLevel(MainMenuBar:GetFrameLevel() + 2)
+
     for i = 1, #MICRO_BUTTONS do
         local button = MICRO_BUTTONS[i]
         if button and not button.dragonUISuppressed then
