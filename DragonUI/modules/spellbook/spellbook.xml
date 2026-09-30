@@ -5,6 +5,7 @@
     <Script file="book_layout.lua"/>
     <Script file="book_frame.lua"/>
     <Script file="book_slots.lua"/>
+    <Script file="book_bars.lua"/>
     <Script file="book_secure.lua"/>
     <Script file="book_ranks.lua"/>
     <Script file="book_flyout.lua"/>

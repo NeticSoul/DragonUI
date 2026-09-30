@@ -193,6 +193,7 @@ function Book.WindowShown()
     UpdateMicroButtons()
     UIErrorsFrame:Raise()
     Book.StartFlashes()
+    Book.SyncLayer()
 end
 
 local function insideBook(frame)
@@ -211,6 +212,8 @@ function Book.WindowHidden()
     Book.CloseMenu()
     Book.search:ClearFocus()
     if insideBook(GameTooltip:GetOwner()) then GameTooltip:Hide() end
+    Book.ClearMarks()
+    Book.SyncLayer()
     Book.HideActionGrids()
     UpdateMicroButtons()
 end
@@ -223,6 +226,7 @@ local function combatStarts()
     Book.CloseRanks()
     Book.CloseMenu()
     Book.search:ClearFocus()
+    Book.LiftLayer()
     -- Last moment the secure tables can change before any category is switched to in combat.
     if next(Book.dirty) and not Book.Locked() then Book.Rebuild() end
 end
@@ -232,6 +236,7 @@ local function combatEnds()
     Book.MenuClosed()
     Book.ReclaimBlizzardBook()
     Book.PlaceMicroCatcher()
+    Book.SyncLayer()
 end
 
 local function contentChanged()
@@ -274,6 +279,7 @@ local function listenToGame()
     Book.On("DISPLAY_SIZE_CHANGED", rescale)
     Book.On("PLAYER_REGEN_DISABLED", combatStarts)
     Book.On("PLAYER_REGEN_ENABLED", combatEnds)
+    Book.ListenToBars()
 end
 
 -- Lifecycle ---------------------------------------------------------------------------------------

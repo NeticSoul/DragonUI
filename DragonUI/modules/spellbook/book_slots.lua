@@ -4,7 +4,7 @@ local addon = select(2, ...)
 local Book = addon.SpellbookModule
 local tr = addon.L
 
-local floor, max, ipairs, pairs, next, tonumber = math.floor, math.max, ipairs, pairs, next, tonumber
+local floor, max, ipairs, pairs, next = math.floor, math.max, ipairs, pairs, next
 local tip = GameTooltip
 
 local cards, headers = {}, {}
@@ -129,20 +129,6 @@ local function sparkStep(elapsed)
         end
     end
     return any
-end
-
--- Action bars -------------------------------------------------------------------------------------
-
-function Book.ScanActionBars()
-    local bound = {}
-    for action = 1, 120 do
-        local kind, index, _, spellID = GetActionInfo(action)
-        if kind == "spell" then
-            local name = tonumber(spellID) and GetSpellInfo(tonumber(spellID)) or GetSpellName(index, "spell")
-            if name then bound[name] = true end
-        end
-    end
-    Book.bound = bound
 end
 
 -- Card construction -------------------------------------------------------------------------------
@@ -371,7 +357,7 @@ local function paintStates(card, jobs)
     end
     if jobs.glow then
         local lonely = Book.Config().highlightUnbound and entry.book == "spell" and not entry.passive
-            and not Book.bound[entry.name]
+            and not Book.IsBound(entry.name)
         card.glow:SetShownCompat(lonely)
         if lonely then Book.Animate("glow", glowStep) end
     end
@@ -510,6 +496,7 @@ function Book.RefreshHoverTooltip()
         end
     end
     if hovered then return Book.CardEnter(hovered) end
+    Book.MarkBars(nil)
     local owner = tip:GetOwner()
     for slot = 1, Book.SLOTS do
         if owner ~= nil and owner == cards[slot] then return tip:Hide() end
@@ -543,6 +530,7 @@ function Book.CardEnter(card)
     local shown = card.entry
     if shown == nil then return end
     Book.SetCardPointer(card, true, card.pressed)
+    Book.MarkBars(shown)
     tip:SetOwner(card, "ANCHOR_RIGHT")
     local keepFresh
     if shown.grey then
@@ -564,6 +552,7 @@ end
 
 function Book.CardLeave(card)
     Book.SetCardPointer(card, false, false)
+    Book.MarkBars(nil)
     if tip:IsOwned(card) then tip:Hide() end
 end
 

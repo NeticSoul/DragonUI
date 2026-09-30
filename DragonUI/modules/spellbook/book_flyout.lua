@@ -178,6 +178,7 @@ end
 local function rungEnter(rung)
     rung.art.lit:Show()
     if not rung.rank then return end
+    Book.MarkBars(rung.rank, rung)
     tip:SetOwner(rung, "ANCHOR_LEFT")
     tip:SetSpell(rung.rank.index, "spell")
     tip:Show()
@@ -185,6 +186,7 @@ end
 
 local function rungLeave(rung)
     rung.art.lit:Hide()
+    Book.MarkBars(nil)
     if tip:IsOwned(rung) then tip:Hide() end
 end
 

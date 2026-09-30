@@ -1959,6 +1959,16 @@ function addon.RefreshExtrabarFrame()
     ExtraBar1:RefreshFrame()
 end
 
+function addon.ForEachExtrabarButton(visit)
+    for _, bar in ipairs(bars) do
+        if bar.applied then
+            for _, button in pairs(bar.buttons) do
+                visit(button, button:GetSlotData())
+            end
+        end
+    end
+end
+
 local function RequestRefreshAll()
     for _, bar in ipairs(bars) do
         if bar.applied then bar:RequestRefresh() end

@@ -22,6 +22,7 @@ local owner, hooked
 
 local function rankTip(tip, entry)
     tip:SetSpell(entry.rank.index, "spell")
+    Book.MarkBars(entry.rank, tip:GetOwner())
 end
 
 -- The catalog lists lower ranks from the one just below the card down to rank 1; rows keep that.
