@@ -80,8 +80,9 @@ local function GetDynamicAnchor()
     -- MultiBarBottomRight = "Bottom Right Action Bar" in Blizzard UI options
     -- MultiBarBottomLeft = "Bottom Left Action Bar" in Blizzard UI options
     
+    -- Offsets net out each bar's own shift so the totems sit 3px higher, level with pet/stance.
     if MultiBarBottomRight and MultiBarBottomRight:IsShown() then
-        return MultiBarBottomRight, 'BOTTOMLEFT', 'TOPLEFT', 0, 2
+        return MultiBarBottomRight, 'BOTTOMLEFT', 'TOPLEFT', 0, 1
     elseif MultiBarBottomLeft and MultiBarBottomLeft:IsShown() then
         return MultiBarBottomLeft, 'BOTTOMLEFT', 'TOPLEFT', 0, 2
     else

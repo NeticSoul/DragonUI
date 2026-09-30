@@ -488,6 +488,10 @@ function addon.ApplyWidgetPositionFromDB(widgetKey, frame)
     local posX = cfg.posX or 0
     local posY = cfg.posY or 0
 
+    if addon.ResolveWidgetDefaultY then
+        posY = addon.ResolveWidgetDefaultY(widgetKey, posY)
+    end
+
     if addon._dualBarOffsetWidgets and addon._dualBarOffsetWidgets[widgetKey]
        and addon.GetDualBarVerticalOffset and addon.IsWidgetAtDefaultPosition
        and addon.IsWidgetAtDefaultPosition(widgetKey) then

@@ -77,7 +77,7 @@ local defaults = {
             petbar = {
                 anchor = "BOTTOM",
                 posX = 1,
-                posY = 143
+                posY = 146
             },
             playerCastbar = {
                 anchor = "BOTTOM",
@@ -113,12 +113,12 @@ local defaults = {
             bottombarleft = {
                 anchor = "BOTTOM",
                 posX = 0,
-                posY = 64
+                posY = 67
             },
             bottombarright = {
                 anchor = "BOTTOM",
                 posX = 0,
-                posY = 102
+                posY = 106
             },
             micromenu = {
                 anchor = "BOTTOMRIGHT",
@@ -444,7 +444,7 @@ local defaults = {
             spacing = 6,
             stance = {
                 x_position = -211,
-                y_offset = -58, -- Additional Y offset for fine-tuning position
+                y_offset = -55, -- Additional Y offset for fine-tuning position
                 button_size = 31, -- Size of stance buttons (native Blizzard size)
                 button_spacing = 6, -- Spacing between stance buttons
                 show_hotkey = false,

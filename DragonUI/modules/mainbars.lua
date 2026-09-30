@@ -422,13 +422,33 @@ local IsWidgetAtDefaultPosition
 -- Keep in sync with database.lua's widgets defaults; a saved position equal to these was never moved.
 local defaultBottomPositions = {
     mainbar         = { posX = 0,    posY = 22  },
-    bottombarleft   = { posX = 0,    posY = 64  },
-    bottombarright  = { posX = 0,    posY = 102 },
-    petbar          = { posX = 1,    posY = 143 },
+    bottombarleft   = { posX = 0,    posY = 67  },
+    bottombarright  = { posX = 0,    posY = 106 },
+    petbar          = { posX = 1,    posY = 146 },
     vehicleExit     = { posX = -251, posY = 145 },
     xpbar           = { posX = 1,    posY = 7   },
     repbar          = { posX = 1,    posY = 23  },
 }
+-- Art hidden: only bare buttons show; left/right sit closer so gaps main/left/right match (12x1 at 0.9).
+local hiddenBackgroundBottomY = { bottombarleft = 64.35, bottombarright = 104 }
+
+local function IsMainBarBackgroundHidden()
+    local buttons = addon.db and addon.db.profile and addon.db.profile.buttons
+    return buttons and buttons.hide_main_bar_background
+end
+
+local function NearBaseY(savedY, baseY, maxOffset)
+    return math.abs(savedY - baseY) <= 1 or math.abs(savedY - (baseY + maxOffset)) <= 1
+end
+
+-- Y for a bar still at its default spot; a moved bar keeps whatever it has.
+local function ResolveDefaultBarY(widgetName, posY)
+    local hiddenY = hiddenBackgroundBottomY[widgetName]
+    if hiddenY and IsMainBarBackgroundHidden() and IsWidgetAtDefaultPosition(widgetName) then
+        return hiddenY
+    end
+    return posY
+end
 local dfXpBar = nil   -- custom XP bar frame
 local dfRepBar = nil  -- custom Rep bar frame
 local mainBarFrame, mainBarArt, UpdateGryphonStyle, xpRepEventFrame, mainbarsEventFrame
@@ -1996,7 +2016,7 @@ local function ApplyActionBarPositions()
 
             if barData.frame and barData.config and barData.config.anchor then
                 local config = barData.config
-                local finalY = xpHiddenRepOverrideY or config.posY
+                local finalY = xpHiddenRepOverrideY or ResolveDefaultBarY(barData.name, config.posY)
                 barData.frame:ClearAllPoints()
                 barData.frame:SetPoint(config.anchor, config.posX, finalY + extraY)
             elseif barData.frame then
@@ -2348,11 +2368,13 @@ local function InitializeMainbars()
         -- Check against base + max possible offset (bar height + 2px gap)
         local maxOffset = GetXpBarHeight() + 2
         if math.abs(savedY - (known.posY + maxOffset)) <= 1 then return true end
-        return false
+        local hiddenY = hiddenBackgroundBottomY[widgetName]
+        return not not (hiddenY and IsMainBarBackgroundHidden() and NearBaseY(savedY, hiddenY, maxOffset))
     end
 
     addon.GetDualBarVerticalOffset = GetDualBarVerticalOffset
     addon.IsWidgetAtDefaultPosition = IsWidgetAtDefaultPosition
+    addon.ResolveWidgetDefaultY = ResolveDefaultBarY
     addon.RefreshXpRepBars = RefreshXpRepBars
     addon.UpdateExhaustionTick = RefreshXpRepBars
     addon.ApplyActionBarPositions = ApplyActionBarPositions
