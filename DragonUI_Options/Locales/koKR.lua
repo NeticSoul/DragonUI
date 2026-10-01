@@ -1260,6 +1260,7 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "�
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "테두리 스타일"
+L["Detailed"] = "정교한"
 L["Rounded"] = "둥근 모서리"
 L["Square"] = "각진 모서리"
 

@@ -1337,6 +1337,7 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "Mo
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "Estilo del borde"
+L["Detailed"] = "Detallado"
 L["Rounded"] = "Redondeado"
 L["Square"] = "Cuadrado"
 

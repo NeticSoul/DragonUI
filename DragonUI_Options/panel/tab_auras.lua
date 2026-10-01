@@ -217,6 +217,15 @@ local function RefreshAuraBorders()
     end
 end
 
+-- Dropdown index order; options dropdowns list entries by key.
+local BORDER_STYLES = { "detailed", "rounded", "square" }
+
+-- Detailed keeps the untinted action-bar art, so the buff color only drives Rounded and Square.
+local function IsBuffColorDisabled()
+    local style = GetAuraBordersField("border_style")
+    return not IsAuraBordersEnabled() or (style ~= "rounded" and style ~= "square")
+end
+
 local function BuildAurasTab(scroll)
     -- ====================================================================
     -- AURA BORDERS
@@ -238,24 +247,36 @@ local function BuildAurasTab(scroll)
         requiresReload = false,
     })
 
+    local buffColorPicker
+
     C:AddDropdown(borderSection, {
         label = LO["Border Style"],
         values = {
-            [1] = LO["Rounded"],
-            [2] = LO["Square"],
+            [1] = LO["Detailed"],
+            [2] = LO["Rounded"],
+            [3] = LO["Square"],
         },
         getFunc = function()
-            return GetAuraBordersField("custom_border") and 1 or 2
+            local style = GetAuraBordersField("border_style")
+            for index, key in ipairs(BORDER_STYLES) do
+                if key == style then return index end
+            end
+            return 1
         end,
         setFunc = function(val)
-            C:EnsureModuleTable("auraborders").custom_border = (val == 1)
+            C:EnsureModuleTable("auraborders").border_style = BORDER_STYLES[val] or BORDER_STYLES[1]
         end,
-        callback = RefreshAuraBorders,
+        callback = function()
+            RefreshAuraBorders()
+            if buffColorPicker and buffColorPicker.SetDisabled then
+                buffColorPicker:SetDisabled(IsBuffColorDisabled())
+            end
+        end,
         disabled = function() return not IsAuraBordersEnabled() end,
         width = 200,
     })
 
-    C:AddColorPicker(borderSection, {
+    buffColorPicker = C:AddColorPicker(borderSection, {
         label = LO["Buff Border Color"],
         getFunc = function()
             local c = GetAuraBordersField("buff_color")
@@ -269,7 +290,7 @@ local function BuildAurasTab(scroll)
             ab.buff_color_user_override = true
         end,
         callback = RefreshAuraBorders,
-        disabled = function() return not IsAuraBordersEnabled() end,
+        disabled = IsBuffColorDisabled,
         hasAlpha = false,
     })
 

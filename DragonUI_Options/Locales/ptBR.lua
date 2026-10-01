@@ -640,6 +640,7 @@ L["Glow Intensity"] = "Intensidade do Brilho"
 L["Opacity of the quality ring on item slots."] = "Opacidade do anel de qualidade nos espaços de item."
 L["Quality Filter Row"] = "Linha de Filtro de Qualidade"
 L["Show the rarity filter dots at the bottom of the bag frame."] = "Mostra os pontos de filtro de raridade na parte inferior da janela das bolsas."
+L["Detailed"] = "Detalhado"
 L["Rounded"] = "Arredondado"
 L["Square"] = "Quadrado"
 

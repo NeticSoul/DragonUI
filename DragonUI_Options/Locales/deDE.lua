@@ -1256,6 +1256,7 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "Ze
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "Rahmenstil"
+L["Detailed"] = "Detailliert"
 L["Rounded"] = "Abgerundet"
 L["Square"] = "Eckig"
 

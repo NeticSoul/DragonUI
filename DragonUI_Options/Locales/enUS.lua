@@ -145,6 +145,7 @@ L["Enable Aura Borders"] = true
 L["Show modern borders around buff and debuff icons."] = true
 L["Buff Border Color"] = true
 L["Border Style"] = true
+L["Detailed"] = true
 L["Rounded"] = true
 L["Square"] = true
 L["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can drag to any position on screen."] = true

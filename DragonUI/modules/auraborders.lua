@@ -28,6 +28,20 @@ end
 local BORDER_TEXTURE = "Interface\\Buttons\\WHITE8X8"
 local FRAME_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe_white.tga"
 
+local DETAILED_BUFF_TEXTURE = addon._dir .. "ActionBars\\uiactionbar2x_new"
+local DETAILED_BUFF_COORDS = { 359 / 512, 451 / 512, 649 / 2048, 739 / 2048 }
+local DETAILED_DEBUFF_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe2x_white"
+local DETAILED_DEBUFF_COORDS = { 0, 92 / 128, 0, 90 / 128 }
+
+-- Detailed copies BuffsBorders (#498) as-is: art sized off a 45px icon, unscaled corner offset.
+local DETAILED_REF = 45
+local DETAILED_SCALE = 1.14
+local DETAILED_WIDTH, DETAILED_HEIGHT = 46, 45
+local DETAILED_X, DETAILED_Y = -1.4, 1.4
+
+local ICON_CROP = 0.05
+local DETAILED_ICON_CROP = 0.06
+
 local PLAYER_BUFF   = { thickness = 1.5, overhang = 1 }
 local PLAYER_DEBUFF = { thickness = 1.5, overhang = 1 }
 local UNIT_BUFF     = { thickness = 1,   overhang = 0.5 }
@@ -68,9 +82,13 @@ local function IsEnabled()
     return addon:IsModuleEnabled("auraborders")
 end
 
-local function IsRoundedBorderEnabled()
+local function GetBorderStyle()
     local cfg = GetConfig()
-    return cfg and cfg.custom_border == true
+    local style = cfg and cfg.border_style
+    if style == "rounded" or style == "square" then
+        return style
+    end
+    return "detailed"
 end
 
 local function GetBuffColor()
@@ -176,13 +194,13 @@ local function FitCooldown(button, size)
     return cd
 end
 
-local function FitAuraChrome(button, icon)
+local function FitAuraChrome(button, icon, crop)
     local size = button:GetWidth() or BAR_REF
 
     -- Same as buttons.lua main_buttons: flush icon + bevel crop.
     icon:ClearAllPoints()
     icon:SetAllPoints(button)
-    icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+    icon:SetTexCoord(crop, 1 - crop, crop, 1 - crop)
     if not button.duiIconOrigLayer then
         button.duiIconOrigLayer = icon:GetDrawLayer() or "BACKGROUND"
     end
@@ -204,6 +222,16 @@ local function FitAuraChrome(button, icon)
     return FitCooldown(button, size)
 end
 
+local function LayoutDetailedChrome(button)
+    local size = button:GetWidth()
+    if not size or size <= 0 then size = DETAILED_REF end
+    local scale = size / DETAILED_REF * DETAILED_SCALE
+    local skin = button.duiSkin
+    skin.art:SetSize(DETAILED_WIDTH * scale, DETAILED_HEIGHT * scale)
+    skin.art:ClearAllPoints()
+    skin.art:SetPoint("TOPLEFT", skin, "TOPLEFT", DETAILED_X, DETAILED_Y)
+end
+
 -- Blizzard resets aura size (17/21) each update before target.lua's resize hook; refit on every size write.
 local function RefitChrome(button)
     if not AuraBordersModule.applied or not styledButtons[button] then return end
@@ -214,6 +242,23 @@ local function RefitChrome(button)
     if button.duiHost and button.duiFrame and button.duiFrame:IsShown() then
         AnchorHostToButton(button.duiHost, button)
     end
+    if button.duiSkin and button.duiSkin:IsShown() then
+        LayoutDetailedChrome(button)
+    end
+end
+
+-- Above the Cooldown, below auracooldowns' text holder (+15).
+local function GetChromeLevel(button)
+    local base = button:GetFrameLevel() + 1
+    local name = button.GetName and button:GetName()
+    local cd = name and _G[name .. "Cooldown"]
+    if cd and cd.GetFrameLevel then
+        local cdLevel = cd:GetFrameLevel()
+        if cdLevel >= base then
+            base = cdLevel
+        end
+    end
+    return base + 5
 end
 
 local function ReparentChromeHost(button)
@@ -232,16 +277,7 @@ local function ReparentChromeHost(button)
         host:SetFrameStrata(strata)
     end
 
-    local base = button:GetFrameLevel() + 1
-    local name = button.GetName and button:GetName()
-    local cd = name and _G[name .. "Cooldown"]
-    if cd and cd.GetFrameLevel then
-        local cdLevel = cd:GetFrameLevel()
-        if cdLevel >= base then
-            base = cdLevel
-        end
-    end
-    host:SetFrameLevel(base + 5)
+    host:SetFrameLevel(GetChromeLevel(button))
 end
 
 -- Sibling as a sibling (not a child): mirror Show/Hide/SetParent and apply compensated
@@ -260,7 +296,7 @@ local function EnsureChromeVisibilitySync(button)
         end
     end)
     hooksecurefunc(button, "Show", function(self)
-        if self.duiHost and AuraBordersModule.applied and styledButtons[self] then
+        if self.duiHost and AuraBordersModule.applied and styledButtons[self] and self.duiStyle ~= "detailed" then
             SyncChromeAlpha(self)
             self.duiHost:Show()
         end
@@ -322,12 +358,34 @@ local function EnsureSquareChrome(button, isDebuff, isUnit, cd)
     return button.duiSlice
 end
 
-local function EnsureBorder(button, isDebuff, isUnit)
+-- A child rather than the sibling host, so it fades fully with the expiry pulse like BuffsBorders.
+local function EnsureDetailedChrome(button, isDebuff)
+    local skin = button.duiSkin
+    if not skin then
+        skin = CreateFrame("Frame", nil, button)
+        skin:SetAllPoints(button)
+        skin.art = skin:CreateTexture(nil, "ARTWORK")
+        button.duiSkin = skin
+    end
+    skin:SetFrameLevel(GetChromeLevel(button))
+
+    if skin.isDebuff ~= isDebuff then
+        local c = isDebuff and DETAILED_DEBUFF_COORDS or DETAILED_BUFF_COORDS
+        skin.art:SetTexture(isDebuff and DETAILED_DEBUFF_TEXTURE or DETAILED_BUFF_TEXTURE)
+        skin.art:SetTexCoord(c[1], c[2], c[3], c[4])
+        skin.isDebuff = isDebuff
+    end
+
+    LayoutDetailedChrome(button)
+    return skin
+end
+
+local function EnsureBorder(button, isDebuff, isUnit, style)
     local name = button.GetName and button:GetName()
     local icon = button.duiAuraIcon or button.icon or (name and _G[name .. "Icon"])
     if not icon then return nil end
 
-    local cd = FitAuraChrome(button, icon)
+    local cd = FitAuraChrome(button, icon, style == "detailed" and DETAILED_ICON_CROP or ICON_CROP)
     button.duiAuraIcon = icon
     styledButtons[button] = true
 
@@ -338,7 +396,9 @@ local function EnsureBorder(button, isDebuff, isUnit)
         button.duiSizeHooked = true
     end
 
-    if IsRoundedBorderEnabled() then
+    if style == "detailed" then
+        EnsureDetailedChrome(button, isDebuff)
+    elseif style == "rounded" then
         EnsureFrameChrome(button, cd)
     else
         EnsureSquareChrome(button, isDebuff, isUnit, cd)
@@ -353,6 +413,9 @@ local function RestoreButton(button)
     end
     if button.duiFrame then
         button.duiFrame:Hide()
+    end
+    if button.duiSkin then
+        button.duiSkin:Hide()
     end
     if button.duiAuraIcon then
         button.duiAuraIcon:SetTexCoord(0, 1, 0, 1)
@@ -401,7 +464,8 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
         return
     end
 
-    if not EnsureBorder(button, isDebuff, isUnit) then return end
+    local style = GetBorderStyle()
+    if not EnsureBorder(button, isDebuff, isUnit, style) then return end
 
     if not isUnit and not button.duiDurMoved then
         local name = button.GetName and button:GetName()
@@ -422,6 +486,14 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
             local none = DebuffTypeColor and DebuffTypeColor["none"]
             r, g, b = none and none.r or 0.8, none and none.g or 0, none and none.b or 0
         end
+    elseif style == "detailed" then
+        -- Untinted action-bar art; dark mode shades it exactly as it shades the action buttons.
+        local tint = addon.GetDarkModeTint and addon.GetDarkModeTint()
+        if tint then
+            r, g, b = tint[1], tint[2], tint[3]
+        else
+            r, g, b = 1, 1, 1
+        end
     else
         r, g, b = GetBuffColor()
     end
@@ -431,8 +503,16 @@ local function StyleAura(button, isDebuff, stockBorderName, isUnit)
         button.duiStockBorder = stock
     end
 
-    local rounded = IsRoundedBorderEnabled()
-    if rounded then
+    button.duiStyle = style
+    if style == "detailed" then
+        if button.duiHost then button.duiHost:Hide() end
+        button.duiSkin.art:SetVertexColor(r, g, b, 1)
+        button.duiSkin:Show()
+        return
+    end
+    if button.duiSkin then button.duiSkin:Hide() end
+
+    if style == "rounded" then
         if button.duiSlice then
             button.duiSlice.top:SetAlpha(0)
             button.duiSlice.bottom:SetAlpha(0)
@@ -545,10 +625,21 @@ local function RestyleAll()
     end
 end
 
--- Rounded chrome overhangs 2.2*size/37 per side; report how much the stock 3px aura gap falls short.
+-- Report how much the stock 3px aura gap falls short of the chrome's combined overhang.
 function addon.GetAuraChromeGap(size)
-    if not AuraBordersModule.applied or not IsRoundedBorderEnabled() then return 0 end
-    local deficit = 2 * 2.2 * ((size or BAR_REF) / BAR_REF) - 3
+    if not AuraBordersModule.applied then return 0 end
+    size = size or BAR_REF
+    local style = GetBorderStyle()
+    local overhang
+    if style == "rounded" then
+        overhang = 2 * 2.2 * (size / BAR_REF)
+    elseif style == "detailed" then
+        -- The visible ring spans 85 of the cell's 92 art pixels, drawn at half size (2x art).
+        overhang = 85 / 2 * size / DETAILED_REF * DETAILED_SCALE - size
+    else
+        return 0
+    end
+    local deficit = overhang - 3
     if deficit <= 0 then return 0 end
     return math.ceil(deficit)
 end

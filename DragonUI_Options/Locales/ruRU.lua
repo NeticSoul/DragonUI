@@ -1257,6 +1257,7 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "П
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "Стиль рамки"
+L["Detailed"] = "Детальный"
 L["Rounded"] = "Скруглённый"
 L["Square"] = "Прямоугольный"
 

@@ -1214,6 +1214,7 @@ L["Showing top %d results. Type at least 3 characters for the full list."] = "�
 
 -- Aura Borders: border style dropdown
 L["Border Style"] = "边框样式"
+L["Detailed"] = "精细"
 L["Rounded"] = "圆角"
 L["Square"] = "方形"
 

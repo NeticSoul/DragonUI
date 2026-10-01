@@ -1332,6 +1332,15 @@ function addon:ApplyDatabaseMigrations()
         nameplates.showHealthNumber, nameplates.showHealthPercent = nil, nil
     end
 
+    -- Aura borders: the rounded/square flag became a style; only an explicit square survives the new default.
+    local auraborders = modules and rawget(modules, "auraborders")
+    if auraborders and rawget(auraborders, "custom_border") ~= nil then
+        if auraborders.custom_border == false then
+            auraborders.border_style = "square"
+        end
+        auraborders.custom_border = nil
+    end
+
     -- profile.chat had no readers left; clear stored values now that the default is gone.
     if rawget(profile, "chat") ~= nil then
         profile.chat = nil
