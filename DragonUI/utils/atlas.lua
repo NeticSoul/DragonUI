@@ -698,8 +698,9 @@ local atlasinfo = {
 	['questcollapse-show-down'] = { rui_MapCollapse, 32, 32, 32/256, 64/256, 0, 32/128 },
 	['questcollapse-hide-up'] = { rui_MapCollapse, 32, 32, 0, 32/256, 32/128, 64/128 },
 	['questcollapse-hide-down'] = { rui_MapCollapse, 32, 32, 32/256, 64/256, 32/128, 64/128 },
-	['mapcornershadow-right'] = { rui_MapCollapse, 46, 53, 64/256, 110/256, 0, 53/128 },
-	['mapcornershadow-left'] = { rui_MapCollapse, 182, 30, 0, 182/256, 64/128, 94/128 },
+	-- One texel off the button cells: bilinear filtering bled their opaque edge in as a thin line.
+	['mapcornershadow-right'] = { rui_MapCollapse, 45, 53, 65/256, 110/256, 0, 53/128 },
+	['mapcornershadow-left'] = { rui_MapCollapse, 182, 29, 0, 182/256, 65/128, 94/128 },
 
 	-- Talents (Textures/Talents/): node frames, footer and war mode pieces share one sheet (retail 4556093).
 	['talents-background-bottombar-left'] = { rui_TalentsPack, 806, 82, 3/1024, 809/1024, 209/512, 291/512 },
