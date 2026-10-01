@@ -209,6 +209,13 @@ local function GetDetachedResetActionForSelection()
                 addon.BuffFrameModule:ResetBuffFramePosition()
             end, frameData
         end
+    elseif frameName == "durability" then
+        local cfg = addon.db.profile.widgets and addon.db.profile.widgets.durability
+        if cfg and cfg.custom_position and addon.MinimapModule and addon.MinimapModule.ResetDurabilityPosition then
+            return function()
+                addon.MinimapModule:ResetDurabilityPosition()
+            end, frameData
+        end
     end
 
     return nil, frameData

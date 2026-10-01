@@ -457,6 +457,72 @@ local function UpdateCalendarDate()
     end
 end
 
+local durabilityMover
+local durabilityCaptureBarActive = false
+
+local function GetDurabilityConfig()
+    local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
+    return widgets and widgets.durability
+end
+
+local function IsDurabilityCustomPlaced()
+    local cfg = GetDurabilityConfig()
+    return durabilityMover ~= nil and cfg ~= nil and cfg.custom_position == true
+end
+
+local function ApplyDurabilityPosition()
+    local durabilityFrame = DurabilityFrame
+    if not durabilityFrame or durabilityFrame.DragonUI_SettingPoint then return end
+    durabilityFrame.DragonUI_SettingPoint = true
+    durabilityFrame:ClearAllPoints()
+    if IsDurabilityCustomPlaced() then
+        durabilityFrame:SetPoint("CENTER", durabilityMover, "CENTER", 0, 0)
+    elseif durabilityCaptureBarActive then
+        durabilityFrame:SetPoint("TOP", Minimap, "BOTTOM", -15, -35)
+    else
+        durabilityFrame:SetPoint("TOP", Minimap, "BOTTOM", -15, -5)
+    end
+    durabilityFrame.DragonUI_SettingPoint = nil
+end
+
+local function UpdateDurabilityPosition(captureBarVisible)
+    durabilityCaptureBarActive = captureBarVisible and true or false
+    ApplyDurabilityPosition()
+end
+
+local function SyncDurabilityMover()
+    if not durabilityMover or not DurabilityFrame then return end
+    local ratio = DurabilityFrame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    durabilityMover:SetSize(DurabilityFrame:GetWidth() * ratio, DurabilityFrame:GetHeight() * ratio)
+    local cfg = GetDurabilityConfig()
+    if cfg and cfg.custom_position then
+        local anchor = cfg.anchor or "CENTER"
+        durabilityMover:ClearAllPoints()
+        durabilityMover:SetPoint(anchor, UIParent, anchor, cfg.posX or 0, cfg.posY or 0)
+    end
+end
+
+-- Snapshot coordinates, never anchor to DurabilityFrame: it anchors to the mover once detached.
+local function SnapDurabilityMoverToFigure()
+    local cx, cy = DurabilityFrame:GetCenter()
+    local ux, uy = UIParent:GetCenter()
+    durabilityMover:ClearAllPoints()
+    if cx and cy and ux and uy then
+        local ratio = DurabilityFrame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        durabilityMover:SetPoint("CENTER", UIParent, "CENTER", cx * ratio - ux, cy * ratio - uy)
+    else
+        durabilityMover:SetPoint("TOP", Minimap, "BOTTOM", 0, 0)
+    end
+end
+
+local function DetachDurabilityFrame()
+    local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
+    if not widgets then return end
+    widgets.durability = widgets.durability or {}
+    widgets.durability.custom_position = true
+    ApplyDurabilityPosition()
+end
+
 local function ReplaceBlizzardFrame(frame)
     -- Check combat lockdown before making secure frame changes
     if InCombatLockdown() then
@@ -575,62 +641,14 @@ local function ReplaceBlizzardFrame(frame)
     -- Configure DurabilityFrame properly
     local durabilityFrame = DurabilityFrame
     if durabilityFrame then
-        durabilityFrame:ClearAllPoints()
-        -- Position below the minimap with appropriate offset
-        durabilityFrame:SetPoint("TOP", Minimap, "BOTTOM", -15, -5)
+        ApplyDurabilityPosition()
         -- Adjust scale to match the minimap
         durabilityFrame:SetScale(3 / blipScale)
     end
 
-    -- Track whether capture bar is currently active
-    local durability_captureBarActive = false
-
-    -- Reposition DurabilityFrame when a capture bar is visible to avoid overlap
-    -- forceState: true = capture bar definitely visible, false = definitely hidden, nil = auto-detect
-    local function UpdateDurabilityPosition(forceState)
-        if not durabilityFrame then return end
-        local captureBarVisible
-        if forceState ~= nil then
-            captureBarVisible = forceState
-        else
-            captureBarVisible = false
-            for i = 1, 5 do
-                local bar = _G['WorldStateCaptureBar' .. i]
-                if bar and bar:IsVisible() then
-                    captureBarVisible = true
-                    break
-                end
-            end
-        end
-        durability_captureBarActive = captureBarVisible
-        if not durabilityFrame.DragonUI_SettingPoint then
-            durabilityFrame.DragonUI_SettingPoint = true
-            durabilityFrame:ClearAllPoints()
-            if captureBarVisible then
-                -- Move down below the capture bar (shifted left to align)
-                durabilityFrame:SetPoint("TOP", Minimap, "BOTTOM", -15, -35)
-            else
-                -- Default position: slightly left of center below the minimap
-                durabilityFrame:SetPoint("TOP", Minimap, "BOTTOM", -15, -5)
-            end
-            durabilityFrame.DragonUI_SettingPoint = nil
-        end
-    end
-
     -- Hook DurabilityFrame:SetPoint to prevent Blizzard from overriding our position
     if durabilityFrame and not durabilityFrame._dragonUISetPointHooked then
-        hooksecurefunc(durabilityFrame, "SetPoint", function(self)
-            if not self.DragonUI_SettingPoint then
-                self.DragonUI_SettingPoint = true
-                self:ClearAllPoints()
-                if durability_captureBarActive then
-                    self:SetPoint("TOP", Minimap, "BOTTOM", -15, -35)
-                else
-                    self:SetPoint("TOP", Minimap, "BOTTOM", -15, -5)
-                end
-                self.DragonUI_SettingPoint = nil
-            end
-        end)
+        hooksecurefunc(durabilityFrame, "SetPoint", ApplyDurabilityPosition)
         durabilityFrame._dragonUISetPointHooked = true
     end
 
@@ -2091,6 +2109,46 @@ function MinimapModule:RegisterLFGEditorFrame()
     self.lfgWrapper = lfgWrapper
 end
 
+-- Durability figure follows the minimap (and dodges the PvP capture bar) until dragged.
+function MinimapModule:RegisterDurabilityEditorFrame()
+    if not DurabilityFrame or durabilityMover then return end
+
+    durabilityMover = addon.CreateUIFrame(DurabilityFrame:GetWidth(), DurabilityFrame:GetHeight(), "DurabilityFrame")
+    durabilityMover:HookScript("OnDragStart", DetachDurabilityFrame)
+    SyncDurabilityMover()
+
+    addon:RegisterEditableFrame({
+        name = "durability",
+        frame = durabilityMover,
+        blizzardFrame = DurabilityFrame,
+        configPath = {"widgets", "durability"},
+        showTest = function()
+            SyncDurabilityMover()
+            if not IsDurabilityCustomPlaced() then
+                SnapDurabilityMoverToFigure()
+            end
+            durabilityMover:Show()
+        end,
+        onNudge = DetachDurabilityFrame,
+        onHide = function()
+            durabilityMover.DragonUI_WasDragged = nil
+            durabilityMover.DragonUI_WasAdjustedByEditor = nil
+            ApplyDurabilityPosition()
+        end,
+        module = self
+    })
+
+    self.durabilityMover = durabilityMover
+end
+
+function MinimapModule:ResetDurabilityPosition()
+    local cfg = GetDurabilityConfig()
+    if cfg then
+        cfg.custom_position = false
+    end
+    ApplyDurabilityPosition()
+end
+
 function MinimapModule:ApplyMinimapSystem()
     if self.applied then
         return -- Already applied
@@ -2427,6 +2485,7 @@ function MinimapModule:InitializeMinimapSystem()
 
     -- Dungeon Eye (MiniMapLFGFrame) -independent moveable frame
     self:RegisterLFGEditorFrame()
+    self:RegisterDurabilityEditorFrame()
 
     local defaultX, defaultY = -7, 0
     local widgetConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.minimap
@@ -2514,9 +2573,9 @@ function MinimapModule:UpdateSettings()
 
         -- Update DurabilityFrame position
         if DurabilityFrame then
-            DurabilityFrame:ClearAllPoints()
-            DurabilityFrame:SetPoint("TOP", Minimap, "BOTTOM", 0, 0)
             DurabilityFrame:SetScale(scale)
+            SyncDurabilityMover()
+            ApplyDurabilityPosition()
         end
         
         --  APPLY POSITION

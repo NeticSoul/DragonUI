@@ -166,6 +166,9 @@ local defaults = {
                 posY = 20,
                 tooltip_position = "TOP"
             },
+            durability = {
+                custom_position = false
+            },
             tooltip = {
                 anchor = "BOTTOMRIGHT",
                 posX = -90,
