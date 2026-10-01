@@ -314,6 +314,10 @@ local function build()
         applyCloseButton()
     end
 
+    -- Stock leaves the window mouse-off; its tabs' hit rects are trimmed to the old art's margins.
+    cf:EnableMouse(true)
+    cf:SetHitRectInsets(0, 0, 0, 0)
+
     -- TokenFrame lives in Blizzard_TokenUI, which loads on demand — re-walk every pass.
     hookSubframes()
 end
@@ -334,6 +338,8 @@ function CP.RestoreChrome()
                              "BottomRightCorner", "TopEdge", "BottomEdge", "LeftEdge", "RightEdge" }) do
         if cf[piece] then cf[piece]:Hide() end
     end
+    cf:EnableMouse(false)
+    cf:SetHitRectInsets(0, 30, 0, 45)
     cf:SetWidth(384)
     cf:SetHeight(512)
 end
