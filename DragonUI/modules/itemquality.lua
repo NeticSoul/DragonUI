@@ -217,7 +217,7 @@ local function UpdateInspectSlot(button)
     if slotID >= 20 and slotID <= 23 then return end
 
     local unit = InspectFrame.unit
-    local hasItem = GetInventoryItemTexture(unit, slotID)
+    local hasItem = addon:IsInspectDataFor(unit) and GetInventoryItemTexture(unit, slotID)
     if hasItem then
         local quality = GetInventoryItemQuality(unit, slotID)
         if not quality then
@@ -447,16 +447,6 @@ local function InstallInspectHook()
         UpdateInspectSlot(button)
     end)
 
-    -- Retargeting reuses the open frame: InspectFrame_UnitChanged calls this right
-    -- after NotifyInspect, so slot data is still the previous unit's.
-    if InspectPaperDollFrame_OnShow then
-        hooksecurefunc("InspectPaperDollFrame_OnShow", function()
-            if not IsModuleEnabled() then return end
-            addon:After(0.1, UpdateAllInspectSlots)
-            addon:After(0.6, UpdateAllInspectSlots)
-        end)
-    end
-
     ItemQualityModule.hooks["Inspect"] = true
 end
 
@@ -607,8 +597,18 @@ eventFrame:RegisterEvent("MERCHANT_SHOW")
 eventFrame:RegisterEvent("MERCHANT_UPDATE")
 eventFrame:RegisterEvent("GUILDBANKFRAME_OPENED")
 eventFrame:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED")
-eventFrame:RegisterEvent("INSPECT_TALENT_READY")
 eventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+
+-- Borders clear the moment a new player is requested and repaint once their reply lands
+addon:RegisterInspectDataCallback(function(ownerGUID)
+    if not IsModuleEnabled() then return end
+    if ownerGUID then
+        InstallInspectHook()
+        addon:After(0.1, UpdateAllInspectSlots)
+    else
+        UpdateAllInspectSlots()
+    end
+end)
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == "Blizzard_InspectUI" then
@@ -656,12 +656,6 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         UpdateBankSlots()
         addon:After(0.5, UpdateBankSlots)
         addon:After(1.5, UpdateBankSlots)
-
-    elseif event == "INSPECT_TALENT_READY" then
-        -- 3.3.5a has no INSPECT_READY; this is the only "inspect data arrived" signal
-        if not IsModuleEnabled() then return end
-        InstallInspectHook()
-        addon:After(0.2, UpdateAllInspectSlots)
 
     elseif event == "UNIT_INVENTORY_CHANGED" then
         if not IsModuleEnabled() then return end

@@ -68,25 +68,48 @@ local levelCache = {}
 -- Average item level strings, keyed "player"/"inspect"
 local averageTexts = {}
 
-local UpdateAll -- forward declaration (retry scheduler runs before it is defined)
+local UpdateAll -- forward declaration (repaint loop runs before it is defined)
 
--- 3.3.5a has no GET_ITEM_INFO_RECEIVED, so uncached items need a timed retry
-local retryScheduled = false
-local retryBudget = 0
+-- 3.3.5a has no item-loaded event, so paint passes repeat at growing gaps while one is missing
+local REPAINT_GAPS = { 0.1, 0.25, 0.5, 1, 2 }
 
-local function ScheduleRetry()
-    if retryScheduled or retryBudget <= 0 then return end
-    retryScheduled = true
-    retryBudget = retryBudget - 1
-    addon:After(0.5, function()
-        retryScheduled = false
-        if UpdateAll then UpdateAll() end
-    end)
+local repaintStep = 0        -- 0 while no repaint is scheduled
+local passMissedItem = false -- the running pass met an item the client has not loaded yet
+local gaveUpRepainting = false
+
+local function RepaintPass()
+    passMissedItem = false
+    if UpdateAll then UpdateAll() end
+    if not passMissedItem then
+        repaintStep = 0
+        return
+    end
+
+    repaintStep = repaintStep + 1
+    local gap = REPAINT_GAPS[repaintStep]
+    if gap then
+        addon:After(gap, RepaintPass)
+        return
+    end
+
+    repaintStep = 0
+    gaveUpRepainting = true
+    -- One last pass so averages settle on whatever did load
+    if UpdateAll then UpdateAll() end
 end
 
--- Called when a frame opens: items may arrive from the server over a second or two
-local function RefillRetryBudget()
-    retryBudget = 3
+local function NoteMissingItem()
+    passMissedItem = true
+    if repaintStep == 0 and not gaveUpRepainting then
+        repaintStep = 1
+        addon:After(REPAINT_GAPS[1], RepaintPass)
+    end
+end
+
+-- A frame that shows items opening earns them a fresh round of repaints
+local function RestartRepaints()
+    gaveUpRepainting = false
+    if repaintStep > 1 then repaintStep = 1 end
 end
 
 -- BAG_UPDATE, AUCTION_ITEM_LIST_UPDATE and friends arrive in bursts; without this
@@ -102,7 +125,7 @@ local function Debounce(key, delay, callback)
     end)
 end
 
--- Returns ilvl, quality, needsRetry
+-- Returns ilvl, quality, stillLoading
 local function GetLevelInfo(link)
     if not link then return nil end
 
@@ -115,8 +138,9 @@ local function GetLevelInfo(link)
 
     local _, _, quality, ilvl, _, _, _, _, equipSlot = GetItemInfo(link)
     if not ilvl then
-        -- Not in the client's local item cache yet
-        return nil, nil, true
+        if not itemID then return nil end
+        NoteMissingItem()
+        return nil, nil, not gaveUpRepainting
     end
 
     if ilvl <= 0 or NON_GEAR_SLOTS[equipSlot or ""] then
@@ -228,8 +252,6 @@ local function HideButtonItemLevel(button)
     if fontString then fontString:Hide() end
 end
 
--- Paints an already-resolved value; callers that read the number from somewhere
--- other than GetItemInfo (inspect tooltips) go through here.
 local function DrawItemLevel(button, ilvl, r, g, b, anchorTo)
     if not ilvl then
         HideButtonItemLevel(button)
@@ -255,9 +277,7 @@ local function SetButtonItemLevel(button, link, anchorTo, context)
         return
     end
 
-    local ilvl, quality, needsRetry = GetLevelInfo(link)
-    if needsRetry then ScheduleRetry() end
-
+    local ilvl, quality = GetLevelInfo(link)
     if not ilvl then
         HideButtonItemLevel(button)
         return
@@ -387,7 +407,6 @@ local INSPECT_SLOT_FRAMES = {
 }
 
 -- Never labelled: ammo, cosmetic slots, and the bag bar's own equipment slots.
--- Needed by slot ID too, since the inspect path reads tooltips, not equipSlot.
 local SKIPPED_SLOT_IDS = {
     [0] = true,  -- Ammo
     [4] = true,  -- Shirt
@@ -411,51 +430,6 @@ local function UpdateCharacterSlot(button)
     SetButtonItemLevel(button, GetInventoryItemLink("player", slotID))
 end
 
--- Plain-text prefix of the localized "Item Level %d" line. Matched literally
--- because a localized string may contain Lua pattern magic characters.
-local ITEM_LEVEL_PREFIX = string.gsub(ITEM_LEVEL or "Item Level %d", "%%d.*", "")
-
-local scanTip, scanTipName
-
--- Until the server answers NotifyInspect the tooltips still describe the previous
--- unit (or the transmog skin), so nothing is drawn rather than drawing a wrong number.
-local inspectDataReady = false
-
--- Transmog servers (Warmane) publish the skin's item in the visible-item fields that
--- GetInventoryItemLink reads, but build the tooltip from the item really equipped —
--- so for inspect the tooltip is the only truthful source.
--- Returns ilvl, link, r, g, b
-local function ScanInspectSlot(unit, slotID)
-    if not scanTip then
-        scanTip = CreateFrame("GameTooltip", "DragonUIItemLevelScanTip", nil, "GameTooltipTemplate")
-        scanTipName = scanTip:GetName()
-    end
-
-    scanTip:SetOwner(UIParent, "ANCHOR_NONE")
-    scanTip:ClearLines()
-    scanTip:SetInventoryItem(unit, slotID)
-
-    local ilvl
-    for i = 2, (scanTip:NumLines() or 0) do
-        local line = _G[scanTipName .. "TextLeft" .. i]
-        local text = line and line:GetText()
-        if text and string.find(text, ITEM_LEVEL_PREFIX, 1, true) then
-            ilvl = tonumber(string.match(text, "(%d+)"))
-            if ilvl then break end
-        end
-    end
-
-    -- Line 1 carries the rarity color, available even when the link is not
-    local r, g, b
-    local nameLine = _G[scanTipName .. "TextLeft1"]
-    if nameLine then r, g, b = nameLine:GetTextColor() end
-
-    local _, link = scanTip:GetItem()
-    scanTip:Hide()
-
-    return ilvl, link, r, g, b
-end
-
 local function UpdateInspectSlot(button)
     if not button or not IsContextEnabled("inspect") then return end
     if not InspectFrame or not InspectFrame.unit then return end
@@ -468,51 +442,25 @@ local function UpdateInspectSlot(button)
     end
 
     local unit = InspectFrame.unit
-    if not inspectDataReady or not GetInventoryItemTexture(unit, slotID) then
-        HideButtonItemLevel(button)
-        return
-    end
-
-    local ilvl, link, r, g, b = ScanInspectSlot(unit, slotID)
-
-    if ilvl then
-        DrawItemLevel(button, ilvl, r, g, b)
-        return
-    end
-
-    -- No item level line (showItemLevel off): fall back to the tooltip's own link
-    SetButtonItemLevel(button, link or GetInventoryItemLink(unit, slotID))
+    SetButtonItemLevel(button, addon:IsInspectDataFor(unit) and GetInventoryItemLink(unit, slotID) or nil)
 end
 
-local function CalculateAverage(unit, useTooltipScan)
-    local total, count = 0, 0
-    local incomplete = false
+-- Returns average, stillLoading
+local function CalculateAverage(unit)
+    local total, count, loading = 0, 0, false
 
     for _, slotID in ipairs(AVERAGE_SLOT_IDS) do
-        local ilvl
-        if useTooltipScan then
-            if GetInventoryItemTexture(unit, slotID) then
-                local scanned, link = ScanInspectSlot(unit, slotID)
-                ilvl = scanned or (link and GetLevelInfo(link)) or nil
-                if not ilvl then incomplete = true end
-            end
-        else
-            local link = GetInventoryItemLink(unit, slotID)
-            if link then
-                local resolved, _, needsRetry = GetLevelInfo(link)
-                ilvl = resolved
-                if needsRetry then incomplete = true end
-            end
-        end
-
+        local ilvl, _, stillLoading = GetLevelInfo(GetInventoryItemLink(unit, slotID))
         if ilvl then
             total = total + ilvl
             count = count + 1
+        elseif stillLoading then
+            loading = true
         end
     end
 
-    if count == 0 then return nil, incomplete end
-    return math.floor((total / count) + 0.5), incomplete
+    if count == 0 then return nil, loading end
+    return math.floor((total / count) + 0.5), loading
 end
 
 -- Model frames draw the 3D model over their own regions, so the text needs its own
@@ -539,7 +487,7 @@ local function GetOrCreateAverageText(key, parent, modelFrame)
     return fontString
 end
 
-local function UpdateAverageFor(key, context, unit, parent, modelFrame, useTooltipScan)
+local function UpdateAverageFor(key, context, unit, parent, modelFrame)
     local existing = averageTexts[key]
     local config = GetModuleConfig()
 
@@ -552,13 +500,13 @@ local function UpdateAverageFor(key, context, unit, parent, modelFrame, useToolt
         return
     end
 
-    local average, incomplete = CalculateAverage(unit, useTooltipScan)
-    if incomplete then ScheduleRetry() end
+    local average, loading = CalculateAverage(unit)
 
     local fontString = existing or GetOrCreateAverageText(key, parent, modelFrame)
     if not fontString then return end
 
-    if not average then
+    -- A partial average would shift as items load; the repaint loop shows it once they settle
+    if not average or loading then
         fontString:Hide()
         return
     end
@@ -605,15 +553,14 @@ end
 
 local function UpdateInspectAverage()
     if not InspectFrame or not InspectFrame.unit then return end
-    if not inspectDataReady then
+    if not addon:IsInspectDataFor(InspectFrame.unit) then
         if averageTexts["inspect"] then averageTexts["inspect"]:Hide() end
         return
     end
-    UpdateAverageFor("inspect", "inspect", InspectFrame.unit, InspectPaperDollFrame, InspectModelFrame, true)
+    UpdateAverageFor("inspect", "inspect", InspectFrame.unit, InspectPaperDollFrame, InspectModelFrame)
 end
 
--- Slot hooks fire once per slot; without this the inspect average would rescan
--- every tooltip for every slot updated.
+-- Slot hooks fire once per slot; this recomputes the average once per burst instead.
 local function ScheduleAverageUpdate(which)
     Debounce("average:" .. which, 0.1, function()
         if which == "inspect" then
@@ -885,23 +832,6 @@ local function InstallInspectHooks()
         ScheduleAverageUpdate("inspect")
     end)
 
-    -- Retargeting reuses the open frame: InspectFrame_UnitChanged calls this right
-    -- after NotifyInspect, so the tooltips still hold the previous unit's gear.
-    if InspectPaperDollFrame_OnShow then
-        hooksecurefunc("InspectPaperDollFrame_OnShow", function()
-            RefillRetryBudget()
-            inspectDataReady = false
-            HideInspectTexts()
-            -- Safety net: draw anyway if INSPECT_TALENT_READY never arrives
-            Debounce("inspectfallback", 1.5, function()
-                if not inspectDataReady then
-                    inspectDataReady = true
-                    UpdateAllInspectSlots()
-                end
-            end)
-        end)
-    end
-
     ItemLevelModule.hooks["Inspect"] = true
 end
 
@@ -1011,7 +941,7 @@ local function ApplyItemLevelSystem()
 
     ApplyTooltipCVar()
 
-    RefillRetryBudget()
+    RestartRepaints()
     addon:After(0.5, UpdateAll)
 
     ItemLevelModule.applied = true
@@ -1036,7 +966,7 @@ function addon:RefreshItemLevel()
         -- Clear everything first: a context just turned off has no update path left to hide it
         HideAllTexts()
         HideAllAverages()
-        RefillRetryBudget()
+        RestartRepaints()
         UpdateAll()
     else
         RestoreItemLevelSystem()
@@ -1098,8 +1028,18 @@ eventFrame:RegisterEvent("MAIL_INBOX_UPDATE")
 eventFrame:RegisterEvent("MAIL_SEND_INFO_UPDATE")
 eventFrame:RegisterEvent("AUCTION_HOUSE_SHOW")
 eventFrame:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-eventFrame:RegisterEvent("INSPECT_TALENT_READY")
 eventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+
+addon:RegisterInspectDataCallback(function(ownerGUID)
+    if not IsModuleEnabled() then return end
+    if ownerGUID then
+        RestartRepaints()
+        InstallInspectHooks()
+        Debounce("inspect", 0.1, UpdateAllInspectSlots)
+    else
+        HideInspectTexts()
+    end
+end)
 
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" then
@@ -1136,16 +1076,16 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 
     elseif event == "BANKFRAME_OPENED" or event == "PLAYERBANKSLOTS_CHANGED"
         or event == "PLAYERBANKBAGSLOTS_CHANGED" then
-        RefillRetryBudget()
+        RestartRepaints()
         Debounce("bank", 0.2, UpdateBankSlots)
 
     elseif event == "GUILDBANKFRAME_OPENED" or event == "GUILDBANKBAGSLOTS_CHANGED" then
-        RefillRetryBudget()
+        RestartRepaints()
         InstallGuildBankHooks()
         Debounce("guildbank", 0.2, UpdateGuildBankSlots)
 
     elseif event == "MERCHANT_SHOW" or event == "MERCHANT_UPDATE" then
-        RefillRetryBudget()
+        RestartRepaints()
         Debounce("merchant", 0.2, UpdateMerchantActiveTab)
 
     elseif event == "TRADE_SHOW" or event == "TRADE_PLAYER_ITEM_CHANGED"
@@ -1153,27 +1093,20 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         Debounce("trade", 0.1, UpdateTradeItems)
 
     elseif event == "LOOT_OPENED" or event == "LOOT_SLOT_CLEARED" then
-        RefillRetryBudget()
+        RestartRepaints()
         Debounce("loot", 0.1, UpdateAllLootButtons)
 
     elseif event == "MAIL_SHOW" or event == "MAIL_INBOX_UPDATE" then
-        RefillRetryBudget()
+        RestartRepaints()
         Debounce("mail", 0.2, UpdateOpenMailAttachments)
 
     elseif event == "MAIL_SEND_INFO_UPDATE" then
         Debounce("sendmail", 0.1, UpdateSendMailAttachments)
 
     elseif event == "AUCTION_HOUSE_SHOW" or event == "AUCTION_ITEM_LIST_UPDATE" then
-        RefillRetryBudget()
+        RestartRepaints()
         InstallAuctionHooks()
         Debounce("auction", 0.2, UpdateAuctionItems)
-
-    elseif event == "INSPECT_TALENT_READY" then
-        -- 3.3.5a has no INSPECT_READY; this is the only "inspect data arrived" signal
-        RefillRetryBudget()
-        InstallInspectHooks()
-        inspectDataReady = true
-        Debounce("inspect", 0.1, UpdateAllInspectSlots)
 
     elseif event == "UNIT_INVENTORY_CHANGED" then
         if InspectFrame and InspectFrame:IsShown() and InspectFrame.unit and arg1 == InspectFrame.unit then

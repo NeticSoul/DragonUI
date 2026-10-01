@@ -1259,6 +1259,78 @@ function addon:After(delay, callback)
     end)
 end
 
+-- ============================================================================
+-- INSPECT REPLY TRACKING
+-- ============================================================================
+
+-- The reply event carries no unit and the client holds one reply at a time, so whose it is lives here.
+local inspectedGUID           -- player named by the latest inspect request
+local inspectAnswered = false -- whether the server has replied for inspectedGUID
+local everAnswered = false
+local inspectCallbacks = {}
+
+-- Only used while this server has never answered an inspect, so a silent server still gets numbers.
+local SILENT_SERVER_WAIT = 2
+
+local function FireInspectCallbacks()
+    local owner = inspectAnswered and inspectedGUID or nil
+    for i = 1, #inspectCallbacks do
+        inspectCallbacks[i](owner)
+    end
+end
+
+-- callback(ownerGUID): ownerGUID is nil while no reply is loaded
+function addon:RegisterInspectDataCallback(callback)
+    if type(callback) == "function" then
+        tinsert(inspectCallbacks, callback)
+    end
+end
+
+-- Until true, inventory queries on the unit return its visible gear: the transmog skin on such servers.
+function addon:IsInspectDataFor(unit)
+    return inspectAnswered and unit ~= nil and UnitGUID(unit) == inspectedGUID
+end
+
+hooksecurefunc("NotifyInspect", function(unit)
+    local guid = unit and UnitGUID(unit)
+
+    -- Re-requesting the same player keeps their reply: it is still their real gear.
+    if guid ~= inspectedGUID then
+        inspectedGUID = guid
+        if inspectAnswered then
+            inspectAnswered = false
+            FireInspectCallbacks()
+        end
+    end
+
+    if guid and not everAnswered then
+        addon:After(SILENT_SERVER_WAIT, function()
+            if not everAnswered and not inspectAnswered and inspectedGUID == guid then
+                inspectAnswered = true
+                FireInspectCallbacks()
+            end
+        end)
+    end
+end)
+
+hooksecurefunc("ClearInspectPlayer", function()
+    inspectedGUID = nil
+    if inspectAnswered then
+        inspectAnswered = false
+        FireInspectCallbacks()
+    end
+end)
+
+local inspectEventFrame = CreateFrame("Frame")
+inspectEventFrame:RegisterEvent("INSPECT_TALENT_READY")
+inspectEventFrame:SetScript("OnEvent", function()
+    everAnswered = true
+    if inspectedGUID then
+        inspectAnswered = true
+        FireInspectCallbacks()
+    end
+end)
+
 function addon:SafeSetAtlas(texture, atlasName, useAtlasSize)
     if not texture or not atlasName then
         return false
