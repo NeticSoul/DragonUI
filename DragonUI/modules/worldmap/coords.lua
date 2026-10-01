@@ -24,8 +24,12 @@ local function cursorPoint()
     x = (x / scale - left) / detail:GetWidth()
     y = (top - y / scale) / detail:GetHeight()
     if x < 0 or x > 1 or y < 0 or y > 1 then return end
+    -- Zoomed, the detail frame reaches past the clipped view.
+    if WM.CursorInView and not WM.CursorInView() then return end
     return x, y
 end
+
+WM.CursorMapPoint = cursorPoint
 
 local function tick(self, elapsed)
     since = since + elapsed

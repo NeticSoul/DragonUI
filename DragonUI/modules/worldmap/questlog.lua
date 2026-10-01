@@ -492,12 +492,18 @@ local function clearBlobs()
     end
 end
 
-WM.ClearBlobs = clearBlobs
-
 -- The blob is rasterised where it was drawn and never travels, so moving the canvas re-lays it.
 function WM.RefreshBlobs()
     clearBlobs()
     applyBlob()
+end
+
+-- Only the shapes on the canvas, so a drag can afford it every frame it moves.
+function WM.RedrawBlobs()
+    for questID in pairs(drawn) do
+        WorldMapBlobFrame:DrawQuestBlob(questID, false)
+        WorldMapBlobFrame:DrawQuestBlob(questID, true)
+    end
 end
 
 -- Outside our windowed chrome the canvas is Blizzard's, and wiping the shape it drew is not ours to do.

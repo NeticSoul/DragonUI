@@ -123,19 +123,23 @@ local function layoutCanvas()
     local detail = WorldMapDetailFrame
     canvasW, canvasH = canvasSize()
     WM.canvasW, WM.canvasH = canvasW, canvasH
-    local scale = canvasW / WM.DETAIL_W
+    local scale = canvasW / WM.DETAIL_W * (WM.zoom or 1)
     WM.canvasScale = scale
     -- WorldMapButton_OnUpdate multiplies POI and arrow offsets by this size; ours differs by it.
     WM.poiScale = scale / WORLDMAP_SETTINGS.size
 
     detail:SetScale(scale)
     detail:ClearAllPoints()
-    detail:SetPoint("TOPLEFT", f, "TOPLEFT", (WM.FRAME_X + WM.INSET_L) / scale, -(WM.FRAME_Y + WM.SPACER_H) / scale)
+    if not (WM.LayoutZoom and WM.LayoutZoom()) then
+        detail:SetPoint("TOPLEFT", f, "TOPLEFT", (WM.FRAME_X + WM.INSET_L) / scale, -(WM.FRAME_Y + WM.SPACER_H) / scale)
+    end
     WorldMapButton:SetScale(scale)
     WorldMapBlobFrame:SetScale(scale)
     -- Blizzard recomputes the blob hit box when this is nil, which keeps the value secure.
     WorldMapBlobFrame.xRatio = nil
-    WorldMapFrameAreaFrame:SetScale(1 / scale)
+    -- The window's scale whatever it hangs off: zoom.lua moves it out from under the button.
+    local area = WorldMapFrameAreaFrame
+    area:SetScale(f:GetEffectiveScale() / area:GetParent():GetEffectiveScale())
 
     scaleArrows(WM.poiScale)
     if WM.RefreshPlayerArrow then WM.RefreshPlayerArrow() end
@@ -252,6 +256,11 @@ local function savePosition()
 end
 
 function WM.Place()
+    -- Interface Options' Okay re-applies the advanced-map CVar, reaching here mid-combat via SetMiniMode.
+    if InCombatLockdown() then
+        addon.CombatQueue:Add("worldmap_place", WM.Place)
+        return
+    end
     local f = WorldMapFrame
     f:SetMovable(true)
     if not WORLDMAP_SETTINGS.advanced then return end
@@ -324,19 +333,38 @@ local function buildChrome()
     titleBar:SetHeight(20)
     titleBar:EnableMouse(true)
     titleBar:RegisterForDrag("LeftButton")
+    local dragging, lastLeft, lastTop
+    -- Blobs are rasterised where they were drawn, so they are redrawn wherever the window goes.
+    local function follow()
+        local left, top = f:GetLeft(), f:GetTop()
+        if left == lastLeft and top == lastTop then return end
+        lastLeft, lastTop = left, top
+        if WM.RedrawBlobs then WM.RedrawBlobs() end
+    end
+    local function drop()
+        if not dragging then return end
+        dragging = nil
+        titleBar:SetScript("OnUpdate", nil)
+        f:StopMovingOrSizing()
+        savePosition()
+        -- Blizzard recomputes the blob hit box when this is nil.
+        WorldMapBlobFrame.xRatio = nil
+        if WM.RefreshBlobs then WM.RefreshBlobs() end
+    end
     titleBar:SetScript("OnDragStart", function()
         if InCombatLockdown() then return end
-        if WM.ClearBlobs then WM.ClearBlobs() end
+        dragging = true
+        lastLeft, lastTop = f:GetLeft(), f:GetTop()
+        titleBar:SetScript("OnUpdate", follow)
         f:StartMoving()
     end)
     titleBar:SetScript("OnDragStop", function()
-        addon:SafeExecute("worldmap", "drop", function()
-            f:StopMovingOrSizing()
-            savePosition()
-            -- Blizzard recomputes the blob hit box when this is nil.
-            WorldMapBlobFrame.xRatio = nil
-            if WM.RefreshBlobs then WM.RefreshBlobs() end
-        end)
+        addon:SafeExecute("worldmap", "drop", drop)
+    end)
+    -- The client keeps moving the window in combat but refuses the stop, so drop it before lockdown.
+    titleBar:RegisterEvent("PLAYER_REGEN_DISABLED")
+    titleBar:SetScript("OnEvent", function()
+        if dragging then addon:SafeExecute("worldmap", "drop", drop) end
     end)
 
     -- Textures only: the close button's secure OnClick is what closes the map in combat.
@@ -466,6 +494,8 @@ end
 local function onWindowedChanged()
     -- Its release would hand lent widgets back to the parents they had before this switch.
     addon.Menu.Close()
+    -- The clip is sized to the windowed canvas and would crop Blizzard's fullscreen map.
+    if WM.ResetZoom then WM.ResetZoom() end
     local windowed = WM.IsWindowed()
     if windowed then
         WM.border:Show()
@@ -550,6 +580,7 @@ local function boot()
     if WM.BuildCoords then WM.BuildCoords() end
     if WM.BuildPlayerArrow then WM.BuildPlayerArrow() end
     if WM.BuildFade then WM.BuildFade() end
+    if WM.BuildZoom then WM.BuildZoom() end
 
     chromeAlpha(WORLDMAP_SETTINGS.opacity)
     onWindowedChanged()
