@@ -34,6 +34,8 @@ local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = 4, -60, -6, 26
 local BAR_TOP, BAR_X, BAR_BOTTOM = 57, -15, 22
 -- Where the stock 239/64 x 241/128 material quarters split, scaled to the page.
 local MATERIAL_SPLIT_X, MATERIAL_SPLIT_Y = 236, 264
+-- The bottom quarters end in 28 blank rows of 128, so they hang past the page to meet its edge.
+local MATERIAL_OVERHANG = math.floor((PAGE_H - MATERIAL_SPLIT_Y) * 28 / 100 + 0.5)
 local PANEL_X_NUDGE = 6
 
 local ICONS = addon._dir .. "Quest\\"
@@ -208,11 +210,11 @@ local function coverWithMaterial(panel, page)
 
     botLeft:ClearAllPoints()
     botLeft:SetPoint("TOPLEFT", topLeft, "BOTTOMLEFT", 0, 0)
-    botLeft:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", MATERIAL_SPLIT_X, 0)
+    botLeft:SetPoint("BOTTOMRIGHT", page, "BOTTOMLEFT", MATERIAL_SPLIT_X, -MATERIAL_OVERHANG)
 
     botRight:ClearAllPoints()
     botRight:SetPoint("TOPLEFT", topLeft, "BOTTOMRIGHT", 0, 0)
-    botRight:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, 0)
+    botRight:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", 0, -MATERIAL_OVERHANG)
 end
 
 local function fitScrollBar(panel, scroll, window, page)
