@@ -23,11 +23,8 @@
         </Anchors>
         <Frames>
             <!-- Keep both children unnamed: the main bar fader treats unnamed children as decorative art. -->
+            <!-- Anchored by SeatBorderArt in mainbars.lua: its offsets need half units, which XML ints can't hold. -->
             <Frame parentKey="BorderArt" frameLevel="52" inherits="DragonUINineSlicePanelTemplate">
-                <Anchors>
-                    <Anchor point="TOPLEFT" x="-4" y="4"/>
-                    <Anchor point="BOTTOMRIGHT" x="8" y="-7"/>
-                </Anchors>
                 <Attributes>
                     <Attribute name="layoutTextureKit" value="ui-hud-actionbar-frame"/>
                     <Attribute name="layoutType" value="UniqueCornersLayout"/>

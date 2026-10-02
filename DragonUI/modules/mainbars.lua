@@ -44,9 +44,7 @@ local ACTION_BUTTON_SIZE = 36  -- Default WoW 3.3.5a action button size
 local ACTION_BUTTON_SPACING = 7  -- Spacing between buttons (matches SetupActionButtons)
 -- Horizontal padding: 2px each side, the same inset as ActionButton1's (2, 2) anchor on the main bar.
 local DEFAULT_PADDING = 4
--- Vertical padding: 2px bottom + 4px top.  The extra top pixels compensate for
--- the NineSlice BorderArt asymmetry (TOPLEFT y=4 vs BOTTOMRIGHT y=-7) so the
--- button highlight/glow doesn't touch the upper border edge.
+-- 2 below + 4 above the buttons; SlotRingEdges is measured against this split.
 local DEFAULT_HEIGHT_PADDING = 6
 -- One-shot copy of the legacy global spacing into per-bar keys so old profiles keep their look.
 local function EnsureSpacingMigration(db)
@@ -431,6 +429,9 @@ local defaultBottomPositions = {
 }
 -- Art hidden: only bare buttons show; left/right sit closer so gaps main/left/right match (12x1 at 0.9).
 local hiddenBackgroundBottomY = { bottombarleft = 64.35, bottombarright = 104 }
+-- Makes main frame top -> left slots equal left slots -> right slots (1.65) at the default 0.9 scales.
+local FRAMED_STACK_DROP = 1.32
+local framedStackWidgets = { bottombarleft = true, bottombarright = true, petbar = true }
 
 local function IsMainBarBackgroundHidden()
     local buttons = addon.db and addon.db.profile and addon.db.profile.buttons
@@ -441,11 +442,26 @@ local function NearBaseY(savedY, baseY, maxOffset)
     return math.abs(savedY - baseY) <= 1 or math.abs(savedY - (baseY + maxOffset)) <= 1
 end
 
+local function GetFramedStackDrop()
+    return IsMainBarBackgroundHidden() and 0 or FRAMED_STACK_DROP
+end
+
+-- Where a bar left at its default is drawn, given the main bar art; nil when the stored Y applies.
+local function ArtDefaultY(widgetName)
+    if IsMainBarBackgroundHidden() then
+        return hiddenBackgroundBottomY[widgetName]
+    end
+    local known = defaultBottomPositions[widgetName]
+    if known and framedStackWidgets[widgetName] then
+        return known.posY - FRAMED_STACK_DROP
+    end
+end
+
 -- Y for a bar still at its default spot; a moved bar keeps whatever it has.
 local function ResolveDefaultBarY(widgetName, posY)
-    local hiddenY = hiddenBackgroundBottomY[widgetName]
-    if hiddenY and IsMainBarBackgroundHidden() and IsWidgetAtDefaultPosition(widgetName) then
-        return hiddenY
+    local artY = ArtDefaultY(widgetName)
+    if artY and IsWidgetAtDefaultPosition(widgetName) then
+        return artY
     end
     return posY
 end
@@ -564,6 +580,74 @@ local function RecordMainBarDivider(slot)
     addon.MainBarDividers[slot] = record
 end
 
+-- buttons.lua pins our slot ring this far outside each button.
+local RING_OUTSET, RING_OUTSET_TOP = 2.2, 2.3
+local MAIN_BAR_EDGE_PAD, MAIN_BAR_TOP_PAD = 2, DEFAULT_HEIGHT_PADDING - 2
+-- Rails tuck 0.2 under the ring's black rim; its bottom rim is near-clear, so a 0.75 shadowed gap stands in.
+local BORDER_OUTSET = { left = 2.8, top = 2.8, right = 2.8, bottom = 3.75 }
+
+-- Bottom/right redrawn as mirrors of the top/left art: the stock ones shade outward, so no offset matched.
+local MIRRORED_BORDER_PIECES = {
+    { "TopRightCorner", "ui-hud-actionbar-frame-nineslice-cornertopleft", 1, 0, 0, 1 },
+    { "BottomLeftCorner", "ui-hud-actionbar-frame-nineslice-cornertopleft", 0, 1, 1, 0 },
+    { "BottomRightCorner", "ui-hud-actionbar-frame-nineslice-cornertopleft", 1, 0, 1, 0 },
+    { "RightEdge", "!ui-hud-actionbar-frame-nineslice-edgeleft", 1, 0, 0, 1 },
+    { "BottomEdge", "_ui-hud-actionbar-frame-nineslice-edgetop", 0, 1, 1, 0 },
+}
+
+-- After the atlas: SetAtlasTexture replaces texcoords, which is why the nine-slice's own mirror flag is lost.
+local function MirrorBorderPieces(border)
+    for _, spec in ipairs(MIRRORED_BORDER_PIECES) do
+        local piece = border[spec[1]]
+        if piece then
+            piece:SetAtlasTexture(spec[2], true)
+            piece:SetSubTexCoord(spec[3], spec[4], spec[5], spec[6])
+        end
+    end
+end
+
+-- Our slot rings' outer edges as offsets from mainBarFrame's matching edges (+x right, +y up).
+local function SlotRingEdges()
+    -- buttons.lua grows the slots to 37 from their BOTTOMLEFT anchor, so only the top and right edges move.
+    local growX = ActionButton1:GetWidth() - ACTION_BUTTON_SIZE
+    local growY = ActionButton1:GetHeight() - ACTION_BUTTON_SIZE
+    return MAIN_BAR_EDGE_PAD - RING_OUTSET,
+        growY - MAIN_BAR_TOP_PAD + RING_OUTSET_TOP,
+        growX - MAIN_BAR_EDGE_PAD + RING_OUTSET,
+        MAIN_BAR_EDGE_PAD - RING_OUTSET
+end
+
+-- Retail draws the bar frame under the slots; above them its inward rail shadow lands on the icons.
+local function SeatBorderArt()
+    local border = mainBarFrame and mainBarFrame.BorderArt
+    if not border then return end
+    -- utils.xml leaves BorderArt unanchored, so a skipped seat would hide the frame until the next refresh.
+    if InCombatLockdown() then
+        if addon.CombatQueue then
+            addon.CombatQueue:Add("mainbars_seat_border_art", SeatBorderArt)
+        end
+        return
+    end
+    MirrorBorderPieces(border)
+    local left, top, right, bottom = SlotRingEdges()
+    border:ClearAllPoints()
+    border:SetPoint("TOPLEFT", mainBarFrame, "TOPLEFT", left - BORDER_OUTSET.left, top + BORDER_OUTSET.top)
+    border:SetPoint("BOTTOMRIGHT", mainBarFrame, "BOTTOMRIGHT",
+        right + BORDER_OUTSET.right, bottom - BORDER_OUTSET.bottom)
+
+    local lowest
+    for slot = 1, NUM_ACTIONBAR_BUTTONS do
+        local button = _G["ActionButton" .. slot]
+        local level = button and button:GetFrameLevel()
+        if level and (not lowest or level < lowest) then
+            lowest = level
+        end
+    end
+    if lowest then
+        border:SetFrameLevel(math.max(mainBarFrame:GetFrameLevel(), lowest - 1))
+    end
+end
+
 function MainMenuBarMixin:SetupActionButtons()
     if InCombatLockdown() then return end
 
@@ -634,6 +718,7 @@ function MainMenuBarMixin:SetupActionBar()
     local leadButton = ActionButton1
     leadButton:SetParent(homeBar)
     leadButton:SetSinglePoint("BOTTOMLEFT", homeBar, "BOTTOMLEFT", 2, 2)
+    SeatBorderArt()
 
     local pageCfg = config.buttons.pages
     local pageLabel = MainMenuBarPageNumber
@@ -2368,13 +2453,14 @@ local function InitializeMainbars()
         -- Check against base + max possible offset (bar height + 2px gap)
         local maxOffset = GetXpBarHeight() + 2
         if math.abs(savedY - (known.posY + maxOffset)) <= 1 then return true end
-        local hiddenY = hiddenBackgroundBottomY[widgetName]
-        return not not (hiddenY and IsMainBarBackgroundHidden() and NearBaseY(savedY, hiddenY, maxOffset))
+        local artY = ArtDefaultY(widgetName)
+        return not not (artY and NearBaseY(savedY, artY, maxOffset))
     end
 
     addon.GetDualBarVerticalOffset = GetDualBarVerticalOffset
     addon.IsWidgetAtDefaultPosition = IsWidgetAtDefaultPosition
     addon.ResolveWidgetDefaultY = ResolveDefaultBarY
+    addon.GetFramedStackDrop = GetFramedStackDrop
     addon.RefreshXpRepBars = RefreshXpRepBars
     addon.UpdateExhaustionTick = RefreshXpRepBars
     addon.ApplyActionBarPositions = ApplyActionBarPositions
@@ -2865,10 +2951,29 @@ local function CollectMainBarLooseArtRegions(mainBarFrame)
     return regions
 end
 
+-- On one framed row the rails and dividers fill every gap; the slot shadow would only darken the rails.
+local function UpdateMainSlotShadows()
+    local buttonsCfg = addon.db and addon.db.profile and addon.db.profile.buttons
+    local playerCfg = addon.db and addon.db.profile and addon.db.profile.mainbars
+        and addon.db.profile.mainbars.player or {}
+    local rows = math.ceil((playerCfg.buttons_shown or 12) / (playerCfg.columns or 12))
+    local framed = rows == 1 and not (buttonsCfg and buttonsCfg.hide_main_bar_background)
+    for slot = 1, NUM_ACTIONBAR_BUTTONS do
+        local button = _G["ActionButton" .. slot]
+        if button and button.shadow then
+            button.shadow:SetShownCompat(not framed)
+        end
+    end
+end
+
 local function SyncMainBarVisibility()
     local mainBarFrame = addon.MainBar
     local mainAlphaAnchor = ActionButton1
     if not mainBarFrame or not mainAlphaAnchor or not addon.VisibilityFade then return end
+    -- Re-seat once buttons.lua has grown the slots to 37; both read the live slot size.
+    SeatBorderArt()
+    addon.UpdateGryphonStyle()
+    UpdateMainSlotShadows()
 
     -- Buttons always fade with hover/combat state, regardless of the background toggle.
     local alphaFrames = {}
@@ -3162,7 +3267,7 @@ function addon.UpdateGryphonStyle()
     -- Art stem and base offsets (left X, left Y, right X, right Y); any other style shows no end caps.
     local endCapLooks = {
         old = { "gryphon", -85, -22, 84, -22 },
-        new = { faction == "Alliance" and "gryphon-thick" or "wyvern-thick", -95, -23, 95, -23 },
+        new = { faction == "Alliance" and "gryphon-thick" or "wyvern-thick", retail = true },
         flying = { "gryphon-flying", -80, -21, 80, -21 },
     }
     local look = endCapLooks[db_style.gryphons]
@@ -3170,7 +3275,14 @@ function addon.UpdateGryphonStyle()
         local stem = "ui-hud-actionbar-" .. look[1]
         MainMenuBarLeftEndCap:SetAtlasTexture(stem .. "-left", true)
         MainMenuBarRightEndCap:SetAtlasTexture(stem .. "-right", true)
-        ApplyEndCapTransform(look[2], look[3], look[4], look[5])
+        if look.retail then
+            -- Retail's EndCaps (+9,-22 / -8,-22 off its bar) sit 9 in, 6 in and 24 below its slot rings.
+            local ringLeft, _, ringRight, ringBottom = SlotRingEdges()
+            local capWidth = MainMenuBarLeftEndCap:GetWidth()
+            ApplyEndCapTransform(ringLeft + 9 - capWidth, ringBottom - 24, ringRight - 6 + capWidth, ringBottom - 24)
+        else
+            ApplyEndCapTransform(look[2], look[3], look[4], look[5])
+        end
     end
     for _, cap in ipairs({ MainMenuBarLeftEndCap, MainMenuBarRightEndCap }) do
         if look then
@@ -3224,6 +3336,7 @@ function addon.ApplyAllBarButtonCounts()
 
     -- Dividers on visual column boundaries (unchanged when button order changes).
     UpdateMainBarColumnDividers(mainColumns, mainRows, mainCount, mainOrder)
+    UpdateMainSlotShadows()
 
     -- Reposition gryphons to hug the resized main bar
     addon.UpdateGryphonStyle()

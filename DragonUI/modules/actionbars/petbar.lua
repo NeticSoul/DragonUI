@@ -89,6 +89,10 @@ local function GetPetbarDualBarOffset()
     return 0
 end
 
+local function ResolvePetbarY(posY)
+    return addon.ResolveWidgetDefaultY and addon.ResolveWidgetDefaultY("petbar", posY) or posY
+end
+
 -- ============================================================================
 -- PETBAR IMPLEMENTATION (combat-safe)
 -- ============================================================================
@@ -120,7 +124,7 @@ local function CreateAnchorFrame()
     if widgetConfig then
         local anchorPoint = widgetConfig.anchor or "BOTTOM"
         local posX = widgetConfig.posX or config.x_position or -400
-        local posY = widgetConfig.posY or config.y_position or 200
+        local posY = ResolvePetbarY(widgetConfig.posY or config.y_position or 200)
         anchor:ClearAllPoints()
         anchor:SetPoint(anchorPoint, UIParent, anchorPoint, posX, posY + extraY)
     else
@@ -144,7 +148,7 @@ local function UpdateAnchorPosition()
         -- Use widget system position - don't override user's saved position
         local anchorPoint = widgetConfig.anchor or "BOTTOM"
         local posX = widgetConfig.posX or 0
-        local posY = widgetConfig.posY or 200
+        local posY = ResolvePetbarY(widgetConfig.posY or 200)
         local extraY = GetPetbarDualBarOffset()
         
         if not InCombatLockdown() then

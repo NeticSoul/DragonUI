@@ -88,10 +88,13 @@ local function updateStanceBar()
     -- IMPORTANT: Keep in sync with database.lua → additional.stance
     local defaultYOffset = -55   -- database default for additional.stance.y_offset
     local defaultXPosition = -211  -- database default for additional.stance.x_position
-    if addon.GetDualBarVerticalOffset
-        and math.abs(x_position - defaultXPosition) <= 1
-        and math.abs(y_offset - defaultYOffset) <= 1 then
+    local atDefault = math.abs(x_position - defaultXPosition) <= 1
+        and math.abs(y_offset - defaultYOffset) <= 1
+    if atDefault and addon.GetDualBarVerticalOffset then
         final_y = final_y + addon.GetDualBarVerticalOffset()
+    end
+    if atDefault and addon.GetFramedStackDrop then
+        final_y = final_y - addon.GetFramedStackDrop()
     end
     
     -- Simple static positioning - no dependencies, no complexity
