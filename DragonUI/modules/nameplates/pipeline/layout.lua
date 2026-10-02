@@ -562,20 +562,18 @@ end
 
 -- Simple clamp (no retail stacking).
 -- Reapply every frame: recycled frames do not preserve clamp state.
--- Bottom inset is anchor-relative, not screen pixels (plates sit in extended WorldFrame).
+-- Keep the bottom inset constant: one derived from GetPoint each frame shook the pinned plate.
 local function ApplySimpleClamp(plateData)
     local plate = plateData.plate
-    if not plate or not plate.SetClampedToScreen or not plate.GetPoint then return end
+    if not plate or not plate.SetClampedToScreen then return end
 
     local want = PlateWantsClamp(plateData)
     plateData._clamped = want
 
     if want then
-        local width, height = plate:GetSize()
-        local _, _, _, _, y = plate:GetPoint(1)
-        y = y or 0
+        local width = plate:GetWidth()
         SetPlateClamp(plateData, plate, true,
-            0.5 * width, -0.5 * width, NP.module._clampTopInset or 0, height - y)
+            0.5 * width, -0.5 * width, NP.module._clampTopInset or 0, 0)
     else
         SetPlateClamp(plateData, plate, false, 0, 0, 0, 0)
     end
