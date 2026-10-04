@@ -1,6 +1,7 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
 local addon = select(2, ...)
+local locale = (addon.Fonts and addon.Fonts.locale) or GetLocale()
 
 -- ===============================================================
 -- DRAGONUI TEXT SYSTEM
@@ -25,20 +26,65 @@ TextSystem.TEXT_FORMATS = {
 -- CORE FORMATTING FUNCTIONS
 -- ===============================================================
 
--- Function to abbreviate large numbers
+local function FormatRoundedNumber(value)
+    return tostring(math.floor(value + 0.5))
+end
+
+local function FormatScaledNumber(value, divisor, suffix)
+    local scaled = string.format("%.1f", value / divisor):gsub("%.?0+$", "")
+    return scaled .. suffix
+end
+
+-- Format large values using the client's familiar number units.
 function TextSystem.AbbreviateLargeNumbers(value)
     if not value or type(value) ~= "number" then
         return "0"
     end
-    if value < 1000 then
-        return tostring(value)
+
+    local negative = value < 0
+    value = math.abs(value)
+
+    if locale == "zhCN" then
+        if value >= 100000000 then
+            value = FormatScaledNumber(value, 100000000, "亿")
+        elseif value >= 10000 then
+            value = FormatScaledNumber(value, 10000, "万")
+        else
+            value = FormatRoundedNumber(value)
+        end
+    elseif locale == "zhTW" then
+        if value >= 100000000 then
+            value = FormatScaledNumber(value, 100000000, "億")
+        elseif value >= 10000 then
+            value = FormatScaledNumber(value, 10000, "萬")
+        else
+            value = FormatRoundedNumber(value)
+        end
+    elseif locale == "koKR" then
+        if value >= 100000000 then
+            value = FormatScaledNumber(value, 100000000, "억")
+        elseif value >= 10000 then
+            value = FormatScaledNumber(value, 10000, "만")
+        elseif value >= 1000 then
+            value = FormatScaledNumber(value, 1000, "천")
+        else
+            value = FormatRoundedNumber(value)
+        end
+    else
+        if value >= 1000000 then
+            value = FormatScaledNumber(value, 1000000, "M")
+        elseif value >= 1000 then
+            value = FormatScaledNumber(value, 1000, "k")
+        else
+            value = FormatRoundedNumber(value)
+        end
     end
 
-    if value >= 1000000 then
-        return string.format("%.1fM", value / 1000000)
-    elseif value >= 1000 then
-        return string.format("%.1fk", value / 1000)
+    if negative then
+        return "-" .. value
     end
+
+    return value
 end
 
 -- Main text formatting function
