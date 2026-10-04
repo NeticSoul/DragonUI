@@ -25,7 +25,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 
 | Folder under `DragonUI/Textures/` | Obtained via |
 |---|---|
-| `ActionBars/` | pretty_actionbar (s0h2x); some sheets carry his small repacking edits, which leave them Blizzard's art |
+| `ActionBars/` | pretty_actionbar (s0h2x); some sheets carry his small repacking edits, which leave them Blizzard's art; `uiactionbar2x_forever` cut from WoW Forever's end-cap sheet (`uiactionbar2xc60`) |
 | `Bags/` | DragonflightUI (`bagborder2`, `bagslotCutout`, `bagsitemslot2x`, `bagsitembankslot2x`), pretty_actionbar (`bagslots2x`, `bagslots2key`); `INV_Misc_Bag_08_round` is the retail bag icon, cropped round |
 | `Castbar/`, `Editmode/`, `Reputation/` | DragonflightUI |
 | `CharacterPanel/` | DragonUI_NewEra; `resistanceicons.tga` is cut from 3.3.5a client art |

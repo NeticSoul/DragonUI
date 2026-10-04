@@ -16,6 +16,7 @@ local bagmain2x = assets..'Bags\\bagslots2x';
 local uiactionbar2x_ = assets..'ActionBars\\uiactionbar2x_';
 local uiactionbar2x_new = assets..'ActionBars\\uiactionbar2x_new';
 local uiactionbar2x_flying = assets..'ActionBars\\uiactionbar2x_flying';
+local uiactionbar2x_forever = assets..'ActionBars\\uiactionbar2x_forever';
 local uiactionbarvertical = assets..'ActionBars\\uiactionbarvertical';
 local uiactionbarvertical2x = assets..'ActionBars\\uiactionbarvertical2x';
 
@@ -140,6 +141,13 @@ local retailHudSheets = {
 	sheet(uiactionbar2x_flying, 256, 2048, {
 		{ "ui-hud-actionbar-gryphon-flying-left", 80, 103, 1, 158, 149, 342 },
 		{ "ui-hud-actionbar-gryphon-flying-right", 80, 103, 1, 157, 539, 732 },
+	}),
+	sheet(uiactionbar2x_forever, 1024, 1024, {
+		-- Forever's 154x95 (Camelot MainMenuBarEndCaps.xml) at our 36/45 slot size, so the beak clears the bar above.
+		{ "ui-hud-actionbar-gryphon-forever-left", 123.2, 76, 1, 481, 1, 281 },
+		{ "ui-hud-actionbar-gryphon-forever-right", 123.2, 76, 483, 963, 1, 281 },
+		{ "ui-hud-actionbar-wyvern-forever-left", 123.2, 76, 1, 481, 283, 563 },
+		{ "ui-hud-actionbar-wyvern-forever-right", 123.2, 76, 483, 963, 283, 563 },
 	}),
 	sheet(uiactionbar2x_new, 512, 2048, {
 		-- Retail draws these at 104.5x98 (MainActionBar.xml EndCaps), true to the 356x334 cells.

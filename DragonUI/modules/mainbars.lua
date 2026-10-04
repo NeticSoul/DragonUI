@@ -3320,6 +3320,7 @@ function addon.UpdateGryphonStyle()
         old = { "gryphon", -85, -22, 84, -22 },
         new = { faction == "Alliance" and "gryphon-thick" or "wyvern-thick", retail = true },
         flying = { "gryphon-flying", -80, -21, 80, -21 },
+        forever = { faction == "Alliance" and "gryphon-forever" or "wyvern-forever", forever = true },
     }
     local look = endCapLooks[db_style.gryphons]
     if look then
@@ -3331,6 +3332,13 @@ function addon.UpdateGryphonStyle()
             local ringLeft, _, ringRight, ringBottom = SlotRingEdges()
             local capWidth = MainMenuBarLeftEndCap:GetWidth()
             ApplyEndCapTransform(ringLeft + 9 - capWidth, ringBottom - 24, ringRight - 6 + capWidth, ringBottom - 24)
+        elseif look.forever then
+            -- Forever's edit-mode layout (30 in, 5 up) at our 36/45 slot size: 24 inside the bar's ends, 4 above its middle.
+            local ringLeft, ringTop, ringRight, ringBottom = SlotRingEdges()
+            local capWidth, capHeight = MainMenuBarLeftEndCap:GetWidth(), MainMenuBarLeftEndCap:GetHeight()
+            local barHeight = MainMenuBarLeftEndCap:GetParent():GetHeight()
+            local capBottom = (ringBottom + barHeight + ringTop) / 2 + 4 - capHeight / 2
+            ApplyEndCapTransform(ringLeft + 24 - capWidth, capBottom, ringRight - 22 + capWidth, capBottom)
         else
             ApplyEndCapTransform(look[2], look[3], look[4], look[5])
         end
