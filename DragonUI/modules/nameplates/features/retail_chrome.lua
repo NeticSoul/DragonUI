@@ -479,7 +479,7 @@ local function SyncTankBorder(plateData, cfg)
     local want = false
     if cfg.tankMode == true and NP.module.playerInCombat then
         local status = NP.threat.ResolveAggroStatus(plateData)
-        want = (status ~= nil and status < 3 and NP.threat.IsHostilePlateByColor(plateData))
+        want = (status ~= nil and status < 3 and NP.threat.IsThreatPlate(plateData))
     end
     if plateData._tankBorderOn == want then
         return
