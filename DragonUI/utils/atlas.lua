@@ -19,6 +19,7 @@ local uiactionbar2x_flying = assets..'ActionBars\\uiactionbar2x_flying';
 local uiactionbar2x_forever = assets..'ActionBars\\uiactionbar2x_forever';
 local uiactionbarvertical = assets..'ActionBars\\uiactionbarvertical';
 local uiactionbarvertical2x = assets..'ActionBars\\uiactionbarvertical2x';
+local uiminimapforever_diel = assets..'Minimap\\forever_diel';
 
 -- These three were byte-identical copies of the aliases above under a second naming scheme.
 local rui_ActionBarHorizontal = uiactionbar2x_new;
@@ -259,6 +260,11 @@ local retailHudSheets = {
 		{ "ui-hud-actionbar-frame-background-nineslice-cornertopright", 20, 20, 242, 253, 457, 468 },
 		{ "_ui-hud-actionbar-frame-background-nineslice-edgebottom", 506, 20, 0, 16, 109, 121, true, false },
 		{ "_ui-hud-actionbar-frame-background-nineslice-edgetop", 506, 20, 0, 16, 123, 134, true, false },
+	}),
+	sheet(uiminimapforever_diel, 256, 128, {
+		{ "Minimap-Forever-Frame-Cycle", 42, 42, 1, 85, 1, 85 },
+		{ "Minimap-Forever-DayCycle", 33, 33, 87, 153, 1, 67 },
+		{ "Minimap-Forever-NightCycle", 33, 33, 155, 221, 1, 67 },
 	}),
 	sheet(uiactionbarvertical, 256, 32, {
 		{ "!ui-hud-actionbar-frame-background-nineslice-edgeleft", 20, 20, 107, 118, 0, 16, false, true },

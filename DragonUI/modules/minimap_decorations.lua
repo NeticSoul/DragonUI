@@ -211,6 +211,11 @@ local function ShouldHideDragonUIBorder()
     return config and config.animated_border_hide_dragonui_border == true
 end
 
+local function IsForeverRingShown()
+    local minimapModule = addon.MinimapModule
+    return minimapModule ~= nil and minimapModule.foreverShown == true
+end
+
 local function GetRecommendedDecorationScale()
     if ShouldHideDragonUIBorder() then
         return AUTO_SCALE_BORDER_HIDDEN
@@ -527,8 +532,10 @@ local function ApplyPresetLayers(preset, opacity, scaleMultiplier)
     local hasRotations = false
     local hasLayers = false
     local layerScaleMultiplier = scaleMultiplier or 1
-    local globalXOffset = ShouldHideDragonUIBorder() and 0 or DECORATIONS_GLOBAL_OFFSET_X
-    local globalYOffset = ShouldHideDragonUIBorder() and 0 or DECORATIONS_GLOBAL_OFFSET_Y
+    -- The nudge follows the DragonUI ring's off-centre art; Forever's ring is drawn centred.
+    local nudge = not ShouldHideDragonUIBorder() and not IsForeverRingShown()
+    local globalXOffset = nudge and DECORATIONS_GLOBAL_OFFSET_X or 0
+    local globalYOffset = nudge and DECORATIONS_GLOBAL_OFFSET_Y or 0
 
     for _, layer in ipairs((preset and preset.borders) or {}) do
         local texture = AcquireTexture(Minimap)
