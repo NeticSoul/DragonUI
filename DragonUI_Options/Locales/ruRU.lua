@@ -749,6 +749,7 @@ L["Always Show Mana Text"] = "Всегда показывать текст ма�
 -- Player frame specific
 L["Player Frame"] = "Фрейм игрока"
 L["Dragon Decoration"] = "Декоративный дракон"
+L["Show PvP Icon"] = "Показывать значок PvP"
 L["None"] = "Нет"
 L["Elite (Golden)"] = "Элитный (Золотой)"
 L["RareElite (Winged)"] = "Редко-элитный (Крылатый)"

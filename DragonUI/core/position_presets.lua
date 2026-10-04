@@ -70,6 +70,7 @@ local TOTEM_POSITION_KEYS = {
 local STANCE_POSITION_KEYS = {
     x_position = true,
     y_offset = true,
+    manual_position = true,
 }
 
 local Serializer = {}
@@ -125,6 +126,12 @@ local function SaveQuadrantSection(frame, sectionName)
     local point, x, y = addon.GetQuadrantAnchor(frame)
     if not point then
         return
+    end
+    -- A module's automatic shift (e.g. loot rolls lifted over a stacked pet bar) is not a saved move.
+    local layoutOffset = frame.DragonUI_LayoutOffset
+    if layoutOffset then
+        x = x - layoutOffset[1]
+        y = y - layoutOffset[2]
     end
 
     addon.db.profile[sectionName] = addon.db.profile[sectionName] or {}
@@ -439,6 +446,8 @@ function PositionPresets:Restore(snapshot)
         if type(snapshot.additional.stance) == "table" then
             profile.additional.stance = profile.additional.stance or {}
             MergeFields(profile.additional.stance, snapshot.additional.stance, STANCE_POSITION_KEYS)
+            -- Presets saved before the flag existed must not keep the current one.
+            profile.additional.stance.manual_position = snapshot.additional.stance.manual_position
         end
     end
 

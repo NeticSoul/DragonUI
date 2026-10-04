@@ -261,6 +261,7 @@ function addon.CreateUIFrame(width, height, frameName)
     frame:SetMovable(false)
     
     frame:SetScript("OnDragStart", function(self, button)
+        self.DragonUI_LayoutOffset = nil
         self:StartMoving()
         -- Ensure this frame is the selected one
         if addon.selectedEditorFrame ~= self then
@@ -394,6 +395,13 @@ function addon.SaveUIFramePosition(frame, configPath1, configPath2)
     end
 
     local anchor, _, _, posX, posY = frame:GetPoint(1)
+
+    -- A module's automatic shift from the default spot (e.g. the pet bar stacked over stances) is not a move.
+    local layoutOffset = frame.DragonUI_LayoutOffset
+    if layoutOffset and posX and posY then
+        posX = posX - layoutOffset[1]
+        posY = posY - layoutOffset[2]
+    end
 
     -- Strip dual-bar offset from positions of affected widgets so the
     -- database always stores the *base* position.  Without this, closing

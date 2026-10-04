@@ -707,6 +707,7 @@ L["Always Show Mana Text"] = "始终显示法力值文本"
 -- 玩家框架特定选项
 L["Player Frame"] = "玩家框架"
 L["Dragon Decoration"] = "龙形装饰"
+L["Show PvP Icon"] = "显示PvP图标"
 L["None"] = "无"
 L["Elite (Golden)"] = "精英（金色）"
 L["RareElite (Winged)"] = "稀有精英（有翼）"

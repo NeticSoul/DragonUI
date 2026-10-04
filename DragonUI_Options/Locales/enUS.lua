@@ -857,6 +857,7 @@ L["Always Show Mana Text"] = true
 -- Player frame specific
 L["Player Frame"] = true
 L["Dragon Decoration"] = true
+L["Show PvP Icon"] = true
 L["None"] = true
 L["Elite (Golden)"] = true
 L["RareElite (Winged)"] = true

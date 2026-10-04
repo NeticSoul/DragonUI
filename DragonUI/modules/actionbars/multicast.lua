@@ -75,15 +75,23 @@ end
 -- 3. Else -> anchor to MainMenuBar
 -- When user moves with editor, manual_position becomes true and uses x_position/y_offset
 -- =============================================================================
+-- DragonUI's own setting when its bars are active: a disabled bar can still be IsShown mid-toggle.
+local function IsBottomBarOn(bar, barName)
+    if addon.MainBar and addon.IsSecondaryBarEnabled then
+        return addon.IsSecondaryBarEnabled(barName)
+    end
+    return bar:IsShown()
+end
+
 local function GetDynamicAnchor()
     -- Check which bars are visible
     -- MultiBarBottomRight = "Bottom Right Action Bar" in Blizzard UI options
     -- MultiBarBottomLeft = "Bottom Left Action Bar" in Blizzard UI options
     
     -- Offsets net out each bar's own shift so the totems sit 3px higher, level with pet/stance.
-    if MultiBarBottomRight and MultiBarBottomRight:IsShown() then
+    if MultiBarBottomRight and IsBottomBarOn(MultiBarBottomRight, "bottom_right") then
         return MultiBarBottomRight, 'BOTTOMLEFT', 'TOPLEFT', 0, 1
-    elseif MultiBarBottomLeft and MultiBarBottomLeft:IsShown() then
+    elseif MultiBarBottomLeft and IsBottomBarOn(MultiBarBottomLeft, "bottom_left") then
         return MultiBarBottomLeft, 'BOTTOMLEFT', 'TOPLEFT', 0, 2
     else
         -- Anchor above MainMenuBar - offset left to align with action buttons
@@ -130,6 +138,21 @@ local function UpdateTotemBarPosition()
         local anchorFrame, point, relativePoint, offsetX, offsetY = GetDynamicAnchor()
         anchor:SetPoint(point, anchorFrame, relativePoint, offsetX, offsetY)
     end
+    if addon.UpdatePetbarPosition then
+        addon.UpdatePetbarPosition()
+    end
+end
+
+addon.UpdateTotemBarPosition = UpdateTotemBarPosition
+
+-- Left edge, bottom and button height of the totem row while it follows the action bars; nil once moved.
+function addon.GetDefaultTotemRow()
+    if not IsModuleEnabled() or not anchor or GetPlayerClass() ~= 'SHAMAN' then return end
+    if GetTotemConfig().manual_position then return end
+    if not (HasMultiCastActionBar and HasMultiCastActionBar()) then return end
+    local left, bottom = anchor:GetLeft(), anchor:GetBottom()
+    if not (left and bottom) then return end
+    return left - UIParent:GetWidth() / 2, bottom, GetTotemConfig().button_size or 34
 end
 
 -- =============================================================================
@@ -259,13 +282,14 @@ local function CreateMulticastFrames()
             -- If we were in auto-anchor mode, convert current position to manual coordinates
             if not totemConfig.manual_position then
                 -- Get current anchor position relative to screen
-                local anchorCenterX, anchorCenterY = anchor:GetCenter()
+                local anchorCenterX = anchor:GetCenter()
                 local screenWidth = UIParent:GetWidth()
                 
                 -- Calculate position relative to BOTTOM center of UIParent
                 local base_y = 200  -- Base Y for manual positioning
                 configStartX = math.floor((anchorCenterX - screenWidth/2) + 0.5)
-                configStartY = math.floor((anchorCenterY - base_y) + 0.5)
+                -- Manual mode places the anchor by its BOTTOM; the centre made the bar jump up on the first drag.
+                configStartY = math.floor((anchor:GetBottom() - base_y) + 0.5)
                 
                 -- Update config to reflect current position in manual mode
                 totemConfig.x_position = configStartX
@@ -538,6 +562,24 @@ local function ApplyMulticastSystem()
             name = "totembar",
             frame = editorOverlay,
             configPath = {"additional", "totem"},
+
+            -- Panel moves (arrows, typed X/Y) shift only this overlay; carry them to the bar like a drag does.
+            onNudge = function()
+                local profile = addon.db and addon.db.profile
+                local totemConfig = profile and profile.additional and profile.additional.totem
+                local cx, cy = editorOverlay:GetCenter()
+                if not (totemConfig and anchor and cx and cy) then return end
+                local buttonWidth = totemConfig.button_size or 34
+                local spacing = totemConfig.button_spacing or 4
+                local totalWidth = math.max(6 * buttonWidth + 5 * spacing, 100)
+                local offsetX = (totalWidth / 2) - (buttonWidth / 2)
+                totemConfig.x_position = math.floor(cx - offsetX - UIParent:GetWidth() / 2 + 0.5)
+                totemConfig.y_offset = math.floor(cy - anchor:GetHeight() / 2 - 200 + 0.5)
+                totemConfig.manual_position = true
+                UpdateTotemBarPosition()
+                editorOverlay:ClearAllPoints()
+                editorOverlay:SetPoint('CENTER', anchor, 'CENTER', offsetX, 0)
+            end,
             
             editorVisible = function()
                 -- Only show totem bar in editor mode for shamans
