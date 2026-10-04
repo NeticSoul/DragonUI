@@ -31,7 +31,8 @@ World of Warcraft game artwork included in the addon (most textures under
 DragonUI/Textures/) is (c) Blizzard Entertainment. It is not covered by the MIT
 License above and is included only for use with the game.
 
-For information on bundled libraries and their licenses, see:
+For information on bundled libraries and their licenses, see, in the DragonUI
+addon folder:
   - THIRD_PARTY_NOTICES.md (detailed information)
   - LICENSES/ directory (full license texts)
 

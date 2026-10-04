@@ -4,9 +4,9 @@ DragonUI's own code is released under the MIT License (`LICENSE` at the reposito
 `LICENSE.txt` inside the `DragonUI` addon folder). This file lists everything shipped in the two
 addon folders that is not DragonUI's own work, or that is under other terms.
 
-Paths are relative to the repository root. Users install only the `DragonUI/` and
-`DragonUI_Options/` folders, so this file and the `LICENSES/` folder are also shipped inside the
-addon: `DragonUI/THIRD_PARTY_NOTICES.md` and `DragonUI/LICENSES/` are copies of the root files, and
+Paths are relative to the repository root, except `LICENSES/`, which is the folder next to this
+file (`DragonUI/LICENSES/`). Users install only the `DragonUI/` and `DragonUI_Options/` folders, so
+this file and `LICENSES/` live inside `DragonUI/` to ship with the addon, and
 `DragonUI_Options/LICENSES/` holds the texts that apply to that folder.
 
 ## Blizzard Entertainment artwork and game data
