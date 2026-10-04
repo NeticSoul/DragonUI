@@ -618,7 +618,7 @@ L["Model control dump failed: "] = "模型控件转储失败："
 -- ============================================================================
 
 L["Gear summary"] = "装备概览"
-L["GearScore"] = "GearScore"
+L["GearScore"] = "装备评分"
 L["Weighted score of your equipped gear."] = "你已装备物品的加权评分。"
 L["Reset stat order"] = "重置排序"
 L["Restore the stat categories to their default order?"] = "将属性分类恢复为默认顺序？"
