@@ -753,6 +753,7 @@ L["Always Show Mana Text"] = "Mana-Text immer anzeigen"
 -- Player frame specific
 L["Player Frame"] = "Spielerfenster"
 L["Dragon Decoration"] = "Drachendekoration"
+L["Show PvP Icon"] = "PvP-Symbol anzeigen"
 L["None"] = "Keine"
 L["Elite (Golden)"] = "Elite (golden)"
 L["RareElite (Winged)"] = "Selten-Elite (geflügelt)"

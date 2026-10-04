@@ -469,6 +469,7 @@ function EditorMode:ResetAllPositions()
             -- Reset only position fields, preserve button_size/spacing user preferences
             addon.db.profile.additional.stance.x_position = addon.defaults.profile.additional.stance.x_position
             addon.db.profile.additional.stance.y_offset = addon.defaults.profile.additional.stance.y_offset
+            addon.db.profile.additional.stance.manual_position = nil
         end
     end
     

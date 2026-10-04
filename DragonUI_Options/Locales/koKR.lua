@@ -757,6 +757,7 @@ L["Always Show Mana Text"] = "마나 수치 항상 표시"
 -- Player frame specific
 L["Player Frame"] = "플레이어 프레임"
 L["Dragon Decoration"] = "용 장식"
+L["Show PvP Icon"] = "PvP 아이콘 표시"
 L["None"] = "없음"
 L["Elite (Golden)"] = "정예 (황금)"
 L["RareElite (Winged)"] = "희귀 정예 (날개)"

@@ -2664,6 +2664,51 @@ local function IsSecondaryBarEnabled(config, barName)
     return true
 end
 
+-- The bar's DragonUI setting; IsShown lags behind it while a toggle is being applied.
+function addon.IsSecondaryBarEnabled(barName)
+    local config = addon.db and addon.db.profile and addon.db.profile.actionbars
+    return config ~= nil and IsSecondaryBarEnabled(config, barName)
+end
+
+local function TopInUIParent(frame)
+    local top = frame and frame:GetTop()
+    if not top then return end
+    return top * frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+end
+
+-- How far the row over the bottom bars (stance, totems, pet) drops when the bars under it are off.
+function addon.GetBottomRowDrop()
+    local config = addon.db and addon.db.profile and addon.db.profile.actionbars
+    if not (config and IsWidgetAtDefaultPosition) or IsSecondaryBarEnabled(config, "bottom_right") then
+        return 0
+    end
+    if not IsWidgetAtDefaultPosition("bottombarright") then return 0 end
+    local lower
+    if IsSecondaryBarEnabled(config, "bottom_left") then
+        if not IsWidgetAtDefaultPosition("bottombarleft") then return 0 end
+        lower = MultiBarBottomLeft
+    else
+        if not IsWidgetAtDefaultPosition("mainbar") then return 0 end
+        lower = mainBarFrame
+    end
+    local rightTop, lowerTop = TopInUIParent(MultiBarBottomRight), TopInUIParent(lower)
+    if not (rightTop and lowerTop) then return 0 end
+    return math.max(0, rightTop - lowerTop)
+end
+
+-- Runs once a bar toggle has settled, so the rows read the final state instead of a mid-toggle Show.
+local function NotifyBottomRowChanged()
+    if addon.UpdateStanceBarPosition then
+        addon.UpdateStanceBarPosition()
+    end
+    if addon.UpdateTotemBarPosition then
+        addon.UpdateTotemBarPosition()
+    end
+    if addon.UpdatePetbarPosition then
+        addon.UpdatePetbarPosition()
+    end
+end
+
 local function SetSecondaryBarButtonsMouseEnabled(barName, enabled)
     if InCombatLockdown() then return end
 
@@ -2796,6 +2841,7 @@ function addon.SyncBarCVarsFromProfile()
     if addon.RefreshActionBarVisibility then
         addon.RefreshActionBarVisibility()
     end
+    NotifyBottomRowChanged()
 end
 
 -- Pull Blizzard globals → DragonUI profile (called from MultiActionBar_Update hook)
@@ -2816,6 +2862,7 @@ local function SyncBarGlobalsToProfile()
         if addon.RefreshActionBarVisibility then
             addon.RefreshActionBarVisibility()
         end
+        NotifyBottomRowChanged()
     end
 
     -- Rebuild DragonUI's own options panel if it's open on this tab, so a change made via WoW's
@@ -3176,6 +3223,10 @@ function addon.RefreshActionBarVisibility()
 
     for _, bar in ipairs(MIGRATED_VISIBILITY_BARS) do
         SyncMigratedBarVisibility(bar)
+    end
+    -- The vehicle drivers own Show/Hide of these bars, so they must learn which ones are turned off.
+    if addon.RefreshSecondaryBarDrivers then
+        addon.RefreshSecondaryBarDrivers()
     end
 end
 

@@ -57,15 +57,17 @@ local function ApplyTypedCoordinates()
     selectedEditorFrame:SetPoint("CENTER", UIParent, "CENTER", newX, newY)
     selectedEditorFrame.DragonUI_WasAdjustedByEditor = true
     selectedEditorFrame.DragonUI_WasDragged = true
+    selectedEditorFrame.DragonUI_LayoutOffset = nil
     -- Auto-save
     if addon.EditableFrames then
         for _, frameData in pairs(addon.EditableFrames) do
-            if frameData.frame == selectedEditorFrame and frameData.configPath then
-                if #frameData.configPath == 2 then
+            if frameData.frame == selectedEditorFrame then
+                if frameData.configPath and #frameData.configPath == 2 then
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1], frameData.configPath[2])
-                else
+                elseif frameData.configPath then
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1])
                 end
+                -- Frames with their own save logic (no configPath, e.g. loot rolls) persist here.
                 if frameData.onNudge then
                     frameData.onNudge()
                 end
@@ -92,15 +94,17 @@ local function NudgeSelectedFrame(dx, dy)
     selectedEditorFrame:SetPoint("CENTER", UIParent, "CENTER", relX, relY)
     selectedEditorFrame.DragonUI_WasAdjustedByEditor = true
     selectedEditorFrame.DragonUI_WasDragged = true
+    selectedEditorFrame.DragonUI_LayoutOffset = nil
     -- Auto-save position
     if addon.EditableFrames then
         for _, frameData in pairs(addon.EditableFrames) do
-            if frameData.frame == selectedEditorFrame and frameData.configPath then
-                if #frameData.configPath == 2 then
+            if frameData.frame == selectedEditorFrame then
+                if frameData.configPath and #frameData.configPath == 2 then
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1], frameData.configPath[2])
-                else
+                elseif frameData.configPath then
                     addon.SaveUIFramePosition(frameData.frame, frameData.configPath[1])
                 end
+                -- Frames with their own save logic (no configPath, e.g. loot rolls) persist here.
                 if frameData.onNudge then
                     frameData.onNudge()
                 end

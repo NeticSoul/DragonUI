@@ -770,6 +770,22 @@ function UF.TargetStyle.Create(opts)
     end
 
     -- ================================================================
+    -- PVP ICON
+    -- ================================================================
+
+    -- Runs after TargetFrame_CheckFaction, the only code that shows the icon; a small focus clears showPVP.
+    local function ApplyPvPIconVisibility()
+        local pvpIcon = BlizzFrame.pvpIcon
+        if not pvpIcon then return end
+        if GetConfig().show_pvp_icon == false then
+            pvpIcon:Hide()
+        elseif BlizzFrame.showPVP and UnitExists(unitToken)
+            and (UnitIsPVPFreeForAll(unitToken) or (UnitFactionGroup(unitToken) and UnitIsPVP(unitToken))) then
+            pvpIcon:Show()
+        end
+    end
+
+    -- ================================================================
     -- FRAME INITIALIZATION
     -- ================================================================
 
@@ -983,6 +999,15 @@ function UF.TargetStyle.Create(opts)
                 end
             end)
             BlizzFrame.DragonUI_ClassificationHook = true
+        end
+
+        if not BlizzFrame.DragonUI_PvPIconHook then
+            hooksecurefunc("TargetFrame_CheckFaction", function(self)
+                if self == BlizzFrame then
+                    ApplyPvPIconVisibility()
+                end
+            end)
+            BlizzFrame.DragonUI_PvPIconHook = true
         end
 
         -- ---- Apply config (scale + position) ----
@@ -1396,6 +1421,7 @@ function UF.TargetStyle.Create(opts)
             if Module.textSystem then Module.textSystem.update() end
         end
 
+        ApplyPvPIconVisibility()
         SyncVisibilityFade()
     end
 

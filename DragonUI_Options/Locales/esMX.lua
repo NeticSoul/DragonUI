@@ -779,6 +779,7 @@ L["Always Show Mana Text"] = "Siempre Mostrar Texto de Maná"
 -- Player frame specific
 L["Player Frame"] = "Marco del Jugador"
 L["Dragon Decoration"] = "Decoración de Dragón"
+L["Show PvP Icon"] = "Mostrar icono JcJ"
 L["None"] = "Ninguno"
 L["Elite (Golden)"] = "Élite (Dorado)"
 L["RareElite (Winged)"] = "RaroÉlite (Alado)"

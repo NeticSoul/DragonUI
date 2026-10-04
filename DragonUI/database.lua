@@ -629,6 +629,7 @@ local defaults = {
                 showHealthTextAlways = false,
                 showManaTextAlways = false,
                 dragon_decoration = "none",
+                show_pvp_icon = true,
                 alwaysShowAlternateManaText = false,
                 alternateManaFormat = "both",
                 show_runes = true, -- DK rune display (used by player.lua)
@@ -664,6 +665,7 @@ local defaults = {
                 showManaTextAlways = false,
                 enableThreatGlow = true,
                 show_name_background = true,
+                show_pvp_icon = true,
                 scale = 1.0,
                 -- Also fades Target of Target and the target cast bar (see target_style.lua)
                 show_on_hover = false,
@@ -680,6 +682,7 @@ local defaults = {
                 showManaTextAlways = false,
                 show_buff_debuff = true,
                 show_name_background = true,
+                show_pvp_icon = true,
                 scale = 0.9,
                 -- Also fades Target of Focus and the focus cast bar (see target_style.lua)
                 show_on_hover = false,

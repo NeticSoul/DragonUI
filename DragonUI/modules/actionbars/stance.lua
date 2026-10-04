@@ -71,16 +71,14 @@ local HOLDER_EDGE = 37
 -- Module frames (created only when enabled)
 local anchor, stancebar
 
--- SIMPLE STATIC POSITIONING - NO DYNAMIC LOGIC
-local function updateStanceBar()
-    if not IsModuleEnabled() or not anchor then return end
-    if InCombatLockdown() then return end  -- Cannot modify secure frame in combat
-    
+local STANCE_BASE_Y = 200
+
+local function ResolveStancePosition()
     -- READ VALUES FROM DATABASE
     local stanceConfig = GetStanceConfig()
     local x_position = stanceConfig.x_position or -230  -- X position from center
     local y_offset = stanceConfig.y_offset or 0         -- Additional Y offset
-    local base_y = 200                                  -- Base Y position from bottom
+    local base_y = STANCE_BASE_Y                        -- Base Y position from bottom
     local final_y = base_y + y_offset                   -- Final Y position
     
     -- Apply dual-bar offset when both XP and Rep bars are visible
@@ -88,7 +86,9 @@ local function updateStanceBar()
     -- IMPORTANT: Keep in sync with database.lua → additional.stance
     local defaultYOffset = -55   -- database default for additional.stance.y_offset
     local defaultXPosition = -211  -- database default for additional.stance.x_position
-    local atDefault = math.abs(x_position - defaultXPosition) <= 1
+    -- The flag, not the numbers, marks an editor move: a 1px nudge rounds back inside the tolerance.
+    local atDefault = not stanceConfig.manual_position
+        and math.abs(x_position - defaultXPosition) <= 1
         and math.abs(y_offset - defaultYOffset) <= 1
     if atDefault and addon.GetDualBarVerticalOffset then
         final_y = final_y + addon.GetDualBarVerticalOffset()
@@ -96,10 +96,37 @@ local function updateStanceBar()
     if atDefault and addon.GetFramedStackDrop then
         final_y = final_y - addon.GetFramedStackDrop()
     end
-    
-    -- Simple static positioning - no dependencies, no complexity
+    if atDefault and addon.GetBottomRowDrop then
+        final_y = final_y - addon.GetBottomRowDrop()
+    end
+    return x_position, final_y, atDefault
+end
+
+local function updateStanceBar()
+    if not IsModuleEnabled() or not anchor then return end
+    if InCombatLockdown() then return end  -- Cannot modify secure frame in combat
+
+    local x_position, final_y = ResolveStancePosition()
     anchor:ClearAllPoints()
     anchor:SetPoint('BOTTOM', UIParent, 'BOTTOM', x_position, final_y)
+    if addon.UpdatePetbarPosition then
+        addon.UpdatePetbarPosition()
+    end
+end
+
+-- Left edge, bottom and button height of the bar while it sits at its default spot with forms to show.
+function addon.GetDefaultStanceRow()
+    if not IsModuleEnabled() or not anchor or not CLASSES_WITH_FORM_BAR[class] then return end
+    if (GetNumShapeshiftForms() or 0) < 1 then return end
+    local x_position, final_y, atDefault = ResolveStancePosition()
+    if not atDefault then return end
+    return x_position - HOLDER_EDGE / 2, final_y, GetStanceConfig().button_size or 31
+end
+
+-- The y_offset that reproduces where the bar is drawn now, automatic shifts included, so editing never jumps.
+local function GetDrawnYOffset()
+    local _, final_y = ResolveStancePosition()
+    return final_y - STANCE_BASE_Y
 end
 
 -- ============================================================================
@@ -173,7 +200,8 @@ local function CreateStanceFrames()
 
         local stanceCfg = addon.db.profile.additional.stance
         stanceCfg.x_position = math.floor((stanceCfg.x_position or -211) + deltaX + 0.5)
-        stanceCfg.y_offset = math.floor((stanceCfg.y_offset or -55) + deltaY + 0.5)
+        stanceCfg.y_offset = math.floor(GetDrawnYOffset() + deltaY + 0.5)
+        stanceCfg.manual_position = true
 
         updateStanceBar()
 
@@ -206,7 +234,7 @@ local function CreateStanceFrames()
         -- Store current config values
         if addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.stance then
             configStartX = addon.db.profile.additional.stance.x_position or -230
-            configStartY = addon.db.profile.additional.stance.y_offset or 0
+            configStartY = GetDrawnYOffset()
         end
     end)
     
@@ -230,11 +258,16 @@ local function CreateStanceFrames()
         
         local deltaX = currentX - dragStartX
         local deltaY = currentY - dragStartY
+        -- A click without a move must not store the drawn spot, or the bar stops following the bars below.
+        if math.abs(deltaX) < 1 and math.abs(deltaY) < 1 then
+            return
+        end
         
         -- Update config values in real-time
         if addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.stance then
             addon.db.profile.additional.stance.x_position = math.floor(configStartX + deltaX + 0.5)
             addon.db.profile.additional.stance.y_offset = math.floor(configStartY + deltaY + 0.5)
+            addon.db.profile.additional.stance.manual_position = true
             
             -- Update anchor position in real-time (move the actual stance bar)
             updateStanceBar()
@@ -404,6 +437,10 @@ local function RebuildFormSlots()
         end
     end
     RefreshFormSlotStates()
+    -- Gaining or losing the first form decides whether the pet bar stacks above this bar.
+    if addon.UpdatePetbarPosition then
+        addon.UpdatePetbarPosition()
+    end
 end
 
 -- Unlisted events only refresh slot states; the form-count events rebuild the whole bar.

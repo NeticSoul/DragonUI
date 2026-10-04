@@ -924,6 +924,15 @@ local PlayerGuideIcon = _G.PlayerGuideIcon
 local PlayerMasterIcon = _G.PlayerMasterIcon
 local PlayerPVPIcon = _G.PlayerPVPIcon
 
+local function IsPVPIconShown()
+    return GetPlayerConfig().show_pvp_icon ~= false
+end
+
+-- Same test PlayerFrame_UpdatePvPStatus uses to show the icon.
+local function IsPlayerPVPFlagged()
+    return UnitIsPVPFreeForAll("player") or (UnitFactionGroup("player") and UnitIsPVP("player"))
+end
+
 -- Update leader icon positioning based on dragon decoration mode
 -- GuideIcon shares LeaderIcon's anchor point (Blizzard shows only one at a time:
 -- GuideIcon for LFG-formed groups, LeaderIcon otherwise), so both need the same treatment.
@@ -1072,11 +1081,37 @@ local function UpdatePVPIconPosition()
     UpdatePVPTimerPosition(isEliteMode)
 end
 
+-- Runs after PlayerFrame_UpdatePvPStatus, the only code that shows the icon.
+local function ApplyPVPIconVisibility()
+    if not PlayerPVPIcon or not IsPlayerModuleEnabled() then
+        return
+    end
+    local shown = IsPVPIconShown()
+    local timerText = _G.PlayerPVPTimerText
+    -- Alpha, not Hide: Blizzard re-shows the timer from PlayerFrame_OnEvent, outside this hook.
+    if timerText then
+        timerText:SetAlpha(shown and 1 or 0)
+    end
+    if not IsPlayerPVPFlagged() then
+        return
+    end
+
+    local hitArea = _G.PlayerPVPIconHitArea
+    if shown then
+        PlayerPVPIcon:Show()
+        if hitArea then hitArea:Show() end
+    else
+        PlayerPVPIcon:Hide()
+        if hitArea then hitArea:Hide() end
+    end
+end
+
 -- Master function to update all leadership icons positioning
 local function UpdateLeadershipIcons()
     UpdateLeaderIconPosition()
     UpdateMasterIconPosition()
     UpdatePVPIconPosition()
+    ApplyPVPIconVisibility()
 end
 
 -- ============================================================================
@@ -3156,6 +3191,7 @@ end
 
 hooksecurefunc("PlayerFrame_ToPlayerArt", OnBlizzardArtApplied)
 hooksecurefunc("PlayerFrame_ToVehicleArt", OnBlizzardArtApplied)
+hooksecurefunc("PlayerFrame_UpdatePvPStatus", ApplyPVPIconVisibility)
 
 if PlayerFrame_SequenceFinished then
     hooksecurefunc("PlayerFrame_SequenceFinished", function()

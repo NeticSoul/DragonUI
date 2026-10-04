@@ -207,6 +207,12 @@ local function BuildPlayerSection(scroll)
         callback = refreshPlayer,
     })
 
+    C:AddToggle(s, {
+        label = LO["Show PvP Icon"],
+        dbPath = "unitframe.player.show_pvp_icon",
+        callback = refreshPlayer,
+    })
+
     -- Glow Effects
     C:AddHeading(s, LO["Glow Effects"])
 
@@ -401,6 +407,12 @@ local function BuildTargetSection(scroll)
         callback = refreshTarget,
     })
 
+    C:AddToggle(s, {
+        label = LO["Show PvP Icon"],
+        dbPath = "unitframe.target.show_pvp_icon",
+        callback = refreshTarget,
+    })
+
     C:AddHeading(s, LO["Visibility"])
     C:AddDescription(s, LO["Also fades the Target of Target and target cast bar, attached or not."])
     C:AddVisibilityFadeToggles(s, {
@@ -425,6 +437,12 @@ local function BuildFocusSection(scroll)
         label = LO["Show Name Background"],
         desc = LO["Show the colored name background behind the focus name."],
         dbPath = "unitframe.focus.show_name_background",
+        callback = refreshFocus,
+    })
+
+    C:AddToggle(s, {
+        label = LO["Show PvP Icon"],
+        dbPath = "unitframe.focus.show_pvp_icon",
         callback = refreshFocus,
     })
 

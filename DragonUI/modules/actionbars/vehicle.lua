@@ -806,6 +806,14 @@ local function HookSecondaryBarRehide()
     VehicleModule.hooks.multiActionBarUpdate = true
 end
 
+-- Blizzard's manager calls Show() on every update while this reads 'show', so a turned-off bar reads 'hide'.
+local function SecondaryBarVisibility(setting)
+    if addon.IsSecondaryBarEnabled and not addon.IsSecondaryBarEnabled(setting) then
+        return 'hide'
+    end
+    return '[vehicleui] hide; show'
+end
+
 local function SetupVehicleBarHiding(hideMainBar)
     local mainBar = mainBarFrame or addon.MainBar or _G.DragonUI_MainActionBar
     if not mainBar then return end
@@ -819,28 +827,40 @@ local function SetupVehicleBarHiding(hideMainBar)
         ArmStateDriver("mainBarVehicle", mainBar, "vehicleupdate", MAINBAR_TOGGLE_SNIPPET, "[vehicleui] 1; 2")
     end
 
-    -- 2) Secondary bars: register 'visibility' state driver DIRECTLY on each bar.
-    --    The 'visibility' state driver uses Blizzard's C-level enforcement which
-    --    blocks :Show() calls when state is 'hide'. This is essential because
-    --    Blizzard's MultiActionBar_Update() re-shows bars during loading —
-    --    the previous approach (helper hider frame with manual Hide() calls)
-    --    could be overridden by those Show() calls.
+    -- 2) Secondary bars: one 'visibility' driver per bar owns its Show/Hide, including turned-off bars.
     --    Skip if already registered (e.g. during combat-safe early setup).
     -- ExtraBar1Container: owned solely by extrabar.lua (SetupExtrabarVehicleVisibility).
     local secondaryBars = {
-        {key = 'vehicleHide_bl', bar = MultiBarBottomLeft},
-        {key = 'vehicleHide_br', bar = MultiBarBottomRight},
-        {key = 'vehicleHide_r',  bar = MultiBarRight},
-        {key = 'vehicleHide_l',  bar = MultiBarLeft},
+        {key = 'vehicleHide_bl', bar = MultiBarBottomLeft,  setting = 'bottom_left'},
+        {key = 'vehicleHide_br', bar = MultiBarBottomRight, setting = 'bottom_right'},
+        {key = 'vehicleHide_r',  bar = MultiBarRight,       setting = 'right'},
+        {key = 'vehicleHide_l',  bar = MultiBarLeft,        setting = 'left'},
     }
     for _, entry in ipairs(secondaryBars) do
         if entry.bar and not VehicleModule.stateDrivers[entry.key] then
-            VehicleModule.stateDrivers[entry.key] = {frame = entry.bar, state = 'visibility'}
-            RegisterStateDriver(entry.bar, 'visibility', '[vehicleui] hide; show')
+            local condition = SecondaryBarVisibility(entry.setting)
+            VehicleModule.stateDrivers[entry.key] = {
+                frame = entry.bar, state = 'visibility', setting = entry.setting, condition = condition,
+            }
+            RegisterStateDriver(entry.bar, 'visibility', condition)
         end
     end
 
     HookSecondaryBarRehide()
+end
+
+-- Re-registers a bar's driver once it is turned on or off; RegisterStateDriver is blocked in combat.
+function addon.RefreshSecondaryBarDrivers()
+    if InCombatLockdown() then return end
+    for _, data in pairs(VehicleModule.stateDrivers) do
+        if data.setting then
+            local condition = SecondaryBarVisibility(data.setting)
+            if condition ~= data.condition then
+                data.condition = condition
+                RegisterStateDriver(data.frame, 'visibility', condition)
+            end
+        end
+    end
 end
 
 -- ============================================================================
