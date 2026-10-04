@@ -773,16 +773,27 @@ function UF.TargetStyle.Create(opts)
     -- PVP ICON
     -- ================================================================
 
+    local pvpBadge
+
     -- Runs after TargetFrame_CheckFaction, the only code that shows the icon; a small focus clears showPVP.
     local function ApplyPvPIconVisibility()
         local pvpIcon = BlizzFrame.pvpIcon
         if not pvpIcon then return end
-        if GetConfig().show_pvp_icon == false then
-            pvpIcon:Hide()
-        elseif BlizzFrame.showPVP and UnitExists(unitToken)
-            and (UnitIsPVPFreeForAll(unitToken) or (UnitFactionGroup(unitToken) and UnitIsPVP(unitToken))) then
-            pvpIcon:Show()
+        local config = GetConfig()
+        local kind = BlizzFrame.showPVP and UnitExists(unitToken) and UF.GetPvPKind(unitToken)
+        local shown = kind and config.show_pvp_icon ~= false
+        if not pvpBadge then
+            -- Same frame as Blizzard's icon, so it draws over the portrait the same way.
+            pvpBadge = UF.CreatePvPBadge(pvpIcon:GetParent())
+            -- Same gap to the gold ring as the player badge: this ring is flush with the portrait, the player's sits ~5 px out.
+            pvpBadge:SetPoint("TOP", Portrait, "RIGHT", 4.1, 7.4)
         end
+        local onBadge = shown and config.pvp_icon_style == "forever" and UF.ShowPvPBadge(pvpBadge, kind)
+        if not onBadge then
+            pvpBadge:Hide()
+        end
+        -- Alpha only: TargetFrame_CheckFaction owns Show/Hide, including the small focus that never shows it.
+        pvpIcon:SetAlpha((shown and not onBadge) and 1 or 0)
     end
 
     -- ================================================================

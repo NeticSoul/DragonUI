@@ -213,6 +213,66 @@ function UF.IsEnabled(unitKey)
     return config.enabled ~= false
 end
 
+-- ============================================================================
+-- PVP BADGE (WoW Forever style)
+-- ============================================================================
+
+local PVP_BADGE_SHEET = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\pvpforever"
+-- Forever draws its 1x atlases at 0.8; our portraits are ~0.93 the size of its 60/58 px ones.
+local PVP_BADGE_SCALE = 0.8 * 0.93
+-- { left, right, top, bottom, width, height }: cut from Forever's @2x sheet, sizes are its 1x atlas sizes.
+local PVP_BADGE_PARTS = {
+    circle   = { 0 / 256, 78 / 256, 0, 78 / 128, 39, 39 },
+    Alliance = { 80 / 256, 128 / 256, 0, 54 / 128, 24, 27 },
+    Horde    = { 130 / 256, 178 / 256, 0, 54 / 128, 24, 27 },
+    FFA      = { 180 / 256, 236 / 256, 0, 88 / 128, 28, 44 },
+}
+
+-- Same test as Blizzard's PvP icon code: free-for-all first, then a PvP-flagged faction.
+function UF.GetPvPKind(unit)
+    if UnitIsPVPFreeForAll(unit) then
+        return "FFA"
+    end
+    local factionGroup = UnitFactionGroup(unit)
+    if factionGroup and UnitIsPVP(unit) then
+        return factionGroup
+    end
+end
+
+-- Forever's dark circle with the emblem on top; callers anchor it by its TOP edge like Forever does.
+function UF.CreatePvPBadge(parent)
+    local circle = PVP_BADGE_PARTS.circle
+    local badge = CreateFrame("Frame", nil, parent)
+    badge:SetSize(circle[5] * PVP_BADGE_SCALE, circle[6] * PVP_BADGE_SCALE)
+
+    local background = badge:CreateTexture(nil, "ARTWORK")
+    background:SetTexture(PVP_BADGE_SHEET)
+    background:SetTexCoord(circle[1], circle[2], circle[3], circle[4])
+    background:SetAllPoints(badge)
+
+    -- OVERLAY over ARTWORK: 3.3.5a ignores sublevels, so the emblem needs a higher layer than the circle.
+    local icon = badge:CreateTexture(nil, "OVERLAY")
+    icon:SetTexture(PVP_BADGE_SHEET)
+    icon:SetPoint("CENTER")
+    badge.icon = icon
+
+    badge:Hide()
+    return badge
+end
+
+-- Shows the badge for a PvP kind; false when there is no art for it, so the caller keeps Blizzard's icon.
+function UF.ShowPvPBadge(badge, kind)
+    local part = PVP_BADGE_PARTS[kind]
+    if not part then
+        badge:Hide()
+        return false
+    end
+    badge.icon:SetTexCoord(part[1], part[2], part[3], part[4])
+    badge.icon:SetSize(part[5] * PVP_BADGE_SCALE, part[6] * PVP_BADGE_SCALE)
+    badge:Show()
+    return true
+end
+
 
 -- ============================================================================
 -- CLASSIFICATION HELPERS

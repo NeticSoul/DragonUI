@@ -41,7 +41,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 | `Spellbook/` | retail spellbook art contributed by PentSec (pull request #485); cropped to the pieces the book draws and re-encoded (`spellbook-ribbon` kept uncompressed) |
 | `Talents/` | DragonUI_NewEra and New Era by Ashgaroth; `Artifact/` holds Legion-era retail art |
 | `UI/` | RetailUI atlases (`UnitFrame`, `MicroMenu`, `Minimap`, `CastingBar`, `QuestTracker`, `BagSlotsKey`, `CollapseButton`); DragonflightUI and DragonUI_NewEra retail frame chrome; a few 3.3.5a client files |
-| `UnitFrames/` | DragonflightUI; `Layers/` via UnitFrameLayers (RomanSpector); `Player/ClassOverlayDeathKnightRunes`, `Player/LFGRoleIcons`, `Player/PlayerRestFlipbook` and `uiunitframeboss2x` via RetailUI |
+| `UnitFrames/` | DragonflightUI; `Layers/` via UnitFrameLayers (RomanSpector); `Player/ClassOverlayDeathKnightRunes`, `Player/LFGRoleIcons`, `Player/PlayerRestFlipbook` and `uiunitframeboss2x` via RetailUI; `pvpforever` cut from WoW Forever's unit frame sheet (`uiunitframe2xc60`) |
 | `WorldMap/` | see [World map artwork](#world-map-artwork) |
 | `XP/` | DragonflightUI; `uiexperiencebar.blp` via pretty_actionbar / RetailUI |
 

@@ -928,9 +928,26 @@ local function IsPVPIconShown()
     return GetPlayerConfig().show_pvp_icon ~= false
 end
 
--- Same test PlayerFrame_UpdatePvPStatus uses to show the icon.
-local function IsPlayerPVPFlagged()
-    return UnitIsPVPFreeForAll("player") or (UnitFactionGroup("player") and UnitIsPVP("player"))
+local function GetPVPIconStyle()
+    return GetPlayerConfig().pvp_icon_style
+end
+
+-- Read at load, before anything reparents it, so the classic style can put the timer back.
+local pvpTimerHome = _G.PlayerPVPTimerText and _G.PlayerPVPTimerText:GetParent()
+local pvpTimerMoved = false
+
+local pvpBadge
+-- Built in the icon container so it draws over the portrait and border like Blizzard's icon.
+local function GetPlayerPvPBadge()
+    if not pvpBadge then
+        local dragonFrame = _G["DragonUIUnitframeFrame"]
+        local container = dragonFrame and dragonFrame.EliteIconContainer
+        if not container then return end
+        pvpBadge = UF.CreatePvPBadge(container)
+        -- Forever's (20,-50) runs at the circle's 0.8 scale: 8 px left, 9 px above mid-portrait (x0.93 for 56 px).
+        pvpBadge:SetPoint("TOP", PlayerPortrait, "LEFT", -7.5, 8.4)
+    end
+    return pvpBadge
 end
 
 -- Update leader icon positioning based on dragon decoration mode
@@ -1022,6 +1039,17 @@ local function UpdatePVPTimerPosition(isEliteMode)
     if not pvpTimerText then
         return
     end
+
+    -- Forever puts the countdown just left of its circle.
+    local badge = GetPVPIconStyle() == "forever" and GetPlayerPvPBadge()
+    if badge then
+        pvpTimerText:SetParent(badge:GetParent())
+        pvpTimerText:SetDrawLayer("OVERLAY", 7)
+        pvpTimerText:ClearAllPoints()
+        pvpTimerText:SetPoint("RIGHT", badge, "LEFT", 2, 0)
+        pvpTimerMoved = true
+        return
+    end
     
     -- ONLY modify if there's elite decoration (elite, rareelite, worldboss, etc.)
     if isEliteMode then
@@ -1038,9 +1066,16 @@ local function UpdatePVPTimerPosition(isEliteMode)
             
             -- Optional: adjust text size for better visibility
             pvpTimerText:SetFont(pvpTimerText:GetFont(), 11, "OUTLINE")
+            pvpTimerMoved = true
         end
+    elseif pvpTimerMoved and pvpTimerHome then
+        -- Blizzard's XML anchor (PlayerFrame.xml), restored after the Forever style or elite decoration
+        pvpTimerText:SetParent(pvpTimerHome)
+        pvpTimerText:SetDrawLayer("BACKGROUND")
+        pvpTimerText:ClearAllPoints()
+        pvpTimerText:SetPoint("CENTER", pvpTimerHome, "TOPLEFT", 38, -8)
+        pvpTimerMoved = false
     end
-    -- WITHOUT elite decoration: DO NOT touch anything, leave Blizzard's original parent, layer and position
 end
 
 local function UpdatePVPIconPosition()
@@ -1092,17 +1127,29 @@ local function ApplyPVPIconVisibility()
     if timerText then
         timerText:SetAlpha(shown and 1 or 0)
     end
-    if not IsPlayerPVPFlagged() then
+    local kind = UF.GetPvPKind("player")
+    local badge = GetPlayerPvPBadge()
+    local onBadge = shown and kind and badge and GetPVPIconStyle() == "forever" and UF.ShowPvPBadge(badge, kind)
+    if badge and not onBadge then
+        badge:Hide()
+    end
+    -- Alpha, not Hide: Blizzard owns Show/Hide and replays the flag sound whenever it finds the icon hidden.
+    PlayerPVPIcon:SetAlpha((shown and not onBadge) and 1 or 0)
+    if not kind then
         return
     end
 
     local hitArea = _G.PlayerPVPIconHitArea
-    if shown then
-        PlayerPVPIcon:Show()
-        if hitArea then hitArea:Show() end
-    else
-        PlayerPVPIcon:Hide()
-        if hitArea then hitArea:Hide() end
+    if hitArea then
+        -- The tooltip area follows whichever icon is drawn (XML: 39x37 at the icon's TOPLEFT).
+        hitArea:ClearAllPoints()
+        if onBadge then
+            hitArea:SetAllPoints(badge)
+        else
+            hitArea:SetSize(39, 37)
+            hitArea:SetPoint("TOPLEFT", PlayerPVPIcon)
+        end
+        if shown then hitArea:Show() else hitArea:Hide() end
     end
 end
 
