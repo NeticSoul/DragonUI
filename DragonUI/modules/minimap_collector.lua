@@ -1308,6 +1308,9 @@ local function DressSettingsRing(btn)
 end
 
 local function ApplyDUIStyle(btn)
+    -- The arrow pulse's OnStop/OnFinished puts the arrow icon back, so kill it before the gear goes on.
+    local attention = btn.DragonUI_ArrowAttentionAnim
+    if attention and attention:IsPlaying() then attention:Stop() end
     btn:SetSize(deps.DRAGONUI_SETTINGS_BUTTON_SIZE, deps.DRAGONUI_SETTINGS_BUTTON_SIZE)
     btn:SetScale(1)
     DressSettingsRing(btn)
