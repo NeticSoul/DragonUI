@@ -43,6 +43,8 @@ local HIGHLIGHT_TEX   = "Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 local WHITE_TEX       = "Interface\\Buttons\\WHITE8X8"
 local BORDER_TEX      = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\border_buttons.tga"
 local GOLD_R, GOLD_G, GOLD_B = 1.0, 0.82, 0.20
+-- The Forever ring's band, lifted a little so a 1 px line still reads as that bronze.
+local BRONZE_R, BRONZE_G, BRONZE_B = 0.62, 0.45, 0.26
 
 local INCLUDE_BUTTONS = {
     "WIM_IconFrame",
@@ -87,7 +89,13 @@ local function NormalizeAngle(a)
     return a
 end
 
+local function IsForever()
+    return deps.IsForeverActive ~= nil and deps.IsForeverActive() and true or false
+end
+
+-- Forever style has no arrow collector; the saved choice comes back with the DragonUI style.
 local function GetStyle()
+    if IsForever() then return STYLE_DUI end
     local c = GetCfg()
     local s = (c and c.collector_style) or STYLE_DUI
     if s == STYLE_CLASSIC then return s end
@@ -183,8 +191,9 @@ local function LayoutSettingsIcon(btn, pressed)
     icon:SetPoint("CENTER", btn, "CENTER", 0, 0)
     icon:SetTexCoord(0, 1, 0, 1)
     if btn.ringFrame then
+        local ringFrameSize = ringSize * (btn.DragonUI_RingGrowth or 1)
         btn.ringFrame:ClearAllPoints()
-        btn.ringFrame:SetSize(ringSize, ringSize)
+        btn.ringFrame:SetSize(ringFrameSize, ringFrameSize)
         btn.ringFrame:SetPoint("CENTER", btn, "CENTER", 0, 0)
     end
     if btn.circle then
@@ -266,7 +275,11 @@ local function EnsureCircleClickAnimation(btn)
 
     local parent = btn.ringFrame or btn
     local flash = parent:CreateTexture(nil, "OVERLAY", nil, 7)
-    flash:SetTexture(BORDER_TEX)
+    if deps.DressButtonRing then
+        deps.DressButtonRing(flash)
+    else
+        flash:SetTexture(BORDER_TEX)
+    end
     flash:SetBlendMode("ADD")
     flash:SetAllPoints(parent)
     flash:SetVertexColor(GOLD_R, GOLD_G, GOLD_B, 1)
@@ -385,9 +398,13 @@ end
 -- Geometry helpers
 -- ----------------------------------------------------------------------------
 local function GetOrbitRadius(btn)
+    local scale = (btn and btn.GetScale and btn:GetScale()) or 1
+    local foreverOrbit = deps.GetForeverOrbitRadius and deps.GetForeverOrbitRadius()
+    if foreverOrbit then
+        return foreverOrbit / scale
+    end
     local mapR = mathmax(Minimap:GetWidth(), Minimap:GetHeight()) * 0.5
     local size = (btn and btn:GetWidth()) or deps.DRAGONUI_SETTINGS_BUTTON_SIZE or 24
-    local scale = (btn and btn.GetScale and btn:GetScale()) or 1
     -- Sit on the minimap rim and hang outside (+8); ring is already btn+4.
     return mathmax(12, mapR - (size * scale) * 0.5 + 6)
 end
@@ -535,7 +552,8 @@ local function RestoreOrigin(btn)
     if o.level  then btn:SetFrameLevel(o.level) end
     if o.w and o.h then btn:SetSize(o.w, o.h) end
     if o.alpha then btn:SetAlpha(o.alpha) end
-    if o.scale then btn:SetScale(o.scale) end
+    local launcherScale = o.parent == Minimap and deps.AdoptLauncher and deps.AdoptLauncher(btn)
+    if launcherScale or o.scale then btn:SetScale(launcherScale or o.scale) end
     btn:ClearAllPoints()
     if o.points then
         for _, p in ipairs(o.points) do btn:SetPoint(unpack(p)) end
@@ -660,6 +678,14 @@ local function ApplyCollectorStyle(c)
 
         c.classicTopBorder, c.classicBottomBorder, c.classicRightBorder = top, bot, right
     end
+
+    local r, g, b = 1, 0.82, 0
+    if IsForever() then
+        r, g, b = BRONZE_R, BRONZE_G, BRONZE_B
+    end
+    c.classicTopBorder:SetGradientAlpha("HORIZONTAL", r, g, b, 0, r, g, b, 1)
+    c.classicBottomBorder:SetGradientAlpha("HORIZONTAL", r, g, b, 0, r, g, b, 1)
+    c.classicRightBorder:SetVertexColor(r, g, b, 1)
 
     -- Original behavior: both styles show the same background/borders.
     c.classicBackground:Show()
@@ -786,7 +812,11 @@ local function NormalizeSkinned(btn)
     btn:SetScale(1)
     btn:SetSize(21, 21)
     if btn.circle then
-        btn.circle:SetSize(25, 25)
+        if deps.DressButtonRing then
+            deps.DressButtonRing(btn.circle, 25)
+        else
+            btn.circle:SetSize(25, 25)
+        end
         btn.circle:ClearAllPoints()
         btn.circle:SetPoint("CENTER", btn, "CENTER", 0, 0)
     end
@@ -932,6 +962,7 @@ local function PlaceCollectedButton(btn, c, index)
 
     local skin = IsSkinEnabled()
     local styleKey = (GetStyle() == STYLE_CLASSIC and "classic" or "dragonui") .. ":" .. (skin and "1" or "0")
+        .. (IsForever() and ":forever" or "")
     local sameLayout = btn.DragonUI_CollectorManaged
         and btn:GetParent() == c
         and btn.DragonUI_CollectorIndex == index
@@ -1261,9 +1292,25 @@ local function ApplyClassicStyle(btn)
     end
 end
 
+-- The gold tint belongs to DragonUI's silver ring; Forever's ring brings its own bronze.
+local function DressSettingsRing(btn)
+    local ring = btn.circle
+    if not ring or not deps.DressButtonRing then return end
+    btn.DragonUI_RingGrowth = deps.DressButtonRing(ring)
+    if IsForever() then
+        ring:SetVertexColor(1, 1, 1)
+    else
+        ring:SetVertexColor(1, 0.82, 0.28)
+    end
+    if btn.DragonUI_ClickFlash then
+        deps.DressButtonRing(btn.DragonUI_ClickFlash)
+    end
+end
+
 local function ApplyDUIStyle(btn)
     btn:SetSize(deps.DRAGONUI_SETTINGS_BUTTON_SIZE, deps.DRAGONUI_SETTINGS_BUTTON_SIZE)
     btn:SetScale(1)
+    DressSettingsRing(btn)
     if btn.ringFrame then btn.ringFrame:Show() end
     if btn.icon then
         SetSettingsIcon(btn.icon)

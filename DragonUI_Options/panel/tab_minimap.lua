@@ -89,6 +89,13 @@ local function GetAnimatedBorderPresets()
     }
 end
 
+-- Hybrid mode leaves the ring to SexyMap, so the Forever style is off there.
+local function IsForeverMinimap()
+    local modules = addon.db and addon.db.profile and addon.db.profile.modules
+    local mode = modules and modules.minimap and modules.minimap.sexymap_mode
+    return C:GetDBValue("minimap.style") == "forever" and mode ~= "hybrid"
+end
+
 local function IsCollectorEnabled()
     local enabled = C:GetDBValue("minimap.collector_enabled")
     if enabled == nil then
@@ -128,6 +135,13 @@ local function BuildMinimapTab(scroll)
     -- ====================================================================
     local collector = C:AddSection(scroll, LO["Minimap Buttons Collector"])
     local collectorWidgets = {}
+    local collectorStyleDropdown
+
+    -- Forever has no arrow collector: the dropdown shows Circle and locks while it is on.
+    local function GetCollectorStyle()
+        if IsForeverMinimap() then return "dragonui" end
+        return C:GetDBValue("minimap.collector_style") or "dragonui"
+    end
 
     local function UpdateCollectorSectionState()
         if Panel.indexing then return end
@@ -136,6 +150,10 @@ local function BuildMinimapTab(scroll)
             if widget and widget.SetDisabled then
                 widget:SetDisabled(not enabled)
             end
+        end
+        if collectorStyleDropdown then
+            collectorStyleDropdown:SetValue(GetCollectorStyle())
+            collectorStyleDropdown:SetDisabled(not enabled or IsForeverMinimap())
         end
         SetSectionVisualState(collector, enabled)
     end
@@ -149,7 +167,7 @@ local function BuildMinimapTab(scroll)
         end,
     })
 
-    collectorWidgets[#collectorWidgets + 1] = C:AddDropdown(collector, {
+    collectorStyleDropdown = C:AddDropdown(collector, {
         label = LO["Style"],
         values = {
             dragonui = LO["Circle"],
@@ -157,6 +175,7 @@ local function BuildMinimapTab(scroll)
         },
         width = 220,
         dbPath = "minimap.collector_style",
+        getFunc = GetCollectorStyle,
         callback = RefreshMinimap,
     })
 
@@ -166,6 +185,19 @@ local function BuildMinimapTab(scroll)
     -- BASIC SETTINGS
     -- ====================================================================
     local basic = C:AddSection(scroll, LO["Basic Settings"])
+
+    C:AddDropdown(basic, {
+        label = LO["Style"],
+        dbPath = "minimap.style",
+        values = {
+            dragonui = LO["DragonUI"],
+            forever = LO["Forever"],
+        },
+        callback = function()
+            UpdateCollectorSectionState()
+            RefreshMinimap()
+        end,
+    })
 
     C:AddSlider(basic, {
         label = LO["Scale"],

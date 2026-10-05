@@ -8,16 +8,16 @@ local C = NP.const
 
 NP.threat = NP.threat or {}
 
-function NP.threat.IsHostilePlateByColor(plateData)
+function NP.threat.IsThreatPlate(plateData)
     if not plateData then
         return false
     end
-    -- Exclude friendly plates only.
-    local reaction = NP.native_style.GetPlateReaction and NP.native_style.GetPlateReaction(plateData)
-    if not reaction then
+    local reaction, unitType = NP.native_style.GetPlateReaction(plateData)
+    if not reaction or reaction == "FRIENDLY" then
         return false
     end
-    return reaction ~= "FRIENDLY"
+    -- Players have no threat table (status stays 0), so DPS/tank tints would only bury the class color.
+    return not (unitType == "PLAYER" and plateData.classKey ~= nil)
 end
 
 function NP.threat.GetAggroStatus(threat)
@@ -132,7 +132,7 @@ end
 -- Combat-only aggro bar tint; nil out of combat or with no threat status.
 function NP.threat.GetAggroBarTint(plateData)
     if not NP.module.playerInCombat or NP.threat.IsThreatSuppressedContext()
-        or not NP.threat.IsHostilePlateByColor(plateData) then
+        or not NP.threat.IsThreatPlate(plateData) then
         return nil
     end
     local status = NP.threat.ResolveAggroStatus(plateData)
@@ -177,7 +177,7 @@ function NP.threat.ApplyThreatGlow(plateData)
 
     local inCombat = NP.module.playerInCombat and true or false
     if not inCombat or NP.threat.IsThreatSuppressedContext()
-        or not NP.threat.IsHostilePlateByColor(plateData) then
+        or not NP.threat.IsThreatPlate(plateData) then
         glow:Hide()
         return
     end

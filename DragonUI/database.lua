@@ -499,6 +499,7 @@ local defaults = {
         -- MINIMAP SETTINGS
         minimap = {
             scale = 1,
+            style = "dragonui", -- "dragonui" or "forever" (WoW Forever's ring, north pointer and day/night badge)
             border_alpha = 1,
             blip_skin = true, -- true = new/modern style, false = old/classic Blizzard style
             tracking_icons = true,
@@ -630,6 +631,7 @@ local defaults = {
                 showManaTextAlways = false,
                 dragon_decoration = "none",
                 show_pvp_icon = true,
+                pvp_icon_style = "classic", -- "classic" or "forever" (WoW Forever's round badge)
                 alwaysShowAlternateManaText = false,
                 alternateManaFormat = "both",
                 show_runes = true, -- DK rune display (used by player.lua)
@@ -666,6 +668,7 @@ local defaults = {
                 enableThreatGlow = true,
                 show_name_background = true,
                 show_pvp_icon = true,
+                pvp_icon_style = "classic",
                 scale = 1.0,
                 -- Also fades Target of Target and the target cast bar (see target_style.lua)
                 show_on_hover = false,
@@ -683,6 +686,7 @@ local defaults = {
                 show_buff_debuff = true,
                 show_name_background = true,
                 show_pvp_icon = true,
+                pvp_icon_style = "classic",
                 scale = 0.9,
                 -- Also fades Target of Focus and the focus cast bar (see target_style.lua)
                 show_on_hover = false,

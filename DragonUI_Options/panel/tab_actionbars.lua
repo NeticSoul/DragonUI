@@ -373,10 +373,11 @@ local function BuildGeneralTab(scroll)
         label = LO["Style"],
         dbPath = "style.gryphons",
         values = {
-            old    = LO["Classic"],
-            new    = LO["Dragonflight"],
-            flying = LO["Flying"],
-            none   = LO["Hidden"],
+            old     = LO["Classic"],
+            new     = LO["Dragonflight"],
+            flying  = LO["Flying"],
+            forever = LO["Forever"],
+            none    = LO["Hidden"],
         },
         width = 200,
         callback = function()
@@ -454,6 +455,16 @@ local function BuildGeneralTab(scroll)
             texCoord = { 1/256, 158/256, 149/2048, 342/2048 },
             width = 70,
             height = 90,
+        })
+
+        -- WoW Forever preview (faction-aware like Dragonflight: gryphon=Alliance, wyvern=Horde)
+        C:AddTexturePreview(previewRow, {
+            label = LO["Forever"],
+            texture = assets .. "ActionBars\\uiactionbar2x_forever",
+            texCoord = faction == "Horde" and { 1/1024, 481/1024, 283/1024, 563/1024 }
+                or { 1/1024, 481/1024, 1/1024, 281/1024 },
+            width = 96,
+            height = 56,
         })
     end
 end

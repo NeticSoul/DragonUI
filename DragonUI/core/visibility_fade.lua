@@ -109,12 +109,13 @@ local function FadeToAlpha(entry, targetAlpha, duration, onComplete)
 end
 
 -- EnableMouse is protected in combat on secure frames; mouseSafeInCombat opts in known-safe ones.
--- Even those (e.g. MinimapCluster) can still get blocked in some contexts (PvP) — pcall per frame.
+-- Boss1TargetFrame/ArenaEnemyFrames anchor to MinimapCluster, so "safe" frames can turn protected.
 local function ApplyMouseState(entry, cfg, shouldShow)
     if not entry.clickThrough or not entry.hoverFrames then return end
-    if InCombatLockdown() and not entry.mouseSafeInCombat then return end
+    local inCombat = InCombatLockdown()
+    if inCombat and not entry.mouseSafeInCombat then return end
     for _, frame in ipairs(entry.hoverFrames) do
-        if frame and frame.EnableMouse then
+        if frame and frame.EnableMouse and not (inCombat and frame:IsProtected()) then
             pcall(frame.EnableMouse, frame, shouldShow)
         end
     end
@@ -311,11 +312,7 @@ function VF.Reset(key, alpha)
     if not entry then return end
     if entry.driver then entry.driver:SetScript("OnUpdate", nil) end
     ApplyAlpha(entry, alpha or 1)
-    if entry.clickThrough and entry.hoverFrames and (entry.mouseSafeInCombat or not InCombatLockdown()) then
-        for _, frame in ipairs(entry.hoverFrames) do
-            if frame and frame.EnableMouse then frame:EnableMouse(true) end
-        end
-    end
+    ApplyMouseState(entry, nil, true)
 end
 
 -- Full teardown on module disable: Reset leaves the hover poller ticking; this drops the entry.

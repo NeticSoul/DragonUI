@@ -4,9 +4,9 @@ DragonUI's own code is released under the MIT License (`LICENSE` at the reposito
 `LICENSE.txt` inside the `DragonUI` addon folder). This file lists everything shipped in the two
 addon folders that is not DragonUI's own work, or that is under other terms.
 
-Paths are relative to the repository root. Users install only the `DragonUI/` and
-`DragonUI_Options/` folders, so this file and the `LICENSES/` folder are also shipped inside the
-addon: `DragonUI/THIRD_PARTY_NOTICES.md` and `DragonUI/LICENSES/` are copies of the root files, and
+Paths are relative to the repository root, except `LICENSES/`, which is the folder next to this
+file (`DragonUI/LICENSES/`). Users install only the `DragonUI/` and `DragonUI_Options/` folders, so
+this file and `LICENSES/` live inside `DragonUI/` to ship with the addon, and
 `DragonUI_Options/LICENSES/` holds the texts that apply to that folder.
 
 ## Blizzard Entertainment artwork and game data
@@ -25,7 +25,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 
 | Folder under `DragonUI/Textures/` | Obtained via |
 |---|---|
-| `ActionBars/` | pretty_actionbar (s0h2x); some sheets carry his small repacking edits, which leave them Blizzard's art |
+| `ActionBars/` | pretty_actionbar (s0h2x); some sheets carry his small repacking edits, which leave them Blizzard's art; `uiactionbar2x_forever` cut from WoW Forever's end-cap sheet (`uiactionbar2xc60`) |
 | `Bags/` | DragonflightUI (`bagborder2`, `bagslotCutout`, `bagsitemslot2x`, `bagsitembankslot2x`), pretty_actionbar (`bagslots2x`, `bagslots2key`); `INV_Misc_Bag_08_round` is the retail bag icon, cropped round |
 | `Castbar/`, `Editmode/`, `Reputation/` | DragonflightUI |
 | `CharacterPanel/` | DragonUI_NewEra; `resistanceicons.tga` is cut from 3.3.5a client art |
@@ -34,7 +34,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 | `Collections/` | see [Collections artwork](#collections-artwork) |
 | `Merchant/` | DragonUI_NewEra; `emptyslot.blp` is the 3.3.5a client's own |
 | `Micromenu/` | DragonflightUI, pretty_actionbar |
-| `Minimap/` | pretty_minimap (s0h2x), RetailUI (`Calendar`, `GuildBanner`, `MinimapBorder`); `collector_toggle.tga` is cropped from the retail minimap border in `UI/Minimap.blp` |
+| `Minimap/` | pretty_minimap (s0h2x), RetailUI (`Calendar`, `GuildBanner`, `MinimapBorder`); `collector_toggle.tga` is cropped from the retail minimap border in `UI/Minimap.blp`; `forever_*` cut from WoW Forever's minimap sheets (`uiminimap2xc60`, `uiminimapmaskgeneralc60`) |
 | `Nameplates/Retail/` | see [Retail nameplate artwork](#retail-nameplate-artwork) |
 | `Nameplates/Totem/` | 3.3.5a spell icons with a new frame |
 | `NewLevelUp/` | retail level-up art |
@@ -42,7 +42,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 | `Spellbook/` | retail spellbook art contributed by PentSec (pull request #485); cropped to the pieces the book draws and re-encoded (`spellbook-ribbon` kept uncompressed) |
 | `Talents/` | DragonUI_NewEra and New Era by Ashgaroth; `Artifact/` holds Legion-era retail art |
 | `UI/` | RetailUI atlases (`UnitFrame`, `MicroMenu`, `Minimap`, `CastingBar`, `QuestTracker`, `BagSlotsKey`, `CollapseButton`); DragonflightUI and DragonUI_NewEra retail frame chrome; a few 3.3.5a client files |
-| `UnitFrames/` | DragonflightUI; `Layers/` via UnitFrameLayers (RomanSpector); `Player/ClassOverlayDeathKnightRunes`, `Player/LFGRoleIcons`, `Player/PlayerRestFlipbook` and `uiunitframeboss2x` via RetailUI |
+| `UnitFrames/` | DragonflightUI; `Layers/` via UnitFrameLayers (RomanSpector); `Player/ClassOverlayDeathKnightRunes`, `Player/LFGRoleIcons`, `Player/PlayerRestFlipbook` and `uiunitframeboss2x` via RetailUI; `pvpforever` cut from WoW Forever's unit frame sheet (`uiunitframe2xc60`) |
 | `WorldMap/` | see [World map artwork](#world-map-artwork) |
 | `XP/` | DragonflightUI; `uiexperiencebar.blp` via pretty_actionbar / RetailUI |
 
