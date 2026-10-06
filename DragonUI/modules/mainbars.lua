@@ -438,8 +438,9 @@ local function IsMainBarBackgroundHidden()
     return buttons and buttons.hide_main_bar_background
 end
 
-local function NearBaseY(savedY, baseY, maxOffset)
-    return math.abs(savedY - baseY) <= 1 or math.abs(savedY - (baseY + maxOffset)) <= 1
+local function NearBaseY(savedY, baseY, slot)
+    local d = savedY - baseY
+    return math.abs(d) <= 1 or math.abs(d - slot) <= 1 or math.abs(d + slot) <= 1
 end
 
 local function GetFramedStackDrop()
@@ -979,17 +980,13 @@ local function IsXpBarVisible()
     return currXP < maxXP
 end
 
-local function AreBothXpRepBarsVisible()
-    if not IsXpBarVisible() then return false end
-    local hasWatchedFaction = GetWatchedFactionInfo() ~= nil
-    return hasWatchedFaction
-end
-
+-- The defaults leave room for one bar: a slot up with XP and rep, a slot down with neither (max level).
 local function GetDualBarVerticalOffset()
-    if not AreBothXpRepBarsVisible() then return 0 end
+    local xpShown = IsXpBarVisible()
+    if xpShown ~= (GetWatchedFactionInfo() ~= nil) then return 0 end
     if not IsWidgetAtDefaultPosition("xpbar") or not IsWidgetAtDefaultPosition("repbar") then return 0 end
-    local barH = GetXpBarHeight()
-    return barH + 2 -- bar height + 2px gap
+    local slot = GetXpBarHeight() + 2
+    return xpShown and slot or -slot
 end
 
 function MainMenuBarMixin:SetupStatusBars()
@@ -2007,7 +2004,7 @@ local function ApplyActionBarPositions()
 
     local widgets = addon.db.profile.widgets
 
-    -- Calculate vertical offset when both XP and Rep bars are visible
+    -- XP/rep stack offset: up with both bars, down with neither
     local dualBarOffset = GetDualBarVerticalOffset()
 
     -- Apply mainbar container position (with dual-bar offset if at default)
@@ -2448,13 +2445,10 @@ local function InitializeMainbars()
         local savedY = w.posY or known.posY
         -- X must match within ±1
         if math.abs(savedX - known.posX) > 1 then return false end
-        -- Y must match base position OR base + dual-bar offset (±1 tolerance)
-        if math.abs(savedY - known.posY) <= 1 then return true end
-        -- Check against base + max possible offset (bar height + 2px gap)
-        local maxOffset = GetXpBarHeight() + 2
-        if math.abs(savedY - (known.posY + maxOffset)) <= 1 then return true end
+        local slot = GetXpBarHeight() + 2
+        if NearBaseY(savedY, known.posY, slot) then return true end
         local artY = ArtDefaultY(widgetName)
-        return not not (artY and NearBaseY(savedY, artY, maxOffset))
+        return not not (artY and NearBaseY(savedY, artY, slot))
     end
 
     addon.GetDualBarVerticalOffset = GetDualBarVerticalOffset

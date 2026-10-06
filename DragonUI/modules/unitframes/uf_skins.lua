@@ -53,12 +53,12 @@ UF.SKINS = {
                          { 5, -3 }, { 5.5, -3.5 }, { 6, -4 }, { 6.5, -4.5 }, { 7, -5 }, { 7.5, -5.5 }, { 8, -6 },
                          { 8.5, -6.5 } },
             },
-            -- The 1x elite glow, widened 0.7% about the ring so its end reaches the art's end line.
+            -- Same glow as Forever: the target's flash at its approved spot on this art, mirrored with it.
             glows = {
-                status = { file = "Interface\\AddOns\\DragonUI\\Textures\\UI\\UnitFrame", w = 210.5, h = 90,
-                           x = 46.625, y = 15, tc = { 0.2061015625, 0, 0.537109375, 0.712890625 } },
-                combat = { file = "Interface\\AddOns\\DragonUI\\Textures\\UI\\UnitFrame", w = 210.5, h = 90,
-                           x = 46.625, y = 15, tc = { 0.2061015625, 0, 0.537109375, 0.712890625 } },
+                status = { file = ART .. "Forever\\Target-InCombat", w = 188, h = 67, x = 66.5, y = 1.5,
+                           tc = { 376 / 512, 0, 0, 134 / 256 } },
+                combat = { file = ART .. "Forever\\Target-InCombat", w = 188, h = 67, x = 66.5, y = 1.5,
+                           tc = { 376 / 512, 0, 0, 134 / 256 } },
             },
             pvp = { x = 61.67, y = -22, scale = 0.8 },
             level = { x = 78.17, y = -55.5 },
@@ -85,9 +85,15 @@ UF.SKINS = {
         player = {
             background = { file = ART .. "HD\\Player-BACKGROUND", w = 256, h = 128, x = -67, y = -28 },
             border = { file = ART .. "HD\\Player-BORDER", w = 256, h = 128, x = -67, y = -28 },
-            -- The copper wedge's CENTER and the 1x glows' TOPLEFT on the portrait's, moved with the ring (fat: -9, 9).
+            -- The copper wedge's CENTER on the portrait's, moved with the ring.
             corner = { x = 16.5, y = -16.5 },
-            glowSpot = { x = -8, y = 8.5 },
+            -- Retail's 2x Status and InCombat, TOPLEFT on the background's TOPLEFT at retail's anchors.
+            glows = {
+                status = { file = ART .. "Forever\\Player-Status", w = 196, h = 71, x = 0, y = 0.5,
+                           tc = { 0, 392 / 512, 0, 142 / 256 } },
+                combat = { file = ART .. "Forever\\Player-InCombat", w = 192, h = 71, x = 1.5, y = 1,
+                           tc = { 0, 384 / 512, 0, 142 / 256 } },
+            },
             -- LEFT on PlayerPortrait's RIGHT, the art riding on the health: HD ring centred, health between its lines.
             bars = {
                 health = { w = 125, h = 20, x = 2, y = -1 },
@@ -195,7 +201,6 @@ do
             border = art(d.player.border, "Player-BORDER", -28),
             -- The copper wedge is baked into the art: the corner piece only shows as the combat swords.
             corner = false,
-            glowSpot = false,
             -- The art rides on the health bar: these carry the c60 ring, 1.5 left and 1 high, onto the portrait.
             bars = {
                 health = { w = 125, h = 20, x = 2.5, y = -1.5 },
@@ -204,13 +209,7 @@ do
             pvp = d.player.pvp,
             level = d.player.level,
             name = d.player.name,
-            -- Forever's retail glows and swords, TOPLEFT on the background's TOPLEFT at its own anchors.
-            glows = {
-                status = { file = ART .. "Forever\\Player-Status", w = 196, h = 71, x = 0, y = 0.5,
-                           tc = { 0, 392 / 512, 0, 142 / 256 } },
-                combat = { file = ART .. "Forever\\Player-InCombat", w = 192, h = 71, x = 1.5, y = 1,
-                           tc = { 0, 384 / 512, 0, 142 / 256 } },
-            },
+            glows = d.player.glows,
             swords = { file = ART .. "Forever\\Player-CombatIcon", w = 16, h = 16, x = 47, y = -47.5 },
         },
     }
@@ -318,7 +317,7 @@ UF.PLAYER_DECORATIONS = {
     worldboss_forever = { kind = "boss", set = "forever" },
 }
 
--- [frame][set][cell]: target and small sit on the portrait CENTER, player on PlayerFrame TOPLEFT.
+-- [frame][set][cell]: target sits on the portrait CENTER, player on PlayerFrame TOPLEFT. ToT/ToF get none, like retail.
 UF.DRAGON_PLACEMENT = {
     target = {
         dragonui = {
@@ -330,18 +329,6 @@ UF.DRAGON_PLACEMENT = {
             gold = { w = 100, h = 100, x = 5.25, y = -1.5 },
             goldWinged = { w = 110, h = 90, x = 11.25, y = -1.5 },
             silverWinged = { w = 110, h = 89, x = 8.25, y = -4 },
-        },
-    },
-    small = {
-        dragonui = {
-            elite = { w = 51, h = 51, x = -4, y = -2, flip = true },
-            rare = { w = 51, h = 51, x = -4, y = -2, flip = true },
-            rareelite = { w = 63, h = 51.75, x = -9.75, y = -2, flip = true },
-        },
-        forever = {
-            gold = { w = 63.75, h = 63.75, x = -4.25, y = -2.75, flip = true },
-            goldWinged = { w = 70.25, h = 57.5, x = -8.25, y = -2.75, flip = true },
-            silverWinged = { w = 70.25, h = 56.75, x = -6.25, y = -4.5, flip = true },
         },
     },
     player = {
@@ -414,11 +401,6 @@ end
 -- The name moves with the level: Forever's left-aligned slot, or nil for each frame's DragonUI placement.
 function UF.GetNameSpot(frameKind)
     return UF.GetLevelStyle() == "forever" and UF.GetFrameSkin()[frameKind].name or nil
-end
-
--- Forever's level circle hangs onto the attached ToT/ToF name; 12 clears it and stays above the castbar.
-function UF.GetCompanionDrop()
-    return UF.GetLevelSpot("target") and 12 or 0
 end
 
 -- "auto" (or anything unknown) follows the frame art, like the level and PvP styles.

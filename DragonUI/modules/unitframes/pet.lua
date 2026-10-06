@@ -201,9 +201,9 @@ local function ConfigurePetThreatGlow()
     threatFlash:SetTexCoord(unpack(COMBAT_TEX_COORDS))
    
     
-    --  Visual configuration
-    threatFlash:SetBlendMode("ADD")
-    threatFlash:SetAlpha(0.7)
+    -- Alpha, not Hide: UnitFrame_UpdateThreatIndicator owns Show/Hide and the threat color.
+    local config = addon.db and addon.db.profile.unitframe.pet
+    threatFlash:SetAlpha((config and config.enableThreatGlow == false) and 0 or 1)
     threatFlash:SetDrawLayer("OVERLAY", 10)
     
     -- Position relative to pet frame

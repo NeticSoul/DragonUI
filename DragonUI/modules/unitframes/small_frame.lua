@@ -60,7 +60,6 @@ function UF.SmallFrame.Create(opts)
         background = nil,
         border = nil,
         borderFrame = nil,
-        elite = nil,
         classPortraitBg = nil,
         classPortraitIcon = nil,
     }
@@ -131,64 +130,6 @@ function UF.SmallFrame.Create(opts)
         end
 
         return false
-    end
-
-
-    -- ========================================================================
-    -- CLASSIFICATION SYSTEM
-    -- ========================================================================
-
-    local function UpdateClassification()
-        local unit = GetUnit()
-        if not unit or not frameElements.elite then
-            if frameElements.elite then
-                frameElements.elite:Hide()
-            end
-            return
-        end
-
-        local classification = UnitClassification(unit)
-
-        -- Check vehicle first
-        if UnitVehicleSeatCount and UnitVehicleSeatCount(unit) > 0 then
-            frameElements.elite:Hide()
-            return
-        end
-
-    -- Determine classification and apply boss/elite/rare decoration
-        local kind = nil
-        if classification == "worldboss" then
-            kind = "boss"
-        elseif classification == "elite" then
-            kind = "elite"
-        elseif classification == "rareelite" then
-            kind = "rareelite"
-        elseif classification == "rare" then
-            kind = "rare"
-        else
-            -- Famous NPC override
-            local name = UnitName(unit)
-            if name and addon.unitframe and addon.unitframe.famous and addon.unitframe.famous[name] then
-                kind = "elite"
-            end
-        end
-
-        local file, left, right, top, bottom, place
-        if kind then
-            file, left, right, top, bottom, place = UF.GetDragon("small", kind)
-        end
-
-        if file then
-            frameElements.elite:SetTexture(file)
-            frameElements.elite:SetTexCoord(left, right, top, bottom)
-            frameElements.elite:SetSize(place.w, place.h)
-            frameElements.elite:SetPoint("CENTER", frames.portrait, "CENTER", place.x, place.y)
-            frameElements.elite:SetDrawLayer("OVERLAY", 11)
-            frameElements.elite:Show()
-            frameElements.elite:SetAlpha(1)
-        else
-            frameElements.elite:Hide()
-        end
     end
 
 
@@ -412,7 +353,6 @@ function UF.SmallFrame.Create(opts)
                     if frameElements.border then
                         frameElements.border:Show()
                     end
-                    UpdateClassification()
                 end
             end)
             frames.main.DragonUI_ShowHook = true
@@ -424,7 +364,6 @@ function UF.SmallFrame.Create(opts)
                 if frame == frames.main and IsEnabled() and UnitExists(opts.unitToken) then
                     if frameElements.background then frameElements.background:Show() end
                     if frameElements.border then frameElements.border:Show() end
-                    UpdateClassification()
                     UpdateSmallFrameClassPortrait()
                 end
             end)
@@ -512,7 +451,7 @@ function UF.SmallFrame.Create(opts)
                 frames.parent,
                 config.anchorParent or opts.defaultAnchorParent or "BOTTOMRIGHT",
                 config.x or opts.defaultX or 0,
-                (config.y or opts.defaultY or 0) - UF.GetCompanionDrop()
+                (config.y or opts.defaultY or 0)
             )
         end
         frames.main:SetScale(config.scale or 1.0)
@@ -545,15 +484,6 @@ function UF.SmallFrame.Create(opts)
         end
         ApplySkinTextures()
 
-        -- Create elite decoration
-        if not frameElements.elite then
-            local eliteFrame = CreateFrame("Frame", opts.namePrefix .. "EliteFrame", frames.main)
-            eliteFrame:SetFrameStrata("MEDIUM")
-            eliteFrame:SetAllPoints(frames.portrait)
-
-            frameElements.elite = eliteFrame:CreateTexture(opts.namePrefix .. "Elite", "OVERLAY", nil, 1)
-            frameElements.elite:Hide()
-        end
 
         -- ----------------------------------------------------------------
         -- Configure health bar
@@ -699,7 +629,6 @@ function UF.SmallFrame.Create(opts)
             end
         end
 
-        UpdateClassification()
         UpdateSmallFrameClassPortrait()
 
         local config = GetConfig()
@@ -821,17 +750,6 @@ function UF.SmallFrame.Create(opts)
             if opts.cvar and cvarName == opts.cvar then
                 RequestVisibilityRefreshFromEvent()
             end
-
-        -- ----------------------------------------------------------------
-        -- UNIT_CLASSIFICATION_CHANGED
-        -- ----------------------------------------------------------------
-        elseif event == "UNIT_CLASSIFICATION_CHANGED" then
-            if not IsEnabled() then return end
-
-            local unit = ...
-            if unit == opts.unitToken then
-                UpdateClassification()
-            end
         end
     end
 
@@ -845,7 +763,6 @@ function UF.SmallFrame.Create(opts)
     if opts.cvar then
         Module.eventsFrame:RegisterEvent("CVAR_UPDATE")
     end
-    Module.eventsFrame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
     Module.eventsFrame:SetScript("OnEvent", OnEvent)
 
 
@@ -978,7 +895,7 @@ function UF.SmallFrame.Create(opts)
                         frames.parent,
                         (config and config.anchorParent) or opts.defaultAnchorParent or "BOTTOMRIGHT",
                         (config and config.x) or opts.defaultX or 0,
-                        ((config and config.y) or opts.defaultY or 0) - UF.GetCompanionDrop()
+                        ((config and config.y) or opts.defaultY or 0)
                     )
                 end
                 frames.main:SetScale((config and config.scale) or 1.0)
@@ -987,10 +904,6 @@ function UF.SmallFrame.Create(opts)
             elseif frames.main then
                 RequestVisibilityRefresh()
             end
-        end
-
-        if ShouldShow() then
-            UpdateClassification()
         end
     end
 
@@ -1011,7 +924,7 @@ function UF.SmallFrame.Create(opts)
                 frames.parent,
                 opts.defaultAnchorParent or "BOTTOMRIGHT",
                 opts.defaultX or 0,
-                (opts.defaultY or 0) - UF.GetCompanionDrop()
+                (opts.defaultY or 0)
             )
             frames.main:SetScale(1.0)
         end

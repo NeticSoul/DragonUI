@@ -31,7 +31,7 @@ local ToFModule = UF.SmallFrame.Create({
     },
     defaultAnchor       = "BOTTOMRIGHT",
     defaultAnchorParent = "BOTTOMRIGHT",
-    defaultX            = -8,
+    defaultX            = -35,
     defaultY            = -30,
     -- No cvar for FoT (only ToT has showTargetOfTarget)
 })

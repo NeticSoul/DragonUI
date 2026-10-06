@@ -129,10 +129,8 @@ local api = UF.TargetStyle.Create({
         return {
             _G.FocusFrameTextureFrameTexture,
             _G.FocusFrameBackground,
-            _G.FocusFrameFlash,
             _G.FocusFrameNumericalThreat,
             FocusFrame.threatNumericIndicator,
-            FocusFrame.threatIndicator,
             -- FoT children (visible as part of FocusFrame even if FoT module is disabled)
             _G.FocusFrameToTBackground,
             _G.FocusFrameToTTextureFrameTexture,

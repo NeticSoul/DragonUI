@@ -33,7 +33,7 @@ if addon.RegisterModule then
 end
 -- Animation variables for Combat Flash pulse effect
 local combatPulseTimer = 0
-local eliteStatusPulseTimer = 0
+local restPulseTimer = 0
 
 -- Elite Glow System State
 local eliteGlowActive = false
@@ -99,21 +99,12 @@ local ELITE_COMBAT_PULSE_SETTINGS = {
     enabled = true
 }
 
--- Normal Status/Rest animation settings (when NO elite decoration)
-local NORMAL_STATUS_PULSE_SETTINGS = {
-    speed = 5, -- Speed for resting in normal mode
-    minAlpha = 0,
-    maxAlpha = 0.7,
-    enabled = true
-}
-
--- Elite Status/Rest animation settings (when elite decoration is ON)
-local ELITE_STATUS_PULSE_SETTINGS = {
-    speed = 5, -- Speed for resting in elite mode
-    minAlpha = 0,
-    maxAlpha = 0.7,
-    enabled = true
-}
+-- Retail's PlayerFrame_OnUpdate breathing: alpha runs 55/255 -> 1 -> 55/255 once a second.
+local function RestPulseAlpha(t)
+    local phase = t % 1
+    if phase > 0.5 then phase = 1 - phase end
+    return (55 + phase * 400) / 255
+end
 
 -- Event lookup tables for O(1) performance
 local HEALTH_EVENTS = {
@@ -489,10 +480,7 @@ local function UpdateGlowVisibility()
     local config = GetPlayerConfig()
     local restGlowEnabled = config.show_rest_glow ~= false -- default true
 
-    -- Vehicle mode: DragonUI's custom glow textures (uiunitframe/uiunitframe-fat) don't
-    -- match the vehicle border shape. Instead, use dedicated VehicleCombatFlash and
-    -- VehicleStatusGlow frames which use the 209×89 vehicle atlas shape.
-    -- This avoids conflict with Blizzard's UIFrameFlash system on PlayerFrameFlash.
+    -- Vehicle mode: the normal/elite glows don't fit the vehicle border; the Vehicle* frames carry retail's vehicle cells.
     if IsInVehicle() then
         -- Suppress ALL normal/elite custom glows (wrong shape for vehicle frame)
         if dragonFrame.DragonUICombatGlow then
@@ -518,7 +506,7 @@ local function UpdateGlowVisibility()
             PlayerStatusTexture:SetAlpha(0)
         end
 
-        -- Vehicle combat flash: dedicated DragonUI frame with vehicle atlas shape
+        -- Vehicle combat flash: dedicated DragonUI frame
         local combatFlashEnabled = GetCombatFlashConfig()
         if dragonFrame.VehicleCombatFlash then
             if combatGlowVisible and combatFlashEnabled then
@@ -529,7 +517,7 @@ local function UpdateGlowVisibility()
             end
         end
 
-        -- Vehicle status (resting) glow: dedicated DragonUI frame with vehicle atlas shape
+        -- Vehicle status (resting) glow: dedicated DragonUI frame
         if dragonFrame.VehicleStatusGlow then
             if statusGlowVisible and restGlowEnabled then
                 dragonFrame.VehicleStatusGlow:Show()
@@ -661,7 +649,7 @@ local function AnimateCombatFlashPulse(elapsed)
         return
     end
 
-    -- Vehicle mode: pulse dedicated VehicleCombatFlash (uses vehicle atlas shape)
+    -- Vehicle mode: pulse dedicated VehicleCombatFlash
     if IsInVehicle() then
         local dragonFrame = _G["DragonUIUnitframeFrame"]
         if dragonFrame and dragonFrame.VehicleCombatFlash and dragonFrame.VehicleCombatFlash:IsVisible() then
@@ -712,33 +700,24 @@ local function AnimateCombatFlashPulse(elapsed)
     end
 end
 
--- Animate Status/Rest pulse effect (both normal and elite modes)
+-- Animate Status/Rest pulse effect (vehicle, elite and normal/fat modes)
 local function AnimateStatusPulse(elapsed)
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     if not dragonFrame then
         return
     end
 
-    -- Elite mode: pulse EliteStatusGlow
-    if eliteGlowActive then
-        if not ELITE_STATUS_PULSE_SETTINGS.enabled then return end
-        if dragonFrame.EliteStatusGlow and dragonFrame.EliteStatusGlow:IsVisible() then
-            eliteStatusPulseTimer = eliteStatusPulseTimer + (elapsed * ELITE_STATUS_PULSE_SETTINGS.speed)
-            local pulseAlpha = ELITE_STATUS_PULSE_SETTINGS.minAlpha +
-                                   (ELITE_STATUS_PULSE_SETTINGS.maxAlpha - ELITE_STATUS_PULSE_SETTINGS.minAlpha) *
-                                   (math.sin(eliteStatusPulseTimer) * 0.5 + 0.5)
-            dragonFrame.EliteStatusTexture:SetAlpha(pulseAlpha)
-        end
+    local glow, texture
+    if IsInVehicle() then
+        glow, texture = dragonFrame.VehicleStatusGlow, dragonFrame.VehicleStatusTexture
+    elseif eliteGlowActive then
+        glow, texture = dragonFrame.EliteStatusGlow, dragonFrame.EliteStatusTexture
     else
-        -- Normal/fat mode: pulse DragonUIStatusGlow
-        if not NORMAL_STATUS_PULSE_SETTINGS.enabled then return end
-        if dragonFrame.DragonUIStatusGlow and dragonFrame.DragonUIStatusGlow:IsVisible() then
-            eliteStatusPulseTimer = eliteStatusPulseTimer + (elapsed * NORMAL_STATUS_PULSE_SETTINGS.speed)
-            local pulseAlpha = NORMAL_STATUS_PULSE_SETTINGS.minAlpha +
-                                   (NORMAL_STATUS_PULSE_SETTINGS.maxAlpha - NORMAL_STATUS_PULSE_SETTINGS.minAlpha) *
-                                   (math.sin(eliteStatusPulseTimer) * 0.5 + 0.5)
-            dragonFrame.DragonUIStatusTexture:SetAlpha(pulseAlpha)
-        end
+        glow, texture = dragonFrame.DragonUIStatusGlow, dragonFrame.DragonUIStatusTexture
+    end
+    if glow and glow:IsVisible() then
+        restPulseTimer = (restPulseTimer + elapsed) % 1
+        texture:SetAlpha(RestPulseAlpha(restPulseTimer))
     end
 end
 
@@ -947,7 +926,7 @@ local function GetPlayerPvPBadge()
         local dragonFrame = _G["DragonUIUnitframeFrame"]
         local container = dragonFrame and dragonFrame.EliteIconContainer
         if not container then return end
-        pvpBadge = UF.CreatePvPBadge(container)
+        pvpBadge = UF.CreatePvPBadge(container, "DragonUIPlayerPvPCircle")
     end
     return pvpBadge
 end
@@ -1669,7 +1648,7 @@ local function PlaceGlow(frame, texture, glow, art)
     texture:SetTexCoord(unpack(glow.tc))
 end
 
--- Forever's art carries its own glows; fat, vehicle and the DragonUI art keep the 1x ones on the portrait.
+-- Both arts take retail's 2x glows; fat keeps the 1x ones on the portrait and vehicle has its own.
 local function ApplyPlayerGlowArt()
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     if not dragonFrame or not dragonFrame.DragonUIStatusGlow or not dragonFrame.EliteStatusGlow then return end
@@ -1683,12 +1662,11 @@ local function ApplyPlayerGlowArt()
         PlaceGlow(dragonFrame.DragonUIStatusGlow, dragonFrame.DragonUIStatusTexture, normal.status, art)
         PlaceGlow(dragonFrame.DragonUICombatGlow, dragonFrame.DragonUICombatTexture, normal.combat, art)
     else
-        local spot = not fat and skin.player.glowSpot
         for _, key in ipairs({ "DragonUIStatus", "DragonUICombat" }) do
             local frame, texture = dragonFrame[key .. "Glow"], dragonFrame[key .. "Texture"]
             frame:SetSize(192, 71)
             frame:ClearAllPoints()
-            frame:SetPoint('TOPLEFT', PlayerPortrait, 'TOPLEFT', spot and spot.x or -9, spot and spot.y or 9)
+            frame:SetPoint('TOPLEFT', PlayerPortrait, 'TOPLEFT', -9, 9)
             texture:SetTexture(GetBaseTexture())
             texture:SetTexCoord(unpack(PLAYER_GLOW_TEX_COORDS))
         end
@@ -2113,7 +2091,6 @@ local function CreatePlayerFrameTextures()
         combatTexture:SetTexture(GetBaseTexture())
         combatTexture:SetTexCoord(0.1943359375, 0.3818359375, 0.169921875, 0.30859375)
         combatTexture:SetAllPoints(combatFlashFrame)
-        combatTexture:SetBlendMode("ADD")
         combatTexture:SetVertexColor(1.0, 0.0, 0.0, 1.0)
 
         dragonFrame.DragonUICombatGlow = combatFlashFrame
@@ -2133,8 +2110,7 @@ local function CreatePlayerFrameTextures()
         statusGlowTexture:SetTexture(GetBaseTexture()) -- uses uiunitframe or uiunitframe-fat
         statusGlowTexture:SetTexCoord(0.1943359375, 0.3818359375, 0.169921875, 0.30859375)
         statusGlowTexture:SetAllPoints(statusGlowFrame)
-        statusGlowTexture:SetBlendMode("ADD")
-        statusGlowTexture:SetVertexColor(1.0, 0.82, 0.0, 0.6) -- Gold/yellow for resting
+        statusGlowTexture:SetVertexColor(1.0, 0.88, 0.25, 1.0) -- Retail's resting gold
 
         dragonFrame.DragonUIStatusGlow = statusGlowFrame
         dragonFrame.DragonUIStatusTexture = statusGlowTexture
@@ -2153,8 +2129,7 @@ local function CreatePlayerFrameTextures()
         statusTexture:SetTexture(ELITE_GLOW_COORDINATES.texture) --  Use from coordinates
         statusTexture:SetTexCoord(unpack(ELITE_GLOW_COORDINATES.texCoord))
         statusTexture:SetAllPoints(statusFrame)
-        statusTexture:SetBlendMode("ADD")
-        statusTexture:SetVertexColor(1.0, 0.8, 0.2, 0.6) -- Yellow
+        statusTexture:SetVertexColor(1.0, 0.88, 0.25, 1.0) -- Retail's resting gold
 
         dragonFrame.EliteStatusGlow = statusFrame
         dragonFrame.EliteStatusTexture = statusTexture
@@ -2170,7 +2145,6 @@ local function CreatePlayerFrameTextures()
         eliteCombatTexture:SetTexture(ELITE_GLOW_COORDINATES.texture) --  Use from coordinates
         eliteCombatTexture:SetTexCoord(unpack(ELITE_GLOW_COORDINATES.texCoord))
         eliteCombatTexture:SetAllPoints(combatFrame)
-        eliteCombatTexture:SetBlendMode("ADD")
         eliteCombatTexture:SetVertexColor(1.0, 0.0, 0.0, 1.0) -- Red
 
         dragonFrame.EliteCombatGlow = combatFrame
@@ -2178,23 +2152,20 @@ local function CreatePlayerFrameTextures()
 
     end
 
-    -- CREATE VEHICLE GLOW SYSTEM - Dedicated frames for vehicle combat/status effects.
-    -- Vehicle border (PlayerFrame-TextureFrame-Vehicle, 209×89) has a different shape than
-    -- normal/fat/elite frames. Using dedicated frames avoids conflict with Blizzard's
-    -- UIFrameFlash system which controls PlayerFrameFlash independently.
+    -- CREATE VEHICLE GLOW SYSTEM - own frames, so Blizzard's UIFrameFlash on PlayerFrameFlash can't fight them.
     if not dragonFrame.VehicleCombatFlash then
         local vehicleCombatFrame = CreateFrame("Frame", "DragonUIVehicleCombatFlash", PlayerFrame)
         vehicleCombatFrame:SetFrameStrata("MEDIUM")
         vehicleCombatFrame:SetFrameLevel(PlayerFrame:GetFrameLevel() + 10)
-        vehicleCombatFrame:SetSize(209, 89) -- Vehicle atlas dimensions
-        vehicleCombatFrame:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 35, 0)
+        vehicleCombatFrame:SetSize(198, 84)
+        -- Retail's Vehicle-InCombat/-Status offsets from the vehicle art, which starts 5 below our atlas top.
+        vehicleCombatFrame:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 35.5, -4)
         vehicleCombatFrame:Hide()
 
         local vehicleCombatTexture = vehicleCombatFrame:CreateTexture(nil, "OVERLAY", nil, 7)
-        vehicleCombatTexture:SetAtlasTexture('PlayerFrame-TextureFrame-Vehicle', true)
-        vehicleCombatTexture:ClearAllPoints()
-        vehicleCombatTexture:SetPoint('TOPLEFT', vehicleCombatFrame, 'TOPLEFT', 0, 0)
-        vehicleCombatTexture:SetBlendMode("ADD")
+        vehicleCombatTexture:SetTexture(TEXTURES.BASE)
+        vehicleCombatTexture:SetTexCoord(408 / 1024, 606 / 1024, 1 / 512, 85 / 512)
+        vehicleCombatTexture:SetAllPoints(vehicleCombatFrame)
         vehicleCombatTexture:SetVertexColor(1.0, 0.0, 0.0, 1.0) -- Red for combat
 
         dragonFrame.VehicleCombatFlash = vehicleCombatFrame
@@ -2205,16 +2176,15 @@ local function CreatePlayerFrameTextures()
         local vehicleStatusFrame = CreateFrame("Frame", "DragonUIVehicleStatusGlow", PlayerFrame)
         vehicleStatusFrame:SetFrameStrata("MEDIUM")
         vehicleStatusFrame:SetFrameLevel(PlayerFrame:GetFrameLevel() + 10)
-        vehicleStatusFrame:SetSize(209, 89) -- Vehicle atlas dimensions
-        vehicleStatusFrame:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 35, 0)
+        vehicleStatusFrame:SetSize(201, 84)
+        vehicleStatusFrame:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 33, -5)
         vehicleStatusFrame:Hide()
 
         local vehicleStatusTexture = vehicleStatusFrame:CreateTexture(nil, "OVERLAY", nil, 7)
-        vehicleStatusTexture:SetAtlasTexture('PlayerFrame-TextureFrame-Vehicle', true)
-        vehicleStatusTexture:ClearAllPoints()
-        vehicleStatusTexture:SetPoint('TOPLEFT', vehicleStatusFrame, 'TOPLEFT', 0, 0)
-        vehicleStatusTexture:SetBlendMode("ADD")
-        vehicleStatusTexture:SetVertexColor(1.0, 0.85, 0.0, 0.6) -- Yellow for resting
+        vehicleStatusTexture:SetTexture(TEXTURES.BASE)
+        vehicleStatusTexture:SetTexCoord(205 / 1024, 406 / 1024, 1 / 512, 85 / 512)
+        vehicleStatusTexture:SetAllPoints(vehicleStatusFrame)
+        vehicleStatusTexture:SetVertexColor(1.0, 0.88, 0.25, 1.0) -- Retail's resting gold
 
         dragonFrame.VehicleStatusGlow = vehicleStatusFrame
         dragonFrame.VehicleStatusTexture = vehicleStatusTexture
@@ -2551,15 +2521,6 @@ local function ChangePlayerframe()
         -- Hide DragonUI normal-mode combat glow (wrong shape for vehicle frame)
         if dragonFrame and dragonFrame.DragonUICombatGlow then
             dragonFrame.DragonUICombatGlow:Hide()
-        end
-        -- Position dedicated vehicle glow frames
-        if dragonFrame and dragonFrame.VehicleCombatFlash then
-            dragonFrame.VehicleCombatFlash:ClearAllPoints()
-            dragonFrame.VehicleCombatFlash:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 35, 0)
-        end
-        if dragonFrame and dragonFrame.VehicleStatusGlow then
-            dragonFrame.VehicleStatusGlow:ClearAllPoints()
-            dragonFrame.VehicleStatusGlow:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 35, 0)
         end
     else
         -- Normal/fat mode: update DragonUIStatusGlow texture to match current base texture

@@ -232,12 +232,12 @@ function UF.GetPvPKind(unit)
 end
 
 -- Forever's dark circle with the emblem on top; callers anchor it by its TOP edge like Forever does.
-function UF.CreatePvPBadge(parent)
+function UF.CreatePvPBadge(parent, circleName)
     local circle = PVP_BADGE_PARTS.circle
     local badge = CreateFrame("Frame", nil, parent)
     badge:SetSize(circle[5] * PVP_BADGE_SCALE, circle[6] * PVP_BADGE_SCALE)
 
-    local background = badge:CreateTexture(nil, "ARTWORK")
+    local background = badge:CreateTexture(circleName, "ARTWORK")
     background:SetTexture(PVP_BADGE_SHEET)
     background:SetTexCoord(circle[1], circle[2], circle[3], circle[4])
     background:SetAllPoints(badge)
@@ -249,6 +249,10 @@ function UF.CreatePvPBadge(parent)
     badge.icon = icon
 
     badge:Hide()
+    -- Dark mode finds the circle by name, and its sweep may already have run.
+    if addon.RefreshDarkModeUnitFrames then
+        addon.RefreshDarkModeUnitFrames()
+    end
     return badge
 end
 

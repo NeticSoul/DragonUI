@@ -174,7 +174,8 @@ local function paint(st)
     if st.absorbFill:IsShown() then
         stripes:ClearAllPoints()
         stripes:SetAllPoints(st.absorbFill)
-        stripes:SetTexCoord(0, kit.unit01(shieldWidth / 32), 0, kit.unit01(bar:GetHeight() / 32))
+        -- Coords run past 1 on purpose: the 32px stripe sheet tiles (horizTile/vertTile).
+        stripes:SetTexCoord(0, shieldWidth / 32, 0, bar:GetHeight() / 32)
         stripes:Show()
     else
         stripes:Hide()

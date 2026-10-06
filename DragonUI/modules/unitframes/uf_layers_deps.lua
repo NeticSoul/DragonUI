@@ -18,7 +18,6 @@ local function unit01(x)
     if x > 1 then return 1 end
     return x
 end
-kit.unit01 = unit01
 
 -- Game facts, not code: Blizzard spell costs and class base mana.
 

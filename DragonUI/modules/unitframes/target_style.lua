@@ -866,7 +866,7 @@ function UF.TargetStyle.Create(opts)
         UF.ApplyClassicPvPTexture(pvpIcon, kind)
         if not pvpBadge then
             -- Same frame as Blizzard's icon, so it draws over the portrait the same way.
-            pvpBadge = UF.CreatePvPBadge(pvpIcon:GetParent())
+            pvpBadge = UF.CreatePvPBadge(pvpIcon:GetParent(), "DragonUI_" .. namePrefix .. "PvPCircle")
         end
         local badge = UF.GetFrameSkin().target.pvp
         pvpBadge:ClearAllPoints()
@@ -878,6 +878,25 @@ function UF.TargetStyle.Create(opts)
         end
         -- Alpha only: TargetFrame_CheckFaction owns Show/Hide, including the small focus that never shows it.
         pvpIcon:SetAlpha((shown and not onBadge) and 1 or 0)
+    end
+
+    -- ================================================================
+    -- THREAT FLASH
+    -- ================================================================
+
+    -- Show/Hide and color stay with UnitFrame_UpdateThreatIndicator.
+    local function ApplyThreatFlash()
+        local flash = BlizzFrame.threatIndicator
+        if not flash or not frameElements.eliteFrame then return end
+        -- On eliteFrame like retail's: over the border, under the elite dragon.
+        flash:SetParent(frameElements.eliteFrame)
+        flash:SetDrawLayer("BACKGROUND")
+        flash:SetTexture(TEXTURES.THREAT)
+        flash:SetTexCoord(0, 376/512, 0, 134/256)
+        local spot = UF.GetFrameSkin().target.flash
+        flash:ClearAllPoints()
+        flash:SetPoint("BOTTOMLEFT", BlizzFrame, "BOTTOMLEFT", spot.x, spot.y)
+        flash:SetSize(188, 67)
     end
 
     -- ================================================================
@@ -965,6 +984,7 @@ function UF.TargetStyle.Create(opts)
                 "DragonUI_" .. namePrefix .. "Elite", "ARTWORK", nil, 1)
             frameElements.elite:Hide()
         end
+        ApplyThreatFlash()
 
         local raidTargetIcon = _G[namePrefix .. "FrameTextureFrameRaidTargetIcon"]
         if raidTargetIcon and raidTargetIcon.SetDrawLayer then
@@ -1068,6 +1088,7 @@ function UF.TargetStyle.Create(opts)
         if not BlizzFrame.DragonUI_ClassificationHook then
             hooksecurefunc("TargetFrame_CheckClassification", function(self, forceNormal)
                 if self == BlizzFrame then
+                    ApplyThreatFlash()
                     UpdateClassification()
                 end
             end)

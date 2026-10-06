@@ -81,8 +81,7 @@ local function ResolveStancePosition()
     local base_y = STANCE_BASE_Y                        -- Base Y position from bottom
     local final_y = base_y + y_offset                   -- Final Y position
     
-    -- Apply dual-bar offset when both XP and Rep bars are visible
-    -- Only if stance bar is at its default position (not moved by user)
+    -- XP/rep stack offset, only if stance bar is at its default position (not moved by user)
     -- IMPORTANT: Keep in sync with database.lua → additional.stance
     local defaultYOffset = -55   -- database default for additional.stance.y_offset
     local defaultXPosition = -211  -- database default for additional.stance.x_position

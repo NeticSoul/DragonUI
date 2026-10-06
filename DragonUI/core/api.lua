@@ -415,7 +415,7 @@ function addon.SaveUIFramePosition(frame, configPath1, configPath2)
        and addon.GetDualBarVerticalOffset and addon.IsWidgetAtDefaultPosition
        and addon.IsWidgetAtDefaultPosition(configPath2) then
         local offset = addon.GetDualBarVerticalOffset()
-        if offset > 0 and posY then
+        if offset ~= 0 and posY then
             posY = posY - offset
         end
     end

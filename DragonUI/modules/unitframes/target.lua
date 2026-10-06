@@ -273,9 +273,9 @@ local function ApplyDragonAuraLayout(frame)
     end
 
     local detached = ShouldUseDetachedAuraLayout(frame)
-    -- Blizzard's 2 short rows are a FrameXML local; a ToT lowered under Forever's level circle reaches a third.
+    -- Blizzard's 2 short rows are a FrameXML local; the ToT at retail's spot leaves room for a third.
     local shortRows = not detached and not frame.buffsOnTop and frame.totFrame and frame.totFrame:IsShown()
-        and UF.GetCompanionDrop() > 0 and 3 or nil
+        and 3 or nil
     local buffSize, debuffSize = GetCustomAuraSizes()
     local blizzardSpacing = not detached and not buffSize
     -- With Blizzard's spacing only a third row beside the lowered ToT differs from Blizzard's own pass.
@@ -387,10 +387,8 @@ local api = UF.TargetStyle.Create({
         return {
             _G.TargetFrameTextureFrameTexture,
             _G.TargetFrameBackground,
-            _G.TargetFrameFlash,
             _G.TargetFrameNumericalThreat,
             TargetFrame.threatNumericIndicator,
-            TargetFrame.threatIndicator,
             -- ToT children (visible as part of TargetFrame even if ToT module is disabled)
             _G.TargetFrameToTBackground,
             _G.TargetFrameToTTextureFrameTexture,
@@ -411,27 +409,6 @@ local api = UF.TargetStyle.Create({
     -- After-init hooks
     -- ----------------------------------------------------------------
     afterInit = function(ctx)
-        -- Hook TargetFrame_CheckClassification for threat flash texture
-        if not ctx.Module.threatHooked then
-            hooksecurefunc("TargetFrame_CheckClassification",
-                function(self, forceNormalTexture)
-                    local threatFlash = _G.TargetFrameFlash
-                    if threatFlash then
-                        threatFlash:SetTexture(ctx.TEXTURES.THREAT)
-                        threatFlash:SetTexCoord(0, 376/512, 0, 134/256)
-                        threatFlash:SetBlendMode("ADD")
-                        threatFlash:SetAlpha(0.7)
-                        threatFlash:SetDrawLayer("ARTWORK", 10)
-                        local flash = UF.GetFrameSkin().target.flash
-                        threatFlash:ClearAllPoints()
-                        threatFlash:SetPoint("BOTTOMLEFT",
-                            TargetFrame, "BOTTOMLEFT", flash.x, flash.y)
-                        threatFlash:SetSize(188, 67)
-                    end
-                end)
-            ctx.Module.threatHooked = true
-        end
-
         -- Classification delay frame + hooks
         if not ctx.Module.classificationHooked then
             local delayFrame = CreateFrame("Frame")
