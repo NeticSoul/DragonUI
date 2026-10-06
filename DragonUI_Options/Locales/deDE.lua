@@ -492,6 +492,8 @@ L["Show Page Numbers"] = "Seitennummern anzeigen"
 L["Cooldown Text"] = "Abklingzeit-Text"
 L["Min Duration"] = "Mindestdauer"
 L["Minimum duration for cooldown text to appear."] = "Mindestdauer, damit Abklingzeit-Text erscheint."
+L["Whole Seconds"] = "Ganze Sekunden"
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = "Zeigt den Abklingzeit-Text in ganzen Sekunden, ohne Zehntelsekunden unter 5 Sekunden."
 L["Cooldown Text Color"] = "Abklingzeit-Textfarbe"
 L["Size of cooldown text."] = "Größe des Abklingzeit-Textes."
 

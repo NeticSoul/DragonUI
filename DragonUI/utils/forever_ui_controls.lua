@@ -1723,6 +1723,9 @@ function ForeverUI.SkinMenuBackground(frame, style)
     cells.r:SetPoint("BOTTOMRIGHT", cells.br, "TOPRIGHT", 0, 0)
     cells.c:SetPoint("TOPLEFT", cells.tl, "BOTTOMRIGHT", 0, 0)
     cells.c:SetPoint("BOTTOMRIGHT", cells.br, "TOPLEFT", 0, 0)
+    -- A pullout takes no mouse and the art reaches past the frame: border clicks fell through.
+    frame:EnableMouse(true)
+    frame:SetHitRectInsets(def.left, -def.right, -def.top, def.bottom)
     return cells
 end
 
@@ -1732,6 +1735,7 @@ function ForeverUI.HideMenuBackground(frame)
         for _, texture in pairs(cells) do
             texture:Hide()
         end
+        frame:SetHitRectInsets(0, 0, 0, 0)
     end
 end
 
@@ -1770,6 +1774,14 @@ local function updateThumbExtent(state)
     end
     extent = max(SCROLL_MIN_THUMB, min(extent, trackHeight))
     state.nativeThumb:SetSize(8, extent)
+end
+
+-- Track art is SCROLL_BAR_W wide even on an 8px pullout slider, so the hit rect widens to match.
+local function coverTrack(state)
+    local slider, base = state.slider, state.baseInsets
+    local width = slider:GetWidth() or 0
+    local pad = (width > 0 and width < SCROLL_BAR_W) and (SCROLL_BAR_W - width) / 2 or 0
+    slider:SetHitRectInsets(base[1] - pad, base[2] - pad, base[3], base[4])
 end
 
 local function findScrollParts(target)
@@ -1826,7 +1838,7 @@ local function skinArrow(button, which)
 end
 
 local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
-    local state = { slider = slider, scrollFrame = scrollFrame }
+    local state = { slider = slider, scrollFrame = scrollFrame, baseInsets = { slider:GetHitRectInsets() } }
     slider._fuScroll = state
 
     local gap = opts.gap or SCROLL_GAP
@@ -1920,6 +1932,7 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
         watcher:Show()
     end)
     slider:HookScript("OnSizeChanged", function()
+        coverTrack(state)
         updateThumbExtent(state)
     end)
     slider:HookScript("OnShow", function()
@@ -1939,6 +1952,7 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
             end)
         end
     end
+    coverTrack(state)
     updateThumbExtent(state)
     return state
 end

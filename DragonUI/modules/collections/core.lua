@@ -273,26 +273,60 @@ function CO.Summon(kind, entry)
     end
 end
 
--- Usable favorite, then any favorite, then any usable, then anything -- retail's order. Within the
--- chosen pool, flying wins wherever flight works and aquatic wins while swimming.
-local function tierOf(spellID, swimming, flyable)
+-- Within the chosen pool the best tier wins: swim, fast fly, fly, fast ground, ground; 0 = too fast to ride.
+local FAST_GROUND, FAST_FLYING = 100, 280
+local TIER_AQUATIC, TIER_FAST_FLYER, TIER_FLYER, TIER_FAST_GROUND, TIER_GROUND = 5, 4, 3, 2, 1
+
+-- Fastest ground and flying speed the known riding spells allow; nil caps when none is known.
+local function ridingCaps()
+    if not IsSpellKnown then return nil, nil end
+    if IsSpellKnown(34091) then return 100, 310 end
+    if IsSpellKnown(34090) then return 100, 150 end
+    if IsSpellKnown(33391) then return 100, 0 end
+    if IsSpellKnown(33388) then return 60, 0 end
+    return nil, nil
+end
+
+-- Scripted mounts have no speed data and scale with the riding skill, so they count as fast.
+local function tierOf(spellID, ctx)
     local row = addon.MountTraits and spellID and addon.MountTraits[spellID]
     local ty, flags = (row and row[1]) or 0, (row and row[2]) or 0
-    if bit.band(flags, 0x30) ~= 0 and swimming then return 1 end
-    if bit.band(ty, 0x5) ~= 0 and flyable and not swimming then return 1 end
-    return 2
+    local speed = addon.MountSpeeds and spellID and addon.MountSpeeds[spellID]
+    if ctx.swimming and bit.band(flags, 0x30) ~= 0 then return TIER_AQUATIC end
+
+    local canFly = bit.band(ty, 0x5) ~= 0
+    if canFly and ctx.flyable and not ctx.swimming then
+        local fly = speed and speed[2] or 0
+        if fly == 0 or not ctx.flyCap or fly <= ctx.flyCap then
+            return (fly == 0 or fly >= FAST_FLYING) and TIER_FAST_FLYER or TIER_FLYER
+        end
+        if bit.band(ty, 0x4) == 0 then return 0 end
+    end
+
+    local ground = speed and speed[1] or 0
+    if ground ~= 0 and ctx.groundCap and ground > ctx.groundCap then return 0 end
+    return (ground == 0 or ground >= FAST_GROUND) and TIER_FAST_GROUND or TIER_GROUND
 end
 
 local function bestTier(kind, pool)
     if kind ~= "MOUNT" or #pool <= 1 then return pool end
-    local swimming = IsSwimming and IsSwimming() and true or false
-    local flyable = IsFlyableArea and IsFlyableArea() and true or false
-    local first, second = {}, {}
+    local ctx = {
+        swimming = IsSwimming and IsSwimming() and true or false,
+        flyable = IsFlyableArea and IsFlyableArea() and true or false,
+    }
+    ctx.groundCap, ctx.flyCap = ridingCaps()
+
+    local best, picked = -1, {}
     for _, entry in ipairs(pool) do
-        local t = tierOf(entry.spellID, swimming, flyable)
-        table.insert(t == 1 and first or second, entry)
+        local tier = tierOf(entry.spellID, ctx)
+        if tier > best then
+            best, picked = tier, {}
+        end
+        if tier == best then
+            picked[#picked + 1] = entry
+        end
     end
-    return #first > 0 and first or second
+    return picked
 end
 
 function CO.SummonRandomFavorite(kind)

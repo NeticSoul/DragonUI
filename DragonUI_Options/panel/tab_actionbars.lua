@@ -281,6 +281,12 @@ local function BuildGeneralTab(scroll)
         callback = RefreshCooldowns,
     })
 
+    C:AddToggle(cdSection, {
+        label = LO["Whole Seconds"],
+        tooltip = LO["Show cooldown text in whole seconds, without the tenths under 5 seconds."],
+        dbPath = "buttons.cooldown.whole_seconds",
+    })
+
     C:AddSlider(cdSection, {
         label = LO["Font Size"],
         desc = LO["Size of cooldown text."],

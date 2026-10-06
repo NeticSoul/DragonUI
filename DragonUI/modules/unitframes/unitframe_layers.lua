@@ -134,6 +134,54 @@ local function chainSegment(seg, link, amount, barMax, barWidth)
     return seg, width
 end
 
+local STRIPE_SHEET = 32
+
+local function hideStripes(st, from)
+    local tiles = st.stripes
+    if from == 1 then
+        st.stripeWidth = nil
+    end
+    for i = from, #tiles do
+        tiles[i]:Hide()
+    end
+end
+
+-- One texture per 32px of shield, every coord inside 0..1: the client's own tiling blurred wide shields.
+local function paintStripes(st, width, height)
+    if not st.absorbFill:IsShown() or width <= 0 then
+        if st.stripeWidth then
+            hideStripes(st, 1)
+        end
+        return
+    end
+    if st.stripeWidth == width and st.stripeHeight == height then return end
+    st.stripeWidth, st.stripeHeight = width, height
+    local tiles = st.stripes
+    local v = height / STRIPE_SHEET
+    if v > 1 then v = 1 end
+    local count, x = 0, 0
+    while x < width do
+        count = count + 1
+        local tile = tiles[count]
+        if not tile then
+            tile = st.stripeOwner:CreateTexture(nil, "OVERLAY")
+            tile:SetDrawLayer("OVERLAY", st.stripeSublevel)
+            tile:SetTexture(ART .. "Shield-Overlay")
+            tiles[count] = tile
+        end
+        local span = width - x
+        if span > STRIPE_SHEET then span = STRIPE_SHEET end
+        tile:ClearAllPoints()
+        tile:SetPoint("TOPLEFT", st.absorbFill, "TOPLEFT", x, 0)
+        tile:SetPoint("BOTTOMLEFT", st.absorbFill, "BOTTOMLEFT", x, 0)
+        tile:SetWidth(span)
+        tile:SetTexCoord(0, span / STRIPE_SHEET, 0, v)
+        tile:Show()
+        x = x + STRIPE_SHEET
+    end
+    hideStripes(st, count + 1)
+end
+
 local function paint(st)
     local native = st.healthBar
     local health = native:GetValue()
@@ -170,16 +218,7 @@ local function paint(st)
     link = chainSegment(st.otherHeal, link, other, barMax, barWidth)
     local _, shieldWidth = chainSegment(st.absorbFill, link, shownShield, barMax, barWidth)
 
-    local stripes = st.absorbStripes
-    if st.absorbFill:IsShown() then
-        stripes:ClearAllPoints()
-        stripes:SetAllPoints(st.absorbFill)
-        -- Coords run past 1 on purpose: the 32px stripe sheet tiles (horizTile/vertTile).
-        stripes:SetTexCoord(0, shieldWidth / 32, 0, bar:GetHeight() / 32)
-        stripes:Show()
-    else
-        stripes:Hide()
-    end
+    paintStripes(st, shieldWidth, bar:GetHeight())
 end
 
 local SPELLCAST_EVENTS = {
@@ -362,9 +401,9 @@ local function buildElements(st, frame, native, small)
     st.otherHeal:SetVertexColor(0.0, 0.631, 0.557)
 
     st.absorbFill = newLayer(box, "ARTWORK", ART .. "Shield-Fill", 0)
-    st.absorbStripes = newLayer(box, "OVERLAY", ART .. "Shield-Overlay", small and 0 or 1)
-    st.absorbStripes:SetHorizTile(true)
-    st.absorbStripes:SetVertTile(true)
+    st.stripes = {}
+    st.stripeOwner = box
+    st.stripeSublevel = small and 0 or 1
 
     st.overAbsorbGlow = newLayer(glowHolder, "OVERLAY", ART .. "Shield-Overshield", small and 2 or nil)
     st.overAbsorbGlow:SetBlendMode("ADD")
@@ -640,7 +679,7 @@ local function applyLayers()
 end
 
 local ELEMENT_KEYS = {
-    "myHeal", "otherHeal", "absorbFill", "absorbStripes", "overAbsorbGlow", "manaCost",
+    "myHeal", "otherHeal", "absorbFill", "overAbsorbGlow", "manaCost",
 }
 
 -- Leaves UNIT_* registrations, the power widgets and the attached state alone.
@@ -648,6 +687,7 @@ local function restoreFrame(st)
     for i = 1, #ELEMENT_KEYS do
         st[ELEMENT_KEYS[i]]:Hide()
     end
+    hideStripes(st, 1)
     if st.missingText then
         st.missingText:Hide()
     end

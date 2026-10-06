@@ -557,6 +557,8 @@ L["Show Page Numbers"] = true
 L["Cooldown Text"] = true
 L["Min Duration"] = true
 L["Minimum duration for cooldown text to appear."] = true
+L["Whole Seconds"] = true
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = true
 L["Cooldown Text Color"] = true
 L["Size of cooldown text."] = true
 

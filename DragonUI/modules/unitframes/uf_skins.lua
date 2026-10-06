@@ -44,8 +44,8 @@ UF.SKINS = {
                 health = { w = 127, h = 20, x = -1, y = -1.5 },
                 mana = { w = 131, h = 9, x = 126, y = -17.5 },
             },
-            -- How far each bar's left and right ends moved from where the texts, name and level were laid out.
-            edges = { health = { -2, -1 }, mana = { 0, -1 } },
+            -- How far each bar's ends moved from the text layout; a 3rd value moves only the left text (mana's % under health's).
+            edges = { health = { -2, -1 }, mana = { 0, -1, -6 } },
             -- The ring curves past the mana's start: half-unit strips of one texture column, { row down, left } on it.
             manaCorner = {
                 step = 0.5, column = 7.5 / 128,

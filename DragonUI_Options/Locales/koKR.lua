@@ -504,6 +504,8 @@ L["Show Page Numbers"] = "페이지 번호 표시"
 L["Cooldown Text"] = "쿨다운 문자"
 L["Min Duration"] = "최소 지속 시간"
 L["Minimum duration for cooldown text to appear."] = "재사용 대기시간 문자가 표시될 최소 지속시간 설정"
+L["Whole Seconds"] = "정수 초 단위"
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = "재사용 대기시간 문자를 5초 미만에서도 소수점 없이 정수 초 단위로 표시합니다."
 L["Cooldown Text Color"] = "재사용 대기시간 문자 색상"
 L["Size of cooldown text."] = "재사용 대기시간 문자의 크기"
 

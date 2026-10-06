@@ -452,6 +452,8 @@ L["Show Page Numbers"] = "显示页面编号"
 L["Cooldown Text"] = "冷却文本"
 L["Min Duration"] = "最短持续时间"
 L["Minimum duration for cooldown text to appear."] = "冷却文本出现的最短持续时间设置。"
+L["Whole Seconds"] = "整秒显示"
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = "以整秒显示冷却文本，5 秒以下不显示小数。"
 L["Cooldown Text Color"] = "冷却文本颜色"
 L["Size of cooldown text."] = "冷却文本的大小。"
 

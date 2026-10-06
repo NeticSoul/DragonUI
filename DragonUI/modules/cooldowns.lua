@@ -28,7 +28,7 @@ end
 -- Create a table within the main addon object to hold our functions
 addon.CooldownText = {}
 
--- Tenths are only drawn under 5s; above that the text changes once a second.
+-- Tenths are only drawn under 5s (unless whole_seconds is on); above that the text changes once a second.
 local TICK_FAST, TICK_SLOW = 0.05, 0.25
 
 local COUNTDOWN_STEPS = {
@@ -49,8 +49,10 @@ local function StepFor(secondsLeft)
     end
 end
 
-local function PaintCountdown(label, step, secondsLeft, dbColor)
-    if step.decimals then
+local function PaintCountdown(label, step, secondsLeft, dbColor, wholeSeconds)
+    if step.decimals and wholeSeconds then
+        label:SetText(ceil(secondsLeft) .. '')
+    elseif step.decimals then
         label:SetText(step.decimals:format(secondsLeft))
     else
         label:SetText(ceil(secondsLeft / step.per) .. step.unit)
@@ -88,19 +90,20 @@ function addon.CooldownText:UpdateText(elapsed)
         return
     end
 
+    local settings = addon.db.profile.buttons.cooldown
+    local wholeSeconds = settings and settings.whole_seconds
     local secondsLeft = self.remain - GetTime()
-    self.duiNextTick = (secondsLeft <= 5) and TICK_FAST or TICK_SLOW
+    self.duiNextTick = (secondsLeft <= 5 and not wholeSeconds) and TICK_FAST or TICK_SLOW
 
     if secondsLeft <= 0 then
         StopCountdown(self, true)
         return
     end
 
-    local settings = addon.db.profile.buttons.cooldown
     if settings == nil then
         return
     end
-    PaintCountdown(self.text, StepFor(secondsLeft), secondsLeft, settings.color)
+    PaintCountdown(self.text, StepFor(secondsLeft), secondsLeft, settings.color, wholeSeconds)
 end
 
 function addon.CooldownText:CreateText()

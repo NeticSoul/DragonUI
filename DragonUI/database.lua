@@ -436,6 +436,7 @@ local defaults = {
             cooldown = {
                 color = {1, 1, 1, 1},
                 min_duration = 3,
+                whole_seconds = false,
                 font = {_arialn, 16, "OUTLINE"},
                 font_size = 16,
                 position = {'CENTER', 0, 1}

@@ -33,7 +33,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 | `Coins/` | DragonflightUI (`commoncoinbox`, `commoncurrencybox`); the coins are retail art |
 | `Collections/` | see [Collections artwork](#collections-artwork) |
 | `Merchant/` | DragonUI_NewEra; `emptyslot.blp` is the 3.3.5a client's own |
-| `Micromenu/` | DragonflightUI, pretty_actionbar |
+| `Micromenu/` | DragonflightUI, pretty_actionbar; `dragonbreath.tga` is the dragon head of `UnitFrames/Forever/uiunitframeboss2x` (WoW Forever's elite dragon sheet) with its jaw re-posed, plus two generated fire sprites |
 | `Minimap/` | pretty_minimap (s0h2x), RetailUI (`Calendar`, `GuildBanner`, `MinimapBorder`); `collector_toggle.tga` is cropped from the retail minimap border in `UI/Minimap.blp`; `forever_*` cut from WoW Forever's minimap sheets (`uiminimap2xc60`, `uiminimapmaskgeneralc60`) |
 | `Nameplates/Retail/` | see [Retail nameplate artwork](#retail-nameplate-artwork) |
 | `Nameplates/Totem/` | 3.3.5a spell icons with a new frame |
@@ -49,7 +49,7 @@ were obtained via. They are credited as conduits, not as the authors of the art.
 Data tables generated from the World of Warcraft client's database (DBC) files are game data
 © Blizzard Entertainment and are not covered by DragonUI's MIT License:
 `DragonUI/modules/worldmap/fogdata.lua`, `entrancedata.lua`, `flightpointdata.lua`,
-`graveyarddata.lua`, and `DragonUI/data/aura_durations.lua`, `companion_traits.lua`. The inn
+`graveyarddata.lua`, and `DragonUI/data/aura_durations.lua`, `companion_traits.lua`, `mount_speeds.lua`. The inn
 positions in `DragonUI/modules/worldmap/inndata.lua` are derived from AzerothCore's world-database
 spawn data together with the client's map data, and the class trainer lists in
 `DragonUI/modules/spellbook/trainerdata.lua` from AzerothCore's trainer tables together with the

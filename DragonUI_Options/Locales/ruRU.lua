@@ -496,6 +496,8 @@ L["Show Page Numbers"] = "Показать номера страниц"
 L["Cooldown Text"] = "Текст перезарядки"
 L["Min Duration"] = "Мин. длительность"
 L["Minimum duration for cooldown text to appear."] = "Минимальная длительность для появления текста перезарядки."
+L["Whole Seconds"] = "Целые секунды"
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = "Показывать текст перезарядки в целых секундах, без десятых долей при менее чем 5 секундах."
 L["Cooldown Text Color"] = "Цвет текста перезарядки"
 L["Size of cooldown text."] = "Размер текста перезарядки."
 

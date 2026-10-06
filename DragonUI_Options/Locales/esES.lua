@@ -526,6 +526,8 @@ L["Show Page Numbers"] = "Mostrar Números de Página"
 L["Cooldown Text"] = "Texto de Reutilización"
 L["Min Duration"] = "Duración Mínima"
 L["Minimum duration for cooldown text to appear."] = "Duración mínima para que aparezca el texto de reutilización."
+L["Whole Seconds"] = "Segundos Enteros"
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = "Muestra el texto de reutilización en segundos enteros, sin décimas por debajo de 5 segundos."
 L["Cooldown Text Color"] = "Color del Texto de Reutilización"
 L["Size of cooldown text."] = "Tamaño del texto de reutilización."
 

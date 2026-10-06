@@ -1830,6 +1830,9 @@ E.Register("__manager", { settings = {
         after = function() E.Rebuild() end }),
     Slider(T("Min Duration"), "buttons.cooldown.min_duration", 1, 10, 1, R.cooldowns, {
         hidden = NoCooldowns, disabled = CooldownOff }),
+    Check(T("Whole Seconds"), "buttons.cooldown.whole_seconds", R.cooldowns, {
+        tooltip = T("Show cooldown text in whole seconds, without the tenths under 5 seconds."),
+        hidden = NoCooldowns, disabled = CooldownOff }),
     Slider(T("Font Size"), "buttons.cooldown.font_size", 8, 24, 1, R.cooldowns, {
         hidden = NoCooldowns, disabled = CooldownOff }),
     CooldownColorRow(),

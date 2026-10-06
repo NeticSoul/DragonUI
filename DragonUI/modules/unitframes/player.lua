@@ -1224,7 +1224,7 @@ function PlayerArt.PlaceTexts(skipHealth)
     for _, spec in ipairs(PlayerArt.texts) do
         local bar = spec.key == "health" and PlayerFrameHealthBar or PlayerFrameManaBar
         if bar and not (skipHealth and spec.key == "health") then
-            local left, right = PlayerArt.Edges(spec.key)
+            local left, right, textLeft = PlayerArt.Edges(spec.key)
             local center, leftText, rightText = dragonFrame[spec.prefix .. "Text"],
                 dragonFrame[spec.prefix .. "TextLeft"], dragonFrame[spec.prefix .. "TextRight"]
             if center then
@@ -1233,7 +1233,7 @@ function PlayerArt.PlaceTexts(skipHealth)
             end
             if leftText then
                 leftText:ClearAllPoints()
-                leftText:SetPoint("LEFT", bar, "LEFT", 6 - left, spec.y)
+                leftText:SetPoint("LEFT", bar, "LEFT", 6 - (textLeft or left), spec.y)
             end
             if rightText then
                 rightText:ClearAllPoints()

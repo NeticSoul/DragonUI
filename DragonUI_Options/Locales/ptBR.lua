@@ -967,6 +967,8 @@ L["Show Page Numbers"] = "Mostrar os números de página"
 L["Cooldown Text"] = "Texto de recarga"
 L["Min Duration"] = "Duração mínima"
 L["Minimum duration for cooldown text to appear."] = "Duração mínima para que o texto de recarga apareça."
+L["Whole Seconds"] = "Segundos inteiros"
+L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = "Mostra o texto de recarga em segundos inteiros, sem décimos abaixo de 5 segundos."
 
 -- Added by DragonUI (missing translations)
 L["Cooldown Text Color"] = "Cor do texto de recarga"

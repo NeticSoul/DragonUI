@@ -396,6 +396,10 @@ local function SkinPullout(widget)
     if po.slider then
         po.slider:SetBackdrop(nil)
         FUI.SkinScrollBar(po.slider)
+        -- Items end 12 short of the edge, under the bar's art, and would take its clicks.
+        if po.scrollFrame then
+            po.slider:SetFrameLevel(po.scrollFrame:GetFrameLevel() + 10)
+        end
     end
 end
 
