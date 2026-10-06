@@ -287,6 +287,10 @@ local function ApplyDragonAuraLayout(frame)
     local targetConfig = frame == TargetFrame and addon.db and addon.db.profile.unitframe.target
     local hideBuffs = targetConfig and targetConfig.show_buffs == false
     local hideDebuffs = targetConfig and targetConfig.show_debuffs == false
+    -- Blizzard's small focus still shows 8 debuffs; "Show Buff/Debuff" off means none at all.
+    if frame == FocusFrame and frame.smallSize then
+        hideBuffs, hideDebuffs = true, true
+    end
     if hideBuffs then
         HideAuraButtons(frameName .. "Buff", MAX_TARGET_BUFFS)
     end
