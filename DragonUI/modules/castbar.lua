@@ -357,17 +357,20 @@ end
 local COMPANION_AURA_GAP = 16
 
 local function GetCompanionSpacingYOffset(unitType, unitFrame, extraAuraOffset)
+    -- The attached ToT/ToF drops under Forever's level circle; the castbar below it drops as much.
+    local UF = addon.UF
+    local floorY = -21 - (UF and UF.GetCompanionDrop and UF.GetCompanionDrop() or 0)
     local frameBottom = unitFrame and unitFrame.GetBottom and unitFrame:GetBottom()
     local lowestBottom = GetLowestVisibleAuraBottom(unitType)
     if frameBottom and lowestBottom then
         local geoY = (lowestBottom - frameBottom) - COMPANION_AURA_GAP
-        if geoY < -21 then
+        if geoY < floorY then
             return geoY
         end
-        return -21
+        return floorY
     end
 
-    return -21 - extraAuraOffset
+    return floorY - extraAuraOffset
 end
 
 local function GetAuraStackGeometryOffset(unitType, unitFrame, auraAnchor, auraAnchorSource, fallbackOffset)

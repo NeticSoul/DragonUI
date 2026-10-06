@@ -406,19 +406,6 @@ local function GetOrientation()
 end
 
 
--- Get class color helper
--- Get texture coordinates for party frame elements
-local function GetPartyCoords(type)
-    if type == "background" then
-        return 0.480469, 0.949219, 0.222656, 0.414062
-    elseif type == "flash" then
-        return 0.480469, 0.925781, 0.453125, 0.636719
-    elseif type == "status" then
-        return 0.00390625, 0.472656, 0.453125, 0.644531
-    end
-    return 0, 1, 0, 1
-end
-
 -- Power bar texture resolver (delegates to shared core)
 local function GetPowerBarTexture(unit)
     return UF.GetPartyPowerBarTexture(unit)
@@ -527,6 +514,79 @@ end
 -- DYNAMIC CLIPPING SYSTEM
 -- ===============================================================
 
+-- Bar geometry from the frame style (UF.SKINS.<style>.party.bars), TOPLEFT on the party frame.
+local function PlacePartyBar(bar, frame, key)
+    local b = UF.GetFrameSkin().party.bars[key]
+    bar:SetSize(b.w, b.h)
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", frame, "TOPLEFT", b.x, b.y)
+end
+
+local function PlacePartyIcon(icon, frame, spot)
+    icon:SetSize(spot.w, spot.h)
+    icon:ClearAllPoints()
+    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", spot.x, spot.y)
+end
+
+-- Blizzard's PartyMemberFrame_UpdateAssignedRoles sets PORTRAITROLES texcoords; this puts our sheet back after it.
+local function ApplyPartyRole(frame)
+    local icon = frame and _G[frame:GetName() .. 'RoleIcon']
+    if not icon then return end
+    local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. frame:GetID())
+    local role = (isTank and "TANK") or (isHealer and "HEALER") or (isDamage and "DAMAGER")
+    PlacePartyIcon(icon, frame, UF.PARTY_ICONS.role)
+    if role then
+        icon:SetTexture(UF.STATUS_ICONS.file)
+        icon:SetTexCoord(unpack(UF.STATUS_ICONS.roles[UF.GetStatusIconStyle()][role]))
+    end
+end
+
+-- Crown, guide, master looter and role at retail's spots, in the frame style's art.
+local function ApplyPartyIcons(frame)
+    local name = frame:GetName()
+    local style = UF.GetStatusIconStyle()
+    local leader = _G[name .. 'LeaderIcon']
+    if leader then
+        PlacePartyIcon(leader, frame, UF.PARTY_ICONS[style == "forever" and "foreverLeader" or "leader"])
+        leader:SetTexture(UF.STATUS_ICONS.file)
+        leader:SetTexCoord(unpack(UF.STATUS_ICONS.leader[style]))
+    end
+    local guide = _G[name .. 'GuideIcon']
+    if guide then
+        PlacePartyIcon(guide, frame, UF.PARTY_ICONS.leader)
+        guide:SetTexture(UF.STATUS_ICONS.file)
+        guide:SetTexCoord(unpack(UF.STATUS_ICONS.guide))
+    end
+    local master = _G[name .. 'MasterIcon']
+    if master then
+        PlacePartyIcon(master, frame, UF.PARTY_ICONS.master)
+    end
+    ApplyPartyRole(frame)
+end
+
+-- Art and bars for the current frame style; read at apply time, so a style switch is a refresh.
+local function ApplyPartySkin(frame)
+    local skin = UF.GetFrameSkin().party
+    if frame.DragonUI_Background then
+        UF.ApplySkinPiece(frame.DragonUI_Background, skin.background, "TOPLEFT", frame, "TOPLEFT", 0, 0)
+    end
+    local border = frame.DragonUI_BorderFrame and frame.DragonUI_BorderFrame.texture
+    if border then
+        UF.ApplySkinPiece(border, skin.border, "TOPLEFT", frame, "TOPLEFT", 0, 0)
+    end
+    if frame.DragonUI_HealthBar then
+        PlacePartyBar(frame.DragonUI_HealthBar, frame, "health")
+    end
+    if frame.DragonUI_ManaBar then
+        PlacePartyBar(frame.DragonUI_ManaBar, frame, "mana")
+    end
+    local flash = _G[frame:GetName() .. 'Flash']
+    if flash then
+        UF.ApplySkinPiece(flash, skin.flash, "TOPLEFT", frame, "TOPLEFT", 0, 0)
+    end
+    ApplyPartyIcons(frame)
+end
+
 -- Create our own health StatusBar overlaid on Blizzard's native one. We never touch
 -- the native bar (that taints it and breaks its in-combat/vehicle Show/Hide); instead
 -- we read its value via the SetValue hook and mirror it onto our own bar.
@@ -541,9 +601,8 @@ local function EnsureDragonHealthBar(frame)
     end
 
     local db = CreateFrame("StatusBar", nil, frame)
-    -- Good custom geometry (native bar is hidden below via SetAlpha, see test below).
-    db:SetSize(71, 10)
-    db:SetPoint('TOPLEFT', frame, 'TOPLEFT', 44, -19)
+    -- Geometry from the frame style (native bar is hidden below via SetAlpha, see test below).
+    PlacePartyBar(db, frame, "health")
     db:SetFrameLevel(native:GetFrameLevel() + 1)
     db:SetStatusBarTexture(TEXTURES.healthBar)
     db:SetStatusBarColor(1, 1, 1, 1)
@@ -635,8 +694,7 @@ local function EnsureDragonManaBar(frame)
     end
 
     local db = CreateFrame("StatusBar", nil, frame)
-    db:SetSize(74, 6.5)
-    db:SetPoint('TOPLEFT', frame, 'TOPLEFT', 41, -30.5)
+    PlacePartyBar(db, frame, "mana")
     db:SetFrameLevel(native:GetFrameLevel() + 1)
     local initTex = GetPowerBarTexture("party" .. frame:GetID())
     db:SetStatusBarTexture(initTex)
@@ -1254,42 +1312,20 @@ local function StylePartyFrames()
                 end
             end
 
-            -- LEADER ICON STYLING
-            local leaderIcon = _G[frame:GetName() .. 'LeaderIcon']
-            if leaderIcon then -- Removed and not InCombatLockdown()
-                leaderIcon:ClearAllPoints()
-                leaderIcon:SetPoint('TOPLEFT', 42, 9) -- Custom position
-                leaderIcon:SetSize(16, 16) -- Custom size (optional)
-            end
-
-            -- Master looter icon styling
-            local masterLooterIcon = _G[frame:GetName() .. 'MasterIcon']
-            if masterLooterIcon then -- No combat restriction
-                masterLooterIcon:ClearAllPoints()
-                masterLooterIcon:SetPoint('TOPLEFT', 58, 11) -- Position next to leader icon
-                masterLooterIcon:SetSize(16, 16) -- Custom size
-
-            end
+            ApplyPartyIcons(frame)
 
             -- Flash setup
             local flash = _G[frame:GetName() .. 'Flash']
             if flash then
-                flash:SetSize(114, 47)
-                flash:SetTexture(TEXTURES.frame)
-                flash:SetTexCoord(GetPartyCoords("flash"))
-                flash:SetPoint('TOPLEFT', 2, -2)
+                UF.ApplySkinPiece(flash, UF.GetFrameSkin().party.flash, "TOPLEFT", frame, "TOPLEFT", 0, 0)
                 flash:SetVertexColor(1, 0, 0, 1)
                 flash:SetDrawLayer('OVERLAY', 1)
             end
 
             -- Create background and mark as styled
             if not frame.DragonUIStyled then
-                -- Background (behind everything)
-                local background = frame:CreateTexture(nil, 'BACKGROUND', nil, 0)
-                background:SetTexture(TEXTURES.frame)
-                background:SetTexCoord(GetPartyCoords("background"))
-                background:SetSize(120, 49)
-                background:SetPoint('TOPLEFT', 1, -2)
+                -- Background (behind everything); art and spot come from ApplyPartySkin
+                frame.DragonUI_Background = frame:CreateTexture(nil, 'BACKGROUND', nil, 0)
 
                 -- Create border as a separate FRAME (not texture) to appear above bars
                 if not frame.DragonUI_BorderFrame then
@@ -1299,13 +1335,10 @@ local function StylePartyFrames()
                     
                     -- Now create border texture inside the border frame
                     local border = frame.DragonUI_BorderFrame:CreateTexture(nil, 'ARTWORK', nil, 1)
-                    border:SetTexture(TEXTURES.border)
-                    border:SetTexCoord(GetPartyCoords("border"))
-                    border:SetSize(128, 64)
-                    border:SetPoint('TOPLEFT', 1, -2)
                     border:SetVertexColor(1, 1, 1, 1)
                     frame.DragonUI_BorderFrame.texture = border
                 end
+                ApplyPartySkin(frame)
 
                 if not frame.DragonUI_FlashContainer then
                     local flashContainer = CreateFrame("Frame", nil, frame)
@@ -1326,8 +1359,7 @@ local function StylePartyFrames()
 
                 if flash and frame.DragonUI_FlashContainer and flash:GetParent() ~= frame.DragonUI_FlashContainer then
                     flash:SetParent(frame.DragonUI_FlashContainer)
-                    flash:ClearAllPoints()
-                    flash:SetPoint('TOPLEFT', frame, 'TOPLEFT', 2, -2)
+                    UF.ApplySkinPiece(flash, UF.GetFrameSkin().party.flash, "TOPLEFT", frame, "TOPLEFT", 0, 0)
                 end
 
                 -- Move icons to HIGH strata container and configure layers
@@ -1469,21 +1501,6 @@ local function UpdateDisconnectedState(frame)
             name:SetTextColor(0.6, 0.6, 0.6, 1)
         end
 
-        -- Reposition icons so they don't get lost
-        local leaderIcon = _G[frame:GetName() .. 'LeaderIcon']
-        if leaderIcon then
-            leaderIcon:ClearAllPoints()
-            leaderIcon:SetPoint('TOPLEFT', 42, 9)
-            leaderIcon:SetSize(16, 16)
-        end
-
-        local masterLooterIcon = _G[frame:GetName() .. 'MasterIcon']
-        if masterLooterIcon then
-            masterLooterIcon:ClearAllPoints()
-            masterLooterIcon:SetPoint('TOPLEFT', 58, 11)
-            masterLooterIcon:SetSize(16, 16)
-        end
-
     else
         -- Connected member - undo exactly what was done when disconnecting
         frame.DragonUI_Disconnected = false
@@ -1511,21 +1528,6 @@ local function UpdateDisconnectedState(frame)
 
         if name then
             name:SetTextColor(1, 0.82, 0, 1) -- Normal yellow
-        end
-
-        -- Reposition icons (without recreating frames)
-        local leaderIcon = _G[frame:GetName() .. 'LeaderIcon']
-        if leaderIcon then
-            leaderIcon:ClearAllPoints()
-            leaderIcon:SetPoint('TOPLEFT', 42, 9)
-            leaderIcon:SetSize(16, 16)
-        end
-
-        local masterLooterIcon = _G[frame:GetName() .. 'MasterIcon']
-        if masterLooterIcon then
-            masterLooterIcon:ClearAllPoints()
-            masterLooterIcon:SetPoint('TOPLEFT', 58, 11)
-            masterLooterIcon:SetSize(16, 16)
         end
     end
 end
@@ -1762,6 +1764,20 @@ local function SetupPartyHooks()
         end
     end)
     
+    hooksecurefunc("PartyMemberFrame_UpdateAssignedRoles", function(frame)
+        if frame and frame:GetName() and frame:GetName():match("^PartyMemberFrame%d+$") then
+            ApplyPartyRole(frame)
+        end
+    end)
+
+    hooksecurefunc("PartyMemberFrame_UpdatePvPStatus", function(frame)
+        local id = frame and frame:GetID()
+        local icon = id and _G["PartyMemberFrame" .. id .. "PVPIcon"]
+        if icon then
+            UF.ApplyClassicPvPTexture(icon, UF.GetPvPKind("party" .. id), true)
+        end
+    end)
+
     -- ===============================================================
     -- DISCONNECT VISUAL FIX (mod-playerbots compatibility)
     -- ===============================================================
@@ -1819,7 +1835,13 @@ function PartyFrames:UpdateSettings()
     
     -- Only apply base styles - ACE3 handles class color
     StylePartyFrames()
-    
+    for i = 1, MAX_PARTY_MEMBERS do
+        local frame = _G['PartyMemberFrame' .. i]
+        if frame and frame.DragonUIStyled then
+            ApplyPartySkin(frame)
+        end
+    end
+
     -- Reposition buffs
     RepositionBlizzardBuffs()
     
@@ -2122,6 +2144,7 @@ if type(PartyMemberFrame_UpdateArt) == "function" then
         HideBlizzardTexts(frame)
         CreateCustomTexts(frame)
         UpdateDisconnectedState(frame)
+        ApplyPartyIcons(frame)
         ResetPartyPortrait(frame)
     end)
 end
@@ -2167,6 +2190,7 @@ if type(PartyMemberFrame_ToVehicleArt) == "function" then
         HideBlizzardTexts(frame)
         CreateCustomTexts(frame)
         UpdateDisconnectedState(frame)
+        ApplyPartyIcons(frame)
         ResetPartyPortrait(frame)
     end)
 end
@@ -2212,6 +2236,7 @@ if type(PartyMemberFrame_ToPlayerArt) == "function" then
         HideBlizzardTexts(frame)
         CreateCustomTexts(frame)
         UpdateDisconnectedState(frame)
+        ApplyPartyIcons(frame)
         ResetPartyPortrait(frame)
     end)
 end

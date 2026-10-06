@@ -269,6 +269,16 @@ UpdatePetTextSystemUnit = function()
     end
 end
 
+local function ApplyPetSkin()
+    local skin = UF.GetFrameSkin().small
+    if moduleState.frame.background then
+        UF.ApplySkinPiece(moduleState.frame.background, skin.background, 'LEFT', PetPortrait, 'CENTER', -24, -9)
+    end
+    if moduleState.frame.border then
+        UF.ApplySkinPiece(moduleState.frame.border, skin.border, 'LEFT', PetPortrait, 'CENTER', -24, -9)
+    end
+end
+
 -- ===============================================================
 -- MAIN FRAME REPLACEMENT
 -- ===============================================================
@@ -328,7 +338,8 @@ local function ReplaceBlizzardPetFrame()
             {'LEFT', portrait, 'CENTER', -24, -9}
         )
     end
-    
+    ApplyPetSkin()
+
     -- Setup health bar
     SetupStatusBar(
         PetFrameHealthBar,
@@ -456,14 +467,8 @@ end
 -- UPDATE HANDLER
 -- ===============================================================
 local function OnPetFrameUpdate()
-    -- Refresh textures
-    if moduleState.frame.background then
-        moduleState.frame.background:SetTexture(SMALL_FRAME_PATH .. TOT_BASE .. 'BACKGROUND')
-    end
-    if moduleState.frame.border then
-        moduleState.frame.border:SetTexture(SMALL_FRAME_PATH .. TOT_BASE .. 'BORDER')
-    end
-    
+    ApplyPetSkin()
+
     UpdatePowerBarTexture()
     ConfigureCombatMode()
     ConfigurePetThreatGlow()
@@ -647,13 +652,13 @@ function PetFrameModule:LoadDefaultSettings()
 end
 
 function PetFrameModule:UpdateWidgets()
-    ApplyWidgetPosition()
     if InCombatLockdown() then
         if addon and addon.CombatQueue then
             addon.CombatQueue:Add("petframe_widgets", function() PetFrameModule:UpdateWidgets() end)
         end
         return
     end
+    ApplyWidgetPosition()
     ApplyFramePositioning()
     SyncPetOverlayToRealFrame()
 end

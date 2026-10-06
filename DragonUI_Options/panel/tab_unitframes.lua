@@ -27,14 +27,30 @@ local textFormatValues = {
     formatted  = LO["Current / Max"],
 }
 
+-- Keys sort each Forever entry under its Retail one; the player ignores Elite Dragons (UF.PLAYER_DECORATIONS).
 local dragonValues = {
-    none      = LO["None"],
-    elite     = LO["Elite (Golden)"],
-    rareelite = LO["RareElite (Winged)"],
+    none              = LO["None"],
+    elite             = LO["Elite (Retail)"],
+    rareelite         = LO["RareElite (Retail)"],
+    elite_forever     = LO["Elite (Forever)"],
+    rareelite_forever = LO["RareElite (Forever)"],
+    worldboss_forever = LO["World Boss (Forever)"],
+}
+
+local frameStyleValues = {
+    dragonui = LO["DragonUI"],
+    forever  = LO["Forever"],
+}
+
+local autoStyleValues = {
+    auto     = LO["Auto"],
+    dragonui = LO["DragonUI"],
+    forever  = LO["Forever"],
 }
 
 local pvpIconStyleValues = {
-    classic = LO["Classic"],
+    auto    = LO["Auto"],
+    classic = LO["DragonUI"],
     forever = LO["Forever"],
 }
 
@@ -220,6 +236,7 @@ local function BuildPlayerSection(scroll)
 
     C:AddDropdown(s, {
         label = LO["PvP Icon Style"],
+        desc = LO["Auto follows the unit frame art: the Forever badge with the Forever art, the classic icon with the DragonUI art."],
         dbPath = "unitframe.player.pvp_icon_style",
         values = pvpIconStyleValues,
         callback = refreshPlayer,
@@ -427,6 +444,7 @@ local function BuildTargetSection(scroll)
 
     C:AddDropdown(s, {
         label = LO["PvP Icon Style"],
+        desc = LO["Auto follows the unit frame art: the Forever badge with the Forever art, the classic icon with the DragonUI art."],
         dbPath = "unitframe.target.pvp_icon_style",
         values = pvpIconStyleValues,
         callback = refreshTarget,
@@ -467,6 +485,7 @@ local function BuildFocusSection(scroll)
 
     C:AddDropdown(s, {
         label = LO["PvP Icon Style"],
+        desc = LO["Auto follows the unit frame art: the Forever badge with the Forever art, the classic icon with the DragonUI art."],
         dbPath = "unitframe.focus.pvp_icon_style",
         values = pvpIconStyleValues,
         callback = refreshFocus,
@@ -839,6 +858,35 @@ local subTabBuilders = {
 -- ============================================================================
 
 local function BuildUnitframesTab(scroll)
+    -- One art style for every unit frame, so it sits above the per-frame sub-tabs.
+    local style = C:AddSection(scroll, LO["Style"])
+    local refreshSkins = function()
+        if addon.UF and addon.UF.RefreshSkins then
+            addon.UF.RefreshSkins()
+        end
+    end
+    C:AddDropdown(style, {
+        label = LO["Unit Frame Art"],
+        desc = LO["Art of the player, target, focus, ToT, ToF, pet and party frames. The Fat Health Bar keeps its own art."],
+        dbPath = "unitframe.frame_style",
+        values = frameStyleValues,
+        callback = refreshSkins,
+    })
+    C:AddDropdown(style, {
+        label = LO["Level Style"],
+        desc = LO["Auto follows the unit frame art. Forever shows the level in a circle and moves the name to the left."],
+        dbPath = "unitframe.level_style",
+        values = autoStyleValues,
+        callback = refreshSkins,
+    })
+    C:AddDropdown(style, {
+        label = LO["Elite Dragons"],
+        desc = LO["Auto follows the unit frame art. Dragons around elite and rare portraits; the player picks its own in Dragon Decoration."],
+        dbPath = "unitframe.dragon_style",
+        values = autoStyleValues,
+        callback = refreshSkins,
+    })
+
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)
         activeSubTab = key
         Panel:SelectTab("unitframes")

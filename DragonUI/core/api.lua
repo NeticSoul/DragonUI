@@ -678,6 +678,9 @@ local DEFAULT_LEGACY_REFRESH_TARGETS = {
     { name = "targetframe", funcName = "RefreshTargetFrame", order = 900 },
     { name = "focusframe", funcName = "RefreshFocusFrame", order = 910 },
     { name = "partyframes", funcName = "RefreshPartyFrames", order = 920 },
+    { name = "totframe", funcName = "RefreshToTFrame", order = 930 },
+    { name = "tofframe", funcName = "RefreshToFFrame", order = 940 },
+    { name = "petframe", funcName = "RefreshPetFrame", order = 950 },
 }
 
 local function ResolveRegistryFunction(info, phase)
@@ -1050,7 +1053,7 @@ function addon:RegisterModule(name, moduleTable, displayName, description, optio
     return MR:Register(name, moduleTable, displayName, description, options)
 end
 
--- No external callers: DEFAULT_LEGACY_REFRESH_TARGETS covers the three frames that need it. Kept as the
+-- No external callers: DEFAULT_LEGACY_REFRESH_TARGETS covers the frames that need it. Kept as the
 -- supported way to add one without editing this file.
 function addon:RegisterLegacyRefreshTarget(name, funcName, order)
     return MR:RegisterLegacyRefreshTarget(name, funcName, order)

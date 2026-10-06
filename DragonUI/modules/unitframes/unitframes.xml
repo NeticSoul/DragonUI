@@ -2,7 +2,8 @@
     
     <!-- Shared core utilities — must load before all frame modules -->
     <Script file="uf_core.lua"/>
-    
+    <Script file="uf_skins.lua"/>
+
     <!-- UnitFrame Layers building blocks (mana-cost data, loss bar, power feedback) -->
     <Script file="uf_layers_deps.lua"/>
 

@@ -148,7 +148,6 @@ function UF.SmallFrame.Create(opts)
         end
 
         local classification = UnitClassification(unit)
-        local coords = nil
 
         -- Check vehicle first
         if UnitVehicleSeatCount and UnitVehicleSeatCount(unit) > 0 then
@@ -157,29 +156,33 @@ function UF.SmallFrame.Create(opts)
         end
 
     -- Determine classification and apply boss/elite/rare decoration
-        if classification == "worldboss" or classification == "elite" then
-            coords = UF.BOSS_COORDS.smallStyle.elite
+        local kind = nil
+        if classification == "worldboss" then
+            kind = "boss"
+        elseif classification == "elite" then
+            kind = "elite"
         elseif classification == "rareelite" then
-            coords = UF.BOSS_COORDS.smallStyle.rareelite
+            kind = "rareelite"
         elseif classification == "rare" then
-            coords = UF.BOSS_COORDS.smallStyle.rare
+            kind = "rare"
         else
             -- Famous NPC override
             local name = UnitName(unit)
             if name and addon.unitframe and addon.unitframe.famous and addon.unitframe.famous[name] then
-                coords = UF.BOSS_COORDS.smallStyle.elite
+                kind = "elite"
             end
         end
 
-        if coords then
-            frameElements.elite:SetTexture(UF.TEXTURES.smallStyle.BOSS)
+        local file, left, right, top, bottom, place
+        if kind then
+            file, left, right, top, bottom, place = UF.GetDragon("small", kind)
+        end
 
-            -- Horizontal flip for small frame decorations
-            local left, right, top, bottom = coords[1], coords[2], coords[3], coords[4]
-            frameElements.elite:SetTexCoord(right, left, top, bottom)
-
-            frameElements.elite:SetSize(51, 51)
-            frameElements.elite:SetPoint("CENTER", frames.portrait, "CENTER", -4, -2)
+        if file then
+            frameElements.elite:SetTexture(file)
+            frameElements.elite:SetTexCoord(left, right, top, bottom)
+            frameElements.elite:SetSize(place.w, place.h)
+            frameElements.elite:SetPoint("CENTER", frames.portrait, "CENTER", place.x, place.y)
             frameElements.elite:SetDrawLayer("OVERLAY", 11)
             frameElements.elite:Show()
             frameElements.elite:SetAlpha(1)
@@ -456,6 +459,12 @@ function UF.SmallFrame.Create(opts)
     -- FRAME INITIALIZATION
     -- ========================================================================
 
+    local function ApplySkinTextures()
+        local skin = UF.GetFrameSkin().small
+        UF.ApplySkinPiece(frameElements.background, skin.background, "LEFT", frames.portrait, "CENTER", -25 + 1, -9)
+        UF.ApplySkinPiece(frameElements.border, skin.border, "LEFT", frames.portrait, "CENTER", -25 + 1, -9)
+    end
+
     local function InitializeFrame()
         if Module.configured then
             return
@@ -503,7 +512,7 @@ function UF.SmallFrame.Create(opts)
                 frames.parent,
                 config.anchorParent or opts.defaultAnchorParent or "BOTTOMRIGHT",
                 config.x or opts.defaultX or 0,
-                config.y or opts.defaultY or 0
+                (config.y or opts.defaultY or 0) - UF.GetCompanionDrop()
             )
         end
         frames.main:SetScale(config.scale or 1.0)
@@ -520,8 +529,6 @@ function UF.SmallFrame.Create(opts)
         -- Create custom background texture
         if not frameElements.background then
             frameElements.background = frames.main:CreateTexture(opts.namePrefix .. "BG", "BACKGROUND", nil, 0)
-            frameElements.background:SetTexture(UF.TEXTURES.smallStyle.BACKGROUND)
-            frameElements.background:SetPoint("LEFT", frames.portrait, "CENTER", -25 + 1, -9)
         end
 
         -- Create custom border texture
@@ -533,11 +540,10 @@ function UF.SmallFrame.Create(opts)
 
         if not frameElements.border then
             frameElements.border = frameElements.borderFrame:CreateTexture(opts.namePrefix .. "Border", "OVERLAY", nil, 1)
-            frameElements.border:SetTexture(UF.TEXTURES.smallStyle.BORDER)
-            frameElements.border:SetPoint("LEFT", frames.portrait, "CENTER", -25 + 1, -9)
             frameElements.border:Show()
             frameElements.border:SetAlpha(1)
         end
+        ApplySkinTextures()
 
         -- Create elite decoration
         if not frameElements.elite then
@@ -546,7 +552,6 @@ function UF.SmallFrame.Create(opts)
             eliteFrame:SetAllPoints(frames.portrait)
 
             frameElements.elite = eliteFrame:CreateTexture(opts.namePrefix .. "Elite", "OVERLAY", nil, 1)
-            frameElements.elite:SetTexture(UF.TEXTURES.smallStyle.BOSS)
             frameElements.elite:Hide()
         end
 
@@ -957,6 +962,9 @@ function UF.SmallFrame.Create(opts)
         if not Module.configured then
             InitializeFrame()
         else
+            if frameElements.border then
+                ApplySkinTextures()
+            end
             if frames.main and not InCombatLockdown() then
                 local config = GetConfig()
                 if config and config.override and Module.anchorFrame then
@@ -970,7 +978,7 @@ function UF.SmallFrame.Create(opts)
                         frames.parent,
                         (config and config.anchorParent) or opts.defaultAnchorParent or "BOTTOMRIGHT",
                         (config and config.x) or opts.defaultX or 0,
-                        (config and config.y) or opts.defaultY or 0
+                        ((config and config.y) or opts.defaultY or 0) - UF.GetCompanionDrop()
                     )
                 end
                 frames.main:SetScale((config and config.scale) or 1.0)
@@ -1003,7 +1011,7 @@ function UF.SmallFrame.Create(opts)
                 frames.parent,
                 opts.defaultAnchorParent or "BOTTOMRIGHT",
                 opts.defaultX or 0,
-                opts.defaultY or 0
+                (opts.defaultY or 0) - UF.GetCompanionDrop()
             )
             frames.main:SetScale(1.0)
         end
