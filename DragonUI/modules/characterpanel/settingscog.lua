@@ -3,8 +3,6 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- The equipment manager's rename button draws this gear too; UI-OptionsButton renders blank here.
-local GEAR_ART = "Interface\\WorldMap\\Gear_64Grey"
 local RESET_POPUP = "DRAGONUI_RESET_STAT_ORDER"
 -- Muted red, never grey: grey is how a disabled entry looks, and this action is live.
 local ACTION_COLOR = "|cffd07070"
@@ -96,10 +94,11 @@ local function menuEntries()
     return list
 end
 
+-- The same gear as the world map's quest settings and the talent window.
 local function gearLayer(layer, alpha, blend)
     local tex = cog:CreateTexture(nil, layer)
-    tex:SetTexture(GEAR_ART)
-    tex:SetAllPoints()
+    tex:SetAtlasTexture("questlog-icon-setting", true)
+    tex:SetPoint("CENTER", cog, "CENTER", 0, 0)
     tex:SetAlpha(alpha)
     tex:SetBlendMode(blend or "BLEND")
     return tex

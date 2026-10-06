@@ -1261,6 +1261,32 @@ local function ApplyStickyChannels()
 end
 
 -- ============================================================================
+-- CLASS COLORED NAMES
+-- ============================================================================
+
+-- The chat types Blizzard's chat settings offer "class colors" for, plus the numbered channels.
+local function SetClassColorNames(enabled)
+    for _, entry in ipairs(CHAT_CONFIG_CHAT_LEFT or {}) do
+        if not entry.noClassColor then
+            ToggleChatColorNamesByClassGroup(enabled, entry.type)
+        end
+    end
+    for i = 1, MAX_WOW_CHAT_CHANNELS or 10 do
+        ToggleChatColorNamesByClassGroup(enabled, "CHANNEL" .. i)
+    end
+end
+
+-- On: re-applied each login (the setting is per character). Off: Blizzard's own per-type choice stays.
+local function ApplyClassColorNames()
+    local config = GetModuleConfig()
+    if config and config.classColorNames then
+        SetClassColorNames(true)
+    end
+end
+
+addon.SetChatClassColorNames = SetClassColorNames
+
+-- ============================================================================
 -- APPLY / RESTORE SYSTEM
 -- ============================================================================
 
@@ -1295,6 +1321,8 @@ local function ApplyChatModsSystem()
     ApplyURLDetection()
     ApplyChatCopy()
     ApplyStickyChannels()
+    -- After the login chat settings have loaded, so they can't overwrite it.
+    addon:After(1, ApplyClassColorNames)
 
     -- AFK/DND dedup filters
     if not ChatModsModule.hooks.afkDndFilter then

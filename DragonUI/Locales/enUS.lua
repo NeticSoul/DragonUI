@@ -602,6 +602,7 @@ L["TexCoord: %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f, %.4f"] = true
 L["Equip"] = true
 L["New Equipment Set"] = true
 L["Rename or change the icon"] = true
+L["Assign To:"] = true
 L["Panel settings"] = true
 L["Background"] = true
 L["Stone"] = true

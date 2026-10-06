@@ -1291,6 +1291,20 @@ function BuffFrameModule:Enable()
         end)
     end
 
+    -- Hidden per button as Blizzard shows it, so a hidden debuff never draws for a frame.
+    if not BuffFrameModule._hookedDebuffVisibility then
+        BuffFrameModule._hookedDebuffVisibility = true
+        hooksecurefunc("AuraButton_Update", function(buttonName, index)
+            if buttonName ~= "DebuffButton" then return end
+            local cfg = GetBuffsConfig()
+            if not (cfg and cfg.enabled and cfg.show_debuffs == false) then return end
+            local button = _G[buttonName .. index]
+            if button then
+                button:Hide()
+            end
+        end)
+    end
+
     -- ========================================================================
     -- HOOK: UIParent_ManageFramePositions — fires on ticket open/close.
     -- We update our frame position AND re-anchor ConsolidatedBuffs + debuffs

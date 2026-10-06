@@ -423,6 +423,13 @@ local function BuildAurasTab(scroll)
 
     C:AddHeading(playerAuraSection, LO["Debuffs"])
 
+    C:AddToggle(playerAuraSection, {
+        label = LO["Show Debuffs"],
+        desc = LO["Show your debuffs on the player aura bar."],
+        dbPath = "buffs.show_debuffs",
+        callback = RefreshPlayerAuraSpacing,
+    })
+
     C:AddSlider(playerAuraSection, {
         label = LO["Debuff Icon Scale"],
         dbPath = "buffs.debuff_scale",

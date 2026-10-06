@@ -579,6 +579,30 @@ local function ApplySimpleClamp(plateData)
     end
 end
 
+-- Plate heights from an anchor point up to the plate's top edge.
+local ANCHOR_TO_TOP = {
+    TOPLEFT = 0, TOP = 0, TOPRIGHT = 0, LEFT = 0.5, CENTER = 0.5, RIGHT = 0.5,
+    BOTTOMLEFT = 1, BOTTOM = 1, BOTTOMRIGHT = 1,
+}
+local FROM_SCREEN_BOTTOM = { BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true }
+
+-- Clamp rect bottom `lift` under the screen edge: the clamp pushes the plate up exactly that far.
+local function ApplyLiftClamp(plateData, lift, screenClamps)
+    local plate = plateData.plate
+    local point, _, relativePoint, _, y = plate:GetPoint(1)
+    local toTop = point and ANCHOR_TO_TOP[point]
+    -- y has to count up from the screen bottom; any other anchoring keeps the plain clamp.
+    if not y or not toTop or not FROM_SCREEN_BOTTOM[relativePoint] then
+        ApplySimpleClamp(plateData)
+        return
+    end
+    local width, height = plate:GetSize()
+    local top = y + height * toTop
+    local topInset = screenClamps and PlateWantsClamp(plateData) and (NP.module._clampTopInset or 0) or -height
+    plateData._clamped = true
+    SetPlateClamp(plateData, plate, true, 0.5 * width, -0.5 * width, topInset, height - top - lift)
+end
+
 local function ClearRetailStackingForPlate(plateData, data)
     if data then
         data.position = 0
@@ -743,7 +767,16 @@ function NP.layout.UpdateStacking()
         return
     end
     NP.layout.ResetRetailStacking()
-    if NP.module._clampTargetEnabled or NP.module._clampBossEnabled then
+    local lift = NP.config.GetClickLift()
+    if lift > 0 then
+        local screenClamps = NP.module._clampTargetEnabled or NP.module._clampBossEnabled
+        for _, plateData in pairs(NP.module.plates) do
+            local plate = plateData.plate
+            if plate and plate.IsShown and plate:IsShown() then
+                ApplyLiftClamp(plateData, lift, screenClamps)
+            end
+        end
+    elseif NP.module._clampTargetEnabled or NP.module._clampBossEnabled then
         for _, plateData in pairs(NP.module.plates) do
             local plate = plateData.plate
             if plate and plate.IsShown and plate:IsShown() then

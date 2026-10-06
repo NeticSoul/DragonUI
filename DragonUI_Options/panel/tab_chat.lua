@@ -56,6 +56,17 @@ local function BuildChatTab(scroll)
         end,
     })
 
+    C:AddToggle(generalSection, {
+        label = LO["Class Colored Names"],
+        desc = LO["Color player names by class in every chat type and channel. Turning it off removes the class colors from this character's chat settings."],
+        dbPath = "modules.chatmods.classColorNames",
+        callback = function(val)
+            if addon.SetChatClassColorNames then
+                addon.SetChatClassColorNames(val)
+            end
+        end,
+    })
+
     -- ====================================================================
     -- EDITBOX POSITION
     -- ====================================================================

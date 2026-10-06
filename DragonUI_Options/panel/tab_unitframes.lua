@@ -450,6 +450,24 @@ local function BuildTargetSection(scroll)
         callback = refreshTarget,
     })
 
+    local refreshTargetAuras = function()
+        if addon.RefreshTargetFocusAuraLayout then
+            addon.RefreshTargetFocusAuraLayout()
+        end
+    end
+    C:AddToggle(s, {
+        label = LO["Show Buffs"],
+        desc = LO["Show the buffs under the target frame."],
+        dbPath = "unitframe.target.show_buffs",
+        callback = refreshTargetAuras,
+    })
+    C:AddToggle(s, {
+        label = LO["Show Debuffs"],
+        desc = LO["Show the debuffs under the target frame."],
+        dbPath = "unitframe.target.show_debuffs",
+        callback = refreshTargetAuras,
+    })
+
     C:AddHeading(s, LO["Visibility"])
     C:AddDescription(s, LO["Also fades the Target of Target and target cast bar, attached or not."])
     C:AddVisibilityFadeToggles(s, {
@@ -865,19 +883,35 @@ local function BuildUnitframesTab(scroll)
             addon.UF.RefreshSkins()
         end
     end
+    -- Center Names only acts on the Forever name spot, so it is listed only while that level style applies.
+    local function IsForeverLevelStyle()
+        return not not (addon.UF and addon.UF.GetLevelStyle and addon.UF.GetLevelStyle() == "forever")
+    end
+    local centerNamesListed = IsForeverLevelStyle()
+    local refreshLevelStyle = function()
+        refreshSkins()
+        if IsForeverLevelStyle() ~= centerNamesListed then
+            -- Next frame: the dropdown that fired this is still inside its own callback.
+            addon:After(0, function()
+                if Panel.currentTab == "unitframes" then
+                    Panel:SelectTab("unitframes")
+                end
+            end)
+        end
+    end
     C:AddDropdown(style, {
         label = LO["Unit Frame Art"],
         desc = LO["Art of the player, target, focus, ToT, ToF, pet and party frames. The Fat Health Bar keeps its own art."],
         dbPath = "unitframe.frame_style",
         values = frameStyleValues,
-        callback = refreshSkins,
+        callback = refreshLevelStyle,
     })
     C:AddDropdown(style, {
         label = LO["Level Style"],
         desc = LO["Auto follows the unit frame art. Forever shows the level in a circle and moves the name to the left."],
         dbPath = "unitframe.level_style",
         values = autoStyleValues,
-        callback = refreshSkins,
+        callback = refreshLevelStyle,
     })
     C:AddDropdown(style, {
         label = LO["Elite Dragons"],
@@ -886,6 +920,14 @@ local function BuildUnitframesTab(scroll)
         values = autoStyleValues,
         callback = refreshSkins,
     })
+    if centerNamesListed then
+        C:AddToggle(style, {
+            label = LO["Center Names"],
+            desc = LO["Center the player, target and focus names instead of aligning them to the left."],
+            dbPath = "unitframe.center_names",
+            callback = refreshSkins,
+        })
+    end
 
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)
         activeSubTab = key

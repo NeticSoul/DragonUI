@@ -102,6 +102,7 @@ local function GetAuraCountsAndSizes(frame)
     local largeDebuffList = {}
 
     -- Large from caster (Blizzard's PLAYER_UNITS rule), not width: prior SetSize corrupts width inference.
+    local playerIsTarget = UnitIsUnit(PlayerFrame.unit or "player", unit)
     for i = 1, MAX_TARGET_BUFFS do
         local buff = _G[selfName .. "Buff" .. i]
         if not buff or not buff:IsShown() then
@@ -109,7 +110,7 @@ local function GetAuraCountsAndSizes(frame)
         end
         numBuffs = i
         local caster = select(8, UnitBuff(unit, i))
-        largeBuffList[i] = caster and PLAYER_CAST_UNITS[caster] or false
+        largeBuffList[i] = not playerIsTarget and caster and PLAYER_CAST_UNITS[caster] or false
     end
 
     for i = 1, MAX_TARGET_DEBUFFS do
@@ -262,6 +263,16 @@ local function UpdateDebuffAnchorDetached(self, debuffName, index, numBuffs, anc
     end
 end
 
+local function HideAuraButtons(prefix, count)
+    for i = 1, count do
+        local button = _G[prefix .. i]
+        if not button then
+            break
+        end
+        button:Hide()
+    end
+end
+
 local function ApplyDragonAuraLayout(frame)
     if not frame or not frame.unit or not UnitExists(frame.unit) then
         return
@@ -272,6 +283,18 @@ local function ApplyDragonAuraLayout(frame)
         return
     end
 
+    -- Hidden before counting, so the kind still shown lays out as if the other had none.
+    local targetConfig = frame == TargetFrame and addon.db and addon.db.profile.unitframe.target
+    local hideBuffs = targetConfig and targetConfig.show_buffs == false
+    local hideDebuffs = targetConfig and targetConfig.show_debuffs == false
+    if hideBuffs then
+        HideAuraButtons(frameName .. "Buff", MAX_TARGET_BUFFS)
+    end
+    if hideDebuffs then
+        HideAuraButtons(frameName .. "Debuff", MAX_TARGET_DEBUFFS)
+    end
+    local hiding = hideBuffs or hideDebuffs
+
     local detached = ShouldUseDetachedAuraLayout(frame)
     -- Blizzard's 2 short rows are a FrameXML local; the ToT at retail's spot leaves room for a third.
     local shortRows = not detached and not frame.buffsOnTop and frame.totFrame and frame.totFrame:IsShown()
@@ -279,7 +302,7 @@ local function ApplyDragonAuraLayout(frame)
     local buffSize, debuffSize = GetCustomAuraSizes()
     local blizzardSpacing = not detached and not buffSize
     -- With Blizzard's spacing only a third row beside the lowered ToT differs from Blizzard's own pass.
-    if blizzardSpacing and (not shortRows or (frame.auraRows or 0) <= 2) then
+    if blizzardSpacing and not hiding and (not shortRows or (frame.auraRows or 0) <= 2) then
         return
     end
     buffSize = buffSize or SMALL_AURA_SIZE
@@ -287,7 +310,7 @@ local function ApplyDragonAuraLayout(frame)
     local largeDelta = LARGE_AURA_SIZE - SMALL_AURA_SIZE
 
     local numBuffs, numDebuffs, largeBuffList, largeDebuffList = GetAuraCountsAndSizes(frame)
-    if numBuffs == 0 and numDebuffs == 0 then
+    if numBuffs == 0 and numDebuffs == 0 and not hiding then
         return
     end
 

@@ -103,9 +103,19 @@ function NP.config.GetCastBarMetrics()
     return cfg.castBarHeight or barH, NP.config.GetStackBarGap()
 end
 
+-- The click area is the plate's rect, so a raised stack lifts the plate; retail stacking owns that clamp.
+function NP.config.GetClickLift()
+    local cfg = NP.config.GetCfg()
+    local oy = cfg.offsetY or 0
+    if oy > 0 and cfg.retailStackingEnabled ~= true then
+        return oy
+    end
+    return 0
+end
+
 function NP.config.GetStackOffset()
     local cfg = NP.config.GetCfg()
-    return cfg.offsetX or 0, cfg.offsetY or 0
+    return cfg.offsetX or 0, (cfg.offsetY or 0) - NP.config.GetClickLift()
 end
 
 function NP.config.GetNameplateFontSizes()

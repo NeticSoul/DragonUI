@@ -68,6 +68,9 @@ local levelCache = {}
 -- Average item level strings, keyed "player"/"inspect"
 local averageTexts = {}
 
+-- [slot button] = durability FontString (character panel only)
+local durabilityTexts = {}
+
 local UpdateAll -- forward declaration (repaint loop runs before it is defined)
 
 -- 3.3.5a has no item-loaded event, so paint passes repeat at growing gaps while one is missing
@@ -222,11 +225,23 @@ local function ApplyTextPosition(fontString, anchor)
     fontString.__DragonUI_ILvlAnchor = anchor
 end
 
+-- Opposite edge from the item level, so the two numbers never overlap.
+local DURABILITY_POSITIONS = { BOTTOM = "TOP", CENTER = "TOP", TOP = "BOTTOM" }
+
+local function PlaceDurabilityText(fontString, button)
+    local p = TEXT_POSITIONS[DURABILITY_POSITIONS[ResolveTextPosition()]]
+    fontString:ClearAllPoints()
+    fontString:SetPoint(p[1], button, p[2], p[3], p[4])
+end
+
 local function RefreshAllPositions()
     for button, fontString in pairs(ItemLevelModule.texts) do
         if fontString then
             ApplyTextPosition(fontString, fontString.__DragonUI_ILvlAnchor or button)
         end
+    end
+    for button, fontString in pairs(durabilityTexts) do
+        PlaceDurabilityText(fontString, button)
     end
 end
 
@@ -298,11 +313,17 @@ local function HideAllTexts()
     for _, fontString in pairs(ItemLevelModule.texts) do
         if fontString then fontString:Hide() end
     end
+    for _, fontString in pairs(durabilityTexts) do
+        fontString:Hide()
+    end
 end
 
 local function RefreshAllFonts()
     for _, fontString in pairs(ItemLevelModule.texts) do
         if fontString then ApplyFont(fontString) end
+    end
+    for _, fontString in pairs(durabilityTexts) do
+        ApplyFont(fontString, -2)
     end
     for _, fontString in pairs(averageTexts) do
         if fontString then ApplyFont(fontString, 1) end
@@ -417,8 +438,37 @@ local SKIPPED_SLOT_IDS = {
 -- Inventory slot IDs counted for the average: gear only (no ammo/shirt/tabard)
 local AVERAGE_SLOT_IDS = { 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 }
 
+local function UpdateSlotDurability(button)
+    local config = GetModuleConfig()
+    local current, maximum
+    if IsModuleEnabled() and config and config.show_durability then
+        current, maximum = GetInventoryItemDurability(button:GetID())
+    end
+
+    local fontString = durabilityTexts[button]
+    if not current or not maximum or maximum <= 0 then
+        if fontString then fontString:Hide() end
+        return
+    end
+    if not fontString then
+        fontString = button:CreateFontString(nil, "OVERLAY")
+        fontString:SetDrawLayer("OVERLAY", 7)
+        fontString:SetJustifyH("CENTER")
+        ApplyFont(fontString, -2)
+        PlaceDurabilityText(fontString, button)
+        durabilityTexts[button] = fontString
+    end
+
+    local ratio = current / maximum
+    fontString:SetFormattedText("%d%%", math.floor(ratio * 100))
+    fontString:SetTextColor(ratio < 0.5 and 1 or (1 - ratio) * 2, ratio > 0.5 and 1 or ratio * 2, 0)
+    fontString:Show()
+end
+
 local function UpdateCharacterSlot(button)
-    if not button or not IsContextEnabled("character") then return end
+    if not button then return end
+    UpdateSlotDurability(button)
+    if not IsContextEnabled("character") then return end
 
     local slotID = button:GetID()
     if not slotID or slotID < 0 then return end
@@ -572,7 +622,7 @@ local function ScheduleAverageUpdate(which)
 end
 
 local function UpdateAllCharacterSlots()
-    if not IsContextEnabled("character") then return end
+    if not IsModuleEnabled() then return end
     for _, frameName in ipairs(EQUIP_SLOT_FRAMES) do
         local button = _G[frameName]
         if button then UpdateCharacterSlot(button) end
@@ -1029,6 +1079,7 @@ eventFrame:RegisterEvent("MAIL_SEND_INFO_UPDATE")
 eventFrame:RegisterEvent("AUCTION_HOUSE_SHOW")
 eventFrame:RegisterEvent("AUCTION_ITEM_LIST_UPDATE")
 eventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+eventFrame:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
 
 addon:RegisterInspectDataCallback(function(ownerGUID)
     if not IsModuleEnabled() then return end
@@ -1070,6 +1121,11 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 
     elseif event == "PLAYER_EQUIPMENT_CHANGED" then
         Debounce("character", 0.2, UpdateAllCharacterSlots)
+
+    elseif event == "UPDATE_INVENTORY_DURABILITY" then
+        if PaperDollFrame and PaperDollFrame:IsVisible() then
+            Debounce("character", 0.2, UpdateAllCharacterSlots)
+        end
 
     elseif event == "BAG_UPDATE" then
         Debounce("bags", 0.2, UpdateAllContainerFrames)

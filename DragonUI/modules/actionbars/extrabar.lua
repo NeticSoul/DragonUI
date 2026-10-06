@@ -762,6 +762,12 @@ local function SetTooltipByName(name, rank, spellID)
 end
 
 local function SetExtrabarTooltip(self)
+    if addon.ShouldHideActionTooltip() then
+        if GameTooltip:IsOwned(self) then
+            GameTooltip:Hide()
+        end
+        return
+    end
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     local companion = self:GetSlotData()
     if companion and companion.type == "companion" then

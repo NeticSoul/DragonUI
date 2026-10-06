@@ -582,6 +582,7 @@ L["Average item level of your equipped gear."] = "Средний уровень 
 L["Equip"] = "Надеть"
 L["New Equipment Set"] = "Новый набор экипировки"
 L["Rename or change the icon"] = "Переименовать или сменить значок"
+L["Assign To:"] = "Назначить:"
 L["Panel settings"] = "Настройки панели"
 L["Background"] = "Фон"
 L["Stone"] = "Камень"

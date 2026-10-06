@@ -582,6 +582,7 @@ L["Average item level of your equipped gear."] = "Durchschnittliche Gegenstandss
 L["Equip"] = "Anlegen"
 L["New Equipment Set"] = "Neues Ausrüstungsset"
 L["Rename or change the icon"] = "Umbenennen oder Symbol ändern"
+L["Assign To:"] = "Zuweisen an:"
 L["Panel settings"] = "Fenstereinstellungen"
 L["Background"] = "Hintergrund"
 L["Stone"] = "Stein"

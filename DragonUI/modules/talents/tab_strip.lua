@@ -28,6 +28,9 @@ function ns.SpecName(group)
     return group == 2 and TALENT_SPEC_SECONDARY or TALENT_SPEC_PRIMARY
 end
 
+-- The equipment set pane and the options panel label specs by these names too.
+addon.GetTalentSpecName = ns.SpecName
+
 function ns.SpecTooltip(owner, group)
     local spent = {}
     for tab = 1, GetNumTalentTabs(false, false) or 0 do

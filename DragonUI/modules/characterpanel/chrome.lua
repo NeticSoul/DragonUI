@@ -171,6 +171,9 @@ function CP.ApplyBodyBackground()
     if CP.DetailGround then
         CP.DetailGround:SetVertexColor(tint.body, tint.body, tint.body)
     end
+    for _, ground in ipairs(CP.DialogGrounds or {}) do
+        ground:SetVertexColor(tint.body, tint.body, tint.body)
+    end
     if CP.DetailPaper then
         CP.DetailPaper:SetVertexColor(tint.paper, tint.paper, tint.paper)
     end

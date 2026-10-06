@@ -222,6 +222,18 @@ local function BuildGeneralTab(scroll)
         callback = RefreshBars,
     })
 
+    C:AddDropdown(buttons, {
+        label = LO["Button Tooltips"],
+        desc = LO["When to show tooltips on action, pet and stance buttons."],
+        dbPath = "buttons.tooltips",
+        values = {
+            always = LO["Always"],
+            combat = LO["Hide in Combat"],
+            never  = LO["Never"],
+        },
+        width = 200,
+    })
+
     -- Text visibility sub-section
     local textVis = C:AddSection(scroll, LO["Text Visibility"])
 

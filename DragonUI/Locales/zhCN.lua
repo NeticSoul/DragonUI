@@ -590,6 +590,7 @@ L["Average item level of your equipped gear."] = "已装备物品的平均等级
 L["Equip"] = "装备"
 L["New Equipment Set"] = "新建装备套装"
 L["Rename or change the icon"] = "重命名或更换图标"
+L["Assign To:"] = "指定给："
 L["Panel settings"] = "面板设置"
 L["Background"] = "背景"
 L["Stone"] = "石质"

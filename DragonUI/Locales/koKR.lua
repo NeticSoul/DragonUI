@@ -580,6 +580,7 @@ L["Average item level of your equipped gear."] = "착용 중인 장비의 평균
 L["Equip"] = "착용"
 L["New Equipment Set"] = "새 장비 세트"
 L["Rename or change the icon"] = "이름 변경 또는 아이콘 변경"
+L["Assign To:"] = "지정 대상:"
 L["Panel settings"] = "패널 설정"
 L["Background"] = "배경"
 L["Stone"] = "석재"

@@ -2442,7 +2442,7 @@ local function ChangePlayerframe()
         local foreverName = not IsFatHealthbarActive()
             and UF.GetNameSpot(isPlayerEliteMode and "playerDecoration" or "player")
         if foreverName then
-            PlayerName:SetJustifyH("LEFT")
+            PlayerName:SetJustifyH(UF.GetNameSpotJustify())
             PlayerName:SetWidth(foreverName.w)
             PlayerName:SetPoint('LEFT', PlayerFrameHealthBar, 'TOPLEFT', foreverName.x, foreverName.y)
         elseif isPlayerEliteMode then
@@ -3639,7 +3639,7 @@ local function Ghost_Layout()
     local config = GetPlayerConfig()
     return tostring(IsFatConfigEnabled()) .. "|" .. tostring((config and config.dragon_decoration) or "none")
         .. "|" .. UF.GetFrameStyle() .. "|" .. UF.GetDragonSet() .. "|" .. UF.GetLevelStyle()
-        .. "|" .. UF.GetPvPIconStyle(config)
+        .. "|" .. UF.GetPvPIconStyle(config) .. "|" .. UF.GetNameSpotJustify()
 end
 
 -- Mirror the frame tree rather than flattening it: draw layers only order regions inside one

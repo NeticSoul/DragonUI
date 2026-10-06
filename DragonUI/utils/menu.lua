@@ -347,7 +347,7 @@ local function build()
             self:Hide()
             return
         end
-        if self.style == STYLES.large then
+        if self.clickAway then
             if pressedOutside() then self:Hide() end
             return
         end
@@ -390,6 +390,8 @@ function addon.Menu.Open(anchor, entries, options)
     closeFrom(2)
     options = options or {}
     menu.style = options.large and STYLES.large or STYLES.small
+    -- No idle timeout, only an outside press closes it; the large look always works this way.
+    menu.clickAway = options.large or options.clickAway
     menu.at, menu.dx, menu.dy = options.at or "BOTTOMLEFT", options.x or 0, options.y or 0
     if menu.tipRow and GameTooltip:IsOwned(menu.tipRow) then GameTooltip:Hide() end
     menu.tips, menu.tipRow, menu.wasDown = false, nil, IsMouseButtonDown() and true or false

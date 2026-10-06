@@ -16,7 +16,10 @@ local BUTTON_INSET = 2
 local LIST_TOP = BUTTON_H + BUTTON_INSET + BUTTON_GAP
 local ACTION_SIZE = 15
 local CHECK_SIZE = 16
+local SPEC_BADGE_SIZE = 16
 local QUESTION_MARK = "Interface\\Icons\\INV_Misc_QuestionMark"
+-- The talent frame's spec tab shows this while a spec has no points spent.
+local NO_POINTS_SPEC_ICON = "Interface\\Icons\\Ability_Marksmanship"
 
 local NORMAL = NORMAL_FONT_COLOR or { r = 1, g = 0.82, b = 0 }
 local RED = RED_FONT_COLOR or { r = 1, g = 0.1, b = 0.1 }
@@ -144,6 +147,45 @@ local function pickupSet(name)
     end
 end
 
+-- db.char.specEquipmentSets[talent group] = set name: one set per spec and one spec per set, as in retail.
+local function specSets()
+    return addon.db and addon.db.char and addon.db.char.specEquipmentSets
+end
+
+local function specForSet(name)
+    local sets = specSets()
+    if not sets or not name then return nil end
+    for group = 1, MAX_TALENT_GROUPS or 2 do
+        if sets[group] == name then return group end
+    end
+end
+
+-- name nil frees the spec; a set given to this spec leaves the one it served before.
+function CP.AssignSpecSet(group, name)
+    local char = addon.db and addon.db.char
+    if not char then return end
+    char.specEquipmentSets = char.specEquipmentSets or {}
+    local previous = specForSet(name)
+    if previous then char.specEquipmentSets[previous] = nil end
+    char.specEquipmentSets[group] = name
+    refresh()
+end
+
+local function specName(group)
+    return addon.GetTalentSpecName and addon.GetTalentSpecName(group)
+        or (group == 2 and TALENT_SPEC_SECONDARY or TALENT_SPEC_PRIMARY)
+end
+
+-- The talent frame's spec-tab rule: the icon of the tree with the most points.
+local function specIcon(group)
+    local icon, most = NO_POINTS_SPEC_ICON, 0
+    for tab = 1, GetNumTalentTabs(false, false) or 0 do
+        local _, texture, points = GetTalentTabInfo(tab, false, false, group)
+        if (points or 0) > most then icon, most = texture, points end
+    end
+    return icon
+end
+
 -- Icon picker. Blizzard's GearManagerDialogPopup already is one, and it is a child of the hidden
 -- GearManagerDialog, so it only needs reparenting to be usable on its own.
 
@@ -158,22 +200,141 @@ local function restorePickerOkay()
     picker.origName = nil
 end
 
+-- Blizzard's MacroPopup art goes; the faction detail popup's dressing (reputationdetail.lua) comes in.
+local DIALOG_BG = "Interface\\DialogFrame\\UI-DialogBox-Background"
+local DIALOG_INSET = 7
+-- Clear of the Dialog rail, which runs 16.5 in from every edge.
+local PICKER_BUTTON_INSET = 20
+-- Below the icon grid (3 rows from -85 end at -209); the spec section adds its own height under it.
+local PICKER_H, PICKER_SPEC_H = 262, 43
+local PICKER_SPEC_TOP = 219
+-- The scrollbar's column, right of the icon grid; ReskinScrollBar insets its track 7 from each end.
+local PICKER_BAR_RIGHT, PICKER_BAR_TOP, PICKER_BAR_BOTTOM = 24, 85 - 7, 209 + 7
+
+local specSection
+
+local function dressPicker(popup)
+    for _, region in ipairs({ popup:GetRegions() }) do
+        if region:GetObjectType() == "Texture" then region:Hide() end
+    end
+    local ground = popup:CreateTexture(nil, "BACKGROUND")
+    ground:SetTexture(DIALOG_BG, "REPEAT", "REPEAT")
+    ground:SetHorizTile(true)
+    ground:SetVertTile(true)
+    ground:SetPoint("TOPLEFT", popup, "TOPLEFT", DIALOG_INSET, -DIALOG_INSET)
+    ground:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", -DIALOG_INSET, DIALOG_INSET)
+    CP.DialogGrounds = CP.DialogGrounds or {}
+    tinsert(CP.DialogGrounds, ground)
+    CP.ApplyBodyBackground()
+
+    local border = CreateFrame("Frame", nil, popup)
+    border:SetAllPoints(popup)
+    border:SetFrameLevel(popup:GetFrameLevel() + 2)
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("Dialog")
+    if layout then DragonUI_NineSlice.ApplyLayout(border, layout) end
+
+    local cancel = _G.GearManagerDialogPopupCancel
+    if cancel then
+        cancel:ClearAllPoints()
+        cancel:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", -PICKER_BUTTON_INSET, PICKER_BUTTON_INSET)
+    end
+    if addon.SkinRedButton then
+        addon.SkinRedButton(_G.GearManagerDialogPopupOkay)
+        addon.SkinRedButton(cancel)
+    end
+
+    local scroll = _G.GearManagerDialogPopupScrollFrame
+    if scroll and CP.ReskinScrollBar then
+        -- The scroll frame's own regions are the carved trainer groove.
+        for _, region in ipairs({ scroll:GetRegions() }) do
+            if region:GetObjectType() == "Texture" then region:Hide() end
+        end
+        local column = CreateFrame("Frame", nil, popup)
+        -- Without a width it has no rect at all, and the bar anchored to it gets none either.
+        column:SetWidth(1)
+        column:SetPoint("TOPRIGHT", popup, "TOPRIGHT", -PICKER_BAR_RIGHT, -PICKER_BAR_TOP)
+        column:SetPoint("BOTTOMRIGHT", popup, "TOPRIGHT", -PICKER_BAR_RIGHT, -PICKER_BAR_BOTTOM)
+        CP.ReskinScrollBar(scroll, column, 0, 0, 0, true)
+    end
+end
+
+-- "Assign To:" inside the picker, so a set gets its spec while it is created or edited.
+local function buildSpecSection(popup)
+    specSection = CreateFrame("Frame", nil, popup)
+    specSection:SetPoint("TOPLEFT", popup, "TOPLEFT", 0, -PICKER_SPEC_TOP)
+    specSection:SetPoint("TOPRIGHT", popup, "TOPRIGHT", 0, -PICKER_SPEC_TOP)
+    specSection:SetHeight(PICKER_SPEC_H)
+
+    local title = specSection:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    title:SetPoint("TOPLEFT", specSection, "TOPLEFT", 24, -2)
+    title:SetText(addon.L["Assign To:"])
+
+    specSection.checks = {}
+    for group = 1, MAX_TALENT_GROUPS or 2 do
+        local check = CreateFrame("CheckButton", "DragonUIEquipSetSpecCheck" .. group, specSection,
+            "UICheckButtonTemplate")
+        check:SetSize(24, 24)
+        check:SetPoint("TOPLEFT", specSection, "TOPLEFT", 20 + (group - 1) * 130, -14)
+        _G[check:GetName() .. "Text"]:SetFontObject("GameFontHighlightSmall")
+        CP.SkinCheckbox(check)
+        -- One spec per set: ticking one clears the other.
+        check:SetScript("OnClick", function(self)
+            for _, other in ipairs(specSection.checks) do
+                if other ~= self then other:SetChecked(false) end
+            end
+        end)
+        specSection.checks[group] = check
+    end
+end
+
+local function syncSpecSection(popup, name)
+    local groups = GetNumTalentGroups and GetNumTalentGroups(false, false) or 1
+    if groups < 2 then
+        if specSection then specSection:Hide() end
+        popup:SetHeight(PICKER_H)
+        return
+    end
+    if not specSection then buildSpecSection(popup) end
+    local current = specForSet(name)
+    for group, check in ipairs(specSection.checks) do
+        _G[check:GetName() .. "Text"]:SetFormattedText("|T%s:14:14|t %s", specIcon(group), specName(group))
+        check:SetChecked(group == current)
+        check:SetShownCompat(group <= groups)
+    end
+    specSection:Show()
+    popup:SetHeight(PICKER_H + PICKER_SPEC_H)
+end
+
+local function chosenSpec()
+    if not specSection or not specSection:IsShown() then return nil end
+    for group, check in ipairs(specSection.checks) do
+        if check:GetChecked() then return group end
+    end
+end
+
 -- This client has no RenameEquipmentSet, so a rename is a save under the new name plus a delete of
 -- the old. Both write the gear worn right now, which is what SaveEquipmentSet does regardless.
-local function pickerOkayForEdit()
+local function pickerOkay(...)
     local popup = _G.GearManagerDialogPopup
     local newName = popup and popup.name
     if not newName or newName == "" or not popup.selectedIcon then return end
 
     local orig = picker.origName
     if newName ~= orig and setInfo(newName) then
+        -- A new set under a taken name keeps Blizzard's own overwrite confirmation.
+        if not orig and picker.okayScript then return picker.okayScript(...) end
         UIErrorsFrame:AddMessage(addon.L["A set with that name already exists."], 1, 0.1, 0.1, 1)
         return
     end
 
     local _, iconIndex = GetEquipmentSetIconInfo(popup.selectedIcon)
+    local spec = orig and specForSet(orig)
+    if specSection and specSection:IsShown() then spec = chosenSpec() end
     SaveEquipmentSet(newName, iconIndex)
     if orig and newName ~= orig then DeleteEquipmentSet(orig) end
+    local old = orig and specForSet(orig)
+    if old then CP.AssignSpecSet(old, nil) end
+    if spec then CP.AssignSpecSet(spec, newName) end
 
     selectedName = newName
     popup:Hide()
@@ -189,6 +350,7 @@ local function preparePicker()
         popup:SetParent(UIParent)
         popup:SetFrameStrata("DIALOG")
         popup:SetToplevel(true)
+        dressPicker(popup)
         popup:HookScript("OnHide", restorePickerOkay)
         if not tContains(UISpecialFrames, "GearManagerDialogPopup") then
             tinsert(UISpecialFrames, "GearManagerDialogPopup")
@@ -208,16 +370,15 @@ local function openPicker(name, texture)
     if _G.GearManagerDialog then _G.GearManagerDialog.selectedSet = nil end
 
     restorePickerOkay()
-    if name then
-        picker.origName = name
-        local okay = _G.GearManagerDialogPopupOkay
-        if okay then
-            picker.okayScript = okay:GetScript("OnClick")
-            okay:SetScript("OnClick", pickerOkayForEdit)
-        end
+    picker.origName = name
+    local okay = _G.GearManagerDialogPopupOkay
+    if okay then
+        picker.okayScript = okay:GetScript("OnClick")
+        okay:SetScript("OnClick", pickerOkay)
     end
 
     popup:Show()
+    syncSpecSection(popup, name)
     if texture then popup:SetSelection(true, texture) end
     local editBox = _G.GearManagerDialogPopupEditBox
     if editBox then
@@ -233,7 +394,9 @@ StaticPopupDialogs["DRAGONUI_DELETE_EQUIPMENT_SET"] = {
     button1 = YES,
     button2 = NO,
     OnAccept = function(_, name)
+        local spec = specForSet(name)
         DeleteEquipmentSet(name)
+        if spec then CP.AssignSpecSet(spec, nil) end
         if selectedName == name then selectedName = nil end
         refresh()
     end,
@@ -276,6 +439,7 @@ local function buildActionButton(row, texture, tooltip, warning, onClick)
 
     btn:SetScript("OnEnter", function(self)
         tex:SetAlpha(1)
+        if not tooltip then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText(tooltip)
         if warning then GameTooltip:AddLine(warning, 1, 0.4, 0.4, true) end
@@ -289,6 +453,40 @@ local function buildActionButton(row, texture, tooltip, warning, onClick)
     btn:SetScript("OnClick", onClick)
     btn:Hide()
     return btn
+end
+
+-- Retail's gear menu: rename/icon, then the specs to equip this set on.
+local function openSetMenu(row)
+    local name = row.setName
+    if not name then return end
+    local L = addon.L
+    local entries = {
+        {
+            text = L["Rename or change the icon"],
+            func = function() openPicker(name, row.Icon:GetTexture()) end,
+            tooltip = function(tip)
+                tip:SetText(L["Rename or change the icon"], 1, 1, 1)
+                tip:AddLine(L["This client can only re-save a set, so the gear you are wearing now replaces its contents."],
+                    1, 0.4, 0.4, true)
+            end,
+        },
+    }
+    -- Without dual specialization there is no swap to equip on.
+    local groups = GetNumTalentGroups and GetNumTalentGroups(false, false) or 1
+    if groups > 1 then
+        entries[#entries + 1] = { text = L["Assign To:"], isTitle = true }
+        for group = 1, groups do
+            entries[#entries + 1] = {
+                text = specName(group),
+                icon = specIcon(group),
+                keepShown = true,
+                checked = function() return specForSet(name) == group end,
+                func = function() CP.AssignSpecSet(group, specForSet(name) ~= group and name or nil) end,
+            }
+        end
+    end
+    -- At the cursor, like retail's context menu: the gear itself hides once the mouse leaves the row.
+    addon.Menu.Open("cursor", entries, { clickAway = true })
 end
 
 function CP.BuildEquipmentRow(parent, index)
@@ -314,6 +512,20 @@ function CP.BuildEquipmentRow(parent, index)
     icon:SetPoint("LEFT", row, "LEFT", 4, 0)
     icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     row.Icon = icon
+
+    -- Retail's spec badge on the icon's lower right; its own frame so it draws over the icon.
+    local badge = CreateFrame("Frame", nil, row)
+    badge:SetSize(SPEC_BADGE_SIZE, SPEC_BADGE_SIZE)
+    badge:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 2, -2)
+    local badgeEdge = badge:CreateTexture(nil, "BACKGROUND")
+    badgeEdge:SetTexture(0, 0, 0, 1)
+    badgeEdge:SetAllPoints(badge)
+    badge.Icon = badge:CreateTexture(nil, "ARTWORK")
+    badge.Icon:SetPoint("TOPLEFT", badge, "TOPLEFT", 1, -1)
+    badge.Icon:SetPoint("BOTTOMRIGHT", badge, "BOTTOMRIGHT", -1, 1)
+    badge.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    badge:Hide()
+    row.SpecBadge = badge
 
     local text = row:CreateFontString(nil, "ARTWORK", "GameFontNormalLeft")
     text:SetPoint("LEFT", row, "LEFT", 42, 0)
@@ -346,13 +558,8 @@ function CP.BuildEquipmentRow(parent, index)
     -- Chained leftwards off the tick instead of sharing the same corner with it.
     row.Delete:SetPoint("RIGHT", check, "LEFT", -6, 0)
 
-    row.Edit = buildActionButton(row, "Interface\\WorldMap\\Gear_64Grey",
-        addon.L["Rename or change the icon"],
-        addon.L["This client can only re-save a set, so the gear you are wearing now replaces its contents."],
-        function(self)
-            local parentRow = self:GetParent()
-            if parentRow.setName then openPicker(parentRow.setName, parentRow.Icon:GetTexture()) end
-        end)
+    row.Edit = buildActionButton(row, "Interface\\WorldMap\\Gear_64Grey", nil, nil,
+        function(self) openSetMenu(self:GetParent()) end)
     row.Edit:SetPoint("RIGHT", row.Delete, "LEFT", -2, 0)
 
     row:RegisterForClicks("LeftButtonUp")
@@ -421,6 +628,9 @@ function refresh()
 
         row.Check:SetShownCompat(isEquipped(info.name))
         row.Selected:SetShownCompat(info.name == selectedName)
+        local spec = specForSet(info.name)
+        if spec then row.SpecBadge.Icon:SetTexture(specIcon(spec)) end
+        row.SpecBadge:SetShownCompat(spec ~= nil)
         updateRowActions(row)
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -(i - 1) * ROW_H)
@@ -511,6 +721,33 @@ end
 
 CP.EquipmentPane = function() return pane end
 
+local function equipSpecSet(group)
+    local sets = specSets()
+    local name = sets and sets[group]
+    if name and setInfo(name) and not isEquipped(name) then
+        equipSet(name)
+    end
+end
+
+local activeGroup
+local specEvents = CreateFrame("Frame")
+specEvents:RegisterEvent("PLAYER_LOGIN")
+specEvents:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+specEvents:SetScript("OnEvent", function(_, event)
+    local group = GetActiveTalentGroup and GetActiveTalentGroup()
+    -- Only a real swap equips: the login value is just the baseline to compare against.
+    if event == "PLAYER_LOGIN" or not group or group == activeGroup then
+        activeGroup = group
+        return
+    end
+    activeGroup = group
+    if InCombatLockdown() then
+        addon.CombatQueue:Add("spec_equipment_set", equipSpecSet, group)
+    else
+        equipSpecSet(group)
+    end
+end)
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("EQUIPMENT_SETS_CHANGED")
 events:RegisterEvent("EQUIPMENT_SWAP_FINISHED")
@@ -518,6 +755,8 @@ events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 -- Losing a set's item to a drop, a sale or a bank deposit announces nothing the equipment API sees.
 events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
+-- The spec badges show each spec's main talent tree.
+events:RegisterEvent("PLAYER_TALENT_UPDATE")
 events:SetScript("OnEvent", function(_, event, completed, setName)
     if event == "EQUIPMENT_SWAP_FINISHED" and completed and setName then
         selectedName = setName

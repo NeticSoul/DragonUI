@@ -240,6 +240,50 @@ local function BuildCharacterSubTab(scroll)
         disabled = function() return not IsEnabled("characterpanel") end,
         requiresReload = false,
     })
+
+    -- ====================================================================
+    -- EQUIPMENT SET PER SPEC (per character, so it lives in db.char)
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local specSection = C:AddSection(scroll, LO["Equipment Sets"])
+
+    C:AddDescription(specSection, LO["Equip a set automatically when you switch talent specialization. Saved per character."])
+
+    -- "" sorts first, so None leads the list.
+    local setValues = { [""] = LO["None"] }
+    for i = 1, (GetNumEquipmentSets and GetNumEquipmentSets() or 0) do
+        local name = GetEquipmentSetInfo(i)
+        if name then setValues[name] = name end
+    end
+
+    local function noDualSpec()
+        return (GetNumTalentGroups and GetNumTalentGroups(false, false) or 1) < 2
+    end
+
+    for group = 1, 2 do
+        C:AddDropdown(specSection, {
+            label = addon.GetTalentSpecName and addon.GetTalentSpecName(group)
+                or (group == 2 and _G.TALENT_SPEC_SECONDARY or _G.TALENT_SPEC_PRIMARY),
+            values = setValues,
+            getFunc = function()
+                local sets = addon.db.char.specEquipmentSets
+                local name = sets and sets[group]
+                return (name and setValues[name]) and name or ""
+            end,
+            setFunc = function(val)
+                local CP = addon.CharacterPanel
+                if CP and CP.AssignSpecSet then CP.AssignSpecSet(group, val ~= "" and val or nil) end
+            end,
+            -- A set serves one spec, so the other dropdown may have just lost it.
+            callback = function()
+                addon:After(0, function()
+                    if Panel.currentTab == "panels" then Panel:SelectTab("panels") end
+                end)
+            end,
+            disabled = noDualSpec,
+            width = 200,
+        })
+    end
 end
 
 -- ============================================================================

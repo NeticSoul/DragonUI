@@ -985,13 +985,40 @@ for exportName, row in pairs(EXTRA_ROW_EXPORTS) do
 end
 
 -- ============================================================================
+-- ACTION BUTTON TOOLTIPS
+-- ============================================================================
+
+-- buttons.tooltips: "always" | "combat" (hidden in combat) | "never"
+function addon.ShouldHideActionTooltip()
+    local db = GetButtonsConfig()
+    local mode = db and db.tooltips
+    local hide = mode == "never" or (mode == "combat" and InCombatLockdown())
+    return hide and IsModuleEnabled() or false
+end
+
+local function HideActionTooltip(tooltip)
+    if addon.ShouldHideActionTooltip() then
+        tooltip:Hide()
+    end
+end
+
+-- ============================================================================
 -- HOOKS MANAGEMENT
 -- ============================================================================
 
 local function SetupHooks()
     if ButtonsModule.hooked or not IsModuleEnabled() then return end
-    
+
     hooksecurefunc('ActionButton_Update', refreshSlotButton)
+
+    hooksecurefunc(GameTooltip, 'SetAction', HideActionTooltip)
+    hooksecurefunc(GameTooltip, 'SetShapeshift', HideActionTooltip)
+    -- Pet commands (Attack, Follow...) fill the tooltip with SetText, never SetPetAction.
+    hooksecurefunc('PetActionButton_OnEnter', function(button)
+        if GameTooltip:IsOwned(button) then
+            HideActionTooltip(GameTooltip)
+        end
+    end)
 
     if type(_G.ActionButton_UpdateHotkeys) == 'function' then
         hooksecurefunc('ActionButton_UpdateHotkeys', function(button)
