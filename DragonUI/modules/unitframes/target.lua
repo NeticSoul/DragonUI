@@ -126,7 +126,8 @@ local function GetAuraCountsAndSizes(frame)
 end
 
 local function UpdateAuraPositionsDetached(self, auraName, numAuras, numOppositeAuras, largeAuraList, updateFunc,
-                                           maxRowWidth, offsetX, mirrorAurasVertically, smallSize, largeSize, extraGap)
+                                           maxRowWidth, offsetX, mirrorAurasVertically, smallSize, largeSize, extraGap,
+                                           shortRows)
     local size
     extraGap = extraGap or 0
     local offsetY = AURA_OFFSET_Y + extraGap
@@ -154,6 +155,9 @@ local function UpdateAuraPositionsDetached(self, auraName, numAuras, numOpposite
             self.auraRows = self.auraRows + 1
             firstAuraOnRow = i
             offsetY = AURA_OFFSET_Y + extraGap
+            if shortRows and self.auraRows > shortRows then
+                maxRowWidth = DEFAULT_AURA_ROW_WIDTH
+            end
         else
             updateFunc(self, auraName, i, numOppositeAuras, i - 1, size, offsetX, offsetY, mirrorAurasVertically)
         end
@@ -269,8 +273,13 @@ local function ApplyDragonAuraLayout(frame)
     end
 
     local detached = ShouldUseDetachedAuraLayout(frame)
+    -- Blizzard's 2 short rows are a FrameXML local; a ToT lowered under Forever's level circle reaches a third.
+    local shortRows = not detached and not frame.buffsOnTop and frame.totFrame and frame.totFrame:IsShown()
+        and UF.GetCompanionDrop() > 0 and 3 or nil
     local buffSize, debuffSize = GetCustomAuraSizes()
-    if not detached and not buffSize then
+    local blizzardSpacing = not detached and not buffSize
+    -- With Blizzard's spacing only a third row beside the lowered ToT differs from Blizzard's own pass.
+    if blizzardSpacing and (not shortRows or (frame.auraRows or 0) <= 2) then
         return
     end
     buffSize = buffSize or SMALL_AURA_SIZE
@@ -289,18 +298,20 @@ local function ApplyDragonAuraLayout(frame)
     -- Attached mode mirrors Blizzard: shrink rows beside a visible ToT, expand back after NUM_TOT_AURA_ROWS.
     local haveToT = not detached and frame.totFrame and frame.totFrame:IsShown()
     local totRowWidth = frame.TOT_AURA_ROW_WIDTH or 101
-    local buffGap = addon.GetAuraChromeGap and addon.GetAuraChromeGap(buffSize + largeDelta) or 0
-    local debuffGap = addon.GetAuraChromeGap and addon.GetAuraChromeGap(debuffSize + largeDelta) or 0
+    local chromeGap = not blizzardSpacing and addon.GetAuraChromeGap
+    local buffGap = chromeGap and chromeGap(buffSize + largeDelta) or 0
+    local debuffGap = chromeGap and chromeGap(debuffSize + largeDelta) or 0
     local debuffOffsetX = (detached and 3 or 4) + debuffGap
 
+    local totRows = shortRows or _G.NUM_TOT_AURA_ROWS or 2
     local maxRowWidth = (haveToT and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Buff", numBuffs, numDebuffs, largeBuffList,
         UpdateBuffAnchorDetached, maxRowWidth, 3 + buffGap, mirrorAurasVertically, buffSize, buffSize + largeDelta,
-        buffGap)
-    maxRowWidth = (haveToT and frame.auraRows < (_G.NUM_TOT_AURA_ROWS or 2) and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
+        buffGap, totRows)
+    maxRowWidth = (haveToT and frame.auraRows < totRows and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Debuff", numDebuffs, numBuffs, largeDebuffList,
         UpdateDebuffAnchorDetached, maxRowWidth, debuffOffsetX, mirrorAurasVertically, debuffSize, debuffSize + largeDelta,
-        debuffGap)
+        debuffGap, totRows)
 
     if frame.spellbar and _G.Target_Spellbar_AdjustPosition then
         _G.Target_Spellbar_AdjustPosition(frame.spellbar)
@@ -411,9 +422,10 @@ local api = UF.TargetStyle.Create({
                         threatFlash:SetBlendMode("ADD")
                         threatFlash:SetAlpha(0.7)
                         threatFlash:SetDrawLayer("ARTWORK", 10)
+                        local flash = UF.GetFrameSkin().target.flash
                         threatFlash:ClearAllPoints()
                         threatFlash:SetPoint("BOTTOMLEFT",
-                            TargetFrame, "BOTTOMLEFT", 2, 25)
+                            TargetFrame, "BOTTOMLEFT", flash.x, flash.y)
                         threatFlash:SetSize(188, 67)
                     end
                 end)

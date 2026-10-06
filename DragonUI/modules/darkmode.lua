@@ -485,6 +485,9 @@ local function DarkenUnitFrameBorders(tint)
             DarkenTexture(dragonFrame.BorderOverlayTexture, tint)
         end
     end
+    -- Forever level circle (its path carries none of the border keywords)
+    local playerLevelCircle = _G["DragonUIPlayerLevelCircle"]
+    if playerLevelCircle then DarkenTexture(playerLevelCircle, tint) end
 
     -- Vehicle border (when in vehicle)
     local vehicleTex = _G["PlayerFrameVehicleTexture"]
@@ -502,6 +505,8 @@ local function DarkenUnitFrameBorders(tint)
     if dragonTargetBG then DarkenTexture(dragonTargetBG, tint) end
     local dragonTargetElite = _G["DragonUI_TargetElite"]
     if dragonTargetElite then DarkenTexture(dragonTargetElite, tint) end
+    local targetLevelCircle = _G["DragonUI_TargetLevelCircle"]
+    if targetLevelCircle then DarkenTexture(targetLevelCircle, tint) end
 
     DarkenFrameBorderTextures(_G["TargetFrameToT"], tint, nameBgTint)
 
@@ -522,6 +527,8 @@ local function DarkenUnitFrameBorders(tint)
     if dragonFocusBG then DarkenTexture(dragonFocusBG, tint) end
     local dragonFocusElite = _G["DragonUI_FocusElite"]
     if dragonFocusElite then DarkenTexture(dragonFocusElite, tint) end
+    local focusLevelCircle = _G["DragonUI_FocusLevelCircle"]
+    if focusLevelCircle then DarkenTexture(focusLevelCircle, tint) end
 
     DarkenFrameBorderTextures(_G["FocusFrameToT"], tint, nameBgTint)
 

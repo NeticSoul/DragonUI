@@ -619,6 +619,9 @@ local defaults = {
         -- UNIT FRAMES SETTINGS
         unitframe = {
             scale = 1.0, -- Global scale for all unit frames
+            frame_style = "dragonui", -- "dragonui" or "forever": art of every unit frame at once (uf_skins.lua)
+            dragon_style = "auto", -- "auto" (follows frame_style), "dragonui" or "forever": elite dragons, with either art
+            level_style = "auto", -- "auto" (follows frame_style), "dragonui" or "forever"; the name moves with it
             player = {
                 enabled = true,
                 breakUpLargeNumbers = true,
@@ -631,7 +634,7 @@ local defaults = {
                 showManaTextAlways = false,
                 dragon_decoration = "none",
                 show_pvp_icon = true,
-                pvp_icon_style = "classic", -- "classic" or "forever" (WoW Forever's round badge)
+                pvp_icon_style = "auto", -- "auto" (follows frame_style), "classic" or "forever" (Forever's round badge)
                 alwaysShowAlternateManaText = false,
                 alternateManaFormat = "both",
                 show_runes = true, -- DK rune display (used by player.lua)
@@ -668,7 +671,7 @@ local defaults = {
                 enableThreatGlow = true,
                 show_name_background = true,
                 show_pvp_icon = true,
-                pvp_icon_style = "classic",
+                pvp_icon_style = "auto",
                 scale = 1.0,
                 -- Also fades Target of Target and the target cast bar (see target_style.lua)
                 show_on_hover = false,
@@ -686,7 +689,7 @@ local defaults = {
                 show_buff_debuff = true,
                 show_name_background = true,
                 show_pvp_icon = true,
-                pvp_icon_style = "classic",
+                pvp_icon_style = "auto",
                 scale = 0.9,
                 -- Also fades Target of Focus and the focus cast bar (see target_style.lua)
                 show_on_hover = false,

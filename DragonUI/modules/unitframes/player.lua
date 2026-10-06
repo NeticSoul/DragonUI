@@ -83,20 +83,6 @@ local ELITE_GLOW_COORDINATES = {
     texture = 'Interface\\Addons\\DragonUI\\Textures\\UI\\UnitFrame'
 }
 
--- Dragon decoration coordinates for uiunitframeboss2x texture (always flipped for player frame)
-local DRAGON_COORDINATES = {
-    elite = {
-        texCoord = {0.314453125, 0.001953125, 0.322265625, 0.630859375},
-        size = {80, 79},
-        offset = {4, 1}
-    },
-    rareelite = {
-        texCoord = {0.388671875, 0.001953125, 0.001953125, 0.31835937},
-        size = {99, 81}, -- 97*1.02 ≈ 99, 79*1.02 ≈ 81
-        offset = {23, 2}
-    }
-}
-
 -- Combat Flash animation settings *NO Elite activated
 local COMBAT_PULSE_SETTINGS = {
     speed = 9, -- Pulse speed
@@ -161,13 +147,6 @@ local RUNE_COORDS = {
 }
 local RUNE_TYPE_DEATH = 4
 local DEATH_RUNE_COORDS = RUNE_COORDS[3]
-
--- LFG Role icon coordinates
-local ROLE_COORDS = {
-    TANK = {35 / 256, 53 / 256, 0 / 256, 17 / 256},
-    HEALER = {18 / 256, 35 / 256, 0 / 256, 18 / 256},
-    DAMAGER = {0 / 256, 17 / 256, 0 / 256, 17 / 256}
-}
 
 -- ============================================================================
 -- UTILITY FUNCTIONS
@@ -317,13 +296,14 @@ local function ApplyFatManaBar()
     if not fatMode then
         -- Normal mode: standard mana bar positioning (ignore fat settings)
         PlayerFrameManaBar:ClearAllPoints()
-        PlayerFrameManaBar:SetSize(hasVehicleUI and 117 or 125, hasVehicleUI and 9 or 9)
         if hasVehicleUI then
             -- Vehicle: position relative to PlayerFrame (matches RetailUI pattern)
+            PlayerFrameManaBar:SetSize(117, 9)
             PlayerFrameManaBar:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 114, -58.5)
         else
-            -- Normal: position relative to portrait
-            PlayerFrameManaBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', 1, -16.5)
+            local mana = UF.GetFrameSkin().player.bars.mana
+            PlayerFrameManaBar:SetSize(mana.w, mana.h)
+            PlayerFrameManaBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', mana.x, mana.y)
         end
         PlayerFrameManaBar:Show()
 
@@ -487,7 +467,7 @@ end
 local function IsEliteModeActive()
     local config = GetPlayerConfig()
     local decorationType = config.dragon_decoration or "none"
-    return decorationType == "elite" or decorationType == "rareelite"
+    return UF.PLAYER_DECORATIONS[decorationType] ~= nil
 end
 
 -- Get combat flash configuration (enabled + opacity multiplier)
@@ -860,7 +840,15 @@ local function HandleRuneFrameVehicleTransition(toVehicle)
     end
 end
 
--- Update LFG role icon display
+-- The DragonUI level text gives way to the role icon (retail); run it last, SetTextColor brings the alpha back.
+local function ApplyPlayerLevelVisibility()
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    local role = dragonFrame and dragonFrame.PlayerRoleIcon
+    local circle = not IsFatHealthbarActive() and UF.GetLevelSpot(IsEliteModeActive() and "playerDecoration" or "player")
+    PlayerLevelText:SetAlpha((role and role:IsShown() and not circle) and 0 or 1)
+end
+
+-- Retail's spot at the end of the name row.
 local function UpdatePlayerRoleIcon()
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     if not dragonFrame or not dragonFrame.PlayerRoleIcon then
@@ -869,22 +857,28 @@ local function UpdatePlayerRoleIcon()
 
     local iconTexture = dragonFrame.PlayerRoleIcon
     local isTank, isHealer, isDamage = UnitGroupRolesAssigned("player")
+    local role = (isTank and "TANK") or (isHealer and "HEALER") or (isDamage and "DAMAGER")
+    local shown = role and not IsInVehicle()
 
-    if isTank then
-        iconTexture:SetTexture(TEXTURES.LFG_ICONS)
-        iconTexture:SetTexCoord(unpack(ROLE_COORDS.TANK))
-        iconTexture:Show()
-    elseif isHealer then
-        iconTexture:SetTexture(TEXTURES.LFG_ICONS)
-        iconTexture:SetTexCoord(unpack(ROLE_COORDS.HEALER))
-        iconTexture:Show()
-    elseif isDamage then
-        iconTexture:SetTexture(TEXTURES.LFG_ICONS)
-        iconTexture:SetTexCoord(unpack(ROLE_COORDS.DAMAGER))
+    if shown then
+        local spot = UF.PLAYER_ICONS.role
+        if dragonFrame.EliteIconContainer then
+            iconTexture:SetParent(dragonFrame.EliteIconContainer)
+        end
+        iconTexture:SetSize(spot.w, spot.h)
+        iconTexture:ClearAllPoints()
+        iconTexture:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", spot.x, spot.y)
+        iconTexture:SetTexture(UF.STATUS_ICONS.file)
+        iconTexture:SetTexCoord(unpack(UF.STATUS_ICONS.roles[UF.GetStatusIconStyle()][role]))
         iconTexture:Show()
     else
         iconTexture:Hide()
     end
+    -- Blizzard's own 3.3.5a role icon (PORTRAITROLES, by the portrait) would show next to ours.
+    if _G.PlayerFrameRoleIcon then
+        _G.PlayerFrameRoleIcon:SetAlpha(0)
+    end
+    ApplyPlayerLevelVisibility()
 end
 
 -- Update group indicator for raids
@@ -894,6 +888,15 @@ local function UpdateGroupIndicator()
 
     if not groupIndicatorFrame or not groupText then
         return
+    end
+
+    -- Blizzard's art swaps SetPoint this global without clearing ours; the vehicle art keeps Blizzard's spot.
+    groupIndicatorFrame:ClearAllPoints()
+    if PlayerFrame.state == "vehicle" then
+        groupIndicatorFrame:SetPoint("BOTTOMLEFT", PlayerFrame, "TOPLEFT", 97, -13)
+    else
+        local spot = UF.PLAYER_ICONS.tab
+        groupIndicatorFrame:SetPoint("BOTTOMRIGHT", PlayerFrame, "TOPLEFT", spot.x, spot.y)
     end
 
     groupIndicatorFrame:Hide()
@@ -908,6 +911,7 @@ local function UpdateGroupIndicator()
         if name and name == UnitName("player") then
             local groupFormat = _G.GROUP_NUMBER or "Group %d"
             groupText:SetText(string.format(groupFormat, subgroup))
+            groupIndicatorFrame:SetWidth(groupText:GetStringWidth() + 40)
             groupIndicatorFrame:Show()
             break
         end
@@ -929,7 +933,7 @@ local function IsPVPIconShown()
 end
 
 local function GetPVPIconStyle()
-    return GetPlayerConfig().pvp_icon_style
+    return UF.GetPvPIconStyle(GetPlayerConfig())
 end
 
 -- Read at load, before anything reparents it, so the classic style can put the timer back.
@@ -944,73 +948,54 @@ local function GetPlayerPvPBadge()
         local container = dragonFrame and dragonFrame.EliteIconContainer
         if not container then return end
         pvpBadge = UF.CreatePvPBadge(container)
-        -- Forever's (20,-50) runs at the circle's 0.8 scale: 8 px left, 9 px above mid-portrait (x0.93 for 56 px).
-        pvpBadge:SetPoint("TOP", PlayerPortrait, "LEFT", -7.5, 8.4)
     end
     return pvpBadge
 end
 
--- Update leader icon positioning based on dragon decoration mode
--- GuideIcon shares LeaderIcon's anchor point (Blizzard shows only one at a time:
--- GuideIcon for LFG-formed groups, LeaderIcon otherwise), so both need the same treatment.
-local function UpdateLeaderIconPosition()
-    local config = GetPlayerConfig()
-    local decorationType = config.dragon_decoration or "none"
-    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+-- Either art takes Forever's badge spot; fat and vehicle art keep the portrait-relative one. Returns the scale.
+local function PlacePlayerPvPBadge(badge)
     local dragonFrame = _G["DragonUIUnitframeFrame"]
-    local icons = {PlayerLeaderIcon, PlayerGuideIcon}
+    local art = dragonFrame and dragonFrame.PlayerFrameBackground
+    badge:ClearAllPoints()
+    if not art or IsInVehicle() or IsFatHealthbarActive() then
+        badge:SetPoint("TOP", PlayerPortrait, "LEFT", UF.PLAYER_PVP_FALLBACK.x, UF.PLAYER_PVP_FALLBACK.y)
+        return nil
+    end
+    local place = UF.GetFrameSkin()[IsEliteModeActive() and "playerDecoration" or "player"].pvp
+    badge:SetPoint("TOP", art, "TOPLEFT", place.x, place.y)
+    return place.scale
+end
 
-    for i = 1, 2 do
-        local icon = icons[i]
-        if icon then
-            icon:ClearAllPoints()
+-- Places an icon at a UF.PLAYER_ICONS spot inside the icon container, so it draws over the border and the dragon.
+local function PlacePlayerIcon(icon, spot)
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    if dragonFrame and dragonFrame.EliteIconContainer then
+        icon:SetParent(dragonFrame.EliteIconContainer)
+    end
+    icon:SetSize(spot.w, spot.h)
+    icon:ClearAllPoints()
+    icon:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", spot.x, spot.y)
+end
 
-            if isEliteMode then
-                -- In elite mode: reparent to EliteIconContainer so the icon renders
-                -- above the dragon decoration textures (strata HIGH, level 1000).
-                -- Same pattern used by UpdateMasterIconPosition.
-                if dragonFrame and dragonFrame.EliteIconContainer then
-                    icon:SetParent(dragonFrame.EliteIconContainer)
-                end
-                icon:SetPoint('BOTTOM', PlayerFrame, "TOP", -1, -33)
-            else
-                -- Non-elite mode: STILL use EliteIconContainer so the icon renders
-                -- above the portrait overlay (level +2) and border overlay (level +3).
-                -- If we parented to PlayerFrame directly, the icon (a texture) would
-                -- draw below all child overlay frames and be hidden behind the border.
-                if dragonFrame and dragonFrame.EliteIconContainer then
-                    icon:SetParent(dragonFrame.EliteIconContainer)
-                end
-                icon:SetPoint('BOTTOM', PlayerFrame, "TOP", -70, -25)
-            end
-        end
+-- The guide icon replaces the leader's in LFG groups (Blizzard shows one), so both share the slot.
+local function UpdateLeaderIconPosition()
+    local art = UF.STATUS_ICONS
+    local style = UF.GetStatusIconStyle()
+    if PlayerLeaderIcon then
+        PlacePlayerIcon(PlayerLeaderIcon, UF.PLAYER_ICONS[style == "forever" and "foreverLeader" or "leader"])
+        PlayerLeaderIcon:SetTexture(art.file)
+        PlayerLeaderIcon:SetTexCoord(unpack(art.leader[style]))
+    end
+    if PlayerGuideIcon then
+        PlacePlayerIcon(PlayerGuideIcon, UF.PLAYER_ICONS.leader)
+        PlayerGuideIcon:SetTexture(art.file)
+        PlayerGuideIcon:SetTexCoord(unpack(art.guide))
     end
 end
 
--- Update master icon positioning based on dragon decoration mode
 local function UpdateMasterIconPosition()
-    if not PlayerMasterIcon then
-        return
-    end
-
-    local config = GetPlayerConfig()
-    local decorationType = config.dragon_decoration or "none"
-    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
-
-    PlayerMasterIcon:ClearAllPoints()
-
-    if isEliteMode then
-        local iconContainer = _G["DragonUIUnitframeFrame"].EliteIconContainer
-        PlayerMasterIcon:SetParent(iconContainer)
-        PlayerMasterIcon:ClearAllPoints()
-        PlayerMasterIcon:SetPoint("TOPRIGHT", PlayerFrame, "TOPRIGHT", -135, -55)
-    else
-        -- Non-elite mode: still use EliteIconContainer for correct layering
-        local dragonFrame = _G["DragonUIUnitframeFrame"]
-        if dragonFrame and dragonFrame.EliteIconContainer then
-            PlayerMasterIcon:SetParent(dragonFrame.EliteIconContainer)
-        end
-        PlayerMasterIcon:SetPoint('BOTTOM', PlayerFrame, "TOP", -71, -75)
+    if PlayerMasterIcon then
+        PlacePlayerIcon(PlayerMasterIcon, UF.PLAYER_ICONS.master)
     end
 end
 
@@ -1091,7 +1076,7 @@ local function UpdatePVPIconPosition()
 
     local config = GetPlayerConfig()
     local decorationType = config.dragon_decoration or "none"
-    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+    local isEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
     local hasVehicleUI = UnitHasVehicleUI("player")
 
     local iconContainer = dragonFrame.EliteIconContainer
@@ -1129,7 +1114,8 @@ local function ApplyPVPIconVisibility()
     end
     local kind = UF.GetPvPKind("player")
     local badge = GetPlayerPvPBadge()
-    local onBadge = shown and kind and badge and GetPVPIconStyle() == "forever" and UF.ShowPvPBadge(badge, kind)
+    local scale = badge and PlacePlayerPvPBadge(badge)
+    local onBadge = shown and kind and badge and GetPVPIconStyle() == "forever" and UF.ShowPvPBadge(badge, kind, scale)
     if badge and not onBadge then
         badge:Hide()
     end
@@ -1138,6 +1124,7 @@ local function ApplyPVPIconVisibility()
     if not kind then
         return
     end
+    UF.ApplyClassicPvPTexture(PlayerPVPIcon, kind)
 
     local hitArea = _G.PlayerPVPIconHitArea
     if hitArea then
@@ -1218,6 +1205,124 @@ end
 
 -- Update mana bar color based on texture mode:
 -- DragonUI textures: force white (1,1,1) because color is baked into the texture.
+-- Player art helpers in one local: this file sits at Lua 5.1's 200-local limit.
+local PlayerArt = {
+    noEdges = { 0, 0 },
+    texts = {
+        { prefix = "PlayerFrameHealth", key = "health", y = 0 },
+        -- Half a unit under its bar's centre, like the target's mana text.
+        { prefix = "PlayerFrameMana", key = "mana", y = -0.5 },
+    },
+    strips = {},
+    count = 0,
+    shown = false,
+    fillStart = 0,
+}
+
+-- How far a decoration bar's left and right ends moved from where its texts, the name and the level were laid out.
+function PlayerArt.Edges(key)
+    local edges = IsEliteModeActive() and not IsFatHealthbarActive() and not IsInVehicle()
+        and UF.GetFrameSkin().playerDecoration.edges
+    return unpack(edges and edges[key] or PlayerArt.noEdges)
+end
+
+-- Re-anchors the bar texts (the text system anchors them once); fat decoration keeps its own health ones.
+function PlayerArt.PlaceTexts(skipHealth)
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    if not dragonFrame then return end
+    for _, spec in ipairs(PlayerArt.texts) do
+        local bar = spec.key == "health" and PlayerFrameHealthBar or PlayerFrameManaBar
+        if bar and not (skipHealth and spec.key == "health") then
+            local left, right = PlayerArt.Edges(spec.key)
+            local center, leftText, rightText = dragonFrame[spec.prefix .. "Text"],
+                dragonFrame[spec.prefix .. "TextLeft"], dragonFrame[spec.prefix .. "TextRight"]
+            if center then
+                center:ClearAllPoints()
+                center:SetPoint("CENTER", bar, "CENTER", -(left + right) / 2, spec.y)
+            end
+            if leftText then
+                leftText:ClearAllPoints()
+                leftText:SetPoint("LEFT", bar, "LEFT", 6 - left, spec.y)
+            end
+            if rightText then
+                rightText:ClearAllPoints()
+                rightText:SetPoint("RIGHT", bar, "RIGHT", -6 - right, spec.y)
+            end
+        end
+    end
+end
+
+function PlayerArt.ShowCorner(show)
+    if show == PlayerArt.shown then return end
+    PlayerArt.shown = show
+    for i = 1, PlayerArt.count do
+        if show then
+            PlayerArt.strips[i]:Show()
+        else
+            PlayerArt.strips[i]:Hide()
+        end
+    end
+end
+
+-- The strips continue the fill to its left, so they show whenever it has any.
+function PlayerArt.UpdateCorner()
+    local show = false
+    if PlayerArt.count > 0 and PlayerFrameManaBar then
+        local _, max = PlayerFrameManaBar:GetMinMaxValues()
+        local cur = PlayerFrameManaBar:GetValue()
+        show = (max and max > 0 and cur and cur > 0) and true or false
+    end
+    PlayerArt.ShowCorner(show)
+end
+
+-- The fill's texcoords follow its value (the colour is baked); in the decoration it starts at the strips' column.
+function PlayerArt.ApplyManaFill(bar)
+    local texture = bar:GetStatusBarTexture()
+    if not texture then return end
+    local _, max = bar:GetMinMaxValues()
+    local cur = bar:GetValue()
+    if max > 0 and cur and cur >= 0 then
+        local start = PlayerArt.fillStart
+        texture:SetTexCoord(start, start + (1 - start) * cur / max, 0, 1)
+    end
+    PlayerArt.UpdateCorner()
+end
+
+-- No masks in 3.3.5a: strips left of the fill trace the ring, in ARTWORK as the border is OVERLAY at their level.
+function PlayerArt.LayoutCorner()
+    local bar = PlayerFrameManaBar
+    if not bar then return end
+    local skin = UF.GetFrameSkin().playerDecoration
+    local corner = IsEliteModeActive() and not IsFatHealthbarActive() and not IsInVehicle() and skin.manaCorner
+    for i = 1, PlayerArt.count do
+        PlayerArt.strips[i]:Hide()
+    end
+    PlayerArt.shown = false
+    PlayerArt.count = 0
+    PlayerArt.fillStart = corner and corner.column or 0
+    if corner then
+        local file = bar:GetStatusBarTexture():GetTexture()
+        local height = skin.bars.mana.h
+        for i, row in ipairs(corner.rows) do
+            local strip = PlayerArt.strips[i]
+            if not strip then
+                strip = bar:CreateTexture(nil, "ARTWORK")
+                PlayerArt.strips[i] = strip
+            end
+            strip:SetDrawLayer("ARTWORK")
+            strip:SetTexture(file)
+            strip:SetVertexColor(1, 1, 1, 1)
+            strip:SetTexCoord(corner.column, corner.column, row[1] / height, (row[1] + corner.step) / height)
+            strip:SetSize(-row[2], corner.step)
+            strip:ClearAllPoints()
+            strip:SetPoint("TOPLEFT", bar, "TOPLEFT", row[2], -row[1])
+            strip:Hide()
+        end
+        PlayerArt.count = #corner.rows
+    end
+    PlayerArt.ApplyManaFill(bar)
+end
+
 -- Override textures: apply power colors from DB (user-customizable) or DF defaults.
 -- (vanilla textures are neutral/grayscale and need explicit coloring).
 local function UpdateManaBarColor(statusBar)
@@ -1253,6 +1358,7 @@ local function UpdatePowerBarTexture(statusBar)
     local currentTexture = statusBar:GetStatusBarTexture():GetTexture()
     if currentTexture ~= powerTexture then
         statusBar:GetStatusBarTexture():SetTexture(powerTexture)
+        PlayerArt.LayoutCorner()
     end
 
     -- Update color after texture change (druid form shifts change power type)
@@ -1457,6 +1563,171 @@ end
 -- FRAME CREATION & CONFIGURATION
 -- ============================================================================
 
+local playerDragonParent, playerDragonTexture
+local playerCombatIconShown = false
+local playerSwords
+
+-- Forever's swords sit over its art (the corner piece draws under the BORDER), in the icon container.
+local function UpdatePlayerSwords(show)
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    local swords = UF.GetFrameSkin().player.swords
+    local art = dragonFrame and dragonFrame.PlayerFrameBackground
+    show = show and swords and art and not IsInVehicle()
+    if show and not playerSwords then
+        local container = dragonFrame.EliteIconContainer
+        if not container then return end
+        playerSwords = container:CreateTexture("DragonUIPlayerForeverSwords", "ARTWORK")
+    end
+    if not playerSwords then return end
+    if show then
+        playerSwords:SetTexture(swords.file)
+        playerSwords:SetSize(swords.w, swords.h)
+        playerSwords:ClearAllPoints()
+        playerSwords:SetPoint("TOPLEFT", art, "TOPLEFT", swords.x, swords.y)
+        playerSwords:Show()
+    else
+        playerSwords:Hide()
+    end
+end
+
+-- Forever bakes the corner wedge into its art: there the piece only appears as the combat swords.
+local function ApplyPlayerCornerAlpha(deco)
+    local fat = IsFatHealthbarActive()
+    local foreverSwords = UF.GetFrameSkin().player.swords and not fat and not IsEliteModeActive()
+    local wanted = (playerCombatIconShown and not foreverSwords) or fat or UF.GetFrameSkin().player.corner
+    deco:SetAlpha(wanted and 1 or 0)
+    UpdatePlayerSwords(foreverSwords and playerCombatIconShown)
+end
+
+-- The wedge follows the normal art's ring (fat keeps the 1x spot); the combat swords sit (3, -4) off it.
+function PlayerArt.PlaceCorner(deco)
+    local corner = not IsFatHealthbarActive() and UF.GetFrameSkin().player.corner
+    local x, y = 15.5, -16
+    if type(corner) == "table" then
+        x, y = corner.x, corner.y
+    end
+    if deco.DragonUI_Swords then
+        x, y = x + 3, y - 4
+    end
+    deco:ClearAllPoints()
+    deco:SetPoint('CENTER', PlayerPortrait, 'CENTER', x, y)
+end
+
+-- Read at load, before the Forever badge takes the text away from its Blizzard frame.
+local levelTextHome = PlayerLevelText:GetParent()
+local levelTextColor = { PlayerLevelText:GetTextColor() }
+local levelTextSize = select(2, PlayerLevelText:GetFont())
+local playerLevelFrame, playerLevelCircle
+
+-- The dragon draws in MEDIUM, so Forever's level badge (circle and text) moves into the icon container.
+local function UpdatePlayerLevelLayout()
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    local container = dragonFrame and dragonFrame.EliteIconContainer
+    local level
+    if container and dragonFrame.PlayerFrameBackground and not IsInVehicle() and not IsFatHealthbarActive() then
+        level = UF.GetLevelSpot(IsEliteModeActive() and "playerDecoration" or "player")
+    end
+    if level and not playerLevelFrame then
+        -- Forever draws the level circle over the PvP one (OVERLAY 4 over 3): one level above the badge frame.
+        playerLevelFrame = CreateFrame("Frame", nil, container)
+        playerLevelFrame:SetAllPoints(container)
+        playerLevelFrame:SetFrameLevel(container:GetFrameLevel() + 2)
+        playerLevelCircle = playerLevelFrame:CreateTexture("DragonUIPlayerLevelCircle", "ARTWORK")
+        -- Built on first use, possibly after dark mode's pass: let it tint the new circle.
+        if addon.RefreshDarkModeUnitFrames then
+            addon.RefreshDarkModeUnitFrames()
+        end
+    end
+    local onCircle = playerLevelCircle
+        and UF.ApplyLevelCircle(playerLevelCircle, level, dragonFrame.PlayerFrameBackground)
+    PlayerLevelText:ClearAllPoints()
+    if onCircle then
+        PlayerLevelText:SetParent(playerLevelFrame)
+        PlayerLevelText:SetPoint('CENTER', playerLevelCircle, 'CENTER', 0, UF.GetLevelTextY(playerLevelFrame))
+        PlayerLevelText:SetTextColor(1, 1, 1)
+    else
+        PlayerLevelText:SetParent(levelTextHome)
+        local _, rightEdge = PlayerArt.Edges("health")
+        PlayerLevelText:SetPoint('BOTTOMRIGHT', PlayerFrameHealthBar, 'TOPRIGHT', -5 - rightEdge, 3)
+        PlayerLevelText:SetTextColor(unpack(levelTextColor))
+    end
+    local font, _, flags = PlayerLevelText:GetFont()
+    if font then
+        PlayerLevelText:SetFont(font, onCircle and UF.LEVEL_ART.fontSize or levelTextSize, flags)
+    end
+    PlayerLevelText:SetDrawLayer('OVERLAY', 7)
+    ApplyPlayerLevelVisibility()
+end
+
+local PLAYER_GLOW_TEX_COORDS = { 0.1943359375, 0.3818359375, 0.169921875, 0.30859375 }
+
+local function PlaceGlow(frame, texture, glow, art)
+    frame:SetSize(glow.w, glow.h)
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", art, "TOPLEFT", glow.x, glow.y)
+    texture:SetTexture(glow.file)
+    texture:SetTexCoord(unpack(glow.tc))
+end
+
+-- Forever's art carries its own glows; fat, vehicle and the DragonUI art keep the 1x ones on the portrait.
+local function ApplyPlayerGlowArt()
+    local dragonFrame = _G["DragonUIUnitframeFrame"]
+    if not dragonFrame or not dragonFrame.DragonUIStatusGlow or not dragonFrame.EliteStatusGlow then return end
+    UpdatePlayerSwords(playerCombatIconShown and not IsFatHealthbarActive() and not IsEliteModeActive())
+    if IsInVehicle() then return end
+    local skin = UF.GetFrameSkin()
+    local art = dragonFrame.PlayerFrameBackground
+    local fat = IsFatHealthbarActive()
+    local normal = not fat and skin.player.glows
+    if normal then
+        PlaceGlow(dragonFrame.DragonUIStatusGlow, dragonFrame.DragonUIStatusTexture, normal.status, art)
+        PlaceGlow(dragonFrame.DragonUICombatGlow, dragonFrame.DragonUICombatTexture, normal.combat, art)
+    else
+        local spot = not fat and skin.player.glowSpot
+        for _, key in ipairs({ "DragonUIStatus", "DragonUICombat" }) do
+            local frame, texture = dragonFrame[key .. "Glow"], dragonFrame[key .. "Texture"]
+            frame:SetSize(192, 71)
+            frame:ClearAllPoints()
+            frame:SetPoint('TOPLEFT', PlayerPortrait, 'TOPLEFT', spot and spot.x or -9, spot and spot.y or 9)
+            texture:SetTexture(GetBaseTexture())
+            texture:SetTexCoord(unpack(PLAYER_GLOW_TEX_COORDS))
+        end
+    end
+    local deco = not fat and skin.playerDecoration.glows
+    if deco then
+        PlaceGlow(dragonFrame.EliteStatusGlow, dragonFrame.EliteStatusTexture, deco.status, art)
+        PlaceGlow(dragonFrame.EliteCombatGlow, dragonFrame.EliteCombatTexture, deco.combat, art)
+    else
+        for _, key in ipairs({ "EliteStatus", "EliteCombat" }) do
+            local frame, texture = dragonFrame[key .. "Glow"], dragonFrame[key .. "Texture"]
+            frame:SetSize(ELITE_GLOW_COORDINATES.size[1], ELITE_GLOW_COORDINATES.size[2])
+            frame:ClearAllPoints()
+            frame:SetPoint('TOPLEFT', PlayerPortrait, 'TOPLEFT', -24.5, 19)
+            texture:SetTexture(ELITE_GLOW_COORDINATES.texture)
+            texture:SetTexCoord(unpack(ELITE_GLOW_COORDINATES.texCoord))
+        end
+    end
+end
+
+-- The Zzz rises from the dragon's snout; a crown, guide flag or looter icon in that row sends it to the plain spot.
+function PlayerArt.PlaceRestIcon()
+    if not PlayerRestIcon then
+        return
+    end
+    local config = GetPlayerConfig()
+    local decoration = config and UF.PLAYER_DECORATIONS[config.dragon_decoration or "none"]
+    local place = decoration and select(6, UF.GetDragon("player", decoration.kind, decoration.set))
+    local rest = place and place.rest
+    local iconShown = (PlayerLeaderIcon and PlayerLeaderIcon:IsShown()) or (PlayerGuideIcon and PlayerGuideIcon:IsShown())
+        or (PlayerMasterIcon and PlayerMasterIcon:IsShown())
+    PlayerRestIcon:ClearAllPoints()
+    if rest and not iconShown then
+        PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", rest.x, rest.y)
+    else
+        PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", 40, 15)
+    end
+end
+
 -- Update decorative dragon for player frame
 local function UpdatePlayerDragonDecoration()
     local dragonFrame = _G["DragonUIUnitframeFrame"]
@@ -1467,71 +1738,63 @@ local function UpdatePlayerDragonDecoration()
     local config = GetPlayerConfig()
     local decorationType = config.dragon_decoration or "none"
 
-    -- Remove existing dragon if it exists
-    if dragonFrame.PlayerDragonDecoration then
-        if dragonFrame.PlayerDragonFrame then
-            dragonFrame.PlayerDragonFrame:Hide()
-            dragonFrame.PlayerDragonFrame = nil
-        end
-        dragonFrame.PlayerDragonDecoration = nil
+    -- Hide the dragon; the fields stay nil while hidden because dark mode and vehicles test them.
+    if dragonFrame.PlayerDragonFrame then
+        dragonFrame.PlayerDragonFrame:Hide()
     end
+    dragonFrame.PlayerDragonFrame = nil
+    dragonFrame.PlayerDragonDecoration = nil
 
-    --  Reposition rest icon in elite/dragon mode
-    if PlayerRestIcon then
-        if decorationType ~= "none" then
-            -- Elite mode: move up and to the right
-            PlayerRestIcon:ClearAllPoints()
-            PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", 60, 20)
-        else
-            -- Normal mode: original position
-            PlayerRestIcon:ClearAllPoints()
-            PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", 40, 15) -- Original position
-        end
-    end
+    local decoration = UF.PLAYER_DECORATIONS[decorationType]
+    PlayerArt.PlaceRestIcon()
 
     --  Change background, border AND STRETCH MANA BAR based on decoration
     local inVehicle = IsInVehicle()
 
-    if decorationType ~= "none" and not inVehicle then
-        -- Dragon decoration active (and not in vehicle): use target textures (flipped) 
+    if decoration and not inVehicle then
+        -- Dragon decoration active (and not in vehicle): use target textures (flipped)
         -- GetDecorationBackground/Border will pick fat variant if fat is enabled
         local decorBg = GetDecorationBackground()
         local decorBorder = GetDecorationBorder()
         local fatMode = IsFatHealthbarActive()
+        local deco = UF.GetFrameSkin().playerDecoration
 
         -- Fat mode shifts the health bar 6px lower; compensate so textures stay aligned
-        -- Adjust these offsets to fine-tune fat+decoration positioning
-        local bgX, bgY, bgW, bgH
-        local borderX, borderY
+        local borderX, borderY = -121, -23.5
         if fatMode then
-            -- Fat + decoration: compensate for health bar's -6 Y shift
-            bgX, bgY   = -121, -23.5   -- ←  Y here for fat+decoration background
-            bgW, bgH    = 255, 130
-            borderX, borderY = -121, -23.5   -- ← Y here for fat+decoration border
+            if dragonFrame.PlayerFrameBackground then
+                dragonFrame.PlayerFrameBackground:Show()
+                dragonFrame.PlayerFrameBackground:SetTexture(decorBg)
+                dragonFrame.PlayerFrameBackground:SetSize(255, 130)
+                dragonFrame.PlayerFrameBackground:SetTexCoord(1, 0, 0, 1) -- Flip horizontal for player
+
+                dragonFrame.PlayerFrameBackground:ClearAllPoints()
+                dragonFrame.PlayerFrameBackground:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', -121, -23.5)
+            end
+            if dragonFrame.PlayerFrameBorder then
+                dragonFrame.PlayerFrameBorder:Show()
+                dragonFrame.PlayerFrameBorder:SetTexture(decorBorder)
+                dragonFrame.PlayerFrameBorder:SetTexCoord(1, 0, 0, 1) -- Flip horizontal for player
+                dragonFrame.PlayerFrameBorder:SetSize(PLAYER_BORDER_WIDTH, PLAYER_BORDER_HEIGHT)
+
+                dragonFrame.PlayerFrameBorder:ClearAllPoints()
+                dragonFrame.PlayerFrameBorder:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', borderX, borderY)
+            end
         else
-            -- Normal decoration (no fat)
-            bgX, bgY   = -128, -29.5
-            bgW, bgH    = 255, 129
-            borderX, borderY = -129, -29.5
-        end
+            -- Placed before the art, which anchors to it; ChangePlayerframe restores the normal layout.
+            local health = deco.bars.health
+            PlayerFrameHealthBar:ClearAllPoints()
+            PlayerFrameHealthBar:SetSize(health.w, health.h)
+            PlayerFrameHealthBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', health.x, health.y)
 
-        if dragonFrame.PlayerFrameBackground then
-            dragonFrame.PlayerFrameBackground:Show()
-            dragonFrame.PlayerFrameBackground:SetTexture(decorBg)
-            dragonFrame.PlayerFrameBackground:SetSize(bgW, bgH)
-            dragonFrame.PlayerFrameBackground:SetTexCoord(1, 0, 0, 1) -- Flip horizontal for player
-
-            dragonFrame.PlayerFrameBackground:ClearAllPoints()
-            dragonFrame.PlayerFrameBackground:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', bgX, bgY)
-        end
-        if dragonFrame.PlayerFrameBorder then
-            dragonFrame.PlayerFrameBorder:Show()
-            dragonFrame.PlayerFrameBorder:SetTexture(decorBorder)
-            dragonFrame.PlayerFrameBorder:SetTexCoord(1, 0, 0, 1) -- Flip horizontal for player
-            dragonFrame.PlayerFrameBorder:SetSize(PLAYER_BORDER_WIDTH, PLAYER_BORDER_HEIGHT)
-
-            dragonFrame.PlayerFrameBorder:ClearAllPoints()
-            dragonFrame.PlayerFrameBorder:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', borderX, borderY)
+            if dragonFrame.PlayerFrameBackground then
+                dragonFrame.PlayerFrameBackground:Show()
+                UF.ApplySkinPiece(dragonFrame.PlayerFrameBackground, deco.background, 'LEFT', PlayerFrameHealthBar, 'LEFT', 0, 0)
+            end
+            if dragonFrame.PlayerFrameBorder then
+                dragonFrame.PlayerFrameBorder:Show()
+                UF.ApplySkinPiece(dragonFrame.PlayerFrameBorder, deco.border, 'LEFT', PlayerFrameHealthBar, 'LEFT', 0, 0)
+            end
         end
 
         -- Hide deco dot when dragon decoration is active
@@ -1620,13 +1883,11 @@ local function UpdatePlayerDragonDecoration()
             end
         elseif PlayerFrameManaBar then
             -- Normal (non-fat) decoration: stretch mana bar to fit decoration frame
-            local normalWidth = 125
-            local extendedWidth = 131
-
+            local mana = deco.bars.mana
             PlayerFrameManaBar:ClearAllPoints()
-            PlayerFrameManaBar:SetSize(extendedWidth, 9)
+            PlayerFrameManaBar:SetSize(mana.w, mana.h)
             -- Anchor by RIGHT side so it stretches leftward
-            PlayerFrameManaBar:SetPoint('RIGHT', PlayerPortrait, 'RIGHT', 1 + normalWidth, -16.5)
+            PlayerFrameManaBar:SetPoint('RIGHT', PlayerPortrait, 'RIGHT', mana.x, mana.y)
         end
         -- Normal (non-fat) decoration: hide overlay frames (not needed without fat)
         if not fatMode then
@@ -1724,23 +1985,35 @@ local function UpdatePlayerDragonDecoration()
             local borderTexture = GetBorderTexture()
             local HP_OFFSET = fatMode and 6 or 0
 
-            if dragonFrame.PlayerFrameBackground then
-                dragonFrame.PlayerFrameBackground:Show()
-                dragonFrame.PlayerFrameBackground:SetTexture(baseTexture)
-                dragonFrame.PlayerFrameBackground:SetTexCoord(0.7890625, 0.982421875, 0.001953125, 0.140625)
-                dragonFrame.PlayerFrameBackground:SetSize(198, 71)
+            if fatMode then
+                if dragonFrame.PlayerFrameBackground then
+                    dragonFrame.PlayerFrameBackground:Show()
+                    dragonFrame.PlayerFrameBackground:SetTexture(baseTexture)
+                    dragonFrame.PlayerFrameBackground:SetTexCoord(0.7890625, 0.982421875, 0.001953125, 0.140625)
+                    dragonFrame.PlayerFrameBackground:SetSize(198, 71)
 
-                dragonFrame.PlayerFrameBackground:ClearAllPoints()
-                dragonFrame.PlayerFrameBackground:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', -67, 0 + HP_OFFSET)
-            end
-            if dragonFrame.PlayerFrameBorder then
-                dragonFrame.PlayerFrameBorder:Show()
-                dragonFrame.PlayerFrameBorder:SetTexture(borderTexture)
-                dragonFrame.PlayerFrameBorder:SetTexCoord(0, 1, 0, 1)
-                dragonFrame.PlayerFrameBorder:SetSize(PLAYER_BORDER_WIDTH, PLAYER_BORDER_HEIGHT)
+                    dragonFrame.PlayerFrameBackground:ClearAllPoints()
+                    dragonFrame.PlayerFrameBackground:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', -67, 0 + HP_OFFSET)
+                end
+                if dragonFrame.PlayerFrameBorder then
+                    dragonFrame.PlayerFrameBorder:Show()
+                    dragonFrame.PlayerFrameBorder:SetTexture(borderTexture)
+                    dragonFrame.PlayerFrameBorder:SetTexCoord(0, 1, 0, 1)
+                    dragonFrame.PlayerFrameBorder:SetSize(PLAYER_BORDER_WIDTH, PLAYER_BORDER_HEIGHT)
 
-                dragonFrame.PlayerFrameBorder:ClearAllPoints()
-                dragonFrame.PlayerFrameBorder:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', -67, -28.5 + HP_OFFSET)
+                    dragonFrame.PlayerFrameBorder:ClearAllPoints()
+                    dragonFrame.PlayerFrameBorder:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', -67, -28.5 + HP_OFFSET)
+                end
+            else
+                local skin = UF.GetFrameSkin().player
+                if dragonFrame.PlayerFrameBackground then
+                    dragonFrame.PlayerFrameBackground:Show()
+                    UF.ApplySkinPiece(dragonFrame.PlayerFrameBackground, skin.background, 'LEFT', PlayerFrameHealthBar, 'LEFT', 0, 0)
+                end
+                if dragonFrame.PlayerFrameBorder then
+                    dragonFrame.PlayerFrameBorder:Show()
+                    UF.ApplySkinPiece(dragonFrame.PlayerFrameBorder, skin.border, 'LEFT', PlayerFrameHealthBar, 'LEFT', 0, 0)
+                end
             end
 
             -- Update combat and status glow textures to match fat/normal mode
@@ -1753,7 +2026,9 @@ local function UpdatePlayerDragonDecoration()
 
             -- Show deco dot when no dragon decoration
             if dragonFrame.PlayerFrameDeco then
+                PlayerArt.PlaceCorner(dragonFrame.PlayerFrameDeco)
                 dragonFrame.PlayerFrameDeco:Show()
+                ApplyPlayerCornerAlpha(dragonFrame.PlayerFrameDeco)
             end
 
             -- Adjust mana bar for fat/normal mode
@@ -1762,30 +2037,38 @@ local function UpdatePlayerDragonDecoration()
 
     end
 
+    ApplyPlayerGlowArt()
+    UpdatePlayerLevelLayout()
+    PlayerArt.PlaceTexts(decoration and not inVehicle and IsFatHealthbarActive())
+    PlayerArt.LayoutCorner()
+
     -- Don't create dragon if decoration is disabled or currently in vehicle
-    if decorationType == "none" or inVehicle then
+    if not decoration or inVehicle then
         return
     end
 
-    -- Get dragon coordinates
-    local coords = DRAGON_COORDINATES[decorationType]
-    if not coords then
-
+    local file, left, right, top, bottom, place = UF.GetDragon("player", decoration.kind, decoration.set)
+    if not file then
         return
     end
 
-    -- Create HIGH strata frame for dragon (parented to PlayerFrame for scaling)
-    local dragonParent = CreateFrame("Frame", nil, PlayerFrame)
+    -- Created once and reused: WoW never frees a frame.
+    if not playerDragonParent then
+        playerDragonParent = CreateFrame("Frame", nil, PlayerFrame)
+        playerDragonTexture = playerDragonParent:CreateTexture(nil, "OVERLAY")
+        playerDragonTexture:SetAllPoints(playerDragonParent)
+    end
+    local dragonParent, dragon = playerDragonParent, playerDragonTexture
     dragonParent:SetFrameStrata("MEDIUM")
     dragonParent:SetFrameLevel(1)
-    dragonParent:SetSize(coords.size[1], coords.size[2])
-    dragonParent:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", -coords.offset[1] + 29.5, coords.offset[2] - 5)
-
-    -- Create dragon texture in high strata frame
-    local dragon = dragonParent:CreateTexture(nil, "OVERLAY")
-    dragon:SetTexture("Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\uiunitframeboss2x")
-    dragon:SetTexCoord(coords.texCoord[1], coords.texCoord[2], coords.texCoord[3], coords.texCoord[4])
-    dragon:SetAllPoints(dragonParent)
+    dragonParent:SetSize(place.w, place.h)
+    dragonParent:ClearAllPoints()
+    dragonParent:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", place.x, place.y)
+    dragon:SetTexture(file)
+    dragon:SetTexCoord(left, right, top, bottom)
+    -- A reused texture can still carry the 0 alpha UpdateDragonVisibilityForVehicle gave it.
+    dragon:SetAlpha(1)
+    dragonParent:Show()
 
     -- Store references
     dragonFrame.PlayerDragonFrame = dragonParent
@@ -1971,6 +2254,8 @@ local function CreatePlayerFrameTextures()
 
     -- Setup rest icon
     if not dragonFrame.PlayerRestIconOverride then
+        -- With the group icons, so the Zzz draws over the dragon when it rests on its head.
+        PlayerRestIcon:SetParent(dragonFrame.EliteIconContainer)
         PlayerRestIcon:SetTexture(TEXTURES.REST_ICON)
         PlayerRestIcon:ClearAllPoints()
         PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", 40, 15)
@@ -1983,19 +2268,30 @@ local function CreatePlayerFrameTextures()
     if not dragonFrame.PlayerGroupIndicator then
         local groupIndicator = CreateFrame("Frame", "DragonUIPlayerGroupIndicator", PlayerFrame)
 
-        --  USE uiunitframe texture like RetailUI
+        -- Retail's tab in 2x: caps at their atlas sizes, the middle stretched; Blizzard sets the width.
+        local art = UF.STATUS_ICONS
+        local left = groupIndicator:CreateTexture(nil, "BACKGROUND")
+        left:SetTexture(art.file)
+        left:SetTexCoord(unpack(art.tabLeft))
+        left:SetSize(5, 13)
+        left:SetPoint("TOPLEFT")
+        local right = groupIndicator:CreateTexture(nil, "BACKGROUND")
+        right:SetTexture(art.file)
+        right:SetTexCoord(unpack(art.tabRight))
+        right:SetSize(7, 16)
+        right:SetPoint("TOPRIGHT")
         local bgTexture = groupIndicator:CreateTexture(nil, "BACKGROUND")
-        bgTexture:SetTexture(TEXTURES.BASE) -- Tu textura uiunitframe
-        bgTexture:SetTexCoord(0.927734375, 0.9970703125, 0.3125, 0.337890625) --  GroupIndicator coordinates
-        bgTexture:SetAllPoints(groupIndicator)
+        bgTexture:SetTexture(art.file)
+        bgTexture:SetTexCoord(unpack(art.tabMid))
+        bgTexture:SetPoint("TOPLEFT", left, "TOPRIGHT")
+        bgTexture:SetPoint("BOTTOMRIGHT", right, "TOPLEFT", 0, -13)
 
-        --  FIXED SIZING as per coordinates
-        groupIndicator:SetSize(71, 13)
-        groupIndicator:SetPoint("BOTTOMLEFT", PlayerFrame, "TOP", 30, -19.5)
+        local spot = UF.PLAYER_ICONS.tab
+        groupIndicator:SetSize(71, 16)
+        groupIndicator:SetPoint("BOTTOMRIGHT", PlayerFrame, "TOPLEFT", spot.x, spot.y)
 
-        --  CENTERED TEXT like original
         local text = groupIndicator:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        text:SetPoint("CENTER", groupIndicator, "CENTER", 0, 0)
+        text:SetPoint("CENTER", groupIndicator, "CENTER", 0, 1.5)
         text:SetJustifyH("CENTER")
         text:SetTextColor(1, 1, 1, 1)
         text:SetFont(UF.DEFAULT_FONT, 9)
@@ -2172,12 +2468,19 @@ local function ChangePlayerframe()
     else
         local pConfig = GetPlayerConfig()
         local decorationType = pConfig.dragon_decoration or "none"
-        local isPlayerEliteMode = decorationType == "elite" or decorationType == "rareelite"
-        if isPlayerEliteMode then
-            -- Dragon decoration mode: center the name above the health bar
+        local isPlayerEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
+        local foreverName = not IsFatHealthbarActive()
+            and UF.GetNameSpot(isPlayerEliteMode and "playerDecoration" or "player")
+        if foreverName then
+            PlayerName:SetJustifyH("LEFT")
+            PlayerName:SetWidth(foreverName.w)
+            PlayerName:SetPoint('LEFT', PlayerFrameHealthBar, 'TOPLEFT', foreverName.x, foreverName.y)
+        elseif isPlayerEliteMode then
+            -- Decoration: name centred over the health bar; 90 wide keeps it off the role icon.
             PlayerName:SetJustifyH("CENTER")
-            PlayerName:SetWidth(110)
-            PlayerName:SetPoint('BOTTOM', PlayerFrameHealthBar, 'TOP', 0, 2)
+            PlayerName:SetWidth(90)
+            local left, right = PlayerArt.Edges("health")
+            PlayerName:SetPoint('BOTTOM', PlayerFrameHealthBar, 'TOP', -(left + right) / 2, 2)
         else
             -- Normal mode: left-aligned above health bar
             PlayerName:SetJustifyH("LEFT")
@@ -2189,10 +2492,8 @@ local function ChangePlayerframe()
     PlayerName:SetAlpha(1)
     PlayerName:Show()
 
-    PlayerLevelText:SetDrawLayer('OVERLAY', 7)
-    PlayerLevelText:ClearAllPoints()
-    PlayerLevelText:SetPoint('BOTTOMRIGHT', PlayerFrameHealthBar, 'TOPRIGHT', -5, 3)
-    PlayerLevelText:SetAlpha(1)
+    UpdatePlayerLevelLayout()
+    ApplyPlayerLevelVisibility()
     PlayerLevelText:Show()
 
     -- Configure health bar (fat mode uses full-width bar, vehicle uses standard)
@@ -2212,8 +2513,9 @@ local function ChangePlayerframe()
         PlayerFrameHealthBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
         PlayerFrameManaBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
     else
-        PlayerFrameHealthBar:SetSize(125, 20) -- Normal size
-        PlayerFrameHealthBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', 1, 0)
+        local health = UF.GetFrameSkin().player.bars.health
+        PlayerFrameHealthBar:SetSize(health.w, health.h)
+        PlayerFrameHealthBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', health.x, health.y)
         PlayerFrameHealthBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
         PlayerFrameManaBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
     end
@@ -2301,6 +2603,7 @@ local function ChangePlayerframe()
             dragonFrame.EliteCombatGlow:ClearAllPoints()
             dragonFrame.EliteCombatGlow:SetPoint('TOPLEFT', PlayerPortrait, 'TOPLEFT', -24.5, 19)
         end
+        ApplyPlayerGlowArt()
     end
 
     -- Setup class-specific elements
@@ -2337,15 +2640,19 @@ local function SetCombatFlashVisible(visible)
             dragonFrame.PlayerFrameDeco:SetTexCoord(unpack(PLAYER_COMBAT_ICON_TEX_COORDS))
             --  ADJUST SIZE FOR COMBAT ICON
             dragonFrame.PlayerFrameDeco:SetSize(16, 14)
-            dragonFrame.PlayerFrameDeco:SetPoint('CENTER', PlayerPortrait, 'CENTER', 18.5, -20)
         else
             --  RESTORE NORMAL DECORATION
             dragonFrame.PlayerFrameDeco:SetTexture(PLAYER_CORNER_TEXTURE)
             dragonFrame.PlayerFrameDeco:SetTexCoord(unpack(PLAYER_CORNER_TEX_COORDS))
             --  RESTORE ORIGINAL SIZE
             dragonFrame.PlayerFrameDeco:SetSize(23, 23)
-            dragonFrame.PlayerFrameDeco:SetPoint('CENTER', PlayerPortrait, 'CENTER', 15.5, -16)
         end
+        dragonFrame.PlayerFrameDeco.DragonUI_Swords = visible and true or false
+        PlayerArt.PlaceCorner(dragonFrame.PlayerFrameDeco)
+    end
+    playerCombatIconShown = visible and true or false
+    if dragonFrame and dragonFrame.PlayerFrameDeco then
+        ApplyPlayerCornerAlpha(dragonFrame.PlayerFrameDeco)
     end
 
     -- ALWAYS update glow state — this drives both normal and vehicle combat flash
@@ -2575,6 +2882,7 @@ local function ApplyPlayerConfig()
             local initialUnit = UnitHasVehicleUI("player") and "vehicle" or "player"
             Module.textSystem = addon.TextSystem.SetupFrameTextSystem("player", initialUnit, dragonFrame,
                 PlayerFrameHealthBar, PlayerFrameManaBar, "PlayerFrame")
+            PlayerArt.PlaceTexts(IsEliteModeActive() and not IsInVehicle() and IsFatHealthbarActive())
         end
         if Module.textSystem then
             -- Ensure we have the correct unit after setup
@@ -2724,14 +3032,14 @@ local function InitializePlayerFrame()
         pvpTimerText:HookScript("OnShow", function()
             local config = GetPlayerConfig()
             local decorationType = config.dragon_decoration or "none"
-            local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+            local isEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
             UpdatePVPTimerPosition(isEliteMode)
         end)
         -- Also update when the text changes
         pvpTimerText:HookScript("OnTextChanged", function()
             local config = GetPlayerConfig()
             local decorationType = config.dragon_decoration or "none"
-            local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+            local isEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
             UpdatePVPTimerPosition(isEliteMode)
         end)
     end
@@ -2823,15 +3131,7 @@ local function InitializePlayerFrame()
 
     -- Mana texcoord clipping (same baked texture rule).
     if PlayerFrameManaBar then
-        hooksecurefunc(PlayerFrameManaBar, "SetValue", function(self)
-            local texture = self:GetStatusBarTexture()
-            if not texture then return end
-            local _, max = self:GetMinMaxValues()
-            local cur = self:GetValue()
-            if max > 0 and cur and cur >= 0 then
-                texture:SetTexCoord(0, cur / max, 0, 1)
-            end
-        end)
+        hooksecurefunc(PlayerFrameManaBar, "SetValue", PlayerArt.ApplyManaFill)
     end
 
     -- Instance-level SetStatusBarColor defense for mana bar (same rationale).
@@ -2948,7 +3248,7 @@ local function ApplyPlayerArtState()
 
     local config = GetPlayerConfig()
     local decorationType = config.dragon_decoration or "none"
-    local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+    local isEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
     UpdateDragonVisibilityForVehicle(inVehicle, isEliteMode)
 
     UpdateGlowVisibility()
@@ -3054,9 +3354,10 @@ local function SetupPlayerEvents()
             end
         end,
 
-        GROUP_ROSTER_UPDATE = UpdateGroupIndicator,
-        ROLE_CHANGED_INFORM = UpdatePlayerRoleIcon,
         LFG_ROLE_UPDATE = UpdatePlayerRoleIcon,
+        PLAYER_ROLES_ASSIGNED = UpdatePlayerRoleIcon,
+        PARTY_MEMBERS_CHANGED = UpdatePlayerRoleIcon,
+        RAID_ROSTER_UPDATE = UpdateGroupIndicator,
 
         UNIT_AURA = function(unit)
             if unit == "player" then
@@ -3105,7 +3406,7 @@ local function SetupPlayerEvents()
                 -- Hide dragon decoration when entering vehicle
                 local config = GetPlayerConfig()
                 local decorationType = config.dragon_decoration or "none"
-                local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+                local isEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
                 UpdateDragonVisibilityForVehicle(true, isEliteMode)
             end
         end,
@@ -3122,7 +3423,7 @@ local function SetupPlayerEvents()
                 -- Show dragon decoration when exiting vehicle
                 local config = GetPlayerConfig()
                 local decorationType = config.dragon_decoration or "none"
-                local isEliteMode = decorationType == "elite" or decorationType == "rareelite"
+                local isEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
                 UpdateDragonVisibilityForVehicle(false, isEliteMode)
                 -- Force health and power updates to ensure bars show correctly
                 if PlayerFrameHealthBar then
@@ -3239,6 +3540,20 @@ end
 hooksecurefunc("PlayerFrame_ToPlayerArt", OnBlizzardArtApplied)
 hooksecurefunc("PlayerFrame_ToVehicleArt", OnBlizzardArtApplied)
 hooksecurefunc("PlayerFrame_UpdatePvPStatus", ApplyPVPIconVisibility)
+
+-- Blizzard toggles these from its event handlers (the looter inline), so the Zzz follows the icons themselves.
+do
+    local function OnPlayerGroupIconToggled()
+        local dragonFrame = _G["DragonUIUnitframeFrame"]
+        if dragonFrame and dragonFrame.PlayerRestIconOverride and IsPlayerModuleEnabled() then
+            PlayerArt.PlaceRestIcon()
+        end
+    end
+    for _, icon in ipairs({ PlayerLeaderIcon, PlayerGuideIcon, PlayerMasterIcon }) do
+        hooksecurefunc(icon, "Show", OnPlayerGroupIconToggled)
+        hooksecurefunc(icon, "Hide", OnPlayerGroupIconToggled)
+    end
+end
 
 if PlayerFrame_SequenceFinished then
     hooksecurefunc("PlayerFrame_SequenceFinished", function()
@@ -3362,6 +3677,8 @@ end
 local function Ghost_Layout()
     local config = GetPlayerConfig()
     return tostring(IsFatConfigEnabled()) .. "|" .. tostring((config and config.dragon_decoration) or "none")
+        .. "|" .. UF.GetFrameStyle() .. "|" .. UF.GetDragonSet() .. "|" .. UF.GetLevelStyle()
+        .. "|" .. UF.GetPvPIconStyle(config)
 end
 
 -- Mirror the frame tree rather than flattening it: draw layers only order regions inside one
