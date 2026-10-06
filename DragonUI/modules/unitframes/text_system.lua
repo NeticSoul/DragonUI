@@ -1,6 +1,11 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
 local addon = select(2, ...)
+local LOCALE_UNITS = ({
+    zhCN = { { 100000000, "亿" }, { 10000, "万" } },
+    zhTW = { { 100000000, "億" }, { 10000, "萬" } },
+    koKR = { { 100000000, "억" }, { 10000, "만" } },
+})[GetLocale()]
 
 -- ===============================================================
 -- DRAGONUI TEXT SYSTEM
@@ -25,16 +30,24 @@ TextSystem.TEXT_FORMATS = {
 -- CORE FORMATTING FUNCTIONS
 -- ===============================================================
 
--- Function to abbreviate large numbers
+-- Format large values using the client's familiar number units.
 function TextSystem.AbbreviateLargeNumbers(value)
     if not value or type(value) ~= "number" then
         return "0"
     end
-    if value < 1000 then
+
+    if LOCALE_UNITS then
+        for _, unit in ipairs(LOCALE_UNITS) do
+            if value >= unit[1] then
+                return (string.format("%.1f", value / unit[1]):gsub("%.0$", "")) .. unit[2]
+            end
+        end
         return tostring(value)
     end
 
-    if value >= 1000000 then
+    if value < 1000 then
+        return tostring(value)
+    elseif value >= 1000000 then
         return string.format("%.1fM", value / 1000000)
     elseif value >= 1000 then
         return string.format("%.1fk", value / 1000)
