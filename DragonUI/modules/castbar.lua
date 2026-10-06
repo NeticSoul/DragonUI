@@ -830,18 +830,15 @@ local function SetTextMode(unitType, mode)
         return
     end
     
-    local elements = {
-        frames.castText, 
-        frames.castTextCompact, 
-        frames.castTextCentered, 
-        frames.castTimeText,
-        frames.castTimeTextCompact,
-        frames.timeValue,  -- Player-specific detailed mode elements
-        frames.timeMax
+    -- By key: the player has no compact/time elements, and a nil hole would stop an ipairs over the frames.
+    local TEXT_KEYS = {
+        "castText", "castTextCompact", "castTextCentered", "castTimeText", "castTimeTextCompact",
+        "timeValue", "timeMax",
     }
-    
+
     -- Hide all text elements first
-    for _, element in ipairs(elements) do
+    for _, key in ipairs(TEXT_KEYS) do
+        local element = frames[key]
         if element then
             element:Hide()
         end
@@ -926,12 +923,39 @@ local function SetCastText(unitType, text)
     end
 end
 
+local function ApplyTimeTexts(unitType, frames, cfg, seconds, secondsMax)
+    local timeText = format('%.' .. (cfg.precision_time or 1) .. 'f', seconds)
+    local fullText
+
+    if cfg.precision_max and cfg.precision_max > 0 then
+        local maxText = format('%.' .. cfg.precision_max .. 'f', secondsMax)
+        fullText = timeText .. ' / ' .. maxText
+    else
+        fullText = timeText .. 's'
+    end
+
+    if unitType == "player" then
+        local textMode = cfg.text_mode or "simple"
+        if textMode ~= "simple" and frames.timeValue and frames.timeMax then
+            frames.timeValue:SetText(timeText)
+            frames.timeMax:SetText(' / ' .. format('%.' .. (cfg.precision_max or 1) .. 'f', secondsMax))
+        end
+    else
+        if frames.castTimeText then
+            frames.castTimeText:SetText(fullText)
+        end
+        if frames.castTimeTextCompact then
+            frames.castTimeTextCompact:SetText(fullText)
+        end
+    end
+end
+
 local function UpdateTimeText(unitType)
     local frames = CastbarModule.frames[unitType]
     if not frames or not frames.castbar then
         return
     end
-    
+
     local castbar = frames.castbar
     
     -- Skip if not casting/channeling
@@ -957,30 +981,7 @@ local function UpdateTimeText(unitType)
         seconds = min(elapsed, secondsMax)
     end
     
-    local timeText = format('%.' .. (cfg.precision_time or 1) .. 'f', seconds)
-    local fullText
-    
-    if cfg.precision_max and cfg.precision_max > 0 then
-        local maxText = format('%.' .. cfg.precision_max .. 'f', secondsMax)
-        fullText = timeText .. ' / ' .. maxText
-    else
-        fullText = timeText .. 's'
-    end
-    
-    if unitType == "player" then
-        local textMode = cfg.text_mode or "simple"
-        if textMode ~= "simple" and frames.timeValue and frames.timeMax then
-            frames.timeValue:SetText(timeText)
-            frames.timeMax:SetText(' / ' .. format('%.' .. (cfg.precision_max or 1) .. 'f', secondsMax))
-        end
-    else
-        if frames.castTimeText then
-            frames.castTimeText:SetText(fullText)
-        end
-        if frames.castTimeTextCompact then
-            frames.castTimeTextCompact:SetText(fullText)
-        end
-    end
+    ApplyTimeTexts(unitType, frames, cfg, seconds, secondsMax)
 end
 
 -- ============================================================================
@@ -1886,7 +1887,13 @@ function CastbarModule:RefreshCastbar(unitType)
     frames.container:SetPoint(anchorPoint, anchorFrame, relativePoint, xPos, yPos)
     frames.container:SetSize(cfg.sizeX or 200, cfg.sizeY or 16)
     frames.container:SetScale(cfg.scale or 1)
-    
+
+    -- The container is centred on the overlay, so a fixed overlay size would drift after /reload.
+    local overlay = (unitType == "player") and self.anchor or GetCastbarAnchorFrame(unitType)
+    if overlay then
+        overlay:SetSize((cfg.sizeX or 200) * (cfg.scale or 1), (cfg.sizeY or 16) * (cfg.scale or 1))
+    end
+
     -- Position text background
     if frames.textBackground then
         frames.textBackground:ClearAllPoints()
@@ -2470,6 +2477,17 @@ local function HandleCastbarEditorHide(unitType)
     CastbarModule:RefreshCastbar(unitType)
 end
 
+-- A nudge must detach at once, or the next refresh re-docks the castbar and strands the overlay.
+local function HandleCastbarEditorNudge(unitType)
+    local cfg = GetConfig(unitType)
+    if cfg then
+        cfg.override = true
+    end
+
+    PersistCastbarAnchorPosition(unitType)
+    CastbarModule:UpdateWidgets()
+end
+
 function CastbarModule:ShowCastbar(unitType, spellName, currentValue, maxValue, duration, isChanneling, isInterrupted)
     local frames = self.frames[unitType]
     if not frames.castbar then
@@ -2538,7 +2556,27 @@ function CastbarModule:ShowCastbar(unitType, spellName, currentValue, maxValue, 
     if frames.textBackground then
         frames.textBackground:Show()
     end
-    
+
+    -- Only the editor preview comes through here, and it has no real spell to take an icon from.
+    local cfg = GetConfig(unitType)
+    if cfg then
+        -- The frozen bar never ticks, so its time text is set once, halfway through a 2.5s cast.
+        ApplyTimeTexts(unitType, frames, cfg, 1.25, 2.5)
+    end
+    if frames.icon and cfg and cfg.showIcon then
+        frames.icon:SetTexture(GetSpellIcon(spellName, "Interface\\Icons\\Spell_Fire_FlameBolt"))
+        frames.icon:Show()
+        SetIconBordersShown(frames, true, cfg)
+    else
+        if frames.icon then
+            frames.icon:Hide()
+        end
+        SetIconBordersShown(frames, false, cfg)
+        if frames.shield then
+            frames.shield:Hide()
+        end
+    end
+
     ForceStatusBarLayer(castbar)
 end
 
@@ -2648,6 +2686,9 @@ local function InitializeCastbarForEditor()
         hideTest = function()
             HideCastbarTest("target")
         end,
+        onNudge = function()
+            HandleCastbarEditorNudge("target")
+        end,
         onHide = function()
             HandleCastbarEditorHide("target")
         end,
@@ -2668,6 +2709,9 @@ local function InitializeCastbarForEditor()
         end,
         hideTest = function()
             HideCastbarTest("focus")
+        end,
+        onNudge = function()
+            HandleCastbarEditorNudge("focus")
         end,
         onHide = function()
             HandleCastbarEditorHide("focus")

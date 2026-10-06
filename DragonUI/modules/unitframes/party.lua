@@ -74,19 +74,30 @@ local function UpdatePartyAnchorSize()
     local settings = addon.db and addon.db.profile and addon.db.profile.unitframe and addon.db.profile.unitframe.party
     local orientation = settings and settings.orientation or 'vertical'
     local numMembers = MAX_PARTY_MEMBERS -- 4
-    
+    local scale = (settings and tonumber(settings.scale)) or 1
+
     if orientation == 'horizontal' then
         local padding = (settings and tonumber(settings.padding_horizontal)) or 50
         local frameWidth = 120
         local frameHeight = 50
         local totalWidth = numMembers * frameWidth + (numMembers - 1) * padding
-        PartyFrames.anchor:SetSize(totalWidth, frameHeight)
+        PartyFrames.anchor:SetSize(totalWidth * scale, frameHeight * scale)
     else
         local padding = (settings and tonumber(settings.padding_vertical)) or 30
         local frameWidth = 130
         local frameHeight = 50
         local totalHeight = numMembers * frameHeight + (numMembers - 1) * padding
-        PartyFrames.anchor:SetSize(frameWidth, totalHeight)
+        PartyFrames.anchor:SetSize(frameWidth * scale, totalHeight * scale)
+    end
+end
+
+-- A row when horizontal, a column when vertical; shared by styling, the editor and the update hook.
+local function PlacePartyMemberFrame(frame, index, step, orientation)
+    frame:ClearAllPoints()
+    if orientation == 'horizontal' then
+        frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", (index - 1) * step, 0)
+    else
+        frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", 0, (index - 1) * -step)
     end
 end
 
@@ -239,23 +250,7 @@ end
 function PartyFrames:UpdateWidgets()
     ApplyWidgetPosition()
     UpdatePartyAnchorSize() -- Update anchor size based on orientation
-    if not InCombatLockdown() then
-        local step = GetPartyStep()
-        local orientation = GetOrientation()
-        for i = 1, MAX_PARTY_MEMBERS do
-            local frame = _G['PartyMemberFrame' .. i]
-            if frame and PartyFrames.anchor then
-                frame:ClearAllPoints()
-                if orientation == 'horizontal' then
-                    local xOffset = (i - 1) * step
-                    frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", xOffset, 0)
-                else
-                    local yOffset = (i - 1) * -step
-                    frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", 0, yOffset)
-                end
-            end
-        end
-    end
+    PartyFrames:LayoutFrames()
 end
 
 -- Function to check if party frames should be visible
@@ -300,6 +295,7 @@ end
 local function ShowPartyFramesTest()
     -- Update anchor size for editor mode
     UpdatePartyAnchorSize()
+    PartyFrames:LayoutFrames()
     -- Raise overlay strata so it appears ABOVE fake party frames
     if PartyFrames.anchor then
         PartyFrames.anchor:SetFrameStrata('FULLSCREEN')
@@ -403,6 +399,20 @@ end
 local function GetOrientation()
     local settings = GetSettings()
     return settings and settings.orientation or 'vertical'
+end
+
+-- A method because UpdateWidgets and the editor test sit above the locals this reads.
+function PartyFrames:LayoutFrames()
+    if InCombatLockdown() or not self.anchor then return end
+
+    local step = GetPartyStep()
+    local orientation = GetOrientation()
+    for i = 1, MAX_PARTY_MEMBERS do
+        local frame = _G['PartyMemberFrame' .. i]
+        if frame then
+            PlacePartyMemberFrame(frame, i, step, orientation)
+        end
+    end
 end
 
 
@@ -913,10 +923,11 @@ local function UpdatePartyBarText(kind, statusBar, forceShow)
     local frameIndex = frame:GetName():match("PartyMemberFrame(%d+)")
     if not frameIndex then return end
 
-    local partyUnit = "party" .. frameIndex
+    local TextSystem = addon.TextSystem
+    local partyUnit, fake = TextSystem.GetPreviewUnit("party" .. frameIndex)
     if not UnitExists(partyUnit) then return end
 
-    if not UnitIsConnected(partyUnit) then
+    if not fake and not UnitIsConnected(partyUnit) then
         HidePartyBarText(frame, spec)
         return
     end
@@ -946,7 +957,7 @@ local function UpdatePartyBarText(kind, statusBar, forceShow)
 
     local shouldShow = false
 
-    if forceShow or isHovering then
+    if forceShow or isHovering or TextSystem.IsPreviewing("party") then
         shouldShow = true
     elseif settings and settings[spec.alwaysKey] then
         shouldShow = true
@@ -958,6 +969,7 @@ local function UpdatePartyBarText(kind, statusBar, forceShow)
     end
 
     local current, max = spec.GetValues(partyUnit)
+    if fake then current, max = TextSystem.ScalePreviewValues(kind, current, max) end
 
     if current and max and max > 0 then
         local textFormat = settings and settings.textFormat or "formatted"
@@ -995,6 +1007,20 @@ end
 UpdateManaText = function(statusBar, forceShow)
     UpdatePartyBarText("mana", statusBar, forceShow)
 end
+
+-- The editor's fake members have no unit events, so format changes repaint their texts from here.
+local function RefreshPartyPreviewTexts()
+    for i = 1, MAX_PARTY_MEMBERS do
+        local frame = _G['PartyMemberFrame' .. i]
+        if frame and frame:IsShown() then
+            local healthBar = frame.DragonUI_HealthBar or _G[frame:GetName() .. 'HealthBar']
+            local manaBar = frame.DragonUI_ManaBar or _G[frame:GetName() .. 'ManaBar']
+            if healthBar then UpdateHealthText(healthBar, false) end
+            if manaBar then UpdateManaText(manaBar, false) end
+        end
+    end
+end
+addon.TextSystem.RegisterPreviewUpdater("party", RefreshPartyPreviewTexts)
 
 -- Create invisible hover frames for independent health/mana text display
 local function CreateHoverFrames(frame, frameIndex)
@@ -1226,14 +1252,7 @@ local function StylePartyFrames()
                 frame:SetScale(settings.scale or 1)
                 frame:SetFrameStrata('BACKGROUND')
                 frame:SetFrameLevel(1)
-                frame:ClearAllPoints()
-                if orientation == 'horizontal' then
-                    local xOffset = (i - 1) * step
-                    frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", xOffset, 0)
-                else
-                    local yOffset = (i - 1) * -step
-                    frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", 0, yOffset)
-                end
+                PlacePartyMemberFrame(frame, i, step, orientation)
             end
 
             -- Hide background (and permanently prevent Blizzard's "Party/Arena Background" CVar from showing it)
@@ -1604,16 +1623,7 @@ local function SetupPartyHooks()
 
             if PartyFrames.anchor and not InCombatLockdown() then
                 if frameIndex and frameIndex >= 1 and frameIndex <= 4 then
-                    frame:ClearAllPoints()
-                    local step = GetPartyStep()
-                    local orientation = GetOrientation()
-                    if orientation == 'horizontal' then
-                        local xOffset = (frameIndex - 1) * step
-                        frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", xOffset, 0)
-                    else
-                        local yOffset = (frameIndex - 1) * -step
-                        frame:SetPoint("TOPLEFT", PartyFrames.anchor, "TOPLEFT", 0, yOffset)
-                    end
+                    PlacePartyMemberFrame(frame, frameIndex, GetPartyStep(), GetOrientation())
                 end
             end
 
@@ -1895,6 +1905,21 @@ function addon:RefreshPartyFrames()
     if PartyFrames and PartyFrames.UpdateSettings then
         PartyFrames:UpdateSettings()
     end
+end
+
+-- StylePartyFrames bails out while the editor is open, so scale and layout are re-applied here.
+function PartyFrames:ApplyLiveLayout()
+    if InCombatLockdown() then return end
+
+    local settings = GetSettings()
+    for i = 1, MAX_PARTY_MEMBERS do
+        local frame = _G['PartyMemberFrame' .. i]
+        if frame then
+            frame:SetScale((settings and settings.scale) or 1)
+        end
+    end
+
+    self:UpdateWidgets()
 end
 
 -- ===============================================================

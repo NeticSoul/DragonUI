@@ -109,24 +109,7 @@ local function SetSectionVisualState(section, enabled)
         return
     end
 
-    local border = section.content and section.content:GetParent()
-    if border and border.SetBackdropColor and border.SetBackdropBorderColor then
-        if enabled then
-            border:SetBackdropColor(0.08, 0.08, 0.10, 0.6)
-            border:SetBackdropBorderColor(0.20, 0.20, 0.22, 0.8)
-        else
-            border:SetBackdropColor(0.06, 0.06, 0.07, 0.45)
-            border:SetBackdropBorderColor(0.14, 0.14, 0.16, 0.6)
-        end
-    end
-
-    if section.titletext then
-        if enabled then
-            section.titletext:SetTextColor(unpack(C.Theme.textGold))
-        else
-            section.titletext:SetTextColor(unpack(C.Theme.textDim))
-        end
-    end
+    C.SetSectionState(section, enabled)
 end
 
 local function BuildMinimapTab(scroll)

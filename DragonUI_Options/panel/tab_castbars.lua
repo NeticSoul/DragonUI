@@ -244,7 +244,7 @@ local function BuildTargetCastbar(scroll)
 
     local isDetached = C:GetDBValue("castbar.target.override")
     if isDetached then
-        C:AddDescription(s, "|cff1784d1- " .. LO["Castbar detached - positioned freely via Editor Mode"] .. "|r")
+        C:AddDescription(s, "|cff" .. C.Theme.accentHex .. "- " .. LO["Castbar detached - positioned freely via Editor Mode"] .. "|r")
     else
         C:AddDescription(s, "|cffaaaaaa- " .. LO["Castbar attached - follows Target frame"] .. "|r")
     end
@@ -278,7 +278,7 @@ local function BuildFocusCastbar(scroll)
 
     local isDetached = C:GetDBValue("castbar.focus.override")
     if isDetached then
-        C:AddDescription(s, "|cff1784d1- " .. LO["Castbar detached - positioned freely via Editor Mode"] .. "|r")
+        C:AddDescription(s, "|cff" .. C.Theme.accentHex .. "- " .. LO["Castbar detached - positioned freely via Editor Mode"] .. "|r")
     else
         C:AddDescription(s, "|cffaaaaaa- " .. LO["Castbar attached - follows Focus frame"] .. "|r")
     end

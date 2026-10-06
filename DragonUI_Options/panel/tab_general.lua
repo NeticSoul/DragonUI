@@ -15,6 +15,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 local C = addon.PanelControls
 local Panel = addon.OptionsPanel
 local LO = addon.LO
+local FUI = addon.ForeverUI
 
 -- ============================================================================
 -- PRESET SYSTEM HELPERS
@@ -68,56 +69,48 @@ local importExportFrame
 local function GetImportExportFrame()
     if importExportFrame then return importExportFrame end
 
-    local f = CreateFrame("Frame", "DragonUI_ImportExportFrame", UIParent)
-    f:SetSize(500, 350)
-    f:SetPoint("CENTER")
-    f:SetFrameStrata("FULLSCREEN_DIALOG")
-    f:EnableMouse(true)
-    f:SetMovable(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop", f.StopMovingOrSizing)
-    f:SetBackdrop({
-        bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 11, right = 11, top = 12, bottom = 10 },
+    local f = FUI.CreateDialog("DragonUI_ImportExportFrame", UIParent, {
+        width = 500,
+        height = 350,
+        strata = "FULLSCREEN_DIALOG",
+        closable = true,
+        solid = true,
     })
-    f:Hide()
+    f:SetPoint("CENTER")
+    C.LiftOnShow(f)
     tinsert(UISpecialFrames, "DragonUI_ImportExportFrame")
 
-    -- Title
-    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    f.title:SetPoint("TOP", 0, -16)
+    f.title = f.TitleText
+
+    local content = f.Content
 
     -- Scrollframe + EditBox
-    local sf = CreateFrame("ScrollFrame", "DragonUI_IEScrollFrame", f, "UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT", 20, -45)
-    sf:SetPoint("BOTTOMRIGHT", -40, 50)
+    local sf = CreateFrame("ScrollFrame", "DragonUI_IEScrollFrame", content, "UIPanelScrollFrameTemplate")
+    sf:SetPoint("TOPLEFT", content, "TOPLEFT", 8, 0)
+    sf:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", -30, 40)
+
+    local well = content:CreateTexture(nil, "BACKGROUND")
+    well:SetTexture(0, 0, 0, 0.45)
+    well:SetPoint("TOPLEFT", sf, "TOPLEFT", -6, 6)
+    well:SetPoint("BOTTOMRIGHT", sf, "BOTTOMRIGHT", 26, -6)
 
     local eb = CreateFrame("EditBox", "DragonUI_IEEditBox", sf)
     eb:SetMultiLine(true)
     eb:SetAutoFocus(false)
     eb:SetFontObject(ChatFontNormal)
-    eb:SetWidth(sf:GetWidth() or 430)
+    eb:SetWidth(420)
     eb:SetScript("OnEscapePressed", function(self) self:ClearFocus(); f:Hide() end)
     sf:SetScrollChild(eb)
+    FUI.SkinScrollBar(sf)
     f.editBox = eb
     f.scrollFrame = sf
 
-    -- Close button
-    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", -4, -4)
-
     -- Bottom button row
-    f.btn1 = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.btn1:SetSize(120, 24)
-    f.btn1:SetPoint("BOTTOMLEFT", 20, 16)
+    f.btn1 = FUI.CreateButton(content, nil, 120, 22)
+    f.btn1:SetPoint("BOTTOMLEFT", content, "BOTTOMLEFT", 0, 0)
 
-    f.btn2 = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.btn2:SetSize(120, 24)
-    f.btn2:SetPoint("BOTTOMRIGHT", -20, 16)
-    f.btn2:SetText(LO["Cancel"] or "Cancel")
+    f.btn2 = FUI.CreateButton(content, LO["Cancel"] or "Cancel", 120, 22)
+    f.btn2:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", 0, 0)
     f.btn2:SetScript("OnClick", function() f:Hide() end)
 
     importExportFrame = f
@@ -159,7 +152,7 @@ local function ShowImportFrame()
             if errType == "header" then
                 msg = LO["Not a valid DragonUI preset string."] or "Not a valid DragonUI preset string."
             end
-            print("|cFFFF4444[DragonUI]|r " .. msg)
+            addon:Error(msg)
             return
         end
         f:Hide()
@@ -374,7 +367,7 @@ local function BuildGeneralTab(scroll)
     -- ====================================================================
     local about = C:AddSection(scroll, LO["About"])
 
-    C:AddLabel(about, "|cff1784d1" .. LO["DragonUI"] .. " v2.5|r")
+    C:AddLabel(about, "|cff" .. C.Theme.accentHex .. LO["DragonUI"] .. " v2.5|r")
     C:AddDescription(about, LO["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."])
     C:AddSpacer(about)
     C:AddDescription(about, LO["Created and maintained by NeticSoul, with community contributions."])
@@ -538,17 +531,18 @@ local function BuildGeneralTab(scroll)
             local hlTex = hlFrame:CreateTexture(nil, "BACKGROUND")
             hlTex:SetAllPoints()
             hlTex:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-            hlTex:SetVertexColor(0.09, 0.52, 0.82, 0)
+            local accent = C.Theme.accent
+            hlTex:SetVertexColor(accent[1], accent[2], accent[3], 0)
 
             btn:SetCallback("OnClick", function()
                 local dialog = StaticPopup_Show("DRAGONUI_PRESET_LOAD", name)
                 if dialog then dialog.data = name end
             end)
             btn:SetCallback("OnEnter", function()
-                hlTex:SetVertexColor(0.09, 0.52, 0.82, 0.15)
+                hlTex:SetVertexColor(accent[1], accent[2], accent[3], 0.12)
             end)
             btn:SetCallback("OnLeave", function()
-                hlTex:SetVertexColor(0.09, 0.52, 0.82, 0)
+                hlTex:SetVertexColor(accent[1], accent[2], accent[3], 0)
             end)
 
             row:AddChild(btn)
@@ -631,7 +625,7 @@ local function BuildGeneralTab(scroll)
                     if exportStr then
                         ShowExportFrame(value, exportStr)
                     else
-                        print("|cFFFF4444[DragonUI]|r " .. (LO["Failed to export preset."] or "Failed to export preset."))
+                        addon:Error(LO["Failed to export preset."] or "Failed to export preset.")
                     end
                 end
             end,

@@ -1080,6 +1080,8 @@ local function UpdatePVPIconPosition()
     UpdatePVPTimerPosition(isEliteMode)
 end
 
+local pvpPreviewShown = false
+
 -- Runs after PlayerFrame_UpdatePvPStatus, the only code that shows the icon.
 local function ApplyPVPIconVisibility()
     if not PlayerPVPIcon or not IsPlayerModuleEnabled() then
@@ -1092,6 +1094,16 @@ local function ApplyPVPIconVisibility()
         timerText:SetAlpha(shown and 1 or 0)
     end
     local kind = UF.GetPvPKind("player")
+    -- Unflagged players see their faction emblem in the editor, so the icon settings have something to show.
+    local preview = not kind and addon.TextSystem.IsEditorActive()
+    if preview then
+        kind = UnitFactionGroup("player") or "Alliance"
+        PlayerPVPIcon:Show()
+        pvpPreviewShown = true
+    elseif pvpPreviewShown then
+        pvpPreviewShown = false
+        if not kind then PlayerPVPIcon:Hide() end
+    end
     local badge = GetPlayerPvPBadge()
     local scale = badge and PlacePlayerPvPBadge(badge)
     local onBadge = shown and kind and badge and GetPVPIconStyle() == "forever" and UF.ShowPvPBadge(badge, kind, scale)
@@ -3016,6 +3028,7 @@ local function InitializePlayerFrame()
         configPath = {"widgets", "player"},
         onHide = function()
             ApplyPlayerConfig() -- Apply new configuration when exiting editor
+            UpdateLeadershipIcons() -- drops the editor's PvP emblem preview
         end,
         module = Module
     })

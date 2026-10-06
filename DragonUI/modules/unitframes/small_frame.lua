@@ -1011,6 +1011,15 @@ function UF.SmallFrame.Create(opts)
                 end
             end
         end,
+        onNudge = function()
+            local config = GetConfig()
+            if config then
+                config.override = true
+            end
+
+            PersistDetachedAnchorFromCurrentPosition()
+            Module:UpdateWidgets()
+        end,
         onHide = function()
             -- Detach if the user dragged OR adjusted via pixel-perfect controls.
             if Module.anchorFrame.DragonUI_WasDragged or Module.anchorFrame.DragonUI_WasAdjustedByEditor then

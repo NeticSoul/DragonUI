@@ -23,7 +23,21 @@ local STYLES = {
         row = 21, minW = 60, iconGap = 10, title = "GameFontNormal",
         text = "GameFontHighlight", disabled = "GameFontDisable", dark = true,
     },
+    forever = {
+        row = 21, minW = 60, iconGap = 10, title = "GameFontNormal",
+        text = "GameFontHighlight", disabled = "GameFontDisable", dark = true, skin = "bg",
+    },
 }
+
+local BACKDROP = {
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 5, right = 5, top = 5, bottom = 5 },
+}
+
+-- Frame levels stay low (high ones sort unreliably); the menu clears the editor windows by strata alone.
+local FOREVER_LEVEL = 60
 
 local menu
 local levels = {}
@@ -89,6 +103,17 @@ end
 local acquire
 
 local function paintBackdrop(level, style)
+    local forever = addon.ForeverUI
+    if style.skin and forever and forever.SkinMenuBackground then
+        forever.SkinMenuBackground(level, style.skin)
+        level._foreverSkin = true
+        return
+    end
+    if level._foreverSkin then
+        level._foreverSkin = nil
+        if forever and forever.HideMenuBackground then forever.HideMenuBackground(level) end
+        level:SetBackdrop(BACKDROP)
+    end
     if style.dark then
         level:SetBackdropColor(0.05, 0.05, 0.05, 0.95)
         level:SetBackdropBorderColor(0.5, 0.5, 0.5)
@@ -103,6 +128,7 @@ local function refresh(level)
     local style = menu.style
     paintBackdrop(level, style)
     local checkable, width = false, style.minW
+    if level == menu and menu.minWidth then width = math.max(width, menu.minWidth) end
     for _, entry in ipairs(level.entries) do
         if entry.checked ~= nil then checkable = true end
         if entry.tooltip then menu.tips = true end
@@ -145,6 +171,7 @@ local function refresh(level)
         if entry.menu then button.arrow:Show() else button.arrow:Hide() end
         button:EnableMouse(not (entry.isTitle or entry.disabled or divider))
         button:UnlockHighlight()
+        button:SetFrameLevel(level:GetFrameLevel() + 1)
         button:ClearAllPoints()
         button:SetPoint("TOPLEFT", level, "TOPLEFT", INSET_X, -y)
         button:SetPoint("RIGHT", level, "RIGHT", -INSET_X, 0)
@@ -278,6 +305,10 @@ local function syncTip()
     menu.tipRow = row
     if not row then return end
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+    -- A raised menu would otherwise paint over a tooltip left at the stock level.
+    if menu.style == STYLES.forever and GameTooltip:GetFrameLevel() < FOREVER_LEVEL + 40 then
+        GameTooltip:SetFrameLevel(FOREVER_LEVEL + 40)
+    end
     row.entry.tooltip(GameTooltip, row.entry)
     GameTooltip:Show()
 end
@@ -297,12 +328,7 @@ newLevel = function(depth)
     level:SetFrameStrata("TOOLTIP")
     level:SetClampedToScreen(true)
     level:EnableMouse(true)
-    level:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16,
-        insets = { left = 5, right = 5, top = 5, bottom = 5 },
-    })
+    level:SetBackdrop(BACKDROP)
     paintBackdrop(level, STYLES.small)
     level:Hide()
     if depth > 1 then
@@ -318,6 +344,7 @@ end
 
 local function build()
     menu = newLevel(1)
+    menu.baseLevel = menu:GetFrameLevel()
     menu.place = function()
         menu:ClearAllPoints()
         local anchor = menu.anchor
@@ -389,9 +416,12 @@ function addon.Menu.Open(anchor, entries, options)
     end
     closeFrom(2)
     options = options or {}
-    menu.style = options.large and STYLES.large or STYLES.small
+    local forever = options.style == "forever"
+    menu.style = forever and STYLES.forever or options.large and STYLES.large or STYLES.small
+    menu:SetFrameLevel(forever and FOREVER_LEVEL or menu.baseLevel)
+    menu.minWidth = options.minWidth
     -- No idle timeout, only an outside press closes it; the large look always works this way.
-    menu.clickAway = options.large or options.clickAway
+    menu.clickAway = options.large or options.clickAway or forever
     menu.at, menu.dx, menu.dy = options.at or "BOTTOMLEFT", options.x or 0, options.y or 0
     if menu.tipRow and GameTooltip:IsOwned(menu.tipRow) then GameTooltip:Hide() end
     menu.tips, menu.tipRow, menu.wasDown = false, nil, IsMouseButtonDown() and true or false

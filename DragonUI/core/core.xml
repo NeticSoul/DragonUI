@@ -7,6 +7,7 @@
     
     <Script file="api.lua"/>
     <Script file="modelview.lua"/>
+    <Script file="editor_settings.lua"/>
     <Script file="editor_panel.lua"/>
     <Script file="position_presets.lua"/>
     <Script file="commands.lua"/>

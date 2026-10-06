@@ -996,6 +996,7 @@ local function registerEditor()
             if addon.VisibilityFade then addon.VisibilityFade.Update("questtracker") end
         end,
         onShow = function() anchor:SetClampedToScreen(true) end,
+        onNudge = function() savePosition() end,
         onHide = function()
             anchor:SetClampedToScreen(false)
             savePosition()

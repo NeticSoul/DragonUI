@@ -755,6 +755,14 @@ function BuffFrameModule:SetupWeaponEnchantSeparation()
                 self:UpdateWeaponEnchantPosition()
                 AnchorWeaponEnchantsToFrame()
             end,
+            onNudge = function()
+                local w = addon.db.profile.widgets.weapon_enchants
+                if w then
+                    w.custom_position = true
+                end
+                self:UpdateWeaponEnchantPosition()
+                AnchorWeaponEnchantsToFrame()
+            end,
             module = self
         })
     end
@@ -827,6 +835,12 @@ function BuffFrameModule:Enable()
             w.custom_position = not isDefault
             self:UpdatePosition()
         end,
+        onNudge = function()
+            local w = addon.db.profile.widgets.buffs
+            if w and not w.custom_position then
+                w.custom_position = true
+            end
+        end,
         module = self
     })
 
@@ -863,6 +877,13 @@ function BuffFrameModule:Enable()
             blizzardFrame = _G["DebuffButton1"],
             configPath = {"widgets", "debuffs"},
             onHide = function()
+                if FixDebuffPositions then FixDebuffPositions() end
+            end,
+            onNudge = function()
+                local w = addon.db.profile.widgets.debuffs
+                if w and not w.custom_position then
+                    w.custom_position = true
+                end
                 if FixDebuffPositions then FixDebuffPositions() end
             end,
             module = self

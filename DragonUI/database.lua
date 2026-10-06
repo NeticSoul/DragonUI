@@ -482,7 +482,7 @@ local defaults = {
             },
             extrabar1 = {
                 x_position = 0,
-                y_position = 260,
+                y_position = 0, -- screen centre
                 scale = 0.9, -- container SetScale, like mainbars scale_actionbar
                 size = 36,
                 spacing = 7, -- match mainbars.button_spacing / per-bar default

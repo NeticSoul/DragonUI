@@ -12,10 +12,13 @@ local EditorMode = {};
 addon.EditorMode = EditorMode;
 
 local gridOverlay = nil;
-local exitEditorButton = nil;
-local resetAllButton = nil;
+local manager = nil;
+local editorActive = false;
 local errorMessagesMover = nil;
 local errorMessagesPositionHooked = false;
+
+-- The overlay hugs one error line, which sits this far above the centre of the 512x60 error frame.
+local ERROR_MOVER_WIDTH, ERROR_MOVER_HEIGHT, ERROR_ROW_OFFSET = 280, 32, 20
 
 local function GetWidgetConfig(widgetName)
     return addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets[widgetName]
@@ -58,7 +61,7 @@ local function PersistErrorMessagesMoverPosition()
     local cfg = addon.db.profile.widgets.errorMessages
     cfg.anchor = "CENTER"
     cfg.posX = math.floor((cx - ux) + 0.5)
-    cfg.posY = math.floor((cy - uy) + 0.5)
+    cfg.posY = math.floor((cy - uy) - ERROR_ROW_OFFSET + 0.5)
     cfg.custom_position = true
 end
 
@@ -67,7 +70,7 @@ local function SetupErrorMessagesMover()
         return
     end
 
-    errorMessagesMover = addon.CreateUIFrame(420, 90, "ErrorMessages")
+    errorMessagesMover = addon.CreateUIFrame(ERROR_MOVER_WIDTH, ERROR_MOVER_HEIGHT, "ErrorMessages")
     errorMessagesMover:HookScript("OnDragStop", function(self)
         self.DragonUI_WasDragged = true
         PersistErrorMessagesMoverPosition()
@@ -76,7 +79,21 @@ local function SetupErrorMessagesMover()
 
     if errorMessagesMover.editorText then
         errorMessagesMover.editorText:SetText(L["Error Messages"])
+        errorMessagesMover.editorText:ClearAllPoints()
+        errorMessagesMover.editorText:SetPoint("TOP", errorMessagesMover, "BOTTOM", 0, -3)
     end
+
+    -- A sample line in the real error frame's strata, so it sits under the overlay like the other previews.
+    local holder = CreateFrame("Frame", nil, UIParent)
+    holder:SetFrameStrata("HIGH")
+    holder:SetSize(ERROR_MOVER_WIDTH, ERROR_MOVER_HEIGHT)
+    holder:SetPoint("CENTER", errorMessagesMover, "CENTER", 0, 0)
+    holder:Hide()
+    local sample = holder:CreateFontString(nil, "OVERLAY", "ErrorFont")
+    sample:SetPoint("CENTER", holder, "CENTER", 0, 0)
+    sample:SetText(_G.ERR_OUT_OF_MANA or "Not enough mana.")
+    sample:SetTextColor(1, 0.1, 0.1)
+    errorMessagesMover.sample = holder
 
     addon:RegisterEditableFrame({
         name = "errorMessages",
@@ -86,13 +103,18 @@ local function SetupErrorMessagesMover()
             local cfg = GetWidgetConfig("errorMessages")
             errorMessagesMover:ClearAllPoints()
             if cfg and cfg.custom_position then
-                errorMessagesMover:SetPoint(cfg.anchor or "CENTER", UIParent, cfg.anchor or "CENTER", cfg.posX or 0, cfg.posY or 160)
+                errorMessagesMover:SetPoint(cfg.anchor or "CENTER", UIParent, cfg.anchor or "CENTER",
+                    cfg.posX or 0, (cfg.posY or 160) + ERROR_ROW_OFFSET)
             elseif UIErrorsFrame then
-                errorMessagesMover:SetPoint("CENTER", UIErrorsFrame, "CENTER", 0, 0)
+                errorMessagesMover:SetPoint("CENTER", UIErrorsFrame, "CENTER", 0, ERROR_ROW_OFFSET)
             else
-                errorMessagesMover:SetPoint("CENTER", UIParent, "CENTER", 0, 160)
+                errorMessagesMover:SetPoint("CENTER", UIParent, "CENTER", 0, 160 + ERROR_ROW_OFFSET)
             end
             errorMessagesMover:Show()
+            errorMessagesMover.sample:Show()
+        end,
+        hideTest = function()
+            errorMessagesMover.sample:Hide()
         end,
         onHide = function()
             if errorMessagesMover.DragonUI_WasDragged or errorMessagesMover.DragonUI_WasAdjustedByEditor then
@@ -182,44 +204,253 @@ function addon.StyleEditorButton(button)
     end
 end
 
-local function createExitButton()
-    if exitEditorButton then return; end
+-- ============================================================================
+-- MANAGER (top-centre window: layout presets, grid, reset and exit)
+-- ============================================================================
 
-    exitEditorButton = CreateFrame("Button", "DragonUIExitEditorButton", UIParent, "UIPanelButtonTemplate");
-    exitEditorButton:SetText(L["Exit Edit Mode"]);
-    exitEditorButton:SetSize(140, 28);
-    exitEditorButton:SetPoint("CENTER", UIParent, "CENTER", 0, 200);
-    exitEditorButton:SetFrameStrata("TOOLTIP");
-    exitEditorButton:SetFrameLevel(1000);
+local MANAGER_WIDTH = 510
+local MANAGER_WIDGET_KEY = "positionPresetPanel"
+-- Rows start under the Show Grid row (GRID_BOTTOM); the footer is the gap, the 28 px buttons and their margin.
+local MANAGER_PAD_X = 26
+local MANAGER_ROW_WIDTH = MANAGER_WIDTH - 2 * MANAGER_PAD_X
+local MANAGER_GRID_BOTTOM = 118
+local MANAGER_FOOTER = 62
+local MANAGER_SECTION_GAP, MANAGER_HEADER_HEIGHT, MANAGER_ROW_GAP = 8, 26, 2
+local MANAGER_ROWS_INTERVAL = 0.2
+local CLICK_SLOP = 8
 
-    -- Apply modern grey + blue style
-    addon.StyleEditorButton(exitEditorButton)
+local managerSet, generalHeader, clickWatcher
 
-    exitEditorButton:SetScript("OnClick", function()
-        EditorMode:Toggle();
-    end);
-
-    exitEditorButton:Hide();
+local function IsGridEnabled()
+    local profile = addon.db and addon.db.profile
+    return not (profile and profile.editorShowGrid == false)
 end
 
-local function createResetAllButton()
-    if resetAllButton then return; end
+local function ApplyGridVisibility()
+    if not gridOverlay then return end
+    if editorActive and IsGridEnabled() then
+        gridOverlay:Show()
+    else
+        gridOverlay:Hide()
+    end
+end
 
-    resetAllButton = CreateFrame("Button", "DragonUIResetAllButton", UIParent, "UIPanelButtonTemplate");
-    resetAllButton:SetText(L["Reset All Positions"]);
-    resetAllButton:SetSize(140, 28);
-    resetAllButton:SetPoint("CENTER", UIParent, "CENTER", 0, 165);
-    resetAllButton:SetFrameStrata("TOOLTIP");
-    resetAllButton:SetFrameLevel(1000);
+function EditorMode:SetGridShown(shown)
+    if addon.db and addon.db.profile then
+        if shown then
+            addon.db.profile.editorShowGrid = nil
+        else
+            addon.db.profile.editorShowGrid = false
+        end
+    end
+    ApplyGridVisibility()
+end
 
-    -- Apply modern grey + blue style
-    addon.StyleEditorButton(resetAllButton)
+-- A dragged frame is re-anchored by its top-left so rows added later grow downwards.
+local function AnchorManagerTopLeft(frame)
+    local left, top = frame:GetLeft(), frame:GetTop()
+    if not (left and top) then return nil end
+    local ratio = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left * ratio, top * ratio)
+    return left * ratio, top * ratio
+end
 
-    resetAllButton:SetScript("OnClick", function()
+local function SaveManagerPosition()
+    if not manager or not addon.db or not addon.db.profile then return end
+
+    local x, y = AnchorManagerTopLeft(manager)
+    if not x then return end
+
+    addon.db.profile.widgets = addon.db.profile.widgets or {}
+    addon.db.profile.widgets[MANAGER_WIDGET_KEY] = {
+        anchor = "TOPLEFT",
+        relativePoint = "BOTTOMLEFT",
+        posX = math.floor(x + 0.5),
+        posY = math.floor(y + 0.5),
+        custom_position = true,
+    }
+end
+
+local function ApplyManagerPosition(frame)
+    local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
+    local cfg = widgets and widgets[MANAGER_WIDGET_KEY]
+    frame:ClearAllPoints()
+    if cfg and cfg.custom_position then
+        frame:SetPoint(cfg.anchor or "TOPLEFT", UIParent, cfg.relativePoint or "BOTTOMLEFT", cfg.posX or 0, cfg.posY or 0)
+        return true
+    end
+    frame:SetPoint("TOP", UIParent, "TOP", 0, -60)
+    return false
+end
+
+-- Combat leaves the window read-only: exiting would touch overlays anchored to protected frames.
+local function SetManagerLocked(locked)
+    if not manager then return end
+    for _, control in ipairs({ manager.layoutDropdown, manager.resetButton, manager.exitButton }) do
+        if locked then control:Disable() else control:Enable() end
+    end
+    if locked and addon.Menu then addon.Menu.Close() end
+    if managerSet then managerSet:SetLocked(locked) end
+end
+
+-- Rows of the "__manager" registry entry sit between Show Grid and the buttons; the window grows downwards.
+local function LayoutManager()
+    if not manager then return end
+    local y = MANAGER_GRID_BOTTOM
+    local visible = managerSet and managerSet:VisibleCount() or 0
+    if visible > 0 then
+        y = y + MANAGER_SECTION_GAP
+        generalHeader:ClearAllPoints()
+        generalHeader:SetPoint("TOPLEFT", manager, "TOPLEFT", MANAGER_PAD_X, -y)
+        generalHeader:Show()
+        y = y + MANAGER_HEADER_HEIGHT
+    else
+        generalHeader:Hide()
+    end
+    if managerSet then
+        local bottom = managerSet:Layout(manager, MANAGER_PAD_X, y, MANAGER_ROW_GAP)
+        if visible > 0 then y = bottom - MANAGER_ROW_GAP end
+    end
+    local height = y + MANAGER_FOOTER
+    if managerSet and height > addon.EditorPanel.MaxHeight() and managerSet:FoldLast() then
+        return LayoutManager()
+    end
+    manager:SetHeight(height)
+end
+
+local function RebuildManagerRows()
+    if not (manager and managerSet) then return end
+    managerSet:Load(addon.EditorPanel.GetDef("__manager"), "__manager")
+    LayoutManager()
+    local forever = addon.ForeverUI
+    if forever.EnforceLayering then forever.EnforceLayering(manager) end
+end
+
+function EditorMode:RebuildManager()
+    RebuildManagerRows()
+end
+
+local function CreateManager()
+    if manager then return manager end
+    local forever = addon.ForeverUI
+    local ui = addon.EditorUI
+
+    local frame = CreateFrame("Frame", "DragonUI_EditorManager", UIParent)
+    frame:SetFrameStrata(ui.STRATA)
+    frame:SetFrameLevel(ui.MANAGER)
+    frame:SetSize(MANAGER_WIDTH, MANAGER_GRID_BOTTOM + MANAGER_FOOTER)
+    forever.SkinDialog(frame, { title = L["Editor Mode"], closable = false })
+    if ApplyManagerPosition(frame) then
+        AnchorManagerTopLeft(frame)
+    end
+    frame:Hide()
+    frame:HookScript("OnDragStop", SaveManagerPosition)
+    manager = frame
+
+    -- On Content: a region of the frame itself would sit under the Back child that paints the fill.
+    local layoutLabel = frame.Content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    layoutLabel:SetSize(96, 20)
+    layoutLabel:SetJustifyH("LEFT")
+    layoutLabel:SetPoint("LEFT", frame, "TOPLEFT", 28, -66)
+    layoutLabel:SetText(L["Layout"])
+
+    frame.layoutDropdown = addon.PositionPresets:CreateLayoutDropdown(frame, 346)
+    frame.layoutDropdown:SetPoint("TOPLEFT", frame, "TOPLEFT", 136, -54)
+
+    frame.gridCheckbox = forever.CreateCheckbox(frame, L["Show Grid"], function(checked)
+        EditorMode:SetGridShown(checked)
+    end, { style = "classic" })
+    frame.gridCheckbox:SetPoint("TOPLEFT", frame, "TOPLEFT", 26, -86)
+
+    frame.resetButton = forever.CreateButton(frame, L["Reset All Positions"], 220, 28)
+    frame.resetButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 24, 24)
+    frame.resetButton:SetScript("OnClick", function()
+        PlaySound("igMainMenuOptionCheckBoxOn")
         EditorMode:ShowResetConfirmation()
-    end);
+    end)
 
-    resetAllButton:Hide();
+    frame.exitButton = forever.CreateButton(frame, L["Exit Edit Mode"], 220, 28)
+    frame.exitButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -24, 24)
+    frame.exitButton:SetScript("OnClick", function()
+        PlaySound("igMainMenuOptionCheckBoxOn")
+        EditorMode:Toggle()
+    end)
+
+    -- On Content like the Layout label; hidden until the registry brings rows.
+    generalHeader = frame.Content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    generalHeader:SetText(L["General"])
+    generalHeader:Hide()
+    managerSet = addon.EditorPanel.CreateRowSet(frame, MANAGER_ROW_WIDTH, { onRelayout = LayoutManager })
+
+    frame:SetScript("OnUpdate", function(self, elapsed)
+        self.rowsElapsed = (self.rowsElapsed or 0) + elapsed
+        if self.rowsElapsed >= MANAGER_ROWS_INTERVAL then
+            self.rowsElapsed = 0
+            managerSet:Poll()
+        end
+    end)
+
+    frame:SetScript("OnShow", function(self)
+        self.gridCheckbox:SetChecked(IsGridEnabled())
+        addon.PositionPresets:RefreshPanel()
+        RebuildManagerRows()
+        SetManagerLocked(InCombatLockdown() and true or false)
+    end)
+    frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+    frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+    frame:SetScript("OnEvent", function(_, event)
+        SetManagerLocked(event == "PLAYER_REGEN_DISABLED")
+    end)
+
+    return frame
+end
+
+function EditorMode:GetManager()
+    return CreateManager()
+end
+
+function EditorMode:ShowManager()
+    CreateManager():Show()
+end
+
+function EditorMode:HideManager()
+    if manager then manager:Hide() end
+end
+
+-- Polled, not a WorldFrame hook: nothing captured (camera clicks pass), and a world drag is not a click.
+local function CreateClickWatcher()
+    if clickWatcher then return clickWatcher end
+
+    local watcher = CreateFrame("Frame", "DragonUI_EditorClickWatcher", UIParent)
+    watcher:Hide()
+    local origin, startX, startY
+
+    watcher:SetScript("OnUpdate", function()
+        if IsMouseButtonDown("LeftButton") then
+            if not origin then
+                local focus = GetMouseFocus()
+                origin = (focus == nil or focus == WorldFrame) and "world" or "ui"
+                startX, startY = GetCursorPosition()
+            end
+        elseif origin then
+            local pressedOn = origin
+            origin = nil
+            if pressedOn == "world" and addon.selectedEditorFrame then
+                local x, y = GetCursorPosition()
+                local dx, dy = x - startX, y - startY
+                if dx * dx + dy * dy <= CLICK_SLOP * CLICK_SLOP then
+                    addon.DeselectEditorFrame()
+                end
+            end
+        end
+    end)
+    watcher:SetScript("OnHide", function()
+        origin = nil
+    end)
+
+    clickWatcher = watcher
+    return watcher
 end
 
 -- Create symmetrical grid overlay for alignment
@@ -255,7 +486,6 @@ local function createGridOverlay()
     local background = gridOverlay:CreateTexture("DragonUIGridBackground", 'BACKGROUND')
     background:SetAllPoints(gridOverlay)
     background:SetTexture(0, 0, 0, 0.3)  -- Semi-transparent black
-    background:SetDrawLayer('BACKGROUND', -1)  -- Behind everything
 
     local lineThickness = 1
 
@@ -305,13 +535,34 @@ function EditorMode:FlushPositions()
     end
 end
 
+-- Popups move to TOOLTIP, above every editor window; their stock strata and level are restored on exit.
+local function RaiseEditorPopup(popup, level)
+    if not popup._dragonEditorStrata then
+        popup._dragonEditorStrata = popup:GetFrameStrata()
+        popup._dragonEditorLevel = popup:GetFrameLevel()
+    end
+    popup:SetFrameStrata(addon.EditorUI.POPUP_STRATA)
+    popup:SetFrameLevel(level)
+end
+
 local function RaiseEditorStaticPopups()
     local numDialogs = STATICPOPUP_NUMDIALOGS or 4
     for i = 1, numDialogs do
         local popup = _G["StaticPopup" .. i]
         if popup and popup:IsShown() then
-            popup:SetFrameStrata("FULLSCREEN_DIALOG")
-            popup:SetFrameLevel(900 + i)
+            RaiseEditorPopup(popup, addon.EditorUI.POPUP + i)
+        end
+    end
+end
+
+local function RestoreEditorStaticPopups()
+    local numDialogs = STATICPOPUP_NUMDIALOGS or 4
+    for i = 1, numDialogs do
+        local popup = _G["StaticPopup" .. i]
+        if popup and popup._dragonEditorStrata then
+            popup:SetFrameStrata(popup._dragonEditorStrata)
+            popup:SetFrameLevel(popup._dragonEditorLevel)
+            popup._dragonEditorStrata, popup._dragonEditorLevel = nil, nil
         end
     end
 end
@@ -336,14 +587,18 @@ function EditorMode:Show()
         return
     end
 
+    if editorActive then
+        return
+    end
+
     createGridOverlay()
-    createExitButton()
-    createResetAllButton()
+    CreateManager()
     SetupErrorMessagesMover()
     EnsureStaticPopupEditorHook()
-    gridOverlay:Show()
-    exitEditorButton:Show()
-    resetAllButton:Show()
+    editorActive = true
+    ApplyGridVisibility()
+    manager:Show()
+    CreateClickWatcher():Show()
 
     addon:ShowAllEditableFrames()
     
@@ -356,10 +611,6 @@ function EditorMode:Show()
     if addon.UpdateOverlaySizes then
         addon.UpdateOverlaySizes()
     end
-
-    if addon.PositionPresets then
-        addon.PositionPresets:ShowPanel()
-    end
 end
 
 local errorFrameInit = CreateFrame("Frame")
@@ -371,15 +622,22 @@ end)
 
 
 function EditorMode:Hide(showReloadPopup)
-    if addon.PositionPresets then
-        addon.PositionPresets:HidePanel()
+    if InCombatLockdown() then
+        addon:Print(L["Cannot toggle editor mode during combat!"])
+        return
     end
 
-    if gridOverlay then gridOverlay:Hide() end
-    if exitEditorButton then exitEditorButton:Hide() end
-    if resetAllButton then resetAllButton:Hide() end
+    if addon.PositionPresets then
+        addon.PositionPresets:CloseDialogs()
+    end
+
+    editorActive = false
+    ApplyGridVisibility()
+    if manager then manager:Hide() end
+    if clickWatcher then clickWatcher:Hide() end
 
     addon:HideAllEditableFrames(true) -- true = refresh and save positions
+    RestoreEditorStaticPopups()
     
     -- Disable action bar overlays to restore normal interaction
     if addon.DisableActionBarOverlays then
@@ -403,8 +661,7 @@ function EditorMode:Toggle()
 end
 
 function EditorMode:IsActive()
-    -- Use grid visibility as the true indicator of editor state
-    return gridOverlay and gridOverlay:IsShown()
+    return editorActive
 end
 
 -- Slash commands
@@ -423,7 +680,12 @@ function EditorMode:ResetAllPositions()
     if not addon.db or not addon.db.profile then
         return
     end
-    
+
+    if InCombatLockdown() then
+        addon:Print(L["Cannot reset positions during combat!"])
+        return
+    end
+
     -- Hide editor mode without showing the generic popup
     if self:IsActive() then
         self:Hide(false) -- false = don't show reload UI popup
@@ -512,8 +774,7 @@ StaticPopupDialogs["DRAGONUI_RESET_ALL_POSITIONS"] = {
     button2 = L["No"],
     OnShow = function(self)
         if EditorMode:IsActive() then
-            self:SetFrameStrata("FULLSCREEN_DIALOG")
-            self:SetFrameLevel(950)
+            RaiseEditorPopup(self, addon.EditorUI.POPUP + 5)
         end
     end,
     OnAccept = function()

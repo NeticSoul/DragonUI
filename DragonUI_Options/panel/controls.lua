@@ -6,7 +6,7 @@
 DragonUI Options Panel - Controls Library
 ================================================================================
 Reusable control builders with auto-binding to addon.db.profile.
-Post-skins AceGUI widgets for a clean, dark look.
+Post-skins AceGUI widgets with the Forever control art (addon.ForeverUI).
 ================================================================================
 ]]
 
@@ -16,6 +16,9 @@ if not addon then return end
 local LO = addon.LO
 
 local AceGUI = LibStub("AceGUI-3.0")
+
+local FUI = addon.ForeverUI
+local FONTS = FUI.Fonts
 
 -- ============================================================================
 -- MODULE
@@ -100,30 +103,25 @@ end
 -- ============================================================================
 
 Controls.Theme = {
-    accent      = { 0.09, 0.52, 0.82, 1 },
-    accentHex   = "1784d1",
-    headerBg    = { 0.12, 0.12, 0.14, 0.9 },
-    sectionBg   = { 0.10, 0.10, 0.12, 0.8 },
-    sectionBorder = { 0.22, 0.22, 0.24, 1 },
-    textNormal  = { 0.9, 0.9, 0.9, 1 },
+    accent      = { 1.0, 0.82, 0.0, 1 },
+    accentHex   = "ffd100",
+    sectionBg   = { 0.05, 0.04, 0.03, 0.55 },
+    sectionBgDim = { 0.03, 0.025, 0.02, 0.4 },
+    textNormal  = { 1.0, 1.0, 1.0, 1 },
     textDim     = { 0.72, 0.72, 0.72, 1 },
     textGold    = { 1.0, 0.82, 0.0, 1 },
     warning     = { 1.0, 0.4, 0.0, 1 },
     success     = { 0.0, 1.0, 0.0, 1 },
     danger      = { 1.0, 0.2, 0.2, 1 },
-    widgetBg    = { 0.14, 0.14, 0.16, 1 },
-    widgetBorder = { 0.25, 0.25, 0.28, 1 },
-    buttonBg    = { 0.16, 0.16, 0.18, 1 },
-    buttonHover = { 0.09, 0.52, 0.82, 0.3 },
-    font        = (addon.Fonts and addon.Fonts.NARROW) or "Interface\\AddOns\\DragonUI_Options\\fonts\\PTSansNarrow.ttf",
-    fontSize    = 13,
+    font        = (FONTS.Highlight:GetFont()),
+    fontSize    = 12,
 }
 
-local BD_WIDGET = {
-    bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
-    edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
-    tile = false, edgeSize = 1,
-    insets = { left = 0, right = 0, top = 0, bottom = 0 },
+-- Inset 1 so the square fill never pokes past the rounded corners of the section rail.
+local BD_FILL = {
+    bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+    tile = false,
+    insets = { left = 1, right = 1, top = 1, bottom = 1 },
 }
 
 -- Ensure widgets always receive a valid font even when a custom/system font path is unavailable.
@@ -278,232 +276,190 @@ end
 -- WIDGET SKINNING
 -- ============================================================================
 
+-- The Forever box is 29 tall, so the 24-high AceGUI row would leave the boxes touching.
+local CHECK_ROW_HEIGHT = 28
+local EDIT_INSET = 4
+local EDIT_BUTTON_W, EDIT_BUTTON_H = 48, 18
+
 local function SkinCheckBox(widget)
-    -- Darken the checkbox background
-    if widget.checkbg then
-        -- AceGUI reuses CheckBox widgets; always re-anchor so prior indent does not leak.
-        local indent = widget._dragonCheckIndent or 0
-        widget.checkbg:ClearAllPoints()
-        widget.checkbg:SetPoint("TOPLEFT", indent, 0)
-        widget.checkbg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-        widget.checkbg:SetVertexColor(0.14, 0.14, 0.16, 1)
-        widget.checkbg:SetWidth(18)
-        widget.checkbg:SetHeight(18)
+    if not (widget.checkbg and widget.check) then return end
+    local indent = widget._dragonCheckIndent or 0
+    FUI.SkinCheckButton(widget, { indent = indent })
+    widget.checkbg:ClearAllPoints()
+    widget.checkbg:SetPoint("TOPLEFT", indent - 3, 1)
+    if widget.desc and widget.desc:IsShown() then
+        widget.desc:ClearAllPoints()
+        widget.desc:SetPoint("TOPLEFT", widget.checkbg, "TOPRIGHT", 3, -21)
+    else
+        widget:SetHeight(CHECK_ROW_HEIGHT)
     end
-    if widget.check then
-        widget.check:SetVertexColor(0.09, 0.72, 1.0, 1)
-    end
-    if widget.highlight then
-        widget.highlight:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-        widget.highlight:SetVertexColor(0.09, 0.52, 0.82, 0.2)
-    end
-    -- Style text
-    if widget.text then
-        SafeSetFont(widget.text, 12, "")
-    end
-    if widget.desc then
-        SafeSetFont(widget.desc, 11, "")
+end
+
+local function SyncSliderState(widget)
+    local slider = widget.slider
+    if not slider then return end
+    local enabled = not widget.disabled
+    slider:SetAlpha(enabled and 1 or 0.55)
+    if slider._fuBack then
+        slider._fuBack:EnableMouse(enabled)
+        slider._fuForward:EnableMouse(enabled)
     end
 end
 
 local function SkinSlider(widget)
-    -- Skin once; re-applying backdrop/thumb causes a one-frame thumb blink.
-    if widget.slider and not widget.slider._dragonSkinned then
-        widget.slider:SetBackdrop(BD_WIDGET)
-        widget.slider:SetBackdropColor(0.14, 0.14, 0.16, 1)
-        widget.slider:SetBackdropBorderColor(0.22, 0.22, 0.24, 1)
-
-        local thumb = widget.slider:GetThumbTexture()
-        if thumb then
-            thumb:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-            thumb:SetVertexColor(0.09, 0.52, 0.82, 1)
-            thumb:SetWidth(12)
-            thumb:SetHeight(12)
+    if not widget.slider then return end
+    FUI.SkinSlider(widget, { steppers = true })
+    if not widget._dragonSliderWrapped then
+        widget._dragonSliderWrapped = true
+        local original = widget.SetDisabled
+        widget.SetDisabled = function(self, disabled)
+            original(self, disabled)
+            SyncSliderState(self)
         end
+    end
+    -- The skin resets the value box font, which also resets the colour AceGUI gave it.
+    widget:SetDisabled(widget.disabled)
+end
 
-        widget.slider._dragonSkinned = true
+-- Separate FontString so GetText and the stored value stay exactly what the caller set.
+local function SyncPlaceholder(widget)
+    local text = widget.text
+    if not text then return end
+    local holder = widget._dragonPlaceholder
+    local current = text:GetText()
+    if current and current ~= "" then
+        if holder then holder:Hide() end
+        return
     end
-    if widget.editbox and not widget.editbox._dragonSkinned then
-        widget.editbox:SetBackdrop(BD_WIDGET)
-        widget.editbox:SetBackdropColor(0.12, 0.12, 0.14, 1)
-        widget.editbox:SetBackdropBorderColor(0.22, 0.22, 0.24, 1)
-        widget.editbox._dragonSkinned = true
+    if not holder then
+        holder = text:GetParent():CreateFontString(nil, "OVERLAY")
+        holder:SetFontObject(FONTS.Normal)
+        holder:SetJustifyH("CENTER")
+        holder:SetPoint("LEFT", text, "LEFT", 0, 0)
+        holder:SetPoint("RIGHT", text, "RIGHT", 0, 0)
+        widget._dragonPlaceholder = holder
     end
-    if widget.editbox then
-        SafeSetFont(widget.editbox, 11, "")
+    holder:SetText(LO["Click to select"])
+    ClampText(holder, math.max(40, (widget.frame:GetWidth() or 200) - 34))
+    -- Same gold as a real value: grey made the empty dropdown look disabled.
+    if widget.disabled then
+        holder:SetTextColor(0.5, 0.5, 0.5)
+    else
+        holder:SetTextColor(1, 0.82, 0)
+    end
+    holder:Show()
+end
+
+-- AceGUI paints the closed dropdown text white on every enable; the Forever dropdown is gold.
+local function SyncDropdown(widget)
+    local tint = widget.disabled and 0.5 or nil
+    if widget.text then
+        if tint then
+            widget.text:SetTextColor(tint, tint, tint)
+        else
+            widget.text:SetTextColor(1, 0.82, 0)
+        end
     end
     if widget.label then
-        SafeSetFont(widget.label, 12, "")
+        if tint then
+            widget.label:SetTextColor(tint, tint, tint)
+        else
+            widget.label:SetTextColor(1, 0.82, 0)
+        end
+    end
+    SyncPlaceholder(widget)
+end
+
+-- Pullouts hang from UIParent, so the window's layering pass never reaches them: lift on every open.
+local function LiftPullout(po)
+    local frame = po.frame
+    frame:SetFrameStrata("TOOLTIP")
+    frame:Raise()
+    FUI.EnforceLayering(frame)
+end
+
+local function SkinPullout(widget)
+    local po = widget.pullout
+    local frame = po and po.frame
+    if not frame then return end
+    if not po._dragonOpenWrapped then
+        po._dragonOpenWrapped = true
+        local original = po.Open
+        po.Open = function(self, ...)
+            original(self, ...)
+            LiftPullout(self)
+        end
+    end
+    if frame._dragonSkinned then return end
+    frame._dragonSkinned = true
+    FUI.SkinMenuBackground(frame, "bg")
+    if po.slider then
+        po.slider:SetBackdrop(nil)
+        FUI.SkinScrollBar(po.slider)
     end
 end
 
 local function SkinDropdown(widget)
-    local dd = widget.dropdown
-    if not dd or dd._dragonSkinned then return end
-    dd._dragonSkinned = true
-
-    local function SyncDropdownButtonState()
-        local disabled = widget.disabled == true
-        if widget.button and widget.button.GetNormalTexture and widget.button:GetNormalTexture() then
-            widget.button:GetNormalTexture():SetVertexColor(disabled and 0.4 or 0.7, disabled and 0.4 or 0.7, disabled and 0.4 or 0.7, disabled and 0.8 or 1)
-        end
-        if widget.button and widget.button.GetHighlightTexture and widget.button:GetHighlightTexture() then
-            if disabled then
-                widget.button:GetHighlightTexture():SetVertexColor(0, 0, 0, 0)
-            else
-                widget.button:GetHighlightTexture():SetVertexColor(0.09, 0.52, 0.82, 0.6)
-            end
-        end
-    end
-
-    local originalSetDisabled = widget.SetDisabled
-    widget.SetDisabled = function(self, disabled)
-        originalSetDisabled(self, disabled)
-        SyncDropdownButtonState()
-    end
-
-    -- 1. Strip all texture regions from UIDropDownMenuTemplate
-    if dd.GetNumRegions then
-        for i = 1, dd:GetNumRegions() do
-            local region = select(i, dd:GetRegions())
-            if region and region.IsObjectType and region:IsObjectType("Texture") then
-                region:SetTexture(nil)
-            end
-        end
-    end
-
-    -- 2. Create dark backdrop on the dropdown frame itself
-    local bg = CreateFrame("Frame", nil, dd)
-    bg:SetFrameLevel(dd:GetFrameLevel())
-    bg:SetBackdrop(BD_WIDGET)
-    bg:SetBackdropColor(0.14, 0.14, 0.16, 1)
-    bg:SetBackdropBorderColor(0.25, 0.25, 0.28, 1)
-    bg:SetPoint("TOPLEFT", dd, "TOPLEFT", 15, -2)
-    bg:SetPoint("BOTTOMRIGHT", dd, "BOTTOMRIGHT", -21, 0)
-    dd.backdrop = bg
-
-    -- 3. Reposition arrow button to the right edge of the backdrop
-    local btn = widget.button
-    if btn then
-        btn:ClearAllPoints()
-        btn:SetPoint("TOPLEFT", bg, "TOPRIGHT", -22, -2)
-        btn:SetPoint("BOTTOMRIGHT", bg, "BOTTOMRIGHT", -2, 2)
-        btn:SetParent(bg)
-        if btn:GetNormalTexture() then
-            btn:GetNormalTexture():SetVertexColor(0.7, 0.7, 0.7, 1)
-        end
-        if btn:GetHighlightTexture() then
-            btn:GetHighlightTexture():SetVertexColor(0.09, 0.52, 0.82, 0.6)
-        end
-    end
-
-    -- 4. Reposition display text inside the backdrop (MUST reparent so it draws above)
-    local text = widget.text
-    if text then
-        text:SetParent(bg)
-        text:ClearAllPoints()
-        text:SetJustifyH("LEFT")
-        text:SetPoint("LEFT", bg, "LEFT", 5, 0)
-        if btn then
-            text:SetPoint("RIGHT", btn, "LEFT", -3, 0)
-        end
-        SafeSetFont(text, 12, "")
-        text:SetVertexColor(1, 1, 1)
-    end
-
-    -- 5. Label above the backdrop
+    if not (widget.dropdown and widget.button) then return end
+    FUI.SkinDropdownButton(widget, { style = "wow2" })
     if widget.label then
-        widget.label:ClearAllPoints()
-        widget.label:SetPoint("BOTTOMLEFT", bg, "TOPLEFT", 2, 1)
-        -- Without this the label has no right edge and a long translation runs over the next widget.
-        widget.label:SetPoint("BOTTOMRIGHT", bg, "TOPRIGHT", 0, 1)
         SafeSetFont(widget.label, 12, "")
-        widget.label:SetTextColor(1, 0.82, 0)
     end
-
-    -- 6. Pullout skinning (immediate + lazy via button hook)
-    local function SkinPullout()
-        local po = widget.pullout
-        if po and po.frame and not po.frame._dragonSkinned then
-            po.frame._dragonSkinned = true
-            po.frame:SetBackdrop(BD_WIDGET)
-            po.frame:SetBackdropColor(0.10, 0.10, 0.12, 0.98)
-            po.frame:SetBackdropBorderColor(0.25, 0.25, 0.28, 1)
-            if po.slider then
-                po.slider:SetBackdrop(BD_WIDGET)
-                po.slider:SetBackdropColor(0.14, 0.14, 0.16, 1)
-                po.slider:SetBackdropBorderColor(0.20, 0.20, 0.22, 1)
-                local thumb = po.slider:GetThumbTexture()
-                if thumb then
-                    thumb:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-                    thumb:SetVertexColor(0.09, 0.52, 0.82, 1)
-                    thumb:SetWidth(8)
-                    thumb:SetHeight(16)
-                end
+    if not widget._dragonDropdownWrapped then
+        widget._dragonDropdownWrapped = true
+        local original = widget.SetDisabled
+        widget.SetDisabled = function(self, disabled)
+            original(self, disabled)
+            SyncDropdown(self)
+        end
+        for _, name in ipairs({ "SetText", "SetValue", "SetList", "SetMultiselect" }) do
+            local setter = widget[name]
+            widget[name] = function(self, ...)
+                setter(self, ...)
+                SyncPlaceholder(self)
             end
         end
+        widget.button:HookScript("OnClick", function()
+            SkinPullout(widget)
+        end)
     end
-    SkinPullout()
-    if btn then
-        btn:HookScript("OnClick", SkinPullout)
-    end
-
-    originalSetDisabled(widget, widget.disabled == true)
-    SyncDropdownButtonState()
+    SyncDropdown(widget)
+    SkinPullout(widget)
 end
 
+local function SkinEditBoxWidget(widget)
+    local box = widget.editbox
+    if not box then return end
+    FUI.SkinEditBox(widget)
+    if widget.label then
+        SafeSetFont(widget.label, 12, "")
+    end
+    if widget.button then
+        FUI.SkinButton(widget.button)
+        widget.button:SetSize(EDIT_BUTTON_W, EDIT_BUTTON_H)
+    end
+    if not widget._dragonEditWrapped then
+        widget._dragonEditWrapped = true
+        -- AceGUI rewrites the text insets on every SetText and keystroke.
+        local original = widget.SetText
+        widget.SetText = function(self, ...)
+            original(self, ...)
+            self.editbox:SetTextInsets(EDIT_INSET, EDIT_INSET, 0, 0)
+        end
+        box:HookScript("OnTextChanged", function(self)
+            local reserve = widget.button and widget.button:IsShown() and (EDIT_BUTTON_W + 6) or EDIT_INSET
+            self:SetTextInsets(EDIT_INSET, reserve, 0, 0)
+        end)
+    end
+    box:SetTextInsets(EDIT_INSET, EDIT_INSET, 0, 0)
+    widget:SetDisabled(widget.disabled)
+end
+
+-- Also takes { frame = button } so the Keybinding widget's inner button can reuse it.
 local function SkinButton(widget)
     local f = widget.frame
     if f then
-        -- Strip ALL texture regions from UIPanelButtonTemplate2 (Left/Middle/Right)
-        -- Use the same texture-stripping approach as the dropdown skinning
-        if f.GetNumRegions then
-            for i = 1, f:GetNumRegions() do
-                local region = select(i, f:GetRegions())
-                if region and region.IsObjectType and region:IsObjectType("Texture") then
-                    region:SetTexture(nil)
-                    region:SetAlpha(0)
-                    region:Hide()
-                end
-            end
-        end
-
-        -- Also strip named button textures if they exist
-        local name = f:GetName()
-        if name then
-            for _, suffix in ipairs({"Left", "Middle", "Right", "left", "middle", "right"}) do
-                local tex = _G[name .. suffix]
-                if tex and tex.SetTexture then
-                    tex:SetTexture(nil)
-                    tex:SetAlpha(0)
-                    tex:Hide()
-                end
-            end
-        end
-
-        f:SetBackdrop(BD_WIDGET)
-        f:SetBackdropColor(0.16, 0.16, 0.18, 1)
-        f:SetBackdropBorderColor(0.25, 0.25, 0.28, 1)
-
-        -- Re-create highlight as a child frame texture so it draws above backdrop
-        if not f._dragonHighlight then
-            local hl = f:CreateTexture(nil, "HIGHLIGHT")
-            hl:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-            hl:SetVertexColor(0.09, 0.52, 0.82, 0.25)
-            hl:SetAllPoints()
-            f._dragonHighlight = hl
-        end
-
-        -- Strip the template highlight/normal/pushed/disabled if still lingering
-        if f:GetNormalTexture() then f:GetNormalTexture():SetTexture(nil); f:GetNormalTexture():SetAlpha(0) end
-        if f:GetPushedTexture() then f:GetPushedTexture():SetTexture(nil); f:GetPushedTexture():SetAlpha(0) end
-        if f:GetHighlightTexture() then f:GetHighlightTexture():SetTexture(nil); f:GetHighlightTexture():SetAlpha(0) end
-        if f:GetDisabledTexture() then f:GetDisabledTexture():SetTexture(nil); f:GetDisabledTexture():SetAlpha(0) end
-
-        -- Style text
-        if widget.text then
-            SafeSetFont(widget.text, 11, "")
-        end
+        FUI.SkinButton(f)
     end
 end
 
@@ -515,31 +471,50 @@ end
 
 local function SkinHeading(widget)
     if widget.label then
-        SafeSetFont(widget.label, 13, "OUTLINE")
+        widget.label:SetFontObject(FONTS.HighlightMedium)
         widget.label:SetTextColor(unpack(Controls.Theme.accent))
     end
-    -- Make the separator lines match theme
-    if widget.left then
-        widget.left:SetVertexColor(0.22, 0.22, 0.24, 1)
-    end
-    if widget.right then
-        widget.right:SetVertexColor(0.22, 0.22, 0.24, 1)
+    for _, line in ipairs({ widget.left or false, widget.right or false }) do
+        if line then
+            FUI.SetAtlas(line, "options_horizontaldivider")
+            line:SetHeight(1)
+        end
     end
 end
 
--- Skin InlineGroup to match dark theme
 local function SkinInlineGroup(widget)
-    -- The border frame
+    local theme = Controls.Theme
     local border = widget.content and widget.content:GetParent()
     if border and border.SetBackdrop then
-        border:SetBackdrop(BD_WIDGET)
-        border:SetBackdropColor(0.08, 0.08, 0.10, 0.6)
-        border:SetBackdropBorderColor(0.20, 0.20, 0.22, 0.8)
+        if not border._dragonSkinned then
+            border._dragonSkinned = true
+            border:SetBackdrop(BD_FILL)
+            FUI.AttachBoxBorder(border)
+        end
+        local fill = widget._dragonSectionDim and theme.sectionBgDim or theme.sectionBg
+        border:SetBackdropColor(fill[1], fill[2], fill[3], fill[4])
     end
     if widget.titletext then
-        SafeSetFont(widget.titletext, 13, "OUTLINE")
-        widget.titletext:SetTextColor(unpack(Controls.Theme.textGold))
+        widget.titletext:SetFontObject(FONTS.HighlightMedium)
+        widget.titletext:SetTextColor(unpack(widget._dragonSectionDim and theme.textDim or theme.textGold))
     end
+end
+
+-- Dims a section whose feature is off; the flag survives the deferred re-skin pass.
+function Controls.SetSectionState(section, enabled)
+    if not section then return end
+    section._dragonSectionDim = not enabled or nil
+    SkinInlineGroup(section)
+end
+
+Controls.SkinEditBox = SkinEditBoxWidget
+
+-- Dialogs parented to UIParent share FULLSCREEN_DIALOG with the AceGUI frames, so win on level every time.
+function Controls.LiftOnShow(frame)
+    frame:HookScript("OnShow", function(self)
+        self:Raise()
+        FUI.EnforceLayering(self)
+    end)
 end
 
 -- ============================================================================
@@ -564,9 +539,9 @@ local function ReskinWidget(widget)
     elseif t == "Slider" then
         SkinSlider(widget)
     elseif t == "Dropdown" then
-        -- Force re-skin by clearing the flag
-        if widget.dropdown then widget.dropdown._dragonSkinned = nil end
         SkinDropdown(widget)
+    elseif t == "EditBox" then
+        SkinEditBoxWidget(widget)
     elseif t == "Button" then
         SkinButton(widget)
     elseif t == "Label" then
@@ -576,9 +551,7 @@ local function ReskinWidget(widget)
             SkinLabel(widget)
         end
     elseif t == "InteractiveLabel" then
-        if widget._dragonSubTabFont and widget.label then
-            SafeSetFont(widget.label, widget._dragonSubTabFont[2], widget._dragonSubTabFont[3], widget._dragonSubTabFont[1])
-        elseif widget._dragonSearchFont and widget.label then
+        if widget._dragonSearchFont and widget.label then
             SafeSetFont(widget.label, widget._dragonSearchFont[2], widget._dragonSearchFont[3], widget._dragonSearchFont[1])
         end
     elseif t == "Heading" then
@@ -660,6 +633,7 @@ function Controls:AddCopyableText(parent, text)
         end
     end)
     editBox:SetCallback("OnTextChanged", function(w) w:SetText(text) end)
+    SkinEditBoxWidget(editBox)
     parent:AddChild(editBox)
     return editBox
 end
@@ -861,6 +835,7 @@ function Controls:AddEditBox(parent, opts)
         box:SetCallback("OnLeave", function() GameTooltip:Hide() end)
     end
 
+    SkinEditBoxWidget(box)
     TagSearchId(box, opts)
     parent:AddChild(box)
     return box
@@ -1026,6 +1001,15 @@ function Controls:AddColorPicker(parent, opts)
         end
         if opts.callback then opts.callback(r, g, b, a) end
     end)
+
+    -- AceGUI only raises the picker's strata; sit above whatever the panel has at that strata.
+    if not cp.frame._dragonPickerHook then
+        cp.frame._dragonPickerHook = true
+        cp.frame:HookScript("OnClick", function()
+            ColorPickerFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+            ColorPickerFrame:Raise()
+        end)
+    end
 
     TagSearchId(cp, opts)
     parent:AddChild(cp)
@@ -1197,6 +1181,47 @@ end
 -- SUB-TAB BAR (horizontal navigation within a tab)
 -- ============================================================================
 
+-- Own widget type so sub-tab pills never inherit pooled Label state (justify, fonts, highlight).
+do
+    local TAB_TYPE, TAB_VERSION = "DragonUITab", 1
+    local TAB_GAP = 5
+
+    local tabMethods = {
+        OnAcquire = function(self)
+            self.tab._fuOver = nil
+            self.tab:SetSelected(false)
+            self:SetText("")
+        end,
+        SetText = function(self, text)
+            self.tab:SetTabText(text)
+            self.frame:SetWidth(self.tab:GetWidth() + TAB_GAP)
+        end,
+        SetSelected = function(self, selected)
+            self.tab:SetSelected(selected)
+        end,
+    }
+
+    local function TabConstructor()
+        local frame = CreateFrame("Frame", nil, UIParent)
+        frame:Hide()
+        local tab = FUI.CreateTab(frame)
+        tab:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+        frame:SetHeight(tab:GetHeight())
+
+        local widget = { frame = frame, tab = tab, type = TAB_TYPE }
+        for method, func in pairs(tabMethods) do
+            widget[method] = func
+        end
+        tab:SetScript("OnClick", function()
+            PlaySound("igCharacterInfoTab")
+            widget:Fire("OnClick")
+        end)
+        return AceGUI:RegisterAsWidget(widget)
+    end
+
+    AceGUI:RegisterWidgetType(TAB_TYPE, TabConstructor, TAB_VERSION)
+end
+
 function Controls:AddSubTabs(parent, tabs, activeKey, onSelect, builders)
     local _P = addon.OptionsPanel
     if _P and _P.indexing then
@@ -1232,47 +1257,13 @@ function Controls:AddSubTabs(parent, tabs, activeKey, onSelect, builders)
     parent:AddChild(row)
 
     for _, tab in ipairs(tabs) do
-        local btn = AceGUI:Create("InteractiveLabel")
-        btn:SetWidth(math.max(#tab.label * 8.5, 70))
-
-        -- Clear pooled search-row hover texture from recycled frames.
-        if btn.frame._searchHover then btn.frame._searchHover:Hide() end
-        btn._dragonSearchFont = nil
-
-        local isActive = (tab.key == activeKey)
-        if isActive then
-            btn:SetText("|cff1784d1" .. tab.label .. "|r")
-        else
-            btn:SetText("|cffaaaaaa" .. tab.label .. "|r")
-        end
-
-        -- Font sizing — stored on widget for deferred re-skin pass
-        local fontFlags = isActive and "OUTLINE" or ""
-        btn._dragonSubTabFont = { self.Theme.font, 12, fontFlags }
-        if btn.label then
-            SafeSetFont(btn.label, 12, fontFlags, self.Theme.font)
-        end
-
+        local btn = AceGUI:Create("DragonUITab")
+        btn:SetText(tab.label)
+        btn:SetSelected(tab.key == activeKey)
         btn:SetCallback("OnClick", function()
             if onSelect then onSelect(tab.key) end
         end)
-        btn:SetCallback("OnEnter", function(w)
-            if not isActive and w.label then
-                w:SetText("|cffdddddd" .. tab.label .. "|r")
-            end
-        end)
-        btn:SetCallback("OnLeave", function(w)
-            if not isActive and w.label then
-                w:SetText("|cffaaaaaa" .. tab.label .. "|r")
-            end
-        end)
-
         row:AddChild(btn)
-
-        -- Re-apply font after AddChild (guards against AceGUI pool/layout resets)
-        if btn.label then
-            SafeSetFont(btn.label, 12, fontFlags, self.Theme.font)
-        end
     end
 
     -- Separator line under the sub-tab bar
@@ -1316,11 +1307,7 @@ local function EnsureSpellFilterNameCache()
 end
 
 local function SpellFilterPrint(msg)
-    if addon and addon.Print then
-        addon:Print(msg)
-    else
-        print("|cff1784d1DragonUI:|r " .. tostring(msg))
-    end
+    addon:Print(msg)
 end
 
 local function ParseSpellFilterIDs(raw)
@@ -1447,49 +1434,40 @@ local function EnsureSpellFilterExportDialog()
         return spellFilterExportDialog
     end
 
-    local frame = CreateFrame("Frame", "DragonUISpellFilterExportDialog", UIParent)
-    frame:SetSize(420, 320)
-    frame:SetFrameStrata("FULLSCREEN_DIALOG")
+    local frame = FUI.CreateDialog("DragonUISpellFilterExportDialog", UIParent, {
+        width = 420,
+        height = 320,
+        title = LO["Export/Import Spell IDs"],
+        strata = "FULLSCREEN_DIALOG",
+        closable = true,
+        solid = true,
+    })
     frame:SetFrameLevel(100)
     frame:SetPoint("CENTER")
-    frame:EnableMouse(true)
-    frame:SetMovable(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", function(self)
-        self:StartMoving()
-    end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-    end)
-    frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 32,
-        edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 },
-    })
-    frame:SetBackdropColor(0, 0, 0, 1)
+    Controls.LiftOnShow(frame)
 
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOP", 0, -16)
-    title:SetText(LO["Export/Import Spell IDs"])
+    local content = frame.Content
 
-    local hint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    hint:SetPoint("TOP", title, "BOTTOM", 0, -8)
+    local hint = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    hint:SetPoint("TOP", content, "TOP", 0, 0)
     hint:SetText(LO["Paste spell IDs separated by commas."])
 
     -- UIPanelScrollFrameTemplate builds a $parentScrollBar child whose OnLoad
     -- concatenates the parent's name; a nil name crashes it, so name it.
-    local scrollFrame = CreateFrame("ScrollFrame", "DragonUISpellFilterExportScrollFrame", frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 16, -50)
-    scrollFrame:SetPoint("BOTTOMRIGHT", -30, 52)
+    local scrollFrame = CreateFrame("ScrollFrame", "DragonUISpellFilterExportScrollFrame", content, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", content, "TOPLEFT", 8, -24)
+    scrollFrame:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", -30, 40)
+
+    local well = content:CreateTexture(nil, "BACKGROUND")
+    well:SetTexture(0, 0, 0, 0.45)
+    well:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", -6, 6)
+    well:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", 26, -6)
 
     local editBox = CreateFrame("EditBox", nil, scrollFrame)
     editBox:SetMultiLine(true)
     editBox:SetAutoFocus(false)
     editBox:SetFontObject("GameFontHighlightSmall")
-    editBox:SetWidth(360)
+    editBox:SetWidth(330)
     editBox:SetHeight(140)
     editBox:SetScript("OnEscapePressed", function(self)
         self:ClearFocus()
@@ -1499,11 +1477,10 @@ local function EnsureSpellFilterExportDialog()
         self:Insert("\n")
     end)
     scrollFrame:SetScrollChild(editBox)
+    FUI.SkinScrollBar(scrollFrame)
 
-    local okButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    okButton:SetText(ACCEPT)
-    okButton:SetSize(110, 22)
-    okButton:SetPoint("BOTTOMLEFT", 16, 16)
+    local okButton = FUI.CreateButton(content, ACCEPT, 110, 22)
+    okButton:SetPoint("BOTTOMLEFT", content, "BOTTOMLEFT", 0, 0)
     okButton:SetScript("OnClick", function()
         if frame.onImport then
             frame.onImport(editBox:GetText())
@@ -1511,17 +1488,14 @@ local function EnsureSpellFilterExportDialog()
         frame:Hide()
     end)
 
-    local cancelButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    cancelButton:SetText(CANCEL)
-    cancelButton:SetSize(110, 22)
-    cancelButton:SetPoint("BOTTOMRIGHT", -16, 16)
+    local cancelButton = FUI.CreateButton(content, CANCEL, 110, 22)
+    cancelButton:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", 0, 0)
     cancelButton:SetScript("OnClick", function()
         frame:Hide()
     end)
 
     frame.editBox = editBox
     spellFilterExportDialog = frame
-    frame:Hide()
     return frame
 end
 

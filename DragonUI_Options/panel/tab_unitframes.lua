@@ -674,7 +674,7 @@ local function BuildToTSection(scroll)
     -- Attachment status indicator
     local totOverride = C:GetDBValue("unitframe.tot.override")
     if totOverride then
-        C:AddDescription(tot, "|cff1784d1- " .. LO["Detached — positioned freely via Editor Mode"] .. "|r")
+        C:AddDescription(tot, "|cff" .. C.Theme.accentHex .. "- " .. LO["Detached — positioned freely via Editor Mode"] .. "|r")
     else
         C:AddDescription(tot, "|cffaaaaaa- " .. LO["Attached — follows Target frame"] .. "|r")
     end
@@ -737,7 +737,7 @@ local function BuildToTSection(scroll)
     -- Attachment status indicator
     local fotOverride = C:GetDBValue("unitframe.fot.override")
     if fotOverride then
-        C:AddDescription(fot, "|cff1784d1- " .. LO["Detached — positioned freely via Editor Mode"] .. "|r")
+        C:AddDescription(fot, "|cff" .. C.Theme.accentHex .. "- " .. LO["Detached — positioned freely via Editor Mode"] .. "|r")
     else
         C:AddDescription(fot, "|cffaaaaaa- " .. LO["Attached — follows Focus frame"] .. "|r")
     end

@@ -2741,12 +2741,17 @@ local function SetSecondaryBarContainerVisibility(barName, enabled)
     end
 
     if IsEditorModeActive() then
-        if not container:IsShown() then
-            container:Show()
+        -- Only the bars that are on get an overlay; showing the rest made every toggle light up all four.
+        if enabled then
+            if not container:IsShown() then
+                container:Show()
+            end
+            container:SetAlpha(1)
+        else
+            container:Hide()
         end
-        container:SetAlpha(1)
         if container.EnableMouse then
-            container:EnableMouse(true)
+            container:EnableMouse(enabled and true or false)
         end
         return
     end

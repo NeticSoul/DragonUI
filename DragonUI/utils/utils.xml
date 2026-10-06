@@ -7,6 +7,11 @@
     <Script file="menu.lua"/>
     <Script file="questpoi.lua"/>
     <Script file="redbutton.lua"/>
+    <Script file="forever_ui_base.lua"/>
+    <Script file="forever_atlas_chrome.lua"/>
+    <Script file="forever_atlas_controls.lua"/>
+    <Script file="forever_ui_chrome.lua"/>
+    <Script file="forever_ui_controls.lua"/>
     <Script file="vehicleart.lua"/>
 
     <Frame name="DragonUINineSlicePanelTemplate" frameLevel="10" setAllPoints="true" virtual="true">

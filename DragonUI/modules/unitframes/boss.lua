@@ -866,6 +866,11 @@ local function PositionBossFrames()
     local config = GetConfig()
     local scale = config.scale or 1.0
 
+    -- Same formula on load and on refresh, so the overlay never drifts after /reload.
+    if BossModule.overlay then
+        BossModule.overlay:SetSize(178 * scale, (NUM_BOSS_FRAMES * 75 - 6) * scale)
+    end
+
     for i = 1, NUM_BOSS_FRAMES do
         local wrapper = BossModule.wrapperFrames[i]
         if wrapper then

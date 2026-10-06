@@ -159,6 +159,69 @@ function TextSystem.CreateDualTextElements(parentFrame, barFrame, prefix, layer,
 end
 
 -- ===============================================================
+-- EDITOR PREVIEW (stand-in numbers and a timed reveal for fake frames)
+-- ===============================================================
+
+local PREVIEW_SECONDS = 3
+local previewUntil = {}
+local previewUpdaters = {}
+
+local function EditorIsActive()
+    local mode = addon.EditorMode
+    return mode and mode.IsActive and mode:IsActive() and true or false
+end
+TextSystem.IsEditorActive = EditorIsActive
+
+-- The fake frames borrow the player's numbers, like they already borrow the portrait and name.
+function TextSystem.GetPreviewUnit(unit)
+    if EditorIsActive() and not UnitExists(unit) then
+        return "player", true
+    end
+    return unit, false
+end
+
+-- Low-level characters have tiny pools; scaled up, "Format Large Numbers" has something to abbreviate.
+function TextSystem.ScalePreviewValues(kind, current, maximum)
+    local target = kind == "health" and 25000 or 12000
+    current, maximum = tonumber(current) or 0, tonumber(maximum) or 0
+    if maximum <= 0 then return target, target end
+    if maximum >= target then return current, maximum end
+    local factor = target / maximum
+    return math.floor(current * factor), math.floor(maximum * factor)
+end
+
+function TextSystem.IsPreviewing(frameType)
+    local deadline = previewUntil[frameType]
+    return deadline ~= nil and GetTime() < deadline
+end
+
+-- Registers what refreshes a frame type's texts (the party frames add their own).
+function TextSystem.RegisterPreviewUpdater(frameType, fn)
+    previewUpdaters[frameType] = fn
+end
+
+local function RunPreviewUpdater(frameType)
+    local fn = previewUpdaters[frameType]
+    if fn then fn() end
+end
+
+-- Repaints a frame type's texts from its settings alone, ending any reveal in progress.
+function TextSystem.RefreshTexts(frameType)
+    previewUntil[frameType] = nil
+    RunPreviewUpdater(frameType)
+end
+
+-- Shows the texts of one frame type for a few seconds so a format change is visible.
+function TextSystem.PreviewTexts(frameType)
+    if not EditorIsActive() then return end
+    previewUntil[frameType] = GetTime() + PREVIEW_SECONDS
+    RunPreviewUpdater(frameType)
+    addon:After(PREVIEW_SECONDS + 0.1, function()
+        if not TextSystem.IsPreviewing(frameType) then RunPreviewUpdater(frameType) end
+    end)
+end
+
+-- ===============================================================
 -- TEXT UPDATE SYSTEM (HYBRID)
 -- ===============================================================
 
@@ -269,9 +332,11 @@ end
 function TextSystem.UpdateFrameText(frameType, unit, parentFrame, healthBar, manaBar, prefix, textSystemRef)
     -- Use dynamic unit from textSystem if available, otherwise use passed unit
     local actualUnit = (textSystemRef and textSystemRef.unit) or unit
-    
+    local fake
+    actualUnit, fake = TextSystem.GetPreviewUnit(actualUnit)
+
     --  CHECK IF THE UNIT EXISTS AND IS ALIVE
-    if not UnitExists(actualUnit) or UnitIsDeadOrGhost(actualUnit) then
+    if not UnitExists(actualUnit) or (not fake and UnitIsDeadOrGhost(actualUnit)) then
         return TextSystem.ClearFrameText(parentFrame, prefix)
     end
 
@@ -280,10 +345,11 @@ function TextSystem.UpdateFrameText(frameType, unit, parentFrame, healthBar, man
     -- Detect specific hover on each bar
     local healthHover = healthBar and TextSystem.IsMouseOverFrame(healthBar) or false
     local manaHover = manaBar and TextSystem.IsMouseOverFrame(manaBar) or false
+    local previewing = TextSystem.IsPreviewing(frameType)
 
     -- Determine whether to show each text type
-    local shouldShowHealth = config.showHealthTextAlways or healthHover
-    local shouldShowMana = config.showManaTextAlways or manaHover
+    local shouldShowHealth = config.showHealthTextAlways or healthHover or previewing
+    local shouldShowMana = config.showManaTextAlways or manaHover or previewing
 
     -- If UnitFrameLayers missing-health mode is active for this friendly non-pet unit,
     -- hide TextSystem health text to prevent overlap and let missing-health text take priority.
@@ -303,6 +369,7 @@ function TextSystem.UpdateFrameText(frameType, unit, parentFrame, healthBar, man
     if healthBar and shouldShowHealth then
         local health = UnitHealth(actualUnit) or 0
         local maxHealth = UnitHealthMax(actualUnit) or 1
+        if fake then health, maxHealth = TextSystem.ScalePreviewValues("health", health, maxHealth) end
         local healthText = TextSystem.FormatStatusText(health, maxHealth, config.textFormat, config.breakUpLargeNumbers,
             frameType)
         TextSystem.UpdateDualText(parentFrame, prefix .. "Health", healthText, config.textFormat, true)
@@ -314,6 +381,7 @@ function TextSystem.UpdateFrameText(frameType, unit, parentFrame, healthBar, man
     if manaBar and shouldShowMana then
         local power = UnitPower(actualUnit) or 0
         local maxPower = UnitPowerMax(actualUnit) or 1
+        if fake then power, maxPower = TextSystem.ScalePreviewValues("mana", power, maxPower) end
         local powerText = TextSystem.FormatStatusText(power, maxPower, config.textFormat, config.breakUpLargeNumbers,
             frameType)
         TextSystem.UpdateDualText(parentFrame, prefix .. "Mana", powerText, config.textFormat, true)
@@ -354,6 +422,7 @@ function TextSystem.SetupFrameTextSystem(frameType, unit, parentFrame, healthBar
     local function updateCallback()
         TextSystem.UpdateFrameText(frameType, unit, parentFrame, healthBar, manaBar, prefix, textSystemRef)
     end
+    TextSystem.RegisterPreviewUpdater(frameType, updateCallback)
 
     --  CREATE DUAL TEXT ELEMENTS (WITH LARGER FONT)
     if healthBar then

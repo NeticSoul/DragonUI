@@ -38,7 +38,7 @@ local function BuildProfilesTab(scroll)
     local current = C:AddSection(scroll, LO["Current Profile"])
 
     local currentProfile = db:GetCurrentProfile()
-    C:AddLabel(current, LO["Active: "] .. "|cff1784d1" .. currentProfile .. "|r")
+    C:AddLabel(current, LO["Active: "] .. "|cff" .. C.Theme.accentHex .. currentProfile .. "|r")
 
     -- ====================================================================
     -- SELECT / CREATE PROFILE
@@ -89,6 +89,7 @@ local function BuildProfilesTab(scroll)
             StaticPopup_Show("DRAGONUI_RELOAD_UI")
         end
     end)
+    C.SkinEditBox(newName)
     selectSection:AddChild(newName)
 
     -- ====================================================================

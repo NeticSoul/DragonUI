@@ -996,7 +996,7 @@ local function BuildAurasTab(scroll)
 
     local isDebuffDetached = C:GetDBValue("widgets.debuffs.custom_position")
     if isDebuffDetached then
-        C:AddDescription(resetSection, "|cff1784d1- " .. LO["Debuffs detached - positioned freely via Editor Mode"] .. "|r")
+        C:AddDescription(resetSection, "|cff" .. C.Theme.accentHex .. "- " .. LO["Debuffs detached - positioned freely via Editor Mode"] .. "|r")
     else
         C:AddDescription(resetSection, "|cffaaaaaa- " .. LO["Debuffs attached - follow buff row"] .. "|r")
     end

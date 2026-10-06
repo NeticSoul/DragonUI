@@ -743,6 +743,7 @@ function PositionPresets:Save(name)
         data = snapshot,
         date = date("%Y-%m-%d %H:%M"),
     }
+    self.currentName = name
 
     return true
 end
@@ -758,7 +759,12 @@ function PositionPresets:Load(name)
         return false
     end
 
-    return self:Apply()
+    local applied = self:Apply()
+    if applied then
+        self.currentName = name
+        self:RefreshPanel()
+    end
+    return applied
 end
 
 function PositionPresets:Delete(name)
@@ -768,6 +774,9 @@ function PositionPresets:Delete(name)
     end
 
     store[name] = nil
+    if self.currentName == name then
+        self.currentName = nil
+    end
     return true
 end
 
@@ -929,85 +938,94 @@ StaticPopupDialogs["DRAGONUI_POSITION_PRESET_IMPORT_NAME"] = {
     preferredIndex = 3,
 }
 
--- ============================================================================
--- IN-GAME PANEL (Edit Mode) — collapsible, preset list, inline name field
--- ============================================================================
+StaticPopupDialogs["DRAGONUI_POSITION_PRESET_SAVE_NAME"] = {
+    text = L["Enter a name for the layout:"],
+    button1 = L["Save"],
+    button2 = L["Cancel"],
+    hasEditBox = true,
+    maxLetters = 40,
+    OnShow = function(self)
+        local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
+        if editBox then
+            editBox:SetText(PositionPresets.currentName or PositionPresets:UniqueName(L["Position Preset"]))
+            editBox:HighlightText()
+            editBox:SetFocus()
+        end
+    end,
+    OnAccept = function(self)
+        local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
+        local name = editBox and strtrim(editBox:GetText() or "")
+        if not name or name == "" then
+            return
+        end
 
-local presetPanel
-local presetRows = {}
-local importExportFrame
-local menuExpanded = false
+        name = name:gsub("|", "")
+        if name == "" then
+            return
+        end
 
-local EDITOR_UI_STRATA = "TOOLTIP"
-local EDITOR_UI_LEVEL = 1000
-local PANEL_WIDTH = 220
-local HEADER_HEIGHT = 28
-local ROW_HEIGHT = 22
-local SAVE_ROW_HEIGHT = 24
-local FOOTER_HEIGHT = 22
-local PANEL_PADDING = 8
-local SCROLLBAR_WIDTH = 24
-local MAX_LIST_HEIGHT = 110
-local CONTENT_WIDTH = PANEL_WIDTH - (PANEL_PADDING * 2)
-local LIST_WIDTH = CONTENT_WIDTH - SCROLLBAR_WIDTH
--- TOP offset when collapsed: CENTER y=130 + half header height
-local PANEL_TOP_OFFSET = 130 + (HEADER_HEIGHT / 2)
-
-local BD_PANEL = {
-    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-    tile = true,
-    tileSize = 16,
-    edgeSize = 16,
-    insets = { left = 4, right = 4, top = 4, bottom = 4 },
+        if PositionPresets:Save(name) then
+            addon:Print("|cFF00FF00[DragonUI]|r " .. L["Position preset saved: "] .. name)
+            PositionPresets:RefreshPanel()
+        end
+    end,
+    EditBoxOnEnterPressed = function(self)
+        local parent = self:GetParent()
+        StaticPopupDialogs["DRAGONUI_POSITION_PRESET_SAVE_NAME"].OnAccept(parent)
+        parent:Hide()
+    end,
+    EditBoxOnEscapePressed = function(self)
+        self:GetParent():Hide()
+    end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+    preferredIndex = 3,
 }
 
-local function StylePanelButton(button)
-    if addon.StyleEditorButton then
-        addon.StyleEditorButton(button)
-    end
-    if button.GetParent and button:GetParent() then
-        button:SetFrameLevel(button:GetParent():GetFrameLevel() + 5)
-    end
-end
+-- ============================================================================
+-- IMPORT / EXPORT WINDOW
+-- ============================================================================
+
+local importExportFrame
 
 local function GetImportExportFrame()
     if importExportFrame then
         return importExportFrame
     end
 
-    local frame = CreateFrame("Frame", "DragonUI_PositionPresetImportExport", UIParent)
-    frame:SetSize(500, 350)
-    frame:SetPoint("CENTER")
-    frame:SetFrameStrata("FULLSCREEN_DIALOG")
-    frame:EnableMouse(true)
-    frame:SetMovable(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 32,
-        edgeSize = 32,
-        insets = { left = 11, right = 11, top = 12, bottom = 10 },
-    })
-    frame:Hide()
-    tinsert(UISpecialFrames, "DragonUI_PositionPresetImportExport")
+    local forever = addon.ForeverUI
+    local ui = addon.EditorUI
 
-    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.title:SetPoint("TOP", 0, -16)
+    local frame = CreateFrame("Frame", "DragonUI_PositionPresetImportExport", UIParent)
+    frame:SetSize(508, 352)
+    frame:SetPoint("CENTER")
+    frame:SetFrameStrata(ui.STRATA)
+    frame:SetFrameLevel(ui.MODAL)
+    forever.SkinDialog(frame, { closable = true, escClose = true })
+    frame:Hide()
+
+    local content = frame.Content
+    local boxBack = CreateFrame("Frame", nil, frame)
+    boxBack:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+    boxBack:SetSize(432, 242)
+    local boxFill = boxBack:CreateTexture(nil, "BACKGROUND")
+    boxFill:SetAllPoints(boxBack)
+    boxFill:SetTexture(0, 0, 0, 0.5)
 
     local ieScroll = CreateFrame("ScrollFrame", "DragonUI_PositionPresetIEScroll", frame, "UIPanelScrollFrameTemplate")
-    ieScroll:SetPoint("TOPLEFT", 20, -45)
-    ieScroll:SetPoint("BOTTOMRIGHT", -40, 50)
+    ieScroll:SetPoint("TOPLEFT", content, "TOPLEFT", 4, -4)
+    ieScroll:SetSize(424, 234)
+    local ok, err = pcall(forever.SkinScrollBar, ieScroll)
+    if not ok then
+        geterrorhandler()(err)
+    end
 
     local editBox = CreateFrame("EditBox", "DragonUI_PositionPresetIEEditBox", ieScroll)
     editBox:SetMultiLine(true)
     editBox:SetAutoFocus(false)
     editBox:SetFontObject(ChatFontNormal)
-    editBox:SetWidth(ieScroll:GetWidth() or 430)
+    editBox:SetWidth(424)
     editBox:SetScript("OnEscapePressed", function(self)
         self:ClearFocus()
         frame:Hide()
@@ -1015,17 +1033,11 @@ local function GetImportExportFrame()
     ieScroll:SetScrollChild(editBox)
     frame.editBox = editBox
 
-    local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", -4, -4)
+    frame.btn1 = forever.CreateButton(frame, "", 130, 28)
+    frame.btn1:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 26, 24)
 
-    frame.btn1 = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    frame.btn1:SetSize(120, 24)
-    frame.btn1:SetPoint("BOTTOMLEFT", 20, 16)
-
-    frame.btn2 = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    frame.btn2:SetSize(120, 24)
-    frame.btn2:SetPoint("BOTTOMRIGHT", -20, 16)
-    frame.btn2:SetText(L["Cancel"])
+    frame.btn2 = forever.CreateButton(frame, L["Cancel"], 130, 28)
+    frame.btn2:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -26, 24)
     frame.btn2:SetScript("OnClick", function()
         frame:Hide()
     end)
@@ -1036,7 +1048,7 @@ end
 
 local function ShowExportFrame(presetName, exportString)
     local frame = GetImportExportFrame()
-    frame.title:SetText(L["Export Position Preset"])
+    frame:SetTitle(L["Export Position Preset"])
     frame.editBox:SetText(exportString)
     frame.editBox:SetScript("OnTextChanged", function(self, userInput)
         -- Keep export payload read-only without risking recursive SetText loops.
@@ -1058,7 +1070,7 @@ end
 
 local function ShowImportFrame()
     local frame = GetImportExportFrame()
-    frame.title:SetText(L["Import Position Preset"])
+    frame:SetTitle(L["Import Position Preset"])
     frame.editBox:SetText("")
     frame.editBox:SetScript("OnTextChanged", nil)
     frame.btn1:SetText(L["Import"])
@@ -1088,420 +1100,180 @@ local function ShowImportFrame()
     frame.editBox:SetFocus()
 end
 
-local function ShowGameTooltip(owner, title, line2)
-    GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
-    if GameTooltip.SetFrameStrata then
-        GameTooltip:SetFrameStrata("TOOLTIP")
-    end
-    GameTooltip:SetFrameLevel(9999)
-    GameTooltip:AddLine(title, 1, 1, 1)
-    if line2 then
-        GameTooltip:AddLine(line2, 0.7, 0.7, 0.7)
-    end
-    GameTooltip:Show()
-end
+-- ============================================================================
+-- LAYOUT DROPDOWN (lives in the editor manager)
+-- ============================================================================
 
-local function CreatePanelEditBox(parent, width)
-    local editBox = CreateFrame("EditBox", nil, parent)
-    editBox:SetSize(width, 20)
-    editBox:SetFontObject(GameFontHighlightSmall)
-    editBox:SetAutoFocus(false)
-    editBox:SetMaxLetters(40)
-    editBox:SetFrameLevel(parent:GetFrameLevel() + 5)
-    editBox:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true,
-        tileSize = 8,
-        edgeSize = 8,
-        insets = { left = 2, right = 2, top = 2, bottom = 2 },
-    })
-    editBox:SetBackdropColor(0, 0, 0, 0.6)
-    editBox:SetBackdropBorderColor(0.09, 0.52, 0.82, 0.6)
-    editBox:SetTextInsets(4, 4, 0, 0)
-    return editBox
-end
+local layoutDropdown
 
-local function SaveFromPanelInput()
-    if not presetPanel or not presetPanel.nameInput then
-        return
-    end
-
-    local name = strtrim(presetPanel.nameInput:GetText() or "")
-    name = name:gsub("|", "")
-    if name == "" then
-        name = PositionPresets:UniqueName(L["Position Preset"])
-    end
-
-    if PositionPresets:Save(name) then
-        addon:Print("|cFF00FF00[DragonUI]|r " .. L["Position preset saved: "] .. name)
-        presetPanel.nameInput:SetText(PositionPresets:UniqueName(L["Position Preset"]))
-        presetPanel.nameInput:HighlightText()
-        PositionPresets:RefreshPanel()
+local function AskLoad(name)
+    local dialog = StaticPopup_Show("DRAGONUI_POSITION_PRESET_LOAD", name)
+    if dialog then
+        dialog.data = name
     end
 end
 
-local function ClearPresetRows()
-    for _, row in ipairs(presetRows) do
-        row:Hide()
-        row:SetParent(nil)
+local function CurrentLayoutName()
+    local current = PositionPresets.currentName
+    if current and not PositionPresets:GetStore()[current] then
+        PositionPresets.currentName = nil
+        current = nil
     end
-    wipe(presetRows)
+    return current
 end
 
-local function GetListContentHeight(nameCount)
-    if nameCount == 0 then
-        return 18
-    end
-    return nameCount * ROW_HEIGHT
-end
+local function BuildLayoutEntries()
+    local current = CurrentLayoutName()
+    local names = PositionPresets:GetSortedNames()
+    local entries = {}
 
-local function SavePanelPosition()
-    if not presetPanel or not addon.db or not addon.db.profile then
-        return
+    if #names == 0 then
+        entries[1] = { text = L["No position presets saved yet."], disabled = true }
+    else
+        for _, name in ipairs(names) do
+            entries[#entries + 1] = {
+                text = name,
+                checked = name == current,
+                func = function() AskLoad(name) end,
+            }
+        end
     end
 
-    local point, _, relativePoint, x, y = presetPanel:GetPoint(1)
-    if not point then
-        return
-    end
-
-    addon.db.profile.widgets = addon.db.profile.widgets or {}
-    addon.db.profile.widgets[PANEL_WIDGET_KEY] = {
-        anchor = point,
-        relativePoint = relativePoint or point,
-        posX = math.floor((x or 0) + 0.5),
-        posY = math.floor((y or 0) + 0.5),
-        custom_position = true,
+    entries[#entries + 1] = { isDivider = true }
+    entries[#entries + 1] = {
+        text = L["Save Layout"],
+        func = function() StaticPopup_Show("DRAGONUI_POSITION_PRESET_SAVE_NAME") end,
     }
+    entries[#entries + 1] = {
+        text = L["Delete Layout"],
+        disabled = not current,
+        func = function()
+            local dialog = StaticPopup_Show("DRAGONUI_POSITION_PRESET_DELETE", current)
+            if dialog then
+                dialog.data = current
+            end
+        end,
+    }
+    entries[#entries + 1] = {
+        text = L["Export Layout"],
+        disabled = not current,
+        func = function()
+            local exportString = PositionPresets:ExportToString(current)
+            if exportString then
+                ShowExportFrame(current, exportString)
+            else
+                addon:Print("|cFFFF4444[DragonUI]|r " .. L["Failed to export position preset."])
+            end
+        end,
+    }
+    entries[#entries + 1] = { text = L["Import Layout"], func = ShowImportFrame }
+    return entries
 end
 
-local function ApplyPanelPosition(panel)
-    local cfg = addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets[PANEL_WIDGET_KEY]
-    panel:ClearAllPoints()
-    if cfg and cfg.custom_position then
-        panel:SetPoint(
-            cfg.anchor or "TOPLEFT",
-            UIParent,
-            cfg.relativePoint or "BOTTOMLEFT",
-            cfg.posX or 0,
-            cfg.posY or 0
-        )
-    else
-        panel:SetPoint("TOP", UIParent, "CENTER", 0, PANEL_TOP_OFFSET)
-    end
-end
-
-local function SetPanelHeightExpandDown(panel, newHeight)
-    if not panel then
+-- The stock dropdown menu cannot hold actions or dividers, so this swaps in a richer menu on the same anchor.
+local function OpenLayoutMenu(button)
+    if not (addon.Menu and addon.Menu.Open) then
         return
     end
 
-    local left = panel:GetLeft()
-    local top = panel:GetTop()
-    if left and top then
-        panel:ClearAllPoints()
-        panel:SetHeight(newHeight)
-        panel:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
-    else
-        panel:SetHeight(newHeight)
-    end
+    addon.Menu.Open(button, BuildLayoutEntries(), {
+        large = true, style = "forever", at = "BOTTOMLEFT", x = -4, y = 0, minWidth = button:GetWidth(),
+    })
+    button:SetScript("OnUpdate", function(self)
+        if not addon.Menu.IsOpenFor(self) then
+            self:SetScript("OnUpdate", nil)
+            self:Refresh()
+        end
+    end)
+    button:Refresh()
 end
 
-function PositionPresets:UpdatePanelHeight()
-    if not presetPanel then
-        return
+function PositionPresets:CreateLayoutDropdown(parent, width)
+    if layoutDropdown then
+        return layoutDropdown
     end
 
-    if not menuExpanded then
-        SetPanelHeightExpandDown(presetPanel, HEADER_HEIGHT)
-        return
-    end
-
-    local names = self:GetSortedNames()
-    local scrollHeight = math.min(GetListContentHeight(#names), MAX_LIST_HEIGHT)
-    local rowGap = 4
-    local bodyHeight = SAVE_ROW_HEIGHT + rowGap + scrollHeight + rowGap + FOOTER_HEIGHT
-
-    if presetPanel.bodyFrame then
-        presetPanel.bodyFrame:SetHeight(bodyHeight)
-    end
-
-    if presetPanel.scrollFrame then
-        presetPanel.scrollFrame:SetSize(LIST_WIDTH, scrollHeight)
-    end
-
-    if presetPanel.listContent then
-        presetPanel.listContent:SetSize(LIST_WIDTH, GetListContentHeight(#names))
-    end
-
-    SetPanelHeightExpandDown(presetPanel, HEADER_HEIGHT + 4 + bodyHeight + PANEL_PADDING)
+    layoutDropdown = addon.ForeverUI.CreateDropdown(parent, {
+        style = "wow1",
+        width = width or 300,
+        placeholder = L["Custom Layout"],
+        get = CurrentLayoutName,
+        builder = function()
+            local items = {}
+            for _, name in ipairs(PositionPresets:GetSortedNames()) do
+                items[#items + 1] = { value = name, text = name }
+            end
+            return items
+        end,
+        set = AskLoad,
+    })
+    layoutDropdown.OpenMenu = OpenLayoutMenu
+    return layoutDropdown
 end
 
 function PositionPresets:RefreshPanel()
-    if not presetPanel then
-        return
-    end
-
-    ClearPresetRows()
-
-    if not presetPanel.listContent then
-        return
-    end
-
-    local names = self:GetSortedNames()
-    local content = presetPanel.listContent
-
-    if #names == 0 then
-        if not presetPanel.emptyLabel then
-            presetPanel.emptyLabel = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-            presetPanel.emptyLabel:SetPoint("TOPLEFT", 0, 0)
-            presetPanel.emptyLabel:SetWidth(LIST_WIDTH)
-            presetPanel.emptyLabel:SetJustifyH("LEFT")
-        end
-        presetPanel.emptyLabel:SetText(L["No position presets saved yet."])
-        presetPanel.emptyLabel:Show()
-    else
-        if presetPanel.emptyLabel then
-            presetPanel.emptyLabel:Hide()
-        end
-
-        local btnWidth = LIST_WIDTH - 56
-
-        for index, presetName in ipairs(names) do
-            local row = CreateFrame("Frame", nil, content)
-            row:SetSize(LIST_WIDTH, ROW_HEIGHT)
-            row:SetPoint("TOPLEFT", 0, -((index - 1) * ROW_HEIGHT))
-
-            local loadButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-            loadButton:SetSize(btnWidth, ROW_HEIGHT - 2)
-            loadButton:SetPoint("LEFT", 0, 0)
-            loadButton:SetText(presetName)
-            StylePanelButton(loadButton)
-            loadButton:SetScript("OnClick", function()
-                local dialog = StaticPopup_Show("DRAGONUI_POSITION_PRESET_LOAD", presetName)
-                if dialog then
-                    dialog.data = presetName
-                end
-            end)
-            loadButton:SetScript("OnEnter", function(self)
-                ShowGameTooltip(self, presetName, L["Click to load"])
-            end)
-            loadButton:SetScript("OnLeave", function()
-                GameTooltip:Hide()
-            end)
-
-            local deleteButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-            deleteButton:SetSize(24, ROW_HEIGHT - 2)
-            deleteButton:SetPoint("LEFT", loadButton, "RIGHT", 4, 0)
-            deleteButton:SetText("x")
-            StylePanelButton(deleteButton)
-            deleteButton:SetScript("OnClick", function()
-                local dialog = StaticPopup_Show("DRAGONUI_POSITION_PRESET_DELETE", presetName)
-                if dialog then
-                    dialog.data = presetName
-                end
-            end)
-            deleteButton:SetScript("OnEnter", function(self)
-                ShowGameTooltip(self, L["Delete Preset"], presetName)
-            end)
-            deleteButton:SetScript("OnLeave", function()
-                GameTooltip:Hide()
-            end)
-
-            local exportButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-            exportButton:SetSize(24, ROW_HEIGHT - 2)
-            exportButton:SetPoint("LEFT", deleteButton, "RIGHT", 4, 0)
-            exportButton:SetText(">")
-            StylePanelButton(exportButton)
-            exportButton:SetScript("OnClick", function()
-                local exportString = PositionPresets:ExportToString(presetName)
-                if exportString then
-                    ShowExportFrame(presetName, exportString)
-                else
-                    addon:Print("|cFFFF4444[DragonUI]|r " .. L["Failed to export position preset."])
-                end
-            end)
-            exportButton:SetScript("OnEnter", function(self)
-                ShowGameTooltip(self, L["Export Preset"], presetName)
-            end)
-            exportButton:SetScript("OnLeave", function()
-                GameTooltip:Hide()
-            end)
-
-            presetRows[#presetRows + 1] = row
-        end
-    end
-
-    self:UpdatePanelHeight()
-end
-
-function PositionPresets:CollapseMenu()
-    menuExpanded = false
-    if not presetPanel then
-        return
-    end
-
-    presetPanel.bodyFrame:Hide()
-    SetPanelHeightExpandDown(presetPanel, HEADER_HEIGHT)
-    if presetPanel.toggleButton then
-        presetPanel.toggleButton:SetText("|cff888888+|r")
+    if layoutDropdown then
+        layoutDropdown:Refresh()
     end
 end
 
-function PositionPresets:ExpandMenu()
-    menuExpanded = true
-    if not presetPanel then
-        return
+function PositionPresets:CloseDialogs()
+    if importExportFrame then
+        importExportFrame:Hide()
     end
-
-    presetPanel.bodyFrame:Show()
-    if presetPanel.toggleButton then
-        presetPanel.toggleButton:SetText("|cff888888-|r")
+    if addon.Menu then
+        addon.Menu.Close()
     end
-    self:RefreshPanel()
+    for _, which in ipairs({ "LOAD", "DELETE", "SAVE_NAME", "IMPORT_NAME" }) do
+        StaticPopup_Hide("DRAGONUI_POSITION_PRESET_" .. which)
+    end
 end
 
-function PositionPresets:ToggleMenu()
-    if menuExpanded then
-        self:CollapseMenu()
-    else
-        self:ExpandMenu()
-    end
+-- The old floating panel is gone; these keep external callers working against the editor manager.
+local function GetEditorMode()
+    return addon.EditorMode
 end
 
 function PositionPresets:CreatePanel()
-    if presetPanel then
-        return presetPanel
-    end
-
-    local panel = CreateFrame("Frame", "DragonUI_PositionPresetPanel", UIParent)
-    panel:SetSize(PANEL_WIDTH, HEADER_HEIGHT)
-    ApplyPanelPosition(panel)
-    panel:SetFrameStrata(EDITOR_UI_STRATA)
-    panel:SetFrameLevel(EDITOR_UI_LEVEL)
-    panel:SetClampedToScreen(true)
-    panel:EnableMouse(true)
-    panel:SetMovable(true)
-
-    local background = CreateFrame("Frame", nil, panel)
-    background:SetAllPoints(panel)
-    background:SetFrameLevel(panel:GetFrameLevel())
-    background:SetBackdrop(BD_PANEL)
-    background:SetBackdropColor(0.08, 0.08, 0.10, 0.92)
-    background:SetBackdropBorderColor(0.09, 0.52, 0.82, 0.8)
-    panel.background = background
-
-    local dragBar = CreateFrame("Frame", nil, panel)
-    dragBar:SetPoint("TOPLEFT", panel, "TOPLEFT", 4, -3)
-    dragBar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -30, -3)
-    dragBar:SetHeight(HEADER_HEIGHT - 6)
-    dragBar:SetFrameLevel(panel:GetFrameLevel() + 2)
-    dragBar:EnableMouse(true)
-    dragBar:RegisterForDrag("LeftButton")
-    dragBar:SetScript("OnDragStart", function()
-        panel:StartMoving()
-    end)
-    dragBar:SetScript("OnDragStop", function()
-        panel:StopMovingOrSizing()
-        SavePanelPosition()
-    end)
-
-    local dragTitle = dragBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    dragTitle:SetPoint("LEFT", dragBar, "LEFT", 8, 0)
-    dragTitle:SetTextColor(0.4, 0.8, 1)
-    dragTitle:SetText(L["Position Presets"])
-    panel.dragTitle = dragTitle
-
-    local toggleButton = CreateFrame("Button", "DragonUI_PositionPresetToggle", panel, "UIPanelButtonTemplate")
-    toggleButton:SetSize(24, HEADER_HEIGHT - 6)
-    toggleButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -4, -3)
-    toggleButton:SetText("|cff888888+|r")
-    toggleButton:SetFrameLevel(panel:GetFrameLevel() + 10)
-    StylePanelButton(toggleButton)
-    toggleButton:SetScript("OnClick", function()
-        PositionPresets:ToggleMenu()
-    end)
-    panel.toggleButton = toggleButton
-
-    dragBar:SetScript("OnEnter", function(self)
-        ShowGameTooltip(self, L["Position Presets"], L["Drag to move"])
-    end)
-    dragBar:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
-
-    local bodyFrame = CreateFrame("Frame", nil, panel)
-    bodyFrame:SetPoint("TOPLEFT", panel, "TOPLEFT", PANEL_PADDING, -(HEADER_HEIGHT + 4))
-    bodyFrame:SetWidth(CONTENT_WIDTH)
-    bodyFrame:SetHeight(SAVE_ROW_HEIGHT + MAX_LIST_HEIGHT + FOOTER_HEIGHT + 12)
-    bodyFrame:SetFrameLevel(panel:GetFrameLevel() + 4)
-    bodyFrame:Hide()
-    panel.bodyFrame = bodyFrame
-
-    local saveRow = CreateFrame("Frame", nil, bodyFrame)
-    saveRow:SetPoint("TOPLEFT", bodyFrame, "TOPLEFT", 0, 0)
-    saveRow:SetSize(CONTENT_WIDTH, SAVE_ROW_HEIGHT)
-    saveRow:SetFrameLevel(bodyFrame:GetFrameLevel())
-
-    local saveButtonWidth = 52
-    local nameInput = CreatePanelEditBox(saveRow, CONTENT_WIDTH - saveButtonWidth - 4)
-    nameInput:SetPoint("LEFT", saveRow, "LEFT", 0, 0)
-    nameInput:SetText(PositionPresets:UniqueName(L["Position Preset"]))
-    nameInput:SetScript("OnEnterPressed", function(self)
-        SaveFromPanelInput()
-        self:ClearFocus()
-    end)
-    nameInput:SetScript("OnEscapePressed", function(self)
-        self:ClearFocus()
-    end)
-    panel.nameInput = nameInput
-
-    local saveButton = CreateFrame("Button", nil, saveRow, "UIPanelButtonTemplate")
-    saveButton:SetSize(saveButtonWidth, SAVE_ROW_HEIGHT - 2)
-    saveButton:SetPoint("LEFT", nameInput, "RIGHT", 4, 0)
-    saveButton:SetText(L["Save"])
-    StylePanelButton(saveButton)
-    saveButton:SetScript("OnClick", SaveFromPanelInput)
-    panel.saveButton = saveButton
-
-    local scrollFrame = CreateFrame("ScrollFrame", "DragonUI_PositionPresetScroll", bodyFrame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", saveRow, "BOTTOMLEFT", 0, -4)
-    scrollFrame:SetSize(LIST_WIDTH, MAX_LIST_HEIGHT)
-    scrollFrame:SetFrameLevel(bodyFrame:GetFrameLevel() + 2)
-    panel.scrollFrame = scrollFrame
-
-    local listContent = CreateFrame("Frame", nil, scrollFrame)
-    listContent:SetSize(LIST_WIDTH, MAX_LIST_HEIGHT)
-    scrollFrame:SetScrollChild(listContent)
-    panel.listContent = listContent
-
-    local importButton = CreateFrame("Button", nil, bodyFrame, "UIPanelButtonTemplate")
-    importButton:SetSize(LIST_WIDTH, ROW_HEIGHT - 2)
-    importButton:SetPoint("TOPLEFT", scrollFrame, "BOTTOMLEFT", 0, -4)
-    importButton:SetText(L["Import Preset"])
-    StylePanelButton(importButton)
-    importButton:SetScript("OnClick", ShowImportFrame)
-    panel.importButton = importButton
-
-    panel:Hide()
-    presetPanel = panel
-    return panel
+    local mode = GetEditorMode()
+    return mode and mode:GetManager()
 end
 
 function PositionPresets:ShowPanel()
-    local panel = self:CreatePanel()
-    self:CollapseMenu()
-    panel:Show()
+    local mode = GetEditorMode()
+    if mode and mode:IsActive() then
+        mode:ShowManager()
+    end
 end
 
 function PositionPresets:HidePanel()
-    if presetPanel then
-        self:CollapseMenu()
-        presetPanel:Hide()
+    self:CloseDialogs()
+    local mode = GetEditorMode()
+    if mode then
+        mode:HideManager()
     end
 end
 
 function PositionPresets:IsPanelShown()
-    return presetPanel and presetPanel:IsShown()
+    local mode = GetEditorMode()
+    local manager = mode and mode:IsActive() and mode:GetManager()
+    return manager and not not manager:IsShown() or false
+end
+
+function PositionPresets:ExpandMenu()
+    if layoutDropdown and not (addon.Menu and addon.Menu.IsOpenFor(layoutDropdown)) then
+        layoutDropdown:OpenMenu()
+    end
+end
+
+function PositionPresets:CollapseMenu()
+    if layoutDropdown and addon.Menu and addon.Menu.IsOpenFor(layoutDropdown) then
+        addon.Menu.Close()
+    end
+end
+
+function PositionPresets:ToggleMenu()
+    if layoutDropdown then
+        layoutDropdown:OpenMenu()
+    end
 end

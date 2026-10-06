@@ -932,12 +932,18 @@ local function BuildVisibilityTab(scroll)
     C:AddToggle(enableSection, {
         label = LO["Right Bar"],
         dbPath = "actionbars.right_enabled",
-        callback = RefreshVisibility,
+        callback = function(value)
+            -- Blizzard greys the left bar out and turns it off with the right one.
+            if not value then C:SetDBValue("actionbars.left_enabled", false) end
+            RefreshVisibility()
+            Panel:SelectTab("actionbars")
+        end,
     })
 
     C:AddToggle(enableSection, {
         label = LO["Left Bar"],
         dbPath = "actionbars.left_enabled",
+        disabled = function() return C:GetDBValue("actionbars.right_enabled") == false end,
         callback = RefreshVisibility,
     })
 

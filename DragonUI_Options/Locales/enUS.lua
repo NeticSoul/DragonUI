@@ -1149,6 +1149,7 @@ L["Only Mine"] = true
 L["Each listed spell can decide whose casts it shows, whatever 'Only My Debuffs' says."] = true
 L["Click an entry to select it."] = true
 L["Click to select."] = true
+L["Click to select"] = true
 L["Remove Spell"] = true
 L["Select a spell above to choose whose casts it shows."] = true
 L["Name & Health"] = true

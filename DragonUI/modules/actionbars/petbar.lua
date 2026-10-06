@@ -198,8 +198,15 @@ end
 local function UpdateAnchorPosition()
     if not IsModuleEnabled() then return end
     if not PetbarModule.anchor then return end
-    -- Skip repositioning while editor mode is active (user may be dragging the anchor)
-    if addon.EditorMode and addon.EditorMode:IsActive() and not addon._positionPresetApply then return end
+    -- In the editor only a bar still at its automatic spot follows the bars below; one being moved is left alone.
+    if addon.EditorMode and addon.EditorMode:IsActive() and not addon._positionPresetApply then
+        local anchor = PetbarModule.anchor
+        local moving = (IsMouseButtonDown("LeftButton") and GetMouseFocus() == anchor)
+            or anchor.DragonUI_WasDragged or anchor.DragonUI_WasAdjustedByEditor
+        if moving or not (addon.IsWidgetAtDefaultPosition and addon.IsWidgetAtDefaultPosition("petbar")) then
+            return
+        end
+    end
     
     -- Check if we have a saved widget position first
     local widgetConfig = addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.petbar

@@ -287,7 +287,7 @@ local function SyncTooltipEditorPreviewLayout()
     end
 
     anchorFrame:SetFrameStrata(GameTooltip:GetFrameStrata() or "TOOLTIP")
-    anchorFrame:SetFrameLevel((GameTooltip:GetFrameLevel() or 1) + 20)
+    anchorFrame:SetFrameLevel((GameTooltip:GetFrameLevel() or 1) + 100)
 end
 
 local function ShowTooltipEditorPreview()
@@ -301,6 +301,8 @@ local function ShowTooltipEditorPreview()
         anchorFrame.editorText:SetPoint("BOTTOM", anchorFrame, "BOTTOM", 0, 6)
     end
 
+    -- Below the editor windows (FULLSCREEN_DIALOG), which a TOOLTIP-strata preview would cover.
+    GameTooltip:SetFrameStrata("FULLSCREEN")
     GameTooltip:SetOwner(anchorFrame, "ANCHOR_NONE")
     GameTooltip:ClearAllPoints()
     GameTooltip:SetPoint("BOTTOMRIGHT", anchorFrame, "BOTTOMRIGHT", 0, 0)
@@ -320,8 +322,11 @@ local function HideTooltipEditorPreview()
         anchorFrame:SetSize(180, 50)
     end
 
-    if GameTooltip and GameTooltip:IsShown() then
-        GameTooltip:Hide()
+    if GameTooltip then
+        GameTooltip:SetFrameStrata("TOOLTIP")
+        if GameTooltip:IsShown() then
+            GameTooltip:Hide()
+        end
     end
 end
 

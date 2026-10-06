@@ -1,11 +1,11 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
-local addon = select(2, ...)
+local FUI = DragonUI and DragonUI.ForeverUI
 
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI then return end
 
-local Type, Version = "DragonUIRowList", 2
+local Type, Version = "DragonUIRowList", 3
 if (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end
 
 local pairs, floor, max = pairs, math.floor, math.max
@@ -158,6 +158,12 @@ local methods = {
             row:SetScript("OnClick", Row_OnClick)
             row:EnableMouse(not self.disabled)
 
+            local hover = FUI and FUI.GetAtlas("options_list_hover")
+            if hover then
+                row:SetHighlightTexture(hover[1], "BLEND")
+                row:GetHighlightTexture():SetTexCoord(hover[4], hover[5], hover[6], hover[7])
+            end
+
             local text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
             text:SetPoint("LEFT", 2, 0)
             text:SetPoint("RIGHT", -2, 0)
@@ -191,6 +197,9 @@ local function Constructor()
     scroll:SetPoint("TOPLEFT")
     scroll:SetPoint("BOTTOMRIGHT", -BAR_WIDTH, 0)
     scroll:SetScript("OnVerticalScroll", OnVerticalScroll)
+    if FUI then
+        FUI.SkinScrollBar(scroll)
+    end
 
     local widget = {
         frame = frame,

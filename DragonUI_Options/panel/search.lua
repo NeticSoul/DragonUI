@@ -36,6 +36,23 @@ function Panel:NormalizeSearchQuery(q)
     return q
 end
 
+-- Live search from the first character: short text lists only the top results (no stall), 3+ the full list.
+function Panel:QueueLiveSearch(text)
+    if self._suppressSearch then return end
+    text = self:NormalizeSearchQuery(text)
+    if text == self._queuedText then return end
+    self._queuedText = text
+    local debounce = self.searchDebounce
+    if not debounce then return end
+    if text == "" and not self._lastRenderedQuery then
+        debounce:Hide()
+        return
+    end
+    self._pendingQuery = text
+    debounce.elapsed = 0
+    debounce:Show()
+end
+
 function Panel:RunSearchQuery(q)
     q = self:NormalizeSearchQuery(q)
     if q == "" then
@@ -195,7 +212,7 @@ local function HighlightTokens(text, tokens)
     for i = #merged, 1, -1 do
         local m = merged[i]
         result = result:sub(1, m.s - 1)
-               .. "|cffFFDD44"
+               .. "|cff" .. Controls.Theme.accentHex
                .. result:sub(m.s, m.e)
                .. "|r"
                .. result:sub(m.e + 1)
@@ -208,7 +225,8 @@ end
 -- ============================================================================
 
 local PULSE_DURATION = 2.0
-local PULSE_ALPHA    = 0.75
+local PULSE_ALPHA    = 0.5  -- the overlay covers the widget text, so keep it translucent
+local PULSE_R, PULSE_G, PULSE_B = 1, 0.82, 0
 
 local function PulseAlpha(t)
     if t < 0.5 then
@@ -233,7 +251,7 @@ local function EnsureOverlay()
     local tex = f:CreateTexture(nil, "OVERLAY")
     tex:SetAllPoints()
     tex:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    tex:SetVertexColor(0.09, 0.52, 0.82, 0)
+    tex:SetVertexColor(PULSE_R, PULSE_G, PULSE_B, 0)
     f._tex = tex
     _overlay = f
     return f
@@ -246,7 +264,7 @@ pulseFrame:SetScript("OnUpdate", function(self, dt)
     local t = self.elapsed
     if t >= PULSE_DURATION or not _overlay then
         if _overlay then
-            _overlay._tex:SetVertexColor(0.09, 0.52, 0.82, 0)
+            _overlay._tex:SetVertexColor(PULSE_R, PULSE_G, PULSE_B, 0)
             _overlay:Hide()
             _overlay:SetParent(UIParent)
         end
@@ -254,7 +272,7 @@ pulseFrame:SetScript("OnUpdate", function(self, dt)
         return
     end
     local alpha = PulseAlpha(t)
-    _overlay._tex:SetVertexColor(0.09, 0.52, 0.82, alpha)
+    _overlay._tex:SetVertexColor(PULSE_R, PULSE_G, PULSE_B, alpha)
 end)
 
 local highlightDefer = CreateFrame("Frame", nil, UIParent)
@@ -339,7 +357,7 @@ function Panel:CancelHighlight()
         highlightDefer:Hide()
     end
     if _overlay then
-        _overlay._tex:SetVertexColor(0.09, 0.52, 0.82, 0)
+        _overlay._tex:SetVertexColor(PULSE_R, PULSE_G, PULSE_B, 0)
         _overlay:Hide()
         _overlay:SetParent(UIParent)
     end
@@ -354,7 +372,7 @@ local function StartPulse(widgetFrame)
     hl:ClearAllPoints()
     hl:SetPoint("TOPLEFT", widgetFrame, "TOPLEFT", -4, 4)
     hl:SetPoint("BOTTOMRIGHT", widgetFrame, "BOTTOMRIGHT", 4, -4)
-    hl._tex:SetVertexColor(0.09, 0.52, 0.82, 0)
+    hl._tex:SetVertexColor(PULSE_R, PULSE_G, PULSE_B, 0)
     hl:Show()
     pulseFrame.elapsed = 0
     pulseFrame:Show()
@@ -452,7 +470,7 @@ end
 -- FONT HELPER
 -- ============================================================================
 
-local SEARCH_RESULT_FONT_SIZE = 14
+local SEARCH_RESULT_FONT_SIZE = 12
 
 local function SafeSetFont(fs, size, flags, preferredFont)
     if not fs then return end
@@ -496,8 +514,9 @@ function Panel:ShowSearchResults(query)
     Controls:ClearSearchFontTags(scroll)
     scroll:ReleaseChildren()
 
-    if self.frame and self.frame.content then
-        scroll.content:SetWidth(self.frame.content:GetWidth() - 32)
+    if self.frame then
+        scroll.content:SetWidth(self:GetScrollContentWidth())
+        self:SetHeaderTitle(SEARCH)
     end
 
     if scroll.frame then scroll.frame:Show() end
@@ -522,6 +541,7 @@ function Panel:ShowSearchResults(query)
         scroll:AddChild(msg)
         ApplySearchResultFont(msg)
         scroll:DoLayout()
+        self:EnforceLayers()
         if scroll.scrollbar then scroll.scrollbar:SetValue(0) end
         if self.reskinFrame then
             self.reskinFrame.elapsed = 0
@@ -533,7 +553,7 @@ function Panel:ShowSearchResults(query)
     for _, entry in ipairs(results) do
         local pathParts = { entry.tabText }
         if entry.section then pathParts[2] = entry.section end
-        local breadcrumb = "|cff3d6b8a" .. table.concat(pathParts, "  >>  ") .. "|r"
+        local breadcrumb = "|cffa8895a" .. table.concat(pathParts, "  >>  ") .. "|r"
 
         local highlightedLabel = HighlightTokens(entry.label, tokens)
 
@@ -551,7 +571,7 @@ function Panel:ShowSearchResults(query)
             local hl = row.frame:CreateTexture(nil, "BACKGROUND")
             hl:SetAllPoints()
             hl:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-            hl:SetVertexColor(0.15, 0.45, 0.75, 0.18)
+            hl:SetVertexColor(PULSE_R, PULSE_G, PULSE_B, 0.12)
             hl:Hide()
             row.frame._searchHover = hl
         end
@@ -591,6 +611,7 @@ function Panel:ShowSearchResults(query)
     end
 
     scroll:DoLayout()
+    self:EnforceLayers()
     if scroll.scrollbar then scroll.scrollbar:SetValue(0) end
 
     if self.reskinFrame then

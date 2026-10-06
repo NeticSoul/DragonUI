@@ -4,8 +4,9 @@
 ================================================================================
 DragonUI Options Panel - Main Frame
 ================================================================================
-Custom dark-themed options panel. Built with raw frames, not AceGUI containers.
-Individual controls still use AceGUI widgets (skinned by controls.lua).
+Forever-style settings window: metal frame, category list on the left, header with
+title and divider, AceGUI scroll on the right. Individual controls still use AceGUI
+widgets (skinned by controls.lua).
 ================================================================================
 ]]
 
@@ -16,6 +17,8 @@ local LO = addon.LO
 
 local AceGUI = LibStub("AceGUI-3.0")
 
+local FUI = addon.ForeverUI
+
 -- ============================================================================
 -- PANEL MODULE
 -- ============================================================================
@@ -23,10 +26,10 @@ local AceGUI = LibStub("AceGUI-3.0")
 local Panel = {}
 addon.OptionsPanel = Panel
 
-Panel.frame      = nil    -- raw Frame
+Panel.frame      = nil    -- window frame
 Panel.tabs       = {}     -- { key = { text, builder, order } }
 Panel.tabOrder   = {}     -- ordered keys
-Panel.tabButtons = {}     -- visual tab buttons
+Panel.tabButtons = {}     -- category list buttons
 Panel.currentTab = nil
 Panel.scrollWidget = nil  -- current AceGUI ScrollFrame inside content
 
@@ -34,82 +37,54 @@ Panel.scrollWidget = nil  -- current AceGUI ScrollFrame inside content
 Panel.subTabSetters = Panel.subTabSetters or {}
 
 -- ============================================================================
--- THEME
+-- LAYOUT
 -- ============================================================================
 
-local T = {
-    bg        = { 0.06, 0.06, 0.08, 0.96 },
-    border    = { 0.20, 0.20, 0.22, 1 },
-    titleBg   = { 0.08, 0.08, 0.10, 1 },
-    tabNormal = { 0.12, 0.12, 0.14, 1 },
-    tabHover  = { 0.20, 0.20, 0.24, 1 },
-    tabActive = { 0.09, 0.52, 0.82, 1 },
-    accent    = { 0.09, 0.52, 0.82, 1 },
-    textWhite = { 1, 1, 1, 1 },
-    textDim   = { 0.55, 0.55, 0.55, 1 },
-    contentBg = { 0.09, 0.09, 0.11, 1 },
-    font      = (addon.Fonts and addon.Fonts.NARROW) or "Interface\\AddOns\\DragonUI_Options\\fonts\\PTSansNarrow.ttf",
-}
+local WINDOW_WIDTH      = 920
+local WINDOW_HEIGHT     = 700
+local WINDOW_MIN_WIDTH  = 760
+local WINDOW_MIN_HEIGHT = 520
+local WINDOW_MAX_WIDTH  = 1400
+local WINDOW_MAX_HEIGHT = 900
 
--- Translated labels overrun the pixel sizes below, which were picked against English.
-local TAB_MIN_WIDTH   = 136
-local TAB_MAX_WIDTH   = 196
-local TAB_TEXT_INSET  = 22
-local PILL_MIN_WIDTH  = 104
-local PILL_MAX_WIDTH  = 190
-local PILL_TEXT_INSET = 18
+-- The inner frame art draws its list divider at a fixed 197 from the left edge.
+local LIST_WIDTH       = 197
+local LIST_GAP         = 16
+local LIST_MARGIN_TOP  = 12
+local LIST_HEADER_H    = 30
+local ROW_X            = 7
+local ROW_WIDTH        = 183
+local ROW_HEIGHT       = 20
+local ROW_LABEL_INSET  = 36
+
+local INSET_SIDE       = 17
+local INSET_VERTICAL   = 106
+local CONTAINER_RIGHT  = 5
+local HEADER_HEIGHT    = 50
+local SCROLL_MARGIN    = 6
+
+-- Content width the AceGUI flow layout gets: container minus the margins and its own scroll bar.
+local SCROLL_CONTENT_OFFSET = 32
+
+local FOOTER_LEFT        = 22
+local FOOTER_RIGHT       = 16
+local FOOTER_GAP         = 6
+local FOOTER_BUTTON_W    = 110
+local FOOTER_BUTTON_PAD  = 28
+local FOOTER_BUTTON_MAX  = 190
+local CLOSE_BUTTON_W     = 96
+local FOOTER_TEXT_MARGIN = 14
 
 local function PanelControls()
     return addon.PanelControls
 end
 
--- No ClampText here: the pill label carries |cff..|r codes that a byte-wise cut would break.
-local function FitPill(button, fontString)
-    local PC = PanelControls()
-    if not PC then return end
-    button:SetWidth(PC.FitWidth(fontString, PILL_MIN_WIDTH, PILL_TEXT_INSET, PILL_MAX_WIDTH))
+local function GetVersion()
+    return addon.RELEASE_VERSION or "2.5"
 end
 
--- ============================================================================
--- BACKDROP TEMPLATES (3.3.5a)
--- ============================================================================
-
-local BD_MAIN = {
-    bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
-    edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
-    tile = false, edgeSize = 1,
-    insets = { left = 0, right = 0, top = 0, bottom = 0 },
-}
-
-local BD_INNER = {
-    bgFile   = "Interface\\ChatFrame\\ChatFrameBackground",
-    edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
-    tile = false, edgeSize = 1,
-    insets = { left = 0, right = 0, top = 0, bottom = 0 },
-}
-
--- Ensure FontStrings always get a valid font even if locale/custom font paths fail.
-local function SetSafeFont(fs, size, flags)
-    if not fs then return end
-
-    local tryFonts = {
-        T.font,
-        addon.Fonts and addon.Fonts.PRIMARY,
-        STANDARD_TEXT_FONT,
-        "Fonts\\FRIZQT__.TTF",
-    }
-
-    local ok = false
-    for _, fontPath in ipairs(tryFonts) do
-        if fontPath and fs:SetFont(fontPath, size or 12, flags or "") then
-            ok = true
-            break
-        end
-    end
-
-    if not ok then
-        fs:SetFontObject(GameFontNormal)
-    end
+local function GetTitle()
+    return LO["DragonUI"] .. " |cffffffff" .. GetVersion() .. "|r"
 end
 
 -- ============================================================================
@@ -134,241 +109,78 @@ function Panel:RegisterTab(key, text, builder, order)
 end
 
 -- ============================================================================
+-- CONTENT SIZING
+-- ============================================================================
+
+-- GetWidth can read 0 before the first layout pass, so fall back to the geometry we anchored.
+function Panel:GetScrollContentWidth()
+    local frame = self.frame
+    local width = frame and frame.content and frame.content:GetWidth()
+    if not width or width <= 0 then
+        local windowWidth = (frame and frame:GetWidth()) or WINDOW_WIDTH
+        width = windowWidth - 2 * INSET_SIDE - (1 + LIST_WIDTH) - LIST_GAP - CONTAINER_RIGHT
+    end
+    return width - SCROLL_CONTENT_OFFSET
+end
+
+function Panel:RefreshContentSize()
+    if self.scrollWidget then
+        self.scrollWidget.content:SetWidth(self:GetScrollContentWidth())
+        self.scrollWidget:DoLayout()
+    end
+end
+
+-- AceGUI builds frames under UIParent and reparents them, so strata and level must be re-asserted after a build.
+function Panel:EnforceLayers()
+    if self.frame then
+        FUI.EnforceLayering(self.frame)
+    end
+end
+
+function Panel:SetHeaderTitle(text)
+    local frame = self.frame
+    if frame and frame.headerTitle then
+        frame.headerTitle:SetText(text or "")
+    end
+end
+
+local function LayoutFooter()
+    local frame = Panel.frame
+    if not (frame and frame.commandsText) then return end
+    local text = frame.commandsText
+    text:SetText(frame.commandsFull)
+    local PC = PanelControls()
+    if not PC then return end
+    local used = frame.footerLeftWidth + FOOTER_RIGHT + CLOSE_BUTTON_W + 2 * FOOTER_TEXT_MARGIN
+    PC.ClampText(text, (frame:GetWidth() or WINDOW_WIDTH) - used)
+end
+
+-- ============================================================================
 -- CREATE FRAME
 -- ============================================================================
 
-local function CreatePanel()
-    -- Main frame
-    local f = CreateFrame("Frame", "DragonUIOptionsPanel", UIParent)
-    f:SetFrameStrata("DIALOG")
-    f:SetWidth(920)
-    f:SetHeight(650)
-    f:SetPoint("CENTER")
-    f:SetMovable(true)
-    f:EnableMouse(true)
-    f:SetClampedToScreen(true)
-    f:SetBackdrop(BD_MAIN)
-    f:SetBackdropColor(unpack(T.bg))
-    f:SetBackdropBorderColor(unpack(T.border))
+local function FitFooterButton(button)
+    local PC = PanelControls()
+    local fontString = button:GetFontString()
+    if PC and fontString then
+        button:SetWidth(PC.FitWidth(fontString, FOOTER_BUTTON_W, FOOTER_BUTTON_PAD, FOOTER_BUTTON_MAX))
+    end
+end
 
-    -- Drag
-    f:SetScript("OnMouseDown", function(self, btn)
-        if btn == "LeftButton" then self:StartMoving() end
-    end)
-    f:SetScript("OnMouseUp", function(self) self:StopMovingOrSizing() end)
-
-    -- Resize support
-    f:SetResizable(true)
-    f:SetMinResize(700, 450)
-    f:SetMaxResize(1400, 900)
-
-    -- Title bar
-    local titleBar = CreateFrame("Frame", nil, f)
-    titleBar:SetPoint("TOPLEFT", 1, -1)
-    titleBar:SetPoint("TOPRIGHT", -1, -1)
-    titleBar:SetHeight(32)
-    titleBar:SetBackdrop(BD_INNER)
-    titleBar:SetBackdropColor(unpack(T.titleBg))
-    titleBar:SetBackdropBorderColor(0, 0, 0, 0)
-
-    local titleText = titleBar:CreateFontString(nil, "OVERLAY")
-    SetSafeFont(titleText, 15, "OUTLINE")
-    titleText:SetPoint("LEFT", 12, 0)
-    titleText:SetText("|cff1784d1" .. LO["DragonUI"] .. "|r |cffaaaaaa2.5|r")
-
-    -- Editor Mode button (in title bar) - styled pill button with neon green border
-    local editorBtn = CreateFrame("Button", nil, titleBar)
-    editorBtn:SetSize(104, 22)
-    editorBtn:SetPoint("RIGHT", titleBar, "RIGHT", -36, 0)
-    editorBtn:SetBackdrop({
-        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-        edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
-        tile = false, edgeSize = 1,
-        insets = { left = 0, right = 0, top = 0, bottom = 0 },
-    })
-    editorBtn:SetBackdropColor(0.05, 0.12, 0.05, 1)
-    editorBtn:SetBackdropBorderColor(0.0, 0.9, 0.0, 0.7)
-    local editorText = editorBtn:CreateFontString(nil, "OVERLAY")
-    SetSafeFont(editorText, 11, "")
-    editorText:SetPoint("CENTER", 0, 0)
-    editorText:SetText("|cff00dd00" .. LO["Editor Mode"] .. "|r")
-    FitPill(editorBtn, editorText)
-    editorBtn:SetScript("OnClick", function()
-        Panel:Close()
-        if addon.EditorMode then addon.EditorMode:Toggle() end
-    end)
-    editorBtn:SetScript("OnEnter", function()
-        editorBtn:SetBackdropColor(0.0, 0.9, 0.0, 0.25)
-        editorBtn:SetBackdropBorderColor(0.0, 1.0, 0.0, 1.0)
-        editorText:SetText("|cff00ff00" .. LO["Editor Mode"] .. "|r")
-    end)
-    editorBtn:SetScript("OnLeave", function()
-        editorBtn:SetBackdropColor(0.05, 0.12, 0.05, 1)
-        editorBtn:SetBackdropBorderColor(0.0, 0.9, 0.0, 0.7)
-        editorText:SetText("|cff00dd00" .. LO["Editor Mode"] .. "|r")
-    end)
-
-    -- KeyBind Mode button (in title bar) - styled pill button with neon green border
-    local keybindBtn = CreateFrame("Button", nil, titleBar)
-    keybindBtn:SetSize(104, 22)
-    keybindBtn:SetPoint("RIGHT", editorBtn, "LEFT", -6, 0)
-    keybindBtn:SetBackdrop({
-        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-        edgeFile = "Interface\\ChatFrame\\ChatFrameBackground",
-        tile = false, edgeSize = 1,
-        insets = { left = 0, right = 0, top = 0, bottom = 0 },
-    })
-    keybindBtn:SetBackdropColor(0.05, 0.12, 0.05, 1)
-    keybindBtn:SetBackdropBorderColor(0.0, 0.9, 0.0, 0.7)
-    local keybindText = keybindBtn:CreateFontString(nil, "OVERLAY")
-    SetSafeFont(keybindText, 11, "")
-    keybindText:SetPoint("CENTER", 0, 0)
-    keybindText:SetText("|cff00dd00" .. LO["KeyBind Mode"] .. "|r")
-    FitPill(keybindBtn, keybindText)
-    keybindBtn:SetScript("OnClick", function()
-        Panel:Close()
-        if addon.KeyBindingModule and LibStub and LibStub("LibKeyBound-1.0", true) then
-            LibStub("LibKeyBound-1.0"):Toggle()
-        end
-    end)
-    keybindBtn:SetScript("OnEnter", function()
-        keybindBtn:SetBackdropColor(0.0, 0.9, 0.0, 0.25)
-        keybindBtn:SetBackdropBorderColor(0.0, 1.0, 0.0, 1.0)
-        keybindText:SetText("|cff00ff00" .. LO["KeyBind Mode"] .. "|r")
-    end)
-    keybindBtn:SetScript("OnLeave", function()
-        keybindBtn:SetBackdropColor(0.05, 0.12, 0.05, 1)
-        keybindBtn:SetBackdropBorderColor(0.0, 0.9, 0.0, 0.7)
-        keybindText:SetText("|cff00dd00" .. LO["KeyBind Mode"] .. "|r")
-    end)
-
-    -- Search (title bar)
-    local SEARCH_ICON_TEXTURE           = "Interface\\AddOns\\DragonUI_Options\\textures\\search_icon"
-    local SEARCH_ICON_HIGHLIGHT_TEXTURE = "Interface\\AddOns\\DragonUI_Options\\textures\\search_icon_highlight"
-    local SEARCH_ICON_SIZE = 18
-    local SEARCH_ICON_GAP  = 3
-
-    local searchBox = CreateFrame("EditBox", nil, titleBar)
-    searchBox:SetSize(180, 22)
-    searchBox:SetPoint("RIGHT", keybindBtn, "LEFT", -10, 0)
-    searchBox:SetBackdrop(BD_INNER)
-    searchBox:SetBackdropColor(0.10, 0.10, 0.12, 1)
-    searchBox:SetBackdropBorderColor(0.22, 0.22, 0.25, 1)
-    searchBox:SetAutoFocus(false)
+local function CreateSearchBox(f, container)
+    local searchBox = FUI.CreateSearchBox(f, 350, LO["Search settings..."])
+    searchBox:SetPoint("BOTTOMRIGHT", container, "TOPRIGHT", 4, 20)
     searchBox:SetMaxLetters(64)
-    searchBox:SetTextInsets(6, 6, 0, 0)
-    searchBox:SetTextColor(0.9, 0.9, 0.9, 1)
-    SetSafeFont(searchBox, 11, "")
-    searchBox:SetFrameLevel(titleBar:GetFrameLevel() + 5)
-
-    local function SearchBoxPulseStrength(t)
-        local peak = 0.75
-        if t < 0.5 then
-            return t / 0.5 * peak
-        elseif t < 1.0 then
-            return (1.0 - t) / 0.5 * peak
-        elseif t < 1.5 then
-            return (t - 1.0) / 0.5 * peak
-        elseif t < 2.0 then
-            return (2.0 - t) / 0.5 * peak
-        end
-        return 0
-    end
-
-    local function ApplySearchBoxPulse(strength)
-        local frac = strength / 0.75
-        local ac = T.accent
-        searchBox:SetBackdropBorderColor(
-            0.22 + (ac[1] - 0.22) * frac,
-            0.22 + (ac[2] - 0.22) * frac,
-            0.25 + (ac[3] - 0.25) * frac,
-            1)
-        searchBox:SetBackdropColor(
-            0.10 + (ac[1] - 0.10) * frac * 0.2,
-            0.10 + (ac[2] - 0.10) * frac * 0.2,
-            0.12 + (ac[3] - 0.12) * frac * 0.2,
-            1)
-    end
-
-    local searchBoxPulse = CreateFrame("Frame", nil, titleBar)
-    searchBoxPulse:Hide()
-    searchBoxPulse:SetScript("OnUpdate", function(self, elapsed)
-        self.elapsed = (self.elapsed or 0) + elapsed
-        local t = self.elapsed
-        if t >= 2.0 then
-            self:Hide()
-            searchBox:SetBackdropBorderColor(0.22, 0.22, 0.25, 1)
-            searchBox:SetBackdropColor(0.10, 0.10, 0.12, 1)
-            return
-        end
-        ApplySearchBoxPulse(SearchBoxPulseStrength(t))
-    end)
-
-    local function StartSearchBoxPulse()
-        searchBoxPulse.elapsed = 0
-        searchBoxPulse:Show()
-    end
-
-    local searchIconBtn = CreateFrame("Button", nil, titleBar)
-    searchIconBtn:SetSize(SEARCH_ICON_SIZE + 4, SEARCH_ICON_SIZE + 4)
-    searchIconBtn:SetPoint("RIGHT", searchBox, "LEFT", -SEARCH_ICON_GAP, 0)
-    searchIconBtn:SetFrameLevel(searchBox:GetFrameLevel())
-
-    local searchIcon = searchIconBtn:CreateTexture(nil, "ARTWORK")
-    searchIcon:SetTexture(SEARCH_ICON_TEXTURE)
-    searchIcon:SetSize(SEARCH_ICON_SIZE, SEARCH_ICON_SIZE)
-    searchIcon:SetPoint("CENTER")
-
-    local searchIconHighlight = searchIconBtn:CreateTexture(nil, "OVERLAY")
-    searchIconHighlight:SetTexture(SEARCH_ICON_HIGHLIGHT_TEXTURE)
-    searchIconHighlight:SetSize(SEARCH_ICON_SIZE, SEARCH_ICON_SIZE)
-    searchIconHighlight:SetPoint("CENTER", searchIcon, "CENTER", 0, 0)
-    searchIconHighlight:Hide()
-
-    searchIconBtn:SetScript("OnClick", function()
-        searchBox:SetFocus()
-        StartSearchBoxPulse()
-    end)
-    searchIconBtn:SetScript("OnEnter", function(self)
-        searchIcon:Hide()
-        searchIconHighlight:Show()
-        GameTooltip:SetOwner(self, "ANCHOR_NONE")
-        GameTooltip:ClearAllPoints()
-        GameTooltip:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 80, 26)
-        GameTooltip:SetText(LO["Type to find a setting"], 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    searchIconBtn:SetScript("OnLeave", function()
-        searchIconHighlight:Hide()
-        searchIcon:Show()
-        GameTooltip:Hide()
-    end)
-
-    local searchPlaceholder = searchBox:CreateFontString(nil, "OVERLAY")
-    SetSafeFont(searchPlaceholder, 11, "ITALIC")
-    searchPlaceholder:SetPoint("LEFT", searchBox, "LEFT", 6, 0)
-    searchPlaceholder:SetText(LO["Search settings..."])
-    searchPlaceholder:SetTextColor(0.35, 0.35, 0.38, 1)
-    searchPlaceholder:Show()
+    searchBox:SetFrameLevel(f:GetFrameLevel() + 5)
 
     searchBox:SetScript("OnTextChanged", function(self)
-        if Panel._suppressSearch then return end
-        local text = self:GetText()
-        if text == "" then
-            searchPlaceholder:Show()
-        else
-            searchPlaceholder:Hide()
-        end
-        Panel._pendingQuery = text
-        if Panel.searchDebounce then
-            Panel.searchDebounce.elapsed = 0
-            Panel.searchDebounce:Show()
-        end
+        Panel:QueueLiveSearch(self:GetText())
     end)
 
     searchBox:SetScript("OnEnterPressed", function(self)
         if Panel._suppressSearch then return end
         if Panel.searchDebounce then Panel.searchDebounce:Hide() end
+        Panel._queuedText = Panel:NormalizeSearchQuery(self:GetText())
         Panel:RunSearchQuery(self:GetText())
     end)
 
@@ -377,7 +189,6 @@ local function CreatePanel()
         self:SetText("")
         self:ClearFocus()
         Panel._suppressSearch = false
-        searchPlaceholder:Show()
         Panel._pendingQuery = ""
         Panel._lastRenderedQuery = nil
         if Panel.searchDebounce then Panel.searchDebounce:Hide() end
@@ -386,126 +197,174 @@ local function CreatePanel()
         end
     end)
 
-    f.searchBox         = searchBox
-    f.searchPlaceholder = searchPlaceholder
-    f.searchIcon          = searchIcon
-    f.searchIconHighlight = searchIconHighlight
-    f.searchIconBtn       = searchIconBtn
+    searchBox:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        GameTooltip:SetText(LO["Type to find a setting"], 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    searchBox:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
 
-    -- Close button
-    local closeBtn = CreateFrame("Button", nil, titleBar)
-    closeBtn:SetSize(20, 20)
-    closeBtn:SetPoint("RIGHT", -8, 0)
-    closeBtn:SetNormalFontObject(GameFontNormal)
+    return searchBox
+end
 
-    local closeTex = closeBtn:CreateFontString(nil, "OVERLAY")
-    SetSafeFont(closeTex, 16, "OUTLINE")
-    closeTex:SetPoint("CENTER", 0, 0)
-    closeTex:SetText("|cffccccccx|r")
-    closeBtn:SetScript("OnClick", function() Panel:Close() end)
-    closeBtn:SetScript("OnEnter", function() closeTex:SetText("|cffff4444x|r") end)
-    closeBtn:SetScript("OnLeave", function() closeTex:SetText("|cffccccccx|r") end)
+local function CreateFooter(f)
+    local closeButton = FUI.CreateButton(f, CLOSE, CLOSE_BUTTON_W, 22)
+    closeButton:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -FOOTER_RIGHT, 16)
+    closeButton:SetScript("OnClick", function()
+        PlaySound("igMainMenuClose")
+        Panel:Close()
+    end)
+    f.closeButton = closeButton
 
-    -- Accent line under title bar
-    local accent = f:CreateTexture(nil, "OVERLAY")
-    accent:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    accent:SetPoint("TOPLEFT", titleBar, "BOTTOMLEFT", 0, 0)
-    accent:SetPoint("TOPRIGHT", titleBar, "BOTTOMRIGHT", 0, 0)
-    accent:SetHeight(2)
-    accent:SetVertexColor(unpack(T.accent))
+    local editorButton = FUI.CreateButton(f, LO["Editor Mode"], FOOTER_BUTTON_W, 22)
+    editorButton:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", FOOTER_LEFT, 16)
+    FitFooterButton(editorButton)
+    editorButton:SetScript("OnClick", function()
+        Panel:Close()
+        if addon.EditorMode then addon.EditorMode:Toggle() end
+    end)
+    f.editorButton = editorButton
 
-    -- Tab strip (left side vertical)
-    local tabStrip = CreateFrame("Frame", nil, f)
-    tabStrip:SetPoint("TOPLEFT", 1, -35)
-    tabStrip:SetPoint("BOTTOMLEFT", 1, 1)
-    tabStrip:SetWidth(140)
-    tabStrip:SetBackdrop(BD_INNER)
-    tabStrip:SetBackdropColor(0.07, 0.07, 0.09, 1)
-    tabStrip:SetBackdropBorderColor(0, 0, 0, 0)
-    f.tabStrip = tabStrip
+    local keybindButton = FUI.CreateButton(f, LO["KeyBind Mode"], FOOTER_BUTTON_W, 22)
+    keybindButton:SetPoint("LEFT", editorButton, "RIGHT", FOOTER_GAP, 0)
+    FitFooterButton(keybindButton)
+    keybindButton:SetScript("OnClick", function()
+        Panel:Close()
+        if addon.KeyBindingModule and LibStub and LibStub("LibKeyBound-1.0", true) then
+            LibStub("LibKeyBound-1.0"):Toggle()
+        end
+    end)
+    f.keybindButton = keybindButton
 
-    -- Separator line between tabs and content
-    local sep = f:CreateTexture(nil, "OVERLAY")
-    sep:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    sep:SetPoint("TOPLEFT", tabStrip, "TOPRIGHT", 0, 0)
-    sep:SetPoint("BOTTOMLEFT", tabStrip, "BOTTOMRIGHT", 0, 0)
-    sep:SetWidth(1)
-    sep:SetVertexColor(unpack(T.border))
+    f.footerLeftWidth = FOOTER_LEFT + editorButton:GetWidth() + FOOTER_GAP + keybindButton:GetWidth()
 
-    -- Content area
-    local content = CreateFrame("Frame", nil, f)
-    content:SetPoint("TOPLEFT", tabStrip, "TOPRIGHT", 1, 0)
-    content:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -1, 1)
-    content:SetBackdrop(BD_INNER)
-    content:SetBackdropColor(unpack(T.contentBg))
-    content:SetBackdropBorderColor(0, 0, 0, 0)
-    f.content = content
+    local commands = f:CreateFontString(nil, "ARTWORK")
+    commands:SetFontObject(GameFontDisableSmall)
+    commands:SetJustifyH("LEFT")
+    commands:SetPoint("LEFT", keybindButton, "RIGHT", FOOTER_TEXT_MARGIN, 0)
+    f.commandsText = commands
+    f.commandsFull = LO["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"]
+end
 
-    -- Status bar at bottom
-    local statusText = f:CreateFontString(nil, "OVERLAY")
-    SetSafeFont(statusText, 11, "")
-    statusText:SetPoint("BOTTOM", f, "BOTTOM", 0, 4)
-    statusText:SetTextColor(0.4, 0.4, 0.4, 1)
-    statusText:SetText(LO["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"])
-
-    -- Resize grip (bottom-right corner)
-    local resizeGrip = CreateFrame("Frame", nil, f)
-    resizeGrip:SetSize(16, 16)
-    resizeGrip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 2)
-    resizeGrip:EnableMouse(true)
-    resizeGrip:SetFrameLevel(f:GetFrameLevel() + 10)
-
-    local gripTex = resizeGrip:CreateTexture(nil, "OVERLAY")
-    gripTex:SetAllPoints()
-    gripTex:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    gripTex:SetVertexColor(0.4, 0.4, 0.4, 0.5)
-
-    -- Draw diagonal grip lines
-    for i = 1, 3 do
-        local line = resizeGrip:CreateTexture(nil, "OVERLAY")
-        line:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-        line:SetVertexColor(0.6, 0.6, 0.6, 0.8)
-        line:SetSize(i * 4, 1)
-        line:SetPoint("BOTTOMRIGHT", resizeGrip, "BOTTOMRIGHT", -1, i * 4)
-    end
-
-    resizeGrip:SetScript("OnMouseDown", function(self, btn)
-        if btn == "LeftButton" then
+local function CreateResizeGrip(f)
+    local grip = CreateFrame("Button", nil, f)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -3, 3)
+    grip:SetFrameLevel(f:GetFrameLevel() + 12)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
             f:StartSizing("BOTTOMRIGHT")
         end
     end)
-    resizeGrip:SetScript("OnMouseUp", function(self)
+    grip:SetScript("OnMouseUp", function()
         f:StopMovingOrSizing()
-        -- Update scroll content width to match new panel size
-        if Panel.scrollWidget then
-            Panel.scrollWidget.content:SetWidth(f.content:GetWidth() - 32)
-            Panel.scrollWidget:DoLayout()
-        end
+        Panel:RefreshContentSize()
     end)
-    resizeGrip:SetScript("OnEnter", function()
-        gripTex:SetVertexColor(0.6, 0.6, 0.6, 0.8)
-    end)
-    resizeGrip:SetScript("OnLeave", function()
-        gripTex:SetVertexColor(0.4, 0.4, 0.4, 0.5)
-    end)
+    return grip
+end
 
-    f:SetScript("OnSizeChanged", function(self, w, h)
-        -- Live-update scroll content width during resize
-        if Panel.scrollWidget then
-            Panel.scrollWidget.content:SetWidth(self.content:GetWidth() - 32)
-            Panel.scrollWidget:DoLayout()
-        end
-    end)
+local function CreatePanel()
+    local height = math.min(WINDOW_HEIGHT, math.max(WINDOW_MIN_HEIGHT, math.floor((UIParent:GetHeight() or WINDOW_HEIGHT) - 40)))
 
-    -- ESC to close
-    tinsert(UISpecialFrames, "DragonUIOptionsPanel")
+    local f = FUI.CreateWindow("DragonUIOptionsPanel", UIParent, {
+        width    = WINDOW_WIDTH,
+        height   = height,
+        title    = GetTitle(),
+        inset    = true,
+        strata   = "DIALOG",
+        movable  = true,
+        escClose = true,
+        onClose  = function() Panel:Close() end,
+    })
+    f:SetPoint("CENTER")
+    f:SetResizable(true)
+    f:SetMinResize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+    f:SetMaxResize(WINDOW_MAX_WIDTH, WINDOW_MAX_HEIGHT)
+
+    local inset = f.Inset
+
+    local list = CreateFrame("Frame", nil, inset)
+    list:SetPoint("TOPLEFT", inset, "TOPLEFT", 1, -LIST_MARGIN_TOP)
+    list:SetPoint("BOTTOMLEFT", inset, "BOTTOMLEFT", 1, LIST_MARGIN_TOP)
+    list:SetWidth(LIST_WIDTH)
+    f.tabStrip = list
+
+    local header = FUI.CreateCategoryHeader(list)
+    header:SetPoint("TOPLEFT", list, "TOPLEFT", 0, 0)
+    header:SetIndex(1)
+    header:SetLabel(LO["DragonUI"])
+    f.listHeader = header
+
+    local content = CreateFrame("Frame", nil, inset)
+    content:SetPoint("TOPLEFT", list, "TOPRIGHT", LIST_GAP, 0)
+    content:SetPoint("BOTTOMRIGHT", inset, "BOTTOMRIGHT", -CONTAINER_RIGHT, LIST_MARGIN_TOP)
+    f.content = content
+
+    local headerTitle = content:CreateFontString(nil, "ARTWORK")
+    headerTitle:SetFontObject(FUI.Fonts.HighlightHuge)
+    headerTitle:SetJustifyH("LEFT")
+    headerTitle:SetPoint("TOPLEFT", content, "TOPLEFT", 7, -22)
+    headerTitle:SetPoint("TOPRIGHT", content, "TOPRIGHT", -7, -22)
+    f.headerTitle = headerTitle
+
+    local divider = FUI.CreateDivider(content)
+    divider:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -HEADER_HEIGHT)
+    divider:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -HEADER_HEIGHT)
+    divider:SetHeight(1)
+
+    local searchBox = CreateSearchBox(f, content)
+    f.searchBox         = searchBox
+    f.searchPlaceholder = searchBox.hint
+
+    -- Backup for the typed-text event: a 0.15 s text check that exists only while the box has focus.
+    local poll = CreateFrame("Frame", nil, f)
+    poll.idle = 0
+    poll:Hide()
+    poll:SetScript("OnUpdate", function(self, elapsed)
+        self.idle = self.idle + elapsed
+        if self.idle < 0.15 then return end
+        self.idle = 0
+        Panel:QueueLiveSearch(searchBox:GetText())
+    end)
+    searchBox:HookScript("OnEditFocusGained", function(self)
+        Panel._queuedText = Panel:NormalizeSearchQuery(self:GetText())
+        poll.idle = 0
+        poll:Show()
+    end)
+    searchBox:HookScript("OnEditFocusLost", function() poll:Hide() end)
+    searchBox:HookScript("OnHide", function() poll:Hide() end)
+
+    CreateFooter(f)
+    CreateResizeGrip(f)
+
+    f:SetScript("OnSizeChanged", function()
+        Panel:RefreshContentSize()
+        LayoutFooter()
+    end)
 
     return f
 end
 
 -- ============================================================================
--- BUILD TAB BUTTONS (vertical strip)
+-- BUILD TAB BUTTONS (category list)
 -- ============================================================================
+
+local function ShowTabTooltip(self)
+    if self.fullText and self.Label:GetText() ~= self.fullText then
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(self.fullText, 1, 1, 1)
+        GameTooltip:Show()
+    end
+end
+
+local function HideTabTooltip()
+    GameTooltip:Hide()
+end
 
 local function BuildTabButtons()
     -- Clear old
@@ -515,82 +374,42 @@ local function BuildTabButtons()
     end
     wipe(Panel.tabButtons)
 
-    local strip = Panel.frame.tabStrip
-    local yOff = -8
+    local frame = Panel.frame
+    local list = frame.tabStrip
+    local PC = PanelControls()
+    local y = -(LIST_HEADER_H + 4)
 
     for _, key in ipairs(Panel.tabOrder) do
         local tabInfo = Panel.tabs[key]
-        local btn = CreateFrame("Button", nil, strip)
-        btn:SetSize(136, 26)
-        btn:SetPoint("TOPLEFT", strip, "TOPLEFT", 2, yOff)
-
-        -- Background
-        local bg = btn:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-        bg:SetVertexColor(unpack(T.tabNormal))
-        btn.bg = bg
-
-        -- Active indicator bar
-        local indicator = btn:CreateTexture(nil, "OVERLAY")
-        indicator:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-        indicator:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
-        indicator:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, 0)
-        indicator:SetWidth(3)
-        indicator:SetVertexColor(unpack(T.accent))
-        indicator:Hide()
-        btn.indicator = indicator
-
-        -- Text
-        local text = btn:CreateFontString(nil, "OVERLAY")
-        SetSafeFont(text, 12, "")
-        text:SetPoint("LEFT", 10, 0)
-        text:SetPoint("RIGHT", -10, 0)
-        text:SetJustifyH("LEFT")
-        text:SetText(tabInfo.text)
-        text:SetTextColor(0.7, 0.7, 0.7, 1)
-        btn.text = text
-
+        local btn = FUI.CreateCategoryButton(list)
+        btn:SetSize(ROW_WIDTH, ROW_HEIGHT)
+        btn:SetPoint("TOPLEFT", list, "TOPLEFT", ROW_X, y)
+        btn:SetText(tabInfo.text)
+        btn.fullText = tabInfo.text
         btn.tabKey = key
-        btn:SetScript("OnClick", function()
-            Panel:SelectTab(key)
-        end)
-        btn:SetScript("OnEnter", function(self)
+        if PC then
+            PC.ClampText(btn.Label, ROW_WIDTH - ROW_LABEL_INSET - 6)
+        end
+
+        btn:SetScript("OnClick", function(self)
             if Panel.currentTab ~= self.tabKey then
-                self.bg:SetVertexColor(unpack(T.tabHover))
-                self.text:SetTextColor(1, 1, 1, 1)
+                PlaySound("igMainMenuOptionCheckBoxOn")
             end
+            Panel:SelectTab(self.tabKey)
         end)
-        btn:SetScript("OnLeave", function(self)
-            if Panel.currentTab ~= self.tabKey then
-                self.bg:SetVertexColor(unpack(T.tabNormal))
-                self.text:SetTextColor(0.7, 0.7, 0.7, 1)
-            end
-        end)
+        btn:HookScript("OnEnter", ShowTabTooltip)
+        btn:HookScript("OnLeave", HideTabTooltip)
 
         Panel.tabButtons[key] = btn
-        yOff = yOff - 28
+        y = y - ROW_HEIGHT
     end
 
-    local PC = PanelControls()
-    if not PC then return end
-
-    local width = TAB_MIN_WIDTH
-    for _, key in ipairs(Panel.tabOrder) do
-        local btn = Panel.tabButtons[key]
-        if btn then
-            width = PC.FitWidth(btn.text, width, TAB_TEXT_INSET, TAB_MAX_WIDTH)
-        end
-    end
-
-    -- The content frame is anchored to the strip's right edge, so it follows on its own.
-    strip:SetWidth(width + 4)
-    for _, key in ipairs(Panel.tabOrder) do
-        local btn = Panel.tabButtons[key]
-        if btn then
-            btn:SetWidth(width)
-            PC.ClampText(btn.text, width - TAB_TEXT_INSET)
-        end
+    -- Every category must stay reachable: the list has no scroll of its own.
+    local needed = INSET_VERTICAL + 2 * LIST_MARGIN_TOP + LIST_HEADER_H + 4 + #Panel.tabOrder * ROW_HEIGHT
+    local minHeight = math.max(WINDOW_MIN_HEIGHT, needed)
+    frame:SetMinResize(WINDOW_MIN_WIDTH, minHeight)
+    if frame:GetHeight() < minHeight then
+        frame:SetHeight(minHeight)
     end
 end
 
@@ -600,16 +419,10 @@ end
 
 local function UpdateTabVisuals()
     for key, btn in pairs(Panel.tabButtons) do
-        if key == Panel.currentTab then
-            btn.bg:SetVertexColor(0.12, 0.12, 0.16, 1)
-            btn.text:SetTextColor(1, 1, 1, 1)
-            btn.indicator:Show()
-        else
-            btn.bg:SetVertexColor(unpack(T.tabNormal))
-            btn.text:SetTextColor(0.7, 0.7, 0.7, 1)
-            btn.indicator:Hide()
-        end
+        btn:SetSelected(key == Panel.currentTab)
     end
+    local info = Panel.currentTab and Panel.tabs[Panel.currentTab]
+    Panel:SetHeaderTitle(info and info.text or "")
 end
 
 -- ============================================================================
@@ -645,9 +458,6 @@ function Panel:SelectTab(key, highlight)
         self.frame.searchBox:ClearFocus()
         self._suppressSearch = false
         self._pendingQuery = nil
-        if self.frame.searchPlaceholder then
-            self.frame.searchPlaceholder:Show()
-        end
         if self.searchDebounce then
             self.searchDebounce:Hide()
             self.searchDebounce.elapsed = 0
@@ -678,13 +488,14 @@ function Panel:SelectTab(key, highlight)
     local sf = scroll.frame
     sf:SetParent(self.frame.content)
     sf:ClearAllPoints()
-    sf:SetPoint("TOPLEFT", self.frame.content, "TOPLEFT", 6, -6)
-    sf:SetPoint("BOTTOMRIGHT", self.frame.content, "BOTTOMRIGHT", -6, 6)
+    sf:SetPoint("TOPLEFT", self.frame.content, "TOPLEFT", SCROLL_MARGIN, -(HEADER_HEIGHT + SCROLL_MARGIN))
+    sf:SetPoint("BOTTOMRIGHT", self.frame.content, "BOTTOMRIGHT", -SCROLL_MARGIN, 4)
     sf:SetFrameStrata("DIALOG")
     sf:Show()
+    FUI.SkinScrollBar(scroll)
 
     -- Fix content area sizing
-    scroll.content:SetWidth(self.frame.content:GetWidth() - 32)
+    scroll.content:SetWidth(self:GetScrollContentWidth())
 
     self.scrollWidget = scroll
 
@@ -702,6 +513,7 @@ function Panel:SelectTab(key, highlight)
 
     -- DoLayout is synchronous; scroll/highlight can run immediately after.
     scroll:DoLayout()
+    self:EnforceLayers()
 
     if savedOffset and savedOffset ~= 0 then
         local status = scroll.status or scroll.localstatus
@@ -716,9 +528,7 @@ function Panel:SelectTab(key, highlight)
         self:HighlightSearchTarget(scroll, highlight)
     end
 
-    -- Deferred re-skin pass to fix vanilla texture bleed-through.
-    -- AceGUI widgets from the pool may have textures reset by OnAcquire/layout;
-    -- re-skinning after a short delay ensures our dark theme wins.
+    -- AceGUI recycles widgets, so dress them again once the layout has settled.
     if not Panel.reskinFrame then
         Panel.reskinFrame = CreateFrame("Frame")
         Panel.reskinFrame:Hide()
@@ -754,10 +564,11 @@ function Panel:Open(selectTab)
     if not self.frame then
         self.frame = CreatePanel()
         BuildTabButtons()
+        LayoutFooter()
     end
 
-    self.frame:Show()
     self.frame:SetFrameLevel(100)
+    self.frame:Show()
 
     local tab = selectTab or self.currentTab or (self.tabOrder[1] or nil)
     if tab then
@@ -786,9 +597,6 @@ function Panel:Close()
             self.frame.searchBox:SetText("")
             self.frame.searchBox:ClearFocus()
             self._suppressSearch = false
-            if self.frame.searchPlaceholder then
-                self.frame.searchPlaceholder:Show()
-            end
         end
         self._pendingQuery       = nil
         self._lastRenderedQuery  = nil
@@ -808,3 +616,15 @@ end
 function Panel:IsOpen()
     return self.frame and self.frame:IsShown()
 end
+
+-- Popups the panel opens must stay above its FULLSCREEN_DIALOG-strata AceGUI frames.
+hooksecurefunc("StaticPopup_Show", function()
+    if not Panel:IsOpen() then return end
+    for index = 1, STATICPOPUP_NUMDIALOGS or 4 do
+        local popup = _G["StaticPopup" .. index]
+        if popup and popup:IsShown() then
+            popup:SetFrameStrata("FULLSCREEN_DIALOG")
+            popup:Raise()
+        end
+    end
+end)
