@@ -620,6 +620,7 @@ function ForeverUI.CreateCategoryButton(parent)
     local button = CreateFrame("Button", nil, parent)
     button:SetSize(M.rowWidth, M.rowHeight)
     button._fuIndent = 0
+    button._fuLabelLeft = M.labelLeft
 
     button.Texture = button:CreateTexture(nil, "BACKGROUND")
     button.Texture:SetPoint("CENTER", button, "CENTER", 0, 0)
@@ -646,8 +647,13 @@ function ForeverUI.CreateCategoryButton(parent)
     end
     function button:SetIndent(indent)
         self._fuIndent = indent or 0
-        self.Label:SetPoint("TOPLEFT", self, "TOPLEFT", M.labelLeft + self._fuIndent, M.labelY)
+        self.Label:SetPoint("TOPLEFT", self, "TOPLEFT", self._fuLabelLeft + self._fuIndent, M.labelY)
         UpdateCategoryButton(self)
+    end
+    -- Rows with no +/- toggle can pull their text in from the toggle's room (default Metrics.category.labelLeft).
+    function button:SetLabelLeft(left)
+        self._fuLabelLeft = left
+        self.Label:SetPoint("TOPLEFT", self, "TOPLEFT", left + self._fuIndent, M.labelY)
     end
     function button:SetExpandable(expandable, expanded, onToggle)
         if not self.Toggle then

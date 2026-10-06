@@ -20,6 +20,9 @@ if not L then return end
 -- ============================================================================
 
 L["DragonUI"] = true
+L["Core"] = true
+L["Frames"] = true
+L["Interface"] = true
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = true
 L["Editor Mode"] = true
 L["Cannot open options during combat."] = true

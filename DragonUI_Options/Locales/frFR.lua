@@ -1292,6 +1292,9 @@ L["Force one icon on all enemy nameplates so you can position and size it. Set t
 
 -- Character Panel, Pets & Mounts and diagnostics
 L["DragonUI"] = "DragonUI"
+L["Core"] = "Principal"
+L["Frames"] = "Cadres"
+L["Interface"] = "Interface"
 L["Modern reskin of the Blizzard character window."] = "Refonte moderne de la fiche de personnage de Blizzard."
 L["Enable Character Panel"] = "Activer le panneau de personnage"
 L["Apply the DragonUI reskin to the character window."] = "Applique l'habillage DragonUI à la fenêtre de personnage."

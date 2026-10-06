@@ -24,6 +24,8 @@ local SEARCH_H = 22
 local SCROLL_GAP = 8
 local SCROLL_BAR_W = 17
 local SCROLL_MIN_THUMB = 23
+-- WoW maps a drag across (track - thumb): a thumb that fills the track leaves nothing to divide by and reads backwards.
+local SCROLL_MIN_TRAVEL = 12
 
 local function isEnabled(frame)
     local state = frame:IsEnabled()
@@ -1756,8 +1758,10 @@ local function paintThumb(state, name)
     SetAtlas(state.thumbMiddle, "minimal-scrollbar-small-thumb-middle" .. suffix, false)
 end
 
-local function updateThumbExtent(state)
-    local slider, scrollFrame = state.slider, state.scrollFrame
+-- The visible thumb is placed from the slider's value and dragged from the cursor, never through WoW's own
+-- drag math, which comes out backwards on some clients when the thumb nearly fills the track (#516).
+local function syncThumb(state)
+    local slider, scrollFrame, holder = state.slider, state.scrollFrame, state.thumb
     local trackHeight = slider:GetHeight() or 0
     if trackHeight <= 0 then
         return
@@ -1772,16 +1776,94 @@ local function updateThumbExtent(state)
             extent = floor(trackHeight * view / total + 0.5)
         end
     end
-    extent = max(SCROLL_MIN_THUMB, min(extent, trackHeight))
-    state.nativeThumb:SetSize(8, extent)
+    extent = min(max(SCROLL_MIN_THUMB, extent), max(1, trackHeight - SCROLL_MIN_TRAVEL))
+
+    local low, high = slider:GetMinMaxValues()
+    low, high = low or 0, high or 0
+    local travel = trackHeight - extent
+    state.travel = travel
+    holder:SetHeight(extent)
+    holder:ClearAllPoints()
+    if high - low <= 0 then
+        holder:Hide()
+        return
+    end
+    holder:Show()
+    holder:SetPoint("TOP", slider, "TOP", 0, -floor(travel * (slider:GetValue() - low) / (high - low) + 0.5))
 end
 
--- Track art is SCROLL_BAR_W wide even on an 8px pullout slider, so the hit rect widens to match.
-local function coverTrack(state)
-    local slider, base = state.slider, state.baseInsets
+-- Distance from the track's top to the cursor, in the slider's own units.
+local function cursorBelowTop(slider)
+    local top = slider:GetTop()
+    if not top then
+        return nil
+    end
+    local _, cursorY = GetCursorPosition()
+    return top - cursorY / slider:GetEffectiveScale()
+end
+
+local function setValueFromThumbTop(state, thumbTop)
+    local slider, travel = state.slider, state.travel or 0
+    local low, high = slider:GetMinMaxValues()
+    if travel <= 0 or not low or high <= low then
+        return
+    end
+    local ratio = thumbTop / travel
+    if ratio < 0 then
+        ratio = 0
+    elseif ratio > 1 then
+        ratio = 1
+    end
+    slider:SetValue(low + ratio * (high - low))
+end
+
+-- Polled rather than taken from OnMouseUp: releasing with the cursor off the bar never delivers it.
+local dragger = CreateFrame("Frame")
+dragger:Hide()
+dragger:SetScript("OnUpdate", function(self)
+    local state = self.state
+    if not state or not IsMouseButtonDown("LeftButton") then
+        self:Hide()
+        if state then
+            state.down = false
+            state.watcher:Show()
+        end
+        return
+    end
+    local cursor = cursorBelowTop(state.slider)
+    if cursor then
+        setValueFromThumbTop(state, cursor - (self.grab or 0))
+    end
+end)
+
+local function beginDrag(state)
+    local slider, holder = state.slider, state.thumb
+    local cursor = cursorBelowTop(slider)
+    if not cursor or not holder:IsShown() then
+        return
+    end
+    local thumbTop = (slider:GetTop() or 0) - (holder:GetTop() or slider:GetTop() or 0)
+    local grab = cursor - thumbTop
+    local height = holder:GetHeight() or 0
+    -- Pressing the bare track picks the thumb up by its middle instead of jumping by a page.
+    if grab < 0 or grab > height then
+        grab = height / 2
+    end
+    dragger.state, dragger.grab = state, grab
+    state.down = true
+    state.watcher:Show()
+    dragger:Show()
+    setValueFromThumbTop(state, cursor - grab)
+end
+
+-- The track art is SCROLL_BAR_W wide even on an 8px pullout slider: the grab area widens to match it.
+local function layoutGrabber(state)
+    local slider, base, grabber = state.slider, state.baseInsets, state.grabber
     local width = slider:GetWidth() or 0
     local pad = (width > 0 and width < SCROLL_BAR_W) and (SCROLL_BAR_W - width) / 2 or 0
-    slider:SetHitRectInsets(base[1] - pad, base[2] - pad, base[3], base[4])
+    grabber:ClearAllPoints()
+    grabber:SetPoint("TOPLEFT", slider, "TOPLEFT", base[1] - pad, -base[3])
+    grabber:SetPoint("BOTTOMRIGHT", slider, "BOTTOMRIGHT", pad - base[2], base[4])
 end
 
 local function findScrollParts(target)
@@ -1866,8 +1948,7 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
     state.nativeThumb = native
 
     local holder = CreateFrame("Frame", nil, slider)
-    holder:SetPoint("TOPLEFT", native, "TOPLEFT", 0, 0)
-    holder:SetPoint("BOTTOMRIGHT", native, "BOTTOMRIGHT", 0, 0)
+    holder:SetWidth(8)
     holder:SetFrameLevel(slider:GetFrameLevel() + 1)
     state.thumb = holder
     state.thumbTop = holder:CreateTexture(nil, "ARTWORK")
@@ -1897,7 +1978,13 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
         downButton:SetPoint("TOP", slider, "BOTTOM", 0, -gap)
     end
 
-    local kids = { { holder, 1 } }
+    -- The slider keeps the value and the range; this takes over its mouse, between the steppers.
+    local grabber = CreateFrame("Button", nil, slider)
+    grabber:SetFrameLevel(slider:GetFrameLevel() + 1)
+    state.grabber = grabber
+    slider:EnableMouse(false)
+
+    local kids = { { holder, 1 }, { grabber, 1 } }
     if upButton then
         kids[#kids + 1] = { upButton, 2 }
     end
@@ -1908,6 +1995,7 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
 
     local watcher = CreateFrame("Frame", nil, slider)
     watcher:Hide()
+    state.watcher = watcher
     watcher:SetScript("OnUpdate", function(self)
         local over = MouseIsOver(holder)
         paintThumb(state, state.down and "down" or (over and "over" or "up"))
@@ -1915,45 +2003,41 @@ local function buildScrollState(slider, scrollFrame, upButton, downButton, opts)
             self:Hide()
         end
     end)
-    slider:HookScript("OnEnter", function()
+    grabber:SetScript("OnEnter", function()
         watcher:Show()
     end)
-    slider:HookScript("OnLeave", function()
+    grabber:SetScript("OnLeave", function()
         if not state.down then
             watcher:Show()
         end
     end)
-    slider:HookScript("OnMouseDown", function()
-        state.down = true
-        watcher:Show()
+    grabber:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
+            beginDrag(state)
+        end
     end)
-    slider:HookScript("OnMouseUp", function()
-        state.down = false
-        watcher:Show()
-    end)
+
+    local function sync()
+        syncThumb(state)
+    end
+    slider:HookScript("OnValueChanged", sync)
+    -- Not every client's Slider has this script; the range also arrives through the scroll frame below.
+    pcall(slider.HookScript, slider, "OnMinMaxChanged", sync)
     slider:HookScript("OnSizeChanged", function()
-        coverTrack(state)
-        updateThumbExtent(state)
+        layoutGrabber(state)
+        syncThumb(state)
     end)
-    slider:HookScript("OnShow", function()
-        updateThumbExtent(state)
-    end)
+    slider:HookScript("OnShow", sync)
     if scrollFrame then
-        scrollFrame:HookScript("OnSizeChanged", function()
-            updateThumbExtent(state)
-        end)
-        scrollFrame:HookScript("OnScrollRangeChanged", function()
-            updateThumbExtent(state)
-        end)
+        scrollFrame:HookScript("OnSizeChanged", sync)
+        scrollFrame:HookScript("OnScrollRangeChanged", sync)
         local child = scrollFrame:GetScrollChild()
         if child then
-            child:HookScript("OnSizeChanged", function()
-                updateThumbExtent(state)
-            end)
+            child:HookScript("OnSizeChanged", sync)
         end
     end
-    coverTrack(state)
-    updateThumbExtent(state)
+    layoutGrabber(state)
+    syncThumb(state)
     return state
 end
 
@@ -1987,7 +2071,7 @@ function ForeverUI.SkinScrollBar(target, opts)
     elseif scrollFrame and not state.scrollFrame then
         state.scrollFrame = scrollFrame
     end
-    updateThumbExtent(state)
+    syncThumb(state)
     return slider
 end
 
@@ -2004,6 +2088,11 @@ function ForeverUI.BindScrollBar(scrollFrame, slider, step)
         end
     end
     slider:SetScript("OnValueChanged", function(self, value)
+        -- SetScript dropped the skin's hook, so the thumb follows the value from here.
+        local state = self._fuScroll
+        if state then
+            syncThumb(state)
+        end
         if self.fuSilent then
             return
         end

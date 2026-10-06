@@ -52,6 +52,15 @@ local function ModuleToggle(parent, opts)
     })
 end
 
+-- Sections of the individual module list; the titles are the options tab and group names (LO keys).
+local ADVANCED_SECTIONS = {
+    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "auraborders", "auracooldowns" } },
+    { title = "Bars", modules = { "mainbars", "vehicle", "stance", "petbar", "multicast", "extrabar1", "buttons", "cooldowns", "noop", "keybinding" } },
+    { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance" } },
+    { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "talents", "worldmap", "loot_skin" } },
+    { title = "Bags", modules = { "bagster", "bags_skin", "bagsort", "altmoney", "itemlevel", "itemquality" } },
+}
+
 -- ============================================================================
 -- MODULES TAB BUILDER
 -- ============================================================================
@@ -224,7 +233,7 @@ local function BuildModulesTab(scroll)
     C:AddLabel(advSection, "|cffFF6600" .. LO["Warning:"] .. "|r " .. LO["Individual overrides. The grouped toggles above take priority."], { color = C.Theme.warning })
     C:AddSpacer(advSection)
 
-    -- Generate toggles for all registered modules
+    -- Toggles for all registered modules, in sections named like the options groups and tabs they belong to.
     local MR = addon.ModuleRegistry
     if MR and MR.loadOrder then
         local hiddenAdvancedModules = {
@@ -238,24 +247,52 @@ local function BuildModulesTab(scroll)
             keypress = true,
         }
 
-        for _, moduleName in ipairs(MR.loadOrder) do
-            if not hiddenAdvancedModules[moduleName] then
+        local function AddAdvancedToggle(section, moduleName)
             local info = MR:GetInfo(moduleName)
-            if info then
-                -- displayName/description are already translated at registration time via addon.L
-                local displayLabel = info.displayName or moduleName
-                local displayDesc = info.description
-                if not displayDesc or displayDesc == "" then
-                    displayDesc = LO["Enable/disable "] .. displayLabel
-                end
-                ModuleToggle(advSection, {
-                    label = displayLabel,
-                    desc = displayDesc,
-                    moduleName = moduleName,
-                })
+            -- displayName/description are already translated at registration time via addon.L
+            local displayLabel = info.displayName or moduleName
+            local displayDesc = info.description
+            if not displayDesc or displayDesc == "" then
+                displayDesc = LO["Enable/disable "] .. displayLabel
             end
+            ModuleToggle(section, {
+                label = displayLabel,
+                desc = displayDesc,
+                moduleName = moduleName,
+            })
+        end
+
+        local function AddAdvancedSection(title, moduleNames)
+            local listed = {}
+            for _, moduleName in ipairs(moduleNames) do
+                if not hiddenAdvancedModules[moduleName] and MR:GetInfo(moduleName) then
+                    listed[#listed + 1] = moduleName
+                end
+            end
+            if #listed == 0 then return end
+            C:AddSpacer(scroll)
+            local section = C:AddSection(scroll, title)
+            for _, moduleName in ipairs(listed) do
+                AddAdvancedToggle(section, moduleName)
             end
         end
+
+        local placed = {}
+        for _, group in ipairs(ADVANCED_SECTIONS) do
+            for _, moduleName in ipairs(group.modules) do
+                placed[moduleName] = true
+            end
+            AddAdvancedSection(LO[group.title], group.modules)
+        end
+
+        -- A module no section lists still gets its toggle, so none can go missing.
+        local others = {}
+        for _, moduleName in ipairs(MR.loadOrder) do
+            if not placed[moduleName] then
+                others[#others + 1] = moduleName
+            end
+        end
+        AddAdvancedSection(_G.OTHER or "Other", others)
     else
         -- Fallback: show known modules from database defaults
         local knownModules = {

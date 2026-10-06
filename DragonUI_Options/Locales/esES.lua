@@ -20,6 +20,9 @@ if not L then return end
 -- ============================================================================
 
 L["DragonUI"] = "DragonUI"
+L["Core"] = "Principal"
+L["Frames"] = "Marcos"
+L["Interface"] = "Interfaz"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "Usa las pestañas de la izquierda para configurar módulos, barras de acción, marcos de unidad, minimapa y más."
 L["Editor Mode"] = "Modo Editor"
 L["Cannot open options during combat."] = "No se pueden abrir las opciones durante el combate."

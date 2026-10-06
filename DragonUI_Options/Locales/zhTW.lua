@@ -23,6 +23,9 @@ L["Arrow"] = "箭頭"
 -- ============================================================================
 
 L["DragonUI"] = "DragonUI"
+L["Core"] = "核心"
+L["Frames"] = "框架"
+L["Interface"] = "介面"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "使用左側標籤頁配置模組、動作條、單位框架、小地圖等。"
 L["Editor Mode"] = "編輯模式"
 L["Cannot open options during combat."] = "戰鬥中無法開啟選項。"

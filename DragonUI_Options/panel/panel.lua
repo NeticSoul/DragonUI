@@ -30,6 +30,7 @@ Panel.frame      = nil    -- window frame
 Panel.tabs       = {}     -- { key = { text, builder, order } }
 Panel.tabOrder   = {}     -- ordered keys
 Panel.tabButtons = {}     -- category list buttons
+Panel.groupHeaders = {}   -- category list banners after the first
 Panel.currentTab = nil
 Panel.scrollWidget = nil  -- current AceGUI ScrollFrame inside content
 
@@ -55,7 +56,9 @@ local LIST_HEADER_H    = 30
 local ROW_X            = 7
 local ROW_WIDTH        = 183
 local ROW_HEIGHT       = 20
-local ROW_LABEL_INSET  = 36
+local GROUP_GAP        = 12
+-- Row text starts where the "DragonUI" header text does (header label x 20 minus ROW_X).
+local ROW_LABEL_INSET  = 13
 
 local INSET_SIDE       = 17
 local INSET_VERTICAL   = 106
@@ -366,6 +369,41 @@ local function HideTabTooltip()
     GameTooltip:Hide()
 end
 
+-- Banners of the category list; a tab missing here is listed at the end of the last section.
+local TAB_GROUPS = {
+    { label = "Core", tabs = { "general", "modules", "enhancements", "profiles" } },
+    { label = "Frames", tabs = { "unitframes", "nameplates", "auras" } },
+    { label = "Bars", tabs = { "actionbars", "additionalbars", "xprepbars", "castbars" } },
+    { label = "Interface", tabs = { "minimap", "questtracker", "chat", "micromenu", "bags", "panels" } },
+}
+
+local function GroupedTabs()
+    local placed, groups = {}, {}
+    for _, group in ipairs(TAB_GROUPS) do
+        local keys = {}
+        for _, key in ipairs(group.tabs) do
+            if Panel.tabs[key] then
+                keys[#keys + 1] = key
+                placed[key] = true
+            end
+        end
+        if #keys > 0 then
+            groups[#groups + 1] = { label = group.label, keys = keys }
+        end
+    end
+    local last = groups[#groups]
+    if not last then
+        last = { label = TAB_GROUPS[1].label, keys = {} }
+        groups[1] = last
+    end
+    for _, key in ipairs(Panel.tabOrder) do
+        if not placed[key] then
+            table.insert(last.keys, key)
+        end
+    end
+    return groups
+end
+
 local function BuildTabButtons()
     -- Clear old
     for _, btn in pairs(Panel.tabButtons) do
@@ -373,39 +411,60 @@ local function BuildTabButtons()
         btn:SetParent(nil)
     end
     wipe(Panel.tabButtons)
+    for _, header in ipairs(Panel.groupHeaders) do
+        header:Hide()
+        header:SetParent(nil)
+    end
+    wipe(Panel.groupHeaders)
 
     local frame = Panel.frame
     local list = frame.tabStrip
     local PC = PanelControls()
-    local y = -(LIST_HEADER_H + 4)
+    local y = 0
 
-    for _, key in ipairs(Panel.tabOrder) do
-        local tabInfo = Panel.tabs[key]
-        local btn = FUI.CreateCategoryButton(list)
-        btn:SetSize(ROW_WIDTH, ROW_HEIGHT)
-        btn:SetPoint("TOPLEFT", list, "TOPLEFT", ROW_X, y)
-        btn:SetText(tabInfo.text)
-        btn.fullText = tabInfo.text
-        btn.tabKey = key
-        if PC then
-            PC.ClampText(btn.Label, ROW_WIDTH - ROW_LABEL_INSET - 6)
+    for index, group in ipairs(GroupedTabs()) do
+        local header = frame.listHeader
+        if index > 1 then
+            header = FUI.CreateCategoryHeader(list)
+            Panel.groupHeaders[#Panel.groupHeaders + 1] = header
         end
+        header:ClearAllPoints()
+        header:SetPoint("TOPLEFT", list, "TOPLEFT", 0, y)
+        header:SetIndex(index)
+        header:SetLabel(LO[group.label])
+        header:Show()
+        y = y - (LIST_HEADER_H + 4)
 
-        btn:SetScript("OnClick", function(self)
-            if Panel.currentTab ~= self.tabKey then
-                PlaySound("igMainMenuOptionCheckBoxOn")
+        for _, key in ipairs(group.keys) do
+            local tabInfo = Panel.tabs[key]
+            local btn = FUI.CreateCategoryButton(list)
+            btn:SetSize(ROW_WIDTH, ROW_HEIGHT)
+            btn:SetPoint("TOPLEFT", list, "TOPLEFT", ROW_X, y)
+            btn:SetLabelLeft(ROW_LABEL_INSET)
+            btn:SetText(tabInfo.text)
+            btn.fullText = tabInfo.text
+            btn.tabKey = key
+            if PC then
+                PC.ClampText(btn.Label, ROW_WIDTH - ROW_LABEL_INSET - 6)
             end
-            Panel:SelectTab(self.tabKey)
-        end)
-        btn:HookScript("OnEnter", ShowTabTooltip)
-        btn:HookScript("OnLeave", HideTabTooltip)
 
-        Panel.tabButtons[key] = btn
-        y = y - ROW_HEIGHT
+            btn:SetScript("OnClick", function(self)
+                if Panel.currentTab ~= self.tabKey then
+                    PlaySound("igMainMenuOptionCheckBoxOn")
+                end
+                Panel:SelectTab(self.tabKey)
+            end)
+            btn:HookScript("OnEnter", ShowTabTooltip)
+            btn:HookScript("OnLeave", HideTabTooltip)
+
+            Panel.tabButtons[key] = btn
+            y = y - ROW_HEIGHT
+        end
+        y = y - GROUP_GAP
     end
 
     -- Every category must stay reachable: the list has no scroll of its own.
-    local needed = INSET_VERTICAL + 2 * LIST_MARGIN_TOP + LIST_HEADER_H + 4 + #Panel.tabOrder * ROW_HEIGHT
+    local needed = INSET_VERTICAL + 2 * LIST_MARGIN_TOP - (y + GROUP_GAP)
     local minHeight = math.max(WINDOW_MIN_HEIGHT, needed)
     frame:SetMinResize(WINDOW_MIN_WIDTH, minHeight)
     if frame:GetHeight() < minHeight then

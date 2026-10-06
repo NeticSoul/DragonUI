@@ -24,6 +24,9 @@ L["Arrow"] = "화살표"
 -- ============================================================================
 
 L["DragonUI"] = "DragonUI"
+L["Core"] = "핵심"
+L["Frames"] = "프레임"
+L["Interface"] = "인터페이스"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "왼쪽 탭을 사용하여 모듈, 액션바, 유닛 프레임, 미니맵 등을 설정하세요."
 L["Editor Mode"] = "편집 모드"
 L["Cannot open options during combat."] = "전투 중 옵션 사용 불가"

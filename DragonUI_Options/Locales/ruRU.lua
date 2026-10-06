@@ -24,6 +24,9 @@ L["Arrow"] = "Стрелка"
 -- ============================================================================
 
 L["DragonUI"] = "DragonUI"
+L["Core"] = "Основное"
+L["Frames"] = "Рамки"
+L["Interface"] = "Интерфейс"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "Используйте вкладки слева для настройки модулей, панелей действий, фреймов, миникарты и многого другого."
 L["Editor Mode"] = "Режим редактора"
 L["Cannot open options during combat."] = "Невозможно открыть настройки во время боя."
