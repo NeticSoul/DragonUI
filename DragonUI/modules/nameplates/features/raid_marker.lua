@@ -114,7 +114,12 @@ function NP.widgets.ReflowTopOverlays(plateData)
             markerY = C.RAID_MARKER_OFFSET_Y_WITH_COMBO
         end
         native:ClearAllPoints()
-        native:SetPoint("TOP", hp, "TOP", markerX, markerY)
+        if headline and plateData.minaName then
+            -- Headline hides the bar, so neither beside nor above it lines up with the name.
+            native:SetPoint("BOTTOM", plateData.minaName, "TOP", 0, 2)
+        else
+            native:SetPoint("TOP", hp, "TOP", markerX, markerY)
+        end
         native:SetSize(C.RAID_MARKER_SIZE, C.RAID_MARKER_SIZE)
     end
 end
