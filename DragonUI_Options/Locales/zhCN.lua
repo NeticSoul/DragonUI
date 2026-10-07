@@ -1572,6 +1572,8 @@ L["HP Warning Threshold"] = "HP警告临界值"
 L["Percentage of HP at which the warning triggers."] = "HP触发警告的百分比。"
 L["Test Warning (3 sec)"] = "测试警告（3秒）"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "触发3秒的警告状态预览，以帮助你调整临界值。"
+L["Personal Resource Display"] = "个人资源显示"
+L["Add Health and Resource below your Character."] = "在你的角色下方添加生命值和资源。"
 
 -- Talents
 L["Talents"] = "天赋"

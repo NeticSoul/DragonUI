@@ -191,7 +191,27 @@ local defaults = {
                 anchor = "TOP",
                 posX = 0,
                 posY = -180
+            },
+            personalresource = {
+                anchor = "CENTER",
+                posX = 0,
+                posY = -110
             }
+        },
+        -- Personal Resource Display: settings (the enable flag is modules.personalresource.enabled)
+        personalresource = {
+            size = 100,           -- Frame scale in percent (editor slider 70-150)
+            bar_width = 100,      -- Width in percent of the 200-unit base (50-150)
+            health_height = 15,   -- Health bar height (10-30)
+            power_height = 15,    -- Power and alternate power bar height (10-30)
+            padding = 0,          -- Extra gap between bars on top of the 4-unit minimum (0-10)
+            opacity = 100,        -- Percent (50-100)
+            visibility = "always", -- always | combat | hidden
+            hide_health = false,
+            hide_power = false,
+            hide_alt_power = false, -- Druid mana while shapeshifted
+            class_color = false,  -- Health bar in the class colour
+            bar_text = false,     -- Percentage and value on the bars
         },
         -- Quest Tracker
         questtracker = {
@@ -891,6 +911,9 @@ local defaults = {
             },
             levelupenhance = {
                 enabled = true, -- Enhanced level-up notification with animated frame
+            },
+            personalresource = {
+                enabled = false, -- Small health and power bar under the character (settings in editor mode)
             },
             darkmode = {
                 enabled = false, -- Apply darker tinted textures to UI chrome

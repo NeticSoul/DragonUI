@@ -113,4 +113,7 @@
 
     <!-- Low HP Alert (screen-edge flash and sound on low health) -->
     <Script file="hp_low_alert.lua"/>
+
+    <!-- Personal Resource Display (small health and power bar under the character) -->
+    <Script file="personalresource.lua"/>
 </Ui>

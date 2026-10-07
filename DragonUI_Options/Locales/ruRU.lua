@@ -1575,6 +1575,8 @@ L["HP Warning Threshold"] = "Порог предупреждения HP"
 L["Percentage of HP at which the warning triggers."] = "Процент HP, при котором срабатывает предупреждение."
 L["Test Warning (3 sec)"] = "Тест предупреждения (3 сек.)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Запускает 3-секундный предпросмотр состояния предупреждения, чтобы помочь вам настроить порог."
+L["Personal Resource Display"] = "Индикатор личных ресурсов"
+L["Add Health and Resource below your Character."] = "Добавляет здоровье и ресурс под вашим персонажем."
 
 -- Talents
 L["Talents"] = "Таланты"

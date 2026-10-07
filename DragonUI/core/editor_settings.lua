@@ -373,6 +373,12 @@ end
 R.extrabarToggle = function()
     if addon.RefreshExtrabarSystem then addon.RefreshExtrabarSystem() end
 end
+R.personalResource = function()
+    if addon.RefreshPersonalResource then addon.RefreshPersonalResource() end
+end
+R.personalResourceToggle = function()
+    if addon.RefreshPersonalResourceSystem then addon.RefreshPersonalResourceSystem() end
+end
 
 E.refresh = R
 
@@ -437,6 +443,11 @@ local function Slider(labelKey, path, min, max, step, refresh, o)
         hidden = o.hidden,
         disabled = o.disabled,
         needsOverlayResize = o.resize and true or false,
+        hideValue = o.hideValue,
+        minTextKey = o.minText,
+        minText = o.minText and Label(o.minText) or nil,
+        maxTextKey = o.maxText,
+        maxText = o.maxText and Label(o.maxText) or nil,
     }
     local apply = o.set or function(value)
         SetDB(path, value)
@@ -1672,6 +1683,30 @@ E.Register("lfgframe", { settings = {
         end }),
 } })
 
+-- Forever's rows minus its class-resource ones (Camelot loads none); the alternate bar is Druid mana.
+E.Register("personalresource", { settings = {
+    Slider(T("Size"), "personalresource.size", 70, 150, 10, R.personalResource, { format = "%d%%" }),
+    Slider(T("Bar Width"), "personalresource.bar_width", 50, 150, 10, R.personalResource, {
+        hideValue = true, minText = T("Narrow"), maxText = T("Wide") }),
+    Slider(T("Health Bar Height"), "personalresource.health_height", 10, 30, 1, R.personalResource, {
+        hideValue = true, minText = T("Short"), maxText = T("Tall") }),
+    Slider(T("Power Bar Height"), "personalresource.power_height", 10, 30, 1, R.personalResource, {
+        hideValue = true, minText = T("Short"), maxText = T("Tall") }),
+    Slider(T("Padding"), "personalresource.padding", 0, 10, 1, R.personalResource),
+    Slider(T("Opacity"), "personalresource.opacity", 50, 100, 1, R.personalResource, { format = "%d%%" }),
+    Drop(T("Visibility"), "personalresource.visibility", {
+        { "always", T("Always") },
+        { "combat", T("In Combat") },
+        { "hidden", T("Hidden") },
+    }, R.personalResource),
+    Check(T("Hide Health Bar"), "personalresource.hide_health", R.personalResource),
+    Check(T("Hide Power Bar"), "personalresource.hide_power", R.personalResource),
+    Check(T("Hide Alternate Power Bar"), "personalresource.hide_alt_power", R.personalResource, {
+        hidden = NotDruid }),
+    Check(T("Show Class Color"), "personalresource.class_color", R.personalResource),
+    Check(T("Show Bar Text"), "personalresource.bar_text", R.personalResource),
+} })
+
 -- ============================================================================
 -- DEFINITIONS: EDITOR MANAGER (global settings, not tied to one frame)
 -- ============================================================================
@@ -1786,6 +1821,9 @@ E.Register("__manager", { settings = {
     Drop(T("Elite Dragons"), "unitframe.dragon_style", STYLE_ITEMS, R.skins),
     Check(T("Center Names"), "unitframe.center_names", R.skins, {
         hidden = function() return not ForeverLevelStyle() end }),
+    Check(T("Personal Resource Display"), "modules.personalresource.enabled", R.personalResourceToggle, {
+        tooltip = T("Add Health and Resource below your Character."),
+        after = function() E.SyncFrames(); E.Rebuild() end }),
 
     Section(T("Action Bars"), true),
     Check(T("Bottom Left Bar"), "actionbars.bottom_left_enabled", R.barToggle),
@@ -1881,6 +1919,8 @@ function E.RefreshLabels()
         for _, row in ipairs(def.settings) do
             if row.labelKey then row.label = Label(row.labelKey) end
             if row.tooltipKey then row.tooltip = Label(row.tooltipKey) end
+            if row.minTextKey then row.minText = Label(row.minTextKey) end
+            if row.maxTextKey then row.maxText = Label(row.maxTextKey) end
             if type(row.items) == "table" then
                 for _, item in ipairs(row.items) do
                     if item.textKey then item.text = ItemText(item) end

@@ -330,6 +330,8 @@ RowKinds.slider = {
         control:SetLabel(Resolve(def.label) or "")
         control:SetRange(def.min or 0, def.max or 1, def.step or 0.01)
         control:SetFormat(def.format)
+        control:SetValueHidden(def.hideValue)
+        row.height = control:SetEndTexts(Resolve(def.minText), Resolve(def.maxText))
     end,
     refresh = function(row)
         local control = row.control

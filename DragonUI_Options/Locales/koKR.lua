@@ -1576,6 +1576,8 @@ L["HP Warning Threshold"] = "HP 경고 임계값"
 L["Percentage of HP at which the warning triggers."] = "경고가 트리거되는 HP 비율."
 L["Test Warning (3 sec)"] = "경고 테스트 (3초)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "임계값을 조정하는 데 도움이 되는 3초 미리보기 경고 상태를 트리거합니다."
+L["Personal Resource Display"] = "개인 자원 표시"
+L["Add Health and Resource below your Character."] = "캐릭터 아래에 생명력과 자원을 표시합니다."
 
 -- Talents
 L["Talents"] = "특성"

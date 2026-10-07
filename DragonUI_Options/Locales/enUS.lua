@@ -1559,6 +1559,8 @@ L["HP Warning Threshold"] = true
 L["Percentage of HP at which the warning triggers."] = true
 L["Test Warning (3 sec)"] = true
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = true
+L["Personal Resource Display"] = true
+L["Add Health and Resource below your Character."] = true
 
 -- Talents
 L["Talents"] = true

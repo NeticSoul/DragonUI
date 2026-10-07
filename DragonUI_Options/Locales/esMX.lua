@@ -1572,6 +1572,8 @@ L["HP Warning Threshold"] = "Umbral de Advertencia de HP"
 L["Percentage of HP at which the warning triggers."] = "Porcentaje de HP en el que se activa la advertencia."
 L["Test Warning (3 sec)"] = "Probar Advertencia (3 seg)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Activa una vista previa de 3 segundos del estado de advertencia para ayudarte a ajustar el umbral."
+L["Personal Resource Display"] = "Visualización de recursos personales"
+L["Add Health and Resource below your Character."] = "Añade salud y recurso bajo tu personaje."
 
 -- Talents
 L["Talents"] = "Talentos"

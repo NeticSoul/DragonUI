@@ -467,6 +467,40 @@ function SliderMethods:Step(direction)
     end
 end
 
+-- Forever's slider rows can drop the number and name the two ends of the track instead.
+function SliderMethods:SetValueHidden(hidden)
+    hidden = hidden and true or false
+    local slider = self.slider
+    slider:ClearAllPoints()
+    slider:SetPoint("TOPLEFT", self, "TOPLEFT", self.sliderLeft, 0)
+    slider:SetPoint("TOPRIGHT", self, "TOPRIGHT", -(hidden and SLIDER_INSET or (SLIDER_VALUE_W + SLIDER_INSET)), 0)
+    if self.valueText then
+        if hidden then
+            self.valueText:Hide()
+        else
+            self.valueText:Show()
+        end
+    end
+end
+
+-- Returns the row height this needs: 38 with end texts, the plain row otherwise.
+function SliderMethods:SetEndTexts(minText, maxText)
+    if (minText or maxText) and not self.minText then
+        self.minText = self:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        self.minText:SetPoint("TOP", self.slider, "BOTTOMLEFT", 0, 6)
+        self.maxText = self:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        self.maxText:SetPoint("TOP", self.slider, "BOTTOMRIGHT", 0, 6)
+    end
+    if self.minText then
+        self.minText:SetText(minText or "")
+        self.maxText:SetText(maxText or "")
+    end
+
+    local height = (minText or maxText) and 38 or ROW_H
+    self:SetHeight(height)
+    return height
+end
+
 function SliderMethods:Enable()
     self.enabled = true
     self.slider:EnableMouse(true)
@@ -529,7 +563,7 @@ function ForeverUI.CreateSlider(parent, opts)
     if opts.label then
         local labelWidth = opts.labelWidth or LABEL_W
         frame.label = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-        frame.label:SetPoint("LEFT", frame, "LEFT", 0, 0)
+        frame.label:SetPoint("LEFT", frame, "TOPLEFT", 0, -ROW_H / 2)
         frame.label:SetWidth(labelWidth)
         frame.label:SetJustifyH("LEFT")
         frame.labelRoom = labelWidth
@@ -539,10 +573,11 @@ function ForeverUI.CreateSlider(parent, opts)
 
     local slider = CreateFrame("Slider", nil, frame)
     slider:SetOrientation("HORIZONTAL")
-    slider:SetPoint("TOPLEFT", frame, "TOPLEFT", leftOffset + SLIDER_INSET, 0)
-    slider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -(SLIDER_VALUE_W + SLIDER_INSET), 0)
-    slider.owner = frame
     frame.slider = slider
+    frame.sliderLeft = leftOffset + SLIDER_INSET
+    slider:SetHeight(ROW_H)
+    slider.owner = frame
+    frame:SetValueHidden(false)
     frame.bar = createBar(slider)
     setThumb(slider)
 

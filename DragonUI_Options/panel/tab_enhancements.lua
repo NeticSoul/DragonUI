@@ -583,6 +583,24 @@ local function BuildEnhancementsTab(scroll)
     })
 
     -- ====================================================================
+    -- PERSONAL RESOURCE DISPLAY
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local prdSection = C:AddSection(scroll, LO["Personal Resource Display"])
+
+    C:AddToggle(prdSection, {
+        label = LO["Personal Resource Display"],
+        desc = LO["Add Health and Resource below your Character."],
+        getFunc = function() return GetModuleField("personalresource", "enabled") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("personalresource")
+            addon.db.profile.modules.personalresource.enabled = val
+            if addon.RefreshPersonalResourceSystem then addon.RefreshPersonalResourceSystem() end
+        end,
+        requiresReload = false,
+    })
+
+    -- ====================================================================
     -- ENHANCED TOOLTIPS
     -- ====================================================================
     C:AddSpacer(scroll)
