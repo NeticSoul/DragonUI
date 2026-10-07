@@ -68,6 +68,9 @@ UF.SKINS = {
         small = {
             background = { file = ART .. "HD\\TargetofTarget-BACKGROUND", w = 128, h = 64, x = -0.5, y = -0.5 },
             border = { file = ART .. "HD\\TargetofTarget-BORDER", w = 128, h = 64, x = -0.5, y = -0.5 },
+            -- Pet glows: the party's ToT glow, 1.25 right and 0.25 up of the border like there, ring on the portrait.
+            flash = { file = ART .. "HD\\Party-InCombat", w = 114, h = 47, x = 0.75, y = 8.25,
+                      tc = { 0, 228 / 256, 0, 94 / 128 } },
         },
         -- Retail's party shares the ToT's contour, so the HD ToT pair serves; all TOPLEFT on the party frame.
         party = {
@@ -182,6 +185,7 @@ do
         small = {
             background = art(d.small.background, "TargetofTarget-BACKGROUND"),
             border = art(d.small.border, "TargetofTarget-BORDER"),
+            flash = d.small.flash,
         },
         -- Forever's own party cell (1x only, upscaled by the generator), registered by its ring.
         party = {

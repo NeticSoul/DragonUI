@@ -79,7 +79,6 @@ UF.TEXTURES = {
     pet = {
         SMALL_FRAME_PATH = "Interface\\Addons\\DragonUI\\Textures\\UnitFrames\\Small\\",
         UNITFRAME_PATH   = "Interface\\Addons\\DragonUI\\Textures\\UnitFrames\\Bars\\",
-        ATLAS_TEXTURE    = "Interface\\Addons\\DragonUI\\Textures\\UnitFrames\\uiunitframe",
         TOT_BASE         = "UI-HUD-UnitFrame-TargetofTarget-PortraitOn-",
         -- Pre-computed power textures (same as smallStyle BAR_PREFIX + power name)
         POWER_TEXTURES = {
@@ -89,7 +88,6 @@ UF.TEXTURES = {
             ENERGY      = "Interface\\Addons\\DragonUI\\Textures\\UnitFrames\\Bars\\UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-Energy",
             RUNIC_POWER = "Interface\\Addons\\DragonUI\\Textures\\UnitFrames\\Bars\\UI-HUD-UnitFrame-TargetofTarget-PortraitOn-Bar-RunicPower",
         },
-        COMBAT_TEX_COORDS = {0.3095703125, 0.4208984375, 0.3125, 0.404296875},
     },
 
     -- Shared class icon texture (used by class portrait system)

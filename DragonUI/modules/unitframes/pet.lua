@@ -25,10 +25,8 @@ local hooksecurefunc = hooksecurefunc
 local PET_TEX = UF.TEXTURES.pet
 local SMALL_FRAME_PATH = PET_TEX.SMALL_FRAME_PATH
 local UNITFRAME_PATH = PET_TEX.UNITFRAME_PATH
-local ATLAS_TEXTURE = PET_TEX.ATLAS_TEXTURE
 local TOT_BASE = PET_TEX.TOT_BASE
 local POWER_TEXTURES = PET_TEX.POWER_TEXTURES
-local COMBAT_TEX_COORDS = PET_TEX.COMBAT_TEX_COORDS
 local DEFAULT_ATTACH_X = 18
 local DEFAULT_ATTACH_Y = -80
 
@@ -155,15 +153,11 @@ local function ConfigureCombatMode()
     local texture = _G.PetAttackModeTexture
     if not texture then return end
     
-    texture:SetTexture(ATLAS_TEXTURE)
-    texture:SetTexCoord(unpack(COMBAT_TEX_COORDS))
+    UF.ApplySkinPiece(texture, UF.GetFrameSkin().small.flash, 'LEFT', PetPortrait, 'CENTER', -24, -9)
     texture:SetVertexColor(1.0, 0.0, 0.0, 1.0)  -- Initial color
     texture:SetBlendMode("ADD")
     texture:SetAlpha(0.8)  -- Fixed alpha
     texture:SetDrawLayer("OVERLAY", 9)
-    texture:ClearAllPoints()
-    texture:SetPoint('CENTER', PetFrame, 'CENTER', -7, -1)
-    texture:SetSize(114, 47)
     
     --  RESET TIMER
     combatPulseTimer = 0
@@ -196,21 +190,24 @@ local function ConfigurePetThreatGlow()
     local threatFlash = _G.PetFrameFlash
     if not threatFlash then return end
     
-    -- Apply custom texture and coordinates
-    threatFlash:SetTexture(ATLAS_TEXTURE)  
-    threatFlash:SetTexCoord(unpack(COMBAT_TEX_COORDS))
-   
-    
+    UF.ApplySkinPiece(threatFlash, UF.GetFrameSkin().small.flash, 'LEFT', PetPortrait, 'CENTER', -24, -9)
+
     -- Alpha, not Hide: UnitFrame_UpdateThreatIndicator owns Show/Hide and the threat color.
     local config = addon.db and addon.db.profile.unitframe.pet
     threatFlash:SetAlpha((config and config.enableThreatGlow == false) and 0 or 1)
     threatFlash:SetDrawLayer("OVERLAY", 10)
-    
-    -- Position relative to pet frame
-    threatFlash:ClearAllPoints()
-    threatFlash:SetPoint("CENTER", PetFrame, "CENTER", -7, -1)  
-    threatFlash:SetSize(114, 47)  
 end
+-- The border sits on PetFrameHealthBar, a child frame, so PetFrame's own glows drew under it; Forever draws them over.
+local function RaisePetGlows()
+    if moduleState.frame.glowLayer then return end
+    local layer = CreateFrame("Frame", nil, PetFrame)
+    layer:SetAllPoints(PetFrame)
+    layer:SetFrameLevel(math.max(PetFrameHealthBar:GetFrameLevel(), PetFrameManaBar:GetFrameLevel()) + 1)
+    _G.PetAttackModeTexture:SetParent(layer)
+    _G.PetFrameFlash:SetParent(layer)
+    moduleState.frame.glowLayer = layer
+end
+
 -- ===============================================================
 -- FRAME SETUP
 -- ===============================================================
@@ -386,6 +383,8 @@ local function ReplaceBlizzardPetFrame()
         PetFrameManaBar.DragonUI_TexCoordHooked = true
     end
     
+    RaisePetGlows()
+
     -- Configure combat mode
     ConfigureCombatMode()
     if not moduleState.hooks.combatMode then
