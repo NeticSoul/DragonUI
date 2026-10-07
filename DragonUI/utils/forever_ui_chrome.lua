@@ -28,12 +28,28 @@ Colors.grayHex = Colors.grayHex or "808080"
 local Fonts = ForeverUI.Fonts or {}
 ForeverUI.Fonts = Fonts
 
+-- A font object left without a usable face makes every SetText raise "Font not set".
+local function Draws(font)
+    local probe = UIParent:CreateFontString(nil, "BACKGROUND")
+    probe:SetFontObject(font)
+    local ok = pcall(probe.SetText, probe, "A")
+    probe:Hide()
+    return ok
+end
+
 local function MakeFont(name, base, size)
     local font = CreateFont(name)
     font:CopyFontObject(base)
     local path, _, flags = base:GetFont()
     if path then
         font:SetFont(path, size, flags)
+    end
+    -- On CJK clients the base's own path can leave the copy faceless (#519): try the locale font, then the base.
+    if not Draws(font) then
+        font:SetFont(addon.Fonts.PRIMARY, size, flags)
+        if not Draws(font) then
+            return base
+        end
     end
     return font
 end
