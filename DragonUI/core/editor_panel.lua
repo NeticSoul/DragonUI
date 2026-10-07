@@ -1124,6 +1124,32 @@ local function CreateNudgeButton(parent, iconName, rotated, dx, dy)
     return button
 end
 
+-- Digits, one leading minus and one decimal point; IME full-width forms and decimal commas are converted first.
+local function SanitizeCoordinate(text)
+    text = text:gsub("\239\188([\144-\153])", function(digit) return string.char(digit:byte() - 96) end)
+    text = text:gsub("\239\188\141", "-"):gsub("\226\136\146", "-")
+    text = text:gsub("\239\188[\140\142]", "."):gsub(",", ".")
+    local negative = text:find("^%s*%-") ~= nil
+    text = text:gsub("[^%d%.]", "")
+    local dot = text:find(".", 1, true)
+    if dot then
+        text = text:sub(1, dot) .. text:sub(dot + 1):gsub("%.", "")
+    end
+    return (negative and "-" or "") .. text
+end
+
+local function FilterCoordinateInput(box, userInput)
+    if not userInput then return end
+    local text = box:GetText() or ""
+    local clean = SanitizeCoordinate(text)
+    if clean ~= text then
+        -- The cursor counts characters, and a full-width IME digit is three bytes.
+        local cursor = SanitizeCoordinate(addon.ForeverUI.CharPrefix(text, box:GetCursorPosition() or #text))
+        box:SetText(clean)
+        box:SetCursorPosition(#cursor)
+    end
+end
+
 local function CreateCoordRow(set, labelText, minus, plus)
     local row = NewHolder(set)
     local label = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
@@ -1134,9 +1160,9 @@ local function CreateCoordRow(set, labelText, minus, plus)
 
     local box = addon.ForeverUI.CreateEditBox(row, 80, 20)
     box:SetPoint("LEFT", row, "LEFT", LABEL_WIDTH + 10, 0)
-    box:SetJustifyH("CENTER")
     box:SetMaxLetters(10)
     box:SetScript("OnEnterPressed", ApplyTypedCoordinates)
+    box:SetScript("OnTextChanged", FilterCoordinateInput)
 
     local back = CreateNudgeButton(row, minus.icon, minus.rotated, minus.dx, minus.dy)
     back:SetPoint("LEFT", box, "RIGHT", 10, 0)

@@ -768,6 +768,7 @@ local function charPrefix(text, count)
     end
     return text:sub(1, position - 1)
 end
+ForeverUI.CharPrefix = charPrefix
 
 local caretMeasurer
 
@@ -1085,6 +1086,7 @@ local function newEditBox(parent, width, height, ours)
     return box
 end
 
+-- Keep the text left-aligned: the drawn caret is placed for left-aligned text.
 function ForeverUI.CreateEditBox(parent, width, height)
     local box = newEditBox(parent, width or 150, height or 20, caretHandlers(true))
     box.fuHighlightOnFocus = true
