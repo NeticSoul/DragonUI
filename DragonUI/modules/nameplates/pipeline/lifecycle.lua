@@ -72,6 +72,7 @@ function NP.lifecycle.PrepareNameplate(plateData)
     plateData._questElite = nil
     plateData._headlineClass = nil
     plateData._friendlyHealthClass = nil
+    plateData._enemyFaction = nil
     plateData._afkState = nil
     plateData.namePlateUnitToken = nil
     plateData.unitToken = nil

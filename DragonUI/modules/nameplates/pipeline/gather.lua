@@ -43,6 +43,7 @@ function NP.gather.PreparePlateForRefresh(plateData, snapshot)
     end
     NP.native_style.CaptureBarColor(plateData)
     NP.identity.UpdatePlateUnitToken(plateData)
+    NP.gather.UpdatePlateFaction(plateData)
     if NP.module.inArena and NP.identity.UpdateArenaCastBindingForPlate then
         NP.identity.UpdateArenaCastBindingForPlate(plateData)
     end
@@ -251,6 +252,20 @@ function NP.gather.GetGroupUnitForPlate(plateData)
         end
     end
     return nil
+end
+
+-- Sanctuaries and PvE realms paint unattackable enemy-faction players in a friendly colour; only the unit tells.
+function NP.gather.UpdatePlateFaction(plateData)
+    if plateData._enemyFaction ~= nil and plateData._enemyFactionName == plateData.plateName then
+        return
+    end
+    plateData._enemyFaction = nil
+    local token = NP.gather.ResolvePlateToken(plateData)
+    if token and UnitExists(token) and UnitIsPlayer(token) then
+        plateData._enemyFaction = not UnitIsFriend("player", token)
+        plateData._enemyFactionName = plateData.plateName
+        NP.gather.InvalidatePlateGates(plateData)
+    end
 end
 
 -- True for friendly player plates matched to a party/raid unit; excludes pets and NPCs.
