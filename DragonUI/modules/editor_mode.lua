@@ -340,7 +340,12 @@ local function CreateManager()
     frame:SetFrameStrata(ui.STRATA)
     frame:SetFrameLevel(ui.MANAGER)
     frame:SetSize(MANAGER_WIDTH, MANAGER_GRID_BOTTOM + MANAGER_FOOTER)
-    forever.SkinDialog(frame, { title = L["Editor Mode"], closable = false })
+    forever.SkinDialog(frame, { title = L["Editor Mode"] })
+    -- The stock close hides the manager first, which would strand an active editor when Hide refuses in combat.
+    frame.CloseButton:SetScript("OnClick", function()
+        PlaySound("igMainMenuClose")
+        EditorMode:Toggle()
+    end)
     if ApplyManagerPosition(frame) then
         AnchorManagerTopLeft(frame)
     end

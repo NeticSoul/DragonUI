@@ -94,12 +94,13 @@ ForeverUI.ChromeLayouts = {
     },
     diamond = {
         corners = {
-            TopLeft = { "ui-frame-diamondmetal-cornertopleft", -9, 9 },
-            TopRight = { "ui-frame-diamondmetal-cornertopright", 9, 9 },
-            BottomLeft = { "ui-frame-diamondmetal-cornerbottomleft", -9, -9 },
-            BottomRight = { "ui-frame-diamondmetal-cornerbottomright", 9, -9 },
+            TopLeft = { "ui-frame-diamondmetal-cornertopleft", 0, 0 },
+            TopRight = { "ui-frame-diamondmetal-cornertopright", 0, 0 },
+            BottomLeft = { "ui-frame-diamondmetal-cornerbottomleft", 0, 0 },
+            BottomRight = { "ui-frame-diamondmetal-cornerbottomright", 0, 0 },
         },
         edges = { Top = "_ui-frame-diamondmetal-edgetop", Bottom = "_ui-frame-diamondmetal-edgebottom", Left = "!ui-frame-diamondmetal-edgeleft", Right = "!ui-frame-diamondmetal-edgeright" },
+        scale = 0.5,
     },
     optionsbox = {
         corners = {

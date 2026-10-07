@@ -81,13 +81,14 @@ end
 function ForeverUI.ApplyNineSlice(frame, layoutName, layer)
     local layout = type(layoutName) == "table" and layoutName or Layouts[layoutName]
     layer = layer or "BORDER"
+    local scale = layout.scale or 1
     local pieces = {}
 
     local function Corner(position, point)
         local spec = layout.corners[position]
         local texture = frame:CreateTexture(nil, layer)
         local info = Put(texture, spec[1])
-        texture:SetSize(info[2], info[3])
+        texture:SetSize(info[2] * scale, info[3] * scale)
         texture:SetPoint(point, frame, point, spec[2], spec[3])
         pieces[position] = texture
         return texture
@@ -100,22 +101,22 @@ function ForeverUI.ApplyNineSlice(frame, layoutName, layer)
 
     local edges = layout.edges
     local top = frame:CreateTexture(nil, layer)
-    top:SetHeight(Put(top, edges.Top)[3])
+    top:SetHeight(Put(top, edges.Top)[3] * scale)
     top:SetPoint("TOPLEFT", topLeft, "TOPRIGHT", 0, 0)
     top:SetPoint("TOPRIGHT", topRight, "TOPLEFT", 0, 0)
 
     local bottom = frame:CreateTexture(nil, layer)
-    bottom:SetHeight(Put(bottom, edges.Bottom)[3])
+    bottom:SetHeight(Put(bottom, edges.Bottom)[3] * scale)
     bottom:SetPoint("BOTTOMLEFT", bottomLeft, "BOTTOMRIGHT", 0, 0)
     bottom:SetPoint("BOTTOMRIGHT", bottomRight, "BOTTOMLEFT", 0, 0)
 
     local left = frame:CreateTexture(nil, layer)
-    left:SetWidth(Put(left, edges.Left)[2])
+    left:SetWidth(Put(left, edges.Left)[2] * scale)
     left:SetPoint("TOPLEFT", topLeft, "BOTTOMLEFT", 0, 0)
     left:SetPoint("BOTTOMLEFT", bottomLeft, "TOPLEFT", 0, 0)
 
     local right = frame:CreateTexture(nil, layer)
-    right:SetWidth(Put(right, edges.Right)[2])
+    right:SetWidth(Put(right, edges.Right)[2] * scale)
     right:SetPoint("TOPRIGHT", topRight, "BOTTOMRIGHT", 0, 0)
     right:SetPoint("BOTTOMRIGHT", bottomRight, "TOPRIGHT", 0, 0)
 
