@@ -1810,6 +1810,8 @@ local function syncThumb(state)
         if view > 0 and total > view then
             extent = floor(trackHeight * view / total + 0.5)
         end
+    elseif state.fraction then
+        extent = floor(trackHeight * state.fraction + 0.5)
     end
     extent = min(max(SCROLL_MIN_THUMB, extent), max(1, trackHeight - SCROLL_MIN_TRAVEL))
 
@@ -2182,4 +2184,14 @@ function ForeverUI.CreateScrollBar(parent, opts)
         slider:SetHeight(opts.height)
     end
     return slider, state
+end
+
+-- A bar with no scroll frame sizes its thumb from the share of the content in view.
+function ForeverUI.SetScrollBarFraction(slider, fraction)
+    local state = slider and slider._fuScroll
+    if not state then
+        return
+    end
+    state.fraction = fraction
+    syncThumb(state)
 end

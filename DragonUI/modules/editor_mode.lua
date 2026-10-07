@@ -308,15 +308,16 @@ local function LayoutManager()
     else
         generalHeader:Hide()
     end
+    local extra = 0
     if managerSet then
-        local bottom = managerSet:Layout(manager, MANAGER_PAD_X, y, MANAGER_ROW_GAP)
+        local panel = addon.EditorPanel
+        local bottom
+        bottom, extra = panel.LayoutRows(managerSet, manager, MANAGER_PAD_X, y, MANAGER_ROW_GAP,
+            panel.MaxHeight() - y - MANAGER_FOOTER)
         if visible > 0 then y = bottom - MANAGER_ROW_GAP end
     end
-    local height = y + MANAGER_FOOTER
-    if managerSet and height > addon.EditorPanel.MaxHeight() and managerSet:FoldLast() then
-        return LayoutManager()
-    end
-    manager:SetHeight(height)
+    manager:SetWidth(MANAGER_WIDTH + extra)
+    manager:SetHeight(y + MANAGER_FOOTER)
 end
 
 local function RebuildManagerRows()

@@ -8,7 +8,7 @@ local L = addon.L
 local EditorUI = { STRATA = "FULLSCREEN_DIALOG", MANAGER = 20, DIALOG = 60, MODAL = 100, POPUP_STRATA = "TOOLTIP", POPUP = 70 }
 addon.EditorUI = EditorUI
 
-local max, min = math.max, math.min
+local max, min, floor = math.max, math.min, math.floor
 local tinsert, tremove = table.insert, table.remove
 
 -- The widest row (343) plus 2x26 of padding: the rails are thick, so the content needs room.
@@ -21,6 +21,7 @@ local ROW_GAP = 2
 local LABEL_WIDTH = 118
 local PAD_X, PAD_TOP, PAD_BOTTOM = 26, 48, 26
 local SCREEN_MARGIN, SIDE_GAP = 8, 8
+local SCROLL_ROOM = 16
 local COORD_INTERVAL, ROWS_INTERVAL = 0.05, 0.2
 
 -- Assigned further down; api.lua reaches them through the addon.* wrappers.
@@ -657,7 +658,7 @@ function RowSet:Clear()
         row.frame:ClearAllPoints()
         tinsert(self.pools[row.kind], row)
     end
-    self.def, self.count, self.keep = nil, 0, nil
+    self.def, self.count, self.scroll, self.reveal = nil, 0, 0, nil
     wipe(self.sections)
 end
 
@@ -764,7 +765,7 @@ end
 function RowSet:ToggleSection(section)
     local collapsed = not section.collapsed
     self:SetCollapsed(section, collapsed, true)
-    self.keep = (not collapsed) and section or nil
+    self.reveal = (not collapsed) and section or nil
     local onExpand = (not collapsed) and section.header.def and section.header.def.onExpand
     if onExpand then Safely(onExpand) end
     self:Refresh()
@@ -773,21 +774,74 @@ function RowSet:ToggleSection(section)
     end
 end
 
--- Height cap: folds the last open section that still shows rows, sparing the one the user just opened.
-function RowSet:FoldLast()
-    for index = #self.sections, 1, -1 do
-        local section = self.sections[index]
-        local covered = section.parent and Hiding(section.parent)
-        if section ~= self.keep and not section.collapsed and not covered then
-            for _, row in ipairs(section.rows) do
-                if not row.hidden then
-                    self:SetCollapsed(section, true)
-                    return true
-                end
-            end
+local function ShownRows(set)
+    local list = {}
+    for _, row in ipairs(set.rows) do
+        if Shown(row) then
+            list[#list + 1] = row
         end
     end
+    return list
+end
+
+local function InSection(row, section)
+    local owner = row.section
+    while owner do
+        if owner == section then return true end
+        owner = owner.parent
+    end
     return false
+end
+
+-- Index of the last row that fits in `view` when `from` is the first one shown.
+local function LastInView(list, from, gap, view)
+    local used, last = 0, from - 1
+    for index = from, #list do
+        local need = used + list[index].height + (used > 0 and gap or 0)
+        if need > view then break end
+        used, last = need, index
+    end
+    return last
+end
+
+-- Height of the shown rows, gaps between them included.
+function RowSet:ContentHeight(gap)
+    local height, count = 0, 0
+    for _, row in ipairs(self.rows) do
+        if Shown(row) then
+            height, count = height + row.height, count + 1
+        end
+    end
+    return count > 0 and height + (count - 1) * gap or 0
+end
+
+-- Clamps the whole-row scroll to `view`, scrolling a section the user just opened into it; returns the max scroll.
+function RowSet:FitScroll(gap, view)
+    local list = ShownRows(self)
+    local used, maxScroll = 0, #list
+    while maxScroll > 0 do
+        local need = used + list[maxScroll].height + (used > 0 and gap or 0)
+        if need > view then break end
+        used, maxScroll = need, maxScroll - 1
+    end
+
+    local scroll = self.scroll or 0
+    local section = self.reveal
+    self.reveal = nil
+    if section then
+        local first, last
+        for index, row in ipairs(list) do
+            if row == section.header then first = index end
+            if first and InSection(row, section) then last = index end
+        end
+        if first and last and (first <= scroll or last > LastInView(list, scroll + 1, gap, view)) then
+            scroll = first - 1
+        end
+    end
+
+    self.scroll = max(0, min(maxScroll, scroll))
+    self.maxScroll = maxScroll
+    return maxScroll
 end
 
 function RowSet:Poll()
@@ -829,10 +883,18 @@ function RowSet:VisibleCount()
     return visible
 end
 
--- Stacks the visible rows from (x, y) under anchor's top-left; returns y after the last row's trailing gap.
-function RowSet:Layout(anchor, x, y, gap)
+-- Stacks shown rows from (x, y), returning y past the trailing gap; with `view` only the scrolled-to rows that fit show.
+function RowSet:Layout(anchor, x, y, gap, view)
+    local skip, full = view and (self.scroll or 0) or 0, false
+    local limit = view and y + view
     for _, row in ipairs(self.rows) do
         if not Shown(row) then
+            row.frame:Hide()
+        elseif skip > 0 then
+            skip = skip - 1
+            row.frame:Hide()
+        elseif full or (limit and y + row.height > limit) then
+            full = true
             row.frame:Hide()
         else
             row.frame:ClearAllPoints()
@@ -844,9 +906,58 @@ function RowSet:Layout(anchor, x, y, gap)
     return y
 end
 
--- Windows never outgrow the screen: past this height the last open sections fold themselves.
+-- Windows never outgrow the screen: past this height their rows scroll.
 local function MaxWindowHeight()
     return UIParent:GetHeight() - 80
+end
+
+local function CreateRowScrollBar(set, window)
+    local forever = addon.ForeverUI
+    local bar = forever.CreateScrollBar(window)
+    local function scrollTo(scroll)
+        scroll = max(0, min(set.maxScroll or 0, scroll))
+        if scroll ~= set.scroll then
+            set.scroll = scroll
+            set.onRelayout(set)
+        end
+    end
+    bar:HookScript("OnValueChanged", function(self, value)
+        if not self.silent then scrollTo(floor(value + 0.5)) end
+    end)
+    bar.upButton:SetScript("OnClick", function() scrollTo(set.scroll - 1) end)
+    bar.downButton:SetScript("OnClick", function() scrollTo(set.scroll + 1) end)
+    window:EnableMouseWheel(true)
+    window:SetScript("OnMouseWheel", function(_, delta)
+        if bar:IsShown() then scrollTo(set.scroll - delta) end
+    end)
+    set.scrollBar = bar
+    if forever.EnforceLayering then forever.EnforceLayering(window) end
+    return bar
+end
+
+-- Lays the set out from y within `room`, scrolling whole rows past it; returns y past the rows and the bar's extra width.
+local function LayoutRows(set, window, x, y, gap, room)
+    local content = set:ContentHeight(gap)
+    if content <= room then
+        set.scroll, set.reveal = 0, nil
+        if set.scrollBar then set.scrollBar:Hide() end
+        return set:Layout(window, x, y, gap), 0
+    end
+
+    local bar = set.scrollBar or CreateRowScrollBar(set, window)
+    local maxScroll = set:FitScroll(gap, room)
+    set:Layout(window, x, y, gap, room)
+    -- The steppers sit 19 above and below the track.
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", window, "TOPLEFT", x + set.rowWidth + 6, -(y + 19))
+    bar:SetHeight(max(1, room - 38))
+    bar.silent = true
+    bar:SetMinMaxValues(0, maxScroll)
+    bar:SetValue(set.scroll)
+    bar.silent = nil
+    addon.ForeverUI.SetScrollBarFraction(bar, room / content)
+    bar:Show()
+    return y + room + gap, SCROLL_ROOM
 end
 
 local function GetRegistryDef(name)
@@ -876,15 +987,18 @@ Layout = function()
 
     place(dialog.xRow, ROW_HEIGHT)
     place(dialog.yRow, ROW_HEIGHT)
-    y = dialogSet:Layout(dialog, PAD_X, y, ROW_GAP)
+    local tail = resetShown and (48 + ROW_GAP) or 0
+    local extra
+    y, extra = LayoutRows(dialogSet, dialog, PAD_X, y, ROW_GAP, MaxWindowHeight() - y - tail - PAD_BOTTOM)
+    dialog:SetWidth(dialogSet.rowWidth + 2 * PAD_X + extra)
 
     if resetShown then
         dialog.divider:ClearAllPoints()
-        dialog.divider:SetPoint("TOP", dialog, "TOP", 0, -(y + 2))
+        dialog.divider:SetPoint("TOP", dialog, "TOP", -extra / 2, -(y + 2))
         dialog.divider:Show()
         y = y + 20
         dialog.resetButton:ClearAllPoints()
-        dialog.resetButton:SetPoint("TOP", dialog, "TOP", 0, -y)
+        dialog.resetButton:SetPoint("TOP", dialog, "TOP", -extra / 2, -y)
         dialog.resetButton:Show()
         y = y + 28 + ROW_GAP
     else
@@ -892,11 +1006,7 @@ Layout = function()
         dialog.resetButton:Hide()
     end
 
-    local height = y - ROW_GAP + PAD_BOTTOM
-    if height > MaxWindowHeight() and dialogSet:FoldLast() then
-        return Layout()
-    end
-    dialog:SetHeight(height)
+    dialog:SetHeight(y - ROW_GAP + PAD_BOTTOM)
 end
 
 UpdateReset = function()
@@ -1156,7 +1266,6 @@ OpenSettingsDialog = function(target)
     dialogSet:Clear()
     local rowWidth = (not def or def.compact) and COMPACT_ROW_WIDTH or ROW_WIDTH
     dialogSet:SetRowWidth(rowWidth)
-    frame:SetWidth(rowWidth + 2 * PAD_X)
     dialogSet:Load(def, name)
 
     resetShown = GetDetachedResetActionForSelection() ~= nil
@@ -1264,6 +1373,7 @@ addon.EditorPanel = {
     GetDef = GetRegistryDef,
     CreateRowSet = NewRowSet,
     MaxHeight = MaxWindowHeight,
+    LayoutRows = LayoutRows,
     -- Same rows keep their widgets so a slider being dragged survives the rebuild a set() asks for.
     Rebuild = function()
         if selectedEditorFrame then
