@@ -1,6 +1,6 @@
 ## Interface: 30300
 ## Title: |cff1784d1DragonUI|r
-## Notes: |cffcaf7faDragonflight-style UI for 3.3.5a with mixed third-party licensing|r
+## Notes: |cffcaf7faRetail-inspired modular UI addon for WoW 3.3.5a (WotLK).|r
 ## Version: 2.5
 ## Author: NeticSoul
 ## SavedVariables: DragonUIDB
