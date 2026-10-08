@@ -119,6 +119,7 @@ local api = UF.TargetStyle.Create({
     },
 
     -- Feature flags
+    hasTapDenied     = true,  -- Grey name bg for tapped-by-other focus
     nameFrameAlpha   = 0.9,   -- SetAlpha on name background
     nameVertexAlpha  = 0.8,   -- 4th param of SetVertexColor
     nameFontSize     = 10,    -- Fixed font size for name text
