@@ -1295,7 +1295,7 @@ local defaults = {
                 flashExtent = 40,  -- Pixels from screen edges toward center
             },
             addonmanager = {
-                 enabled = true 
+                enabled = true, -- AddOns button in the Esc menu opening the in-game addon list
             },
         },
 

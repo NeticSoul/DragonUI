@@ -1031,6 +1031,7 @@ L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = 
 
 -- Addon Manager
 L["Addon Manager"] = true
+L["Enable and disable your addons in game from an AddOns button in the Esc menu"] = true
 L["Load out of date AddOns"] = true
 L["Search..."] = true
 L["Addon Memory:"] = true
