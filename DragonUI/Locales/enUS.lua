@@ -1028,3 +1028,14 @@ L["Show Cooldown Text"] = true
 L["Min Duration"] = true
 L["Whole Seconds"] = true
 L["Show cooldown text in whole seconds, without the tenths under 5 seconds."] = true
+
+-- Addon Manager
+L["Addon Manager"] = true
+L["Load out of date AddOns"] = true
+L["Search..."] = true
+L["Addon Memory:"] = true
+L["Enable All"] = true
+L["Disable All"] = true
+L["OK / Reload"] = true
+L["Parent Disabled"] = true
+L["Protected"] = true

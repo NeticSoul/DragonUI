@@ -119,4 +119,7 @@
 
     <!-- Swing timers (main hand, off hand and ranged bars fed by LibSwingTimer-1.0) -->
     <Script file="swingtimer.lua"/>
+
+    <!-- Addon Manager module -->
+    <Script file="addonmanager.lua"/>
 </Ui>
