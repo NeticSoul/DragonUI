@@ -13,6 +13,7 @@ local HEADER_DROP = 6
 local LINE_H = 16                -- WATCHFRAME_LINEHEIGHT
 local MULTI_LINE_H = 29          -- WATCHFRAME_MULTIPLE_LINEHEIGHT, the cap for a wrapped objective
 local QUEST_GAP = 10             -- WATCHFRAME_QUEST_OFFSET, the gap between one quest and the next
+local ITEM_WIDTH = 33            -- WATCHFRAME_ITEM_WIDTH
 -- The old module anchored WatchFrameLines to the header's BOTTOMLEFT at -15, which put the first
 -- title 37 below the frame top. Blizzard's stock 30 is tighter; this keeps the spacing you had.
 local HEADER_GAP = 15
@@ -133,6 +134,7 @@ local function collectQuests(blocks, counters)
         local index = GetQuestIndexForWatch(watch)
         if index and index > 0 then
             local title, level, _, _, _, _, isComplete, _, questID = GetQuestLogTitle(index)
+            local _, item = GetQuestLogSpecialItemInfo(index)
             local objectives = questObjectives(index)
             -- Blizzard treats an objectiveless quest as ready to hand in.
             local failed = isComplete and isComplete < 0
@@ -145,6 +147,8 @@ local function collectQuests(blocks, counters)
                 kind = "quest", watchIndex = watch, questLogIndex = index, questID = questID,
                 title = title, level = level, complete = complete,
                 lines = objectives, badge = badgeFor(questID, complete, counters),
+                -- Blizzard only builds the item button while the quest is still open.
+                hasItem = item ~= nil and not complete,
             }
         end
     end
@@ -392,6 +396,65 @@ local function unmuteRows()
     end
 end
 
+-- Borrowed WatchFrameItemN, like the POIs: their own OnClick is a secure UseQuestLogSpecialItem.
+local itemOwner = {}             -- button -> block it hangs on, false while parked
+local itemHooked = {}
+local itemPark = CreateFrame("Frame")
+itemPark:Hide()
+
+-- Our own data has the last word: a stale Blizzard ID never lands on a quest without an item.
+local function itemBlock(questLogIndex)
+    for _, block in ipairs(blockPool) do
+        if block.hasItem and block.questLogIndex == questLogIndex and block:IsShown() then
+            return block
+        end
+    end
+end
+
+-- Hovering the item lights the quest it belongs to, same as hovering the badge.
+local function itemHover(button, onEnter)
+    local block = itemOwner[button]
+    if block then highlight(block, onEnter) end
+end
+
+local function adoptItem(button, block)
+    itemOwner[button] = block
+    button:SetParent(block)
+    -- SetParent re-levels the button, so its Cooldown child is lifted back over the icon by hand.
+    button:SetFrameLevel(block:GetFrameLevel() + 1)
+    _G[button:GetName() .. "Cooldown"]:SetFrameLevel(button:GetFrameLevel() + 1)
+    -- Hidden while parked, so a cooldown started meanwhile never reached it; widget calls only.
+    WatchFrameItem_UpdateCooldown(button)
+    -- Clickable exactly when its row is: muteRows or the fade's click-through may have it off.
+    muted[button] = nil
+    button:EnableMouse(block:IsMouseEnabled())
+    if itemHooked[button] then return end
+    itemHooked[button] = true
+    button:HookScript("OnEnter", function(self) itemHover(self, true) end)
+    button:HookScript("OnLeave", function(self) itemHover(self, false) end)
+    return true
+end
+
+-- Never Show/Hide them while borrowed: IsShown is Blizzard's word on which ones are live.
+local function syncItems()
+    local took
+    for i = 1, WATCHFRAME_NUM_ITEMS or 0 do
+        local button = _G["WatchFrameItem" .. i]
+        local block = button and button:IsShown() and itemBlock(button:GetID())
+        if block then
+            if itemOwner[button] ~= block and adoptItem(button, block) then took = true end
+            -- Blizzard's +10,-2 off a title line 24 short of its frame lands 2 inside our block's edge.
+            button:ClearAllPoints()
+            button:SetPoint("TOPRIGHT", block, "TOPRIGHT", -2, -2)
+        elseif button and itemOwner[button] then
+            -- Not back under WatchFrameLines: alpha 0 there still takes clicks.
+            itemOwner[button] = false
+            button:SetParent(itemPark)
+        end
+    end
+    if took then syncFadeHoverFrames() end
+end
+
 -- Blizzard re-anchors every POI to its own hidden lines on each pass of its tracker.
 local function afterWatchFrameUpdate()
     if not OT.silenced then return end
@@ -403,6 +466,7 @@ local function afterWatchFrameUpdate()
         end
         cropBorrowed(button)
     end
+    syncItems()
     -- Their pass is what builds the buttons, so the first one always lands after our rows exist.
     if ourMapOpen() then return end
     for _, block in ipairs(blockPool) do
@@ -497,6 +561,7 @@ local function fillBlock(block, data, width, size)
     block.kind = data.kind
     block.watchIndex, block.questLogIndex = data.watchIndex, data.questLogIndex
     block.questID, block.achievementID = data.questID, data.achievementID
+    block.hasItem = data.hasItem
     block.title:SetText(data.title or "")
 
     if data.icon then
@@ -513,7 +578,9 @@ local function fillBlock(block, data, width, size)
     -- swapping in a narrow face made everything read a size smaller than it claimed.
     local titlePath, _, titleFlags = block.title:GetFont()
     block.title:SetFont(titlePath, size, titleFlags)
-    block.title:SetWidth(width)
+    -- WatchFrame_SetLine narrows an item quest's first two visual rows so they clear the button.
+    local itemRows = data.hasItem and 0 or 2
+    block.title:SetWidth(itemRows < 2 and width - ITEM_WIDTH or width)
 
     -- WatchFrame chains its lines with a +FONTSPACING overlap, so a 16px row advances by 14.
     local spacing = (LINE_H - size) / 2
@@ -521,7 +588,9 @@ local function fillBlock(block, data, width, size)
         return region:GetStringHeight() > LINE_H and MULTI_LINE_H or LINE_H
     end
 
-    local y = rowHeight(block.title) - spacing
+    local titleHeight = rowHeight(block.title)
+    itemRows = itemRows + (titleHeight == MULTI_LINE_H and 2 or 1)
+    local y = titleHeight - spacing
     local shown = 0
     for _, entry in ipairs(data.lines) do
         shown = shown + 1
@@ -533,11 +602,12 @@ local function fillBlock(block, data, width, size)
         line.dash:ClearAllPoints()
         -- Dash sits on the title's own left edge; only the text is pushed in by its width.
         line.dash:SetPoint("TOPLEFT", block, "TOPLEFT", 0, -y)
-        line.text:SetWidth(width - dashWidth)
+        line.text:SetWidth(width - dashWidth - (itemRows < 2 and ITEM_WIDTH or 0))
         line.text:SetText(entry.text)
         line.text:ClearAllPoints()
         line.text:SetPoint("TOPLEFT", block, "TOPLEFT", dashWidth, -y)
         local height = rowHeight(line.text)
+        itemRows = itemRows + (height == MULTI_LINE_H and 2 or 1)
         -- Blizzard clamps a wrapped objective to two lines rather than letting it grow.
         if height == MULTI_LINE_H then line.text:SetHeight(MULTI_LINE_H) else line.text:SetHeight(0) end
         line.dash:Show()
@@ -678,6 +748,7 @@ function OT.Refresh()
         blockPool[index]:Hide()
         releaseBlockPOI(blockPool[index])
     end
+    syncItems()
 
     -- The frame itself has to follow the CVar too: leaving it at the narrow width while the header
     -- art and the line budget grew is what pushed the title off to one side in wide mode.
@@ -848,6 +919,8 @@ local function silenceBlizzardTracker()
     OT.silenced = true
     WatchFrame:SetAlpha(0)
     WatchFrame:EnableMouse(false)
+    -- Rows a re-enable inherits would otherwise take clicks until Blizzard's next pass mutes them.
+    muteRows(WatchFrameLines)
 end
 
 -- Turning the module off has to hand the player back a working tracker, POI buttons included.
@@ -855,6 +928,13 @@ local function restoreBlizzardTracker()
     if not WatchFrame or not OT.silenced then return end
     OT.silenced = nil
     for _, block in ipairs(blockPool) do releaseBlockPOI(block) end
+    -- Given back hidden like the POIs; Blizzard's next pass re-anchors and re-shows the live ones.
+    for button in pairs(itemOwner) do
+        itemOwner[button] = nil
+        button:SetParent(WatchFrameLines)
+        button:ClearAllPoints()
+        button:Hide()
+    end
     unmuteRows()
     WatchFrame:SetAlpha(1)
     WatchFrame:EnableMouse(true)
@@ -910,6 +990,7 @@ syncFadeHoverFrames = function()
         if block.badge then found[#found + 1] = block.badge end
         if block.poi then found[#found + 1] = block.poi end
     end
+    for button in pairs(itemOwner) do found[#found + 1] = button end
     if header then found[#found + 1] = header.toggle end
     if #found > 0 then addon.VisibilityFade.AddHoverFrames("questtracker", found) end
 end
