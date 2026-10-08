@@ -1007,6 +1007,7 @@ L["Custom Color"] = true
 L["Unit Frame Appearance"] = true
 L["Unit Frame Art"] = true
 L["Elite Dragons"] = true
+L["Elite Dragons (Target)"] = true
 L["Center Names"] = true
 L["Combat"] = true
 L["Action Bars"] = true

@@ -901,7 +901,7 @@ local function BuildUnitframesTab(scroll)
     end
     C:AddDropdown(style, {
         label = LO["Unit Frame Art"],
-        desc = LO["Art of the player, target, focus, ToT, ToF, pet and party frames. The Fat Health Bar keeps its own art."],
+        desc = LO["Art of the player, target, focus, ToT, ToF, pet and party frames."],
         dbPath = "unitframe.frame_style",
         values = frameStyleValues,
         callback = refreshLevelStyle,
@@ -914,7 +914,7 @@ local function BuildUnitframesTab(scroll)
         callback = refreshLevelStyle,
     })
     C:AddDropdown(style, {
-        label = LO["Elite Dragons"],
+        label = LO["Elite Dragons (Target)"],
         desc = LO["Auto follows the unit frame art. Dragons around elite and rare portraits; the player picks its own in Dragon Decoration."],
         dbPath = "unitframe.dragon_style",
         values = autoStyleValues,

@@ -1848,7 +1848,7 @@ E.Register("__manager", { settings = {
         { "dragonui", T("DragonUI") },
         { "forever", T("Forever") },
     }, R.skins, { after = function() E.Rebuild() end }),
-    Drop(T("Elite Dragons"), "unitframe.dragon_style", STYLE_ITEMS, R.skins),
+    Drop(T("Elite Dragons (Target)"), "unitframe.dragon_style", STYLE_ITEMS, R.skins),
     Check(T("Center Names"), "unitframe.center_names", R.skins, {
         hidden = function() return not ForeverLevelStyle() end }),
 

@@ -64,6 +64,24 @@ UF.SKINS = {
             level = { x = 78.17, y = -55.5 },
             name = { x = 6, y = 7.5, w = 96 },
         },
+        -- Fat decoration: the same art without the health/mana line (gen_uf_fat.py), at the same screen spot.
+        playerDecorationFat = {
+            background = { file = ART .. "HD\\Target-Fat-BACKGROUND", w = 256, h = 128, x = -126.5, y = -25, tc = { 1, 0, 0, 1 } },
+            border = { file = ART .. "HD\\Target-Fat-BORDER", w = 256, h = 128, x = -126.5, y = -25, tc = { 1, 0, 0, 1 } },
+            -- One bar from the health well's top to the mana well's bottom; the fat mana bar sits apart.
+            bars = {
+                health = { w = 127, h = 31, x = -1, y = -7 },
+            },
+            edges = { health = { -2, -1 } },
+            -- The lower well opens left under the ring, as the mana's did: strips measured on this art.
+            healthCorner = {
+                step = 0.5, column = 7.5 / 128,
+                rows = { { 20.5, -3 }, { 21, -3 }, { 21.5, -3 }, { 22, -3.5 }, { 22.5, -3.5 }, { 23, -4 },
+                         { 23.5, -4 }, { 24, -4.5 }, { 24.5, -5 }, { 25, -5.5 }, { 25.5, -5.5 }, { 26, -6 },
+                         { 26.5, -6.5 }, { 27, -7 }, { 27.5, -7.5 }, { 28, -8 }, { 28.5, -8 }, { 29, -9 },
+                         { 29.5, -9.5 }, { 30, -10 }, { 30.5, -10.5 } },
+            },
+        },
         -- Both anchor to the portrait; the HD ring lands on its centre, the bar end 0.5 under the contour.
         small = {
             background = { file = ART .. "HD\\TargetofTarget-BACKGROUND", w = 128, h = 64, x = -0.5, y = -0.5 },
@@ -216,7 +234,38 @@ do
             glows = d.player.glows,
             swords = { file = ART .. "Forever\\Player-CombatIcon", w = 16, h = 16, x = 47, y = -47.5 },
         },
+        -- Fat: the art above without the health/mana line, at the same spot, so its level, PvP and glows carry over.
+        playerFat = {
+            background = { file = ART .. "Forever\\Player-Fat-BACKGROUND", w = 256, h = 128, x = -67, y = -22.5 },
+            border = { file = ART .. "Forever\\Player-Fat-BORDER", w = 256, h = 128, x = -67, y = -22.5 },
+            -- Covers both wells exactly, as the health and mana bars do between them.
+            bars = {
+                health = { w = 125, h = 31, x = 2.5, y = -7 },
+            },
+        },
+        playerDecorationFat = {
+            background = { file = ART .. "Forever\\Target-Fat-BACKGROUND", w = 256, h = 128, x = -126.5, y = -21, tc = { 1, 0, 0, 1 } },
+            border = { file = ART .. "Forever\\Target-Fat-BORDER", w = 256, h = 128, x = -126.5, y = -21, tc = { 1, 0, 0, 1 } },
+            bars = d.playerDecorationFat.bars,
+            edges = d.playerDecorationFat.edges,
+            healthCorner = {
+                step = 0.5, column = 7.5 / 128,
+                rows = { { 20.5, -3 }, { 21, -3 }, { 21.5, -3 }, { 22, -3.5 }, { 22.5, -3.5 }, { 23, -4 },
+                         { 23.5, -4 }, { 24, -4.5 }, { 24.5, -5 }, { 25, -5 }, { 25.5, -5.5 }, { 26, -6 },
+                         { 26.5, -6.5 }, { 27, -7 }, { 27.5, -7.5 }, { 28, -7.5 }, { 28.5, -8 }, { 29, -8.5 },
+                         { 29.5, -9 }, { 30, -10 }, { 30.5, -10.5 } },
+            },
+        },
     }
+    -- The combat/rest glows trace the frame too: same pieces and spots, minus the health/mana line.
+    local f = UF.SKINS.forever
+    local function fatGlows(glows, file)
+        return { status = art(glows.status, file), combat = art(glows.combat, file) }
+    end
+    d.playerDecorationFat.glows = fatGlows(d.playerDecoration.glows, "Target-InCombat-Fat")
+    f.playerDecorationFat.glows = fatGlows(f.playerDecoration.glows, "Target-InCombat-Fat")
+    -- The player's rest glow is only the top halo, with no line to drop.
+    f.playerFat.glows = { status = d.player.glows.status, combat = art(d.player.glows.combat, "Player-InCombat-Fat") }
 end
 
 -- One cell per colour, in the generator's order: HD/Target-NameStrip 268x31 every 32, Forever/Target-Type 270x36.
