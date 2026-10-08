@@ -815,6 +815,13 @@ local function DarkenCastbarBorders(tint)
             DarkenTexture(spellIcon.ModernBorder, tint)
         end
 
+        local shield = _G[name .. "Shield"]
+        if shield and shield.GetRegions then
+            for _, region in ipairs({ shield:GetRegions() }) do
+                DarkenTexture(region, tint)
+            end
+        end
+
         -- Darken the text background frame border
         local textBG = _G[name .. "TextBG"]
         if textBG and textBG.GetRegions then

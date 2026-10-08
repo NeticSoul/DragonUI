@@ -798,6 +798,15 @@ local function CreateShield(container, castbar, icon, frameName, iconSize)
     return shield
 end
 
+-- Closer to the bar by default; with the shield up it keeps the old gap so the shield clears the bar.
+local function AnchorShieldedIcon(frames, cfg)
+    if not frames.icon or not frames.castbar then return end
+    local iconScale = ((cfg and cfg.sizeIcon) or 20) / 16
+    local gap = (frames.shield and frames.shield:IsShown()) and 7 or 4
+    frames.icon:ClearAllPoints()
+    frames.icon:SetPoint('RIGHT', frames.castbar, 'LEFT', -gap * iconScale, -4)
+end
+
 -- ============================================================================
 -- TEXT MANAGEMENT
 -- ============================================================================
@@ -1395,6 +1404,9 @@ function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
             frames.shield:Hide()
         end
     end
+    if frames.shield then
+        AnchorShieldedIcon(frames, cfg)
+    end
     
     if frames.textBackground then
         frames.textBackground:Show()
@@ -1910,8 +1922,7 @@ function CastbarModule:RefreshCastbar(unitType)
         if unitType == "player" then
             frames.icon:SetPoint('TOPLEFT', frames.castbar, 'TOPLEFT', -(iconSize + 6), -1)
         else
-            local iconScale = iconSize / 16
-            frames.icon:SetPoint('RIGHT', frames.castbar, 'LEFT', -7 * iconScale, -4)
+            AnchorShieldedIcon(frames, cfg)
         end
         
         if frames.icon.Border then
@@ -2114,6 +2125,7 @@ function CastbarModule:HandleInterruptibleChanged(unitType, unit, isNotInterrupt
         else
             frames.shield:Hide()
         end
+        AnchorShieldedIcon(frames, cfg)
     end
 end
 
