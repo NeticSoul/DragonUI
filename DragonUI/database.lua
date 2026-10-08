@@ -200,12 +200,12 @@ local defaults = {
             swingtimer_mainhand = {
                 anchor = "BOTTOM",
                 posX = 0,
-                posY = 285
+                posY = 289
             },
             swingtimer_offhand = {
                 anchor = "BOTTOM",
                 posX = 0,
-                posY = 260
+                posY = 262
             },
             swingtimer_ranged = {
                 anchor = "BOTTOM",
@@ -231,28 +231,28 @@ local defaults = {
         -- Swing timers, one table per bar (the enable flag is modules.swingtimer.enabled)
         swingtimer = {
             mainhand = {
-                scale = 100,          -- Percent (50-200)
+                scale = 80,           -- Percent (50-200); Forever's HUD is drawn ~25% larger than DragonUI's
                 opacity = 100,        -- Percent (50-100)
-                width = 307,          -- Units (153-613); Forever's 426 at our HUD's 0.72
-                height = 22,          -- Units (11-43); Forever's 30 at our HUD's 0.72
+                width = 426,          -- Units (213-852); Forever's default
+                height = 30,          -- Units (15-60); Forever's default
                 show_title = true,
                 show_time = true,
                 visibility = "combat", -- always | combat | hidden
             },
             offhand = {
-                scale = 100,
+                scale = 80,
                 opacity = 100,
-                width = 307,
-                height = 22,
+                width = 426,
+                height = 30,
                 show_title = true,
                 show_time = true,
                 visibility = "combat",
             },
             ranged = {
-                scale = 100,
+                scale = 80,
                 opacity = 100,
-                width = 307,
-                height = 22,
+                width = 426,
+                height = 30,
                 show_title = true,
                 show_time = true,
                 visibility = "combat",
@@ -1293,6 +1293,9 @@ local defaults = {
                 useClassColor = false, -- Use player class color instead of flashColor
                 flashOpacity = 0.35, -- Max alpha of the flash (0.0–1.0)
                 flashExtent = 40,  -- Pixels from screen edges toward center
+            },
+            addonmanager = {
+                 enabled = true 
             },
         },
 
