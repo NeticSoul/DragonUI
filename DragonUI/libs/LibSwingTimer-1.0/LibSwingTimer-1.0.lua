@@ -16,7 +16,7 @@ Queries: lib:GetSwing(hand), lib:GetSpeed(hand), lib:HasWeapon(hand), lib:IsInRa
 The library stays dormant (no events) until something registers a callback.
 ]]
 
-local MAJOR, MINOR = "LibSwingTimer-1.0", 1
+local MAJOR, MINOR = "LibSwingTimer-1.0", 2
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 
@@ -27,8 +27,9 @@ lib.frame = lib.frame or CreateFrame("Frame")
 local callbacks, frame = lib.callbacks, lib.frame
 local GetTime, UnitGUID, UnitAttackSpeed, UnitRangedDamage = GetTime, UnitGUID, UnitAttackSpeed, UnitRangedDamage
 local UnitExists, GetSpellInfo, GetInventoryItemLink = UnitExists, GetSpellInfo, GetInventoryItemLink
+local GetItemInfo, UnitClass, UnitCastingInfo = GetItemInfo, UnitClass, UnitCastingInfo
 local IsActionInRange, IsAttackAction, IsSpellInRange = IsActionInRange, IsAttackAction, IsSpellInRange
-local pairs = pairs
+local pairs, select = pairs, select
 
 local MAIN, OFF, RANGED = "mainhand", "offhand", "ranged"
 local OPENER_OFFHAND_DELAY = 0.5   -- the off hand waits half its speed when auto attack starts
@@ -61,15 +62,20 @@ local AUTO_SHOT = SpellName(75)
 local SLAM = SpellName(1464)
 local ATTACK = SpellName(6603)
 
+local RANGED_SLOT = 18
+local RANGED_EQUIP = { INVTYPE_RANGED = true, INVTYPE_RANGEDRIGHT = true, INVTYPE_THROWN = true }
+local RELIC_CLASSES = { DRUID = true, PALADIN = true, SHAMAN = true, DEATHKNIGHT = true }
+
 local swings = { [MAIN] = {}, [OFF] = {}, [RANGED] = {} }
 local speeds = {}
 local inRange = {}
 local expected = {}
 local weaponLinks = {}
+local announced = {}
 local playerGUID
 local autoAttacking, autoRepeating = false, false
 local extraAttacks, extraAttackAt = 0, 0
-local castingName, lastRangedName
+local castingName, castingID, lastRangedName
 local attackSlot
 local active = false
 
@@ -77,12 +83,30 @@ local function Fire(event, ...)
     callbacks:Fire(event, ...)
 end
 
+-- Relics share the ranged slot and UnitRangedDamage still reports a speed for them, so the item decides.
+local function HasRangedWeapon()
+    local link = GetInventoryItemLink("player", RANGED_SLOT)
+    if not link then return false end
+    local equipLoc = select(9, GetItemInfo(link))
+    if equipLoc then return RANGED_EQUIP[equipLoc] == true end
+    return not RELIC_CLASSES[select(2, UnitClass("player"))]
+end
+
 local function RefreshSpeeds()
     local main, off = UnitAttackSpeed("player")
     speeds[MAIN] = main
     speeds[OFF] = (off and off > 0) and off or nil
     local ranged = UnitRangedDamage("player")
-    speeds[RANGED] = (ranged and ranged > 0) and ranged or nil
+    speeds[RANGED] = (ranged and ranged > 0 and HasRangedWeapon()) and ranged or nil
+end
+
+-- Compares with what listeners were last told: speed and item events reach us in either order.
+local function AnnounceWeapons()
+    local hasOff, hasRanged = speeds[OFF] ~= nil, speeds[RANGED] ~= nil
+    if hasOff ~= announced[OFF] or hasRanged ~= announced[RANGED] then
+        announced[OFF], announced[RANGED] = hasOff, hasRanged
+        Fire("SWING_WEAPONS", hasOff, hasRanged)
+    end
 end
 
 local function Remaining(swing, now)
@@ -202,24 +226,20 @@ local function PauseMelee(paused)
 end
 
 local function RefreshWeapons(restart)
-    local hadOff, hadRanged = speeds[OFF] ~= nil, speeds[RANGED] ~= nil
     RefreshSpeeds()
-    for slot, hand in pairs({ [16] = MAIN, [17] = OFF, [18] = RANGED }) do
+    for slot, hand in pairs({ [16] = MAIN, [17] = OFF, [RANGED_SLOT] = RANGED }) do
         local link = GetInventoryItemLink("player", slot)
         if restart and link ~= weaponLinks[slot] then
-            -- Swapping a weapon restarts that hand's swing.
-            if speeds[hand] and swings[hand].start then
-                StartSwing(hand)
-            elseif not speeds[hand] and hand ~= MAIN then
+            -- Swapping a weapon restarts a swing in progress; a finished one stays finished.
+            if speeds[hand] then
+                RestartIfRunning(hand)
+            elseif hand ~= MAIN then
                 StopSwing(hand)
             end
         end
         weaponLinks[slot] = link
     end
-    local hasOff, hasRanged = speeds[OFF] ~= nil, speeds[RANGED] ~= nil
-    if hasOff ~= hadOff or hasRanged ~= hadRanged then
-        Fire("SWING_WEAPONS", hasOff, hasRanged)
-    end
+    AnnounceWeapons()
 end
 
 -- ---------------------------------------------------------------------------
@@ -386,25 +406,29 @@ function handlers.STOP_AUTOREPEAT_SPELL()
     autoRepeating = false
 end
 
-function handlers.UNIT_SPELLCAST_START(unit, spellName)
+-- 3.3.5a events: unit, spellName, rank, castID. Blizzard's casting bar reads the ID the same way.
+function handlers.UNIT_SPELLCAST_START(unit, spellName, _, castID)
     if unit ~= "player" then return end
-    castingName = spellName
+    castingName, castingID = spellName, select(8, UnitCastingInfo("player")) or castID
     if spellName == SLAM then
         PauseMelee(true)
     end
 end
 
-local function EndCast(spellName, succeeded)
-    if spellName == SLAM then
+-- FAILED also fires for every press rejected during the cast; only the cast's own ID may end it.
+local function IsOwnCast(spellName, castID)
+    return castingName ~= nil and spellName == castingName and (castID == nil or castingID == nil or castID == castingID)
+end
+
+local function EndCast(succeeded)
+    if castingName == SLAM then
         PauseMelee(false)
-    elseif succeeded and castingName == spellName and autoAttacking and not RANGED_SPELLS[spellName] then
+    elseif succeeded and autoAttacking and not RANGED_SPELLS[castingName] then
         -- A finished cast restarts melee even if the swing ran out mid-cast; instants never fire START.
         StartSwing(MAIN)
         StartSwing(OFF)
     end
-    if castingName == spellName then
-        castingName = nil
-    end
+    castingName, castingID = nil, nil
 end
 
 function handlers.UNIT_SPELLCAST_SUCCEEDED(unit, spellName)
@@ -419,14 +443,22 @@ function handlers.UNIT_SPELLCAST_SUCCEEDED(unit, spellName)
         end
         WakeRange()
     end
-    EndCast(spellName, true)
+    if castingName ~= nil and spellName == castingName then
+        EndCast(true)
+    end
 end
 
-function handlers.UNIT_SPELLCAST_INTERRUPTED(unit, spellName)
-    if unit == "player" then EndCast(spellName, false) end
+function handlers.UNIT_SPELLCAST_INTERRUPTED(unit, spellName, _, castID)
+    if unit == "player" and IsOwnCast(spellName, castID) then EndCast(false) end
 end
 handlers.UNIT_SPELLCAST_FAILED = handlers.UNIT_SPELLCAST_INTERRUPTED
-handlers.UNIT_SPELLCAST_STOP = handlers.UNIT_SPELLCAST_INTERRUPTED
+
+-- STOP can arrive before SUCCEEDED, so it only lifts Slam's pause and leaves the cast to SUCCEEDED.
+function handlers.UNIT_SPELLCAST_STOP(unit, spellName, _, castID)
+    if unit == "player" and spellName == SLAM and IsOwnCast(spellName, castID) then
+        PauseMelee(false)
+    end
+end
 
 function handlers.UNIT_ATTACK_SPEED(unit)
     if unit ~= "player" then return end
@@ -439,12 +471,14 @@ function handlers.UNIT_ATTACK_SPEED(unit)
     if (oldOff ~= nil) ~= (speeds[OFF] ~= nil) then
         RefreshWeapons(true)
     end
+    AnnounceWeapons()
 end
 
 function handlers.UNIT_RANGEDDAMAGE(unit)
     if unit ~= "player" then return end
     RefreshSpeeds()
     Rescale(RANGED, speeds[RANGED])
+    AnnounceWeapons()
 end
 
 function handlers.UNIT_INVENTORY_CHANGED(unit)
@@ -490,12 +524,21 @@ local function Activate()
     handlers.PLAYER_ENTERING_WORLD()
 end
 
+-- Nothing tracks while dormant, so every remembered swing, range and cast would be stale on wake-up.
 local function Deactivate()
     if not active then return end
     active = false
     frame:UnregisterAllEvents()
     frame:SetScript("OnUpdate", nil)
     autoAttacking, autoRepeating = false, false
+    for _, swing in pairs(swings) do
+        swing.start, swing.duration, swing.pausedAt = nil, nil, nil
+    end
+    for _, list in pairs({ inRange, expected, announced }) do
+        for key in pairs(list) do list[key] = nil end
+    end
+    extraAttacks, extraAttackAt = 0, 0
+    castingName, castingID = nil, nil
 end
 
 local used = 0

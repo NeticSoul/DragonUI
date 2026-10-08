@@ -200,12 +200,12 @@ local defaults = {
             swingtimer_mainhand = {
                 anchor = "BOTTOM",
                 posX = 0,
-                posY = 289
+                posY = 285
             },
             swingtimer_offhand = {
                 anchor = "BOTTOM",
                 posX = 0,
-                posY = 262
+                posY = 260
             },
             swingtimer_ranged = {
                 anchor = "BOTTOM",
@@ -231,28 +231,28 @@ local defaults = {
         -- Swing timers, one table per bar (the enable flag is modules.swingtimer.enabled)
         swingtimer = {
             mainhand = {
-                scale = 80,           -- Percent (50-200); Forever's HUD is drawn ~25% larger than DragonUI's
+                scale = 100,          -- Percent (50-200)
                 opacity = 100,        -- Percent (50-100)
-                width = 426,          -- Units (213-852); Forever's default
-                height = 30,          -- Units (15-60); Forever's default
+                width = 307,          -- Units (153-613); Forever's 426 at our HUD's 0.72
+                height = 22,          -- Units (11-43); Forever's 30 at our HUD's 0.72
                 show_title = true,
                 show_time = true,
                 visibility = "combat", -- always | combat | hidden
             },
             offhand = {
-                scale = 80,
+                scale = 100,
                 opacity = 100,
-                width = 426,
-                height = 30,
+                width = 307,
+                height = 22,
                 show_title = true,
                 show_time = true,
                 visibility = "combat",
             },
             ranged = {
-                scale = 80,
+                scale = 100,
                 opacity = 100,
-                width = 426,
-                height = 30,
+                width = 307,
+                height = 22,
                 show_title = true,
                 show_time = true,
                 visibility = "combat",

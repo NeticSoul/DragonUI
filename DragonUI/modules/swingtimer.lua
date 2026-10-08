@@ -9,11 +9,14 @@ local KEY = "swingtimer"
 local ART = addon._dir .. "SwingTimer\\"
 local FRAME_TEXTURE, BG_TEXTURE, SHEET_TEXTURE = ART .. "frame", ART .. "bg", ART .. "sheet"
 
-local MIN_WIDTH, MAX_WIDTH, MIN_HEIGHT, MAX_HEIGHT = 213, 852, 15, 60
--- Forever stores width/height as a difference from the minimum, so its 213/15 preset is really 426x30.
-local DEFAULT_WIDTH, DEFAULT_HEIGHT = 426, 30
-local DEFAULT_SCALE = 80
--- Forever's XML: the StatusBar sits 5 units in from the sides and 4 from top and bottom.
+-- Forever's 45-unit action buttons are ours at 36 drawn at 0.9: its HUD maps onto ours at 0.72.
+local FOREVER_SCALE = 0.72
+-- Forever's 213-852 by 15-60 range and 426x30 default, converted to our units.
+local MIN_WIDTH, MAX_WIDTH, MIN_HEIGHT, MAX_HEIGHT = 153, 613, 11, 43
+local DEFAULT_WIDTH, DEFAULT_HEIGHT = 307, 22
+local DEFAULT_SCALE = 100
+-- Art is laid out in Forever units: the StatusBar sits 5 in from the sides, 4 from top and bottom.
+local FOREVER_HEIGHT = 30
 local INSET_X, INSET_Y = 5, 4
 local LABEL_INSET = 10
 local SHADOW_WIDTH = 171
@@ -49,11 +52,12 @@ end
 
 local bars, barsByHand = {}, {}
 local inCombat = false
+local screenHeight
 local callbacksRegistered = false
 local eventFrame = CreateFrame("Frame")
 local callbackOwner = {}
 
-local floor = math.floor
+local floor, ceil, max = math.floor, math.ceil, math.max
 local GetTime = GetTime
 
 local function Lib()
@@ -77,6 +81,16 @@ end
 
 local function EditorActive()
     return addon.EditorMode and addon.EditorMode:IsActive() and true or false
+end
+
+local function RefreshScreenHeight()
+    screenHeight = tonumber((GetCVar("gxResolution") or ""):match("%d+x(%d+)"))
+end
+
+-- Out of range dims the whole bar, as Forever does; the combat fade multiplies on top.
+local function ApplyAlpha(bar)
+    local range = bar.outOfRange and OUT_OF_RANGE_ALPHA or 1
+    bar.frame:SetAlpha((bar.opacity or 1) * range * bar.fade)
 end
 
 -- =============================================================================
@@ -127,7 +141,7 @@ end
 
 -- Shorter than the default, the ends shrink with the bar like Forever's stretched frame; taller, they keep their size.
 local function LayoutBorder(corners, height)
-    local shrink = math.min(1, height / DEFAULT_HEIGHT)
+    local shrink = math.min(1, height / FOREVER_HEIGHT)
     for _, corner in ipairs(corners) do
         corner:SetSize(CORNER_W * shrink, CORNER_H * shrink)
     end
@@ -140,7 +154,11 @@ local function CreateLabel(parent, point, x)
 end
 
 local function CreateBar(def)
-    local bar = { def = def, widget = KEY .. "_" .. def.hand }
+    local bar = { def = def, widget = KEY .. "_" .. def.hand, fade = 1 }
+    bar.setFade = function(value)
+        bar.fade = value
+        ApplyAlpha(bar)
+    end
     bar.anchor = addon.CreateUIFrame(DEFAULT_WIDTH, DEFAULT_HEIGHT, def.frameName)
 
     local frame = CreateFrame("Frame", "DragonUI_" .. def.frameName .. "Bar", UIParent)
@@ -197,17 +215,37 @@ end
 -- Drawing
 -- =============================================================================
 
--- The fill is cropped by texcoords, never squashed, so its grain stays put as it grows.
+-- 3.3.5a has no pixel snapping: at fractional offsets the thin pip shimmers, so it sits on whole pixels.
+local function PlacePip(bar, right)
+    local left = bar.holder:GetLeft()
+    local pipWidth = PIP_WIDTH
+    if left and screenHeight then
+        local perUnit = bar.holder:GetEffectiveScale() * screenHeight / 768
+        local pixel = floor((left + right) * perUnit + 0.5)
+        local first, last = ceil(left * perUnit), floor((left + bar.innerWidth) * perUnit)
+        if pixel < first then pixel = first elseif pixel > last then pixel = last end
+        right = pixel / perUnit - left
+        pipWidth = max(1, floor(PIP_WIDTH * perUnit + 0.5)) / perUnit
+    end
+    if pipWidth ~= bar.pipWidth then
+        bar.pipWidth = pipWidth
+        bar.pip:SetWidth(pipWidth)
+    end
+    bar.pip:SetPoint("RIGHT", bar.holder, "LEFT", right, 0)
+    return right - pipWidth
+end
+
+-- Cropped by texcoords so the grain stays put; it stops at the pip, whose soft edges would show that grain.
 local function Draw(bar, progress, remaining)
-    local width = bar.innerWidth * progress
+    local width = PlacePip(bar, bar.innerWidth * progress)
     if width >= 0.5 then
+        local right = FILL_LEFT + FILL_PIXELS * width / bar.innerWidth
         bar.fill:SetWidth(width)
-        bar.fill:SetTexCoord(FILL_LEFT / SHEET_W, (FILL_LEFT + FILL_PIXELS * progress) / SHEET_W, bar.fillTop, bar.fillBottom)
+        bar.fill:SetTexCoord(FILL_LEFT / SHEET_W, right / SHEET_W, bar.fillTop, bar.fillBottom)
         bar.fill:Show()
     else
         bar.fill:Hide()
     end
-    bar.pip:SetPoint("RIGHT", bar.holder, "LEFT", width, 0)
 
     local tenths = floor(remaining * 10 + 0.5)
     if tenths ~= bar.tenths then
@@ -258,12 +296,12 @@ local function Sync(bar)
     end
 end
 
--- Out of range dims the whole bar and turns the text red, as Forever does; the editor preview never dims.
+-- Out of range also turns the text red, as Forever does; the editor preview never dims.
 local function ApplyRange(bar)
     local lib = Lib()
-    local outOfRange = not bar.previewing and lib and lib:IsInRange(bar.def.hand) == false
-    bar.frame:SetAlpha((bar.opacity or 1) * (outOfRange and OUT_OF_RANGE_ALPHA or 1))
-    local color = outOfRange and RED_FONT_COLOR or HIGHLIGHT_FONT_COLOR
+    bar.outOfRange = not bar.previewing and lib and lib:IsInRange(bar.def.hand) == false
+    ApplyAlpha(bar)
+    local color = bar.outOfRange and RED_FONT_COLOR or HIGHLIGHT_FONT_COLOR
     bar.title:SetTextColor(color.r, color.g, color.b)
     bar.time:SetTextColor(color.r, color.g, color.b)
 end
@@ -273,12 +311,13 @@ local function Layout(bar)
     local width = Clamp(cfg.width, MIN_WIDTH, MAX_WIDTH, DEFAULT_WIDTH)
     local height = Clamp(cfg.height, MIN_HEIGHT, MAX_HEIGHT, DEFAULT_HEIGHT)
     local scale = Clamp(cfg.scale, 50, 200, DEFAULT_SCALE) / 100
+    local artWidth, artHeight = width / FOREVER_SCALE, height / FOREVER_SCALE
 
-    bar.frame:SetSize(width, height)
-    LayoutBorder(bar.corners, height)
-    bar.frame:SetScale(scale)
+    bar.frame:SetSize(artWidth, artHeight)
+    LayoutBorder(bar.corners, artHeight)
+    bar.frame:SetScale(scale * FOREVER_SCALE)
     bar.anchor:SetSize(width * scale, height * scale)
-    bar.innerWidth = width - 2 * INSET_X
+    bar.innerWidth = artWidth - 2 * INSET_X
     bar.opacity = Clamp(cfg.opacity, 50, 100, 100) / 100
 
     local showTitle = cfg.show_title ~= false
@@ -320,10 +359,15 @@ local function ShouldShow(bar)
     return mode ~= "hidden"
 end
 
-local function UpdateShownState()
+-- animate: only entering and leaving combat fade; weapons, the editor and settings switch at once.
+local function UpdateShownState(animate)
     for _, bar in ipairs(bars) do
-        SetShown(bar.frame, ShouldShow(bar))
+        addon.SetShownFaded(bar.frame, ShouldShow(bar), animate, bar.setFade)
     end
+end
+
+local function OnWeapons()
+    UpdateShownState(false)
 end
 
 local function OnSwing(_, hand)
@@ -360,19 +404,23 @@ local function UpdateCallbacks()
         lib.RegisterCallback(callbackOwner, "SWING_UPDATE", OnSwing)
         lib.RegisterCallback(callbackOwner, "SWING_STOP", OnStop)
         lib.RegisterCallback(callbackOwner, "SWING_RANGE", OnRange)
-        lib.RegisterCallback(callbackOwner, "SWING_WEAPONS", UpdateShownState)
+        lib.RegisterCallback(callbackOwner, "SWING_WEAPONS", OnWeapons)
     else
         lib.UnregisterAllCallbacks(callbackOwner)
     end
 end
 
 eventFrame:SetScript("OnEvent", function(_, event)
+    if event == "DISPLAY_SIZE_CHANGED" then
+        RefreshScreenHeight()
+        return
+    end
     if event == "PLAYER_REGEN_DISABLED" then
         inCombat = true
     elseif event == "PLAYER_REGEN_ENABLED" then
         inCombat = false
     end
-    UpdateShownState()
+    UpdateShownState(event ~= "PLAYER_ENTERING_WORLD")
 end)
 
 -- =============================================================================
@@ -445,11 +493,13 @@ function addon.ApplySwingTimerSystem()
     SwingTimer.initialized = true
     SwingTimer.applied = true
     inCombat = UnitAffectingCombat("player") and true or false
+    RefreshScreenHeight()
 
     eventFrame:UnregisterAllEvents()
     eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    eventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
     UpdateCallbacks()
     for _, bar in ipairs(bars) do
@@ -467,7 +517,7 @@ function addon.RestoreSwingTimerSystem()
     for _, bar in ipairs(bars) do
         bar.previewing = false
         Clear(bar)
-        bar.frame:Hide()
+        addon.SetShownFaded(bar.frame, false, false, bar.setFade)
     end
 end
 

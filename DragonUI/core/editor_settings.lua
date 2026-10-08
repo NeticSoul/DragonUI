@@ -1713,15 +1713,15 @@ E.Register("personalresource", { settings = {
     Check(T("Show Bar Text"), "personalresource.bar_text", R.personalResource),
 } })
 
--- Forever's swing timer rows and ranges, one dialog per bar.
+-- Forever's swing timer rows, ranges at our HUD's 0.72 (see swingtimer.lua), one dialog per bar.
 local function SwingTimerSettings(hand)
     local path = "swingtimer." .. hand .. "."
     return { settings = {
         Slider(T("Scale"), path .. "scale", 50, 200, 10, R.swingTimer, { format = "%d%%" }),
         Slider(T("Opacity"), path .. "opacity", 50, 100, 1, R.swingTimer, { format = "%d%%" }),
-        Slider(T("Width"), path .. "width", 213, 852, 10, R.swingTimer, {
+        Slider(T("Width"), path .. "width", 153, 613, 1, R.swingTimer, {
             hideValue = true, minText = T("Narrow"), maxText = T("Wide") }),
-        Slider(T("Height"), path .. "height", 15, 60, 1, R.swingTimer, {
+        Slider(T("Height"), path .. "height", 11, 43, 1, R.swingTimer, {
             hideValue = true, minText = T("Short"), maxText = T("Tall") }),
         Check(T("Show Bar Title"), path .. "show_title", R.swingTimer),
         Check(T("Show Time"), path .. "show_time", R.swingTimer),

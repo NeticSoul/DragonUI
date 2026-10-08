@@ -89,6 +89,7 @@ local health, power, alt
 local playerClass, playerGUID
 local previewing = false
 local inCombat = false
+local fade = 1
 local altActive = false
 local powerType, powerToken = 0, nil
 local predictedPowerCost
@@ -845,6 +846,15 @@ local function Place(frame, y, width, height)
     return y + height
 end
 
+local function ApplyAlpha()
+    content:SetAlpha(Clamp(Cfg().opacity, 50, 100, 100) / 100 * fade)
+end
+
+local function SetFade(value)
+    fade = value
+    ApplyAlpha()
+end
+
 local function Layout()
     if not content then return end
 
@@ -881,7 +891,7 @@ local function Layout()
 
     content:SetSize(width, total)
     content:SetScale(scale)
-    content:SetAlpha(Clamp(cfg.opacity, 50, 100, 100) / 100)
+    ApplyAlpha()
     anchor:SetSize(width * scale, total * scale)
 
     SyncAlt()
@@ -916,14 +926,10 @@ local function ShouldShow()
     return mode ~= "hidden"
 end
 
-local function UpdateShownState()
+-- animate: only entering and leaving combat fade; the editor, settings and login switch at once.
+local function UpdateShownState(animate)
     if not content then return end
-
-    if ShouldShow() then
-        content:Show()
-    else
-        content:Hide()
-    end
+    addon.SetShownFaded(content, ShouldShow(), animate, SetFade)
 end
 
 local function RegisterDataEvents()
@@ -993,7 +999,7 @@ eventFrame:SetScript("OnEvent", function(_, event)
         playerGUID = UnitGUID("player")
         if content and content:IsShown() then RefreshAll() end
     end
-    UpdateShownState()
+    UpdateShownState(event ~= "PLAYER_ENTERING_WORLD")
 end)
 
 -- =============================================================================
@@ -1101,7 +1107,7 @@ function addon.RestorePersonalResourceSystem()
     previewing = false
 
     eventFrame:UnregisterAllEvents()
-    if content then content:Hide() end
+    if content then addon.SetShownFaded(content, false, false, SetFade) end
 end
 
 function addon.RefreshPersonalResourceSystem()

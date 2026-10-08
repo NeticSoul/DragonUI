@@ -405,6 +405,64 @@ function addon.HideUIFrame(frame, exclude)
 end
 
 -- ============================================================================
+-- FADED SHOW / HIDE
+-- ============================================================================
+
+local FADE_IN_TIME, FADE_OUT_TIME = 0.25, 0.5
+
+local function SetFadeValue(fader, value)
+    fader.value = value
+    fader.apply(value)
+end
+
+local function FaderOnUpdate(fader, elapsed)
+    local frame = fader.frame
+    if not frame:IsShown() then
+        fader.value = 0
+        fader:Hide()
+        return
+    end
+    local target = fader.target
+    local value
+    if target == 1 then
+        value = math.min(1, fader.value + elapsed / FADE_IN_TIME)
+    else
+        value = math.max(0, fader.value - elapsed / FADE_OUT_TIME)
+    end
+    SetFadeValue(fader, value)
+    if value == target then
+        fader:Hide()
+        if target == 0 then frame:Hide() end
+    end
+end
+
+-- Shows or hides frame, fading when animate; apply(value) folds the 0-1 fade into the frame's own alpha.
+function addon.SetShownFaded(frame, shown, animate, apply)
+    local fader = frame.DragonUI_Fader
+    if not fader then
+        fader = CreateFrame("Frame")
+        fader:Hide()
+        fader:SetScript("OnUpdate", FaderOnUpdate)
+        fader.frame, fader.value = frame, frame:IsShown() and 1 or 0
+        frame.DragonUI_Fader = fader
+    end
+    fader.apply, fader.target = apply, shown and 1 or 0
+
+    if not animate then
+        fader:Hide()
+        SetFadeValue(fader, fader.target)
+        if shown then frame:Show() else frame:Hide() end
+        return
+    end
+    if not frame:IsShown() then
+        if not shown then return end
+        SetFadeValue(fader, 0)
+        frame:Show()
+    end
+    if fader.value ~= fader.target then fader:Show() else fader:Hide() end
+end
+
+-- ============================================================================
 -- POSITION SAVE/LOAD FUNCTIONS
 -- ============================================================================
 
