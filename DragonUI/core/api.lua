@@ -328,6 +328,26 @@ addon.SetNinesliceState = SetNinesliceState
 addon.ShowNineslice = ShowNineslice
 addon.HideNineslice = HideNineslice
 
+-- Grows the editor box (outline + click area) about the point the real frame hangs from; the widget itself stays put.
+function addon.SetEditorBoxScale(frame, scale, pivot)
+    local slice = frame and frame.NineSlice
+    if not slice or (InCombatLockdown() and frame:IsProtected()) then return end
+    scale, pivot = scale or 1, pivot or "CENTER"
+    local growW, growH = frame:GetWidth() * (scale - 1), frame:GetHeight() * (scale - 1)
+    local fromLeft = pivot:find("LEFT") and 0 or (pivot:find("RIGHT") and 1 or 0.5)
+    local fromTop = pivot:find("TOP") and 0 or (pivot:find("BOTTOM") and 1 or 0.5)
+    local left, right = growW * fromLeft, growW * (1 - fromLeft)
+    local top, bottom = growH * fromTop, growH * (1 - fromTop)
+    local shift = (frame.DragonUI_BoxShiftY or 0) * scale
+    slice.TopLeftCorner:SetPoint("TOPLEFT", -8 - left, 8 + top + shift)
+    slice.TopRightCorner:SetPoint("TOPRIGHT", 8 + right, 8 + top + shift)
+    slice.BottomLeftCorner:SetPoint("BOTTOMLEFT", -8 - left, -8 - bottom + shift)
+    slice.BottomRightCorner:SetPoint("BOTTOMRIGHT", 8 + right, -8 - bottom + shift)
+    slice.Center:SetPoint("TOPLEFT", -left, top + shift)
+    slice.Center:SetPoint("BOTTOMRIGHT", right, -bottom + shift)
+    frame:SetHitRectInsets(-left, -right, -(top + shift), -(bottom - shift))
+end
+
 -- ============================================================================
 -- FRAME VISIBILITY FUNCTIONS (Editor Mode Support)
 -- ============================================================================
@@ -514,6 +534,23 @@ function addon.ApplyWidgetPositionFromDB(widgetKey, frame)
     frame:SetPoint(anchor, UIParent, anchor, posX, posY)
 end
 
+local function PointCoords(frame, point)
+    local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
+    if not (left and right and top and bottom) then return nil end
+    local x = point:find("LEFT") and left or (point:find("RIGHT") and right or (left + right) / 2)
+    local y = point:find("TOP") and top or (point:find("BOTTOM") and bottom or (top + bottom) / 2)
+    return x, y
+end
+
+-- SetPoint(point, UIParent, relativePoint, x, y) offsets that keep `frame` in place, read off its edges (GetPoint skews).
+function addon.GetAnchorOffset(frame, point, relativePoint)
+    local fx, fy = PointCoords(frame, point)
+    local ux, uy = PointCoords(UIParent, relativePoint or point)
+    if not (fx and ux) then return nil end
+    local ratio = UIParent:GetEffectiveScale() / frame:GetEffectiveScale()
+    return fx - ux * ratio, fy - uy * ratio
+end
+
 -- Apply frame position from database
 function addon.ApplyUIFramePosition(frame, configPath)
     if not frame or not configPath then
@@ -582,6 +619,9 @@ function addon:RegisterEditableFrame(frameInfo)
         hideTest = frameInfo.hideTest,            -- Function to hide fake frame
         hasTarget = frameInfo.hasTarget,          -- Function to check if should be visible
         editorVisible = frameInfo.editorVisible,  -- Function to check if frame should appear in editor mode
+        resetPosition = frameInfo.resetPosition,  -- Optional: the module's own way back to its default spot
+        applyPosition = frameInfo.applyPosition,  -- Optional: re-places the frame from the DB with the module's own shifts
+        isDefaultPosition = frameInfo.isDefaultPosition, -- Optional: true when resetPosition would change nothing
         module = frameInfo.module                 -- Reference to the module
     }
     

@@ -997,6 +997,21 @@ local function registerEditor()
         end,
         onShow = function() anchor:SetClampedToScreen(true) end,
         onNudge = function() savePosition() end,
+        resetPosition = function()
+            local config = addon.db and addon.db.profile and addon.db.profile.questtracker
+            local defaults = addon.defaults and addon.defaults.profile.questtracker
+            if not (config and defaults) then return end
+            config.anchor, config.x, config.y = defaults.anchor, defaults.x, defaults.y
+            OT.Place()
+        end,
+        isDefaultPosition = function()
+            local config = addon.db and addon.db.profile and addon.db.profile.questtracker
+            local defaults = addon.defaults and addon.defaults.profile.questtracker
+            if not (config and defaults) then return true end
+            return (config.anchor or defaults.anchor) == defaults.anchor
+                and math.abs((config.x or defaults.x) - defaults.x) <= 1
+                and math.abs((config.y or defaults.y) - defaults.y) <= 1
+        end,
         onHide = function()
             anchor:SetClampedToScreen(false)
             savePosition()

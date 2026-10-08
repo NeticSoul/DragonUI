@@ -763,6 +763,18 @@ function BuffFrameModule:SetupWeaponEnchantSeparation()
                 self:UpdateWeaponEnchantPosition()
                 AnchorWeaponEnchantsToFrame()
             end,
+            -- At default the frame sits on its own constants, not the saved spot; custom_position only updates on close.
+            resetPosition = function()
+                local w = addon.db.profile.widgets.weapon_enchants
+                if w then w.custom_position = false end
+                self:UpdateWeaponEnchantPosition()
+                AnchorWeaponEnchantsToFrame()
+            end,
+            isDefaultPosition = function()
+                local x, y = addon.GetAnchorOffset(dragonUIWeaponBuffFrame, WEAPON_DEFAULT_ANCHOR, "TOPRIGHT")
+                if not x then return true end
+                return math.abs(x - WEAPON_DEFAULT_POSX) <= 1 and math.abs(y - WEAPON_DEFAULT_POSY) <= 1
+            end,
             module = self
         })
     end

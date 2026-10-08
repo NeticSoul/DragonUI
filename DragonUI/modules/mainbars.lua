@@ -1764,9 +1764,11 @@ local function UpdateBarPositions()
     -- Resize editor frames to match bar dimensions
     if addon.ActionBarFrames.xpbar then
         addon.ActionBarFrames.xpbar:SetSize(barW, barH)
+        addon.SetEditorBoxScale(addon.ActionBarFrames.xpbar, cfg.expbar_scale or 1)
     end
     if addon.ActionBarFrames.repbar then
         addon.ActionBarFrames.repbar:SetSize(barW, barH)
+        addon.SetEditorBoxScale(addon.ActionBarFrames.repbar, cfg.repbar_scale or 1)
     end
 
     if style == "dragonflightui" then
@@ -2190,6 +2192,11 @@ local function RegisterActionBarFrames()
                 blizzardFrame = registration.blizzardFrame,
                 configPath = registration.configPath,
                 editorVisible = registration.editorVisible,
+                -- Dual-bar offset, art-style default Y and the rep bar's drop into the XP slot at max level.
+                applyPosition = function()
+                    addon.ApplyActionBarPositions()
+                    if addon.PositionActionBarsToContainers then addon.PositionActionBarsToContainers() end
+                end,
             })
         end
     end

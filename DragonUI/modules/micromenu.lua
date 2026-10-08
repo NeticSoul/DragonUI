@@ -1673,6 +1673,8 @@ end
 function MainMenuMicroButtonMixin:bagbuttons_reposition()
     local bagScale = addon.db and addon.db.profile and addon.db.profile.bags and addon.db.profile.bags.scale or 1.0
     MainMenuBarBackpackButton:SetScale(bagScale)
+    local bagsWidget = addon:GetEditableFrameInfo("bagsbar")
+    if bagsWidget then addon.SetEditorBoxScale(bagsWidget.frame, bagScale, "RIGHT") end
 
     CharacterBag0Slot:SetSinglePoint('RIGHT', MainMenuBarBackpackButton, 'LEFT', -14, -2)
 
@@ -2299,6 +2301,7 @@ function addon.RefreshBagsPosition()
     end
 
     local frameInfo = addon:GetEditableFrameInfo("bagsbar")
+    if frameInfo then addon.SetEditorBoxScale(frameInfo.frame, scale or 1, "RIGHT") end
     if frameInfo and frameInfo.frame then
         -- Apply position from database or use default
         local bagsConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.bagsbar

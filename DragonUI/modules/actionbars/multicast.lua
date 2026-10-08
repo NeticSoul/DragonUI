@@ -274,8 +274,7 @@ local function CreateMulticastFrames()
         dragStartX = GetCursorPosition() / scale
         dragStartY = select(2, GetCursorPosition()) / scale
         
-        -- When dragging starts, switch to manual positioning mode
-        -- and calculate current position relative to UIParent BOTTOM
+        -- Starting point in manual coordinates (from UIParent BOTTOM); manual mode begins on the first real move.
         if addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.totem then
             local totemConfig = addon.db.profile.additional.totem
             
@@ -291,17 +290,11 @@ local function CreateMulticastFrames()
                 -- Manual mode places the anchor by its BOTTOM; the centre made the bar jump up on the first drag.
                 configStartY = math.floor((anchor:GetBottom() - base_y) + 0.5)
                 
-                -- Update config to reflect current position in manual mode
-                totemConfig.x_position = configStartX
-                totemConfig.y_offset = configStartY
             else
                 -- Already in manual mode, use stored values
                 configStartX = totemConfig.x_position or 0
                 configStartY = totemConfig.y_offset or 0
             end
-            
-            -- Enable manual positioning mode (loses dynamic anchor)
-            totemConfig.manual_position = true
         end
     end)
     
@@ -316,11 +309,17 @@ local function CreateMulticastFrames()
         
         local deltaX = currentX - dragStartX
         local deltaY = currentY - dragStartY
+        -- A click without a move must not switch to manual mode, or the bar stops following the bars below.
+        if math.abs(deltaX) < 1 and math.abs(deltaY) < 1 and not GetTotemConfig().manual_position then
+            return
+        end
         
         -- Update config values in real-time
         if addon.db and addon.db.profile and addon.db.profile.additional and addon.db.profile.additional.totem then
             addon.db.profile.additional.totem.x_position = math.floor(configStartX + deltaX + 0.5)
             addon.db.profile.additional.totem.y_offset = math.floor(configStartY + deltaY + 0.5)
+            -- Manual positioning loses the dynamic anchor to the action bars.
+            addon.db.profile.additional.totem.manual_position = true
             
             -- Update anchor position in real-time
             UpdateTotemBarPosition()
@@ -620,7 +619,20 @@ local function ApplyMulticastSystem()
                     editorOverlay.editorText:Hide()
                 end
             end,
-            
+
+            resetPosition = function()
+                local totemConfig = GetTotemConfig()
+                local defaults = addon.defaults and addon.defaults.profile.additional.totem
+                if not defaults then return end
+                totemConfig.x_position = defaults.x_position
+                totemConfig.y_offset = defaults.y_offset
+                totemConfig.manual_position = defaults.manual_position
+                UpdateTotemBarPosition()
+            end,
+            isDefaultPosition = function()
+                return not GetTotemConfig().manual_position
+            end,
+
             module = MulticastModule
         })
     end

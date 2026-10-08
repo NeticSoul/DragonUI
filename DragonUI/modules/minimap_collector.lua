@@ -1118,15 +1118,30 @@ end
 -- ----------------------------------------------------------------------------
 -- Settings button scripts (named, no closures over local btn)
 -- ----------------------------------------------------------------------------
+local OnSettingsEnter
+
 local function OnSettingsClick(self, mouseBtn)
     if self.DragonUI_SuppressClickUntil and GetTime and GetTime() < self.DragonUI_SuppressClickUntil then
         return
     end
     if mouseBtn == "RightButton" then
         ToggleInterfaceConfig()
+    elseif IsShiftKeyDown() then
+        -- EditorMode:Show refuses combat silently; say why, like the settings click does.
+        if InCombatLockdown() then
+            addon:Error(addon.L["Cannot toggle editor mode during combat!"])
+        elseif addon.EditorMode then
+            addon.EditorMode:Toggle()
+        end
     else
         ToggleCollector()
         UpdateHighlightStyle(self)
+        -- The tooltip was placed for the old box; place it again next frame, once the box has its new rect.
+        if GameTooltip and GameTooltip:IsOwned(self) then
+            addon:After(0, function()
+                if GameTooltip:IsOwned(self) then OnSettingsEnter(self) end
+            end)
+        end
     end
 end
 
@@ -1142,7 +1157,7 @@ local function OnSettingsMouseUp(self)
     LayoutSettingsIcon(self, false)
 end
 
-local function OnSettingsEnter(self)
+function OnSettingsEnter(self)
     if IsSettingsButtonFadeEnabled() and deps.fadein then
         deps.fadein(self)
     else
@@ -1156,7 +1171,18 @@ local function OnSettingsEnter(self)
     if style == STYLE_CLASSIC then
         GameTooltip:SetOwner(self, "ANCHOR_NONE")
         GameTooltip:ClearAllPoints()
-        GameTooltip:SetPoint("RIGHT", self, "LEFT", 3, -85)
+        local c = GetCollector()
+        local boxBottom = c and c.isOpen and c:IsShown() and c:GetBottom()
+        local top, bottom = self:GetTop(), self:GetBottom()
+        if boxBottom and top and bottom then
+            -- Edges flush under the open box (centred on the minimap, height = rows), like the circle style's tooltip.
+            local middle = (top + bottom) / 2 * self:GetEffectiveScale()
+            local y = (boxBottom * c:GetEffectiveScale() - middle) / GameTooltip:GetEffectiveScale()
+            GameTooltip:SetPoint("TOPRIGHT", self, "LEFT", 3, y)
+        else
+            -- Closed: right beside the arrow it describes; opening the box moves it underneath.
+            GameTooltip:SetPoint("RIGHT", self, "LEFT", 3, 0)
+        end
     else
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     end
@@ -1164,6 +1190,7 @@ local function OnSettingsEnter(self)
     GameTooltip:AddLine((L and L["Left-click to show or hide minimap addon buttons."])
         or "Left-Click to open minimap buttons.", 1, 0.82, 0, true)
     GameTooltip:AddLine(L["Right-click to open DragonUI settings."], 1, 0.82, 0, true)
+    GameTooltip:AddLine(L["Shift-click to open Editor Mode."], 1, 0.82, 0, true)
     if style == STYLE_DUI then
         GameTooltip:AddLine(L["Drag to move"], 0.7, 0.7, 0.7, true)
     end

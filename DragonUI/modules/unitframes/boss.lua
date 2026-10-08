@@ -39,6 +39,8 @@ end
 -- ============================================================================
 
 local NUM_BOSS_FRAMES = 4
+-- BossTargetFrame_OnLoad's own scale; the wrappers and the overlay are laid out around it.
+local BOSS_BASE_SCALE = 0.75
 
 -- ============================================================================
 -- MODULE STATE
@@ -875,6 +877,11 @@ local function PositionBossFrames()
         local wrapper = BossModule.wrapperFrames[i]
         if wrapper then
             wrapper:SetScale(scale)
+            -- Anchored to the wrapper, not parented: the wrapper's scale only spaced the frames apart.
+            local bossFrame = _G["Boss" .. i .. "TargetFrame"]
+            if bossFrame then
+                bossFrame:SetScale(BOSS_BASE_SCALE * scale)
+            end
 
             if i == 1 then
                 -- Always anchor to overlay so editor drag moves everything
@@ -1001,6 +1008,9 @@ end
 -- EDITOR MODE
 -- ============================================================================
 
+-- Defined with the apply functions below; the editor's reset needs it first.
+local ApplyBossFramePosition
+
 local function SetupEditorMode()
     local totalHeight = NUM_BOSS_FRAMES * 75 - 6
     BossModule.overlay = addon.CreateUIFrame(178, totalHeight, "boss")
@@ -1016,8 +1026,16 @@ local function SetupEditorMode()
         "TOPRIGHT", UIParent, "TOPRIGHT", -100, -270
     )
 
+    -- A click with a twitch of the mouse is no move; flagging it saved override at the very same spot.
+    BossModule.overlay:HookScript("OnDragStart", function(self)
+        self.DragonUI_DragFromX, self.DragonUI_DragFromY = self:GetLeft(), self:GetTop()
+    end)
     BossModule.overlay:HookScript("OnDragStop", function(self)
-        self.DragonUI_WasDragged = true
+        local x, y = self:GetLeft(), self:GetTop()
+        if not (x and self.DragonUI_DragFromX) or math.abs(x - self.DragonUI_DragFromX) > 1
+            or math.abs(y - self.DragonUI_DragFromY) > 1 then
+            self.DragonUI_WasDragged = true
+        end
     end)
 
     addon:RegisterEditableFrame({
@@ -1063,6 +1081,20 @@ local function SetupEditorMode()
                 BossModule.overlay.DragonUI_WasDragged = nil
             end
         end,
+        resetPosition = function()
+            local config = GetConfig()
+            if config then config.override = false end
+            ApplyBossFramePosition()
+            PositionBossFrames()
+        end,
+        -- Where the overlay is, not the override flag: an old flag can sit on frames that never moved.
+        isDefaultPosition = function()
+            local config = GetConfig()
+            local x, y = addon.GetAnchorOffset(BossModule.overlay, config.anchor or "TOPRIGHT",
+                config.anchorParent or "TOPRIGHT")
+            if not x then return true end
+            return math.abs(x - (config.x or -100)) <= 1 and math.abs(y - (config.y or -270)) <= 1
+        end,
         module = BossModule
     })
 end
@@ -1071,7 +1103,7 @@ end
 -- APPLY / RESTORE
 -- ============================================================================
 
-local function ApplyBossFramePosition()
+function ApplyBossFramePosition()
     if not BossModule.overlay then return end
     local config = GetConfig()
     if config and config.override then

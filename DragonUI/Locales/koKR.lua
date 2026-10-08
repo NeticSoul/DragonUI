@@ -80,6 +80,7 @@ L["DragonUI Version: "] = "DragonUI 버전: "
 L["Exit Edit Mode"] = "편집 모드 종료"
 L["Reset All Positions"] = "모든 위치 초기화"
 L["Are you sure you want to reset all interface elements to their default positions?"] = "모든 인터페이스 요소를 기본 위치로 되돌릴까요?"
+L["Reset Position"] = "위치 초기화"
 L["Yes"] = "예"
 L["No"] = "아니요"
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = "UI 요소의 위치가 바뀌었습니다. 모든 그래픽이 제대로 표시되도록 UI를 다시 불러올까요?"
@@ -138,6 +139,7 @@ L["Keybinding mode deactivated."] = "단축키 모드가 꺼졌습니다."
 L["Minimap Buttons"] = "미니맵 버튼"
 L["Left-click to show or hide minimap addon buttons."] = "왼쪽 클릭으로 미니맵 애드온 버튼을 엽니다."
 L["Right-click to open DragonUI settings."] = "오른쪽 클릭으로 DragonUI 설정을 엽니다."
+L["Shift-click to open Editor Mode."] = "Shift-클릭으로 편집 모드를 엽니다."
 
 -- ============================================================================
 -- EDITOR MODE LABELS (displayed on mover overlays)
@@ -789,7 +791,6 @@ L["Delete Layout"] = "레이아웃 삭제"
 L["Export Layout"] = "레이아웃 내보내기"
 L["Import Layout"] = "레이아웃 가져오기"
 L["Enter a name for the layout:"] = "레이아웃 이름을 입력하세요:"
-L["Reset"] = "초기화"
 L["General"] = "일반"
 
 -- Dropdown placeholder

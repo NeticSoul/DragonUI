@@ -19,6 +19,8 @@ local errorMessagesPositionHooked = false;
 
 -- The overlay hugs one error line, which sits this far above the centre of the 512x60 error frame.
 local ERROR_MOVER_WIDTH, ERROR_MOVER_HEIGHT, ERROR_ROW_OFFSET = 280, 32, 20
+-- Blizzard's own anchor for the error frame (UIErrorsFrame.xml): TOP of UIParent, this far down.
+local ERROR_DEFAULT_Y = -122
 
 local function GetWidgetConfig(widgetName)
     return addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets[widgetName]
@@ -43,6 +45,13 @@ local function ApplyErrorMessagesPosition()
 end
 
 addon.ApplyErrorMessagesPosition = ApplyErrorMessagesPosition
+
+-- ApplyErrorMessagesPosition leaves the frame alone without a custom spot, so the reset puts it back itself.
+local function RestoreErrorMessagesDefaultPosition()
+    if not UIErrorsFrame then return end
+    UIErrorsFrame:ClearAllPoints()
+    UIErrorsFrame:SetPoint("TOP", UIParent, "TOP", 0, ERROR_DEFAULT_Y)
+end
 
 local function PersistErrorMessagesMoverPosition()
     if not errorMessagesMover or not addon.db or not addon.db.profile then
@@ -71,7 +80,16 @@ local function SetupErrorMessagesMover()
     end
 
     errorMessagesMover = addon.CreateUIFrame(ERROR_MOVER_WIDTH, ERROR_MOVER_HEIGHT, "ErrorMessages")
+    -- A click with a twitch of the mouse is no move; persisting it turned custom_position on for nothing.
+    errorMessagesMover:HookScript("OnDragStart", function(self)
+        self.DragonUI_DragFromX, self.DragonUI_DragFromY = self:GetLeft(), self:GetTop()
+    end)
     errorMessagesMover:HookScript("OnDragStop", function(self)
+        local x, y = self:GetLeft(), self:GetTop()
+        if x and self.DragonUI_DragFromX and math.abs(x - self.DragonUI_DragFromX) <= 1
+            and math.abs(y - self.DragonUI_DragFromY) <= 1 then
+            return
+        end
         self.DragonUI_WasDragged = true
         PersistErrorMessagesMoverPosition()
         ApplyErrorMessagesPosition()
@@ -115,6 +133,22 @@ local function SetupErrorMessagesMover()
         end,
         hideTest = function()
             errorMessagesMover.sample:Hide()
+        end,
+        resetPosition = function()
+            local cfg = GetWidgetConfig("errorMessages")
+            local defaults = addon.defaults and addon.defaults.profile.widgets.errorMessages
+            if cfg and defaults then
+                cfg.anchor, cfg.posX, cfg.posY = defaults.anchor, defaults.posX, defaults.posY
+                cfg.custom_position = defaults.custom_position
+            end
+            RestoreErrorMessagesDefaultPosition()
+        end,
+        -- Where the mover is, not custom_position: an old flag can sit on a frame that never moved.
+        isDefaultPosition = function()
+            local x, y = addon.GetAnchorOffset(errorMessagesMover, "CENTER", "TOP")
+            if not x then return true end
+            local height = UIErrorsFrame and UIErrorsFrame:GetHeight() or 60
+            return math.abs(x) <= 1 and math.abs(y - (ERROR_DEFAULT_Y - height / 2 + ERROR_ROW_OFFSET)) <= 1
         end,
         onHide = function()
             if errorMessagesMover.DragonUI_WasDragged or errorMessagesMover.DragonUI_WasAdjustedByEditor then

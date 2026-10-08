@@ -507,13 +507,13 @@ function ForeverUI.CreateButton(parent, text, width, height)
     return button
 end
 
--- opts: size (default 24), large (128-RedButton-Exit art), onClick (default hides the parent).
+-- opts: size (24), large (128 art) or art (any red-button prefix), sound, onClick (default hides the parent).
 function ForeverUI.CreateCloseButton(parent, opts)
     opts = opts or {}
     local button = CreateFrame("Button", nil, parent)
     local size = opts.size or Metrics.window.closeSize
     button:SetSize(size, size)
-    local prefix = opts.large and "128-redbutton-exit" or "redbutton-exit"
+    local prefix = opts.art or (opts.large and "128-redbutton-exit" or "redbutton-exit")
 
     local function Skin(setter, getter, name)
         local info = ForeverAtlas[name]
@@ -530,7 +530,7 @@ function ForeverUI.CreateCloseButton(parent, opts)
     button:GetHighlightTexture():SetTexCoord(highlight[4], highlight[5], highlight[6], highlight[7])
 
     button:SetScript("OnClick", function(self)
-        PlaySound("igMainMenuClose")
+        PlaySound(opts.sound or "igMainMenuClose")
         if opts.onClick then
             opts.onClick(self)
         elseif self:GetParent() then

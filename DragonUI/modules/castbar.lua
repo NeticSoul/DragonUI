@@ -2655,6 +2655,7 @@ local function InitializeCastbarForEditor()
         name = "PlayerCastbar",
         frame = CastbarModule.anchor,
         configPath = {"widgets", "playerCastbar"},
+        applyPosition = ApplyWidgetPosition,
         hasTarget = ShouldPlayerCastbarBeVisible,
         editorVisible = ShouldPlayerCastbarBeVisible,
         showTest = ShowPlayerCastbarTest,

@@ -562,6 +562,18 @@ local function ApplyStanceSystem()
                 end
             end,
             
+            resetPosition = function()
+                local stanceConfig = GetStanceConfig()
+                if stanceConfig == STANCE_DEFAULTS then return end
+                stanceConfig.x_position = STANCE_DEFAULTS.x_position
+                stanceConfig.y_offset = STANCE_DEFAULTS.y_offset
+                stanceConfig.manual_position = nil
+                updateStanceBar()
+            end,
+            isDefaultPosition = function()
+                return (select(3, ResolveStancePosition()))
+            end,
+
             hideTest = function()
                 -- Ensure manual editor adjustments are persisted before hiding.
                 if editorOverlay and editorOverlay.SyncManualOverlayDeltaToStanceConfig then

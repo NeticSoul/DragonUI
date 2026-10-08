@@ -1719,11 +1719,21 @@ end
 -- ---------------------------------------------------------------------------
 
 local MENU_STYLES = {
-    bg = { prefix = "common-dropdown-bg", left = -10, top = 3, right = 10, bottom = -3, cap = 16 },
+    bg = { prefix = "common-dropdown-bg", left = -10, top = 3, right = 10, bottom = -3, cap = 20 },
     cbg = { prefix = "common-dropdown-c-bg", left = -17, top = 12, right = 17, bottom = -22, cap = 26 },
 }
 
 local CELLS = { "tl", "t", "tr", "l", "c", "r", "bl", "b", "br" }
+
+-- A menu shorter than two corners squeezes them instead of letting them overlap.
+local function FitMenuCorners(frame)
+    local def, cells = frame._fuMenuDef, frame._fuMenuBg
+    if not (def and cells and cells.tl:IsShown()) then return end
+    local height = min(def.cap, ((frame:GetHeight() or 0) + def.top - def.bottom) / 2)
+    for _, key in ipairs({ "tl", "tr", "bl", "br" }) do
+        cells[key]:SetSize(def.cap, height)
+    end
+end
 
 -- Returns the 9 textures table; `style` is "bg" (editor menus) or "cbg" (settings menus).
 function ForeverUI.SkinMenuBackground(frame, style)
@@ -1735,19 +1745,17 @@ function ForeverUI.SkinMenuBackground(frame, style)
             cells[key] = frame:CreateTexture(nil, "BACKGROUND")
         end
         frame._fuMenuBg = cells
+        frame:HookScript("OnSizeChanged", FitMenuCorners)
     end
+    frame._fuMenuDef = def
     frame:SetBackdrop(nil)
-    local cap = def.cap
     for _, key in ipairs(CELLS) do
         local texture = cells[key]
         SetAtlas(texture, def.prefix .. "-" .. key, false)
         texture:ClearAllPoints()
         texture:Show()
     end
-    cells.tl:SetSize(cap, cap)
-    cells.tr:SetSize(cap, cap)
-    cells.bl:SetSize(cap, cap)
-    cells.br:SetSize(cap, cap)
+    FitMenuCorners(frame)
     cells.tl:SetPoint("TOPLEFT", frame, "TOPLEFT", def.left, def.top)
     cells.tr:SetPoint("TOPRIGHT", frame, "TOPRIGHT", def.right, def.top)
     cells.bl:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", def.left, def.bottom)

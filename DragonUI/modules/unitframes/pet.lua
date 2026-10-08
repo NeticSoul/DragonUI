@@ -119,6 +119,7 @@ local function ApplyFramePositioning()
     if not config or not PetFrame then return end
 
     PetFrame:SetScale(config.scale or 1.0)
+    addon.SetEditorBoxScale(PetFrameModule.anchor, config.scale or 1)
     PetFrame:ClearAllPoints()
 
     if config.override and PetFrameModule.anchor then

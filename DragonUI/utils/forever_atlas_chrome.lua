@@ -68,19 +68,22 @@ ForeverAtlas["128-redbutton-exit"] = { DIR .. "chrome-buttons", 128, 128, 312/51
 ForeverAtlas["128-redbutton-exit-disabled"] = { DIR .. "chrome-buttons", 128, 128, 384/512, 448/512, 76/512, 140/512 }
 ForeverAtlas["128-redbutton-exit-pressed"] = { DIR .. "chrome-buttons", 128, 128, 4/512, 68/512, 148/512, 212/512 }
 ForeverAtlas["128-redbutton-highlight"] = { DIR .. "chrome-buttons", 441, 128, 4/512, 224/512, 4/512, 68/512 }
-ForeverAtlas["128-redbutton-left"] = { DIR .. "chrome-buttons", 114, 128, 364/512, 421/512, 148/512, 212/512 }
-ForeverAtlas["128-redbutton-left-disabled"] = { DIR .. "chrome-buttons", 114, 128, 430/512, 487/512, 148/512, 212/512 }
-ForeverAtlas["128-redbutton-left-pressed"] = { DIR .. "chrome-buttons", 114, 128, 4/512, 61/512, 220/512, 284/512 }
+ForeverAtlas["128-redbutton-left"] = { DIR .. "chrome-buttons", 114, 128, 76/512, 133/512, 220/512, 284/512 }
+ForeverAtlas["128-redbutton-left-disabled"] = { DIR .. "chrome-buttons", 114, 128, 142/512, 199/512, 220/512, 284/512 }
+ForeverAtlas["128-redbutton-left-pressed"] = { DIR .. "chrome-buttons", 114, 128, 208/512, 265/512, 220/512, 284/512 }
+ForeverAtlas["128-redbutton-refresh"] = { DIR .. "chrome-buttons", 128, 128, 76/512, 140/512, 148/512, 212/512 }
+ForeverAtlas["128-redbutton-refresh-disabled"] = { DIR .. "chrome-buttons", 128, 128, 148/512, 212/512, 148/512, 212/512 }
+ForeverAtlas["128-redbutton-refresh-pressed"] = { DIR .. "chrome-buttons", 128, 128, 220/512, 284/512, 148/512, 212/512 }
 ForeverAtlas["128-redbutton-right"] = { DIR .. "chrome-buttons", 292, 128, 232/512, 378/512, 4/512, 68/512 }
 ForeverAtlas["128-redbutton-right-disabled"] = { DIR .. "chrome-buttons", 292, 128, 4/512, 150/512, 76/512, 140/512 }
 ForeverAtlas["128-redbutton-right-pressed"] = { DIR .. "chrome-buttons", 292, 128, 158/512, 304/512, 76/512, 140/512 }
-ForeverAtlas["_128-redbutton-center"] = { DIR .. "chrome-buttons", 64, 128, 70/512, 102/512, 220/512, 284/512 }
-ForeverAtlas["_128-redbutton-center-disabled"] = { DIR .. "chrome-buttons", 64, 128, 110/512, 142/512, 220/512, 284/512 }
-ForeverAtlas["_128-redbutton-center-pressed"] = { DIR .. "chrome-buttons", 64, 128, 150/512, 182/512, 220/512, 284/512 }
-ForeverAtlas["redbutton-exit"] = { DIR .. "chrome-buttons", 32, 32, 76/512, 140/512, 148/512, 212/512 }
-ForeverAtlas["redbutton-exit-disabled"] = { DIR .. "chrome-buttons", 32, 32, 148/512, 212/512, 148/512, 212/512 }
-ForeverAtlas["redbutton-exit-pressed"] = { DIR .. "chrome-buttons", 32, 32, 220/512, 284/512, 148/512, 212/512 }
-ForeverAtlas["redbutton-highlight"] = { DIR .. "chrome-buttons", 32, 32, 292/512, 356/512, 148/512, 212/512 }
+ForeverAtlas["_128-redbutton-center"] = { DIR .. "chrome-buttons", 64, 128, 274/512, 306/512, 220/512, 284/512 }
+ForeverAtlas["_128-redbutton-center-disabled"] = { DIR .. "chrome-buttons", 64, 128, 314/512, 346/512, 220/512, 284/512 }
+ForeverAtlas["_128-redbutton-center-pressed"] = { DIR .. "chrome-buttons", 64, 128, 354/512, 386/512, 220/512, 284/512 }
+ForeverAtlas["redbutton-exit"] = { DIR .. "chrome-buttons", 32, 32, 292/512, 356/512, 148/512, 212/512 }
+ForeverAtlas["redbutton-exit-disabled"] = { DIR .. "chrome-buttons", 32, 32, 364/512, 428/512, 148/512, 212/512 }
+ForeverAtlas["redbutton-exit-pressed"] = { DIR .. "chrome-buttons", 32, 32, 436/512, 500/512, 148/512, 212/512 }
+ForeverAtlas["redbutton-highlight"] = { DIR .. "chrome-buttons", 32, 32, 4/512, 68/512, 220/512, 284/512 }
 
 ForeverUI.ChromeLayouts = {
     metalframe = {
@@ -125,7 +128,7 @@ ForeverUI.ChromeLayouts = {
 
 ForeverUI.ChromeMetrics = {
     window = { bgLeft = 7, bgTop = -18, bgRight = -3, bgBottom = 3, titleY = 0, titleSide = 60, closeX = -2, closeY = 1, closeSize = 24, insetLeft = 17, insetTop = -64, insetRight = -17, insetBottom = 42, plainLeft = 12, plainTop = -32, plainRight = -12, plainBottom = 12, titleBarHeight = 18 },
-    dialog = { bgInset = 7, titleY = -21, closeX = 0, closeY = 0, railInset = 9, contentLeft = 24, contentTop = -48, contentRight = -24, contentBottom = 24 },
+    dialog = { bgInset = 7, titleY = -21, closeX = 0, closeY = 0, railInset = 0, contentLeft = 24, contentTop = -48, contentRight = -24, contentBottom = 24 },
     optionsbox = { railInsetX = 14, railInsetY = 13, railThickness = 1, fillInset = 1, defaultLeft = -16, defaultTop = 15, defaultRight = 16, defaultBottom = -15 },
     button = { sliceHeight = 128, pushedX = -2, pushedY = -1, defaultWidth = 96, defaultHeight = 22 },
     category = { headerWidth = 175, headerHeight = 30, headerLabelX = 20, headerLabelY = -1, rowWidth = 175, rowHeight = 20, labelLeft = 36, labelY = 1, toggleX = 9, toggleSize = 22 },

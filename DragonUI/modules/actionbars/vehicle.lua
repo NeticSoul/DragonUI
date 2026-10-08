@@ -324,6 +324,21 @@ local function CreateVehicleExitButton()
                 frame = editorOverlay,
                 configPath = {'widgets', 'vehicleExit'},
 
+                -- showTest copies the real button's spot onto the overlay, so the button has to move first.
+                resetPosition = function()
+                    local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
+                    local defaults = addon.defaults and addon.defaults.profile.widgets.vehicleExit
+                    if not (widgets and defaults) then return end
+                    widgets.vehicleExit = widgets.vehicleExit or {}
+                    widgets.vehicleExit.anchor = defaults.anchor
+                    widgets.vehicleExit.posX = defaults.posX
+                    widgets.vehicleExit.posY = defaults.posY
+                    PositionVehicleExitButton()
+                end,
+                isDefaultPosition = function()
+                    return addon.IsWidgetAtDefaultPosition and addon.IsWidgetAtDefaultPosition("vehicleExit") or false
+                end,
+
                 showTest = function()
                     editorOverlay:SetSize(btnsize + 10, btnsize + 10)
                     editorOverlay:ClearAllPoints()

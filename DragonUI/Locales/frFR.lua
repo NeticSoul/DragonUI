@@ -48,6 +48,7 @@ L["Copy Text"] = "Copier le texte"
 L["Minimap Buttons"] = "Boutons de minicarte"
 L["Left-click to show or hide minimap addon buttons."] = "Clic gauche pour ouvrir les boutons d'addon de la minicarte."
 L["Right-click to open DragonUI settings."] = "Clic droit pour ouvrir les parametres de DragonUI."
+L["Shift-click to open Editor Mode."] = "Maj-clic pour ouvrir le mode éditeur."
 L["Drag to move"] = "Glisser pour deplacer"
 
 -- Editor mode labels
@@ -199,6 +200,7 @@ L["DragonUI Version: "] = "Version de DragonUI : "
 L["Exit Edit Mode"] = "Quitter le mode édition"
 L["Reset All Positions"] = "Réinitialiser toutes les positions"
 L["Are you sure you want to reset all interface elements to their default positions?"] = "Voulez-vous vraiment replacer tous les éléments d'interface à leur position par défaut ?"
+L["Reset Position"] = "Réinitialiser la position"
 L["Yes"] = "Oui"
 L["No"] = "Non"
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = "Des éléments d'interface ont été déplacés. Recharger l'interface pour que tous les graphismes s'affichent correctement ?"
@@ -722,7 +724,6 @@ L["Delete Layout"] = "Supprimer la disposition"
 L["Export Layout"] = "Exporter la disposition"
 L["Import Layout"] = "Importer la disposition"
 L["Enter a name for the layout:"] = "Entrez un nom pour la disposition :"
-L["Reset"] = "Réinitialiser"
 L["General"] = "Général"
 
 -- Dropdown placeholder

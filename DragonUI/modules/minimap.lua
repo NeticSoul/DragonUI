@@ -2735,13 +2735,9 @@ function MinimapModule:InitializeMinimapSystem()
     self.minimapFrame = addon.CreateUIFrame(230, 230, "MinimapFrame")
     -- Simple visual tweak: keep minimap editor overlay 10px lower.
     do
-        local slice = self.minimapFrame and self.minimapFrame.NineSlice
-        if slice then
-            slice.TopLeftCorner:ClearAllPoints();     slice.TopLeftCorner:SetPoint("TOPLEFT", -8, -2)
-            slice.TopRightCorner:ClearAllPoints();    slice.TopRightCorner:SetPoint("TOPRIGHT", 8, -2)
-            slice.BottomLeftCorner:ClearAllPoints();  slice.BottomLeftCorner:SetPoint("BOTTOMLEFT", -8, -18)
-            slice.BottomRightCorner:ClearAllPoints(); slice.BottomRightCorner:SetPoint("BOTTOMRIGHT", 8, -18)
-            slice.Center:ClearAllPoints();            slice.Center:SetPoint("TOPLEFT", 0, -10); slice.Center:SetPoint("BOTTOMRIGHT", 0, -10)
+        if self.minimapFrame then
+            self.minimapFrame.DragonUI_BoxShiftY = -10
+            addon.SetEditorBoxScale(self.minimapFrame, addon.db.profile.minimap.scale or 1)
         end
         if self.minimapFrame and self.minimapFrame.editorText then
             self.minimapFrame.editorText:ClearAllPoints()
@@ -2875,7 +2871,7 @@ function MinimapModule:UpdateSettings()
         --  APPLY SCALE (works perfectly now)
         if MinimapCluster then
             MinimapCluster:SetScale(scale)
-
+            addon.SetEditorBoxScale(self.minimapFrame, scale)
         end
 
         if self.borderFrame then

@@ -48,6 +48,7 @@ L["Copy Text"] = "複製文字"
 L["Minimap Buttons"] = "小地圖按鈕"
 L["Left-click to show or hide minimap addon buttons."] = "左鍵開啟小地圖插件按鈕。"
 L["Right-click to open DragonUI settings."] = "右鍵開啟 DragonUI 設定。"
+L["Shift-click to open Editor Mode."] = "Shift-左鍵開啟編輯模式。"
 L["Drag to move"] = "拖曳以移動"
 
 -- 編輯模式標籤
@@ -199,6 +200,7 @@ L["DragonUI Version: "] = "DragonUI 版本："
 L["Exit Edit Mode"] = "離開編輯模式"
 L["Reset All Positions"] = "重置所有位置"
 L["Are you sure you want to reset all interface elements to their default positions?"] = "確定要將所有介面元件重置為預設位置嗎？"
+L["Reset Position"] = "重置位置"
 L["Yes"] = "是"
 L["No"] = "否"
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = "介面元件已重新定位。是否重新載入介面以確保所有圖形正確顯示？"
@@ -722,7 +724,6 @@ L["Delete Layout"] = "刪除版面"
 L["Export Layout"] = "匯出版面"
 L["Import Layout"] = "匯入版面"
 L["Enter a name for the layout:"] = "輸入版面名稱:"
-L["Reset"] = "重設"
 L["General"] = "一般"
 
 -- Dropdown placeholder

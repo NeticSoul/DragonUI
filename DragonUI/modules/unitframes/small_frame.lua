@@ -404,6 +404,35 @@ function UF.SmallFrame.Create(opts)
         UF.ApplySkinPiece(frameElements.border, skin.border, "LEFT", frames.portrait, "CENTER", -25 + 1, -9)
     end
 
+    -- Hung by its TOPLEFT, offset divided by scale: a bigger frame grows down-right, off the auras; same spot at 1.
+    local function AttachToParent(config)
+        local point = (config and config.anchor) or opts.defaultAnchor or "BOTTOMRIGHT"
+        local relativePoint = (config and config.anchorParent) or opts.defaultAnchorParent or "BOTTOMRIGHT"
+        local x = (config and config.x) or opts.defaultX or 0
+        local y = (config and config.y) or opts.defaultY or 0
+        local scale = (config and config.scale) or 1
+        local width, height = frames.main:GetWidth(), frames.main:GetHeight()
+        local fromLeft = point:find("RIGHT") and width or (point:find("LEFT") and 0 or width / 2)
+        local fromTop = point:find("BOTTOM") and height or (point:find("TOP") and 0 or height / 2)
+        frames.main.DragonUI_Attaching = true
+        frames.main:SetPoint("TOPLEFT", frames.parent, relativePoint, (x - fromLeft) / scale, (y + fromTop) / scale)
+        frames.main.DragonUI_Attaching = nil
+    end
+
+    -- FocusFrame_SetSmallSize re-anchors FocusFrameToT by BOTTOMRIGHT: beside our TOPLEFT it would stretch it.
+    local function HookOutsideAnchors()
+        if frames.main.DragonUI_AttachHooked then return end
+        frames.main.DragonUI_AttachHooked = true
+        hooksecurefunc(frames.main, "SetPoint", function(self)
+            if self.DragonUI_Attaching or InCombatLockdown() then return end
+            local config = GetConfig()
+            if config.override and Module.anchorFrame then return end
+            self:SetScale(config.scale or 1.0)
+            self:ClearAllPoints()
+            AttachToParent(config)
+        end)
+    end
+
     local function InitializeFrame()
         if Module.configured then
             return
@@ -429,6 +458,7 @@ function UF.SmallFrame.Create(opts)
         if not frames.main then
             return
         end
+        HookOutsideAnchors()
 
         -- Get configuration
         local config = GetConfig()
@@ -446,15 +476,10 @@ function UF.SmallFrame.Create(opts)
             frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", 0, 0)
         else
             -- Attached mode: anchored to parent frame (default)
-            frames.main:SetPoint(
-                config.anchor or opts.defaultAnchor or "BOTTOMRIGHT",
-                frames.parent,
-                config.anchorParent or opts.defaultAnchorParent or "BOTTOMRIGHT",
-                config.x or opts.defaultX or 0,
-                (config.y or opts.defaultY or 0)
-            )
+            AttachToParent(config)
         end
         frames.main:SetScale(config.scale or 1.0)
+        addon.SetEditorBoxScale(Module.anchorFrame, config.scale or 1)
 
         -- Hide Blizzard default textures
         local toHide = { frames.blizzTexture, frames.blizzBackground }
@@ -890,15 +915,10 @@ function UF.SmallFrame.Create(opts)
                     frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", 0, 0)
                 else
                     frames.main:ClearAllPoints()
-                    frames.main:SetPoint(
-                        (config and config.anchor) or opts.defaultAnchor or "BOTTOMRIGHT",
-                        frames.parent,
-                        (config and config.anchorParent) or opts.defaultAnchorParent or "BOTTOMRIGHT",
-                        (config and config.x) or opts.defaultX or 0,
-                        ((config and config.y) or opts.defaultY or 0)
-                    )
+                    AttachToParent(config)
                 end
                 frames.main:SetScale((config and config.scale) or 1.0)
+                addon.SetEditorBoxScale(Module.anchorFrame, (config and config.scale) or 1)
 
                 RequestVisibilityRefresh()
             elseif frames.main then
@@ -927,6 +947,7 @@ function UF.SmallFrame.Create(opts)
                 (opts.defaultY or 0)
             )
             frames.main:SetScale(1.0)
+            addon.SetEditorBoxScale(Module.anchorFrame, 1)
         end
     end
 

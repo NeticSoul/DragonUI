@@ -82,6 +82,7 @@ L["DragonUI Version: "] = true
 L["Exit Edit Mode"] = true
 L["Reset All Positions"] = true
 L["Are you sure you want to reset all interface elements to their default positions?"] = true
+L["Reset Position"] = true
 L["Yes"] = true
 L["No"] = true
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = true
@@ -142,6 +143,7 @@ L["Native animated minimap decoration effects for DragonUI."] = true
 L["Minimap Buttons"] = true
 L["Left-click to show or hide minimap addon buttons."] = "Left-Click to open minimap buttons."
 L["Right-click to open DragonUI settings."] = true
+L["Shift-click to open Editor Mode."] = true
 
 -- ============================================================================
 -- EDITOR MODE LABELS (displayed on mover overlays)
@@ -215,7 +217,6 @@ L["Delete Layout"] = true
 L["Export Layout"] = true
 L["Import Layout"] = true
 L["Enter a name for the layout:"] = true
-L["Reset"] = true
 L["General"] = true
 
 -- ============================================================================

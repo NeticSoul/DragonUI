@@ -2843,6 +2843,7 @@ local function ApplyPlayerConfig()
     -- Apply scale (protected — pcall for combat safety)
     local scaleOk, scaleErr = pcall(function() PlayerFrame:SetScale(config.scale or 1.0) end)
     if not scaleOk and addon.Debug then addon:Debug("PlayerFrame:SetScale error:", scaleErr) end
+    addon.SetEditorBoxScale(Module.playerFrame, config.scale or 1)
 
     --  ALWAYS use widget position (Editor Mode)
     ApplyWidgetPosition()

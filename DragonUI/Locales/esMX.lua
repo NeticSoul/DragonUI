@@ -80,6 +80,7 @@ L["DragonUI Version: "] = "Versión de DragonUI: "
 L["Exit Edit Mode"] = "Salir Editor"
 L["Reset All Positions"] = "Restablecer Posiciones"
 L["Are you sure you want to reset all interface elements to their default positions?"] = "¿Restablecer todos los elementos a su posición predeterminada?"
+L["Reset Position"] = "Restablecer Posición"
 L["Yes"] = "Sí"
 L["No"] = "No"
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = "Los elementos de la interfaz han sido reposicionados. ¿Recargar la interfaz para que se muestren correctamente?"
@@ -138,6 +139,7 @@ L["Keybinding mode deactivated."] = "Modo de atajos desactivado."
 L["Minimap Buttons"] = "Botones del minimapa"
 L["Left-click to show or hide minimap addon buttons."] = "Clic izquierdo para abrir los botones de addons del minimapa."
 L["Right-click to open DragonUI settings."] = "Clic derecho para abrir la configuración de DragonUI."
+L["Shift-click to open Editor Mode."] = "Mayús-clic para abrir el modo editor."
 
 -- ============================================================================
 -- EDITOR MODE LABELS (displayed on mover overlays)
@@ -791,7 +793,6 @@ L["Delete Layout"] = "Eliminar distribución"
 L["Export Layout"] = "Exportar distribución"
 L["Import Layout"] = "Importar distribución"
 L["Enter a name for the layout:"] = "Escribe un nombre para la distribución:"
-L["Reset"] = "Restablecer"
 L["General"] = "General"
 
 -- Dropdown placeholder

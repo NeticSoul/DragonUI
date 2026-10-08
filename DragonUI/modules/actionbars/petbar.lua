@@ -771,6 +771,7 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
                 name = "petbar",
                 frame = nil, -- Frame will be set when created
                 configPath = {"widgets", "petbar"},
+                applyPosition = UpdateAnchorPosition,
                 showTest = ShowPetbarTest,
                 hideTest = HidePetbarTest
             })

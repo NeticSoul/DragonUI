@@ -80,6 +80,7 @@ L["DragonUI Version: "] = "Версия DragonUI: "
 L["Exit Edit Mode"] = "Выйти из режима редактора"
 L["Reset All Positions"] = "Сбросить все позиции"
 L["Are you sure you want to reset all interface elements to their default positions?"] = "Вы уверены, что хотите сбросить все элементы интерфейса в позиции по умолчанию?"
+L["Reset Position"] = "Сбросить позицию"
 L["Yes"] = "Да"
 L["No"] = "Нет"
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = "Элементы интерфейса были перемещены. Перезагрузить интерфейс для корректного отображения?"
@@ -138,6 +139,7 @@ L["Keybinding mode deactivated."] = "Режим назначения клави�
 L["Minimap Buttons"] = "Кнопки миникарты"
 L["Left-click to show or hide minimap addon buttons."] = "ЛКМ, чтобы открыть кнопки аддонов миникарты."
 L["Right-click to open DragonUI settings."] = "ПКМ, чтобы открыть настройки DragonUI."
+L["Shift-click to open Editor Mode."] = "Shift-клик, чтобы открыть режим редактора."
 
 -- ============================================================================
 -- EDITOR MODE LABELS (displayed on mover overlays)
@@ -791,7 +793,6 @@ L["Delete Layout"] = "Удалить раскладку"
 L["Export Layout"] = "Экспорт раскладки"
 L["Import Layout"] = "Импорт раскладки"
 L["Enter a name for the layout:"] = "Введите название раскладки:"
-L["Reset"] = "Сбросить"
 L["General"] = "Общие"
 
 -- Dropdown placeholder

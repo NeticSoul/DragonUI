@@ -232,6 +232,17 @@ function LootRollModule:Initialize()
                 UpdateAnchorPosition()
                 AttachContainer()
             end,
+            resetPosition = function()
+                local cfg = addon.db and addon.db.profile and addon.db.profile.lootroll
+                local defaults = addon.defaults and addon.defaults.profile.lootroll
+                if not (cfg and defaults) then return end
+                cfg.anchor, cfg.x, cfg.y = defaults.anchor, defaults.x, defaults.y
+                UpdateAnchorPosition()
+                AttachContainer()
+            end,
+            isDefaultPosition = function()
+                return IsAtDefaultPosition(GetLootRollConfig())
+            end,
             module = LootRollModule
         })
     end

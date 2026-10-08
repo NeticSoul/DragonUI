@@ -77,6 +77,7 @@ L["DragonUI Version: "] = "DragonUI 版本："
 L["Exit Edit Mode"] = "退出编辑模式"
 L["Reset All Positions"] = "重置所有位置"
 L["Are you sure you want to reset all interface elements to their default positions?"] = "你确定要将所有界面元素重置到默认位置吗？"
+L["Reset Position"] = "重置位置"
 L["Yes"] = "是"
 L["No"] = "否"
 L["UI elements have been repositioned. Reload UI to ensure all graphics display correctly?"] = "界面元素已重新定位。是否重新加载界面以确保所有图形正确显示？"
@@ -135,6 +136,7 @@ L["Keybinding mode deactivated."] = "按键绑定模式已停用。"
 L["Minimap Buttons"] = "小地图按钮"
 L["Left-click to show or hide minimap addon buttons."] = "左键打开小地图按钮。"
 L["Right-click to open DragonUI settings."] = "右键打开 DragonUI 设置。"
+L["Shift-click to open Editor Mode."] = "Shift-左键打开编辑模式。"
 
 -- ============================================================================
 -- 编辑模式标签
@@ -784,7 +786,6 @@ L["Delete Layout"] = "删除布局"
 L["Export Layout"] = "导出布局"
 L["Import Layout"] = "导入布局"
 L["Enter a name for the layout:"] = "输入布局名称:"
-L["Reset"] = "重置"
 L["General"] = "常规"
 
 -- Dropdown placeholder
