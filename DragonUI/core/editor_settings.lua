@@ -379,6 +379,12 @@ end
 R.personalResourceToggle = function()
     if addon.RefreshPersonalResourceSystem then addon.RefreshPersonalResourceSystem() end
 end
+R.swingTimer = function()
+    if addon.RefreshSwingTimer then addon.RefreshSwingTimer() end
+end
+R.swingTimerToggle = function()
+    if addon.RefreshSwingTimerSystem then addon.RefreshSwingTimerSystem() end
+end
 
 E.refresh = R
 
@@ -1707,6 +1713,30 @@ E.Register("personalresource", { settings = {
     Check(T("Show Bar Text"), "personalresource.bar_text", R.personalResource),
 } })
 
+-- Forever's swing timer rows and ranges, one dialog per bar.
+local function SwingTimerSettings(hand)
+    local path = "swingtimer." .. hand .. "."
+    return { settings = {
+        Slider(T("Scale"), path .. "scale", 50, 200, 10, R.swingTimer, { format = "%d%%" }),
+        Slider(T("Opacity"), path .. "opacity", 50, 100, 1, R.swingTimer, { format = "%d%%" }),
+        Slider(T("Width"), path .. "width", 213, 852, 10, R.swingTimer, {
+            hideValue = true, minText = T("Narrow"), maxText = T("Wide") }),
+        Slider(T("Height"), path .. "height", 15, 60, 1, R.swingTimer, {
+            hideValue = true, minText = T("Short"), maxText = T("Tall") }),
+        Check(T("Show Bar Title"), path .. "show_title", R.swingTimer),
+        Check(T("Show Time"), path .. "show_time", R.swingTimer),
+        Drop(T("Visibility"), path .. "visibility", {
+            { "always", T("Always") },
+            { "combat", T("In Combat") },
+            { "hidden", T("Hidden") },
+        }, R.swingTimer),
+    } }
+end
+
+E.Register("swingtimer_mainhand", SwingTimerSettings("mainhand"))
+E.Register("swingtimer_offhand", SwingTimerSettings("offhand"))
+E.Register("swingtimer_ranged", SwingTimerSettings("ranged"))
+
 -- ============================================================================
 -- DEFINITIONS: EDITOR MANAGER (global settings, not tied to one frame)
 -- ============================================================================
@@ -1821,8 +1851,13 @@ E.Register("__manager", { settings = {
     Drop(T("Elite Dragons"), "unitframe.dragon_style", STYLE_ITEMS, R.skins),
     Check(T("Center Names"), "unitframe.center_names", R.skins, {
         hidden = function() return not ForeverLevelStyle() end }),
+
+    Section(T("Combat"), true),
     Check(T("Personal Resource Display"), "modules.personalresource.enabled", R.personalResourceToggle, {
         tooltip = T("Add Health and Resource below your Character."),
+        after = function() E.SyncFrames(); E.Rebuild() end }),
+    Check(T("Swing Timer"), "modules.swingtimer.enabled", R.swingTimerToggle, {
+        tooltip = T("Show a bar with the time left until each weapon's next swing."),
         after = function() E.SyncFrames(); E.Rebuild() end }),
 
     Section(T("Action Bars"), true),

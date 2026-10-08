@@ -601,6 +601,24 @@ local function BuildEnhancementsTab(scroll)
     })
 
     -- ====================================================================
+    -- SWING TIMER
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local swingSection = C:AddSection(scroll, LO["Swing Timer"])
+
+    C:AddToggle(swingSection, {
+        label = LO["Swing Timer"],
+        desc = LO["Show a bar with the time left until each weapon's next swing."],
+        getFunc = function() return GetModuleField("swingtimer", "enabled") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("swingtimer")
+            addon.db.profile.modules.swingtimer.enabled = val
+            if addon.RefreshSwingTimerSystem then addon.RefreshSwingTimerSystem() end
+        end,
+        requiresReload = false,
+    })
+
+    -- ====================================================================
     -- ENHANCED TOOLTIPS
     -- ====================================================================
     C:AddSpacer(scroll)

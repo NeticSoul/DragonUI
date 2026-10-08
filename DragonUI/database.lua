@@ -196,6 +196,21 @@ local defaults = {
                 anchor = "CENTER",
                 posX = 0,
                 posY = -110
+            },
+            swingtimer_mainhand = {
+                anchor = "BOTTOM",
+                posX = 0,
+                posY = 289
+            },
+            swingtimer_offhand = {
+                anchor = "BOTTOM",
+                posX = 0,
+                posY = 262
+            },
+            swingtimer_ranged = {
+                anchor = "BOTTOM",
+                posX = 0,
+                posY = 235
             }
         },
         -- Personal Resource Display: settings (the enable flag is modules.personalresource.enabled)
@@ -212,6 +227,36 @@ local defaults = {
             hide_alt_power = false, -- Druid mana while shapeshifted
             class_color = false,  -- Health bar in the class colour
             bar_text = false,     -- Percentage and value on the bars
+        },
+        -- Swing timers, one table per bar (the enable flag is modules.swingtimer.enabled)
+        swingtimer = {
+            mainhand = {
+                scale = 80,           -- Percent (50-200); Forever's HUD is drawn ~25% larger than DragonUI's
+                opacity = 100,        -- Percent (50-100)
+                width = 426,          -- Units (213-852); Forever's default
+                height = 30,          -- Units (15-60); Forever's default
+                show_title = true,
+                show_time = true,
+                visibility = "combat", -- always | combat | hidden
+            },
+            offhand = {
+                scale = 80,
+                opacity = 100,
+                width = 426,
+                height = 30,
+                show_title = true,
+                show_time = true,
+                visibility = "combat",
+            },
+            ranged = {
+                scale = 80,
+                opacity = 100,
+                width = 426,
+                height = 30,
+                show_title = true,
+                show_time = true,
+                visibility = "combat",
+            },
         },
         -- Quest Tracker
         questtracker = {
@@ -914,6 +959,9 @@ local defaults = {
             },
             personalresource = {
                 enabled = false, -- Small health and power bar under the character (settings in editor mode)
+            },
+            swingtimer = {
+                enabled = false, -- Main hand, off hand and ranged swing bars (settings in editor mode)
             },
             darkmode = {
                 enabled = false, -- Apply darker tinted textures to UI chrome

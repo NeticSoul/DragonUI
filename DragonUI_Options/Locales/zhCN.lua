@@ -1574,6 +1574,10 @@ L["Test Warning (3 sec)"] = "测试警告（3秒）"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "触发3秒的警告状态预览，以帮助你调整临界值。"
 L["Personal Resource Display"] = "个人资源显示"
 L["Add Health and Resource below your Character."] = "在你的角色下方添加生命值和资源。"
+L["Swing Timer"] = "攻击计时条"
+L["Show a bar with the time left until each weapon's next swing."] = "显示每把武器距离下一次攻击的剩余时间。"
+L["Show Bar Title"] = "显示计时条标题"
+L["Show Time"] = "显示时间"
 
 -- Talents
 L["Talents"] = "天赋"

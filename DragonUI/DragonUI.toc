@@ -23,6 +23,7 @@ libs\AceSerializer-3.0\AceSerializer-3.0.xml
 libs\LibDeflate\LibDeflate.lua
 libs\LibHealComm-4.0\LibHealComm-4.0.xml
 libs\AbsorbsMonitor-1.0\AbsorbsMonitor-1.0.xml
+libs\LibSwingTimer-1.0\LibSwingTimer-1.0.lua
 
 # Note: AceConfig-3.0 and AceGUI-3.0 moved to DragonUI_Options
 

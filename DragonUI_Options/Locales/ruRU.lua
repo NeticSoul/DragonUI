@@ -1577,6 +1577,10 @@ L["Test Warning (3 sec)"] = "Тест предупреждения (3 сек.)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "Запускает 3-секундный предпросмотр состояния предупреждения, чтобы помочь вам настроить порог."
 L["Personal Resource Display"] = "Индикатор личных ресурсов"
 L["Add Health and Resource below your Character."] = "Добавляет здоровье и ресурс под вашим персонажем."
+L["Swing Timer"] = "Таймер удара"
+L["Show a bar with the time left until each weapon's next swing."] = "Показывает полосу с временем до следующего удара каждым оружием."
+L["Show Bar Title"] = "Показывать название полосы"
+L["Show Time"] = "Показывать время"
 
 -- Talents
 L["Talents"] = "Таланты"

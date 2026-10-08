@@ -694,6 +694,11 @@ L["Plays a sound and flashes the screen edges when your HP drops below the thres
 L["Personal Resource Display"] = true
 L["PersonalResource"] = true
 L["Add Health and Resource below your Character."] = true
+L["Swing Timer"] = true
+L["Show a bar with the time left until each weapon's next swing."] = true
+L["SwingTimerMainHand"] = "Main Hand Swing Timer"
+L["SwingTimerOffHand"] = "Off Hand Swing Timer"
+L["SwingTimerRanged"] = "Ranged Swing Timer"
 
 -- Talents
 L["Talents"] = true
@@ -989,6 +994,8 @@ L["Hide Power Bar"] = true
 L["Hide Alternate Power Bar"] = true
 L["Show Class Color"] = true
 L["Show Bar Text"] = true
+L["Show Bar Title"] = true
+L["Show Time"] = true
 L["Color"] = true
 L["Enable Dark Mode"] = true
 L["Intensity"] = true
@@ -1000,6 +1007,7 @@ L["Unit Frame Appearance"] = true
 L["Unit Frame Art"] = true
 L["Elite Dragons"] = true
 L["Center Names"] = true
+L["Combat"] = true
 L["Action Bars"] = true
 L["Bottom Left Bar"] = true
 L["Bottom Right Bar"] = true

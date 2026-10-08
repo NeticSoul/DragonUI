@@ -1037,6 +1037,21 @@ local function CreateEditorFrame()
     })
 end
 
+local function DarkModeChrome()
+    local textures = {}
+    for _, holder in ipairs({ health, power, alt }) do
+        for _, art in ipairs({ holder.trough, holder.rim }) do
+            for row = 1, 3 do
+                for column = 1, 3 do
+                    local piece = art.pieces[row][column]
+                    if piece then textures[#textures + 1] = piece end
+                end
+            end
+        end
+    end
+    return textures
+end
+
 -- =============================================================================
 -- Lifecycle
 -- =============================================================================
@@ -1058,6 +1073,7 @@ function addon.ApplyPersonalResourceSystem()
         end)
         content:SetScript("OnUpdate", OnFrameUpdate)
         CreateEditorFrame()
+        if addon.RegisterDarkModeChrome then addon.RegisterDarkModeChrome(DarkModeChrome) end
     end
 
     PersonalResource.initialized = true

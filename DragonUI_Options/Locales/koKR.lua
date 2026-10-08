@@ -1578,6 +1578,10 @@ L["Test Warning (3 sec)"] = "경고 테스트 (3초)"
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = "임계값을 조정하는 데 도움이 되는 3초 미리보기 경고 상태를 트리거합니다."
 L["Personal Resource Display"] = "개인 자원 표시"
 L["Add Health and Resource below your Character."] = "캐릭터 아래에 생명력과 자원을 표시합니다."
+L["Swing Timer"] = "스윙 타이머"
+L["Show a bar with the time left until each weapon's next swing."] = "각 무기의 다음 공격까지 남은 시간을 막대로 표시합니다."
+L["Show Bar Title"] = "바 제목 표시"
+L["Show Time"] = "시간 표시"
 
 -- Talents
 L["Talents"] = "특성"

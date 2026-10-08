@@ -1561,6 +1561,10 @@ L["Test Warning (3 sec)"] = true
 L["Triggers a 3-second preview of the warning state to help you adjust the threshold."] = true
 L["Personal Resource Display"] = true
 L["Add Health and Resource below your Character."] = true
+L["Swing Timer"] = true
+L["Show a bar with the time left until each weapon's next swing."] = true
+L["Show Bar Title"] = true
+L["Show Time"] = true
 
 -- Talents
 L["Talents"] = true
