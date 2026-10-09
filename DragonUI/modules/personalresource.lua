@@ -1073,6 +1073,8 @@ function addon.ApplyPersonalResourceSystem()
         end)
         content:SetScript("OnHide", function()
             dataFrame:UnregisterAllEvents()
+            -- Deaf to cast events from here on, so a cast ending while hidden would leave its cost behind.
+            predictedPowerCost = nil
             UnregisterPredictionCallbacks()
             EndFeedback()
             RemoveFullPowerAnims()
