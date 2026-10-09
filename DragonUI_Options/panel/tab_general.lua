@@ -641,6 +641,24 @@ local function BuildGeneralTab(scroll)
             ShowImportFrame()
         end,
     })
+
+    C:AddSpacer(scroll)
+
+    -- ====================================================================
+    -- SETTINGS WINDOW
+    -- ====================================================================
+    local window = C:AddSection(scroll, LO["Settings Window"])
+
+    C:AddSlider(window, {
+        label = LO["Scale"],
+        desc = LO["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."],
+        min = 0.75,
+        max = 2,
+        step = 0.05,
+        width = 200,
+        getFunc = function() return Panel:GetScale() end,
+        setFunc = function(val) Panel:SetScale(val) end,
+    })
 end
 
 -- Register the tab

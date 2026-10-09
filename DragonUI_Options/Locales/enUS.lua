@@ -49,6 +49,10 @@ L["Language"] = true
 L["Choose the language used by the DragonUI interface."] = true
 L["Follow the client language"] = true
 
+-- Settings window
+L["Settings Window"] = true
+L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = true
+
 L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = true
 L["GitHub (select and Ctrl+C to copy):"] = true
 L["All"] = true

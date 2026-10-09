@@ -135,6 +135,11 @@ function addon:ToggleOptionsUI(msg)
 
         if noConfig then
             addon:Error(L["Error -- Addon 'DragonUI_Options' not found or is disabled."])
+            if reason == "DISABLED" then
+                addon:Print(addon:IsModuleEnabled("addonmanager")
+                    and L["Turn it back on from the AddOns button in the Esc menu."]
+                    or L["Turn it back on from the AddOns list at character selection."])
+            end
             return
         end
     end

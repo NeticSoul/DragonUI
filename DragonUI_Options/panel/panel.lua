@@ -251,26 +251,6 @@ local function CreateFooter(f)
     f.commandsFull = LO["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"]
 end
 
-local function CreateResizeGrip(f)
-    local grip = CreateFrame("Button", nil, f)
-    grip:SetSize(16, 16)
-    grip:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -3, 3)
-    grip:SetFrameLevel(f:GetFrameLevel() + 12)
-    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
-    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
-    grip:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" then
-            f:StartSizing("BOTTOMRIGHT")
-        end
-    end)
-    grip:SetScript("OnMouseUp", function()
-        f:StopMovingOrSizing()
-        Panel:RefreshContentSize()
-    end)
-    return grip
-end
-
 local function CreatePanel()
     local height = math.min(WINDOW_HEIGHT, math.max(WINDOW_MIN_HEIGHT, math.floor((UIParent:GetHeight() or WINDOW_HEIGHT) - 40)))
 
@@ -285,9 +265,7 @@ local function CreatePanel()
         onClose  = function() Panel:Close() end,
     })
     f:SetPoint("CENTER")
-    f:SetResizable(true)
-    f:SetMinResize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
-    f:SetMaxResize(WINDOW_MAX_WIDTH, WINDOW_MAX_HEIGHT)
+    FUI.SetResizeBounds(f, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MAX_WIDTH, WINDOW_MAX_HEIGHT)
 
     local inset = f.Inset
 
@@ -343,7 +321,7 @@ local function CreatePanel()
     searchBox:HookScript("OnHide", function() poll:Hide() end)
 
     CreateFooter(f)
-    CreateResizeGrip(f)
+    FUI.AddResizeGrip(f, function() Panel:RefreshContentSize() end)
 
     f:SetScript("OnSizeChanged", function()
         Panel:RefreshContentSize()
@@ -466,7 +444,7 @@ local function BuildTabButtons()
     -- Every category must stay reachable: the list has no scroll of its own.
     local needed = INSET_VERTICAL + 2 * LIST_MARGIN_TOP - (y + GROUP_GAP)
     local minHeight = math.max(WINDOW_MIN_HEIGHT, needed)
-    frame:SetMinResize(WINDOW_MIN_WIDTH, minHeight)
+    FUI.SetResizeBounds(frame, WINDOW_MIN_WIDTH, minHeight, WINDOW_MAX_WIDTH, WINDOW_MAX_HEIGHT)
     if frame:GetHeight() < minHeight then
         frame:SetHeight(minHeight)
     end
@@ -611,6 +589,37 @@ function Panel:SelectTab(key, highlight)
 end
 
 -- ============================================================================
+-- SCALE
+-- ============================================================================
+
+function Panel:GetScale()
+    local global = addon.db and addon.db.global
+    return tonumber(global and global.optionsPanelScale) or 1
+end
+
+function Panel:ApplyScale()
+    if self.frame then
+        FUI.SetWindowScale(self.frame, self:GetScale())
+    end
+end
+
+-- The slider lives inside the window it scales, so a drag is only applied once the button is released.
+local scaleWaiter = CreateFrame("Frame")
+scaleWaiter:Hide()
+scaleWaiter:SetScript("OnUpdate", function(self)
+    if IsMouseButtonDown("LeftButton") then return end
+    self:Hide()
+    Panel:ApplyScale()
+end)
+
+function Panel:SetScale(value)
+    if addon.db and addon.db.global then
+        addon.db.global.optionsPanelScale = value
+    end
+    scaleWaiter:Show()
+end
+
+-- ============================================================================
 -- OPEN / CLOSE / TOGGLE
 -- ============================================================================
 
@@ -625,6 +634,7 @@ function Panel:Open(selectTab)
         BuildTabButtons()
         LayoutFooter()
     end
+    self:ApplyScale()
 
     self.frame:SetFrameLevel(100)
     self.frame:Show()

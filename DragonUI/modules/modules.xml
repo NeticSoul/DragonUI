@@ -121,5 +121,6 @@
     <Script file="swingtimer.lua"/>
 
     <!-- Addon Manager module -->
+    <Script file="addonmanager_icons.lua"/>
     <Script file="addonmanager.lua"/>
 </Ui>

@@ -385,8 +385,10 @@ local function SkinPullout(widget)
     if not po._dragonOpenWrapped then
         po._dragonOpenWrapped = true
         local original = po.Open
-        po.Open = function(self, ...)
-            original(self, ...)
+        po.Open = function(self, point, relFrame, ...)
+            -- Hanging from UIParent, it would miss the options window's scale; match the dropdown instead.
+            self.frame:SetScale(relFrame and relFrame:GetEffectiveScale() / UIParent:GetEffectiveScale() or 1)
+            original(self, point, relFrame, ...)
             LiftPullout(self)
         end
     end

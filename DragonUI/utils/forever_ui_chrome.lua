@@ -318,6 +318,69 @@ function ForeverUI.CreateWindow(name, parent, opts)
     return frame
 end
 
+-- The chat size grabber in the bottom-right corner; onDone(frame) runs when a drag ends.
+function ForeverUI.AddResizeGrip(frame, onDone)
+    frame:SetResizable(true)
+    local grip = CreateFrame("Button", nil, frame)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
+    grip:SetFrameLevel(frame:GetFrameLevel() + 12)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" then
+            frame:StartSizing("BOTTOMRIGHT")
+        end
+    end)
+    grip:SetScript("OnMouseUp", function()
+        frame:StopMovingOrSizing()
+        if onDone then
+            onDone(frame)
+        end
+    end)
+    frame.ResizeGrip = grip
+    return grip
+end
+
+-- Kept apart because SetWindowScale lowers the live max resize to what the screen fits at each scale.
+function ForeverUI.SetResizeBounds(frame, minWidth, minHeight, maxWidth, maxHeight)
+    frame._fuBounds = { minWidth, minHeight, maxWidth, maxHeight }
+    frame:SetMinResize(minWidth, minHeight)
+    frame:SetMaxResize(maxWidth, maxHeight)
+end
+
+-- Scales around the window's centre; on a small screen it shrinks to its minimum before the scale drops.
+function ForeverUI.SetWindowScale(frame, wanted)
+    local roomW, roomH = UIParent:GetWidth() - 16, UIParent:GetHeight() - 16
+    local bounds = frame._fuBounds
+    local scale = wanted or 1
+    local width, height = frame:GetWidth(), frame:GetHeight()
+    if bounds then
+        width = max(bounds[1], math.min(width, roomW / scale))
+        height = max(bounds[2], math.min(height, roomH / scale))
+        frame:SetSize(width, height)
+    end
+    if width > 0 and height > 0 then
+        scale = math.min(scale, roomW / width, roomH / height)
+    end
+    scale = max(0.05, scale)
+
+    local x, y = frame:GetCenter()
+    local before = frame:GetEffectiveScale()
+    frame:SetScale(scale)
+    if x and y then
+        local after = frame:GetEffectiveScale()
+        frame:ClearAllPoints()
+        frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * before / after, y * before / after)
+    end
+
+    if bounds then
+        frame:SetMaxResize(math.min(bounds[3], roomW / scale), math.min(bounds[4], roomH / scale))
+    end
+    return scale
+end
+
 -- Skins an existing Frame with the translucent diamond-metal dialog border; opts.solid paints it opaque.
 function ForeverUI.SkinDialog(frame, opts)
     opts = opts or {}

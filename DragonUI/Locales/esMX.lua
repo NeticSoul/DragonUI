@@ -41,6 +41,8 @@ L["Rested: "] = "Descanso: "
 
 -- Errors
 L["Error -- Addon 'DragonUI_Options' not found or is disabled."] = "Error -- El addon 'DragonUI_Options' no se encontró o está desactivado."
+L["Turn it back on from the AddOns button in the Esc menu."] = "Vuelve a activarlo desde el botón AddOns del menú Esc."
+L["Turn it back on from the AddOns list at character selection."] = "Vuelve a activarlo desde la lista de AddOns en la selección de personaje."
 
 -- ============================================================================
 -- SLASH COMMANDS / HELP

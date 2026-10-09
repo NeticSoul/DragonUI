@@ -19,7 +19,9 @@ local defaults = {
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
         questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
         talentBuilds = {}, -- Saved talent builds per class: [CLASS] = { {name, ranks[tab][index], reqLevel}, ... }
-        auraDurations = {} -- Observed debuff durations for nameplates: [spellId] = seconds
+        auraDurations = {}, -- Observed debuff durations for nameplates: [spellId] = seconds
+        addonIcons = {}, -- Addon manager icons learned from loaded addons: [lowercase folder] = { icon, coords }
+        optionsPanelScale = 1 -- Settings window scale on top of the UI scale
     },
     profile = {
         -- Keep at 1: version-less legacy profiles read this default and must still run migrations.
@@ -1296,6 +1298,7 @@ local defaults = {
             },
             addonmanager = {
                 enabled = true, -- AddOns button in the Esc menu opening the in-game addon list
+                scale = 1, -- Addon list window scale on top of the UI scale
             },
         },
 
