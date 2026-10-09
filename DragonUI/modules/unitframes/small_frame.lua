@@ -64,11 +64,6 @@ function UF.SmallFrame.Create(opts)
         classPortraitIcon = nil,
     }
 
-    local updateCache = {
-        lastHealthUpdate = 0,
-        lastPowerUpdate = 0,
-    }
-
     local pendingWidgetPositionUpdate = false
     local pendingVisibilityUpdate = false
 
@@ -189,16 +184,11 @@ function UF.SmallFrame.Create(opts)
                 healthTexture:SetDrawLayer("ARTWORK", 1)
             end
 
+            -- Never throttle these: a value change left uncropped draws the fill mis-cropped for frames.
             hooksecurefunc(frames.healthBar, "SetValue", function(self)
                 if not UnitExists(opts.unitToken) then
                     return
                 end
-
-                local now = GetTime()
-                if now - updateCache.lastHealthUpdate < 0.05 then
-                    return
-                end
-                updateCache.lastHealthUpdate = now
 
                 local texture = self:GetStatusBarTexture()
                 if not texture then
@@ -258,12 +248,6 @@ function UF.SmallFrame.Create(opts)
                 if not UnitExists(opts.unitToken) then
                     return
                 end
-
-                local now = GetTime()
-                if now - updateCache.lastPowerUpdate < 0.05 then
-                    return
-                end
-                updateCache.lastPowerUpdate = now
 
                 local texture = self:GetStatusBarTexture()
                 if not texture then
