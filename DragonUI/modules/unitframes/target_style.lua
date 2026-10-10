@@ -570,8 +570,11 @@ function UF.TargetStyle.Create(opts)
             end)
             ManaBar:SetStatusBarColor(1, 1, 1, 1)
 
+            local shownPower
+
             -- Update texture & coords on every value change
-            hooksecurefunc(ManaBar, "SetValue", function(self)
+            hooksecurefunc(ManaBar, "SetValue", function(self, value)
+                shownPower = value
                 if not UnitExists(unitToken) then return end
                 local texture = self:GetStatusBarTexture()
                 if not texture then return end
@@ -588,6 +591,13 @@ function UF.TargetStyle.Create(opts)
                 if max > 0 and cur then
                     texture:SetTexCoord(0, cur / max, 0, 1)
                 end
+            end)
+
+            -- Blizzard polls only player/pet/vehicle; targeting yourself, predicted regen fires no UNIT_ENERGY.
+            ManaBar:HookScript("OnUpdate", function(self)
+                if self.disconnected or self.lockValues or not UnitExists(unitToken) then return end
+                local value = UnitPower(unitToken, self.powerType)
+                if value ~= shownPower then self:SetValue(value) end
             end)
             ManaBar.DragonUI_Setup = true
         end
