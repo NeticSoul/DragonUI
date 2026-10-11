@@ -172,6 +172,7 @@ local function SkinButton(button)
     -- Layer normal before checked/pushed exist so OVERLAY stacks normal, checked, pushed.
     normal:SetDrawLayer('OVERLAY')
     normal:SetVertexColor(1, 1, 1, 1)
+    if addon.TrackButtonFrameArt then addon.TrackButtonFrameArt(button) end
 
     -- A bare CheckButton has no checked/pushed region until a path is set, so SetAtlasTexture needs one first.
     button:SetCheckedTexture(art.normal)

@@ -73,6 +73,19 @@ local function GetTintValues()
     return tintCache
 end
 
+-- Action button frames take the Buttons border colour under the dark tint, plus its alpha.
+local frameTintCache = { 1, 1, 1 }
+local function GetFrameTintValues()
+    local tint = GetTintValues()
+    local r, g, b, a = 1, 1, 1, nil
+    if addon.GetButtonFrameColor then
+        r, g, b, a = addon.GetButtonFrameColor()
+    end
+    frameTintCache[1], frameTintCache[2], frameTintCache[3] = tint[1] * r, tint[2] * g, tint[3] * b
+    frameTintCache[4] = a
+    return frameTintCache
+end
+
 -- Unit frames need to be noticeably darker than other UI chrome
 -- due to their color composition (gold borders on dark backgrounds)
 local function GetUFTintValues()
@@ -107,7 +120,8 @@ local function DarkenTexture(texture, tint)
     if pr and DarkModeModule.darkenedTextures[texture]
         and abs(pr - tint[1]) < TINT_EPSILON
         and abs(pg - tint[2]) < TINT_EPSILON
-        and abs(pb - tint[3]) < TINT_EPSILON then
+        and abs(pb - tint[3]) < TINT_EPSILON
+        and (not tint[4] or abs(pa - tint[4]) < TINT_EPSILON) then
         return
     end
     if not texture.__DragonUI_OrigColor then
@@ -116,7 +130,7 @@ local function DarkenTexture(texture, tint)
     -- SetVertexColor(r,g,b) resets alpha to 1 and undoes hide_main_bar_background on gryphons.
     local keepAlpha = texture.GetAlpha and texture:GetAlpha() or 1
     texture.__DragonUI_SettingDark = true
-    texture:SetVertexColor(tint[1], tint[2], tint[3], pa)
+    texture:SetVertexColor(tint[1], tint[2], tint[3], tint[4] or pa)
     texture.__DragonUI_SettingDark = nil
     if texture.SetAlpha then
         texture:SetAlpha(keepAlpha)
@@ -181,13 +195,14 @@ do
 end
 
 local function DarkenActionButtonBorders(tint)
+    local frameTint = GetFrameTintValues()
     for n = 1, #ACTION_BUTTON_NAMES, 2 do
         local button = _G[ACTION_BUTTON_NAMES[n]]
         if button then
             -- Darken NormalTexture (the border frame around the icon)
             local normal = _G[ACTION_BUTTON_NAMES[n + 1]] or (button.GetNormalTexture and button:GetNormalTexture())
             if normal and normal.GetObjectType and normal:GetObjectType() == "Texture" then
-                DarkenTexture(normal, tint)
+                DarkenTexture(normal, frameTint)
             end
             -- Darken background slot texture (created by DragonUI buttons module)
             if button.background and button.background.GetObjectType and button.background:GetObjectType() == "Texture" then
@@ -203,12 +218,13 @@ end
 -- NOT the Icon (ability texture)
 -- -----------------------------------------------------------------------
 local function DarkenStanceButtonBorders(tint)
+    local frameTint = GetFrameTintValues()
     for i = 1, 10 do
         local button = _G["ShapeshiftButton" .. i]
         if button then
             local normal = _G["ShapeshiftButton" .. i .. "NormalTexture"] or (button.GetNormalTexture and button:GetNormalTexture())
             if normal and normal.GetObjectType and normal:GetObjectType() == "Texture" then
-                DarkenTexture(normal, tint)
+                DarkenTexture(normal, frameTint)
             end
             if button.background and button.background:GetObjectType() == "Texture" then
                 DarkenTexture(button.background, tint)
@@ -221,13 +237,14 @@ end
 -- PET BAR BUTTONS: darken only NormalTexture (border), NOT the Icon
 -- -----------------------------------------------------------------------
 local function DarkenPetButtonBorders(tint)
+    local frameTint = GetFrameTintValues()
     for i = 1, 10 do
         local button = _G["PetActionButton" .. i]
         if button then
             local normal = _G["PetActionButton" .. i .. "NormalTexture2"] or _G["PetActionButton" .. i .. "NormalTexture"]
                            or (button.GetNormalTexture and button:GetNormalTexture())
             if normal and normal.GetObjectType and normal:GetObjectType() == "Texture" then
-                DarkenTexture(normal, tint)
+                DarkenTexture(normal, frameTint)
             end
             if button.background and button.background:GetObjectType() == "Texture" then
                 DarkenTexture(button.background, tint)
@@ -855,6 +872,16 @@ end
 -- APPLY / RESTORE SYSTEM
 -- ============================================================================
 
+-- Hooked on button NormalTextures: any outside reset (usable, range, ShowGrid) is re-darkened at once.
+local function GuardSetVertexColor(self)
+    if not DarkModeModule.applied then return end
+    if self.__DragonUI_SettingDark then return end
+    self.__DragonUI_SettingDark = true
+    local tint = GetFrameTintValues()
+    self:SetVertexColor(tint[1], tint[2], tint[3], tint[4] or 1)
+    self.__DragonUI_SettingDark = nil
+end
+
 -- Lightweight re-darkener for a single action button (called from hooks)
 local function ReDarkenButton(button)
     if not DarkModeModule.applied then return end
@@ -866,7 +893,7 @@ local function ReDarkenButton(button)
     local normal = _G[name .. "NormalTexture2"] or _G[name .. "NormalTexture"]
                    or (button.GetNormalTexture and button:GetNormalTexture())
     if normal and normal.GetObjectType and normal:GetObjectType() == "Texture" then
-        DarkenTexture(normal, tint)
+        DarkenTexture(normal, GetFrameTintValues())
         -- Re-install vertex color guard if texture was replaced (e.g. SetNormalTexture call)
         if not normal.__DragonUI_VCGuard then
             local ok = pcall(hooksecurefunc, normal, "SetVertexColor", GuardSetVertexColor)
@@ -999,6 +1026,9 @@ RestoreDarkMode = function(resetAuraBorders)
     end
 
     DarkModeModule.applied = false
+    if addon.RefreshButtonFrameTint then
+        addon.RefreshButtonFrameTint()
+    end
     if resetAuraBorders then
         SyncAuraBorderColorFromDarkMode(nil, true)
     end
@@ -1090,22 +1120,6 @@ local function SetupBarRefreshHooks()
     end
 
     DarkModeModule.hooks.barRefreshHooked = true
-end
-
--- -----------------------------------------------------------------------
--- VERTEX COLOR GUARDS: Hook SetVertexColor on every action/stance/pet
--- button NormalTexture so that ANY external vertex color reset (range
--- checks in ActionButton_OnUpdate, usability updates, ShowGrid, etc.)
--- is immediately overridden with the dark mode tint.
--- This is the definitive fix for intermittent border depaint.
--- -----------------------------------------------------------------------
-local function GuardSetVertexColor(self)
-    if not DarkModeModule.applied then return end
-    if self.__DragonUI_SettingDark then return end
-    self.__DragonUI_SettingDark = true
-    local tint = GetTintValues()
-    self:SetVertexColor(tint[1], tint[2], tint[3])
-    self.__DragonUI_SettingDark = nil
 end
 
 local function InstallVertexColorGuards()
@@ -1447,6 +1461,11 @@ end
 addon.GetDarkModeTint = function()
     if not IsModuleEnabled() or not DarkModeModule.applied then return nil end
     return GetTintValues()
+end
+
+-- Cheap enough for per-SetVertexColor checks in the buttons frame tint.
+addon.IsDarkModeApplied = function()
+    return DarkModeModule.applied
 end
 
 -- source() returns the module's chrome textures; it is called on every apply.

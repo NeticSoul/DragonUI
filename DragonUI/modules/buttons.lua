@@ -567,6 +567,93 @@ local function SeatStateArt(owner, art, onOverlay)
     end
 end
 
+-- Frame tint: border_color times the colour Blizzard gives the frame (blue when out of mana).
+local frameColor = { 1, 1, 1, 1 }
+local frameIsPlain = true
+local trackedFrameArt = {}
+
+local function ReadFrameColor()
+    local db = GetButtonsConfig()
+    local c = db and db.border_color
+    frameColor[1], frameColor[2], frameColor[3] = c and c[1] or 1, c and c[2] or 1, c and c[3] or 1
+    frameColor[4] = c and c[4] or 1
+    frameIsPlain = frameColor[1] == 1 and frameColor[2] == 1 and frameColor[3] == 1 and frameColor[4] == 1
+end
+
+-- While dark mode is applied it paints these frames itself, with border_color folded into its tint.
+local function DarkModeOwnsFrames()
+    return addon.IsDarkModeApplied ~= nil and addon.IsDarkModeApplied()
+end
+
+local function PaintFrameArt(art, withColor)
+    local r, g, b, a = 1, 1, 1, 1
+    if withColor then
+        r, g, b, a = frameColor[1], frameColor[2], frameColor[3], frameColor[4]
+    end
+    art.__duiPainting = true
+    art:SetVertexColor(art.__duiR * r, art.__duiG * g, art.__duiB * b, a)
+    art.__duiPainting = nil
+end
+
+-- Blizzard repaints the frame on every usable and grid update (alpha 0.5 on empty slots), so re-tint after each write.
+local function OnFrameArtColored(art, r, g, b, a)
+    -- Dark mode flags its own writes, and its first apply runs before IsDarkModeApplied turns true.
+    if art.__duiPainting or art.__DragonUI_SettingDark or DarkModeOwnsFrames() then return end
+    art.__duiR, art.__duiG, art.__duiB = r or 1, g or 1, b or 1
+    if frameIsPlain and (a == nil or a == 1) then return end
+    if IsModuleEnabled() then
+        PaintFrameArt(art, true)
+    end
+end
+
+local function FrameArtOf(button)
+    local id = button:GetName()
+    return Part(id, 'NormalTexture2') or Part(id, 'NormalTexture') or button:GetNormalTexture()
+end
+
+local function OnNormalTextureSet(button)
+    local art = button.__duiFrameArt
+    if art and not frameIsPlain and IsModuleEnabled() and not DarkModeOwnsFrames() then
+        PaintFrameArt(art, true)
+    end
+end
+
+local function TrackFrameArt(button)
+    if not button then return end
+    local art = button.__duiFrameArt or FrameArtOf(button)
+    if not art then return end
+    if not trackedFrameArt[art] then
+        trackedFrameArt[art] = true
+        art.__duiR, art.__duiG, art.__duiB = 1, 1, 1
+        hooksecurefunc(art, 'SetVertexColor', OnFrameArtColored)
+    end
+    if not button.__duiFrameArt then
+        button.__duiFrameArt = art
+        hooksecurefunc(button, 'SetNormalTexture', OnNormalTextureSet)
+    end
+    OnNormalTextureSet(button)
+end
+
+local function RefreshFrameTint()
+    ReadFrameColor()
+    if DarkModeOwnsFrames() then
+        if addon.RefreshDarkModeActionButtons then addon.RefreshDarkModeActionButtons() end
+        return
+    end
+    local enabled = IsModuleEnabled()
+    for art in pairs(trackedFrameArt) do
+        PaintFrameArt(art, enabled)
+    end
+end
+
+addon.TrackButtonFrameArt = TrackFrameArt
+addon.RefreshButtonFrameTint = RefreshFrameTint
+
+function addon.GetButtonFrameColor()
+    if not IsModuleEnabled() then return 1, 1, 1, nil end
+    return frameColor[1], frameColor[2], frameColor[3], frameColor[4]
+end
+
 local function StyleActionSlot(slotButton, skipCombatGuard)
     if not IsModuleEnabled() then return end
     if not skipCombatGuard and InCombatLockdown() then return end
@@ -582,6 +669,7 @@ local function StyleActionSlot(slotButton, skipCombatGuard)
     local art = Part(id, 'NormalTexture') or slotButton:GetNormalTexture()
     SeatFrameArt(art, slotButton)
     art:SetVertexColor(1, 1, 1, 1)
+    TrackFrameArt(slotButton)
 
     local flash, face = Part(id, 'Flash'), Part(id, 'Icon')
     local swipe, equipRing = Part(id, 'Cooldown'), Part(id, 'Border')
@@ -604,6 +692,7 @@ local function StyleExtraSlot(slotButton)
     DropToplevel(slotButton:GetParent())
     StoreOriginalButtonState(slotButton)
     slotButton:SetNormalTexture(config.assets.normal)
+    TrackFrameArt(slotButton)
     if slotButton.background then return end
 
     local id = slotButton:GetName()
@@ -794,7 +883,8 @@ end
 
 function addon.RefreshButtons()
     if not IsModuleEnabled() then return end
-    
+    RefreshFrameTint()
+
     -- CRITICAL: Don't refresh buttons during combat to avoid taint
     if InCombatLockdown() then 
         ButtonsModule.pendingRefresh = true
@@ -838,15 +928,6 @@ function addon.RefreshButtons()
                 local count = _G[buttonName .. 'Count']
                 if count and db.count then
                     count:SetAlpha(db.count.show and 1 or 0)
-                end
-
-                -- handle border styling and equipped state
-                local border = _G[buttonName .. 'Border']
-                if border then
-                    if db.border_color then
-                        border:SetVertexColor(unpack(db.border_color))
-                    end
-                    border:SetAlpha(IsEquippedAction(button.action) and 1 or 0)
                 end
 
                 ActionButton_Update(button)
@@ -1054,23 +1135,6 @@ local function SetupHooks()
         end)
     end
 
-    -- Read once per session; a new border colour needs a reload to reach the grid tint.
-    local gridTint
-    hooksecurefunc('ActionButton_ShowGrid', function(slotButton)
-        if not IsModuleEnabled() or not slotButton or KeyBindModeActive() then return end
-        local id = slotButton:GetName()
-        if not id then return end
-        if not gridTint then
-            local c = config.buttons.border_color
-            if not c then return end
-            gridTint = { c[1], c[2], c[3], c[4] }
-        end
-        local art = Part(id, 'NormalTexture')
-        if art then
-            art:SetVertexColor(gridTint[1], gridTint[2], gridTint[3], gridTint[4])
-        end
-    end)
-    
     -- HideGrid hook: protect ONLY main bar from ever being hidden.
     -- Additional bars are fully managed by Blizzard — we don't touch them.
     hooksecurefunc('ActionButton_HideGrid', function(button)
@@ -1123,7 +1187,8 @@ end
 
 local function Initialize()
     if ButtonsModule.initialized then return end
-    
+    ReadFrameColor()
+
     -- Only apply styling if module is enabled
     if IsModuleEnabled() then
         ApplyButtonStyling()
@@ -1134,6 +1199,7 @@ local function Initialize()
         local function OnProfileChanged()
             hotkeyStyle.ready = false
             hotkeyStyle.recolor = false
+            RefreshFrameTint()
             if IsModuleEnabled() then
                 addon.RefreshAllHotkeys()
             end
