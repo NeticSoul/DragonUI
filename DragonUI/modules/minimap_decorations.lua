@@ -214,6 +214,7 @@ end
 
 local function ShouldHideDragonUIBorder()
     if IsSquareStyle() then return false end
+    if not IsEffectEnabled() then return false end
     local config = GetMinimapConfig()
     return config and config.animated_border_hide_dragonui_border == true
 end
@@ -374,6 +375,15 @@ local function UpdateDragonUIBorderVisibility()
     local circle = Minimap and Minimap.Circle
     local toggleButton = _G.MinimapToggleButton
 
+    if IsSquareStyle() then
+        if borderTexture then borderTexture:Hide() end
+        if circle then
+            circle:SetAlpha(1)
+            circle:Hide()
+        end
+        return
+    end
+
     if not borderTexture and not circle and not toggleButton then
         MinimapDecorationsModule.originalStates.minimapBorderTextureHiddenByDecorations = nil
         MinimapDecorationsModule.originalStates.minimapBorderTextureAlpha = nil
@@ -437,7 +447,7 @@ local function UpdateDragonUIBorderVisibility()
 
         if circle then
             local circleAlpha = MinimapDecorationsModule.originalStates.minimapCircleAlpha
-            if circleAlpha == nil then
+            if circleAlpha == nil or circleAlpha == 0 then
                 circleAlpha = 1
             end
             circle:SetAlpha(circleAlpha)
@@ -480,6 +490,12 @@ local function UpdateDragonUIBorderVisibility()
     MinimapDecorationsModule.originalStates.minimapToggleButtonAlpha = nil
     MinimapDecorationsModule.originalStates.minimapToggleButtonShown = nil
     MinimapDecorationsModule.originalStates.minimapToggleButtonEnabled = nil
+
+    if not IsSquareStyle() and circle and circle:GetAlpha() == 0 then
+        circle:SetAlpha(1)
+        circle:Show()
+        EnsureDragonUICirclePriority()
+    end
 end
 
 local function EnsureBackdrop()
@@ -646,29 +662,38 @@ function MinimapDecorationsModule:Restore()
         local circle = Minimap and Minimap.Circle
         local toggleButton = _G.MinimapToggleButton
         if borderTexture then
-            local alpha = self.originalStates.minimapBorderTextureAlpha
-            if alpha == nil then
-                alpha = 0
-            end
-            borderTexture:SetAlpha(alpha)
-            if self.originalStates.minimapBorderTextureShown then
-                borderTexture:Show()
+            if not IsSquareStyle() then
+                local alpha = self.originalStates.minimapBorderTextureAlpha
+                if alpha == nil then
+                    alpha = 0
+                end
+                borderTexture:SetAlpha(alpha)
+                if self.originalStates.minimapBorderTextureShown then
+                    borderTexture:Show()
+                else
+                    borderTexture:Hide()
+                end
             else
                 borderTexture:Hide()
             end
         end
         if circle then
-            local circleAlpha = self.originalStates.minimapCircleAlpha
-            if circleAlpha == nil then
-                circleAlpha = 1
-            end
-            circle:SetAlpha(circleAlpha)
-            if self.originalStates.minimapCircleShown ~= false then
-                circle:Show()
+            if not IsSquareStyle() then
+                local circleAlpha = self.originalStates.minimapCircleAlpha
+                if circleAlpha == nil or circleAlpha == 0 then
+                    circleAlpha = 1
+                end
+                circle:SetAlpha(circleAlpha)
+                if self.originalStates.minimapCircleShown ~= false then
+                    circle:Show()
+                else
+                    circle:Hide()
+                end
+                EnsureDragonUICirclePriority()
             else
+                circle:SetAlpha(1)
                 circle:Hide()
             end
-            EnsureDragonUICirclePriority()
         end
         if toggleButton then
             local toggleAlpha = self.originalStates.minimapToggleButtonAlpha
@@ -705,12 +730,21 @@ function MinimapDecorationsModule:Restore()
     self.currentPreset = nil
     self.currentOpacity = nil
 
+    if not IsSquareStyle() and circle and circle:GetAlpha() == 0 then
+        circle:SetAlpha(1)
+        circle:Show()
+        EnsureDragonUICirclePriority()
+    end
+
     RefreshMinimapMaskState()
 end
 
 function MinimapDecorationsModule:Apply()
     if not Minimap or IsSquareStyle() or not IsEffectEnabled() then
         self:Restore()
+        if Minimap and Minimap.Circle and IsSquareStyle() then
+            Minimap.Circle:Hide()
+        end
         return
     end
 
@@ -744,6 +778,9 @@ end
 function MinimapDecorationsModule:Refresh()
     if IsSquareStyle() then
         self:Restore()
+        if Minimap and Minimap.Circle then
+            Minimap.Circle:Hide()
+        end
         return
     end
     if IsEffectEnabled() then

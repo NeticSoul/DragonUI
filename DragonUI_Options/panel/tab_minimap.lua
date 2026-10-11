@@ -177,7 +177,7 @@ local function BuildMinimapTab(scroll)
         values = {
             dragonui = LO["DragonUI"],
             forever = LO["Forever"],
-            square = LO["Square Minimap"] or LO["Square"],
+            square = LO["Square Minimap"],
         },
         callback = function()
             UpdateCollectorSectionState()
