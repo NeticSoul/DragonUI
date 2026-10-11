@@ -1295,6 +1295,8 @@ L["Border Style"] = "Стиль рамки"
 L["Detailed"] = "Детальный"
 L["Rounded"] = "Скруглённый"
 L["Square"] = "Прямоугольный"
+L["Square Minimap"] = "Квадратная"
+L["Decorations are only available for circular minimap styles."] = "Декорации доступны только для круглых стилей миникарты."
 
 -- Range Indicator colors
 L["Out of Range Color"] = "Цвет вне досягаемости"

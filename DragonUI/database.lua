@@ -568,7 +568,7 @@ local defaults = {
         -- MINIMAP SETTINGS
         minimap = {
             scale = 1,
-            style = "dragonui", -- "dragonui" or "forever" (WoW Forever's ring, north pointer and day/night badge)
+            style = "dragonui", -- "dragonui", "forever", or "square"
             border_alpha = 1,
             blip_skin = true, -- true = new/modern style, false = old/classic Blizzard style
             tracking_icons = true,

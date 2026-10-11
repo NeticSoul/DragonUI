@@ -963,6 +963,7 @@ L["Border Style"] = true
 L["Detailed"] = true
 L["Rounded"] = true
 L["Square"] = true
+L["Square Minimap"] = true
 L["Aura Tooltips"] = true
 L["Debuff Icon Scale"] = true
 L["Debuffs Per Row"] = true

@@ -169,11 +169,17 @@ local function IsHybridModeActive()
     return mode == "hybrid" or mode == "sexymap"
 end
 
+local function IsSquareStyle()
+    local config = GetMinimapConfig()
+    return config and config.style == "square"
+end
+
 local function IsEffectEnabled()
     local config = GetMinimapConfig()
     return IsModuleEnabled()
         and IsMinimapSystemEnabled()
         and not IsHybridModeActive()
+        and not IsSquareStyle()
         and config
         and config.animated_border_enabled == true
 end
@@ -207,6 +213,7 @@ local function GetPresetName()
 end
 
 local function ShouldHideDragonUIBorder()
+    if IsSquareStyle() then return false end
     local config = GetMinimapConfig()
     return config and config.animated_border_hide_dragonui_border == true
 end
@@ -434,7 +441,7 @@ local function UpdateDragonUIBorderVisibility()
                 circleAlpha = 1
             end
             circle:SetAlpha(circleAlpha)
-            if MinimapDecorationsModule.originalStates.minimapCircleShown ~= false then
+            if MinimapDecorationsModule.originalStates.minimapCircleShown ~= false and not IsSquareStyle() then
                 circle:Show()
             else
                 circle:Hide()
@@ -702,7 +709,7 @@ function MinimapDecorationsModule:Restore()
 end
 
 function MinimapDecorationsModule:Apply()
-    if not Minimap or not IsEffectEnabled() then
+    if not Minimap or IsSquareStyle() or not IsEffectEnabled() then
         self:Restore()
         return
     end
@@ -735,6 +742,10 @@ function MinimapDecorationsModule:Apply()
 end
 
 function MinimapDecorationsModule:Refresh()
+    if IsSquareStyle() then
+        self:Restore()
+        return
+    end
     if IsEffectEnabled() then
         self:Apply()
     else

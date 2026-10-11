@@ -164,6 +164,8 @@ local function BuildMinimapTab(scroll)
 
     UpdateCollectorSectionState()
 
+    local UpdateAnimatedBorderSectionState -- forward declare
+
     -- ====================================================================
     -- BASIC SETTINGS
     -- ====================================================================
@@ -175,10 +177,15 @@ local function BuildMinimapTab(scroll)
         values = {
             dragonui = LO["DragonUI"],
             forever = LO["Forever"],
+            square = LO["Square Minimap"] or LO["Square"],
         },
         callback = function()
             UpdateCollectorSectionState()
+            if UpdateAnimatedBorderSectionState then
+                UpdateAnimatedBorderSectionState()
+            end
             RefreshMinimap()
+            RefreshAnimatedBorder()
         end,
     })
 
@@ -302,22 +309,32 @@ local function BuildMinimapTab(scroll)
     -- ====================================================================
     local animatedBorder = C:AddSection(scroll, LO["Minimap Decorations"])
     C:AddDescription(animatedBorder, LO["Border presets from SexyMap by funkydude, used with permission."])
+    C:AddDescription(animatedBorder, LO["Decorations are only available for circular minimap styles."])
     local animatedBorderWidgets = {}
     local animatedBorderScaleSlider
+    local animatedBorderToggle
 
-    local function IsAnimatedBorderEnabled()
-        return C:GetDBValue("minimap.animated_border_enabled") == true
+    local function IsSquareMinimap()
+        return C:GetDBValue("minimap.style") == "square"
     end
 
-    local function UpdateAnimatedBorderSectionState()
+    local function IsAnimatedBorderEnabled()
+        return C:GetDBValue("minimap.animated_border_enabled") == true and not IsSquareMinimap()
+    end
+
+    UpdateAnimatedBorderSectionState = function()
         if Panel.indexing then return end
+        local isSquare = IsSquareMinimap()
         local enabled = IsAnimatedBorderEnabled()
         for _, widget in ipairs(animatedBorderWidgets) do
             if widget and widget.SetDisabled then
-                widget:SetDisabled(not enabled)
+                widget:SetDisabled(not enabled or isSquare)
             end
         end
-        SetSectionVisualState(animatedBorder, enabled)
+        if animatedBorderToggle and animatedBorderToggle.SetDisabled then
+            animatedBorderToggle:SetDisabled(isSquare)
+        end
+        SetSectionVisualState(animatedBorder, enabled and not isSquare)
     end
 
     C:AddDescription(animatedBorder,
@@ -325,7 +342,7 @@ local function BuildMinimapTab(scroll)
 
     local hideDragonUIBorderToggle
 
-    C:AddToggle(animatedBorder, {
+    animatedBorderToggle = C:AddToggle(animatedBorder, {
         label = LO["Enable Minimap Decorations"],
         dbPath = "minimap.animated_border_enabled",
         callback = function()
