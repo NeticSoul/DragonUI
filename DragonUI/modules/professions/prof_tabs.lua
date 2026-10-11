@@ -12,7 +12,8 @@ P.Tabs = Tabs
 
 -- Forever sizes the tab to the art minus its 5 transparent rows (55 x 55) and centres the 55 x 60 art on it.
 local TAB_SIZE, TAB_GAP, FIRST_Y = 55, 2, -60
-local MAX_TABS = 10
+-- Ten tabs fit at the default scale; servers allowing every profession need up to fourteen.
+local FIT_TABS, MAX_TABS = 10, 14
 -- What Forever's 50 x 50 icon (4 left, texcoords 1/32 in) shows through common-sidetab-mask: a 45 x 44 hole at (2, 5.5).
 local ICON_X, ICON_Y, ICON_W, ICON_H = 2, -5.5, 45, 44
 local ICON_L, ICON_R, ICON_T, ICON_B = 0.096875, 0.940625, 0.0875, 0.9125
@@ -67,7 +68,12 @@ end
 
 local function tabScale()
     local cfg = addon:GetModuleConfig("professions")
-    return cfg and tonumber(cfg.tabScale) or 0.9
+    local scale = cfg and tonumber(cfg.tabScale) or 0.9
+    local n = Tabs.count or 0
+    if n > FIT_TABS then
+        scale = math.min(scale, (P.Frame.HEIGHT + FIRST_Y - 10) / (n * TAB_SIZE + (n - 1) * TAB_GAP))
+    end
+    return scale
 end
 
 -- A scaled frame reads its own offsets in its own units, so the first tab's drop is divided back out.
@@ -153,6 +159,7 @@ function Tabs.Rebuild()
         if #entries >= MAX_TABS then break end
         entries[#entries + 1] = { label = prof.craftSpell, icon = prof.icon or Prof.IconFor(prof.entry), prof = prof }
     end
+    Tabs.count = #entries
     for i, e in ipairs(entries) do
         local tab = Tabs.buttons[i] or newTab(i)
         tab.label, tab.prof = e.label, e.prof
@@ -165,6 +172,7 @@ function Tabs.Rebuild()
         Tabs.buttons[i].prof = nil
         if not InCombatLockdown() then Catchers.Unbind(i) end
     end
+    Tabs.ApplyScale()
     Tabs.RefreshSelection()
     Tabs.Bind()
 end
