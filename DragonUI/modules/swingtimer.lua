@@ -28,7 +28,7 @@ local PREVIEW_PROGRESS = 0.6
 local FRAME_W, FRAME_H = 512, 32
 local SLICE_X, SLICE_Y = { 1, 17, 411, 427 }, { 1, 9, 23, 31 }
 local CORNER_W, CORNER_H = 16, 8
--- sheet.blp 512x128: three 418x22 px fills, the label shadow and the pip.
+-- sheet.tga 512x128: three 418x22 px fills, the label shadow and the pip.
 local SHEET_W, SHEET_H = 512, 128
 local FILL_LEFT, FILL_PIXELS, FILL_ROWS = 1, 418, 22
 
