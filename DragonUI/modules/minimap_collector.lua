@@ -29,6 +29,7 @@ local mathmax, mathmin, mathfloor, mathceil =
 local mathrad, mathdeg, mathcos, mathsin, mathpi =
       math.rad, math.deg, math.cos, math.sin, math.pi
 local mathatan2, mathatan = math.atan2, math.atan
+local mathabs = math.abs
 local strlower, tsort = string.lower, table.sort
 
 -- ----------------------------------------------------------------------------
@@ -421,8 +422,24 @@ local function PositionByAngle(btn, angle)
     local n = NormalizeAngle(angle)
     local r = GetOrbitRadius(btn)
     local rad = mathrad(n)
+    local cosA = mathcos(rad)
+    local sinA = mathsin(rad)
+    local x, y
+    if GetMinimapShape and GetMinimapShape() == "SQUARE" then
+        local maxCoord = mathmax(mathabs(cosA), mathabs(sinA))
+        if maxCoord > 0 then
+            x = (cosA / maxCoord) * r
+            y = (sinA / maxCoord) * r
+        else
+            x = cosA * r
+            y = sinA * r
+        end
+    else
+        x = cosA * r
+        y = sinA * r
+    end
     btn:ClearAllPoints()
-    btn:SetPoint("CENTER", Minimap, "CENTER", mathcos(rad) * r, mathsin(rad) * r)
+    btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
     btn.DragonUI_Angle = n
 end
 

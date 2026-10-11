@@ -1434,6 +1434,7 @@ end
 local function DecorationsOff()
     local mode = SexyMapMode()
     return GetDB("minimap.animated_border_enabled") ~= true or mode == "hybrid" or mode == "sexymap"
+        or GetDB("minimap.style") == "square"
 end
 
 local function NoDecorations()
@@ -1475,6 +1476,7 @@ E.Register("minimap", { settings = {
     Drop(T("Style"), "minimap.style", {
         { "dragonui", T("DragonUI") },
         { "forever", T("Forever") },
+        { "square", T("Square Minimap") },
     }, R.minimap, { after = function() E.Rebuild() end }),
     Section(T("Minimap Buttons Collector"), true),
     Check(T("Enable"), "minimap.collector_enabled", R.minimap, {
@@ -1518,6 +1520,7 @@ E.Register("minimap", { settings = {
     Section(T("Minimap Decorations"), true, NoDecorations),
     Check(T("Enable Minimap Decorations"), "minimap.animated_border_enabled", R.minimapDecor, {
         hidden = NoDecorations,
+        disabled = function() return GetDB("minimap.style") == "square" end,
         set = function(value)
             SetDB("minimap.animated_border_enabled", value)
             if not value then SetDB("minimap.animated_border_hide_dragonui_border", false) end
