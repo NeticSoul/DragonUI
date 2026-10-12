@@ -555,6 +555,8 @@ local function DarkenUnitFrameBorders(tint)
         if frame and frame.DragonUI_BorderFrame and frame.DragonUI_BorderFrame.texture then
             DarkenTexture(frame.DragonUI_BorderFrame.texture, tint)
         end
+        local partyPvPCircle = _G["DragonUI_Party" .. i .. "PvPCircle"]
+        if partyPvPCircle then DarkenTexture(partyPvPCircle, tint) end
         local petFrame = _G["PartyMemberFrame" .. i .. "PetFrame"]
         DarkenFrameBorderTextures(petFrame, tint)
         DarkenNestedPartyArt(petFrame, tint, 0)

@@ -798,6 +798,7 @@ local defaults = {
                 orientation = 'vertical',
                 padding_vertical = 30,
                 padding_horizontal = 50,
+                pvp_icon_style = "classic", -- not "auto": party keeps the classic icon on the Forever art too
                 scale = 1.0,
                 override = false,
                 anchor = 'TOPLEFT',

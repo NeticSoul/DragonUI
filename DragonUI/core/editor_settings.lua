@@ -1135,6 +1135,7 @@ E.Register("party", { settings = Join({
         hidden = function() return GetDB("unitframe.party.orientation") ~= "horizontal" end }),
     Section(T("Appearance"), true),
     Check(T("Class Color Health"), "unitframe.party.classcolor", R.partyText),
+    Drop(T("PvP Icon Style"), "unitframe.party.pvp_icon_style", PVP_STYLES, R.partyText),
     Section(T("Text Display"), true, nil, PreviewTexts("party")),
     TextRows("party", R.partyText),
 }) })

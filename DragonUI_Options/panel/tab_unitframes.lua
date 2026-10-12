@@ -800,6 +800,14 @@ local function BuildPartySection(scroll)
     })
 
     C:AddDropdown(s, {
+        label = LO["PvP Icon Style"],
+        desc = LO["Auto follows the unit frame art: the Forever badge with the Forever art, the classic icon with the DragonUI art."],
+        dbPath = "unitframe.party.pvp_icon_style",
+        values = pvpIconStyleValues,
+        callback = refreshParty,
+    })
+
+    C:AddDropdown(s, {
         label = LO["Orientation"],
         dbPath = "unitframe.party.orientation",
         values = partyOrientationValues,

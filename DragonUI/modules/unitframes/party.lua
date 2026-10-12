@@ -574,6 +574,32 @@ local function ApplyPartyIcons(frame)
     ApplyPartyRole(frame)
 end
 
+-- Runs after PartyMemberFrame_UpdatePvPStatus, the only code that shows the icon.
+local function ApplyPartyPvP(frame)
+    local id = frame:GetID()
+    local icon = _G["PartyMemberFrame" .. id .. "PVPIcon"]
+    if not icon then return end
+    local kind = UF.GetPvPKind("party" .. id)
+    UF.ApplyClassicPvPTexture(icon, kind, true)
+    local container = frame.DragonUI_IconContainer
+    local badge = frame.DragonUI_PvPBadge
+    local onBadge = false
+    if kind and container and UF.GetPvPIconStyle(UF.GetConfig("party")) == "forever" then
+        if not badge then
+            badge = UF.CreatePvPBadge(container, "DragonUI_Party" .. id .. "PvPCircle")
+            frame.DragonUI_PvPBadge = badge
+        end
+        local spot = UF.PARTY_PVP_BADGE
+        badge:ClearAllPoints()
+        badge:SetPoint("CENTER", icon, "CENTER", spot.x, spot.y)
+        onBadge = UF.ShowPvPBadge(badge, kind, spot.scale)
+    elseif badge then
+        badge:Hide()
+    end
+    -- Alpha, not Hide: Blizzard owns the icon's Show/Hide.
+    icon:SetAlpha(onBadge and 0 or 1)
+end
+
 -- Art and bars for the current frame style; read at apply time, so a style switch is a refresh.
 local function ApplyPartySkin(frame)
     local skin = UF.GetFrameSkin().party
@@ -595,6 +621,7 @@ local function ApplyPartySkin(frame)
         UF.ApplySkinPiece(flash, skin.flash, "TOPLEFT", frame, "TOPLEFT", 0, 0)
     end
     ApplyPartyIcons(frame)
+    ApplyPartyPvP(frame)
 end
 
 -- Create our own health StatusBar overlaid on Blizzard's native one. We never touch
@@ -1781,10 +1808,8 @@ local function SetupPartyHooks()
     end)
 
     hooksecurefunc("PartyMemberFrame_UpdatePvPStatus", function(frame)
-        local id = frame and frame:GetID()
-        local icon = id and _G["PartyMemberFrame" .. id .. "PVPIcon"]
-        if icon then
-            UF.ApplyClassicPvPTexture(icon, UF.GetPvPKind("party" .. id), true)
+        if frame then
+            ApplyPartyPvP(frame)
         end
     end)
 
