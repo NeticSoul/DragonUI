@@ -515,6 +515,7 @@ L["Modern borders on buff and debuff icons."] = "Bordes modernos en los iconos d
 L["%s's Inventory"] = "Inventario de %s"
 L["%s's Bank"] = "Banco de %s"
 L["Bags"] = "Bolsas"
+L["Bank"] = "Banco"
 L["|cff00ff00Left-Click|r to toggle bag display"] = "|cff00ff00Clic izquierdo|r para alternar la vista de bolsas"
 L["|cff00ff00Right-Click|r to toggle inventory"] = "|cff00ff00Clic derecho|r para alternar el inventario"
 L["|cff00ff00Right-Click|r to toggle bank"] = "|cff00ff00Clic derecho|r para alternar el banco"

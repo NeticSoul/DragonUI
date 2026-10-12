@@ -46,6 +46,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "Cread
 L["Language"] = "Idioma"
 L["Choose the language used by the DragonUI interface."] = "Elige el idioma que usará la interfaz de DragonUI."
 L["Follow the client language"] = "Seguir el idioma del cliente"
+L["Number Abbreviations"] = "Abreviatura de números"
+L["How unit frames, nameplates and the resource display shorten large numbers."] = "Cómo acortan los números grandes los marcos de unidad, las placas de nombre y la barra de recursos."
 L["Settings Window"] = "Ventana de ajustes"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Tamaño de esta ventana sobre tu escala de interfaz; 1.0 es el de los demás paneles. Nunca se sale de la pantalla."
 
@@ -459,6 +461,8 @@ L["Quest Item Glow"] = "Brillo de Objetos de Misión"
 L["Highlight quest items with a golden border."] = "Resalta los objetos de misión con un borde dorado."
 L["Glow Intensity"] = "Intensidad del Brillo"
 L["Opacity of the quality ring on item slots."] = "Opacidad del anillo de calidad en las casillas."
+L["Item Count in Tooltip"] = "Recuento en el tooltip"
+L["Show how many of the hovered item you own in total, across your bags and bank."] = "Muestra cuántas unidades del objeto señalado tienes en total entre tus bolsas y el banco."
 L["Quality Filter Row"] = "Fila de Filtro de Calidad"
 L["Show the rarity filter dots at the bottom of the bag frame."] = "Muestra los puntos de filtro por rareza en la parte inferior de la ventana."
 

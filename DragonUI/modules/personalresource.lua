@@ -131,15 +131,12 @@ local function EditorActive()
 end
 
 -- Forever's FIRST/SECOND/THIRD_NUMBER_CAP_NO_SPACE; the Asian clients keep DragonUI's own units.
-local LOCAL_UNITS = { zhCN = true, zhTW = true, koKR = true }
-local useLocalUnits = LOCAL_UNITS[GetLocale()]
-
 local function Scaled(value, divisor, suffix)
     return (format("%.1f", value / divisor):gsub("%.0$", "")) .. suffix
 end
 
 local function Abbreviate(value)
-    if useLocalUnits and addon.TextSystem then
+    if addon.TextSystem and addon.TextSystem.UsesLocaleUnits() then
         return addon.TextSystem.AbbreviateLargeNumbers(value)
     end
     if value >= 1e9 then return Scaled(value, 1e9, "B") end

@@ -49,6 +49,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "由Ne
 L["Language"] = "语言"
 L["Choose the language used by the DragonUI interface."] = "选择DragonUI界面使用的语言。"
 L["Follow the client language"] = "跟随客户端语言"
+L["Number Abbreviations"] = "数字缩写"
+L["How unit frames, nameplates and the resource display shorten large numbers."] = "单位框架、姓名板和个人资源显示中大数字的缩写方式。"
 L["Settings Window"] = "设置窗口"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "此窗口在界面缩放之上的大小；1.0 与其他面板相同。窗口不会超出屏幕。"
 
@@ -386,6 +388,8 @@ L["Quest Item Glow"] = "任务物品光环"
 L["Highlight quest items with a golden border."] = "用金色边框突出显示任务物品。"
 L["Glow Intensity"] = "光环强度"
 L["Opacity of the quality ring on item slots."] = "物品格子品质边框的不透明度。"
+L["Item Count in Tooltip"] = "鼠标提示中显示物品数量"
+L["Show how many of the hovered item you own in total, across your bags and bank."] = "显示鼠标指向的物品在背包和银行中的总数。"
 L["Quality Filter Row"] = "品质筛选行"
 L["Show the rarity filter dots at the bottom of the bag frame."] = "在背包窗口底部显示稀有度筛选点。"
 

@@ -14,6 +14,7 @@ local _arialn = addon.Fonts and addon.Fonts.ARIALN or "Fonts\\ARIALN.TTF"
 local defaults = {
     global = {
         locale = "auto", -- UI language override; "auto" follows the client locale
+        numberUnits = "auto", -- Large-number units: "auto" keeps 만/억 or 万/亿 on those clients, "western" forces k/M
         defaultProfile = "", -- Profile new characters start on; "" gives each its own
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
@@ -1230,6 +1231,7 @@ local defaults = {
                 glow_quest = true, -- Golden border on quest items
                 glow_alpha = 1, -- Quality ring opacity
                 show_quality_filter = true, -- Rarity filter dots centered on the bottom band
+                tooltip_count = true, -- Total owned (bags + bank) line on item tooltips
             },
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin

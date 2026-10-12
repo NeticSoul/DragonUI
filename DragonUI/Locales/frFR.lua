@@ -381,6 +381,7 @@ L["Micro menu and bags system styling and positioning"] = "Style et positionneme
 L["%s's Inventory"] = "Inventaire de %s"
 L["%s's Bank"] = "Banque de %s"
 L["Bags"] = "Sacs"
+L["Bank"] = "Banque"
 L["|cff00ff00Left-Click|r to toggle bag display"] = "|cff00ff00Clic gauche|r pour afficher ou masquer les sacs"
 L["|cff00ff00Right-Click|r to toggle inventory"] = "|cff00ff00Clic droit|r pour afficher ou masquer l'inventaire"
 L["|cff00ff00Right-Click|r to toggle bank"] = "|cff00ff00Clic droit|r pour afficher ou masquer la banque"

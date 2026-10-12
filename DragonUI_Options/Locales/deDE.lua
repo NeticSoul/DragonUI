@@ -46,6 +46,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "Erste
 L["Language"] = "Sprache"
 L["Choose the language used by the DragonUI interface."] = "Wähle die Sprache für die DragonUI-Oberfläche."
 L["Follow the client language"] = "Clientsprache übernehmen"
+L["Number Abbreviations"] = "Zahlenabkürzungen"
+L["How unit frames, nameplates and the resource display shorten large numbers."] = "Wie Einheitenfenster, Namensplaketten und die Ressourcenanzeige große Zahlen abkürzen."
 L["Settings Window"] = "Einstellungsfenster"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Größe dieses Fensters zusätzlich zu deiner UI-Skalierung; 1.0 entspricht den anderen Fenstern. Es wird nie größer als der Bildschirm."
 
@@ -426,6 +428,8 @@ L["Quest Item Glow"] = "Questgegenstand-Glühen"
 L["Highlight quest items with a golden border."] = "Hebt Questgegenstände mit einem goldenen Rahmen hervor."
 L["Glow Intensity"] = "Glühintensität"
 L["Opacity of the quality ring on item slots."] = "Deckkraft des Qualitätsrings auf den Gegenstandsfeldern."
+L["Item Count in Tooltip"] = "Gegenstandsanzahl im Tooltip"
+L["Show how many of the hovered item you own in total, across your bags and bank."] = "Zeigt, wie viele Exemplare des Gegenstands unter dem Mauszeiger du insgesamt in Taschen und Bank besitzt."
 L["Quality Filter Row"] = "Qualitätsfilter-Leiste"
 L["Show the rarity filter dots at the bottom of the bag frame."] = "Zeigt die Seltenheitsfilter-Punkte am unteren Rand des Taschenfensters."
 

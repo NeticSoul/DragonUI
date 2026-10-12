@@ -468,6 +468,7 @@ L["Micro menu and bags system styling and positioning"] = "微型菜单和背包
 L["%s's Inventory"] = "%s的背包"
 L["%s's Bank"] = "%s的银行"
 L["Bags"] = "背包"
+L["Bank"] = "银行"
 L["|cff00ff00Left-Click|r to toggle bag display"] = "|cff00ff00左键点击|r切换背包栏显示"
 L["|cff00ff00Right-Click|r to toggle inventory"] = "|cff00ff00右键点击|r切换背包"
 L["|cff00ff00Right-Click|r to toggle bank"] = "|cff00ff00右键点击|r切换银行"
