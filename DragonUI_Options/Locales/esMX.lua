@@ -1384,7 +1384,6 @@ L["Forever Frame"] = "Marco Forever"
 L["Thin Line"] = "Línea delgada"
 L["Top Arrow"] = "Flecha superior"
 L["Rounded Corners"] = "Esquinas redondeadas"
-L["Decorations are only available for circular minimap styles."] = "Las decoraciones solo están disponibles para los estilos de minimapa circulares."
 
 -- Range Indicator colors
 L["Out of Range Color"] = "Color fuera de rango"

@@ -1302,7 +1302,6 @@ L["Forever Frame"] = "Рамка Forever"
 L["Thin Line"] = "Тонкая линия"
 L["Top Arrow"] = "Стрелка сверху"
 L["Rounded Corners"] = "Скруглённые углы"
-L["Decorations are only available for circular minimap styles."] = "Декорации доступны только для круглых стилей миникарты."
 
 -- Range Indicator colors
 L["Out of Range Color"] = "Цвет вне досягаемости"

@@ -47,7 +47,9 @@ local function GetMinimapSettingsTable()
 end
 
 local function GetRecommendedAnimatedBorderScale(settings)
-    if settings and settings.animated_border_hide_dragonui_border == true then
+    -- Square presets frame the map at their own size; only round ones tuck inside the ring.
+    local square = settings and (settings.style == "dragonui_square" or settings.style == "forever_square")
+    if settings and (settings.animated_border_hide_dragonui_border == true or square) then
         return AUTO_SCALE_BORDER_HIDDEN
     end
     return AUTO_SCALE_BORDER_VISIBLE
@@ -348,33 +350,38 @@ local function BuildMinimapTab(scroll)
     -- ====================================================================
     local animatedBorder = C:AddSection(scroll, LO["Minimap Decorations"])
     C:AddDescription(animatedBorder, LO["Border presets from SexyMap by funkydude, used with permission."])
-    C:AddDescription(animatedBorder, LO["Decorations are only available for circular minimap styles."])
     local animatedBorderWidgets = {}
     local animatedBorderScaleSlider
-    local animatedBorderToggle
+    local presetDropdown
 
-    local function IsSquareMinimap()
+    -- Round and square styles offer different presets, so each keeps its own choice.
+    local function GetPresetPath()
         local style = C:GetDBValue("minimap.style")
-        return style == "dragonui_square" or style == "forever_square"
+        local square = style == "dragonui_square" or style == "forever_square"
+        return square and "minimap.animated_border_square_preset" or "minimap.animated_border_preset"
     end
 
     local function IsAnimatedBorderEnabled()
-        return C:GetDBValue("minimap.animated_border_enabled") == true and not IsSquareMinimap()
+        return C:GetDBValue("minimap.animated_border_enabled") == true
     end
 
     UpdateAnimatedBorderSectionState = function()
         if Panel.indexing then return end
-        local isSquare = IsSquareMinimap()
         local enabled = IsAnimatedBorderEnabled()
         for _, widget in ipairs(animatedBorderWidgets) do
             if widget and widget.SetDisabled then
-                widget:SetDisabled(not enabled or isSquare)
+                widget:SetDisabled(not enabled)
             end
         end
-        if animatedBorderToggle and animatedBorderToggle.SetDisabled then
-            animatedBorderToggle:SetDisabled(isSquare)
+        if presetDropdown and presetDropdown.SetList then
+            presetDropdown:SetList(GetAnimatedBorderPresets())
+            presetDropdown:SetValue(C:GetDBValue(GetPresetPath()))
         end
-        SetSectionVisualState(animatedBorder, enabled and not isSquare)
+        local _, recommendedScale = ApplyAnimatedBorderAutoScaleIfNeeded()
+        if recommendedScale and animatedBorderScaleSlider and animatedBorderScaleSlider.SetValue then
+            animatedBorderScaleSlider:SetValue(recommendedScale)
+        end
+        SetSectionVisualState(animatedBorder, enabled)
     end
 
     C:AddDescription(animatedBorder,
@@ -382,7 +389,7 @@ local function BuildMinimapTab(scroll)
 
     local hideDragonUIBorderToggle
 
-    animatedBorderToggle = C:AddToggle(animatedBorder, {
+    C:AddToggle(animatedBorder, {
         label = LO["Enable Minimap Decorations"],
         dbPath = "minimap.animated_border_enabled",
         callback = function()
@@ -397,13 +404,16 @@ local function BuildMinimapTab(scroll)
         end,
     })
 
-    animatedBorderWidgets[#animatedBorderWidgets + 1] = C:AddDropdown(animatedBorder, {
+    presetDropdown = C:AddDropdown(animatedBorder, {
         label = LO["Preset"],
         values = GetAnimatedBorderPresets(),
         width = 260,
         dbPath = "minimap.animated_border_preset",
+        getFunc = function() return C:GetDBValue(GetPresetPath()) end,
+        setFunc = function(value) C:SetDBValue(GetPresetPath(), value) end,
         callback = RefreshAnimatedBorder,
     })
+    animatedBorderWidgets[#animatedBorderWidgets + 1] = presetDropdown
 
     animatedBorderWidgets[#animatedBorderWidgets + 1] = C:AddToggle(animatedBorder, {
         label = LO["Animated Effects"],

@@ -587,6 +587,7 @@ local defaults = {
             animated_border_enabled = false,
             animated_border_scale = 0.9,
             animated_border_preset = "drg_preset_01",
+            animated_border_square_preset = "drg_square_01",
             animated_border_animations = true,
             animated_border_opacity = 1,
             animated_border_hide_dragonui_border = false,

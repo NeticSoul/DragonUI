@@ -1305,7 +1305,6 @@ L["Forever Frame"] = "Forever 테두리"
 L["Thin Line"] = "얇은 선"
 L["Top Arrow"] = "상단 화살표"
 L["Rounded Corners"] = "둥근 모서리"
-L["Decorations are only available for circular minimap styles."] = "장식은 원형 미니맵 스타일에서만 사용할 수 있습니다."
 
 -- Range Indicator colors
 L["Out of Range Color"] = "사거리 초과 색상"

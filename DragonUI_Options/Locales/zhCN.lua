@@ -1257,7 +1257,6 @@ L["Forever Frame"] = "Forever 边框"
 L["Thin Line"] = "细线"
 L["Top Arrow"] = "顶部箭头"
 L["Rounded Corners"] = "圆角"
-L["Decorations are only available for circular minimap styles."] = "装饰仅适用于圆形小地图样式。"
 
 -- Range Indicator colors
 L["Out of Range Color"] = "超出范围颜色"

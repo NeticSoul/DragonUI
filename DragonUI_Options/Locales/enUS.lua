@@ -162,7 +162,6 @@ L["Forever Frame"] = true
 L["Thin Line"] = true
 L["Top Arrow"] = true
 L["Rounded Corners"] = true
-L["Decorations are only available for circular minimap styles."] = true
 L["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can drag to any position on screen."] = true
 L["Positions"] = true
 L["Player Buffs & Debuffs"] = true

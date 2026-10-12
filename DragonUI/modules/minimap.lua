@@ -309,7 +309,9 @@ local function UpdateMinimapMaskForRotation()
         and minimapConfig
         and minimapConfig.animated_border_enabled == true
         and minimapConfig.animated_border_hide_dragonui_border == true
-    local desiredMask = isSquare and SQUARE_MINIMAP_MASK
+    local decorations = addon.MinimapDecorations
+    local presetMask = isSquare and decorations and decorations.GetSquareMask and decorations:GetSquareMask()
+    local desiredMask = isSquare and (presetMask or SQUARE_MINIMAP_MASK)
         or (useVanillaMask and VANILLA_MINIMAP_MASK
             or (IsForeverStyle() and FOREVER_MINIMAP_MASK or DRAGONUI_MINIMAP_MASK))
 
@@ -671,6 +673,18 @@ local function EnsureSquareBorder()
     return MinimapModule.squareBorder
 end
 
+-- Decorations' Hide DragonUI Border takes the thin line too, as it does the frames it stands in for.
+local function SyncThinSquareBorder()
+    local decorations = addon.MinimapDecorations
+    local hidden = decorations and decorations.HidesDragonUIBorder and decorations:HidesDragonUIBorder()
+    if IsThinSquareBorder() and not hidden and IsDragonUIMinimapControlling() then
+        EnsureSquareBorder():Show()
+    elseif MinimapModule.squareBorder then
+        MinimapModule.squareBorder:Hide()
+    end
+end
+MinimapModule.SyncThinSquareBorder = SyncThinSquareBorder
+
 local function UpdateMailPosition()
     if not MiniMapMailFrame or not MiniMapTracking then return end
     MiniMapMailFrame:ClearAllPoints()
@@ -731,11 +745,7 @@ local function UpdateForeverStyle()
     end
 
     local thin = IsThinSquareBorder()
-    if thin then
-        EnsureSquareBorder():Show()
-    elseif MinimapModule.squareBorder then
-        MinimapModule.squareBorder:Hide()
-    end
+    SyncThinSquareBorder()
 
     -- An empty ring rather than a hidden one: decorations and restores Show() the circle on their own.
     local rounded = addon.db.profile.minimap.forever_square_rounded == true

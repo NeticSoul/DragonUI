@@ -66,9 +66,37 @@ local PRESET_LABELS = {
     ["drg_preset_07"] = "Shamanism by Jaygoody",
 }
 
-local PRESET_AVAILABLE = {}
+-- SexyMap's square presets: square styles only, saved apart so the round choice survives.
+local SQUARE_PRESET_ORDER = {
+    "drg_square_01",
+    "drg_square_02",
+    "drg_square_03",
+    "drg_square_04",
+    "drg_square_05",
+    "drg_square_06",
+    "drg_square_07",
+}
+
+PRESET_LABELS["drg_square_01"] = "Jewels"
+PRESET_LABELS["drg_square_02"] = "Blue Square Glow"
+PRESET_LABELS["drg_square_03"] = "Rustic"
+PRESET_LABELS["drg_square_04"] = "Parchment"
+PRESET_LABELS["drg_square_05"] = "Simple Square"
+PRESET_LABELS["drg_square_06"] = "Ruins"
+PRESET_LABELS["drg_square_07"] = "Wood Framed"
+
+-- The map shape a square preset asks for, applied once it replaces the DragonUI frame.
+local SQUARE_SHAPE_MASKS = {
+    square = "Interface\\Buttons\\WHITE8X8",
+    faded = "SPELLS\\T_VFX_BORDER",
+}
+
+local PRESET_AVAILABLE, SQUARE_PRESET_AVAILABLE = {}, {}
 for i = 1, #PRESET_ORDER do
     PRESET_AVAILABLE[PRESET_ORDER[i]] = true
+end
+for i = 1, #SQUARE_PRESET_ORDER do
+    SQUARE_PRESET_AVAILABLE[SQUARE_PRESET_ORDER[i]] = true
 end
 
 local PRESETS = {
@@ -137,6 +165,96 @@ local PRESETS = {
             { texture = "SPELLS\\GENERICGLOW64.BLP", scale = 1.1, hNudge = 65, vNudge = 65, drawLayer = "BACKGROUND", r = 0.2588235294117647, g = 1, b = 0, a = 0.4000000357627869 },
         },
     },
+    ["drg_square_01"] = {
+        borders = {
+            { texture = "TILESET\\EXPANSION01\\EVERSONG\\SwathSmallStones.blp", scale = 0.88, disableRotation = true, blendMode = "DISABLE", drawLayer = "BACKGROUND", r = 0.615686274509804, g = 0.6392156862745098, b = 0.7058823529411764, a = 1 },
+            { texture = "Interface\\Minimap\\Ping\\ping5.blp", scale = 0.88, rotation = 66, rotSpeed = 118, hNudge = 0, vNudge = 0, disableRotation = true, blendMode = "ADD", drawLayer = "BORDER", r = 0.6823529411764706, g = 0.8666666666666667, b = 1, a = 1 },
+        },
+        shape = "faded",
+    },
+    ["drg_square_02"] = {
+        borders = {
+            { texture = "World\\GENERIC\\ACTIVEDOODADS\\WORLDTREEPORTALS\\TWISTEDNETHER8.BLP", scale = 0.73, rotation = 66, rotSpeed = 10, hNudge = 0, vNudge = 0, disableRotation = true, blendMode = "ADD", drawLayer = "ARTWORK", r = 0.3411764705882353, g = 0.4705882352941176, b = 1, a = 1 },
+            { texture = "World\\GENERIC\\ACTIVEDOODADS\\INSTANCEPORTAL\\GENERICGLOW2.BLP", scale = 1.9, rotSpeed = -14, hNudge = 0, vNudge = 5, disableRotation = true, blendMode = "ADD", drawLayer = "BACKGROUND", r = 0.3607843137254902, g = 0.7215686274509804, b = 1, a = 1 },
+        },
+        shape = "square",
+    },
+    ["drg_square_03"] = {
+        borders = {},
+        backdrop = {
+            show = true,
+            scale = 1.25,
+            textureColor = { r = 1, g = 0.9215686274509803, b = 0.6627450980392157, a = 1 },
+            borderColor = { r = 1, g = 0.7607843137254902, b = 0.7176470588235294, a = 1 },
+            settings = {
+                bgFile = "World\\EXPANSION02\\DOODADS\\Ulduar\\UL_SpinningRoomRings_Ring07.blp",
+                edgeFile = "Interface\\LFGFrame\\LFGBorder.blp",
+                tile = false,
+                edgeSize = 28,
+                insets = { left = 9, right = 9, top = 9, bottom = 9 },
+            },
+        },
+        shape = "faded",
+    },
+    ["drg_square_04"] = {
+        borders = {
+            { texture = "Interface\\AchievementFrame\\UI-Achievement-Parchment.blp", scale = 0.82, disableRotation = true, blendMode = "DISABLE", drawLayer = "BACKGROUND", r = 1, g = 1, b = 1, a = 1 },
+            { texture = "Interface\\BUTTONS\\WHITE8X8.BLP", scale = 0.9, blendMode = "BLEND", drawLayer = "BACKGROUND", r = 0.2, g = 0.09803921568627451, b = 0, a = 0.3799999952316284 },
+            { texture = "Interface\\AchievementFrame\\UI-Achievement-Parchment-Horizontal.blp", scale = 0.82, disableRotation = true, r = 0.6313725490196078, g = 0.6313725490196078, b = 0.6313725490196078, a = 1 },
+        },
+        shape = "faded",
+    },
+    ["drg_square_05"] = {
+        borders = {},
+        backdrop = {
+            show = true,
+            scale = 1.07,
+            textureColor = {},
+            borderColor = {},
+            settings = {
+                bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+                tile = false,
+                edgeSize = 17,
+                insets = { left = 4, right = 4, top = 4, bottom = 4 },
+            },
+        },
+        shape = "square",
+    },
+    ["drg_square_06"] = {
+        borders = {},
+        backdrop = {
+            show = true,
+            scale = 1.42,
+            textureColor = { r = 1, g = 1, b = 1, a = 1 },
+            borderColor = { r = 1, g = 0.8627450980392157, b = 0.7254901960784314, a = 1 },
+            settings = {
+                bgFile = "World\\ENVIRONMENT\\DOODAD\\STRANGLETHORN\\TROLLRUINS\\TEX\\GARY\\GP_SNKNTMP_ATARBORDER.blp",
+                edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border.blp",
+                tile = false,
+                edgeSize = 23,
+                insets = { left = 5, right = 5, top = 5, bottom = 5 },
+            },
+        },
+        shape = "faded",
+    },
+    ["drg_square_07"] = {
+        borders = {},
+        backdrop = {
+            show = true,
+            scale = 1.17,
+            textureColor = { r = 1, g = 1, b = 1, a = 1 },
+            borderColor = { r = 1, g = 0.8627450980392157, b = 0.7254901960784314, a = 1 },
+            settings = {
+                bgFile = "Interface\\AchievementFrame\\UI-Achievement-StatsBackground.blp",
+                edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder.blp",
+                tile = false,
+                edgeSize = 28,
+                insets = { left = 4, right = 4, top = 4, bottom = 4 },
+            },
+        },
+        shape = "faded",
+    },
 }
 
 local function GetMinimapConfig()
@@ -179,7 +297,6 @@ local function IsEffectEnabled()
     return IsModuleEnabled()
         and IsMinimapSystemEnabled()
         and not IsHybridModeActive()
-        and not IsSquareStyle()
         and config
         and config.animated_border_enabled == true
 end
@@ -198,14 +315,21 @@ local function ClampDecorationScale(value)
     return value
 end
 
+local function GetPresetKey()
+    return IsSquareStyle() and "animated_border_square_preset" or "animated_border_preset"
+end
+
 local function GetPresetName()
     local config = GetMinimapConfig()
-    local name = config and config.animated_border_preset or nil
-    local defaultPreset = PRESET_ORDER[1]
+    local key = GetPresetKey()
+    local name = config and config[key] or nil
+    local square = IsSquareStyle()
+    local available = square and SQUARE_PRESET_AVAILABLE or PRESET_AVAILABLE
+    local defaultPreset = (square and SQUARE_PRESET_ORDER or PRESET_ORDER)[1]
 
-    if not name or not PRESET_AVAILABLE[name] or not PRESETS[name] then
+    if not name or not available[name] or not PRESETS[name] then
         if config then
-            config.animated_border_preset = defaultPreset
+            config[key] = defaultPreset
         end
         return defaultPreset
     end
@@ -224,7 +348,8 @@ local function IsForeverRingShown()
 end
 
 local function GetRecommendedDecorationScale()
-    if ShouldHideDragonUIBorder() then
+    -- The 0.9 tucks round presets inside the ring; square presets frame the map at their own size.
+    if ShouldHideDragonUIBorder() or IsSquareStyle() then
         return AUTO_SCALE_BORDER_HIDDEN
     end
     return AUTO_SCALE_BORDER_VISIBLE
@@ -258,7 +383,8 @@ local function GetBaseSize()
     if not Minimap then return 180 end
     local width = Minimap:GetWidth() or 140
     local height = Minimap:GetHeight() or 140
-    return mathmax(width, height) * 1.25
+    -- Square presets keep SexyMap's 180-on-140 layers so their art meets the map edge exactly.
+    return mathmax(width, height) * (IsSquareStyle() and 180 / 140 or 1.25)
 end
 
 local function RotateTexture(texture, increment, set)
@@ -363,6 +489,9 @@ local function RefreshMinimapMaskState()
     local minimapModule = addon.MinimapModule
     if minimapModule and minimapModule.applied and minimapModule.UpdateRotation then
         minimapModule.UpdateRotation()
+        if minimapModule.SyncThinSquareBorder then
+            minimapModule.SyncThinSquareBorder()
+        end
     end
 end
 
@@ -525,9 +654,9 @@ local function ApplyBackdrop(preset, opacity, scaleMultiplier)
         return
     end
 
-    local baseSize = GetBaseSize()
+    -- SexyMap sizes the backdrop to the map itself and scales it; only its square presets carry one.
     local scale = (data.scale or 1) * (scaleMultiplier or 1)
-    backdrop:SetSize(baseSize, baseSize)
+    backdrop:SetSize(Minimap:GetWidth(), Minimap:GetHeight())
     backdrop:SetScale(scale)
     backdrop:SetAlpha(opacity)
     backdrop:SetBackdrop(data.settings)
@@ -545,8 +674,8 @@ local function ApplyPresetLayers(preset, opacity, scaleMultiplier)
     local hasRotations = false
     local hasLayers = false
     local layerScaleMultiplier = scaleMultiplier or 1
-    -- The nudge follows the DragonUI ring's off-centre art; Forever's ring is drawn centred.
-    local nudge = not ShouldHideDragonUIBorder() and not IsForeverRingShown()
+    -- Only the DragonUI round ring's art sits off-centre; Forever and the square frames are centred.
+    local nudge = not ShouldHideDragonUIBorder() and not IsForeverRingShown() and not IsSquareStyle()
     local globalXOffset = nudge and DECORATIONS_GLOBAL_OFFSET_X or 0
     local globalYOffset = nudge and DECORATIONS_GLOBAL_OFFSET_Y or 0
 
@@ -622,10 +751,21 @@ end
 
 function MinimapDecorationsModule:GetPresetList()
     local values = {}
-    for _, name in ipairs(PRESET_ORDER) do
+    for _, name in ipairs(IsSquareStyle() and SQUARE_PRESET_ORDER or PRESET_ORDER) do
         values[name] = PRESET_LABELS[name] or name
     end
     return values
+end
+
+-- The square preset's own map shape once it replaces the frame; nil keeps the plain square mask.
+function MinimapDecorationsModule:GetSquareMask()
+    if not IsSquareStyle() or not ShouldHideDragonUIBorder() then return nil end
+    local preset = PRESETS[GetPresetName()]
+    return preset and SQUARE_SHAPE_MASKS[preset.shape]
+end
+
+function MinimapDecorationsModule:HidesDragonUIBorder()
+    return ShouldHideDragonUIBorder()
 end
 
 function MinimapDecorationsModule:Restore()
