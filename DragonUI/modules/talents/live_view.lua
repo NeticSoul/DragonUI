@@ -41,10 +41,10 @@ function ns.MeasureDepth()
     ns.SetDepth(deepest)
 end
 
-local function liveState(open, met, shown, available)
+local function liveState(open, met, shown, maxRank, available)
     if not open and shown == 0 then return "locked" end
     if not met or not open or (available <= 0 and shown == 0) then return "gray" end
-    if shown == 0 then return "green" end
+    if shown < maxRank then return "green" end
     return "yellow"
 end
 
@@ -53,7 +53,7 @@ local function readTree(ctx, tab, perTier, available)
     local treePoints = (spent or 0) + (ctx.preview and (previewSpent or 0) or 0)
     local talents, byCell, deepest = {}, {}, 0
     for index = 1, GetNumTalents(tab, ctx.inspect, ctx.pet) or 0 do
-        local name, icon, tier, column, rank, _, exceptional, met, previewRank, previewMet =
+        local name, icon, tier, column, rank, maxRank, exceptional, met, previewRank, previewMet =
             GetTalentInfo(tab, index, ctx.inspect, ctx.pet, ctx.group)
         if name and tier then
             local shown = (ctx.preview and previewRank or rank) or 0
@@ -62,7 +62,7 @@ local function readTree(ctx, tab, perTier, available)
             local entry = {
                 index = index, name = name, icon = icon, tier = tier, column = column,
                 exceptional = exceptional and true or false, rank = shown, met = ok and true or false,
-                state = liveState(open, ok, shown, available),
+                state = liveState(open, ok, shown, maxRank or 1, available), spendable = available > 0,
                 needs = prereqCells(GetTalentPrereqs(tab, index, ctx.inspect, ctx.pet, ctx.group)),
             }
             talents[#talents + 1] = entry

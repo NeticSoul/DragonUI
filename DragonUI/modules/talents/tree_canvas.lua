@@ -196,7 +196,7 @@ local function dressNode(node, entry)
     node.hover:Hide()
 
     if state == "green" then
-        startPulse(node)
+        if entry.spendable then startPulse(node) else stopPulse(node) end
         node.rank:SetTextColor(0.1, 1, 0.1)
     else
         stopPulse(node)

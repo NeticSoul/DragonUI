@@ -158,9 +158,9 @@ ns.DefinePopup("DUI_TALENT_UNSAVED_LEFT", L["You have unsaved changes in '%s'. S
 
 -- Painting ----------------------------------------------------------------------------------------
 
-local function editorState(build, data, tab, talent, rank)
-    if rank > 0 then return "yellow" end
-    if ns.CanAddPoint(build, data, tab, talent.index) then return "green" end
+local function editorState(build, data, tab, talent, rank, canAdd)
+    if rank >= talent.maxRank then return "yellow" end
+    if rank > 0 or canAdd then return "green" end
     if ns.TierOpen(build, data, tab, talent.tier) then return "gray" end
     return "locked"
 end
@@ -170,6 +170,7 @@ local function editorTree(build, data, tab)
     local drawn = {}
     for _, talent in ipairs(tree.order) do
         local rank = ns.BuildRank(build, tab, talent.index)
+        local canAdd = ns.CanAddPoint(build, data, tab, talent.index)
         local links = {}
         for _, cell in ipairs(talent.needs) do
             local source = tree.cells[ns.CellKey(cell[1], cell[2])]
@@ -181,7 +182,8 @@ local function editorTree(build, data, tab)
         drawn[#drawn + 1] = {
             index = talent.index, name = talent.name, icon = talent.icon,
             tier = talent.tier, column = talent.column, exceptional = talent.exceptional,
-            rank = rank, state = editorState(build, data, tab, talent, rank), links = links,
+            rank = rank, state = editorState(build, data, tab, talent, rank, canAdd), links = links,
+            spendable = canAdd,
         }
     end
     return { name = tree.name, points = ns.TreePoints(build, tab), talents = drawn }
