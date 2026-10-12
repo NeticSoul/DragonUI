@@ -19,7 +19,7 @@ end
 parts.localized = localized
 
 if addon.RegisterModule then
-    addon:RegisterModule("merchant", Merchant, localized("Merchant"), localized("Retail-style vendor window chrome with auto repair and junk selling"), {
+    addon:RegisterModule("merchant", Merchant, localized("Merchant"), localized("Retail-style vendor window chrome"), {
         lifecyclePrefix = "Merchant",
         loadOnce = true,
     })

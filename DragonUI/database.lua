@@ -931,8 +931,8 @@ local defaults = {
             },
             merchant = {
                 enabled = true, -- Retail-style vendor window chrome, sell-all-junk button, and buyback undo arrow
-                autoRepair = false, -- Repair all equipped items automatically when a merchant window opens
-                autoRepairGuild = true, -- Pay for automatic repairs with guild bank funds when available
+                autoRepair = false, -- Repair all items automatically when a merchant window opens
+                autoRepairGuild = false, -- Pay for automatic repairs with guild bank funds when they cover the cost
                 autoSellJunk = false -- Sell all grey (junk) items automatically when a merchant window opens
             },
             questdialog = {

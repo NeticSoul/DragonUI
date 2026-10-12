@@ -725,7 +725,7 @@ local function BuildEnhancementsTab(scroll)
 
     C:AddToggle(merchantSection, {
         label = LO["Auto Repair"],
-        desc = LO["Automatically repair all equipped items when a merchant window opens."],
+        desc = LO["Automatically repair all your items when a merchant window opens."],
         getFunc = function()
             return GetModuleField("merchant", "autoRepair") == true
         end,
@@ -744,7 +744,7 @@ local function BuildEnhancementsTab(scroll)
         setFunc = function(val)
             EnsureModuleTable("merchant").autoRepairGuild = val
         end,
-        disabled = function() return not IsEnabled("merchant") end,
+        disabled = function() return not IsEnabled("merchant") or GetModuleField("merchant", "autoRepair") ~= true end,
         indent = 1,
     })
 

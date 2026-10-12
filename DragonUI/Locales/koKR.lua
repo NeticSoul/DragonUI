@@ -634,12 +634,11 @@ L["Restore the stat categories to their default order?"] = "능력치 분류를 
 
 -- MERCHANT MODULE
 L["Merchant"] = "상인"
-L["Retail-style vendor window chrome with auto repair and junk selling"] = "자동 수리와 잡동사니 판매가 포함된 상인 창 모던 스타일"
+L["Retail-style vendor window chrome"] = "상인 창 모던 스타일"
 L["Quest Dialog"] = "퀘스트 대화창"
 L["Retail-style quest and gossip window chrome"] = "퀘스트 및 대화 창 모던 스타일"
 L["Sell all junk items"] = "모든 잡동사니 아이템 판매"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "모든 잡동사니 아이템을 판매하게 되며 다시 구매할 수 없습니다.\n\n계속 진행하시겠습니까?"
-L["Sold %d junk item(s)."] = "%d 개의 잡동사니 아이템이 판매되었습니다."
 L["Repaired all items for %s."] = "모든 아이템을 %s에 수리했습니다."
 L["Repaired all items for %s using guild funds."] = "길드 자금으로 모든 아이템을 %s에 수리했습니다."
 L["Not enough gold to repair all items."] = "모든 아이템을 수리할 골드가 충분하지 않습니다."

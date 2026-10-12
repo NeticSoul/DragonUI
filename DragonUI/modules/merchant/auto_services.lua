@@ -2,88 +2,117 @@
 
 local addon = select(2, ...)
 
---[[
-================================================================================
-DragonUI - Merchant Auto Services
-================================================================================
-Vendor automation for the merchant module:
-  - Auto Repair: repairs equipped items when a merchant window opens
-  - Auto Sell Junk: sells grey (junk) items when a merchant window opens
-Both are opt-in per profile (see database.lua, modules.merchant).
-================================================================================
-]]
-
 local parts = addon.merchantParts or {}
 addon.merchantParts = parts
 local localized = parts.localized
 
-local function config()
-    return addon:GetModuleConfig("merchant") or {}
+local CHECK_INTERVAL = 0.25
+local CHECK_TRIES = 20
+
+-- Bumped on every vendor open and close so checks left from an earlier visit give up.
+local visit = 0
+
+local function repairCost()
+    local cost, canRepair = GetRepairAllCost()
+    if not canRepair then
+        return 0
+    end
+    return cost or 0
 end
 
--- Repair everything the merchant can fix. Guild funds are used only when the
--- player has the right; a player-funded repair is skipped when it cannot be
--- afforded, so no half-repaired equipment is left behind.
-local function autoRepair(cfg)
-    if not CanMerchantRepair() then
-        return
+local function guildRepairFunds()
+    local allowance = GetGuildBankWithdrawMoney() or 0
+    local bank = GetGuildBankMoney() or 0
+    -- Blizzard's guild repair tooltip reads -1 as "no daily cap" (guild master).
+    if allowance == -1 then
+        return bank
     end
-    local cost = GetRepairAllCost() or 0
+    return math.min(allowance, bank)
+end
+
+local function waitFor(check, onTimeout)
+    local thisVisit, triesLeft = visit, CHECK_TRIES
+    local function step()
+        if thisVisit ~= visit or check() then
+            return
+        end
+        triesLeft = triesLeft - 1
+        if triesLeft > 0 then
+            addon:After(CHECK_INTERVAL, step)
+        elseif onTimeout then
+            onTimeout()
+        end
+    end
+    addon:After(CHECK_INTERVAL, step)
+end
+
+local function repair(cost, useGuild, onFailure)
+    RepairAllItems(useGuild and 1 or nil)
+    waitFor(function()
+        if repairCost() > 0 then
+            return false
+        end
+        local text = GetMoneyString(cost)
+        if useGuild then
+            addon:Print(string.format(localized("Repaired all items for %s using guild funds."), text))
+        else
+            addon:Print(string.format(localized("Repaired all items for %s."), text))
+        end
+        return true
+    end, onFailure)
+end
+
+local function repairWithOwnGold()
+    local cost = repairCost()
     if cost <= 0 then
         return
     end
-    local useGuild = cfg.autoRepairGuild and CanGuildBankRepair()
-    if not useGuild and GetMoney() < cost then
+    if GetMoney() < cost then
         addon:Print(localized("Not enough gold to repair all items."))
         return
     end
-    RepairAllItems(useGuild)
-    local text = GetCoinTextureString(cost)
-    if useGuild then
-        addon:Print(string.format(localized("Repaired all items for %s using guild funds."), text))
-    else
-        addon:Print(string.format(localized("Repaired all items for %s."), text))
-    end
+    repair(cost, false)
 end
 
--- Sells every grey stack the vendor accepts and reports the haul, counting
--- whole stacks the same way the manual sell-all button does.
-local function autoSellJunk()
-    local isJunk = parts.isJunk
-    if not isJunk then
+local function autoRepair(cfg, incoming)
+    if not CanMerchantRepair() then
         return
     end
-    local items, copper = 0, 0
-    for container = 0, NUM_BAG_SLOTS or 4 do
-        for slot = 1, GetContainerNumSlots(container) or 0 do
-            local link = GetContainerItemLink(container, slot)
-            if isJunk(link) then
-                local _, count = GetContainerItemInfo(container, slot)
-                count = count or 1
-                if pcall(UseContainerItem, container, slot) then
-                    items = items + count
-                    copper = copper + (select(11, GetItemInfo(link)) or 0) * count
-                end
-            end
-        end
+    local cost = repairCost()
+    if cost <= 0 then
+        return
     end
-    if items > 0 then
-        addon:Print(string.format(localized("Sold %d junk item(s) for %s."), items, GetCoinTextureString(copper)))
+    if cfg.autoRepairGuild and CanGuildBankRepair() and guildRepairFunds() >= cost then
+        -- The client's guild figures can be stale; whatever the guild leaves unpaid falls to the player.
+        repair(cost, true, repairWithOwnGold)
+    elseif GetMoney() >= cost or GetMoney() + incoming < cost then
+        repairWithOwnGold()
+    else
+        -- The junk just sold covers the gap, but GetMoney() only grows once the server pays out.
+        waitFor(function()
+            if GetMoney() < cost then
+                return false
+            end
+            repairWithOwnGold()
+            return true
+        end, repairWithOwnGold)
     end
 end
 
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function(self, event)
+eventFrame:SetScript("OnEvent", function(_, event)
+    visit = visit + 1
     if event ~= "MERCHANT_SHOW" or not addon:IsModuleEnabled("merchant") then
         return
     end
-    local cfg = config()
-    local window = _G.MerchantFrame
-    if cfg.autoSellJunk and window and window:IsShown() and window.selectedTab == 1 then
-        autoSellJunk()
+    local cfg = addon:GetModuleConfig("merchant") or {}
+    local incoming = 0
+    if cfg.autoSellJunk then
+        incoming = select(2, parts.sellEveryJunkItem())
     end
     if cfg.autoRepair then
-        autoRepair(cfg)
+        autoRepair(cfg, incoming)
     end
 end)
 eventFrame:RegisterEvent("MERCHANT_SHOW")
+eventFrame:RegisterEvent("MERCHANT_CLOSED")

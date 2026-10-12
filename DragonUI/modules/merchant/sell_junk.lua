@@ -22,14 +22,12 @@ local function isJunk(link)
     return grey and select(11, GetItemInfo(link)) ~= 0
 end
 
--- Shared with auto_services.lua, which merchant.xml loads after this file.
-parts.isJunk = isJunk
-
 local function forEachJunkSlot(visit)
     for container = 0, NUM_BAG_SLOTS or 4 do
         for slot = 1, GetContainerNumSlots(container) or 0 do
-            if isJunk(GetContainerItemLink(container, slot)) then
-                visit(container, slot)
+            local link = GetContainerItemLink(container, slot)
+            if isJunk(link) then
+                visit(container, slot, link)
             end
         end
     end
@@ -46,19 +44,25 @@ end
 local function sellEveryJunkItem()
     local window = _G.MerchantFrame
     if not window or not window:IsShown() or window.selectedTab ~= 1 then
-        return
+        return 0, 0
     end
     -- Counts calls that did not raise, not sales the server confirmed.
-    local attempts = 0
-    forEachJunkSlot(function(bag, slot)
+    local items, copper = 0, 0
+    forEachJunkSlot(function(bag, slot, link)
+        local _, count = GetContainerItemInfo(bag, slot)
+        count = count or 1
+        local price = select(11, GetItemInfo(link)) or 0
         if pcall(UseContainerItem, bag, slot) then
-            attempts = attempts + 1
+            items = items + count
+            copper = copper + price * count
         end
     end)
-    if attempts > 0 then
-        addon:Print(string.format(localized("Sold %d junk item(s)."), attempts))
+    if items > 0 then
+        addon:Print(string.format(localized("Sold %d junk item(s) for %s."), items, GetMoneyString(copper)))
     end
+    return items, copper
 end
+parts.sellEveryJunkItem = sellEveryJunkItem
 
 local function applyJunkState(button)
     stateQueued = false
@@ -91,7 +95,10 @@ local function defineDialog()
     local dialog = { timeout = 0, whileDead = 1, hideOnEscape = 1 }
     dialog.text = localized(WARNING_KEY)
     dialog.button1, dialog.button2 = YES, NO
-    dialog.OnAccept = sellEveryJunkItem
+    -- A truthy return from OnAccept keeps the popup open, so drop the sale totals.
+    dialog.OnAccept = function()
+        sellEveryJunkItem()
+    end
     StaticPopupDialogs[DIALOG_KEY] = dialog
 end
 
