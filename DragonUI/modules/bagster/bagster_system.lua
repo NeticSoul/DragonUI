@@ -132,9 +132,13 @@ local function ApplyBagsterSystem()
         mod:Toggle(KEYRING_CONTAINER)
         ScheduleHighlightMainMenuBags()
     end
-    -- Some keybind paths call OpenAllBags directly, so make it a true toggle.
-    _G.OpenAllBags = function()
-        mod:Toggle(BACKPACK_CONTAINER)
+    -- Keybinds call it as a toggle; forceOpen callers (Auctionator's tab switch) must never close it.
+    _G.OpenAllBags = function(forceOpen)
+        if forceOpen then
+            mod:Show(BACKPACK_CONTAINER)
+        else
+            mod:Toggle(BACKPACK_CONTAINER)
+        end
         ScheduleHighlightMainMenuBags()
     end
     if _G.ToggleAllBags then
