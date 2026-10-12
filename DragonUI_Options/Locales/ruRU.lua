@@ -53,6 +53,10 @@ L["Follow the client language"] = "Следовать языку клиента"
 L["Number Abbreviations"] = "Сокращение чисел"
 L["How unit frames, nameplates and the resource display shorten large numbers."] = "Как сокращаются большие числа на фреймах, индикаторах и панели личных ресурсов."
 
+-- Loot Roll
+L["Auto Greed/DE"] = "Авто-жадность/распыление"
+L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."] = "Автоматически выбирает жадность или распыление (если доступно) для предметов зелёного качества. Это работает только на максимальном уровне."
+
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "Команды: /dragonui, /dui, /pi — /dragonui edit (редактор) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (выделите и нажмите Ctrl+C для копирования):"
 L["All"] = "Все"

@@ -782,7 +782,12 @@ function EditorMode:ResetAllPositions()
     
     -- Reset loot roll position
     if addon.defaults and addon.defaults.profile and addon.defaults.profile.lootroll then
-        addon.db.profile.lootroll = addon:CopyTable(addon.defaults.profile.lootroll)
+        if not addon.db.profile.lootroll then
+            addon.db.profile.lootroll = {}
+        end
+        addon.db.profile.lootroll.anchor = addon.defaults.profile.lootroll.anchor
+        addon.db.profile.lootroll.x = addon.defaults.profile.lootroll.x
+        addon.db.profile.lootroll.y = addon.defaults.profile.lootroll.y
     end
     
     -- Use ReloadUI to fully apply the changes

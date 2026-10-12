@@ -48,6 +48,10 @@ L["Choose the language used by the DragonUI interface."] = "Wähle die Sprache f
 L["Follow the client language"] = "Clientsprache übernehmen"
 L["Number Abbreviations"] = "Zahlenabkürzungen"
 L["How unit frames, nameplates and the resource display shorten large numbers."] = "Wie Einheitenfenster, Namensplaketten und die Ressourcenanzeige große Zahlen abkürzen."
+
+-- Loot Roll
+L["Auto Greed/DE"] = "Automatisch Gier/Entzauberung"
+L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."] = "Wählt automatisch Gier oder Entzauberung (wenn verfügbar) bei grünen Gegenständen. Dies funktioniert nur auf der Maximalstufe."
 L["Settings Window"] = "Einstellungsfenster"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Größe dieses Fensters zusätzlich zu deiner UI-Skalierung; 1.0 entspricht den anderen Fenstern. Es wird nie größer als der Bildschirm."
 
