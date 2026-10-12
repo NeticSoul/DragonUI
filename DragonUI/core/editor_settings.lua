@@ -1431,10 +1431,15 @@ local function SexyMapMode()
     return GetDB("modules.minimap.sexymap_mode")
 end
 
+local function SquareMinimap()
+    local style = GetDB("minimap.style")
+    return style == "dragonui_square" or style == "forever_square"
+end
+
 local function DecorationsOff()
     local mode = SexyMapMode()
     return GetDB("minimap.animated_border_enabled") ~= true or mode == "hybrid" or mode == "sexymap"
-        or GetDB("minimap.style") == "square"
+        or SquareMinimap()
 end
 
 local function NoDecorations()
@@ -1463,7 +1468,12 @@ end
 
 -- The Forever ring has no arrow collector, so the collector style is locked to the circle there.
 local function ForeverMinimap()
-    return GetDB("minimap.style") == "forever" and SexyMapMode() ~= "hybrid"
+    local style = GetDB("minimap.style")
+    return (style == "forever" or style == "forever_square") and SexyMapMode() ~= "hybrid"
+end
+
+local function ForeverSquareMinimap()
+    return GetDB("minimap.style") == "forever_square" and SexyMapMode() ~= "hybrid"
 end
 
 local function CollectorOff()
@@ -1475,9 +1485,21 @@ E.Register("minimap", { settings = {
     Slider(T("Scale"), "minimap.scale", 0.5, 2.0, 0.01, R.minimap),
     Drop(T("Style"), "minimap.style", {
         { "dragonui", T("DragonUI") },
+        { "dragonui_square", T("DragonUI Square") },
         { "forever", T("Forever") },
-        { "square", T("Square Minimap") },
+        { "forever_square", T("Forever Square") },
     }, R.minimap, { after = function() E.Rebuild() end }),
+    Drop(T("Square Border"), "minimap.forever_square_border", {
+        { "frame", T("Forever Frame") },
+        { "thin", T("Thin Line") },
+    }, R.minimap, { hidden = function() return not ForeverSquareMinimap() end, after = function() E.Rebuild() end }),
+    Check(T("Top Arrow"), "minimap.square_top_arrow", R.minimap, {
+        get = function() return GetDB("minimap.square_top_arrow") ~= false end,
+        hidden = function() return not ForeverSquareMinimap() end,
+        disabled = function() return GetDB("minimap.forever_square_border") == "thin" end }),
+    Check(T("Rounded Corners"), "minimap.forever_square_rounded", R.minimap, {
+        hidden = function() return not ForeverSquareMinimap() end,
+        disabled = function() return GetDB("minimap.forever_square_border") == "thin" end }),
     Section(T("Minimap Buttons Collector"), true),
     Check(T("Enable"), "minimap.collector_enabled", R.minimap, {
         get = function() return GetDB("minimap.collector_enabled") ~= false end,
@@ -1520,7 +1542,7 @@ E.Register("minimap", { settings = {
     Section(T("Minimap Decorations"), true, NoDecorations),
     Check(T("Enable Minimap Decorations"), "minimap.animated_border_enabled", R.minimapDecor, {
         hidden = NoDecorations,
-        disabled = function() return GetDB("minimap.style") == "square" end,
+        disabled = SquareMinimap,
         set = function(value)
             SetDB("minimap.animated_border_enabled", value)
             if not value then SetDB("minimap.animated_border_hide_dragonui_border", false) end

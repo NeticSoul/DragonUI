@@ -647,6 +647,14 @@ L["Show the rarity filter dots at the bottom of the bag frame."] = "Mostra os po
 L["Detailed"] = "Detalhado"
 L["Rounded"] = "Arredondado"
 L["Square"] = "Quadrado"
+L["DragonUI Square"] = "DragonUI (quadrado)"
+L["Forever Square"] = "Forever (quadrado)"
+L["Square Border"] = "Borda quadrada"
+L["Forever Frame"] = "Moldura Forever"
+L["Thin Line"] = "Linha fina"
+L["Top Arrow"] = "Seta superior"
+L["Rounded Corners"] = "Cantos arredondados"
+L["Decorations are only available for circular minimap styles."] = "As decorações só estão disponíveis nos estilos de minimapa redondos."
 
 -- Range Indicator colors
 L["Out of Range Color"] = "Cor fora de alcance"

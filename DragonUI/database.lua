@@ -568,7 +568,10 @@ local defaults = {
         -- MINIMAP SETTINGS
         minimap = {
             scale = 1,
-            style = "dragonui", -- "dragonui", "forever", or "square"
+            style = "dragonui", -- "dragonui", "dragonui_square", "forever" or "forever_square"
+            forever_square_border = "frame", -- "frame" (the Forever ring made square) or "thin" (a thin box border)
+            forever_square_rounded = false, -- Forever frame on the square: rounded corners instead of right angles
+            square_top_arrow = true, -- Forever square: north pointer on the top edge
             border_alpha = 1,
             blip_skin = true, -- true = new/modern style, false = old/classic Blizzard style
             tracking_icons = true,

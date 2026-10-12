@@ -651,6 +651,14 @@ L["Show the rarity filter dots at the bottom of the bag frame."] = "Affiche les 
 L["Detailed"] = "Détaillé"
 L["Rounded"] = "Arrondi"
 L["Square"] = "Carré"
+L["DragonUI Square"] = "DragonUI (carré)"
+L["Forever Square"] = "Forever (carré)"
+L["Square Border"] = "Bordure carrée"
+L["Forever Frame"] = "Cadre Forever"
+L["Thin Line"] = "Ligne fine"
+L["Top Arrow"] = "Flèche du haut"
+L["Rounded Corners"] = "Coins arrondis"
+L["Decorations are only available for circular minimap styles."] = "Les décorations ne sont disponibles que pour les styles de mini-carte ronds."
 
 -- Range Indicator colors
 L["Out of Range Color"] = "Couleur hors de portée"

@@ -53,7 +53,8 @@ local blipScale = 1.12
 -- Sampled at load: ReplaceBlizzardFrame runs on every apply and would grow the map each time.
 local mapUnscaledWidth = Minimap:GetWidth() * 1.36 / blipScale
 local mapUnscaledHeight = Minimap:GetHeight() * 1.36 / blipScale
-local BORDER_TO_MAP_RATIO = 284 / mapUnscaledWidth
+-- Drawn width: 284 was tuned under Texture:SetRotation, which draws the art 1/sqrt(2) smaller.
+local BORDER_TO_MAP_RATIO = 284 / math.sqrt(2) / mapUnscaledWidth
 
 local DRAGONUI_MINIMAP_MASK = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\uiminimapmask.tga"
 local VANILLA_MINIMAP_MASK = "Textures\\MinimapMask"
@@ -62,12 +63,27 @@ local FOREVER_MINIMAP_MASK = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\fo
 local FOREVER_MINIMAP_CIRCLE = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\forever_circle"
 local FOREVER_MINIMAP_POINTER = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\forever_pointer"
 local SQUARE_MINIMAP_MASK = "Interface\\Buttons\\WHITE8X8"
+local DRAGONUI_SQUARE_FRAME = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\uiminimapsquareborder.tga"
+local DRAGONUI_SQUARE_COLLECTOR_ICON = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\collector_toggle_square.tga"
+-- The icon is the frame's left chevron cut on 64 art texels, centred 201 texels left of centre.
+local DRAGONUI_SQUARE_ARROW_SIZE, DRAGONUI_SQUARE_ARROW_X = 64, -201
+-- Art texels across the map in game: the line sits ~2% inside the map's edge (measured, not 389).
+local DRAGONUI_SQUARE_MAP_TEXELS = 397
+local FOREVER_SQUARE_FRAME = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\forever_square_frame.tga"
+local FOREVER_SQUARE_FRAME_ROUNDED = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\forever_square_frame_rounded.tga"
+local FOREVER_SQUARE_POINTER = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\forever_square_pointer.tga"
+-- The square frame's line runs 389 px apart in its 512 px art.
+local DRAGONUI_SQUARE_SPAN = 389
+-- The map's width inside the round ring's 256 px art: the square keeps the round style's map size.
+local DRAGONUI_RING_MAP_SPAN = 238
 
 -- WoW Forever's minimap (Camelot Skin.lua and Diel.lua) in its own units, around a 198-wide map.
 local FOREVER_MAP_SIZE = 198
 -- The 506 px ring art is padded to 512 px so the pointer turns about the texture centre.
 local FOREVER_RING_SIZE = 253 * 512 / 506
 local FOREVER_DIEL_X, FOREVER_DIEL_Y = 53, 88.75
+-- The same spot on the band unwrapped onto the square frame; rounded corners shorten the band.
+local FOREVER_SQUARE_DIEL_X, FOREVER_SQUARE_ROUNDED_DIEL_X, FOREVER_SQUARE_DIEL_Y = 68.37, 66.31, 103.37
 local FOREVER_DIEL_RING_SIZE, FOREVER_DIEL_ICON_SIZE = 42, 33
 -- Middle of the ring's band (94.5 to 105): where minimap buttons ride in Forever style.
 local FOREVER_BAND_RADIUS = 99.75
@@ -79,6 +95,10 @@ local LIBDBICON_ORBIT = 80
 local MAP_OFFSET_Y = -25
 -- Forever keeps 13.5 units between the zone bar and the pointer tip; ours would overlap it by 12.
 local FOREVER_MAP_DROP, FOREVER_CLUSTER_LIFT = 25, 12
+-- Without its pointer the Forever square rises until its day/night badge nears the zone bar.
+local FOREVER_SQUARE_POINTERLESS_RISE = 9
+-- The square frame's top chevron rises past the round ring's; this keeps it as far below the bar.
+local DRAGONUI_SQUARE_MAP_DROP = 11
 -- GameTime.lua's own dawn and dusk, in minutes past midnight.
 local GAMETIME_DAWN, GAMETIME_DUSK = 5 * 60 + 30, 21 * 60
 
@@ -207,19 +227,34 @@ local function IsQuestMinimapPin(button)
     return false
 end
 
-local function IsForeverStyle()
+local function GetMinimapStyle()
     local minimapConfig = addon.db and addon.db.profile and addon.db.profile.minimap
-    return minimapConfig ~= nil and minimapConfig.style == "forever"
+    if not minimapConfig then return nil end
+    -- Pre-release name of the Forever square style.
+    if minimapConfig.style == "square" then
+        minimapConfig.style = "forever_square"
+    end
+    return minimapConfig.style
+end
+
+local function IsForeverStyle()
+    local style = GetMinimapStyle()
+    return style == "forever" or style == "forever_square"
 end
 
 local function IsSquareStyle()
-    local minimapConfig = addon.db and addon.db.profile and addon.db.profile.minimap
-    return minimapConfig ~= nil and minimapConfig.style == "square"
+    local style = GetMinimapStyle()
+    return style == "dragonui_square" or style == "forever_square"
 end
 
 -- Forever units to MinimapBackdrop units; ReplaceBlizzardFrame scales the backdrop back to the cluster's.
 local function ForeverScale()
     return Minimap:GetWidth() / MinimapBackdrop:GetScale() / FOREVER_MAP_SIZE
+end
+
+local function IsDragonUISquareFrame()
+    local texture = MinimapModule.circleTexture
+    return texture == DRAGONUI_SQUARE_FRAME
 end
 
 local function UpdateMinimapCircleSize()
@@ -231,6 +266,8 @@ local function UpdateMinimapCircleSize()
     local borderSize = mapSize * BORDER_TO_MAP_RATIO
     if MinimapModule.foreverShown then
         borderSize = FOREVER_RING_SIZE * ForeverScale()
+    elseif IsDragonUISquareFrame() then
+        borderSize = borderSize * DRAGONUI_RING_MAP_SPAN / 256 * 512 / DRAGONUI_SQUARE_SPAN
     end
     if MinimapModule.activeCircleSize ~= borderSize then
         Minimap.Circle:SetSize(borderSize, borderSize)
@@ -238,6 +275,13 @@ local function UpdateMinimapCircleSize()
         Minimap.Circle:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
         MinimapModule.activeCircleSize = borderSize
     end
+end
+
+-- Size and x offset from the map's centre, in btn's units, of the frame's left chevron.
+local function GetSquareArrowPlacement(btn)
+    if not IsDragonUISquareFrame() then return nil end
+    local texel = Minimap:GetWidth() * Minimap:GetEffectiveScale() / btn:GetEffectiveScale() / DRAGONUI_SQUARE_MAP_TEXELS
+    return DRAGONUI_SQUARE_ARROW_SIZE * texel, DRAGONUI_SQUARE_ARROW_X * texel
 end
 
 local function IsSexyMapHybridModeValue(mode)
@@ -287,9 +331,23 @@ local function IsForeverLayout()
     return IsForeverStyle() and not IsHybridMinimapModeActive()
 end
 
+local function IsSquareLayout()
+    return IsSquareStyle() and not IsHybridMinimapModeActive()
+end
+
 local function IsForeverActive()
     return IsForeverLayout() and IsDragonUIMinimapControlling()
         and not MinimapModule._allowExternalBorderControl
+end
+
+-- The thin box border the square style first shipped with, kept as an option for Forever square.
+local function IsThinSquareBorder()
+    if not (IsSquareLayout() and IsForeverActive()) then return false end
+    return addon.db.profile.minimap.forever_square_border == "thin"
+end
+
+local function ShowSquareTopArrow()
+    return addon.db.profile.minimap.square_top_arrow ~= false
 end
 
 -- In Minimap units; nil keeps DragonUI's own orbit.
@@ -447,17 +505,6 @@ local function RotateTexCoords(texture, angle)
     texture:SetTexCoord(ulx, uly, llx, lly, urx, ury, lrx, lry)
 end
 
-local function ApplyTextureRotation(texture, angle)
-    if not texture then return end
-
-    if texture.SetRotation then
-        texture:SetRotation(angle)
-        return
-    end
-
-    RotateTexCoords(texture, angle)
-end
-
 -- ============================================================================
 -- WOW FOREVER STYLE
 -- ============================================================================
@@ -485,8 +532,12 @@ local function EnsureForeverFrame()
 
     frame.pointer = frame:CreateTexture(nil, "ARTWORK")
     frame.pointer:SetTexture(FOREVER_MINIMAP_POINTER)
-    frame.dielIcon = frame:CreateTexture(nil, "BORDER")
-    frame.dielRing = frame:CreateTexture(nil, "OVERLAY")
+    -- Forever raises the day/night badge so the turning pointer passes wholly beneath it (Diel.lua).
+    frame.diel = CreateFrame("Frame", nil, frame)
+    frame.diel:SetAllPoints(frame)
+    frame.diel:SetFrameLevel(frame:GetFrameLevel() + 1)
+    frame.dielIcon = frame.diel:CreateTexture(nil, "BORDER")
+    frame.dielRing = frame.diel:CreateTexture(nil, "OVERLAY")
     frame.dielRing:SetAtlasTexture("Minimap-Forever-Frame-Cycle")
 
     local sinceCheck = 0
@@ -510,12 +561,14 @@ end
 local function SyncForeverOverlay()
     if not foreverFrame then return end
     local circle = Minimap.Circle
-    local show = MinimapModule.foreverShown and circle and circle:IsShown() and true or false
+    local show = MinimapModule.foreverShown and circle and circle:IsShown()
+        and not IsThinSquareBorder() and true or false
     if show then
         local r, g, b, a = circle:GetVertexColor()
         foreverFrame:SetAlpha(circle:GetAlpha())
         foreverFrame.pointer:SetVertexColor(r, g, b, a)
         foreverFrame.dielRing:SetVertexColor(r, g, b, a)
+        foreverFrame.pointer:SetShownCompat(not IsSquareLayout() or ShowSquareTopArrow())
     end
     foreverFrame:SetShownCompat(show)
 end
@@ -529,41 +582,44 @@ local function HookForeverMirror(circle)
     hooksecurefunc(circle, "SetVertexColor", SyncForeverOverlay)
 end
 
--- Forever turns only its north pointer; the ring itself never rotates.
+-- Only Forever's round pointer turns; a turning ring drags its chevron off the arrow collector.
 local function RotateRing(angle)
-    if MinimapModule.foreverShown then
-        if foreverFrame then RotateTexCoords(foreverFrame.pointer, angle) end
-    elseif Minimap.Circle then
-        ApplyTextureRotation(Minimap.Circle, angle)
-    end
+    if IsSquareLayout() or not MinimapModule.foreverShown then return end
+    if foreverFrame then RotateTexCoords(foreverFrame.pointer, angle) end
 end
 
 local function ResetRingRotation()
     if MinimapModule.foreverShown then
         if foreverFrame then foreverFrame.pointer:SetTexCoord(0, 1, 0, 1) end
     elseif Minimap.Circle then
-        if Minimap.Circle.SetRotation then
-            Minimap.Circle:SetRotation(0)
-        else
-            Minimap.Circle:SetTexCoord(0, 1, 0, 1)
-        end
+        -- Never SetRotation: it also shrinks the ring, and BORDER_TO_MAP_RATIO is its drawn size.
+        Minimap.Circle:SetTexCoord(0, 1, 0, 1)
     end
 end
 
--- The difficulty banner hangs over the day/night badge, and Forever draws the banner on top.
-local function SyncInstanceDifficultyLevel(active)
-    local difficulty = MiniMapInstanceDifficulty
-    if not difficulty then return end
+local function LiftAbove(frame, key, cover)
+    if not frame then return end
     local states = MinimapModule.originalStates
-    if active and foreverFrame then
-        if not states.InstanceDifficultyLevel then
-            states.InstanceDifficultyLevel = difficulty:GetFrameLevel()
+    if cover then
+        if not states[key] then
+            states[key] = frame:GetFrameLevel()
         end
-        difficulty:SetFrameLevel(foreverFrame:GetFrameLevel() + 1)
-    elseif states.InstanceDifficultyLevel then
-        difficulty:SetFrameLevel(states.InstanceDifficultyLevel)
-        states.InstanceDifficultyLevel = nil
+        frame:SetFrameLevel(math.max(states[key], cover:GetFrameLevel() + 1))
+    elseif states[key] then
+        frame:SetFrameLevel(states[key])
+        states[key] = nil
     end
+end
+
+-- The day/night badge and the square frames would otherwise cover these icons.
+local function SyncCornerIconLevels(foreverActive)
+    local square = IsSquareLayout() and IsDragonUIMinimapControlling()
+    local border = MinimapModule.squareBorder
+    if border and not border:IsShown() then border = nil end
+    local cover = border or (foreverActive and foreverFrame and foreverFrame.diel) or (square and MinimapBackdrop) or nil
+    LiftAbove(MiniMapInstanceDifficulty, "InstanceDifficultyLevel", cover)
+    LiftAbove(MiniMapBattlefieldFrame, "BattlefieldLevel", square and cover or nil)
+    LiftAbove(MiniMapMailFrame, "MailLevel", square and cover or nil)
 end
 
 -- The collector asks this when it hands a button back to the map; a module restore keeps the original scale.
@@ -618,27 +674,28 @@ end
 local function UpdateMailPosition()
     if not MiniMapMailFrame or not MiniMapTracking then return end
     MiniMapMailFrame:ClearAllPoints()
-    if IsSquareStyle() then
+    if IsSquareLayout() then
         MiniMapMailFrame:SetPoint("RIGHT", MiniMapTracking, "LEFT", -3, 0)
-        MiniMapMailFrame:SetFrameLevel(MiniMapTracking:GetFrameLevel() + 5)
     else
         MiniMapMailFrame:SetPoint("TOP", MiniMapTracking, "BOTTOM", 0, -3)
-        MiniMapMailFrame:SetFrameLevel(MiniMapTracking:GetFrameLevel())
     end
 end
 
 local function UpdateCornerIconsPosition()
+    -- SexyMap places these in hybrid mode.
+    if IsHybridMinimapModeActive() then return end
+
     UpdateMailPosition()
 
-    local isSquare = IsSquareStyle()
+    local isSquare = IsSquareLayout()
 
     local difficulty = MiniMapInstanceDifficulty
     if difficulty then
         difficulty:ClearAllPoints()
-        if isSquare then
+        -- Forever hangs the banner over its day/night badge, which the square frame keeps in that corner.
+        if isSquare and (not IsForeverLayout() or IsThinSquareBorder()) then
             difficulty:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -4, -4)
             difficulty:SetScale(0.85)
-            difficulty:SetFrameLevel(Minimap:GetFrameLevel() + 10)
         else
             if MinimapBorderTop then
                 difficulty:SetPoint("TOP", MinimapBorderTop, 'BOTTOMRIGHT', -20, 6)
@@ -654,58 +711,62 @@ local function UpdateCornerIconsPosition()
         pvpButton:ClearAllPoints()
         if isSquare then
             pvpButton:SetPoint("BOTTOMRIGHT", Minimap, "BOTTOMRIGHT", -4, 4)
-            pvpButton:SetFrameLevel(Minimap:GetFrameLevel() + 10)
         else
             pvpButton:SetPoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 0, 18)
         end
     end
 end
 
-local function UpdateSquareStyle()
-    local isSquare = IsSquareStyle()
-    if isSquare then
-        local border = EnsureSquareBorder()
-        border:Show()
-    elseif MinimapModule.squareBorder then
-        MinimapModule.squareBorder:Hide()
-    end
-    UpdateCornerIconsPosition()
-end
-
 local function UpdateForeverStyle()
     local circle = Minimap and Minimap.Circle
     if not circle then return end
 
-    UpdateSquareStyle()
+    UpdateCornerIconsPosition()
 
     local active = IsForeverActive()
+    local square = IsSquareLayout()
     if active ~= (MinimapModule.foreverShown == true) then
         MinimapModule.foreverShown = active
-        circle:SetTexture(active and FOREVER_MINIMAP_CIRCLE or DRAGONUI_MINIMAP_CIRCLE)
+        RescaleLaunchers()
+    end
+
+    local thin = IsThinSquareBorder()
+    if thin then
+        EnsureSquareBorder():Show()
+    elseif MinimapModule.squareBorder then
+        MinimapModule.squareBorder:Hide()
+    end
+
+    -- An empty ring rather than a hidden one: decorations and restores Show() the circle on their own.
+    local rounded = addon.db.profile.minimap.forever_square_rounded == true
+    local foreverSquare = rounded and FOREVER_SQUARE_FRAME_ROUNDED or FOREVER_SQUARE_FRAME
+    local texture = (thin and "") or (active and (square and foreverSquare or FOREVER_MINIMAP_CIRCLE))
+        or (square and DRAGONUI_SQUARE_FRAME or DRAGONUI_MINIMAP_CIRCLE)
+    if MinimapModule.circleTexture ~= texture then
+        MinimapModule.circleTexture = texture
+        if thin then
+            circle:SetTexture(nil)
+        else
+            circle:SetTexture(texture)
+        end
         circle:SetTexCoord(0, 1, 0, 1)
         if foreverFrame then foreverFrame.pointer:SetTexCoord(0, 1, 0, 1) end
-        RescaleLaunchers()
         -- Forces the rotation loop to re-aim whichever texture turns now.
         if MinimapModule.borderFrame then
             MinimapModule.borderFrame._duiLastAppliedAngle = nil
         end
     end
 
-    if IsSquareStyle() then
-        circle:Hide()
-        if foreverFrame then foreverFrame:Hide() end
-        SyncInstanceDifficultyLevel(false)
-        SyncLibDBIconShape()
-        return
-    end
-
     if active then
         local frame = EnsureForeverFrame()
         local scale = ForeverScale()
         local ringSize = FOREVER_RING_SIZE * scale
+        frame.pointer:SetTexture(square and FOREVER_SQUARE_POINTER or FOREVER_MINIMAP_POINTER)
         frame.pointer:SetSize(ringSize, ringSize)
         frame.pointer:SetSinglePoint("CENTER", Minimap, "CENTER", 0, 0)
-        local dielX, dielY = FOREVER_DIEL_X * scale, FOREVER_DIEL_Y * scale
+        local squareDielX = rounded and FOREVER_SQUARE_ROUNDED_DIEL_X or FOREVER_SQUARE_DIEL_X
+        local dielX = (square and squareDielX or FOREVER_DIEL_X) * scale
+        local dielY = (square and FOREVER_SQUARE_DIEL_Y or FOREVER_DIEL_Y) * scale
         frame.dielRing:SetSize(FOREVER_DIEL_RING_SIZE * scale, FOREVER_DIEL_RING_SIZE * scale)
         frame.dielRing:SetSinglePoint("CENTER", Minimap, "CENTER", dielX, dielY)
         frame.dielIcon:SetSize(FOREVER_DIEL_ICON_SIZE * scale, FOREVER_DIEL_ICON_SIZE * scale)
@@ -723,16 +784,28 @@ local function UpdateForeverStyle()
 
     UpdateMinimapCircleSize()
     SyncForeverOverlay()
-    SyncInstanceDifficultyLevel(active)
-    if GetCVar("rotateMinimap") ~= "1" then
+    SyncCornerIconLevels(active)
+    if square or GetCVar("rotateMinimap") ~= "1" then
         ResetRingRotation()
     end
     SyncLibDBIconShape()
 end
 
 local function GetStyleOffsets()
+    -- No pointer or badge to make room for: the thin line hugs the zone bar like the plain style.
+    local thin = IsForeverLayout() and IsSquareLayout() and addon.db.profile.minimap.forever_square_border == "thin"
+    if thin then
+        return 0, MAP_OFFSET_Y
+    end
     if IsForeverLayout() then
-        return FOREVER_CLUSTER_LIFT, MAP_OFFSET_Y - FOREVER_MAP_DROP
+        local drop = FOREVER_MAP_DROP
+        if IsSquareLayout() and addon.db.profile.minimap.square_top_arrow == false then
+            drop = drop - FOREVER_SQUARE_POINTERLESS_RISE
+        end
+        return FOREVER_CLUSTER_LIFT, MAP_OFFSET_Y - drop
+    end
+    if IsSquareLayout() then
+        return 0, MAP_OFFSET_Y - DRAGONUI_SQUARE_MAP_DROP
     end
     return 0, MAP_OFFSET_Y
 end
@@ -740,20 +813,19 @@ end
 -- Live style switches only; ReplaceBlizzardFrame anchors both frames itself on every apply.
 local function ApplyStyleAnchors()
     local mover = MinimapModule.minimapFrame
-    local forever = IsForeverLayout()
-    if not mover or MinimapModule.appliedForeverLayout == forever then return end
+    local clusterLift, mapOffsetY = GetStyleOffsets()
+    if not mover or MinimapModule.appliedMapOffsetY == mapOffsetY then return end
     if InCombatLockdown() then
         addon.CombatQueue:Add("minimap_style_anchors", ApplyStyleAnchors)
         return
     end
 
-    local clusterLift, mapOffsetY = GetStyleOffsets()
     MinimapCluster:ClearAllPoints()
     MinimapCluster:SetPoint("CENTER", mover, "CENTER", 0, clusterLift)
     -- Anchor offsets are read in the map's own scaled units.
     Minimap:ClearAllPoints()
     Minimap:SetPoint("CENTER", MinimapCluster, "CENTER", 0, mapOffsetY / blipScale)
-    MinimapModule.appliedForeverLayout = forever
+    MinimapModule.appliedMapOffsetY = mapOffsetY
 end
 
 -- SECURE HOOKS: Add secure hooks for critical functions
@@ -927,7 +999,7 @@ local function ReplaceBlizzardFrame(frame)
     end
 
     local clusterLift, mapOffsetY = GetStyleOffsets()
-    MinimapModule.appliedForeverLayout = IsForeverLayout()
+    MinimapModule.appliedMapOffsetY = mapOffsetY
 
     local minimapCluster = MinimapCluster
     minimapCluster:ClearAllPoints()
@@ -1031,23 +1103,13 @@ local function ReplaceBlizzardFrame(frame)
 
     local minimapBattlefieldFrame = MiniMapBattlefieldFrame
     minimapBattlefieldFrame:ClearAllPoints()
-    if IsSquareStyle() then
-        minimapBattlefieldFrame:SetPoint("BOTTOMRIGHT", Minimap, "BOTTOMRIGHT", -4, 4)
-        minimapBattlefieldFrame:SetFrameLevel(Minimap:GetFrameLevel() + 10)
-    else
-        minimapBattlefieldFrame:SetPoint("BOTTOMLEFT", 8, 2)
-    end
+    minimapBattlefieldFrame:SetPoint("BOTTOMLEFT", 8, 2)
 
     if not isHybridMode then
         -- DragonUI positioning for elements anchored to the border top
         local minimapInstanceFrame = MiniMapInstanceDifficulty
         minimapInstanceFrame:ClearAllPoints()
-        if IsSquareStyle() then
-            minimapInstanceFrame:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -4, -4)
-            minimapInstanceFrame:SetFrameLevel(Minimap:GetFrameLevel() + 10)
-        else
-            minimapInstanceFrame:SetPoint("TOP", MinimapBorderTop, 'BOTTOMRIGHT', -20, 6)
-        end
+        minimapInstanceFrame:SetPoint("TOP", MinimapBorderTop, 'BOTTOMRIGHT', -20, 6)
         minimapInstanceFrame:SetScale(0.85) -- Fixed scale for difficulty icon
 
         local minimapTracking = MiniMapTracking
@@ -1226,7 +1288,7 @@ local function ReplaceBlizzardFrame(frame)
 
         if not isHybridMode then
             _G.GetMinimapShape = function()
-                return IsSquareStyle() and "SQUARE" or "ROUND"
+                return IsSquareLayout() and "SQUARE" or "ROUND"
             end
         end
     end
@@ -1259,12 +1321,7 @@ local function ReplaceBlizzardFrame(frame)
             HookForeverMirror(Minimap.Circle)
         end
         -- A restore hid it; decorations re-hide it in UpdateSettings if they own the border.
-        if not IsSquareStyle() then
-            Minimap.Circle:SetAlpha(1)
-            Minimap.Circle:Show()
-        else
-            Minimap.Circle:Hide()
-        end
+        Minimap.Circle:Show()
         UpdateMinimapCircleSize()
         UpdateForeverStyle()
 
@@ -1921,6 +1978,9 @@ local function GetConfiguredMinimapCollector()
         fadeout = fadeout,
         IsForeverActive = IsForeverActive,
         GetForeverOrbitRadius = GetForeverOrbitRadius,
+        IsDragonUISquareFrame = IsDragonUISquareFrame,
+        GetSquareArrowPlacement = GetSquareArrowPlacement,
+        DRAGONUI_SQUARE_COLLECTOR_ICON = DRAGONUI_SQUARE_COLLECTOR_ICON,
         DressButtonRing = DressButtonRing,
         AdoptLauncher = AdoptLauncher,
     })
@@ -2191,9 +2251,8 @@ local function StylePVPBattlefieldFrame()
 
     local pvpButton = MiniMapBattlefieldFrame
     pvpButton:SetSize(44, 44)
-    if IsSquareStyle() then
+    if IsSquareLayout() then
         pvpButton:SetSinglePoint("BOTTOMRIGHT", Minimap, "BOTTOMRIGHT", -4, 4)
-        pvpButton:SetFrameLevel(Minimap:GetFrameLevel() + 10)
     else
         pvpButton:SetSinglePoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 0, 18)
     end
@@ -2726,12 +2785,12 @@ function MinimapModule:RestoreMinimapSystem()
     if foreverFrame then
         foreverFrame:Hide()
     end
-    SyncInstanceDifficultyLevel(false)
-    if self.appliedForeverLayout and Minimap and MinimapCluster then
+    SyncCornerIconLevels(false)
+    if self.appliedMapOffsetY and self.appliedMapOffsetY ~= MAP_OFFSET_Y and Minimap and MinimapCluster then
         Minimap:ClearAllPoints()
         Minimap:SetPoint("CENTER", MinimapCluster, "CENTER", 0, MAP_OFFSET_Y / blipScale)
     end
-    self.appliedForeverLayout = nil
+    self.appliedMapOffsetY = nil
     -- The Blizzard mask went back on above; a re-apply must not trust the cached one.
     self.activeMask = nil
     if not wasHybrid then

@@ -160,9 +160,17 @@ local function SafeSet(tex, primary, fallback)
     end
 end
 
+-- The square DragonUI frame's chevron differs from the round ring's, so it gets its own cut.
+local function ClassicIconPath()
+    if deps.IsDragonUISquareFrame and deps.IsDragonUISquareFrame() then
+        return deps.DRAGONUI_SQUARE_COLLECTOR_ICON
+    end
+    return deps.DRAGONUI_CLASSIC_COLLECTOR_ICON
+end
+
 local function SetClassicIcon(tex)
     if not tex then return end
-    SafeSet(tex, deps.DRAGONUI_CLASSIC_COLLECTOR_ICON)
+    SafeSet(tex, ClassicIconPath())
     tex:SetTexCoord(0, 1, 0, 1)
 end
 
@@ -207,9 +215,9 @@ local function SetClassicGlow(tex)
     if not tex then return end
     local a = deps.addon
     if a and a.SafeSetTexture then
-        a:SafeSetTexture(tex, deps.DRAGONUI_CLASSIC_COLLECTOR_ICON)
+        a:SafeSetTexture(tex, ClassicIconPath())
     else
-        tex:SetTexture(deps.DRAGONUI_CLASSIC_COLLECTOR_ICON or WHITE_TEX)
+        tex:SetTexture(ClassicIconPath() or WHITE_TEX)
     end
     tex:SetTexCoord(0, 1, 0, 1)
 end
@@ -720,12 +728,17 @@ local function PositionCollector()
     c:SetScale(GetMinimapScale())
     c:ClearAllPoints()
 
+    local sbtn = GetSettingsBtn()
     if GetStyle() == STYLE_CLASSIC then
-        c:SetPoint("RIGHT", Minimap, "LEFT", -5, 0)
+        -- The square frame's arrow sits further out; its button's edge clears the tip as the ring's does.
+        if sbtn and deps.IsDragonUISquareFrame and deps.IsDragonUISquareFrame() then
+            c:SetPoint("RIGHT", sbtn, "LEFT", 0, 0)
+        else
+            c:SetPoint("RIGHT", Minimap, "LEFT", -5, 0)
+        end
         return
     end
 
-    local sbtn = GetSettingsBtn()
     if sbtn then c:SetPoint("TOPRIGHT", sbtn, "TOPLEFT", -5, 0) end
 end
 
@@ -1315,10 +1328,18 @@ local function ApplyClassicStyle(btn)
     btn:SetScript("OnUpdate", nil)
     btn.DragonUI_Dragging = false
     btn.DragonUI_DragMoved = false
-    btn:SetSize(21, 21)
     btn:SetScale(1)
     btn:ClearAllPoints()
-    btn:SetPoint("RIGHT", Minimap, "LEFT", 16.5, -2)
+    local size, x
+    if deps.GetSquareArrowPlacement then size, x = deps.GetSquareArrowPlacement(btn) end
+    if size then
+        -- An exact copy of the square frame's left chevron, laid over it.
+        btn:SetSize(size, size)
+        btn:SetPoint("CENTER", Minimap, "CENTER", x, 0)
+    else
+        btn:SetSize(21, 21)
+        btn:SetPoint("RIGHT", Minimap, "LEFT", 16.5, -2)
+    end
 
     if btn.icon then
         btn.icon:ClearAllPoints()

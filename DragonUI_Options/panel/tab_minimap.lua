@@ -93,7 +93,8 @@ end
 local function IsForeverMinimap()
     local modules = addon.db and addon.db.profile and addon.db.profile.modules
     local mode = modules and modules.minimap and modules.minimap.sexymap_mode
-    return C:GetDBValue("minimap.style") == "forever" and mode ~= "hybrid"
+    local style = C:GetDBValue("minimap.style")
+    return (style == "forever" or style == "forever_square") and mode ~= "hybrid"
 end
 
 local function IsCollectorEnabled()
@@ -170,17 +171,29 @@ local function BuildMinimapTab(scroll)
     -- BASIC SETTINGS
     -- ====================================================================
     local basic = C:AddSection(scroll, LO["Basic Settings"])
+    local squareBorderDropdown, topArrowToggle, roundedToggle
+
+    local function UpdateSquareBorderState()
+        if Panel.indexing or not squareBorderDropdown or not topArrowToggle or not roundedToggle then return end
+        local foreverSquare = IsForeverMinimap() and C:GetDBValue("minimap.style") == "forever_square"
+        local thin = foreverSquare and C:GetDBValue("minimap.forever_square_border") == "thin"
+        squareBorderDropdown:SetDisabled(not foreverSquare)
+        topArrowToggle:SetDisabled(not foreverSquare or thin)
+        roundedToggle:SetDisabled(not foreverSquare or thin)
+    end
 
     C:AddDropdown(basic, {
         label = LO["Style"],
         dbPath = "minimap.style",
         values = {
             dragonui = LO["DragonUI"],
+            dragonui_square = LO["DragonUI Square"],
             forever = LO["Forever"],
-            square = LO["Square Minimap"],
+            forever_square = LO["Forever Square"],
         },
         callback = function()
             UpdateCollectorSectionState()
+            UpdateSquareBorderState()
             if UpdateAnimatedBorderSectionState then
                 UpdateAnimatedBorderSectionState()
             end
@@ -188,6 +201,32 @@ local function BuildMinimapTab(scroll)
             RefreshAnimatedBorder()
         end,
     })
+
+    squareBorderDropdown = C:AddDropdown(basic, {
+        label = LO["Square Border"],
+        dbPath = "minimap.forever_square_border",
+        values = {
+            frame = LO["Forever Frame"],
+            thin = LO["Thin Line"],
+        },
+        callback = function()
+            UpdateSquareBorderState()
+            RefreshMinimap()
+        end,
+    })
+
+    topArrowToggle = C:AddToggle(basic, {
+        label = LO["Top Arrow"],
+        dbPath = "minimap.square_top_arrow",
+        callback = RefreshMinimap,
+    })
+
+    roundedToggle = C:AddToggle(basic, {
+        label = LO["Rounded Corners"],
+        dbPath = "minimap.forever_square_rounded",
+        callback = RefreshMinimap,
+    })
+    UpdateSquareBorderState()
 
     C:AddSlider(basic, {
         label = LO["Scale"],
@@ -315,7 +354,8 @@ local function BuildMinimapTab(scroll)
     local animatedBorderToggle
 
     local function IsSquareMinimap()
-        return C:GetDBValue("minimap.style") == "square"
+        local style = C:GetDBValue("minimap.style")
+        return style == "dragonui_square" or style == "forever_square"
     end
 
     local function IsAnimatedBorderEnabled()
