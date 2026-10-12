@@ -154,6 +154,7 @@ local function ShowHelp()
     print("  " .. L["/dragonui edit - Toggle editor mode (move UI elements)"])
     print("  " .. L["/dragonui reset - Reset all positions to defaults"])
     print("  " .. L["/dragonui status - Show module status"])
+    print("  " .. L["/dragonui farm - Toggle farm mode (big minimap, chrome hidden)"])
     print("  " .. L["/dragonui debug on|off|status - Toggle diagnostic logging"])
     print("  " .. L["/dragonui kb - Toggle keybind mode"])
     print("  " .. L["/dragonui collections - Open the Pets & Mounts window"])
@@ -183,6 +184,12 @@ local function SlashCommandHandler(input)
         ResetPositions(arg)
     elseif cmd == "status" then
         ShowStatus()
+    elseif cmd == "farm" or cmd == "farmmode" then
+        if addon.MinimapModule and addon.MinimapModule.ToggleFarmMode then
+            addon.MinimapModule:ToggleFarmMode()
+        else
+            addon:Print(L["Minimap module not available."])
+        end
     elseif cmd == "debug" then
         SetDebugMode(arg)
     elseif cmd == "kb" or cmd == "keybind" or cmd == "keybinds" then
