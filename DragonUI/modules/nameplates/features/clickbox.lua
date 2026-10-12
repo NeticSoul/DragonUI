@@ -7,10 +7,92 @@ local NP = addon.Nameplates
 
 NP.clickbox = NP.clickbox or {}
 
+-- Above Blizzard's highest pushable (7), so the trigger panel never displaces an open window.
+local TRIGGER_PUSHABLE = 8
+local SECURE_RETRY_INTERVAL = 0.5
+local SIZE_TOLERANCE = 0.5
+
+-- Plates the client creates mid-combat come up at native size; only those are touched.
+local RESIZE_SNIPPET = [[
+    local world = self:GetFrameRef("world")
+    local nativeW, nativeH = self:GetAttribute("nativew"), self:GetAttribute("nativeh")
+    local width, height = self:GetAttribute("width"), self:GetAttribute("height")
+    if not (world and nativeW and nativeH and width and height) then
+        return
+    end
+    local children = newtable(world:GetChildren())
+    for i = 1, #children do
+        local plate = children[i]
+        if plate:IsShown() and abs(plate:GetWidth() - nativeW) < 0.5
+            and abs(plate:GetHeight() - nativeH) < 0.5 then
+            plate:SetWidth(width)
+            plate:SetHeight(height)
+        end
+    end
+]]
+
+local secureTrigger
+local secureArmed = false
+
+local function EnsureSecureTrigger()
+    if secureTrigger or InCombatLockdown() then
+        return secureTrigger
+    end
+    -- No parent: a UIParent child would not fire OnShow while the UI is hidden (Alt+Z).
+    local trigger = CreateFrame("Frame", nil, nil, "SecureHandlerShowHideTemplate")
+    trigger:SetSize(1, 1)
+    trigger:Hide()
+    trigger:SetAttribute("UIPanelLayout-defined", true)
+    trigger:SetAttribute("UIPanelLayout-enabled", true)
+    trigger:SetAttribute("UIPanelLayout-area", "left")
+    trigger:SetAttribute("UIPanelLayout-pushable", TRIGGER_PUSHABLE)
+    trigger:SetAttribute("UIPanelLayout-whileDead", 1)
+    SecureHandlerSetFrameRef(trigger, "world", WorldFrame)
+    trigger:SetAttribute("_onshow", RESIZE_SNIPPET)
+    secureTrigger = trigger
+    return trigger
+end
+
+local function IsAtNativeSize(plate)
+    local nativeW, nativeH = NP.module._clickboxNativeW, NP.module._clickboxNativeH
+    if not (nativeW and nativeH and plate and plate.GetSize) then
+        return false
+    end
+    local w, h = plate:GetSize()
+    return math.abs(w - nativeW) < SIZE_TOLERANCE and math.abs(h - nativeH) < SIZE_TOLERANCE
+end
+
+-- Insecure code cannot Show a protected frame in combat; ShowUIPanel hands it to Blizzard's secure delegate.
+local function FireSecureResize()
+    local trigger = secureTrigger
+    if not (secureArmed and trigger) or trigger:IsShown() then
+        return false
+    end
+    -- A right panel means three are open, where showing another would close the left one.
+    if GetUIPanel("fullscreen") or GetUIPanel("right") then
+        return false
+    end
+    ShowUIPanel(trigger)
+    if not trigger:IsShown() then
+        return false
+    end
+    HideUIPanel(trigger)
+    return true
+end
+
+local function RequestSecureResize(plateData)
+    local plate = plateData and plateData.plate
+    if not (secureArmed and plate and IsAtNativeSize(plate)) then
+        return
+    end
+    -- Capture before the snippet resizes it, or visualRoot would be built from the scaled size.
+    NP.clickbox.CaptureBaseSize(plateData)
+    if not FireSecureResize() or IsAtNativeSize(plate) then
+        NP.module._clickboxSecureRetryAt = GetTime() + SECURE_RETRY_INTERVAL
+    end
+end
+
 local function ApplyClickboxForCombatPlate(plateData)
-    -- Never enumerate or resize arbitrary protected WorldFrame children from a
-    -- secure snippet. Keep the current clickbox stable during combat and apply
-    -- the requested geometry to registered plates on PLAYER_REGEN_ENABLED.
     if plateData then
         plateData._clickAreaPending = true
     end
@@ -33,8 +115,8 @@ local function ApplyOverlayGeometry(plateData)
     overlay:SetAllPoints(plate)
 end
 
-function NP.clickbox.InitSecureSystem(syncAttributes)
-    return not InCombatLockdown()
+function NP.clickbox.InitSecureSystem()
+    return NP.clickbox.UpdateSecureAttributes()
 end
 
 function NP.clickbox.OnCombatStart()
@@ -52,9 +134,9 @@ function NP.clickbox.CaptureBaseSize(plateData)
 
     local w, h = plate._dragonUIClickboxNativeW, plate._dragonUIClickboxNativeH
     if not (w and h) then
-        if plate._dragonUIClickboxSized then
-            w, h = NP.module._clickboxNativeW, NP.module._clickboxNativeH
-        elseif plate.GetSize then
+        -- The combat snippet resizes plates without setting _dragonUIClickboxSized.
+        w, h = NP.module._clickboxNativeW, NP.module._clickboxNativeH
+        if not (w and h) and not plate._dragonUIClickboxSized and plate.GetSize then
             w, h = plate:GetSize()
         end
         if not (w and w > 0 and h and h > 0) then
@@ -119,7 +201,44 @@ function NP.clickbox.UpdateSecureAttributes()
         NP.module._clickboxSecurePending = true
         return false
     end
+    local trigger = EnsureSecureTrigger()
+    local nativeW, nativeH = NP.module._clickboxNativeW, NP.module._clickboxNativeH
+    local width, height
+    if nativeW and nativeH then
+        local cfg = NP.config.GetCfg()
+        width = nativeW * (cfg.clickboxWidthFactor or 1)
+        height = nativeH * (cfg.clickboxHeightFactor or 1)
+        if math.abs(width - nativeW) < SIZE_TOLERANCE and math.abs(height - nativeH) < SIZE_TOLERANCE then
+            width, height = nil, nil
+        end
+    end
+    secureArmed = width ~= nil
+    if trigger:GetAttribute("width") ~= width or trigger:GetAttribute("height") ~= height
+        or trigger:GetAttribute("nativew") ~= nativeW or trigger:GetAttribute("nativeh") ~= nativeH then
+        trigger:SetAttribute("nativew", nativeW)
+        trigger:SetAttribute("nativeh", nativeH)
+        trigger:SetAttribute("width", width)
+        trigger:SetAttribute("height", height)
+    end
     return true
+end
+
+function NP.clickbox.TickSecureResize()
+    local retryAt = NP.module._clickboxSecureRetryAt
+    if not retryAt or GetTime() < retryAt then
+        return
+    end
+    NP.module._clickboxSecureRetryAt = nil
+    if not InCombatLockdown() then
+        return
+    end
+    for _, plateData in pairs(NP.module.plates) do
+        local plate = plateData.plate
+        if plate and plate:IsShown() and IsAtNativeSize(plate) then
+            RequestSecureResize(plateData)
+            return
+        end
+    end
 end
 
 function NP.clickbox.ShouldShowOverlay()
@@ -223,6 +342,10 @@ function NP.clickbox.FlushPending()
     if InCombatLockdown() then
         return
     end
+    NP.module._clickboxSecureRetryAt = nil
+    if secureTrigger and secureTrigger:IsShown() then
+        HideUIPanel(secureTrigger)
+    end
     if NP.module._clickboxSecurePending then
         NP.module._clickboxSecurePending = nil
         NP.clickbox.UpdateSecureAttributes()
@@ -244,11 +367,13 @@ function NP.clickbox.OnPlateShown(plateData)
         plateData._clickAreaPending = true
         NP.module._clickboxSecurePending = true
         ApplyClickboxForCombatPlate(plateData)
+        RequestSecureResize(plateData)
     end
     NP.clickbox.SyncOverlay(plateData)
 end
 
 function NP.clickbox.RefreshAll()
+    NP.clickbox.UpdateSecureAttributes()
     for _, plateData in pairs(NP.module.plates) do
         NP.clickbox.ApplyPlateClickbox(plateData)
     end

@@ -109,7 +109,7 @@ function NP.layout.RestorePlateDepthOrdering(plateData)
     if not plateData then return end
     local plate = plateData.plate
     local originalLevels = plateData._depthOriginalLevels
-    if plate and originalLevels and originalLevels[plate] ~= nil then
+    if plate and originalLevels and originalLevels[plate] ~= nil and not InCombatLockdown() then
         SetFrameLevelFully(plate, originalLevels[plate])
     end
     plateData._depthOriginalLevels = nil
@@ -334,7 +334,8 @@ function NP.layout.UpdateDepthOrdering(elapsed)
         if plateData._depthAppliedIndex == index
             and plateData._depthAppliedCfgRev == cfgRev
             and not plateData._depthDirty
-            and not drifted then
+            and not drifted
+            and not (plateData._depthPlatePending and not InCombatLockdown()) then
             -- Sync BGHframe when attached mid-life.
             if plate and plate.BGHframe and plate.BGHframe.SetFrameLevel then
                 SetDepthFrameLevel(plateData, plate.BGHframe, base + BGH_FRAME_OFFSET)
@@ -343,10 +344,16 @@ function NP.layout.UpdateDepthOrdering(elapsed)
             plateData._depthAppliedIndex = index
             plateData._depthAppliedCfgRev = cfgRev
             plateData._depthDirty = nil
-            if cfg.showClickbox == true and plate and plate.SetFrameLevel then
+            plateData._depthPlatePending = nil
+            local originalLevel = plateData._depthOriginalLevels and plateData._depthOriginalLevels[plate]
+            local wantPlateLevel = cfg.showClickbox == true and plate and plate.SetFrameLevel
+            -- The client plate is protected, so its own level change waits for combat to end.
+            if (wantPlateLevel or originalLevel ~= nil) and InCombatLockdown() then
+                plateData._depthPlatePending = true
+            elseif wantPlateLevel then
                 SetDepthFrameLevel(plateData, plate, base + 1)
-            elseif plateData._depthOriginalLevels and plateData._depthOriginalLevels[plate] ~= nil then
-                SetFrameLevelFully(plate, plateData._depthOriginalLevels[plate])
+            elseif originalLevel ~= nil then
+                SetFrameLevelFully(plate, originalLevel)
                 plateData._depthOriginalLevels[plate] = nil
             end
             if visualRoot and visualRoot.SetFrameLevel then

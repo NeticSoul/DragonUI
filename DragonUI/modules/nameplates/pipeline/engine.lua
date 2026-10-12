@@ -466,6 +466,7 @@ local function EngineOnUpdate(_, elapsed)
 
     if NP.clickbox and NP.clickbox.TickPreview then
         NP.clickbox.TickPreview()
+        NP.clickbox.TickSecureResize()
     end
     if NP.auras and NP.auras.TickPreview then
         NP.auras.TickPreview()
