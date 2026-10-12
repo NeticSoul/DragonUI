@@ -715,6 +715,50 @@ local function BuildEnhancementsTab(scroll)
         disabled = function() return not IsEnabled("tooltip") end,
         requiresReload = false,
     })
+
+    -- ====================================================================
+    -- MERCHANT AUTO SERVICES
+    -- ====================================================================
+    local merchantSection = C:AddSection(scroll, LO["Merchant Auto Services"])
+
+    C:AddDescription(merchantSection, LO["Automatically repair items and sell junk when you open a merchant window. Requires the Merchant module."])
+
+    C:AddToggle(merchantSection, {
+        label = LO["Auto Repair"],
+        desc = LO["Automatically repair all equipped items when a merchant window opens."],
+        getFunc = function()
+            return GetModuleField("merchant", "autoRepair") == true
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("merchant").autoRepair = val
+        end,
+        disabled = function() return not IsEnabled("merchant") end,
+    })
+
+    C:AddToggle(merchantSection, {
+        label = LO["Use Guild Funds"],
+        desc = LO["Pay for automatic repairs with guild bank money when you have the right and the guild can cover the cost."],
+        getFunc = function()
+            return GetModuleField("merchant", "autoRepairGuild") == true
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("merchant").autoRepairGuild = val
+        end,
+        disabled = function() return not IsEnabled("merchant") end,
+        indent = 1,
+    })
+
+    C:AddToggle(merchantSection, {
+        label = LO["Auto Sell Junk"],
+        desc = LO["Automatically sell grey (junk) items when a merchant window opens."],
+        getFunc = function()
+            return GetModuleField("merchant", "autoSellJunk") == true
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("merchant").autoSellJunk = val
+        end,
+        disabled = function() return not IsEnabled("merchant") end,
+    })
 end
 
 -- Register the tab (order 11 = after Quest Tracker, before Profiles)

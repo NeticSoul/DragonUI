@@ -200,7 +200,7 @@ local function BuildModulesTab(scroll)
 
     ModuleToggle(uiSection, {
         label = LO["Merchant"],
-        desc = LO["Retail-style vendor window chrome"],
+        desc = LO["Retail-style vendor window chrome with auto repair and junk selling"],
         moduleName = "merchant",
     })
 
