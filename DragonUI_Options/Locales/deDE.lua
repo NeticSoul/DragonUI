@@ -46,6 +46,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "Erste
 L["Language"] = "Sprache"
 L["Choose the language used by the DragonUI interface."] = "Wähle die Sprache für die DragonUI-Oberfläche."
 L["Follow the client language"] = "Clientsprache übernehmen"
+L["Settings Window"] = "Einstellungsfenster"
+L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Größe dieses Fensters zusätzlich zu deiner UI-Skalierung; 1.0 entspricht den anderen Fenstern. Es wird nie größer als der Bildschirm."
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "Befehle: /dragonui, /dui, /pi — /dragonui edit (Editor) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (markieren und Strg+C zum Kopieren):"

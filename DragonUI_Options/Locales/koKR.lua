@@ -55,6 +55,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "Netic
 L["Language"] = "언어"
 L["Choose the language used by the DragonUI interface."] = "DragonUI 인터페이스에서 사용할 언어를 선택하세요."
 L["Follow the client language"] = "클라이언트 언어 따르기"
+L["Settings Window"] = "설정 창"
+L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "UI 크기에 더해 적용되는 이 창의 크기입니다. 1.0이 다른 창과 같습니다. 화면을 벗어나지 않습니다."
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "명령어: /dragonui, /dui, /pi — /dragonui edit (편집) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (선택 후 Ctrl+C로 복사):"

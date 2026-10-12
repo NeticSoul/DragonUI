@@ -667,6 +667,8 @@ L["Not Enough Mana Color"] = "Couleur mana insuffisant"
 L["Language"] = "Langue"
 L["Choose the language used by the DragonUI interface."] = "Choisissez la langue utilisée par l'interface de DragonUI."
 L["Follow the client language"] = "Suivre la langue du client"
+L["Settings Window"] = "Fenêtre des réglages"
+L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Taille de cette fenêtre, en plus de votre échelle d'interface ; 1.0 correspond aux autres panneaux. Elle ne dépasse jamais de l'écran."
 
 -- Quest nameplate icons (loot providers + Questie coexistence)
 L["Resolve By Name"] = "Résoudre par nom"
