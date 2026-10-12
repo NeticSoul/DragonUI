@@ -1,11 +1,18 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
 local addon = select(2, ...)
-local LOCALE_UNITS = ({
+local NATIVE_UNITS = ({
     zhCN = { { 100000000, "亿" }, { 10000, "万" } },
     zhTW = { { 100000000, "億" }, { 10000, "萬" } },
     koKR = { { 100000000, "억" }, { 10000, "만" } },
 })[GetLocale()]
+
+local function GetLocaleUnits()
+    local global = addon.db and addon.db.global
+    if NATIVE_UNITS and not (global and global.numberUnits == "western") then
+        return NATIVE_UNITS
+    end
+end
 
 -- ===============================================================
 -- DRAGONUI TEXT SYSTEM
@@ -30,14 +37,26 @@ TextSystem.TEXT_FORMATS = {
 -- CORE FORMATTING FUNCTIONS
 -- ===============================================================
 
+function TextSystem.UsesLocaleUnits()
+    return GetLocaleUnits() ~= nil
+end
+
+-- nil on clients that only know k / M, so the options can skip the choice there.
+function TextSystem.GetLocaleUnitsLabel()
+    if NATIVE_UNITS then
+        return NATIVE_UNITS[2][2] .. " / " .. NATIVE_UNITS[1][2]
+    end
+end
+
 -- Format large values using the client's familiar number units.
 function TextSystem.AbbreviateLargeNumbers(value)
     if not value or type(value) ~= "number" then
         return "0"
     end
 
-    if LOCALE_UNITS then
-        for _, unit in ipairs(LOCALE_UNITS) do
+    local units = GetLocaleUnits()
+    if units then
+        for _, unit in ipairs(units) do
             if value >= unit[1] then
                 return (string.format("%.1f", value / unit[1]):gsub("%.0$", "")) .. unit[2]
             end
@@ -209,6 +228,19 @@ end
 function TextSystem.RefreshTexts(frameType)
     previewUntil[frameType] = nil
     RunPreviewUpdater(frameType)
+end
+
+-- Repaints every abbreviated number now, instead of waiting for each value to change.
+function TextSystem.RefreshNumberTexts()
+    for _, fn in pairs(previewUpdaters) do
+        fn()
+    end
+    if addon.RefreshPersonalResource then
+        addon.RefreshPersonalResource()
+    end
+    if addon.RefreshNameplates and addon:IsModuleEnabled("nameplates") then
+        addon:RefreshNameplates()
+    end
 end
 
 -- Shows the texts of one frame type for a few seconds so a format change is visible.

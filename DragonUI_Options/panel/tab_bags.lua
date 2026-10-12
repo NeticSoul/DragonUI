@@ -682,6 +682,17 @@ local function BuildBagsTab(scroll)
         disabled = function() return not IsBagsterEnabled() end,
     })
 
+    C:AddToggle(displaySection, {
+        label = LO["Item Count in Tooltip"],
+        desc = LO["Show how many of the hovered item you own in total, across your bags and bank."],
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return not mc or mc.tooltip_count ~= false
+        end,
+        setFunc = function(val) SetBagsterOption("tooltip_count", val) end,
+        disabled = function() return not IsBagsterEnabled() end,
+    })
+
     -- ====================================================================
     -- INVENTORY CATEGORY TABS
     -- ====================================================================

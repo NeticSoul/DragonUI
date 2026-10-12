@@ -50,6 +50,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "Со�
 L["Language"] = "Язык"
 L["Choose the language used by the DragonUI interface."] = "Выберите язык интерфейса DragonUI."
 L["Follow the client language"] = "Следовать языку клиента"
+L["Number Abbreviations"] = "Сокращение чисел"
+L["How unit frames, nameplates and the resource display shorten large numbers."] = "Как сокращаются большие числа на фреймах, индикаторах и панели личных ресурсов."
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "Команды: /dragonui, /dui, /pi — /dragonui edit (редактор) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (выделите и нажмите Ctrl+C для копирования):"
@@ -436,6 +438,8 @@ L["Quest Item Glow"] = "Свечение квестовых предметов"
 L["Highlight quest items with a golden border."] = "Выделяет квестовые предметы золотой рамкой."
 L["Glow Intensity"] = "Интенсивность свечения"
 L["Opacity of the quality ring on item slots."] = "Прозрачность кольца качества на ячейках предметов."
+L["Item Count in Tooltip"] = "Количество предметов в подсказке"
+L["Show how many of the hovered item you own in total, across your bags and bank."] = "Показывает, сколько всего таких предметов у вас в сумках и банке."
 L["Quality Filter Row"] = "Строка фильтра качества"
 L["Show the rarity filter dots at the bottom of the bag frame."] = "Показывает точки фильтра редкости внизу окна сумок."
 

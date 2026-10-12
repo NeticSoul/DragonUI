@@ -276,6 +276,13 @@ do
         end
     end
 
+    local function ShowContainerTooltip(self)
+        ContainerFrameItemButton_OnEnter(self)
+        if self:AddItemCount() then
+            GameTooltip:Show()
+        end
+    end
+
     function ItemSlot:OnEnter()
         local dummySlot = self:GetDummyItemSlot()
         if self:IsCached() then
@@ -290,6 +297,7 @@ do
                 if self:GetItem() then
                     self:AnchorTooltip()
                     GameTooltip:SetInventoryItem("player", BankButtonIDToInvSlotID(self:GetID()))
+                    self:AddItemCount()
                     GameTooltip:Show()
                     CursorUpdate(self)
                     if IsModifiedClick("COMPAREITEMS") then
@@ -299,9 +307,9 @@ do
                 end
             else
                 -- Native handler shows Soulbound/durability and initial shift+compare
-                ContainerFrameItemButton_OnEnter(self)
+                ShowContainerTooltip(self)
                 -- Keeps tooltip in sync when the hovered item changes (e.g. right-click equip)
-                self.UpdateTooltip = ContainerFrameItemButton_OnEnter
+                self.UpdateTooltip = ShowContainerTooltip
             end
         end
     end
@@ -548,6 +556,26 @@ do
         end
     end
 
+    -- Returns true when it added a line, so the caller re-Shows the tooltip to fit it.
+    function ItemSlot:AddItemCount()
+        local link = self:GetItem()
+        if not link then return end
+        local cfg = mod.GetModuleConfig()
+        if cfg and cfg.tooltip_count == false then return end
+
+        local bags = GetItemCount(link)
+        local bank = max(GetItemCount(link, true) - bags, 0)
+        if bags + bank <= 1 then return end
+
+        local L = addon.L
+        local text = format("%s: |cffffffff%d|r", L["Total"], bags + bank)
+        if bags > 0 and bank > 0 then
+            text = format("%s  (%s: |cffffffff%d|r, %s: |cffffffff%d|r)", text, L["Bags"], bags, L["Bank"], bank)
+        end
+        GameTooltip:AddLine(text, NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+        return true
+    end
+
     function ItemSlot:Highlight(enable)
         if enable then
             self:LockHighlight()
@@ -643,6 +671,7 @@ do
             if parent:IsCached() and parent:GetItem() then
                 ItemSlot.AnchorTooltip(self)
                 GameTooltip:SetHyperlink(parent:GetItem())
+                parent:AddItemCount()
                 GameTooltip:Show()
             end
         end

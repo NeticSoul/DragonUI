@@ -427,6 +427,31 @@ local function BuildGeneralTab(scroll)
         width = 200,
     })
 
+    local TextSystem = addon.TextSystem
+    local localeUnits = TextSystem and TextSystem.GetLocaleUnitsLabel()
+    if localeUnits then
+        C:AddDropdown(language, {
+            label = LO["Number Abbreviations"],
+            desc  = LO["How unit frames, nameplates and the resource display shorten large numbers."],
+            values = {
+                auto = localeUnits,
+                western = "k / M",
+            },
+            getFunc = function()
+                return (addon.db and addon.db.global and addon.db.global.numberUnits) or "auto"
+            end,
+            setFunc = function(value)
+                if addon.db and addon.db.global then
+                    addon.db.global.numberUnits = value
+                end
+            end,
+            callback = function()
+                TextSystem.RefreshNumberTexts()
+            end,
+            width = 200,
+        })
+    end
+
     C:AddSpacer(scroll)
 
     -- ====================================================================

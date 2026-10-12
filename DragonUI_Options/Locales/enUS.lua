@@ -48,6 +48,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = true
 L["Language"] = true
 L["Choose the language used by the DragonUI interface."] = true
 L["Follow the client language"] = true
+L["Number Abbreviations"] = true
+L["How unit frames, nameplates and the resource display shorten large numbers."] = true
 
 -- Settings window
 L["Settings Window"] = true
@@ -506,6 +508,8 @@ L["Quest Item Glow"] = true
 L["Highlight quest items with a golden border."] = true
 L["Glow Intensity"] = true
 L["Opacity of the quality ring on item slots."] = true
+L["Item Count in Tooltip"] = true
+L["Show how many of the hovered item you own in total, across your bags and bank."] = true
 L["Quality Filter Row"] = true
 L["Show the rarity filter dots at the bottom of the bag frame."] = true
 

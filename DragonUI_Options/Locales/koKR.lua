@@ -55,6 +55,8 @@ L["Created and maintained by NeticSoul, with community contributions."] = "Netic
 L["Language"] = "언어"
 L["Choose the language used by the DragonUI interface."] = "DragonUI 인터페이스에서 사용할 언어를 선택하세요."
 L["Follow the client language"] = "클라이언트 언어 따르기"
+L["Number Abbreviations"] = "숫자 단위 표기"
+L["How unit frames, nameplates and the resource display shorten large numbers."] = "유닛 프레임, 이름표, 자원 표시에서 큰 숫자를 줄여 쓰는 방식입니다."
 L["Settings Window"] = "설정 창"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "UI 크기에 더해 적용되는 이 창의 크기입니다. 1.0이 다른 창과 같습니다. 화면을 벗어나지 않습니다."
 
@@ -446,6 +448,8 @@ L["Quest Item Glow"] = "퀘스트 아이템 테두리"
 L["Highlight quest items with a golden border."] = "퀘스트 아이템을 황금색 테두리로 강조합니다."
 L["Glow Intensity"] = "테두리 강도"
 L["Opacity of the quality ring on item slots."] = "아이템 칸 품질 테두리의 투명도입니다."
+L["Item Count in Tooltip"] = "툴팁에 아이템 개수 표시"
+L["Show how many of the hovered item you own in total, across your bags and bank."] = "마우스를 올린 아이템을 가방과 은행에 모두 합쳐 몇 개 가지고 있는지 표시합니다."
 L["Quality Filter Row"] = "품질 필터 줄"
 L["Show the rarity filter dots at the bottom of the bag frame."] = "가방 창 하단에 희귀도 필터 점을 표시합니다."
 
