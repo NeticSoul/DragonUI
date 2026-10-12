@@ -629,12 +629,16 @@ L["Restore the stat categories to their default order?"] = "将属性分类恢�
 
 -- MERCHANT MODULE
 L["Merchant"] = "商人"
-L["Retail-style vendor window chrome"] = "商人窗口现代风格"
+L["Retail-style vendor window chrome with auto repair and junk selling"] = "商人窗口现代风格，含自动修理与垃圾出售"
 L["Quest Dialog"] = "任务对话框"
 L["Retail-style quest and gossip window chrome"] = "任务与对话窗口现代风格"
 L["Sell all junk items"] = "出售所有垃圾物品"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "您即将出售所有垃圾物品，且无法再购买回来。\n\n确定要继续吗？"
 L["Sold %d junk item(s)."] = "已售出 %d 件垃圾物品。"
+L["Repaired all items for %s."] = "已修理所有物品，花费 %s。"
+L["Repaired all items for %s using guild funds."] = "已使用公会资金修理所有物品，花费 %s。"
+L["Not enough gold to repair all items."] = "金币不足，无法修理所有物品。"
+L["Sold %d junk item(s) for %s."] = "已售出 %d 件垃圾物品，收入 %s。"
 
 -- World Map
 L["World Map"] = "世界地图"

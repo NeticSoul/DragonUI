@@ -567,12 +567,16 @@ L["Restore the stat categories to their default order?"] = "Rétablir l'ordre pa
 
 -- MERCHANT MODULE
 L["Merchant"] = "Marchand"
-L["Retail-style vendor window chrome"] = "Cadre de fenêtre de vendeur style Retail"
+L["Retail-style vendor window chrome with auto repair and junk selling"] = "Cadre de vendeur style Retail avec réparation auto et vente de camelote"
 L["Quest Dialog"] = "Dialogue de quête"
 L["Retail-style quest and gossip window chrome"] = "Cadre style Retail pour les fenêtres de quête et de dialogue"
 L["Sell all junk items"] = "Vendre tous les objets poubelle"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "Vous êtes sur le point de vendre tous les objets poubelle et vous ne pourrez pas les racheter.\n\nÊtes-vous sûr de vouloir continuer ?"
 L["Sold %d junk item(s)."] = "%d objet(s) poubelle vendu(s)."
+L["Repaired all items for %s."] = "Objets réparés pour %s."
+L["Repaired all items for %s using guild funds."] = "Objets réparés pour %s avec les fonds de guilde."
+L["Not enough gold to repair all items."] = "Pas assez d'or pour réparer tous les objets."
+L["Sold %d junk item(s) for %s."] = "%d objet(s) poubelle vendu(s) pour %s."
 
 -- World Map
 L["World Map"] = "Carte du monde"

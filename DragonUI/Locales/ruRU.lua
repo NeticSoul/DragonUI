@@ -636,12 +636,16 @@ L["Restore the stat categories to their default order?"] = "Вернуть ка�
 
 -- MERCHANT MODULE
 L["Merchant"] = "Торговец"
-L["Retail-style vendor window chrome"] = "Современный интерфейс окна торговца"
+L["Retail-style vendor window chrome with auto repair and junk selling"] = "Современный интерфейс окна торговца с авторемонтом и продажей хлама"
 L["Quest Dialog"] = "Диалог заданий"
 L["Retail-style quest and gossip window chrome"] = "Современный интерфейс окон заданий и диалогов"
 L["Sell all junk items"] = "Продать весь хлам"
 L["You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"] = "Вы собираетесь продать весь хлам и не сможете купить его обратно.\n\nВы уверены, что хотите продолжить?"
 L["Sold %d junk item(s)."] = "Продано %d предмет(а/ов) хлама."
+L["Repaired all items for %s."] = "Все предметы отремонтированы за %s."
+L["Repaired all items for %s using guild funds."] = "Все предметы отремонтированы за %s за счёт средств гильдии."
+L["Not enough gold to repair all items."] = "Недостаточно золота, чтобы отремонтировать все предметы."
+L["Sold %d junk item(s) for %s."] = "Продано %d предмет(а/ов) хлама за %s."
 
 -- World Map
 L["World Map"] = "Карта мира"

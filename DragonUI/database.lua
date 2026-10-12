@@ -930,7 +930,10 @@ local defaults = {
                 enabled = true -- Apply DragonUI main action bars, status bars (XP/Rep), scaling, and positioning system
             },
             merchant = {
-                enabled = true -- Retail-style vendor window chrome, sell-all-junk button, and buyback undo arrow
+                enabled = true, -- Retail-style vendor window chrome, sell-all-junk button, and buyback undo arrow
+                autoRepair = false, -- Repair all equipped items automatically when a merchant window opens
+                autoRepairGuild = true, -- Pay for automatic repairs with guild bank funds when available
+                autoSellJunk = false -- Sell all grey (junk) items automatically when a merchant window opens
             },
             questdialog = {
                 enabled = true -- Retail-style quest and gossip window chrome

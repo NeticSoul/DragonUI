@@ -22,6 +22,9 @@ local function isJunk(link)
     return grey and select(11, GetItemInfo(link)) ~= 0
 end
 
+-- Shared with auto_services.lua, which merchant.xml loads after this file.
+parts.isJunk = isJunk
+
 local function forEachJunkSlot(visit)
     for container = 0, NUM_BAG_SLOTS or 4 do
         for slot = 1, GetContainerNumSlots(container) or 0 do
