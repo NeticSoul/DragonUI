@@ -2297,6 +2297,8 @@ local function layoutMicroButtons(xOffset)
         bar:ClearAllPoints()
         bar:SetSize(barW, barH)
         bar:SetPoint("BOTTOM", HelpMicroButton, "BOTTOM", offX, offY)
+        -- Only rows 57-59 (x 4-27) of the 32x64 art are drawn; the rest must not catch hovers.
+        bar:SetHitRectInsets(barW * 4 / 32, barW * 4 / 32, barH * 57 / 64, barH * 4 / 64)
 
         bar:Show()
     elseif MicromenuModule.frames.latencyIndicator then
