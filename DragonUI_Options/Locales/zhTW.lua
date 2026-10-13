@@ -1673,3 +1673,9 @@ L["Orb Style"] = "寶珠風格"
 L["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."] = "自動跟隨單位框架風格。Forever 風格下盜賊和德魯伊都使用青銅寶珠。"
 L["Hide When Empty"] = "為空時隱藏"
 L["Hide the orbs and the gems at 0 points instead of showing them empty."] = "0 點時隱藏寶珠和寶石，而不是顯示為空。"
+
+-- Auto-Accept
+L["Auto-Accept"] = "自動接受"
+L["Accept Party Invites"] = "接受組隊邀請"
+L["Automatically accept party invites from your friends and guild members."] = "自動接受來自好友和公會成員的組隊邀請。"
+L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "替你處理組隊邀請。只有好友和公會成員的邀請會被自動接受，其餘留給你自己決定。"

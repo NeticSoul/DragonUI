@@ -1665,3 +1665,9 @@ L["Orb Style"] = "Kugelstil"
 L["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."] = "Auto folgt dem Einheitenrahmen-Stil. Forever nutzt seine Bronzekugeln für Schurken und Druiden."
 L["Hide When Empty"] = "Ausblenden, wenn leer"
 L["Hide the orbs and the gems at 0 points instead of showing them empty."] = "Blendet Kugeln und Edelsteine bei 0 Punkten aus, statt sie leer anzuzeigen."
+
+-- Auto-Accept
+L["Auto-Accept"] = "Automatisch annehmen"
+L["Accept Party Invites"] = "Gruppeneinladungen annehmen"
+L["Automatically accept party invites from your friends and guild members."] = "Nimmt Gruppeneinladungen von Freunden und Gildenmitgliedern automatisch an."
+L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "Beantwortet Gruppeneinladungen für dich. Nur Einladungen von Freunden und Gildenmitgliedern werden angenommen; alle anderen bleiben bei dir."

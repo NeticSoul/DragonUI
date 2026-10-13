@@ -1667,3 +1667,9 @@ L["Orb Style"] = "구슬 스타일"
 L["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."] = "자동은 유닛 프레임 스타일을 따릅니다. Forever는 도적과 드루이드 모두 청동 구슬을 사용합니다."
 L["Hide When Empty"] = "비어 있으면 숨기기"
 L["Hide the orbs and the gems at 0 points instead of showing them empty."] = "0점일 때 구슬과 보석을 비워서 표시하지 않고 숨깁니다."
+
+-- Auto-Accept
+L["Auto-Accept"] = "초대 자동 수락"
+L["Accept Party Invites"] = "그룹 초대 수락"
+L["Automatically accept party invites from your friends and guild members."] = "친구와 길드 멤버의 그룹 초대를 자동으로 수락합니다."
+L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "그룹 초대를 대신 처리합니다. 친구와 길드 멤버의 초대만 자동으로 수락하며, 그 외 초대는 직접 판단할 수 있도록 남겨 둡니다."
