@@ -316,8 +316,12 @@ local function ApplyInterruptedHoldVisual(bar)
     bar._applyingInterruptVisual = nil
 end
 
-local function GetInterruptedFadeDuration()
-    return (C.CAST_INTERRUPT_HOLD or 0) + (C.CAST_INTERRUPT_FADE or 0.8)
+-- The red bar holds still first; TickPlateCastBars starts this once the hold runs out.
+local function StartInterruptFade(bar, now)
+    bar._intFadeAt = nil
+    if UIFrameFadeOut then
+        UIFrameFadeOut(bar, max(0.05, bar._intHideAt - now), bar:GetAlpha() or 1, 0.0)
+    end
 end
 
 local function GetSuccessFadeTimings()
@@ -404,18 +408,21 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
     HideSuccessFlashVisual(bar)
     bar._intBg:Show()
     bar:Show()
-    -- Preserve stack alpha from engine dimming.
-    local fadeFrom = bar:GetAlpha() or 1
-    local duration = GetInterruptedFadeDuration()
+    local nameText = not isPartyBar and bar.minaCastSpellName
+    if nameText and nameText:GetFont() and NP.config.GetCfg().showCastBarSpellName ~= false then
+        nameText:SetText(INTERRUPTED)
+        nameText:Show()
+    end
     if UIFrameFadeRemoveFrame then
         UIFrameFadeRemoveFrame(bar)
     end
-    if UIFrameFadeOut then
-        UIFrameFadeOut(bar, duration, fadeFrom, 0.0)
+    -- A late interrupt can land mid success-fade; hold at the plate's own alpha, not the faded one.
+    if plateData and plateData._lastAppliedVisualAlpha then
+        bar:SetAlpha(plateData._lastAppliedVisualAlpha)
     end
     local now = GetTime()
-    bar._intFadeAt = now
-    bar._intHideAt = now + duration
+    bar._intFadeAt = now + (C.CAST_INTERRUPT_HOLD or 0)
+    bar._intHideAt = bar._intFadeAt + (C.CAST_INTERRUPT_FADE or 0.5)
     if plateData then
         NP.castbar.RegisterCastTick(plateData)
     end
@@ -1503,6 +1510,17 @@ local function ShouldIgnoreUnitCastStop(bar, unit, eventSpell)
     return false
 end
 
+-- The bar ends on its own clock; a failure lagging past that still means the cast never landed.
+local function IsLateFailureOfFinishedCast(bar, event, eventSpell)
+    if event ~= "UNIT_SPELLCAST_FAILED" and event ~= "UNIT_SPELLCAST_FAILED_QUIET" then
+        return false
+    end
+    if not (bar._successHoldUntil or bar._successHideAt) then
+        return false
+    end
+    return eventSpell ~= nil and eventSpell == bar._successSpell
+end
+
 local AUTHORITATIVE_GUID_SOURCE = {
     target = "TOKEN_TARGET",
     mouseover = "TOKEN_MOUSEOVER",
@@ -2214,6 +2232,12 @@ local function CorrectRecentInterruptedPlate(destGUID, destName)
                 bar._recentStopAt = nil
                 NP.castbar.ShowInterruptedState(bar, plateData, false)
             end
+        elseif guidKey and (bar._successHoldUntil or bar._successHideAt) then
+            -- A kick that lags past the bar's own end time; GUID only, a name could be a twin.
+            local plateGUID = GetPlateCastOwnerGUID(plateData, bar)
+            if plateGUID and NormalizeCastGUID(plateGUID) == guidKey then
+                NP.castbar.ShowInterruptedState(bar, plateData, false)
+            end
         end
     end
 end
@@ -2865,6 +2889,7 @@ function NP.castbar.HidePlateCastBar(plateData, force)
         and bar.IsShown
         and bar:IsShown()
     local ownerGUID = GetPlateCastOwnerGUID(plateData, bar)
+    local endingSpell = bar.spellName
 
     bar._monitorGUID = nil
     bar._monitorConfidence = nil
@@ -2881,6 +2906,7 @@ function NP.castbar.HidePlateCastBar(plateData, force)
     NP.discovery.HideCastChrome(plateData)
 
     if canSuccessFade then
+        bar._successSpell = endingSpell
         bar._castSourceGUID = nil
         -- Reset so the next cast doesn't inherit this one's shield/interrupt state.
         bar._notInterruptible = false
@@ -3056,6 +3082,8 @@ local function TickPlateCastBars(plateData, now)
             HideCastBarContent(bar)
             bar:Hide()
             bar:SetAlpha(1)
+        elseif bar._intFadeAt and now >= bar._intFadeAt then
+            StartInterruptFade(bar, now)
         end
     elseif bar and bar._successHoldUntil then
         if now >= bar._successHoldUntil then
@@ -3114,6 +3142,8 @@ local function TickPlateCastBars(plateData, now)
             partyBar:Hide()
             partyBar:SetAlpha(1)
             PartyRaidCastTracker.activeCasts[plateData] = nil
+        elseif partyBar._intFadeAt and now >= partyBar._intFadeAt then
+            StartInterruptFade(partyBar, now)
         end
     end
 
@@ -3768,6 +3798,10 @@ function NP.castbar.OnCastStopEvent(event, unit, ...)
             return
         end
         if ShouldIgnoreUnitCastStop(bar, unit, eventSpell) then
+            return
+        end
+        if IsLateFailureOfFinishedCast(bar, event, eventSpell) then
+            NP.castbar.ShowInterruptedState(bar, plateData, false)
             return
         end
         local markEnd = NP.castbar.MarkPlateCastEnd(bar, unit, event, eventSpell)

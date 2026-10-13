@@ -36,6 +36,8 @@ local RETAIL_FLARE_BASE_H = 20
 -- Retail's lose-aggro alert: two 0.25s yellow pulses over the bar.
 local FLASH_PULSE = 0.25
 local FLASH_PULSES = 2
+-- A kill clears threat a server tick before the plate learns the unit died; wait that out.
+local FLASH_CONFIRM_DELAY = 0.3
 local TANK_BORDER = { 1, 1, 0 }
 
 -- Margin scale: native above the art's own cavity, shrinking proportionally below it.
@@ -216,6 +218,61 @@ local function IsPlateHovered(plateData)
     return plateData ~= nil and plateData == hoveredPlate
 end
 
+local function StartFlash(plateData, now)
+    local flash = plateData._retailFlash
+    if not flash then
+        return
+    end
+    plateData._flashStart = now
+    plateData._flashUntil = now + FLASH_PULSE * FLASH_PULSES
+    flash:SetAlpha(1)
+    flash:Show()
+end
+
+local function RequestFlash(plateData)
+    if not plateData._retailFlash then
+        return
+    end
+    plateData._flashPendingAt = GetTime() + FLASH_CONFIRM_DELAY
+    plateData._flashPendingShownAt = plateData._shownAt
+    activeFlashes[plateData] = true
+    if flareDriver then
+        flareDriver:Show()
+    end
+end
+
+local function CancelFlash(plateData)
+    if plateData._retailFlash then
+        plateData._retailFlash:Hide()
+        plateData._retailFlash:SetAlpha(0)
+    end
+    plateData._flashPendingAt = nil
+    plateData._flashUntil = nil
+    activeFlashes[plateData] = nil
+end
+
+local function FlashStillWanted(plateData)
+    local plate = plateData.plate
+    if not (plate and plate:IsShown()) or plateData._flashPendingShownAt ~= plateData._shownAt then
+        return false
+    end
+    if not NP.module.playerInCombat or NP.threat.GetAggroBarTint(plateData) then
+        return false
+    end
+    local src = plateData.healthBar
+    if src and src.GetValue then
+        local lo = src:GetMinMaxValues()
+        if (src:GetValue() or 0) <= (lo or 0) then
+            return false
+        end
+    end
+    local unit = NP.identity.ResolvePlateCastUnit(plateData)
+    if unit and UnitExists(unit) and UnitIsDead(unit) then
+        return false
+    end
+    return true
+end
+
 local function EnsureFlareDriver()
     if flareDriver then
         return
@@ -234,7 +291,18 @@ local function EnsureFlareDriver()
         for plateData in pairs(activeFlashes) do
             local flash = plateData._retailFlash
             local until_ = plateData._flashUntil
-            if flash and until_ then
+            local pendingAt = plateData._flashPendingAt
+            if flash and pendingAt then
+                any = true
+                if now >= pendingAt then
+                    plateData._flashPendingAt = nil
+                    if FlashStillWanted(plateData) then
+                        StartFlash(plateData, now)
+                    else
+                        activeFlashes[plateData] = nil
+                    end
+                end
+            elseif flash and until_ then
                 if now >= until_ then
                     flash:SetAlpha(0)
                     flash:Hide()
@@ -434,12 +502,10 @@ local function HideChrome(plateData, restoreLegacy)
             mouseoverLit = nil
         end
     end
-    if plateData._retailFlash then
-        plateData._retailFlash:Hide()
-        plateData._retailFlash:SetAlpha(0)
+    CancelFlash(plateData)
+    if restoreLegacy then
+        plateData._retailChromeHeadline = nil
     end
-    plateData._flashUntil = nil
-    activeFlashes[plateData] = nil
     if restoreLegacy and plateData._retailChromeOn then
         plateData._retailChromeOn = nil
         plateData._retailChromeSig = nil
@@ -456,21 +522,6 @@ local function HideChrome(plateData, restoreLegacy)
             cast._cachedCastH = nil
         end
         SetLegacyBarChrome(cast, true)
-    end
-end
-
-local function StartFlash(plateData)
-    local flash = plateData._retailFlash
-    if not flash then
-        return
-    end
-    plateData._flashStart = GetTime()
-    plateData._flashUntil = plateData._flashStart + FLASH_PULSE * FLASH_PULSES
-    flash:SetAlpha(1)
-    flash:Show()
-    activeFlashes[plateData] = true
-    if flareDriver then
-        flareDriver:Show()
     end
 end
 
@@ -505,7 +556,7 @@ local function SyncFlareInternal(plateData, cfg)
     local r, g, b = NP.threat.GetAggroBarTint(plateData)
     if not r then
         if plateData._hadAggro and NP.module.playerInCombat then
-            StartFlash(plateData)
+            RequestFlash(plateData)
         end
         plateData._hadAggro = nil
         SetFlareShown(plateData, false)
@@ -520,6 +571,15 @@ local function SyncFlareInternal(plateData, cfg)
         end
     end
     SetFlareShown(plateData, true)
+end
+
+-- A recycled plate must not inherit the last occupant's aggro and flash for it.
+function NP.retail_chrome.ResetThreatAlert(plateData)
+    if not plateData then
+        return
+    end
+    plateData._hadAggro = nil
+    CancelFlash(plateData)
 end
 
 -- How far the capsule reaches above the bar, so callers can clear it.
@@ -577,8 +637,10 @@ local function SyncChrome(plateData, isTarget)
 
     if NP.gather.IsHeadlineActive(plateData) then
         HideChrome(plateData, false)
+        plateData._retailChromeHeadline = true
         return
     end
+    plateData._retailChromeHeadline = nil
 
     if not plateData._retailChromeOn then
         plateData._retailChromeOn = true
@@ -597,6 +659,9 @@ local function SyncChrome(plateData, isTarget)
     else
         A.HideSlice(plateData._retailPoBg)
     end
+
+    -- Headline hides it too, and LayoutChrome only shows it again when the bar size changes.
+    A.ShowSlice(plateData._retailCastFrame)
 
     local cast = plateData.minaCast
     if cast and cast._successFlash then

@@ -542,6 +542,10 @@ function NP.gather.SyncHealth(plateData, value)
     local r, g, b = NP.gather.GetHealthBarColor(plateData)
     NP.discovery.SetBarColor(bar, r, g, b)
     bar:Show()
+    -- Leaving headline on a health tick skips the full refresh that would bring the chrome back.
+    if plateData._retailChromeHeadline then
+        NP.widgets.Sync("RetailChrome", plateData)
+    end
 
     local rowText, barText, barPct = plateData.minaHpPct, plateData.minaHpNum, plateData.minaHpBarPct
     if not rowText or not barText or not barPct then return end
