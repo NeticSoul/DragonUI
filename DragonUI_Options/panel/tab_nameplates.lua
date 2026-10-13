@@ -1376,10 +1376,8 @@ local function BuildBarsSubTab(scroll)
     })
 
     if offTargetEnabled then
-        local aggressiveDesc = LO["Off-Target Aggressive Mode Desc"]
-        if offTargetAggressive and not offTargetPlayersOnly then
-            aggressiveDesc = aggressiveDesc .. "\n\n" .. LO["Off-Target Aggressive Warning"]
-        end
+        local aggressiveDesc = LO["Off-Target Aggressive Mode Desc"] .. "\n\n" .. LO["Off-Target Aggressive Warning"]
+            .. "\n\n" .. LO["Off-Target Aggressive Ignored"]
 
         C:AddToggle(offTargetSection, {
             label = LO["Off-Target Aggressive Mode"],
@@ -1396,10 +1394,8 @@ local function BuildBarsSubTab(scroll)
         })
 
         if offTargetAggressive then
-            local playersOnlyDesc = LO["Off-Target Players Only Desc"]
-            if offTargetPlayersOnly then
-                playersOnlyDesc = playersOnlyDesc .. "\n\n" .. LO["Off-Target Players Only Warning"]
-            end
+            local playersOnlyDesc = LO["Off-Target Players Only Desc"] .. "\n\n" .. LO["Off-Target Players Only Warning"]
+                .. "\n\n" .. LO["Off-Target Aggressive Ignored"]
 
             C:AddToggle(offTargetSection, {
                 label = LO["Off-Target Players Only"],

@@ -13,6 +13,60 @@ local sqrt = math.sqrt
 
 NP.castbar = NP.castbar or {}
 
+-- /dui castlog: lines land in DragonUIDB.castlog so a session can be read back from SavedVariables.
+local CASTLOG_MAX = 4000
+local castLogOn = false
+
+function NP.castbar.SetCastLog(mode)
+    local sv = _G.DragonUIDB
+    if mode == "clear" then
+        if sv then sv.castlog = nil end
+        return castLogOn
+    end
+    castLogOn = mode == true
+    if castLogOn and sv then
+        sv.castlog = sv.castlog or {}
+    end
+    return castLogOn
+end
+
+function NP.castbar.IsCastLogOn()
+    return castLogOn
+end
+
+local function CastLog(plateData, fmt, ...)
+    if not castLogOn then return end
+    local sv = _G.DragonUIDB
+    if not sv then return end
+    local log = sv.castlog
+    if not log then
+        log = {}
+        sv.castlog = log
+    end
+    local ok, msg = pcall(string.format, fmt, ...)
+    if not ok then msg = tostring(fmt) end
+    log[#log + 1] = string.format("%.3f [%s] %s", GetTime(), tostring(plateData and plateData.plateName or "-"), msg)
+    if #log > CASTLOG_MAX then
+        local keep, half = {}, math.floor(CASTLOG_MAX / 2)
+        for i = #log - half + 1, #log do
+            keep[#keep + 1] = log[i]
+        end
+        sv.castlog = keep
+    end
+end
+NP.castbar.CastLog = CastLog
+
+-- Caller line numbers, so each logged decision can be traced back to the rule that made it.
+local function CastLogCaller()
+    if not castLogOn then return "" end
+    local stack = debugstack(3, 2, 0) or ""
+    local lines = {}
+    for line in stack:gmatch("castbar%.lua:(%d+)") do
+        lines[#lines + 1] = line
+    end
+    return table.concat(lines, "<")
+end
+
 function NP.castbar.GetCastBarFillProgress(bar)
     if not bar or not bar.GetMinMaxValues or not bar.GetValue then
         return nil
@@ -34,8 +88,12 @@ function NP.castbar.CastBarEndedEarly(bar, now)
         return true
     end
     local prog = NP.castbar.GetCastBarFillProgress(bar)
-    if prog ~= nil and prog < 0.90 then
-        return true
+    if prog ~= nil then
+        -- A channel bar holds the share still to go, so a finished channel sits near 0, not 1.
+        if bar.channelingEx then
+            return prog > 0.10
+        end
+        return prog < 0.90
     end
     return false
 end
@@ -96,6 +154,7 @@ local function ResetNativeCastTrack(plateData)
     plateData._nativeCastFirstVal = nil
     plateData._nativeCastSecondVal = nil
     plateData._nativeChanneling = nil
+    plateData._nativeCastStep = nil
 end
 
 local function UpdateNativeCastTrack(plateData, val)
@@ -113,6 +172,14 @@ local function UpdateNativeCastTrack(plateData, val)
         return
     end
     plateData._nativeCastMaxVal = maxV
+    local prev = plateData._nativeCastLastVal
+    if prev and plateData._nativeChanneling ~= nil then
+        -- One frame's worth of progress; pushback jumps and plate rebuilds are not frames.
+        local step = plateData._nativeChanneling and (prev - val) or (val - prev)
+        if step > 0 and step < 0.25 then
+            plateData._nativeCastStep = step
+        end
+    end
     plateData._nativeCastLastVal = val
     if not plateData._nativeCastFirstVal then
         plateData._nativeCastFirstVal = val
@@ -123,6 +190,9 @@ local function UpdateNativeCastTrack(plateData, val)
         else
             plateData._nativeChanneling = false
         end
+        CastLog(plateData, "native dir=%s first=%.3f second=%.3f max=%.3f",
+            plateData._nativeChanneling and "channel" or "cast", plateData._nativeCastFirstVal, val, maxV)
+        NP.castbar.OnNativeDirectionKnown(plateData)
     end
 end
 
@@ -149,6 +219,10 @@ end
 
 local function ShouldShowNativeInterrupt(plateData, bar)
     bar = bar or (plateData and plateData.minaCast)
+    -- The combat log can settle a cast a frame before the native bar resets; that reset is not a cut.
+    if not bar or not (bar.castingEx or bar.channelingEx) then
+        return false
+    end
     if IsCastAuthoritativelyBound(bar) then
         return false
     end
@@ -204,6 +278,18 @@ function NP.castbar.BindNativeCastPlateIdentity(plateData)
 end
 
 function NP.castbar.OnNativeCastShown(plateData)
+    -- Stock clients fill the plate cast bar for the current target only; anything else means a patched exe.
+    if not NP.module._nativeCastPatch and plateData.plateName
+        and not (UnitExists("target") and NP.native_style.UnitNameEquals(UnitName("target"), plateData.plateName)) then
+        NP.module._nativeCastPatch = true
+        CastLog(plateData, "patched exe detected (native cast bar off-target)")
+    end
+    plateData._nativeCastShownAt = GetTime()
+    CastLog(plateData, "native show")
+    -- Alpha only: hiding its regions now would blank the shield the snap below reads a frame later.
+    if plateData.castBar and plateData.castBar.SetAlpha and NP.config.GetCfg().showCastBar ~= false then
+        plateData.castBar:SetAlpha(0)
+    end
     -- Reset first: leaving headline mid-cast would otherwise read a stale max value
     -- left by the previous cast on this recycled plate.
     ResetNativeCastTrack(plateData)
@@ -250,7 +336,9 @@ function NP.castbar.OnNativeCastHidden(plateData)
         snapFrame:Hide()
         snapFrame:SetScript("OnUpdate", nil)
     end
-    if TryShowNativeInterrupt(plateData) then
+    CastLog(plateData, "native hide last=%s max=%s", tostring(plateData._nativeCastLastVal),
+        tostring(plateData._nativeCastMaxVal))
+    if NP.castbar.BeginNativeCastEnd(plateData) or TryShowNativeInterrupt(plateData) then
         if plateData.minaCast then
             plateData.minaCast._nativeCastShield = nil
         end
@@ -362,6 +450,8 @@ local function StartSuccessFade(bar)
     end
     local holdDuration, fadeDuration = GetSuccessFadeTimings()
     local now = GetTime()
+    bar._endedAt = now
+    CastLog(bar._ownerPlateData, "end: success via %s", CastLogCaller())
     bar._successHoldUntil = now + holdDuration
     bar._successFadeDuration = fadeDuration
     bar._successHideAt = nil
@@ -382,6 +472,11 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
         return
     end
 
+    -- Blizzard (CastingBarFrame) and retail never paint a channel as interrupted; it just fades out.
+    local wasChannel = bar.channelingEx and true or false
+    CastLog(plateData, "end: %s%s via %s", wasChannel and "channel cut, quiet fade" or "INTERRUPTED",
+        isPartyBar and " (party bar)" or "", CastLogCaller())
+
     bar.castingEx = false
     bar.channelingEx = false
     bar.castStartTime = nil
@@ -398,7 +493,9 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
         plateData.minaPartyCastSpark:Hide()
     end
 
-    ApplyInterruptedHoldVisual(bar)
+    if not wasChannel then
+        ApplyInterruptedHoldVisual(bar)
+    end
     bar._interrupted = true
     bar._interruptFadeActive = true
     bar._successHoldUntil = nil
@@ -406,9 +503,11 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
     bar._successFadeDuration = nil
     bar._successFading = nil
     HideSuccessFlashVisual(bar)
-    bar._intBg:Show()
+    if not wasChannel then
+        bar._intBg:Show()
+    end
     bar:Show()
-    local nameText = not isPartyBar and bar.minaCastSpellName
+    local nameText = not isPartyBar and not wasChannel and bar.minaCastSpellName
     if nameText and nameText:GetFont() and NP.config.GetCfg().showCastBarSpellName ~= false then
         nameText:SetText(INTERRUPTED)
         nameText:Show()
@@ -421,7 +520,8 @@ function NP.castbar.ShowInterruptedState(bar, plateData, isPartyBar)
         bar:SetAlpha(plateData._lastAppliedVisualAlpha)
     end
     local now = GetTime()
-    bar._intFadeAt = now + (C.CAST_INTERRUPT_HOLD or 0)
+    bar._endedAt = now
+    bar._intFadeAt = now + (wasChannel and 0 or (C.CAST_INTERRUPT_HOLD or 0))
     bar._intHideAt = bar._intFadeAt + (C.CAST_INTERRUPT_FADE or 0.5)
     if plateData then
         NP.castbar.RegisterCastTick(plateData)
@@ -747,6 +847,7 @@ local function HardResetCastBar(bar)
     bar._successFadeDuration = nil
     bar._successFading = nil
     bar._recentStopAt = nil
+    bar._endedAt = nil
     bar:SetScript("OnUpdate", nil)
     bar:SetValue(0)
     bar:SetAlpha(1)
@@ -2045,6 +2146,27 @@ local function FindPlateForActiveCast(guid, endingSpellName, destName)
     return FindPlateForActiveCastByName(destName, endingSpellName)
 end
 
+-- The native bar runs on the unit's real clock; the combat-log estimate misses pushback, Slow and haste.
+local function MirrorNativeCastTimes(plateData, bar)
+    local src = plateData.castBar
+    if not src or not bar._fromCombatLog or not NP.castbar.IsNativeCastVisible(plateData) then
+        return
+    end
+    local lo, hi = src:GetMinMaxValues()
+    local cur = src:GetValue()
+    lo = lo or 0
+    if not hi or hi <= lo or not cur or cur < 0.002 then
+        return
+    end
+    local channel = plateData._nativeChanneling
+    if channel == nil then
+        channel = bar.channelingEx
+    end
+    local now = GetTime()
+    bar.castEndTime = now + (channel and (cur - lo) or (hi - cur))
+    bar.castStartTime = bar.castEndTime - (hi - lo)
+end
+
 local function SyncMonitorCastFromNative(plateData, bar)
     if not plateData or not bar or not bar._fromCombatLog then
         return false
@@ -2053,6 +2175,7 @@ local function SyncMonitorCastFromNative(plateData, bar)
     if not ShouldUseNativePatchSync(cfg) then
         return false
     end
+    MirrorNativeCastTimes(plateData, bar)
     local src = plateData.castBar
     if not src or not NP.castbar.IsNativeCastVisible(plateData) then
         return false
@@ -2213,6 +2336,22 @@ local function MonitorStopCast(plateData, interrupted)
     end
 end
 
+local function PlateNameIsUnique(name)
+    if not name then
+        return false
+    end
+    local count = 0
+    for _, pd in pairs(NP.module.plates) do
+        if pd.plateName == name and IsVisiblePlate(pd) then
+            count = count + 1
+            if count > 1 then
+                return false
+            end
+        end
+    end
+    return count == 1
+end
+
 local function CorrectRecentInterruptedPlate(destGUID, destName)
     local wantName = destName and NP.native_style.StripRealm(destName) or nil
     local guidKey = NormalizeCastGUID(destGUID)
@@ -2233,13 +2372,134 @@ local function CorrectRecentInterruptedPlate(destGUID, destName)
                 NP.castbar.ShowInterruptedState(bar, plateData, false)
             end
         elseif guidKey and (bar._successHoldUntil or bar._successHideAt) then
-            -- A kick that lags past the bar's own end time; GUID only, a name could be a twin.
+            -- A kick that lags past the bar's end; a GUID-less plate only matches if no twin shares its name.
             local plateGUID = GetPlateCastOwnerGUID(plateData, bar)
-            if plateGUID and NormalizeCastGUID(plateGUID) == guidKey then
+            local match
+            if plateGUID then
+                match = NormalizeCastGUID(plateGUID) == guidKey
+            else
+                match = wantName ~= nil and plateData.plateName == wantName and PlateNameIsUnique(wantName)
+            end
+            if match then
                 NP.castbar.ShowInterruptedState(bar, plateData, false)
             end
         end
     end
+end
+
+-- Native cast end: the plate's own cast bar says when and how a cast stopped.
+
+-- 3.3.5a logs no SUCCESS for other units' cast-time spells, so the combat log can only confirm cuts.
+local function WasInterruptLogged(plateData, bar, startedAt)
+    local guidKey = NormalizeCastGUID(GetPlateCastOwnerGUID(plateData, bar))
+    local hit
+    if guidKey then
+        hit = CastInterrupts[guidKey]
+    elseif PlateNameIsUnique(plateData.plateName) then
+        hit = CastInterruptsByName[NormalizeCastName(plateData.plateName)]
+    end
+    return hit ~= nil and hit.time >= startedAt and GetTime() - hit.time <= CAST_INTERRUPT_CACHE_TTL
+end
+
+-- Success fade for a cast that is known to have landed.
+local function FinishCastSuccess(plateData, bar)
+    if not bar then
+        return
+    end
+    if not (bar.IsShown and bar:IsShown()) then
+        NP.castbar.HidePlateCastBar(plateData, true)
+        return
+    end
+    local wasCast = bar.castingEx
+    local endingSpell = bar.spellName
+    plateData._monitorBackup = nil
+    bar._monitorGUID = nil
+    bar._monitorConfidence = nil
+    bar._fromCombatLog = nil
+    bar.castingEx = false
+    bar.channelingEx = false
+    bar.castStartTime = nil
+    bar.castEndTime = nil
+    bar.spellName = nil
+    bar:SetScript("OnUpdate", nil)
+    if plateData.minaCastSpark then
+        plateData.minaCastSpark:Hide()
+    end
+    NP.discovery.HideCastChrome(plateData)
+    if wasCast then
+        bar:SetMinMaxValues(0, 1)
+        bar:SetValue(1)
+        if bar.UpdateTextureClipping then
+            bar:UpdateTextureClipping(1, false)
+        end
+    end
+    bar._successSpell = endingSpell
+    bar._castSourceGUID = nil
+    bar._notInterruptible = false
+    bar._nativeCastShield = nil
+    bar._recentStopAt = nil
+    StartSuccessFade(bar)
+    NP.castbar.RegisterCastTick(plateData)
+end
+
+-- Called when the plate's native cast bar drops to zero or hides; true when it settled the cast.
+function NP.castbar.BeginNativeCastEnd(plateData)
+    local bar = plateData and plateData.minaCast
+    if not bar or not (bar.castingEx or bar.channelingEx) or bar._intHideAt
+        or bar._successHoldUntil or bar._successHideAt then
+        return false
+    end
+    -- Target/focus/mouseover casts end through UNIT_SPELLCAST_* (castID-matched), which is exact.
+    if GetAuthoritativeCastUnit(plateData) then
+        return false
+    end
+    if NP.castbar.PlateCastHiddenAsPet(plateData) then
+        return false
+    end
+    local lastVal, maxVal = plateData._nativeCastLastVal, plateData._nativeCastMaxVal
+    if not lastVal or not maxVal or maxVal <= 0 then
+        return false
+    end
+    local channel = plateData._nativeChanneling
+    if channel == nil then
+        channel = bar.channelingEx and true or false
+    end
+    -- A finished cast stops on its max or one frame short of it; one frame is the bar's own step.
+    local margin = max(0.05, min(0.15, (plateData._nativeCastStep or 0) * 1.5))
+    local reachedEnd
+    if channel then
+        reachedEnd = lastVal < margin
+    else
+        reachedEnd = (maxVal - lastVal) < margin
+    end
+    local startedAt = plateData._nativeCastShownAt or bar.castStartTime or 0
+    local logged = not channel and WasInterruptLogged(plateData, bar, startedAt)
+    local success = reachedEnd and not logged
+    CastLog(plateData, "native end: %s last=%.3f max=%.3f margin=%.3f%s -> %s", channel and "channel" or "cast",
+        lastVal, maxVal, margin, logged and " (interrupt logged)" or "", success and "success" or "cut")
+    if success then
+        FinishCastSuccess(plateData, bar)
+    else
+        NP.castbar.ShowInterruptedState(bar, plateData, false)
+    end
+    return true
+end
+
+-- Plate cast bar direction (up = cast, down = channel) is the only channel signal off-target on 3.3.5a.
+function NP.castbar.OnNativeDirectionKnown(plateData)
+    local bar = plateData.minaCast
+    if not bar or not (bar.castingEx or bar.channelingEx) then
+        return
+    end
+    if GetAuthoritativeCastUnit(plateData) then
+        return
+    end
+    local channel = plateData._nativeChanneling and true or false
+    if (bar.channelingEx and true or false) == channel then
+        return
+    end
+    NP.castbar.ApplyPlateCastTextures(bar, channel, plateData)
+    NP.castbar.SyncPlateCastProgress(bar)
 end
 
 function NP.castbar.StartMonitorCast(plateData, sourceGUID, spellName, spellIcon, isChannel, castTimeMS, monitorConfidence)
@@ -2306,6 +2566,8 @@ function NP.castbar.StartMonitorCast(plateData, sourceGUID, spellName, spellIcon
     bar._successFading = nil
     if bar._intBg then bar._intBg:Hide() end
     HideSuccessFlashVisual(bar)
+    CastLog(plateData, "monitor start spell=%s castTime=%s conf=%s", tostring(spellName),
+        tostring(castTimeMS), tostring(incomingConfidence))
     bar._monitorGUID = sourceGUID
     bar._castSourceGUID = sourceGUID
     bar._monitorConfidence = incomingConfidence
@@ -2376,6 +2638,7 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
     local cfg = NP.config.GetCfg()
 
     if event == "SPELL_INTERRUPT" then
+        CastLog(nil, "cleu SPELL_INTERRUPT dest=%s guid=%s", tostring(destName), tostring(destGUID))
         NP.castbar.RecordRecentInterrupt(destGUID, destName)
         CorrectRecentInterruptedPlate(destGUID, destName)
         local plateData = FindPlateForActiveCast(destGUID, nil, destName)
@@ -2509,7 +2772,14 @@ function NP.castbar.CastMonitorOnCombatLog(timestamp, event, sourceGUID, sourceN
             if not interrupted and ShouldTreatCastAsInterrupted(plateData, sourceGUID, sourceName) then
                 interrupted = true
             end
-            MonitorStopCast(plateData, interrupted)
+            local bar = plateData.minaCast
+            if interrupted then
+                MonitorStopCast(plateData, true)
+            elseif bar and not bar.channelingEx and bar.spellName and bar.spellName == endingSpellName then
+                -- A channel logs SUCCESS as it starts, and an instant cast into a running bar cancels it.
+                plateData._monitorBackup = nil
+                FinishCastSuccess(plateData, bar)
+            end
         end
         return
     end
@@ -3170,6 +3440,9 @@ function NP.castbar.ResolvePlateChanneling(plateData, channelingHint)
         if UnitChannelInfo("target") then return true end
         if UnitCastingInfo("target") then return false end
     end
+    if plateData._nativeChanneling ~= nil then
+        return plateData._nativeChanneling
+    end
     local src = plateData.castBar
     if src and src.GetStatusBarTexture then
         local tex = src:GetStatusBarTexture()
@@ -3434,6 +3707,16 @@ function NP.castbar.SyncCastBar(plateData)
     end
 
     local hasResolvedCast = resolvedUnit and (UnitCastingInfo(resolvedUnit) or UnitChannelInfo(resolvedUnit))
+
+    -- An ending bar keeps its end look until a newer cast shows; re-adopting the old one made it flicker.
+    if bar._intHideAt or bar._successHoldUntil or bar._successHideAt then
+        local shownAt, endedAt = plateData._nativeCastShownAt, bar._endedAt
+        local newerNative = shownAt and endedAt and shownAt >= endedAt
+        if not hasResolvedCast and not newerNative then
+            return
+        end
+    end
+
     if hasResolvedCast and IsReliableCastUnit(resolvedUnit) then
         BindCastSourceIdentity(plateData, resolvedUnit, bar)
     end
@@ -3667,18 +3950,26 @@ function NP.castbar.OnNativeCastValueChanged(plateData, val)
         NP.castbar.HideNativeCastVisual(plateData)
         return
     end
+    local bar = plateData.minaCast
     val = tonumber(val)
     if val and val >= 0.002 then
         UpdateNativeCastTrack(plateData, val)
-    elseif val and val < 0.002 and TryShowNativeInterrupt(plateData) then
-        if plateData.minaCast then
-            plateData.minaCast._nativeCastShield = nil
+    elseif val and val < 0.002 and plateData._nativeCastLastVal then
+        -- Only a drop after real progress is an end; RefinedBlizzPlates guards the same way.
+        CastLog(plateData, "native reset last=%.3f max=%s", plateData._nativeCastLastVal,
+            tostring(plateData._nativeCastMaxVal))
+        if NP.castbar.BeginNativeCastEnd(plateData) or TryShowNativeInterrupt(plateData) then
+            if bar then
+                bar._nativeCastShield = nil
+            end
+            ResetNativeCastTrack(plateData)
+            return
         end
-        ResetNativeCastTrack(plateData)
-        return
     end
 
-    local bar = plateData.minaCast
+    if bar and bar._fromCombatLog then
+        MirrorNativeCastTimes(plateData, bar)
+    end
     local cfg = NP.config.GetCfg()
     local allowMonitorNativeSync = ShouldUseNativePatchSync(cfg)
     if bar and bar.castStartTime and bar.castEndTime
@@ -3749,8 +4040,20 @@ local function RouteCastEventToPlate(unit, func)
                     NP.identity.BindArenaPlateUnit(plateData, unit)
                 end
             end
+            if not plateData then
+                -- Same-name mobs can leave the target unbound in the GUID map; the cast itself knows its owner.
+                for _, pd in pairs(NP.module.plates) do
+                    if IsVisiblePlate(pd) and pd.minaCast and GetPlateCastOwnerGUID(pd, pd.minaCast) == eventGUID then
+                        plateData = pd
+                        CastLog(pd, "%s event routed by cast owner GUID", unit)
+                        break
+                    end
+                end
+            end
             if plateData then
                 func(plateData)
+            elseif castLogOn and UnitCanAttack("player", unit) then
+                CastLog(nil, "%s event dropped: no plate owns %s", unit, tostring(eventGUID))
             end
         end
         return
@@ -3791,10 +4094,13 @@ function NP.castbar.OnCastStopEvent(event, unit, ...)
 
     local function HandlePlateStop(plateData)
         local bar = plateData.minaCast
+        CastLog(plateData, "unit %s %s spell=%s casting=%s", tostring(unit), event, tostring(eventSpell),
+            tostring(bar and (bar.castingEx or bar.channelingEx)))
         if not bar or bar._intHideAt then
             return
         end
         if not PlateCastMatchesEventUnit(plateData, unit, bar) then
+            CastLog(plateData, "unit event ignored: cast owner GUID differs")
             return
         end
         if ShouldIgnoreUnitCastStop(bar, unit, eventSpell) then

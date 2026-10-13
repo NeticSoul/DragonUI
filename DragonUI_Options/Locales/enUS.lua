@@ -1356,6 +1356,7 @@ L["Off-Target Players Only"] = "Players only"
 L["Off-Target Players Only Desc"] = "Aggressive mode for players only. World mobs stay on safe mode."
 L["Off-Target Aggressive Warning"] = "|cffffffffWarning:|r\n- If a cast is cancelled by moving or jumping (fake cast), the bar still runs to the end.\n- Same-name mobs may show the bar on the wrong nameplate."
 L["Off-Target Players Only Warning"] = "|cffffffffWarning:|r\n- If a cast is cancelled by moving or jumping (fake cast), the bar still runs to the end."
+L["Off-Target Aggressive Ignored"] = "Not used with awesome_wotlk or with a client that shows cast bars on every nameplate. Those already know who is casting, so safe mode is used instead."
 L["Icons"] = true
 L["Quest"] = true
 L["Show Raid Markers"] = true

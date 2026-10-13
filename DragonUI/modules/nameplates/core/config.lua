@@ -41,6 +41,10 @@ end
 -- Effective off-target mode for one CLEU source (hybrid splits player vs NPC).
 function NP.config.ResolveEffectiveCastMode(cfg, sourceIsPlayer)
     local mode = NP.config.GetOffTargetCastMode(cfg)
+    -- Unit tokens (awesome_wotlk) or plate cast bars on every plate (patched exe) already say who casts.
+    if (mode == "aggressive" or mode == "hybrid") and (C_NamePlate or NP.module._nativeCastPatch) then
+        return "safe"
+    end
     if mode ~= "hybrid" then
         return mode
     end

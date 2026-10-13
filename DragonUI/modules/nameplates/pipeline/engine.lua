@@ -285,11 +285,8 @@ function E.SyncShowVKeyCastbarCVar()
         end
     end
 
-    local nativeCastWanted = (cfg.showCastBar ~= false)
-    local likelyHDClient = (C_NamePlate and C_NamePlate.GetNamePlateForUnit)
-        or (UnitExists and UnitExists("nameplate1"))
-    likelyHDClient = likelyHDClient and true or false
-    local shouldForceOn = nativeCastWanted and likelyHDClient
+    -- Data source only (target shield; every plate on a patched exe); DragonUI hides its art.
+    local shouldForceOn = (cfg.showCastBar ~= false)
 
     if shouldForceOn then
         EnsureSaved()

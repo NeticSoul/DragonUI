@@ -218,6 +218,24 @@ local function SlashCommandHandler(input)
         if addon.DebugVehicle then addon.DebugVehicle() else addon:Print(L["Vehicle debug not available"]) end
     elseif cmd == "ufl" then
         if addon.DiagnoseUnitFrameLayers then addon.DiagnoseUnitFrameLayers() else addon:Print(L["UFL diagnostic not available"]) end
+    elseif cmd == "castlog" then
+        local NP = addon.Nameplates
+        if not (NP and NP.castbar and NP.castbar.SetCastLog) then
+            addon:Print("Nameplate cast log not available")
+            return
+        end
+        arg = arg and arg:lower() or ""
+        if arg == "clear" then
+            NP.castbar.SetCastLog("clear")
+            addon:Print("Cast log cleared.")
+        elseif arg == "on" or arg == "off" then
+            NP.castbar.SetCastLog(arg == "on")
+            addon:Print("Cast log " .. arg .. ". /reload to write it to SavedVariables.")
+        else
+            local log = _G.DragonUIDB and _G.DragonUIDB.castlog
+            addon:Print(string.format("Cast log is %s, %d lines. Usage: /dui castlog on|off|clear",
+                NP.castbar.IsCastLogOn() and "on" or "off", log and #log or 0))
+        end
     elseif cmd == "npclamp" then
         local NP = addon.Nameplates
         if NP and NP.layout and NP.layout.DebugPrintClampState then
