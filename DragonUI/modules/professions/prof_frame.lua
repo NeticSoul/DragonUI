@@ -236,3 +236,34 @@ P.On("Hide", syncMicroButton)
 addon.RefreshProfessionsScale = function(scale)
     Frame.ApplyScale(scale or Frame.Scale())
 end
+
+-- ARL docks its scan button on TradeSkillFrame by the close button, under our chrome.
+local function liftScanButton()
+    local arl = _G.AckisRecipeList
+    local button = type(arl) == "table" and arl.scan_button
+    if not (P.active and Frame.built and button and button:GetParent() == TradeSkillFrame) then return end
+    addon.ForeverUI.SkinButton(button)
+    button:SetScale(Frame.scaler:GetScale())
+    button:SetFrameStrata(Frame.scaler:GetFrameStrata())
+    button:SetFrameLevel(Frame.TopLevel() - 1)
+end
+P.On("Scale", liftScanButton)
+
+local scanHooked = false
+local function hookScanButton()
+    local arl = _G.AckisRecipeList
+    if scanHooked or type(arl) ~= "table" or type(arl.TRADE_SKILL_SHOW) ~= "function" then return end
+    scanHooked = true
+    hooksecurefunc(arl, "TRADE_SKILL_SHOW", liftScanButton)
+end
+
+hookScanButton()
+-- AddonLoader can load ARL on the first TRADE_SKILL_SHOW, long after us.
+if not scanHooked then
+    local watcher = CreateFrame("Frame")
+    watcher:RegisterEvent("ADDON_LOADED")
+    watcher:SetScript("OnEvent", function(self)
+        hookScanButton()
+        if scanHooked then self:UnregisterEvent("ADDON_LOADED") end
+    end)
+end
