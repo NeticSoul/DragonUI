@@ -363,15 +363,13 @@ function NP.discovery.ReassertNativeFontChrome(plateData)
     ReassertNativeFontString(plateData.levelText)
 end
 
+-- Native regions only: hover and target refreshes run this mid-cast, after the spark was placed.
 function NP.discovery.HideCastChrome(plateData)
     for _, key in ipairs({ "castBarBorder", "castBarShield", "castBarIcon" }) do
         local region = plateData[key]
         if region and region.Hide then
             region:Hide()
         end
-    end
-    if plateData.minaCastSpark and plateData.minaCastSpark.Hide then
-        plateData.minaCastSpark:Hide()
     end
 end
 

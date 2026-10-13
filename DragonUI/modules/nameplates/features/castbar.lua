@@ -2107,11 +2107,32 @@ local function PlateCastBarIsActive(bar)
     return bar.IsShown and bar:IsShown()
 end
 
+local function PlateNameIsUnique(name)
+    if not name then
+        return false
+    end
+    local count = 0
+    for _, pd in pairs(NP.module.plates) do
+        if pd.plateName == name and IsVisiblePlate(pd) then
+            count = count + 1
+            if count > 1 then
+                return false
+            end
+        end
+    end
+    return count == 1
+end
+
+-- A twin's bar is the only active one once the real target's has ended, so names must be unique.
 local function FindPlateForActiveCastByName(destName, endingSpellName)
     if not destName then
         return nil
     end
     local want = NP.native_style.StripRealm(destName)
+    if not PlateNameIsUnique(want) then
+        CastLog(nil, "name fallback refused: %s is on several plates", tostring(want))
+        return nil
+    end
     for _, pd in pairs(NP.module.plates) do
         local bar = pd.minaCast
         if pd.plateName == want and PlateCastBarIsActive(bar)
@@ -2284,7 +2305,7 @@ local function ShouldTreatCastAsInterrupted(plateData, guid, name)
             return true
         end
         -- Name fallback only when the plate has no cast owner GUID (unsafe duplicate-name NPCs otherwise).
-        if not ownerGUID then
+        if not ownerGUID and PlateNameIsUnique(plateData.plateName) then
             local plateName = name or plateData.plateName
             if plateName and NP.castbar.GetRecentInterrupt(nil, plateName) then
                 return true
@@ -2340,22 +2361,6 @@ local function MonitorStopCast(plateData, interrupted)
         bar:Hide()
         NP.discovery.HideCastChrome(plateData)
     end
-end
-
-local function PlateNameIsUnique(name)
-    if not name then
-        return false
-    end
-    local count = 0
-    for _, pd in pairs(NP.module.plates) do
-        if pd.plateName == name and IsVisiblePlate(pd) then
-            count = count + 1
-            if count > 1 then
-                return false
-            end
-        end
-    end
-    return count == 1
 end
 
 local function CorrectRecentInterruptedPlate(destGUID, destName)
@@ -2795,6 +2800,7 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
         spellId = tonumber(spellId)
         local auraBreak = destGUID and AuraBreaksActiveCast(spellId, combatSpellName)
         if auraBreak then
+            CastLog(nil, "cleu cc %s dest=%s guid=%s", tostring(combatSpellName), tostring(destName), tostring(destGUID))
             if not ShouldRequireHostileReaction(cfg)
                 or not destFlags or IsHostileCombatLogFlags(destFlags) then
                 local plateData = FindPlateForActiveCast(destGUID, nil, destName)
