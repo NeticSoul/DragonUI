@@ -155,6 +155,7 @@ local function ResetNativeCastTrack(plateData)
     plateData._nativeCastSecondVal = nil
     plateData._nativeChanneling = nil
     plateData._nativeCastStep = nil
+    plateData._nativeCastBegan = nil
 end
 
 local function UpdateNativeCastTrack(plateData, val)
@@ -190,6 +191,8 @@ local function UpdateNativeCastTrack(plateData, val)
         else
             plateData._nativeChanneling = false
         end
+        -- The value is time since the cast began (a channel counts down), so this is its start.
+        plateData._nativeCastBegan = GetTime() - (plateData._nativeChanneling and (maxV - val) or val)
         CastLog(plateData, "native dir=%s first=%.3f second=%.3f max=%.3f",
             plateData._nativeChanneling and "channel" or "cast", plateData._nativeCastFirstVal, val, maxV)
         NP.castbar.OnNativeDirectionKnown(plateData)
@@ -2390,6 +2393,133 @@ local function CorrectRecentInterruptedPlate(destGUID, destName)
     end
 end
 
+-- Native bars carry no spell name; the combat log line that began that same cast does.
+local CAST_NAME_START_TOLERANCE = 0.15
+local CAST_NAME_RING = 4
+local castStartsByName, channelStartsByName = {}, {}
+local castStartSweepAt = 0
+local awaitingCastName = setmetatable({}, { __mode = "k" })
+
+local function IconKey(path)
+    if type(path) ~= "string" or path == "" then
+        return nil
+    end
+    local key = path:lower():gsub("/", "\\"):gsub("%.blp$", "")
+    return key
+end
+
+local function SweepCastStarts(now)
+    for _, byName in pairs({ castStartsByName, channelStartsByName }) do
+        for nameKey, ring in pairs(byName) do
+            local newest = 0
+            for i = 1, CAST_NAME_RING do
+                local entry = ring[i]
+                if entry and entry.t > newest then
+                    newest = entry.t
+                end
+            end
+            -- Long enough for a plate that comes into view late in a ten-second cast.
+            if now - newest > 60 then
+                byName[nameKey] = nil
+            end
+        end
+    end
+end
+
+-- The cast behind this plate's native bar: same caster, start time and icon; nil when in doubt.
+local function MatchNativeCastName(plateData, bar)
+    local began, channel = plateData._nativeCastBegan, plateData._nativeChanneling
+    if not began or channel == nil then
+        return nil
+    end
+    local iconKey = IconKey(plateData.castBarIcon and plateData.castBarIcon:GetTexture())
+    local nameKey = NormalizeCastName(plateData.plateName)
+    local ring = iconKey and nameKey and (channel and channelStartsByName or castStartsByName)[nameKey]
+    if not ring then
+        return nil
+    end
+    local ownerKey = NormalizeCastGUID(GetPlateCastOwnerGUID(plateData, bar))
+    local found
+    for i = 1, CAST_NAME_RING do
+        local entry = ring[i]
+        if entry and entry.icon == iconKey and abs(entry.t - began) <= CAST_NAME_START_TOLERANCE
+            and (not ownerKey or entry.guid == ownerKey) then
+            if found and found ~= entry.spell then
+                return nil
+            end
+            found = entry.spell
+        end
+    end
+    return found
+end
+
+local function TryNameNativeCast(plateData, bar)
+    if not bar or bar.spellName or not (bar.castingEx or bar.channelingEx) then
+        awaitingCastName[plateData] = nil
+        return
+    end
+    local spell = MatchNativeCastName(plateData, bar)
+    if spell then
+        bar.spellName = spell
+        bar._nameHintFor = plateData._nativeCastBegan
+        awaitingCastName[plateData] = nil
+        CastLog(plateData, "spell name from combat log: %s", spell)
+        NP.layout.LayoutCastBarStack(plateData)
+    elseif plateData._nativeCastBegan and GetTime() - plateData._nativeCastBegan > 1 then
+        awaitingCastName[plateData] = nil
+        if castLogOn then
+            local nameKey = NormalizeCastName(plateData.plateName)
+            local ring = nameKey and (plateData._nativeChanneling and channelStartsByName or castStartsByName)[nameKey]
+            local seen = {}
+            for i = 1, CAST_NAME_RING do
+                local entry = ring and ring[i]
+                if entry then
+                    seen[#seen + 1] = string.format("%s %.3f %s", entry.spell, entry.t - plateData._nativeCastBegan,
+                        entry.icon)
+                end
+            end
+            CastLog(plateData, "no spell name: icon=%s seen=[%s]", tostring(IconKey(plateData.castBarIcon
+                and plateData.castBarIcon:GetTexture())), table.concat(seen, "; "))
+        end
+    else
+        awaitingCastName[plateData] = true
+    end
+end
+
+-- Casts start with SPELL_CAST_START; 3.3.5a logs a channel's SUCCESS as it begins, kept apart.
+local function RecordCastStart(guid, name, spellId, isSuccess)
+    local nameKey = NormalizeCastName(name and NP.native_style.StripRealm(name) or nil)
+    if not nameKey or not spellId then
+        return
+    end
+    local spell, _, icon = GetSpellInfo(spellId)
+    local iconKey = IconKey(icon)
+    if not spell or not iconKey then
+        return
+    end
+    local now = GetTime()
+    if now >= castStartSweepAt then
+        castStartSweepAt = now + 5
+        SweepCastStarts(now)
+    end
+    local byName = isSuccess and channelStartsByName or castStartsByName
+    local ring = byName[nameKey]
+    if not ring then
+        ring = { n = 0 }
+        byName[nameKey] = ring
+    end
+    ring.n = ring.n % CAST_NAME_RING + 1
+    local entry = ring[ring.n]
+    if not entry then
+        entry = {}
+        ring[ring.n] = entry
+    end
+    entry.t, entry.spell, entry.icon, entry.guid = now, spell, iconKey, NormalizeCastGUID(guid)
+    for pd in pairs(awaitingCastName) do
+        TryNameNativeCast(pd, pd.minaCast)
+    end
+end
+
 -- Native cast end: the plate's own cast bar says when and how a cast stopped.
 
 -- 3.3.5a logs no SUCCESS for other units' cast-time spells, so the combat log can only confirm cuts.
@@ -2498,6 +2628,7 @@ function NP.castbar.OnNativeDirectionKnown(plateData)
         return
     end
     local channel = plateData._nativeChanneling and true or false
+    TryNameNativeCast(plateData, bar)
     if (bar.channelingEx and true or false) == channel then
         return
     end
@@ -2629,6 +2760,8 @@ local CAST_BREAK_EVENTS = {
     SPELL_INTERRUPT = true,
     SPELL_AURA_APPLIED = true,
     SPELL_AURA_REFRESH = true,
+    SPELL_CAST_START = true,
+    SPELL_CAST_SUCCESS = true,
 }
 -- Exported for engine CLEU subevent gating.
 NP.castbar.CAST_BREAK_EVENTS = CAST_BREAK_EVENTS
@@ -2639,6 +2772,13 @@ function NP.castbar.HandleCombatLogCastBreak(timestamp, event, sourceGUID, sourc
     end
     local destGUID, destName, destFlags, spellId, combatSpellName = ParseCombatLogSpellEvent(...)
     local cfg = NP.config.GetCfg()
+
+    if event == "SPELL_CAST_START" or event == "SPELL_CAST_SUCCESS" then
+        if sourceGUID and sourceGUID ~= UnitGUID("player") then
+            RecordCastStart(sourceGUID, sourceName, tonumber(spellId), event == "SPELL_CAST_SUCCESS")
+        end
+        return
+    end
 
     if event == "SPELL_INTERRUPT" then
         CastLog(nil, "cleu SPELL_INTERRUPT dest=%s guid=%s", tostring(destName), tostring(destGUID))
@@ -3874,6 +4014,25 @@ function NP.castbar.SyncCastBar(plateData)
     bar._fromCombatLog = nil
     bar._notInterruptible = ResolveCastNotInterruptible(plateData, bar, notInterruptible)
     bar.spellName = castName
+    local hintedThisCast = previousSpellName and bar._nameHintFor
+        and bar._nameHintFor == plateData._nativeCastBegan
+    if hintedThisCast and castName then
+        -- A unit now names the same cast: the proof that the combat-log name was right.
+        CastLog(plateData, "name check: combat log=%s unit=%s %s", previousSpellName, castName,
+            previousSpellName == castName and "OK" or "MISMATCH")
+        bar._nameHintFor = nil
+    elseif hintedThisCast and not authUnit then
+        bar.spellName = previousSpellName
+    elseif not castName and not authUnit then
+        local spell = MatchNativeCastName(plateData, bar)
+        if spell then
+            bar.spellName = spell
+            bar._nameHintFor = plateData._nativeCastBegan
+            CastLog(plateData, "spell name from combat log: %s", spell)
+        else
+            awaitingCastName[plateData] = true
+        end
+    end
 
     NP.castbar.HideNativeCastVisual(plateData)
     NP.layout.LayoutCastBarStack(plateData)
@@ -3968,6 +4127,10 @@ function NP.castbar.OnNativeCastValueChanged(plateData, val)
     val = tonumber(val)
     if val and val >= 0.002 then
         UpdateNativeCastTrack(plateData, val)
+        -- The icon can land a frame after the bar; keep trying until the name is found or given up.
+        if awaitingCastName[plateData] then
+            TryNameNativeCast(plateData, bar)
+        end
     elseif val and val < 0.002 and plateData._nativeCastLastVal then
         -- Only a drop after real progress is an end; RefinedBlizzPlates guards the same way.
         CastLog(plateData, "native reset last=%.3f max=%s", plateData._nativeCastLastVal,
