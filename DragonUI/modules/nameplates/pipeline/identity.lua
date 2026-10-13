@@ -798,17 +798,26 @@ function identity.UpdatePlateUnitToken(plateData)
     return nil
 end
 
+-- Tokens move to the new unit before the plate caches do; a stale cache would take that unit's cast.
+local function CachedTokenStillOnPlate(plateData, unit)
+    if not identity.UnitNameMatchesPlate(unit, plateData) then
+        return false
+    end
+    local plateGuid = NP.state.GetPlateGUID(plateData)
+    return not plateGuid or plateGuid == UnitGUID(unit)
+end
+
 function identity.ResolvePlateCastUnit(plateData)
     if not plateData then
         return nil
     end
-    if identity.IsTargetPlate(plateData) then
+    if identity.IsTargetPlate(plateData) and CachedTokenStillOnPlate(plateData, "target") then
         return "target"
     end
-    if identity.IsFocusPlate(plateData) then
+    if identity.IsFocusPlate(plateData) and CachedTokenStillOnPlate(plateData, "focus") then
         return "focus"
     end
-    if identity.IsMouseoverPlate(plateData) then
+    if identity.IsMouseoverPlate(plateData) and CachedTokenStillOnPlate(plateData, "mouseover") then
         return "mouseover"
     end
     -- Sticky arena cast unit when not target/focus/mouseover.

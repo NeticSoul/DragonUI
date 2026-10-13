@@ -1593,7 +1593,10 @@ local function ShouldInterruptAuthoritativeEarlyEnd(plateData, bar, now)
     if endT then
         return now < (endT - 0.25)
     end
-    -- Native-driven bar (no stored end); unit API already cleared.
+    -- A native-timed bar has no end to compare against; its own native bar settles the outcome.
+    if plateData._nativeCastLastVal or NP.castbar.IsNativeCastVisible(plateData) then
+        return false
+    end
     return true
 end
 
@@ -2449,8 +2452,8 @@ function NP.castbar.BeginNativeCastEnd(plateData)
         or bar._successHoldUntil or bar._successHideAt then
         return false
     end
-    -- Target/focus/mouseover casts end through UNIT_SPELLCAST_* (castID-matched), which is exact.
-    if GetAuthoritativeCastUnit(plateData) then
+    -- Unit-timed target/focus/mouseover casts end via castID-matched events; native-timed ones end here.
+    if bar.castEndTime and GetAuthoritativeCastUnit(plateData) then
         return false
     end
     if NP.castbar.PlateCastHiddenAsPet(plateData) then
@@ -3317,11 +3320,18 @@ local function TickPlateCastBars(plateData, now)
             end
         else
             local endT = bar.castEndTime
-            local shouldHide = (not endT) or (now >= endT)
-            shouldHide = shouldHide and not NP.castbar.PlateStillCasting(plateData)
-            if shouldHide then
+            local pastEnd = (not endT) or (now >= endT)
+            if pastEnd and not NP.castbar.PlateStillCasting(plateData) then
                 NP.castbar.HidePlateCastBar(plateData)
             elseif endT then
+                if pastEnd and GetAuthoritativeCastUnit(plateData) then
+                    -- Still casting past this cast's end means a chained cast whose start event never landed here.
+                    local _, startMS = NP.castbar.GetPlateCastInfo(plateData)
+                    if startMS and abs(startMS / 1000 - (bar.castStartTime or 0)) > 0.15 then
+                        CastLog(plateData, "chained cast picked up past the previous end")
+                        NP.engine.QueuePlate(plateData, NP.engine.Callbacks.OnUpdateCastbar)
+                    end
+                end
                 if NP.castbar.IsNativeCastVisible(plateData) then
                     plateData._nativeCastSuppressed = nil
                 end
@@ -3506,6 +3516,10 @@ function NP.castbar.PlateStillCasting(plateData)
     local bar = plateData.minaCast
     local authUnit = GetAuthoritativeCastUnit(plateData)
     if authUnit then
+        -- A native-timed bar ends with its native bar, which the unit API can beat by a frame.
+        if bar and not bar.castEndTime and NP.castbar.IsNativeCastVisible(plateData) then
+            return true
+        end
         -- Unit API is authoritative for target/focus/mouseover plates.
         return UnitHasActiveCast(authUnit) and true or false
     end
@@ -4013,7 +4027,8 @@ local function ForEachPlateResolvedToUnit(unit, func)
     for _, plateData in pairs(NP.module.plates) do
         local resolved = NP.identity.ResolvePlateUnit(plateData)
         local castResolved = NP.identity.ResolvePlateCastUnit(plateData)
-        if resolved == unit or castResolved == unit then
+        -- A GUID-less plate resolves through the cached slot, which can still point at the previous unit.
+        if castResolved == unit or (resolved == unit and NP.identity.UnitNameMatchesPlate(unit, plateData)) then
             func(plateData)
         end
     end
