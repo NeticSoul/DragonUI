@@ -90,7 +90,8 @@ end
 
 -- 36, centred on the stock 39: the frames' rings sit 1 inside a 39 icon and its colour bled out.
 local function slotBorder(button, icon)
-    local border = button:CreateTexture(nil, "OVERLAY")
+    -- Below the template's ARTWORK Count: a wide "18 /4" reaches the frame's metal.
+    local border = button:CreateTexture(nil, "BORDER")
     border.icon = icon
     icon:SetSize(36, 36)
     icon:ClearAllPoints()
