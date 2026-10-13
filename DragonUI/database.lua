@@ -638,6 +638,8 @@ local defaults = {
             modernIconBorder = true,
             holdTime = 0.3,
             holdTimeInterrupt = 0.8,
+            interruptShake = true, -- retail-style shake when the player's cast is interrupted
+            showInterrupter = true, -- "Interrupted by <name>" on interrupted casts
 
             -- LATENCY INDICATOR (PLAYER ONLY)
             latency = {
@@ -663,6 +665,7 @@ local defaults = {
                 modernIconBorder = true,
                 holdTime = 0.3,
                 holdTimeInterrupt = 0.8,
+                showInterrupter = true,
                 anchorFrame = 'TargetFrame',
                 anchor = 'TOP',
                 anchorParent = 'BOTTOM'
@@ -685,6 +688,7 @@ local defaults = {
                 modernIconBorder = true,
                 holdTime = 0.3,
                 holdTimeInterrupt = 0.8,
+                showInterrupter = true,
                 anchorFrame = 'FocusFrame',
                 anchor = 'TOP',
                 anchorParent = 'BOTTOM'

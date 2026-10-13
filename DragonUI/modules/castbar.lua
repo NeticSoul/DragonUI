@@ -667,6 +667,13 @@ end
 -- Phase 3: Persistent flash timer frames per unitType to avoid memory leak
 local flashTimerFrames = {}
 
+local function CancelFlashTimer(frames)
+    if frames.flashTimer then
+        frames.flashTimer:SetScript("OnUpdate", nil)
+        frames.flashTimer = nil
+    end
+end
+
 local function ShowSuccessFlash(unitType)
     local frames = CastbarModule.frames[unitType]
     if not frames then
@@ -677,10 +684,7 @@ local function ShowSuccessFlash(unitType)
     local holdDuration = (cfg and cfg.holdTime) or 0.3
     
     -- Cancel any previous flash timer
-    if frames.flashTimer then
-        frames.flashTimer:SetScript("OnUpdate", nil)
-        frames.flashTimer = nil
-    end
+    CancelFlashTimer(frames)
     
     if frames.flash then
         frames.flash:SetAlpha(1.0)
@@ -719,6 +723,123 @@ local function ShowSuccessFlash(unitType)
     else
         FadeOutCastbar(unitType, (cfg and cfg.holdTime) or 0.3)
     end
+end
+
+-- Retail's cast_interrupt_outerglow isn't shipped; DragonUI's own soft halo stands in, tinted red.
+local INTERRUPT_GLOW_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\Nameplates\\combat-glow"
+local INTERRUPT_GLOW_FADE = 1.0
+-- Retail InterruptShakeAnim: still for 0.1s, then four hops 0.05s apart that add up to zero.
+local INTERRUPT_SHAKE_HOPS = { { -1, 1 }, { 1, -2 }, { 1, 2 }, { -1, -1 } }
+
+local function EnsureInterruptFX(frames)
+    if not frames.interruptGlow and frames.castbar then
+        local glow = frames.castbar:CreateTexture(nil, "BACKGROUND")
+        glow:SetTexture(INTERRUPT_GLOW_TEXTURE)
+        glow:SetBlendMode("ADD")
+        glow:SetVertexColor(1, 0.25, 0.1, 1)
+        glow:Hide()
+        frames.interruptGlow = glow
+    end
+    if not frames.interruptShake and frames.container then
+        local group = frames.container:CreateAnimationGroup()
+        local still = group:CreateAnimation("Translation")
+        still:SetOffset(0, 0)
+        still:SetDuration(0.1)
+        still:SetOrder(1)
+        for i, hop in ipairs(INTERRUPT_SHAKE_HOPS) do
+            local step = group:CreateAnimation("Translation")
+            step:SetOffset(hop[1], hop[2])
+            step:SetDuration(0)
+            step:SetStartDelay(0.05)
+            step:SetOrder(i + 1)
+        end
+        frames.interruptShake = group
+    end
+end
+
+local function ResetInterruptFX(frames)
+    if frames.interruptShake then
+        frames.interruptShake:Stop()
+    end
+    if frames.interruptGlow then
+        frames.interruptGlow:Hide()
+    end
+    if frames.castbar then
+        frames.castbar.interruptedAt = nil
+        frames.castbar.interruptedGUID = nil
+    end
+end
+
+local function PlayInterruptFX(frames, cfg)
+    EnsureInterruptFX(frames)
+    local glow, castbar = frames.interruptGlow, frames.castbar
+    if glow and castbar then
+        -- Retail's halo is 222x25 around a 208x11 bar; scale that, plus DragonUI's 2px border.
+        local padX = castbar:GetWidth() * 0.034 + 2
+        local padY = castbar:GetHeight() * 0.64 + 2
+        glow:ClearAllPoints()
+        glow:SetPoint("TOPLEFT", castbar, "TOPLEFT", -padX, padY)
+        glow:SetPoint("BOTTOMRIGHT", castbar, "BOTTOMRIGHT", padX, -padY)
+        glow:SetAlpha(1)
+        glow:Show()
+    end
+    if frames.interruptShake and not (cfg and cfg.interruptShake == false) then
+        frames.interruptShake:Stop()
+        frames.interruptShake:Play()
+    end
+end
+
+-- Interrupted bars hold still before fading, as Blizzard's do (CASTING_BAR_HOLD_TIME).
+local INTERRUPT_FREEZE = 0.75
+
+local function OnInterruptFreezeUpdate(self, elapsed)
+    self.elapsed = self.elapsed + elapsed
+    local glow = self.frames.interruptGlow
+    if glow and glow:IsShown() then
+        glow:SetAlpha(max(0, 1 - self.elapsed / INTERRUPT_GLOW_FADE))
+    end
+    if self.elapsed < INTERRUPT_FREEZE then
+        return
+    end
+    self:SetScript("OnUpdate", nil)
+    local f = CastbarModule.frames[self.unitType]
+    if not f then
+        return
+    end
+    f.flashTimer = nil
+    local castbar = f.castbar
+    -- UIFrameFade Shows its frame, so a bar hidden during the freeze must not be faded back in.
+    if castbar and not (castbar.castingEx or castbar.channelingEx)
+        and f.container and f.container:IsShown() then
+        FadeOutCastbar(self.unitType, self.fadeDuration)
+    end
+end
+
+-- Shares the flash timer slot, so a new cast or HideCastbar cancels the freeze too.
+local function FreezeInterruptedCastbar(unitType, fadeDuration)
+    local frames = CastbarModule.frames[unitType]
+    if not frames then
+        return
+    end
+    CancelFlashTimer(frames)
+    if fadeDuration <= 0 then
+        FadeOutCastbar(unitType, fadeDuration)
+        return
+    end
+    if not flashTimerFrames[unitType] then
+        flashTimerFrames[unitType] = CreateFrame("Frame")
+    end
+    local timer = flashTimerFrames[unitType]
+    timer.elapsed = 0
+    timer.unitType = unitType
+    timer.frames = frames
+    timer.fadeDuration = fadeDuration
+    -- Retail plays glow and shake only on the standalone player bar (playCastFX); unit frame bars just hold.
+    if unitType == "player" then
+        PlayInterruptFX(frames, GetConfig(unitType))
+    end
+    timer:SetScript("OnUpdate", OnInterruptFreezeUpdate)
+    frames.flashTimer = timer
 end
 
 -- ============================================================================
@@ -811,6 +932,22 @@ end
 -- TEXT MANAGEMENT
 -- ============================================================================
 
+-- Cutting after byte i must not leave half of a |cAARRGGBB or |r escape on screen.
+local function CutSplitsEscape(text, i)
+    if strbyte(text, i) == 124 then
+        return true
+    end
+    local from, lastColor = 1, nil
+    while true do
+        local at = strfind(text, "|c", from, true)
+        if not at or at > i then
+            break
+        end
+        lastColor, from = at, at + 2
+    end
+    return lastColor ~= nil and i < lastColor + 9
+end
+
 -- Truncate text with "..." if it exceeds maxWidth pixels (UTF-8 safe)
 local function TruncateTextWithEllipsis(fontString, text, maxWidth)
     if not fontString or not text then return end
@@ -823,7 +960,7 @@ local function TruncateTextWithEllipsis(fontString, text, maxWidth)
         -- Only cut at valid UTF-8 character boundaries:
         -- skip positions where the next byte is a continuation byte (10xxxxxx = 0x80-0xBF)
         local nextByte = strbyte(text, i + 1)
-        if not nextByte or nextByte < 0x80 or nextByte >= 0xC0 then
+        if (not nextByte or nextByte < 0x80 or nextByte >= 0xC0) and not CutSplitsEscape(text, i) then
             fontString:SetText(strsub(text, 1, i) .. "...")
             if fontString:GetStringWidth() <= maxWidth then
                 return
@@ -1249,6 +1386,75 @@ local function ShowLatencyIndicator(castDuration)
 end
 
 -- ============================================================================
+-- INTERRUPTER NAME ("Interrupted by X", as retail)
+-- ============================================================================
+
+-- SPELL_INTERRUPT and the unit's stop event land in the same frame, in either order.
+local INTERRUPTER_WINDOW = 0.5
+local INTERRUPTER_UNITS = { "player", "target", "focus" }
+local recentInterrupts = {}
+
+local function FormatInterrupter(entry)
+    local name = entry.name and entry.name:match("^[^%-]+")
+    if not name or name == "" then
+        return nil
+    end
+    -- pcall: the source can be an NPC or pet GUID, which GetPlayerInfoByGUID has no answer for.
+    local ok, _, classFile = pcall(GetPlayerInfoByGUID, entry.guid)
+    local color = ok and classFile and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+    if color then
+        name = format("|cff%02x%02x%02x%s|r",
+            floor(color.r * 255 + 0.5), floor(color.g * 255 + 0.5), floor(color.b * 255 + 0.5), name)
+    end
+    return format(L["Interrupted by %s"], name)
+end
+
+local function ShowInterrupter(unitType, castbar, entry)
+    local cfg = GetConfig(unitType)
+    if cfg and cfg.showInterrupter == false then
+        return
+    end
+    if entry.spell and castbar.spellName and entry.spell ~= castbar.spellName then
+        return
+    end
+    local text = FormatInterrupter(entry)
+    if text then
+        castbar.interruptedAt = nil
+        SetCastText(unitType, text)
+    end
+end
+
+local function TryShowCachedInterrupter(unitType, castbar)
+    local entry = castbar.interruptedGUID and recentInterrupts[castbar.interruptedGUID]
+    if entry and castbar.interruptedAt - entry.time <= INTERRUPTER_WINDOW
+        and entry.time >= (castbar.startTime or 0) - 0.05 then
+        ShowInterrupter(unitType, castbar, entry)
+    end
+end
+
+local function OnInterruptLogged(sourceGUID, sourceName, destGUID, interruptedSpell)
+    if not destGUID or not sourceName then
+        return
+    end
+    local now = GetTime()
+    for guid, old in pairs(recentInterrupts) do
+        if now - old.time > 5 then
+            recentInterrupts[guid] = nil
+        end
+    end
+    local entry = { guid = sourceGUID, name = sourceName, spell = interruptedSpell, time = now }
+    recentInterrupts[destGUID] = entry
+    for _, unitType in ipairs(INTERRUPTER_UNITS) do
+        local frames = CastbarModule.frames[unitType]
+        local castbar = frames and frames.castbar
+        if castbar and castbar.interruptedAt and castbar.interruptedGUID == destGUID
+            and now - castbar.interruptedAt <= INTERRUPTER_WINDOW then
+            ShowInterrupter(unitType, castbar, entry)
+        end
+    end
+end
+
+-- ============================================================================
 -- CASTING EVENT HANDLERS
 -- ============================================================================
 
@@ -1291,10 +1497,8 @@ function CastbarModule:HandleCastStart_Simple(unitType, unit, isChanneling)
     end
     
     -- Cancel any active flash timer that might trigger fade later
-    if frames.flashTimer then
-        frames.flashTimer:SetScript("OnUpdate", nil)
-        frames.flashTimer = nil
-    end
+    CancelFlashTimer(frames)
+    ResetInterruptFX(frames)
     
     -- Always use 0-1 range
     castbar:SetMinMaxValues(0, 1)
@@ -1497,22 +1701,12 @@ function CastbarModule:HandleCastStop_Simple(unitType, wasInterrupted, isChannel
             texture:SetVertexColor(1, 1, 1, 1)
         end
         
-        -- Text display:
-        --   INTERRUPTED event → "Interrupted" (player or target/focus)
-        --   FAILED event (via overrideText) → "Failed"
-        --   Timing heuristic (selfInterrupt) → "Failed" (non-self target only)
-        local displayText = overrideText
-        if not displayText then
-            if castbar.selfInterrupt then
-                -- Timing heuristic path: non-self target, always "Failed"
-                displayText = FAILED
-            else
-                -- Event-driven path: INTERRUPTED event → "Interrupted"
-                displayText = INTERRUPTED
-            end
-        end
-        SetCastText(unitType, displayText)
-        FadeOutCastbar(unitType, (cfg and cfg.holdTimeInterrupt) or 0.8)
+        -- Only the player's FAILED override says "Failed"; see HandleCastFailed_Simple.
+        SetCastText(unitType, overrideText or INTERRUPTED)
+        castbar.interruptedAt = GetTime()
+        castbar.interruptedGUID = unitType == "player" and UnitGUID("player") or castbar.unit
+        TryShowCachedInterrupter(unitType, castbar)
+        FreezeInterruptedCastbar(unitType, (cfg and cfg.holdTimeInterrupt) or 0.8)
     else
         -- Normal completion - show success flash
         if frames.spark then frames.spark:Hide() end
@@ -1558,7 +1752,8 @@ function CastbarModule:HandleCastFailed_Simple(unitType, eventSpell, _, eventCas
         return
     end
 
-    self:HandleCastStop_Simple(unitType, true, nil, FAILED)
+    -- Other units' kicks arrive as FAILED, not INTERRUPTED; only the player's FAILED is a real failure.
+    self:HandleCastStop_Simple(unitType, true, nil, unitType == "player" and FAILED or nil)
 end
 
 -- INTERRUPTED used to kill any active bar; gate on castID (or spell name for channels).
@@ -2005,6 +2200,13 @@ function CastbarModule:HideCastbar(unitType)
     
     if frames.container then
         frames.container:Hide()
+    end
+
+    -- A pending flash or freeze timer would fade the hidden bar back in (UIFrameFade Shows it).
+    CancelFlashTimer(frames)
+    ResetInterruptFX(frames)
+    if frames.flash then
+        frames.flash:Hide()
     end
     
     local castbar = frames.castbar
@@ -2536,6 +2738,12 @@ function CastbarModule:ShowCastbar(unitType, spellName, currentValue, maxValue, 
     frames.container:Show()
     UIFrameFadeRemoveFrame(frames.container)
     frames.container:SetAlpha(1.0)
+    -- The preview clears castingEx to hold still, which a pending flash/freeze timer reads as "fade now".
+    CancelFlashTimer(frames)
+    ResetInterruptFX(frames)
+    if frames.flash then
+        frames.flash:Hide()
+    end
     
     if isInterrupted then
         castbar:SetStatusBarTexture(TEXTURES.interrupted)
@@ -2770,6 +2978,18 @@ local function SetupBlizzardLayoutHooks()
 end
 
 local function OnEvent(self, event, unit, ...)
+    if event == 'COMBAT_LOG_EVENT_UNFILTERED' then
+        if (...) == "SPELL_INTERRUPT" then
+            local _, sourceGUID, sourceName, _, fifth = ...
+            -- Some 3.3.5 cores insert raid flags after each flags field, shifting dest and spell args.
+            if type(fifth) == "number" then
+                OnInterruptLogged(sourceGUID, sourceName, (select(6, ...)), (select(14, ...)))
+            else
+                OnInterruptLogged(sourceGUID, sourceName, fifth, (select(12, ...)))
+            end
+        end
+        return
+    end
     if event == 'PLAYER_TARGET_CHANGED' then
         CastbarModule:HandleTargetChanged()
     elseif event == 'PLAYER_FOCUS_CHANGED' then
@@ -2935,7 +3155,8 @@ local events = {
     'UNIT_SPELLCAST_INTERRUPTIBLE',
     'UNIT_TARGET',
     'PLAYER_TARGET_CHANGED',
-    'PLAYER_FOCUS_CHANGED'
+    'PLAYER_FOCUS_CHANGED',
+    'COMBAT_LOG_EVENT_UNFILTERED'
 }
 
 for _, event in ipairs(events) do

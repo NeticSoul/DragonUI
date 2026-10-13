@@ -167,6 +167,21 @@ local function AddCastbarControls(parent, dbPrefix, refreshFunc, opts)
         callback = refreshFunc,
     })
 
+    C:AddToggle(parent, {
+        label = LO["Show Interrupter"],
+        desc = LO["Show the name of whoever interrupted the cast."],
+        dbPath = dbPrefix .. ".showInterrupter",
+    })
+
+    -- Retail only animates interrupts on the full-size player bar; target/focus bars never shake.
+    if opts.interruptFX then
+        C:AddToggle(parent, {
+            label = LO["Shake on Interrupt"],
+            desc = LO["Shake the cast bar briefly when it gets interrupted."],
+            dbPath = dbPrefix .. ".interruptShake",
+        })
+    end
+
     if opts.resetFunc then
         C:AddButton(parent, {
             label = LO["Reset Position"],
@@ -189,6 +204,7 @@ local function BuildPlayerCastbar(scroll)
     AddCastbarControls(s, "castbar", refresh, {
         sizeXMin = 80, sizeXMax = 512,
         sizeYMin = 10, sizeYMax = 64,
+        interruptFX = true,
         resetFunc = function()
             if addon.ResetCastbarPosition then
                 addon.ResetCastbarPosition()

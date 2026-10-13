@@ -397,6 +397,7 @@ L["Range Indicator"] = true
 L["Color action button icons when target is out of range or ability is unusable."] = true
 L["Cast Bar"] = true
 L["Custom player, target, and focus cast bars"] = true
+L["Interrupted by %s"] = true
 L["Multicast"] = true
 L["Shaman totem bar positioning and styling"] = true
 L["Player Frame"] = true
