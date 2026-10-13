@@ -96,6 +96,8 @@ end
 -- Same trick Blizzard's own GameTooltip_ShowStatusBar uses: a real blank AddLine, so native auto-height covers it.
 local function ReserveHealthBarLine()
     if not GameTooltipStatusBar or not GameTooltipStatusBar:IsShown() then return end
+    local lastLine = _G["GameTooltipTextLeft" .. GameTooltip:NumLines()]
+    if lastLine and lastLine:GetText() == " " then return end
     GameTooltip:AddLine(" ")
     GameTooltip:Show()
 end
@@ -553,6 +555,8 @@ local function ApplyTooltipSystem()
     if not TooltipModule.hooks["UnitFrameTooltip"] then
         hooksecurefunc("UnitFrame_UpdateTooltip", function(self)
             if not IsModuleEnabled() or not self or not self.unit then return end
+            -- The deferred reserve lands a frame late; on this 0.2s refresh that frame made the tip flicker.
+            ReserveHealthBarLine()
             ColorTooltipName(self.unit)
         end)
         TooltipModule.hooks["UnitFrameTooltip"] = true
