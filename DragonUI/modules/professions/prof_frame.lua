@@ -246,6 +246,11 @@ local function liftScanButton()
     button:SetScale(Frame.scaler:GetScale())
     button:SetFrameStrata(Frame.scaler:GetFrameStrata())
     button:SetFrameLevel(Frame.TopLevel() - 1)
+    -- Only ARL's default spot: its +4 offset tucks the button under our close button.
+    if arl.db and arl.db.profile.scanbuttonlocation == "TR" then
+        button:ClearAllPoints()
+        button:SetPoint("RIGHT", TradeSkillFrameCloseButton, "LEFT", -4, 0)
+    end
 end
 P.On("Scale", liftScanButton)
 
