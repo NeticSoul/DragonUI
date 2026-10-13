@@ -89,7 +89,9 @@ end
 
 -- Resized, not rescaled: it hangs off an offset in its own scale, so scaling slides it away.
 local function sizeQuestPOI(button, size)
-    for _, texture in ipairs({ button.normalTexture, button.pushedTexture, button.highlightTexture }) do
+    local rings = { button.normalTexture or button.ring, button.pushedTexture or button.ringPushed,
+        button.highlightTexture or button.ringHighlight }
+    for _, texture in ipairs(rings) do
         texture:ClearAllPoints()
         texture:SetPoint("CENTER", button, "CENTER", 0, 0)
         texture:SetSize(size, size)
@@ -100,6 +102,11 @@ local function sizeQuestPOI(button, size)
         button.number:SetSize(size, size)
     end
     if button.duiRing then button.duiRing:SetSize(size / TURNIN_SHARE, size / TURNIN_SHARE) end
+    -- A held map's QP pin: its number fills the badge, its turn-in glyph sits at 24 of 32.
+    if button.icon then
+        local glyph = button.duiStyle == "numeric" and size or size * TURNIN_SHARE
+        button.icon:SetSize(glyph, glyph)
+    end
 end
 
 -- Blizzard rings a completed pin only via the twin its own pick swaps in; ours rings the shared focus.
@@ -131,7 +138,7 @@ end
 local flashing = {}
 
 local function poiQuest(button)
-    return button.questId or (button.quest and button.quest.questId)
+    return button.questId or (button.quest and button.quest.questId) or (button.row and button.row.questId)
 end
 
 local function stopQuestFlash(button)
@@ -182,10 +189,168 @@ local function cropQuestPOI(button, selected)
     QP.CropBlizzardPOI(button, selected)
 end
 
+-- ============================================================================
+-- QUEST PIN GUARD
+-- ============================================================================
+
+-- Completed pins are named by row: one sorted under an open quest leaves a hole HideButtons indexes.
+local SWAP_PIN = "poiWorldMapPOIFrame" .. QUEST_POI_COMPLETE_SWAP .. "_"
+local updateMapQuests = QuestMapUpdateAllQuests
+-- QuestPOICompletedTemplate's glyph fills its 32px, where QP draws the turn-in at 24.
+local HELD_COMPLETE_SCALE = QUEST_POI_SCALE / TURNIN_SHARE
+local NO_ROWS = {}
+local pinsHeld = false
+-- Rows numbered as Blizzard would have; on a held map our pins and the panel's badges read them.
+local heldRows, heldPool = {}, {}
+
+-- WorldMapFrame_UpdateQuests' own rows and completion rule, replayed before it runs.
+local function wouldLeaveHole()
+    local money, count, open, lastNew = GetMoney(), 0, 0, 0
+    for i = 1, updateMapQuests() do
+        local questID, logIndex = QuestPOIGetQuestIDByVisibleIndex(i)
+        if logIndex and logIndex > 0 then
+            count = count + 1
+            local _, _, _, _, _, _, done = GetQuestLogTitle(logIndex)
+            if done and done < 0 then
+                done = false
+            elseif GetNumQuestLeaderBoards(logIndex) == 0 and money >= GetQuestLogRequiredMoney(logIndex) then
+                done = true
+            end
+            local row = heldRows[count] or {}
+            heldRows[count] = row
+            row.questId, row.questLogIndex, row.completed = questID, logIndex, done and true or false
+            row.number = nil
+            if done then
+                if not _G[SWAP_PIN .. count] then lastNew = count end
+            else
+                open = open + 1
+                row.number = open
+            end
+        end
+    end
+    for index = #heldRows, count + 1, -1 do heldRows[index] = nil end
+    for index = 1, lastNew - 1 do
+        if not (heldRows[index].completed or _G[SWAP_PIN .. index]) then return true end
+    end
+    return false
+end
+
+-- Only right after the list is built: QuestPOIGetIconInfo answers for whichever map was last.
+local function readHeldPositions()
+    QuestPOIUpdateIcons()
+    for _, row in ipairs(heldRows) do
+        local _, x, y = QuestPOIGetIconInfo(row.questId)
+        row.x, row.y = x, y
+    end
+end
+
+-- Blizzard's lines, not its handler: WorldMapQuestPOI_OnEnter writes WorldMapPOIFrame.allowBlobTooltip.
+local function showHeldTooltip(pin)
+    local logIndex = pin.row.questLogIndex
+    WorldMapTooltip:SetOwner(WorldMapFrame, "ANCHOR_CURSOR_RIGHT", 5, 2)
+    WorldMapTooltip:SetText((GetQuestLogTitle(logIndex)))
+    if pin.row.completed then
+        local text = GetQuestLogCompletionText(logIndex)
+        if text then WorldMapTooltip:AddLine("- " .. text, 1, 1, 1, 1) end
+    else
+        for i = 1, GetNumQuestLeaderBoards(logIndex) do
+            local text, _, finished = GetQuestLogLeaderBoard(i, logIndex)
+            if text and not finished then
+                WorldMapTooltip:AddLine("- " .. WorldMapFrame_ReverseQuestObjective(text), 1, 1, 1, 1)
+            end
+        end
+    end
+    WorldMapTooltip:Show()
+end
+
+local function heldPin(index)
+    local pin = heldPool[index]
+    if pin then return pin end
+    -- Blizzard hides WorldMapPOIFrame on a held map; zoom clips and mutes the button's children.
+    pin = QP.Create(WorldMapButton)
+    pin:SetFrameLevel(WorldMapButton:GetFrameLevel() + 3)
+    pin:RegisterForClicks("LeftButtonUp")
+    pin:SetScript("OnEnter", showHeldTooltip)
+    pin:SetScript("OnLeave", function() WorldMapTooltip:Hide() end)
+    pin:SetScript("OnClick", function(self)
+        PlaySound("igMainMenuOptionCheckBoxOn")
+        if WM.PickQuestFromCanvas then WM.PickQuestFromCanvas(self.row.questId) end
+    end)
+    heldPool[index] = pin
+    return pin
+end
+
+local function styleHeldPin(pin, selected)
+    local done = pin.row.completed
+    QP.SetStyle(pin, done and "complete" or "numeric", pin.row.number, selected)
+    -- QuestPOICompletedTemplate is the bare glyph; only a picked one gets a ring.
+    local ring = (done and not selected) and 0 or 1
+    pin.ring:SetAlpha(ring)
+    pin.ringPushed:SetAlpha(ring)
+    pin.ringHighlight:SetAlpha(ring)
+end
+
+local function placeHeldPins()
+    local shown = 0
+    if pinsHeld and WM.IsWindowed() then
+        local width, height = WorldMapButton:GetWidth(), WorldMapButton:GetHeight()
+        -- Against the frame Blizzard's own pins hang off, so both kinds come out one size on screen.
+        local poiScale = WorldMapPOIFrame:GetEffectiveScale() / WorldMapButton:GetEffectiveScale()
+        local focus = QP.GetFocus()
+        for _, row in ipairs(heldRows) do
+            if row.x and row.y then
+                shown = shown + 1
+                local pin = heldPin(shown)
+                pin.row = row
+                styleHeldPin(pin, row.questId == focus)
+                local pinScale = (row.completed and HELD_COMPLETE_SCALE or QUEST_POI_NUMERIC_SCALE) * poiScale
+                pin:SetScale(pinScale)
+                pin:ClearAllPoints()
+                pin:SetPoint("CENTER", WorldMapButton, "TOPLEFT", row.x * width / pinScale, -row.y * height / pinScale)
+                pin:Show()
+            end
+        end
+    end
+    for index = shown + 1, #heldPool do heldPool[index]:Hide() end
+end
+
+local function releaseQuestPins()
+    if pinsHeld then
+        pinsHeld = false
+        if WatchFrame.showObjectives then SetCVar("questPOI", "1") end
+    end
+    placeHeldPins()
+end
+
+-- Off, the CVar makes the client count no quests, so Blizzard's next pass builds no pins at all.
+local function guardQuestPins()
+    if not WatchFrame.showObjectives then
+        -- The player switched objectives off: the CVar is theirs again.
+        pinsHeld = false
+    elseif not WorldMapFrame:IsShown() then
+        return releaseQuestPins()
+    else
+        if pinsHeld then SetCVar("questPOI", "1") end
+        pinsHeld = wouldLeaveHole()
+        if pinsHeld then
+            readHeldPositions()
+            SetCVar("questPOI", "0")
+        end
+    end
+    placeHeldPins()
+end
+
+function WM.HeldQuestRows()
+    return pinsHeld and heldRows or NO_ROWS
+end
+
 function WM.SelectQuestPOI(questID)
     for index = 1, WorldMapFrame.numQuests or 0 do
         local row = _G["WorldMapQuestFrame" .. index]
         if row and row.poiIcon then cropQuestPOI(row.poiIcon, row.questId == questID) end
+    end
+    for _, pin in ipairs(heldPool) do
+        if pin:IsShown() then styleHeldPin(pin, pin.row.questId == questID) end
     end
 end
 
@@ -207,6 +372,13 @@ local function tryFlashQuestPOI()
             return
         end
     end
+    for _, pin in ipairs(heldPool) do
+        if pin:IsShown() and pin.row.questId == pendingQuestFlash then
+            flashQuestPOI(pin)
+            pendingQuestFlash = nil
+            return
+        end
+    end
 end
 
 function WM.FlashQuestPOI(questID)
@@ -223,6 +395,7 @@ function WM.RefreshPins()
         local row = _G["WorldMapQuestFrame" .. index]
         if row and row.poiIcon then placeQuestPOI(row.poiIcon) end
     end
+    placeHeldPins()
 end
 
 local function styleAreaLabel()
@@ -269,7 +442,7 @@ end
 
 -- The Lua gate is read from the CVar only at load, while the client honours the CVar live.
 function WM.ObjectivesShown()
-    return (WatchFrame.showObjectives and GetCVarBool("questPOI")) and true or false
+    return (WatchFrame.showObjectives and (pinsHeld or GetCVarBool("questPOI"))) and true or false
 end
 
 local function filterEntries()
@@ -397,6 +570,25 @@ function WM.BuildPins()
     QP.RegisterFocusListener(WM.SelectQuestPOI)
     hooksecurefunc("WorldMapFrame_UpdateQuests", dropStaleFlashes)
     hooksecurefunc("WorldMapFrame_DisplayQuestPOI", onQuestPOIDisplayed)
+
+    -- Each runs ahead of a Blizzard quest pass: the map rebuild, or whoever hears a quest event first.
+    hooksecurefunc("WorldMapFrame_SetMapName", guardQuestPins)
+    hooksecurefunc("WatchFrame_GetCurrentMapQuests", guardQuestPins)
+    -- Not WM.border: fullscreen mode hides that one while the map stays open.
+    local guard = CreateFrame("Frame", nil, WorldMapFrame)
+    guard:SetScript("OnHide", releaseQuestPins)
+    guard:RegisterEvent("QUEST_LOG_UPDATE")
+    guard:RegisterEvent("QUEST_POI_UPDATE")
+    guard:RegisterEvent("PLAYER_LOGOUT")
+    guard:SetScript("OnEvent", function(_, event)
+        if event == "PLAYER_LOGOUT" then releaseQuestPins() else guardQuestPins() end
+    end)
+    -- Blizzard's empty pass hid the shape layer, but a quest picked on our pins still lights its area.
+    hooksecurefunc("WorldMapFrame_DisplayQuests", function()
+        if pinsHeld and WM.IsWindowed() and not InCombatLockdown() then WorldMapBlobFrame:Show() end
+        -- WorldMapFrame_Update runs before the guard places held pins, so the flash looks again here.
+        tryFlashQuestPOI()
+    end)
 
     local onLayout = WM.OnLayout
     WM.OnLayout = function()

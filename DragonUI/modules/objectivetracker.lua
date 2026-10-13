@@ -85,6 +85,13 @@ local mapQuests = {}
 
 local function refreshMapQuests()
     for id in pairs(mapQuests) do mapQuests[id] = nil end
+    -- The world map holds questPOI off on maps it would break, so the client lists none there.
+    local worldMap = addon.WorldMap
+    local held = worldMap and worldMap.HeldQuestRows and worldMap.HeldQuestRows()
+    if held and #held > 0 then
+        for i, row in ipairs(held) do mapQuests[row.questId] = i end
+        return
+    end
     if not (QuestMapUpdateAllQuests and QuestPOIGetQuestIDByVisibleIndex) then return end
     local count = QuestMapUpdateAllQuests()
     for i = 1, count or 0 do

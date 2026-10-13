@@ -123,6 +123,10 @@ local function mapBadges()
             }
         end
     end
+    -- A held map has no Blizzard rows; pins.lua numbered its quests the way they would have been.
+    for _, row in ipairs(WM.HeldQuestRows()) do
+        badges[row.questLogIndex] = { frame = row, number = row.number, completed = row.completed }
+    end
     return badges
 end
 
@@ -761,6 +765,12 @@ local function repaint()
                 break
             end
         end
+        for _, row in ipairs(WM.HeldQuestRows()) do
+            if row.questId == lastFocus then
+                QP.SetFocus(lastFocus)
+                break
+            end
+        end
     end
     local wasHovering = hoveredRow and hoveredRow._questID
     hoverRow(nil, false)
@@ -1050,16 +1060,18 @@ function WM.BuildQuestLog()
         reclaimBlob(questFrame)
         requestRepaint()
     end)
-    -- The canvas pin is Blizzard's own button, and its click is the one pick that comes through no row.
-    hooksecurefunc("WorldMapQuestPOI_OnClick", function(self)
-        if not ownsCanvas() then return end
-        local questID = self.quest and self.quest.questId
-        if not questID or questID == 0 then return end
+    -- A canvas pin, Blizzard's or a held map's own, is the one pick that comes through no row.
+    local function pickFromCanvas(questID)
+        if not ownsCanvas() or not questID or questID == 0 then return end
         lastFocus = questID
         QP.SetFocus(questID)
         applyBlob()
         requestRepaint()
+    end
+    hooksecurefunc("WorldMapQuestPOI_OnClick", function(self)
+        pickFromCanvas(self.quest and self.quest.questId)
     end)
+    WM.PickQuestFromCanvas = pickFromCanvas
 
     local events = CreateFrame("Frame")
     events:RegisterEvent("QUEST_LOG_UPDATE")
