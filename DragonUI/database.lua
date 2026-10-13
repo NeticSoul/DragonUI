@@ -1007,6 +1007,7 @@ local defaults = {
                 castBarPvPAggressive = false, -- legacy reaction filter (no longer exposed in UI)
                 showPartyRaidCastBars = true, -- show cast bars on party/raid member nameplates
                 castBarModernIconBorder = true, -- action-bar style frame around the cast icon
+                castBarModernIconLeft = false, -- Modern style: spell icon left of the cast bar instead of under it
                 castBarHeight = 9, -- height of the cast bar in pixels
                 castBarGap = 3, -- vertical gap between health, power, and cast bars
                 showCastBarSpellName = false, -- show the spell name text on the cast bar (the modern skin turns it on)

@@ -1086,6 +1086,8 @@ L["Show Icon"] = "Mostrar ícone"
 
 -- Added by DragonUI (missing translations)
 L["Modern Icon Border Desc"] = "Emoldura o ícone da magia com a borda das barras de ação do DragonUI em vez do anel clássico."
+L["Spell Icon Left of Bar"] = "Ícone da magia à esquerda da barra"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "Estilo Moderno: mostra o ícone da magia à esquerda da barra de lançamento em vez de embaixo."
 L["Text Mode"] = "Modo de texto"
 L["Simple (Name Only)"] = "Simples (apenas nome)"
 L["Detailed (Name + Time)"] = "Detalhado (nome + tempo)"

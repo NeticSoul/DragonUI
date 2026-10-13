@@ -660,8 +660,12 @@ function NP.castbar.LayoutCastSpellIcon(icon, bar, notInterruptible)
     if NP.config.IsRetailSkin() then
         -- Retail's Modern style hangs the icon under the bar's left end, not beside it.
         icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        -- Clear ui-castingbar-frame, which hangs 2px below the bar.
-        icon:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -3)
+        -- Clear ui-castingbar-frame, which hangs 2px past the bar on every side.
+        if NP.config.GetCfg().castBarModernIconLeft then
+            icon:SetPoint("RIGHT", bar, "LEFT", -3, 0)
+        else
+            icon:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -3)
+        end
     else
         icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
         icon:SetPoint("RIGHT", bar, "LEFT", anchorX, anchorY)

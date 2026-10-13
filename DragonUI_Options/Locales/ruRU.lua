@@ -1475,6 +1475,8 @@ L["Has no effect while SexyMap controls the minimap (SexyMap or Hybrid mode)."] 
 L["Hide in Combat"] = "Скрывать в бою"
 L["Hide the minimap while in combat."] = "Скрывать миникарту в бою."
 L["Modern Icon Border Desc"] = "Обрамляет значок заклинания рамкой панели действий DragonUI вместо классического кольца."
+L["Spell Icon Left of Bar"] = "Значок заклинания слева от полосы"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "Современный стиль: значок заклинания слева от полосы заклинаний, а не под ней."
 L["Quest"] = "Задание"
 L["Quest Icons"] = "Значки заданий"
 L["Show Quest Icons"] = "Показывать значки заданий"

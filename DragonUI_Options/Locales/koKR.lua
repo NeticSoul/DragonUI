@@ -1476,6 +1476,8 @@ L["Has no effect while SexyMap controls the minimap (SexyMap or Hybrid mode)."] 
 L["Hide in Combat"] = "전투 중 숨기기"
 L["Hide the minimap while in combat."] = "전투 중에 미니맵을 숨깁니다."
 L["Modern Icon Border Desc"] = "주문 아이콘을 기존 원형 테두리 대신 DragonUI 행동 단축바 테두리로 감쌉니다."
+L["Spell Icon Left of Bar"] = "주문 아이콘을 바 왼쪽에"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "모던 스타일: 주문 아이콘을 시전 바 아래가 아닌 왼쪽에 표시합니다."
 L["Quest"] = "퀘스트"
 L["Quest Icons"] = "퀘스트 아이콘"
 L["Show Quest Icons"] = "퀘스트 아이콘 표시"

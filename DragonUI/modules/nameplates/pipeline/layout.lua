@@ -876,7 +876,7 @@ function NP.layout.ApplyNameplateFonts(plateData)
         local offY = cfg.castBarSpellNameOffsetY or 0
         fs:ClearAllPoints()
         local icon = cast.minaCastIcon
-        if NP.config.IsRetailSkin() and icon then
+        if NP.config.IsRetailSkin() and icon and not cfg.castBarModernIconLeft then
             -- Retail runs the spell name from the icon's right edge, under the bar.
             fs:SetJustifyH("LEFT")
             fs:SetPoint("LEFT", icon, "RIGHT", 2 + offX, offY)

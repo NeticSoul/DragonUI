@@ -1086,6 +1086,8 @@ L["Show Icon"] = "Afficher l'icône"
 
 -- Added by DragonUI (missing translations)
 L["Modern Icon Border Desc"] = "Encadre l'icône du sort avec la bordure des barres d'action DragonUI plutôt qu'avec l'anneau classique."
+L["Spell Icon Left of Bar"] = "Icône du sort à gauche de la barre"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "Style Moderne : affiche l'icône du sort à gauche de la barre de cast au lieu d'en dessous."
 L["Text Mode"] = "Mode de texte"
 L["Simple (Name Only)"] = "Simple (nom uniquement)"
 L["Detailed (Name + Time)"] = "Détaillé (nom + durée)"

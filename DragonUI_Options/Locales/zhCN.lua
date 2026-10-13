@@ -1472,6 +1472,8 @@ L["Has no effect while SexyMap controls the minimap (SexyMap or Hybrid mode)."] 
 L["Hide in Combat"] = "战斗中隐藏"
 L["Hide the minimap while in combat."] = "战斗中隐藏小地图。"
 L["Modern Icon Border Desc"] = "使用 DragonUI 动作条边框而非经典圆环来包裹法术图标。"
+L["Spell Icon Left of Bar"] = "法术图标位于施法条左侧"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "现代风格：将法术图标显示在施法条左侧，而非下方。"
 L["Quest"] = "任务"
 L["Quest Icons"] = "任务图标"
 L["Show Quest Icons"] = "显示任务图标"

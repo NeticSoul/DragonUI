@@ -1473,6 +1473,8 @@ L["Has no effect while SexyMap controls the minimap (SexyMap or Hybrid mode)."] 
 L["Hide in Combat"] = "Im Kampf ausblenden"
 L["Hide the minimap while in combat."] = "Blendet die Minikarte im Kampf aus."
 L["Modern Icon Border Desc"] = "Rahmt das Zaubersymbol mit dem DragonUI-Aktionsleistenrand statt mit dem klassischen Ring ein."
+L["Spell Icon Left of Bar"] = "Zaubersymbol links der Leiste"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "Modern-Stil: zeigt das Zaubersymbol links neben der Zauberleiste statt darunter."
 L["Quest Icons"] = "Questsymbole"
 L["Show Quest Icons"] = "Questsymbole anzeigen"
 L["Show kill/loot icons over your quest-objective mobs. Without awesome_wotlk, only your target, mouseover and focus show them."] = "Zeigt Tötungs-/Beutesymbole über Kreaturen deiner Questziele. Ohne awesome_wotlk erscheinen sie nur bei Ziel, Mauszeiger und Fokus."

@@ -1480,6 +1480,8 @@ L["Hide the minimap while in combat."] = "戰鬥中隱藏小地圖。"
 
 -- Added by DragonUI (missing translations)
 L["Modern Icon Border Desc"] = "使用 DragonUI 動作條邊框取代傳統圓環來包覆法術圖示。"
+L["Spell Icon Left of Bar"] = "法術圖示位於施法條左側"
+L["Modern style: show the spell icon to the left of the cast bar instead of under it."] = "現代風格：將法術圖示顯示在施法條左側，而非下方。"
 
 -- Added by DragonUI (missing translations)
 L["Quest"] = "任務"

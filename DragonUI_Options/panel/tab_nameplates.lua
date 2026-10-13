@@ -1299,6 +1299,17 @@ local function BuildBarsSubTab(scroll)
     })
 
     C:AddToggle(castSection, {
+        label = LO["Spell Icon Left of Bar"],
+        desc = LO["Modern style: show the spell icon to the left of the cast bar instead of under it."],
+        dbPath = DB .. ".castBarModernIconLeft",
+        disabled = function()
+            local style = C:GetDBValue(DB .. ".plateStyle")
+            return IsCastBarDisabled() or style == "legacy" or style == "classic"
+        end,
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(castSection, {
         label = LO["Show Party/Raid Cast Bars"],
         desc = LO["Also show cast bars on party and raid allies, even when you are not targeting them."],
         dbPath = DB .. ".showPartyRaidCastBars",
