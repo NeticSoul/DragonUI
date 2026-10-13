@@ -366,102 +366,14 @@ local function GetLauncherScale()
     return (1 / blipScale) * (1 + ADDON_ORBIT_RADIUS / 100)
 end
 
-local function GetStoredRotatePreference()
-    local minimapConfig = addon and addon.db and addon.db.profile and addon.db.profile.minimap
-    if minimapConfig and (minimapConfig.indoorRotatePreference == "0" or minimapConfig.indoorRotatePreference == "1") then
-        return minimapConfig.indoorRotatePreference
+-- Old builds forced rotateMinimap off indoors, so a logout while forced saved it as 0.
+local function RestoreForcedIndoorRotation()
+    local minimapConfig = addon.db and addon.db.profile and addon.db.profile.minimap
+    if not minimapConfig or minimapConfig.indoorRotatePreference == nil then return end
+    if minimapConfig.indoorRotatePreference == "1" and GetCVar("rotateMinimap") == "0" then
+        SetCVar("rotateMinimap", "1")
     end
-    return nil
-end
-
-local function SetStoredRotatePreference(value)
-    if value ~= "0" and value ~= "1" then return end
-    local minimapConfig = addon and addon.db and addon.db.profile and addon.db.profile.minimap
-    if minimapConfig then
-        minimapConfig.indoorRotatePreference = value
-    end
-end
-
-local function SyncStoredRotatePreference(currentRotate, isIndoor, isForced)
-    if currentRotate ~= "0" and currentRotate ~= "1" then return end
-
-    -- Always persist explicit ON preference.
-    if currentRotate == "1" then
-        SetStoredRotatePreference("1")
-        return
-    end
-
-    -- For OFF, only persist when in stable outdoor non-forced context.
-    local inInstance = IsInInstance and IsInInstance()
-    if not isIndoor and not isForced and not inInstance then
-        SetStoredRotatePreference("0")
-    end
-end
-
-local function ApplyRotateCVar(value)
-    if value ~= "0" and value ~= "1" then return end
-    if GetCVar("rotateMinimap") == value then return end
-
-    MinimapModule._rotationPolicyUpdating = true
-    SetCVar("rotateMinimap", value)
-    if MinimapModule.UpdateRotation then
-        MinimapModule.UpdateRotation()
-    end
-    MinimapModule._rotationPolicyUpdating = false
-end
-
-local function UpdateIndoorRotationPolicy()
-    if not Minimap or not IsDragonUIMinimapControlling() then return end
-    if MinimapModule._rotationPolicyUpdating then return end
-
-    -- In SexyMap hybrid mode, DragonUI must not control rotateMinimap.
-    if IsHybridMinimapModeActive() then
-        if MinimapModule.forcingIndoorRotation then
-            MinimapModule.forcingIndoorRotation = false
-            local restoreRotate = GetStoredRotatePreference() or MinimapModule.userRotatePreference
-            if restoreRotate == "0" or restoreRotate == "1" then
-                ApplyRotateCVar(restoreRotate)
-            end
-        else
-            local current = GetCVar("rotateMinimap")
-            MinimapModule.userRotatePreference = current
-            SyncStoredRotatePreference(current, IsIndoors and IsIndoors(), false)
-        end
-        return
-    end
-
-    local isIndoor = IsIndoors and IsIndoors()
-    local shouldForceIndoorDisable = isIndoor
-    local currentRotate = GetCVar("rotateMinimap")
-    local preferredRotate = GetStoredRotatePreference() or MinimapModule.userRotatePreference or currentRotate
-
-    -- While in instance interiors, force rotateMinimap off if preferred/outdoor setting is ON.
-    if shouldForceIndoorDisable then
-        if currentRotate == "1" then
-            preferredRotate = "1"
-            MinimapModule.userRotatePreference = "1"
-            SetStoredRotatePreference("1")
-        end
-
-        if preferredRotate == "1" then
-            MinimapModule.forcingIndoorRotation = true
-            ApplyRotateCVar("0")
-        else
-            MinimapModule.forcingIndoorRotation = false
-        end
-        return
-    end
-
-    -- Outdoors, restore user preference after indoor force-disable.
-    if MinimapModule.forcingIndoorRotation then
-        local restoreRotate = preferredRotate or "1"
-        MinimapModule.forcingIndoorRotation = false
-        ApplyRotateCVar(restoreRotate)
-    end
-
-    -- Outdoors without force: treat current CVar as the user's chosen preference.
-    MinimapModule.userRotatePreference = currentRotate
-    SyncStoredRotatePreference(currentRotate, shouldForceIndoorDisable, MinimapModule.forcingIndoorRotation)
+    minimapConfig.indoorRotatePreference = nil
 end
 
 local function UpdateMinimapBackdropAlignment(force)
@@ -1553,7 +1465,6 @@ local function CreateMinimapBorderFrame(width, height)
         self._duiHeavyUpdateElapsed = self._duiHeavyUpdateElapsed + elapsed
         if self._duiHeavyUpdateElapsed >= 0.1 then
             self._duiHeavyUpdateElapsed = 0
-            UpdateIndoorRotationPolicy()
             UpdateMinimapMaskForRotation()
             UpdateMinimapBackdropAlignment(false)
             UpdateIndoorRotateScale()
@@ -2326,8 +2237,6 @@ end
 MinimapModule.UpdateRotation = function()
     if not IsDragonUIMinimapControlling() then return end
 
-    UpdateIndoorRotationPolicy()
-
     -- In hybrid mode, let SexyMap control the border visibility
     local isHybridMode = MinimapModule.sexyMapHybridMode
         or MinimapModule._allowExternalBorderControl
@@ -2341,12 +2250,7 @@ MinimapModule.UpdateRotation = function()
         end
     end
 
-    local rotateEnabled = GetCVar("rotateMinimap") == "1"
-    local keepPolicyLoop = MinimapModule.forcingIndoorRotation == true
-
-    -- Keep borderFrame visible while forcing indoor rotation OFF so OnUpdate can
-    -- detect leaving indoor areas and restore the user's rotation preference.
-    if rotateEnabled or keepPolicyLoop then
+    if GetCVar("rotateMinimap") == "1" then
         if MinimapModule.borderFrame then
             MinimapModule.borderFrame:Show()
         end
@@ -2654,6 +2558,8 @@ function MinimapModule:ApplyMinimapSystem()
     NormalizeLibDBIconRadius()
     HideIntegratedAddonMinimapButtons()
     
+    RestoreForcedIndoorRotation()
+
     -- Initialize the DragonUI minimap system
     self._initializingMinimapSystem = true
     self:InitializeMinimapSystem()
