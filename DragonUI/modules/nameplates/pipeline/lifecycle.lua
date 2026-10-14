@@ -16,6 +16,7 @@ function NP.lifecycle.InvalidatePlateVisuals(plateData, clearGuid)
     -- The native hit rect survives frame recycling; force a re-apply on the next gate pass.
     plateData._hitRectInset = nil
     plateData._hitRectApplied = nil
+    plateData._gatedSizeApplied = nil
     if clearGuid then
         NP.state.ClearPlateGUID(plateData)
     end

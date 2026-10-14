@@ -123,6 +123,14 @@ function NP.native_style.NeutralizeStatusBarVisual(bar)
         if bar.SetAlpha and bar.GetAlpha and bar:GetAlpha() ~= 0 then
             bar:SetAlpha(0)
         end
+        -- Bar clamp shrinks the drawn bar to nothing; the exact getter is used for the same reason as
+        -- the plate clamp (overridden Lua method), and h is guarded because a fresh bar can read 0.
+        if bar.SetClampRectInsets then
+            local h = (getHeight or function(f) return f:GetHeight() end)(bar)
+            if h and h > 0 then
+                bar:SetClampRectInsets(0, 0, 0, -h)
+            end
+        end
         return
     end
     if bar.SetAlpha and bar.GetAlpha and bar:GetAlpha() ~= 1 then
