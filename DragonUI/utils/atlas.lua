@@ -59,8 +59,8 @@ local rui_RingAlliance = assets..'CharacterPanel\\ring-alliance';
 local rui_RingHorde = assets..'CharacterPanel\\ring-horde';
 local rui_RingNeutral = assets..'CharacterPanel\\ring-neutral';
 local rui_CharInfoB = assets..'CharacterPanel\\characterinfoclasses-b';
-local rui_Scrollbar = assets..'CharacterPanel\\scrollbar';
-local rui_ScrollbarMid = assets..'CharacterPanel\\scrollbarmiddle';
+local rui_ScrollArrows = assets..'CharacterPanel\\scrollbararrows';
+local rui_ScrollThumb = assets..'CharacterPanel\\scrollbarthumb';
 local rui_CommonButtons = assets..'CharacterPanel\\commonbuttons';
 local rui_CommonIcons = assets..'CharacterPanel\\commonicons';
 local rui_ListExpand = assets..'CharacterPanel\\listexpand';
@@ -608,23 +608,23 @@ local atlasinfo = {
 	['ui-character-info-hunter-bg'] = { rui_CharInfoB, 197, 355, 0.583984, 0.776367, 0.001953, 0.695312 },
 
 	-- Retail's minimal scrollbar (the "small" family: 8px slider, 8x8 caps, 17x11 arrows).
-	['minimal-scrollbar-track-top'] = { rui_Scrollbar, 8, 8, 0.625, 0.75, 0.84375, 0.96875 },
-	['minimal-scrollbar-track-bottom'] = { rui_Scrollbar, 8, 8, 0.625, 0.75, 0.6875, 0.8125 },
-	['!minimal-scrollbar-track-middle'] = { rui_ScrollbarMid, 8, 1, 0.015625, 0.140625, 0, 0.000977 },
-	['minimal-scrollbar-thumb-top'] = { rui_Scrollbar, 8, 8, 0.3125, 0.4375, 0.84375, 0.96875 },
-	['minimal-scrollbar-thumb-bottom'] = { rui_Scrollbar, 8, 8, 0.609375, 0.734375, 0.484375, 0.609375 },
-	['minimal-scrollbar-thumb-middle'] = { rui_ScrollbarMid, 8, 715, 0.484375, 0.609375, 0.000977, 0.699219 },
-	['minimal-scrollbar-arrow-top'] = { rui_Scrollbar, 17, 11, 0.015625, 0.28125, 0.484375, 0.65625 },
-	['minimal-scrollbar-arrow-bottom'] = { rui_Scrollbar, 17, 11, 0.015625, 0.28125, 0.28125, 0.453125 },
+	['minimal-scrollbar-track-top'] = { rui_ScrollThumb, 8, 8, 22/32, 30/32, 2/32, 10/32 },
+	['minimal-scrollbar-track-bottom'] = { rui_ScrollThumb, 8, 8, 22/32, 30/32, 14/32, 22/32 },
+	['!minimal-scrollbar-track-middle'] = { rui_ScrollThumb, 8, 1, 12/32, 20/32, 14/32, 22/32 },
+	['minimal-scrollbar-small-thumb-top'] = { rui_ScrollThumb, 8, 8, 2/32, 10/32, 2/32, 10/32 },
+	['minimal-scrollbar-small-thumb-bottom'] = { rui_ScrollThumb, 8, 8, 2/32, 10/32, 14/32, 22/32 },
+	['minimal-scrollbar-small-thumb-middle'] = { rui_ScrollThumb, 8, 8, 12/32, 20/32, 2/32, 10/32 },
+	['minimal-scrollbar-arrow-top'] = { rui_ScrollArrows, 17, 11, 2/64, 19/64, 18/32, 29/32 },
+	['minimal-scrollbar-arrow-bottom'] = { rui_ScrollArrows, 17, 11, 2/64, 19/64, 2/32, 13/32 },
 
 	-- Retail's square button face and its icon glyphs, used by the model rotate controls.
-	['common-button-square-gray-up'] = { rui_CommonButtons, 42, 42, 0.000977, 0.250977, 0.536133, 0.786133 },
-	['common-button-square-gray-down'] = { rui_CommonButtons, 42, 42, 0.000977, 0.250977, 0.284180, 0.534180 },
-	['common-icon-rotateleft'] = { rui_CommonIcons, 20, 20, 0.126465, 0.175293, 0.756836, 0.854492 },
-	['common-icon-rotateright'] = { rui_CommonIcons, 20, 20, 0.126465, 0.175293, 0.856445, 0.954102 },
-	['common-icon-zoomin'] = { rui_CommonIcons, 25, 25, 0.504395, 0.629395, 0.000977, 0.250977 },
-	['common-icon-zoomout'] = { rui_CommonIcons, 25, 25, 0.756348, 0.881348, 0.000977, 0.250977 },
-	['common-icon-undo'] = { rui_CommonIcons, 25, 25, 0.378418, 0.503418, 0.252930, 0.502930 },
+	['common-button-square-gray-up'] = { rui_CommonButtons, 42, 42, 2/256, 126/256, 2/128, 126/128 },
+	['common-button-square-gray-down'] = { rui_CommonButtons, 42, 42, 130/256, 254/256, 2/128, 126/128 },
+	['common-icon-rotateleft'] = { rui_CommonIcons, 20, 20, 2/256, 66/256, 2/256, 66/256 },
+	['common-icon-rotateright'] = { rui_CommonIcons, 20, 20, 70/256, 134/256, 2/256, 66/256 },
+	['common-icon-zoomin'] = { rui_CommonIcons, 25, 25, 138/256, 202/256, 2/256, 66/256 },
+	['common-icon-zoomout'] = { rui_CommonIcons, 25, 25, 2/256, 66/256, 70/256, 134/256 },
+	['common-icon-undo'] = { rui_CommonIcons, 25, 25, 70/256, 134/256, 70/256, 134/256 },
 	-- Merchant pack (256x256): repair/sell icons + bottom band.
 	['spellicon-256x256-selljunk'] = { rui_MerchantPack, 72, 72, 0.001953, 0.142578, 0.250000, 0.531250 },
 	['spellicon-256x256-repair'] = { rui_MerchantPack, 72, 72, 0.146484, 0.287109, 0.250000, 0.531250 },
@@ -635,9 +635,9 @@ local atlasinfo = {
 	['honorsystem-portrait-horde'] = { rui_RingHorde, 50, 52, 0, 0.78125, 0, 0.8125 },
 	['honorsystem-portrait-neutral'] = { rui_RingNeutral, 50, 52, 0, 0.78125, 0, 0.8125 },
 
-	['common-icon-checkmark'] = { rui_CommonIcons, 25, 25, 0.000488, 0.125488, 0.504883, 0.754883 },
-	['common-icon-checkmark-yellow'] = { rui_CommonIcons, 25, 25, 0.126465, 0.251465, 0.000977, 0.250977 },
-	['common-icon-delete'] = { rui_CommonIcons, 20, 20, 0.000488, 0.049316, 0.756836, 0.854492 },
+	['common-icon-checkmark'] = { rui_CommonIcons, 25, 25, 138/256, 202/256, 70/256, 134/256 },
+	['common-icon-checkmark-yellow'] = { rui_CommonIcons, 25, 25, 2/256, 66/256, 138/256, 202/256 },
+	['common-icon-delete'] = { rui_CommonIcons, 20, 20, 70/256, 134/256, 138/256, 202/256 },
 
 	-- Collapsible list headers: a 3-piece bar whose right cap doubles as the expand chevron.
 	['options_listexpand_left'] = { rui_ListExpand, 12, 26, 0.007812, 0.101562, 0.656250, 0.859375 },
