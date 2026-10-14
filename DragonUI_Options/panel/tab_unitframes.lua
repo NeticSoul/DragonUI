@@ -66,6 +66,13 @@ local partyOrientationValues = {
     horizontal = LO["Horizontal"],
 }
 
+local comboLocationValues = {
+    auto   = LO["Auto"],
+    both   = LO["Player + Target"],
+    player = LO["Player Frame"],
+    target = LO["Target Frame"],
+}
+
 local function RefreshUnitFramesTabAfterToggle(refreshFunc)
     if refreshFunc then
         refreshFunc()
@@ -879,6 +886,46 @@ local subTabBuilders = {
     boss   = BuildBossSection,
 }
 
+-- Combo points live on the player and the target at once, so they sit above the per-frame sub-tabs too.
+local function BuildComboPointsSection(scroll)
+    local combo = C:AddSection(scroll, LO["Combo Points"])
+    local refreshCombo = function()
+        if addon.RefreshComboPointsSystem then
+            addon.RefreshComboPointsSystem()
+        end
+    end
+    C:AddToggle(combo, {
+        label = LO["Combo Points"],
+        desc = LO["Combo points as orbs under the player frame and/or gems around the target portrait."],
+        getFunc = function() return addon:IsModuleEnabled("combopoints") end,
+        setFunc = function(val)
+            C:EnsureModuleTable("combopoints")
+            addon.db.profile.modules.combopoints.enabled = val
+            refreshCombo()
+        end,
+    })
+    C:AddDropdown(combo, {
+        label = LO["Location"],
+        desc = LO["Auto follows the unit frame art: orbs under the player with the DragonUI art, gems on the target with the Forever art."],
+        dbPath = "combopoints.location",
+        values = comboLocationValues,
+        callback = refreshCombo,
+    })
+    C:AddDropdown(combo, {
+        label = LO["Orb Style"],
+        desc = LO["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."],
+        dbPath = "combopoints.style",
+        values = autoStyleValues,
+        callback = refreshCombo,
+    })
+    C:AddToggle(combo, {
+        label = LO["Hide When Empty"],
+        desc = LO["Hide the orbs and the gems at 0 points instead of showing them empty."],
+        dbPath = "combopoints.hide_empty",
+        callback = refreshCombo,
+    })
+end
+
 -- ============================================================================
 -- MAIN TAB BUILDER
 -- ============================================================================
@@ -935,6 +982,12 @@ local function BuildUnitframesTab(scroll)
             dbPath = "unitframe.center_names",
             callback = refreshSkins,
         })
+    end
+
+    -- Other classes only get combo points in a few vehicles, where their saved values still apply.
+    local _, playerClass = UnitClass("player")
+    if playerClass == "ROGUE" or playerClass == "DRUID" then
+        BuildComboPointsSection(scroll)
     end
 
     C:AddSubTabs(scroll, subTabs, activeSubTab, function(key)

@@ -22,6 +22,9 @@ local weakKey = { __mode = "k" }
 E.massQueue = E.massQueue or setmetatable({}, weakKey)
 E.functionQueue = E.functionQueue or setmetatable({}, weakKey)
 E.targetQueue = E.targetQueue or setmetatable({}, weakKey)
+-- Swapped in while the per-plate queue drains, so callbacks that queue again land next tick.
+local drainingTargetQueue = setmetatable({}, weakKey)
+local callbackSetPool = {}
 -- Pending full refreshes; weak-keyed, budgeted in ProcessQueues.
 E.pendingFullRefresh = E.pendingFullRefresh or setmetatable({}, weakKey)
 
@@ -45,8 +48,10 @@ function E.ResetQueues()
     for fn in pairs(E.functionQueue) do
         E.functionQueue[fn] = nil
     end
-    for plate in pairs(E.targetQueue) do
+    for plate, pending in pairs(E.targetQueue) do
         E.targetQueue[plate] = nil
+        wipe(pending)
+        callbackSetPool[#callbackSetPool + 1] = pending
     end
     for plate in pairs(E.pendingFullRefresh) do
         E.pendingFullRefresh[plate] = nil
@@ -65,9 +70,15 @@ function E.QueueFunction(func)
     end
 end
 
+-- A set per plate: with one slot, a same-frame UNIT_MANA or UNIT_AURA erased a queued cast start.
 function E.QueuePlate(plateData, func)
     if plateData and func then
-        E.targetQueue[plateData] = func
+        local pending = E.targetQueue[plateData]
+        if not pending then
+            pending = table.remove(callbackSetPool) or {}
+            E.targetQueue[plateData] = pending
+        end
+        pending[func] = true
     end
 end
 
@@ -147,11 +158,17 @@ function E.ProcessQueues()
         end
     end
 
-    for plateData, queuedFunction in pairs(E.targetQueue) do
-        E.targetQueue[plateData] = nil
+    local queue = E.targetQueue
+    E.targetQueue, drainingTargetQueue = drainingTargetQueue, queue
+    for plateData, pending in pairs(queue) do
+        queue[plateData] = nil
         if plateData and plateData.plate and plateData.plate.IsShown and plateData.plate:IsShown() then
-            queuedFunction(plateData)
+            for queuedFunction in pairs(pending) do
+                queuedFunction(plateData)
+            end
         end
+        wipe(pending)
+        callbackSetPool[#callbackSetPool + 1] = pending
     end
 end
 
