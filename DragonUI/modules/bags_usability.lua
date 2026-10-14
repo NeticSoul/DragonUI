@@ -163,8 +163,18 @@ local function IsWrongWeapon(link)
     return not (CLASS_WEAPONS[classFile] and CLASS_WEAPONS[classFile][key])
 end
 
+-- Recipe tooltips append the crafted item's tooltip after the "Use: Teaches you..." line; its armor type
+-- and level go red for the crafted item, not the recipe, so only the lines above it count.
+local function IsRecipeTooltipEnd(fs)
+    local text = fs and fs:GetText()
+    if not text then return false end
+    text = text:gsub("^|c%x%x%x%x%x%x%x%x", "")
+    local use = ITEM_SPELL_TRIGGER_ONUSE or "Use:"
+    return text:match("^%s*$") ~= nil or text:sub(1, #use) == use
+end
+
 -- Level/skill/class/race/reputation/proficiency, equippable or not. Returns nil if tooltip empty (uncached).
-local function TooltipHasRedRequirement(link, bag, slot)
+local function TooltipHasRedRequirement(link, bag, slot, isRecipe)
     if not scanTip then
         scanTip = CreateFrame("GameTooltip", "DragonUIUnusableScanTip", nil, "GameTooltipTemplate")
         scanTipName = scanTip:GetName()
@@ -190,6 +200,7 @@ local function TooltipHasRedRequirement(link, bag, slot)
         return r and r > 0.9 and g < 0.2 and b < 0.2 or false
     end
     for i = 2, numLines do
+        if isRecipe and IsRecipeTooltipEnd(_G[scanTipName .. "TextLeft" .. i]) then break end
         -- Weapon/armor subtype sits on the RIGHT of its line and is what reddens for a proficiency the class lacks.
         if IsRed(_G[scanTipName .. "TextLeft" .. i]) or IsRed(_G[scanTipName .. "TextRight" .. i]) then
             scanTip:Hide()
@@ -233,7 +244,8 @@ function addon:IsItemUnusableForTint(link, bag, slot)
         if reqLevel and reqLevel > UnitLevel("player") then
             unusable = true
         else
-            local red = TooltipHasRedRequirement(link, bag, slot)
+            local isRecipe = select(6, GetItemInfo(link)) == select(9, GetAuctionItemClasses())
+            local red = TooltipHasRedRequirement(link, bag, slot, isRecipe)
             if red == nil then
                 cacheable = false
                 unusable = false
