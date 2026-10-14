@@ -780,19 +780,110 @@ local function UpdateRune(button)
     end
 end
 
+-- One table, not locals: this file is at Lua's 200-local limit.
+local Runes = { size = 18, gap = 4 }
+
+-- Moved in the editor and with a saved spot (a layout reset can drop the spot while the flag stays).
+function Runes.Detached()
+    local widgets = addon.db.profile.widgets
+    local spot = widgets and widgets.dkrunes
+    return Runes.box and GetPlayerConfig().runes_detached and spot and spot.posX ~= nil and true or false
+end
+
+-- Moves the box onto UIParent's centre where it stands (it may sit on the runes), so its offsets are screen ones.
+function Runes.Pin()
+    local x, y = Runes.box:GetCenter()
+    local cx, cy = UIParent:GetCenter()
+    if not (x and cx) then return false end
+    Runes.box:ClearAllPoints()
+    Runes.box:SetPoint('CENTER', UIParent, 'CENTER', x - cx, y - cy)
+    return true
+end
+
+-- In the row under the player frame until moved in the editor; then on the box (widgets.dkrunes).
+function Runes.Place()
+    local first = _G.RuneButtonIndividual1
+    if not first then return end
+    first:ClearAllPoints()
+    if Runes.Detached() then
+        -- Off the runes first: the saved spot is not applied in combat, and the box may still hang from them.
+        Runes.Pin()
+        addon.ApplyWidgetPositionFromDB("dkrunes", Runes.box)
+        first:SetPoint('LEFT', Runes.box, 'LEFT', 0, 0)
+    else
+        first:SetPoint('CENTER', PlayerFrame, 'BOTTOM', -10, 15)
+    end
+end
+
+function Runes.SyncBox()
+    if not Runes.Detached() and _G.RuneButtonIndividual1 then
+        Runes.box:ClearAllPoints()
+        Runes.box:SetPoint('LEFT', _G.RuneButtonIndividual1, 'LEFT', 0, 0)
+    end
+end
+
+function Runes.Detach()
+    if Runes.Pin() then
+        addon.SaveUIFramePosition(Runes.box, "widgets", "dkrunes")
+        GetPlayerConfig().runes_detached = true
+    end
+    Runes.Place()
+end
+
+-- Attached, the box rides on the runes; turned around before the drag, they follow from the first move.
+function Runes.Grab()
+    local first = _G.RuneButtonIndividual1
+    if not first or Runes.Detached() or not Runes.Pin() then return end
+    first:ClearAllPoints()
+    first:SetPoint('LEFT', Runes.box, 'LEFT', 0, 0)
+end
+
+function Runes.CreateEditor()
+    if Runes.box or select(2, UnitClass("player")) ~= "DEATHKNIGHT" then return end
+    Runes.box = addon.CreateUIFrame(6 * Runes.size + 5 * Runes.gap, Runes.size, "DKRunes")
+    -- Before the stock handler's StartMoving: re-anchoring a frame mid-move breaks the drag.
+    Runes.startDrag = Runes.box:GetScript("OnDragStart")
+    Runes.box:SetScript("OnDragStart", function(self, ...)
+        Runes.Grab()
+        if Runes.startDrag then return Runes.startDrag(self, ...) end
+    end)
+    Runes.box:HookScript("OnDragStop", Runes.Detach)
+    addon:RegisterEditableFrame({
+        name = "dkrunes",
+        frame = Runes.box,
+        configPath = { "widgets", "dkrunes" },
+        editorVisible = function()
+            return IsPlayerModuleEnabled() and GetPlayerConfig().show_runes ~= false
+        end,
+        showTest = Runes.SyncBox,
+        onNudge = Runes.Detach,
+        resetPosition = function()
+            GetPlayerConfig().runes_detached = false
+            Runes.Place()
+            Runes.SyncBox()
+        end,
+        isDefaultPosition = function()
+            return not Runes.Detached()
+        end,
+        applyPosition = Runes.Place,
+        module = Module,
+    })
+end
+
 -- Setup Death Knight rune frame
 local function SetupRuneFrame()
     -- WoW automatically handles rune availability for DKs
     -- No need to manually check the class
+    Runes.CreateEditor()
 
     for index = 1, 6 do
         local button = _G['RuneButtonIndividual' .. index]
         if button then
             button:ClearAllPoints()
             if index > 1 then
-                button:SetPoint('LEFT', _G['RuneButtonIndividual' .. (index - 1)], 'RIGHT', 4, 0)
+                button:SetPoint('LEFT', _G['RuneButtonIndividual' .. (index - 1)], 'RIGHT', Runes.gap, 0)
             else
-                button:SetPoint('CENTER', PlayerFrame, 'BOTTOM', -10, 15)
+                Runes.Place()
             end
             UpdateRune(button)
 

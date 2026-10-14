@@ -552,4 +552,8 @@ function UF.RefreshSkins()
     if addon.RefreshDarkModeUnitFrames then
         addon.RefreshDarkModeUnitFrames()
     end
+    -- Combo points' Auto location and orb style follow the frame art.
+    if addon.RefreshComboPointsSystem then
+        addon.RefreshComboPointsSystem()
+    end
 end

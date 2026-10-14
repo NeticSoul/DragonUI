@@ -231,6 +231,13 @@ local defaults = {
             class_color = false,  -- Health bar in the class colour
             bar_text = false,     -- Percentage and value on the bars
         },
+        -- Combo points (the enable flag is modules.combopoints.enabled)
+        combopoints = {
+            location = "auto",    -- auto | both | player | target; auto follows unitframe.frame_style
+            style = "auto",       -- auto | dragonui | forever: art of the player bar (retail or c60 orbs); auto follows unitframe.frame_style
+            hide_empty = false,   -- Hide the bar and the gems at 0 points instead of showing empty ones
+            detached = false,     -- Player bar moved in the editor: follows widgets.combopoints instead of the player frame
+        },
         -- Swing timers, one table per bar (the enable flag is modules.swingtimer.enabled)
         swingtimer = {
             mainhand = {
@@ -718,6 +725,7 @@ local defaults = {
                 alwaysShowAlternateManaText = false,
                 alternateManaFormat = "both",
                 show_runes = true, -- DK rune display (used by player.lua)
+                runes_detached = false, -- DK runes moved in the editor: follow widgets.dkrunes instead of the player frame
                 show_rest_glow = true, -- Show golden glow when resting (inn/city)
                 combat_flash_enabled = true, -- Enable combat flash pulse animation
                 combat_flash_opacity = 1.0, -- Opacity multiplier for combat flash (0.0 - 1.0)
@@ -974,6 +982,9 @@ local defaults = {
             },
             personalresource = {
                 enabled = false, -- Small health and power bar under the character (settings in editor mode)
+            },
+            combopoints = {
+                enabled = true, -- Retail orb bar under the player and/or Forever gem arc on the target (Options > Unit Frames)
             },
             swingtimer = {
                 enabled = false, -- Main hand, off hand and ranged swing bars (settings in editor mode)

@@ -700,6 +700,13 @@ L["Plays a sound and flashes the screen edges when your HP drops below the thres
 L["Personal Resource Display"] = true
 L["PersonalResource"] = true
 L["Add Health and Resource below your Character."] = true
+L["Combo Points"] = true
+L["Combo points as orbs under the player frame and/or gems around the target portrait."] = true
+L["ComboPoints"] = "Combo Points"
+L["DKRunes"] = "Death Knight Runes"
+L["Orb Style"] = true
+L["Hide When Empty"] = true
+L["Hide the orbs and the gems at 0 points instead of showing them empty."] = true
 L["Swing Timer"] = true
 L["Show a bar with the time left until each weapon's next swing."] = true
 L["SwingTimerMainHand"] = "Main Hand Swing Timer"

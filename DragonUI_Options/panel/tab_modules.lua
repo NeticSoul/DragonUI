@@ -54,7 +54,7 @@ end
 
 -- Sections of the individual module list; the titles are the options tab and group names (LO keys).
 local ADVANCED_SECTIONS = {
-    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "auraborders", "auracooldowns" } },
+    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "auraborders", "auracooldowns" } },
     { title = "Bars", modules = { "mainbars", "vehicle", "stance", "petbar", "multicast", "extrabar1", "buttons", "cooldowns", "noop", "keybinding" } },
     { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance", "addonmanager" } },
     { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "professions", "talents", "worldmap", "loot_skin" } },
@@ -246,6 +246,11 @@ local function BuildModulesTab(scroll)
             questdialog = true,
             keypress = true,
         }
+        -- Like its Unit Frames section: classes without combo points only meet them in a few vehicles.
+        local _, playerClass = UnitClass("player")
+        if playerClass ~= "ROGUE" and playerClass ~= "DRUID" then
+            hiddenAdvancedModules.combopoints = true
+        end
 
         local function AddAdvancedToggle(section, moduleName)
             local info = MR:GetInfo(moduleName)

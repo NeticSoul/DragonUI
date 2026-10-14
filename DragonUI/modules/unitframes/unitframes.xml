@@ -23,6 +23,7 @@
     <Script file="party.lua"/>
     <Script file="pet.lua"/>
     <Script file="boss.lua"/>
+    <Script file="combopoints.lua"/>
 
     <!-- UnitFrame Layers module (hooks all above — must load LAST) -->
     <Script file="unitframe_layers.lua"/>

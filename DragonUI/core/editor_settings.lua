@@ -385,6 +385,9 @@ end
 R.swingTimerToggle = function()
     if addon.RefreshSwingTimerSystem then addon.RefreshSwingTimerSystem() end
 end
+R.comboPoints = function()
+    if addon.RefreshComboPointsSystem then addon.RefreshComboPointsSystem() end
+end
 
 E.refresh = R
 
@@ -1747,6 +1750,16 @@ E.Register("personalresource", { settings = {
     Check(T("Show Bar Text"), "personalresource.bar_text", R.personalResource),
 } })
 
+-- The player's combo point orbs; their location and the target gems stay in Options > Unit Frames.
+E.Register("combopoints", { settings = {
+    Drop(T("Orb Style"), "combopoints.style", STYLE_ITEMS, R.comboPoints),
+    Check(T("Hide When Empty"), "combopoints.hide_empty", R.comboPoints, {
+        tooltip = T("Hide the orbs and the gems at 0 points instead of showing them empty.") }),
+} })
+
+-- Position only: the dialog keeps its coordinate rows and the reset that re-attaches them to the player frame.
+E.Register("dkrunes", { settings = {} })
+
 -- Forever's swing timer rows, ranges at our HUD's 0.72 (see swingtimer.lua), one dialog per bar.
 local function SwingTimerSettings(hand)
     local path = "swingtimer." .. hand .. "."
@@ -1976,7 +1989,7 @@ Fades("boss", Dotted("unitframe.boss"), R.boss)
 -- Dialogs with few settings and no wide dropdowns shrink to the width of their coordinate rows.
 for _, frameName in ipairs({
     "boss", "bagsbar", "stance", "totembar", "xpbar", "repbar", "tooltip", "questtracker",
-    "weapon_enchants", "tot", "fot", "petbar",
+    "weapon_enchants", "tot", "fot", "petbar", "combopoints", "dkrunes",
 }) do
     local def = E.Get(frameName)
     if def then def.compact = true end
