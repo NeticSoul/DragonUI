@@ -386,9 +386,9 @@ local VISUAL_ALPHA_FIELDS = {
     "minaThreatTex",
 }
 
-local function KeepNameRowChildOpaque(fs)
+local function KeepNameRowChildOpaque(fs, forcedAlpha)
     if fs and fs.SetAlpha then
-        fs:SetAlpha(1)
+        fs:SetAlpha(forcedAlpha or 1)
     end
 end
 
@@ -412,10 +412,13 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
                 obj:SetAlpha(compensatedAlpha)
             end
         end
-        KeepNameRowChildOpaque(plateData.minaName)
-        KeepNameRowChildOpaque(plateData.minaHpPct)
-        KeepNameRowChildOpaque(plateData.minaSubTitle)
-        KeepNameRowChildOpaque(plateData.minaBossSkull)
+        -- Children keep alpha 1 while the plate dims, but an alpha-0 plate (onlyTargetPlates
+        -- filter) must not leave the name text floating on its own.
+        local forcedAlpha = compensatedAlpha == 0 and 0 or nil
+        KeepNameRowChildOpaque(plateData.minaName, forcedAlpha)
+        KeepNameRowChildOpaque(plateData.minaHpPct, forcedAlpha)
+        KeepNameRowChildOpaque(plateData.minaSubTitle, forcedAlpha)
+        KeepNameRowChildOpaque(plateData.minaBossSkull, forcedAlpha)
     end
 
     -- Cast sync may reset bar alpha; re-apply after engine step 7.

@@ -317,6 +317,7 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityValue = cfg.opacityNonTarget or 0.5
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
     NP.module._opacityFullParty = (cfg.opacityFullParty == true)
+    NP.module._onlyTargetPlates = cfg.onlyTargetPlates == true
     NP.module._retailBehavior = NP.config.IsRetailBehavior()
     NP.module._healthTextFormat = NP.config.GetHealthTextFormat()
     NP.module._healthTextPlacement = NP.config.GetHealthTextPlacement()
@@ -480,18 +481,25 @@ local function EngineOnUpdate(_, elapsed)
     NP.layout.UpdateDepthOrdering(elapsed)
 
     -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
-    if NP.module._opacityEnabled then
+    -- onlyTargetPlates: everything outside the gate collapses to alpha 0 (target-only filter).
+    local onlyTarget = NP.module._onlyTargetPlates
+    if NP.module._opacityEnabled or onlyTarget then
         local fullParty = NP.module._opacityFullParty
+        local baseAlpha = NP.module._opacityEnabled and NP.module._opacityValue or 1.0
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
             if pl and pl.IsShown and pl:IsShown() then
                 local isTarget = NP.identity.IsTargetPlateVisual(pd, hasTarget)
                 SyncTargetVisual(pd, isTarget)
-                local visualAlpha = NP.module._opacityValue
-                if isTarget
-                    or ((not hasTarget) and NP.module._opacityFullNoTarget)
-                    or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
-                    visualAlpha = 1.0
+                local visualAlpha = baseAlpha
+                if not onlyTarget or NP.gather.IsOnlyTargetPlateAllowed(pd) then
+                    if isTarget
+                        or ((not hasTarget) and NP.module._opacityFullNoTarget)
+                        or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
+                        visualAlpha = 1.0
+                    end
+                else
+                    visualAlpha = 0.0
                 end
                 NP.layout.SetPlateVisualAlpha(pd, visualAlpha)
             end
