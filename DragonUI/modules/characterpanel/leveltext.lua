@@ -9,10 +9,27 @@ local function classColored(text, classFile)
     return string.format("|cff%02x%02x%02x%s|r", c.r * 255, c.g * 255, c.b * 255, text)
 end
 
+-- How retail's PLAYER_LEVEL joins spec and class inside the class colour, per locale; the rest put spec first.
+local SPEC_CLASS_ORDER = {
+    esES = "class spec", esMX = "class spec", frFR = "class spec",
+    ruRU = "class (spec)", ptBR = "class (spec)", deDE = "spec-class", zhTW = "specclass",
+}
+
+local function specAndClass(classDisplay)
+    local spec = CP.ActiveSpec and CP.ActiveSpec()
+    if not spec or spec == "" then return classDisplay end
+    local order = SPEC_CLASS_ORDER[GetLocale()]
+    if order == "class spec" then return classDisplay .. " " .. spec end
+    if order == "class (spec)" then return classDisplay .. " (" .. spec .. ")" end
+    if order == "spec-class" then return spec .. "-" .. classDisplay end
+    if order == "specclass" then return spec .. classDisplay end
+    return spec .. " " .. classDisplay
+end
+
 local function levelString()
     local classDisplay, classFile = UnitClass("player")
     return string.format(PLAYER_LEVEL, UnitLevel("player") or 1, UnitRace("player") or "",
-                         classColored(classDisplay or "", classFile))
+                         classColored(specAndClass(classDisplay or ""), classFile))
 end
 
 -- Retail lifts the level line from -42 to -36 when a second line shows under it, centring the pair.
@@ -77,7 +94,8 @@ end
 CP.RefreshLevelText = rewriteLevelLine
 
 local levelEvents = CreateFrame("Frame")
-for _, event in ipairs({ "PLAYER_GUILD_UPDATE", "PLAYER_ENTERING_WORLD" }) do
+for _, event in ipairs({ "PLAYER_GUILD_UPDATE", "PLAYER_ENTERING_WORLD",
+                         "PLAYER_TALENT_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED" }) do
     levelEvents:RegisterEvent(event)
 end
 levelEvents:SetScript("OnEvent", rewriteLevelLine)

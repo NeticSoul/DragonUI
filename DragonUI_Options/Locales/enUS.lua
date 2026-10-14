@@ -122,7 +122,9 @@ L["Modern reskin of the Blizzard character window."] = true
 L["Enable Character Panel"] = true
 L["Apply the DragonUI reskin to the character window."] = true
 L["Class Portrait"] = true
-L["Show your class icon in the portrait instead of your character's face."] = true
+L["Portrait"] = true
+L["Class Icon"] = true
+L["Specialization Icon"] = true
 L["Class-Colored Level Text"] = true
 L["Color the class name in the \"Level X Race Class\" line."] = true
 -- Pets & Mounts

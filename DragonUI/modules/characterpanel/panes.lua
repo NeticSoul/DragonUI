@@ -7,10 +7,27 @@ local CP = addon.CharacterPanel
 -- their accessors exist.
 
 local STATS, TITLES, EQUIPMENT = 1, 2, 3
+local MARBLE = addon._dir .. "UI\\ui-background-marble"
+
+-- Retail's InsetRight is an InsetFrameTemplate: tiled marble under its rim, darker than the body.
+local function paneMarble(inset)
+    if not inset._duiMarble then
+        local bg = inset:CreateTexture(nil, "BACKGROUND")
+        bg:SetTexture(MARBLE, "REPEAT", "REPEAT")
+        bg:SetHorizTile(true)
+        bg:SetVertTile(true)
+        bg:SetAllPoints(inset)
+        inset._duiMarble = bg
+    end
+    return inset._duiMarble
+end
 
 function CP.ShowSidebarPane(index)
     local cf = _G.CharacterFrame
     if not cf or not cf.InsetRight then return end
+
+    -- The stats tab keeps the body showing through, behind its class crest.
+    paneMarble(cf.InsetRight):SetShownCompat(index ~= STATS)
 
     local stats = CP._sidebar
     local titles = CP.TitlesPane and CP.TitlesPane()

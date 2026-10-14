@@ -77,20 +77,28 @@ local function BuildCharacterSubTab(scroll)
         requiresReload = true,
     })
 
-    C:AddToggle(cpSection, {
-        label = LO["Class Portrait"],
-        desc = LO["Show your class icon in the portrait instead of your character's face."],
+    -- Keys sort in display order: the embedded dropdown lists them alphabetically.
+    C:AddDropdown(cpSection, {
+        label = LO["Portrait"],
+        values = {
+            character = LO["Character"],
+            class = LO["Class Icon"],
+            spec = LO["Specialization Icon"],
+        },
+        width = 200,
         getFunc = function()
-            return GetModuleField("characterpanel", "class_portrait") ~= false
+            local CP = addon.CharacterPanel
+            return CP and CP.PortraitStyle and CP.PortraitStyle() or "spec"
         end,
         setFunc = function(val)
-            EnsureModuleTable("characterpanel").class_portrait = val
+            local cfg = EnsureModuleTable("characterpanel")
+            cfg.portrait_style = val
+            cfg.class_portrait = nil
             if addon.CharacterPanel and addon.CharacterPanel.UpdatePortrait then
                 addon.CharacterPanel.UpdatePortrait()
             end
         end,
         disabled = function() return not IsEnabled("characterpanel") end,
-        requiresReload = false,
     })
 
     C:AddToggle(cpSection, {
