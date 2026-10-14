@@ -759,6 +759,19 @@ local function BuildEnhancementsTab(scroll)
         end,
         disabled = function() return not IsEnabled("merchant") end,
     })
+
+    -- ====================================================================
+    -- LOOT ROLL
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local lootRollSection = C:AddSection(scroll, LO["Loot Roll"])
+
+    C:AddToggle(lootRollSection, {
+        label = LO["Auto Greed/DE"],
+        desc = LO["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."],
+        dbPath = "lootroll.autoRoll",
+        requiresReload = false,
+    })
 end
 
 -- Register the tab (order 11 = after Quest Tracker, before Profiles)

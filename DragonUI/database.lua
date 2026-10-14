@@ -288,6 +288,7 @@ local defaults = {
             anchor = "BOTTOM",
             x = 0,
             y = 220,
+            autoRoll = false, -- Auto greed/disenchant green BoE rolls at max level
         },
         -- ACTIONBAR SETTINGS
         mainbars = {

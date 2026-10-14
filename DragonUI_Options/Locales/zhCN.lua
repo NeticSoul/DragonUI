@@ -51,6 +51,10 @@ L["Choose the language used by the DragonUI interface."] = "选择DragonUI界面
 L["Follow the client language"] = "跟随客户端语言"
 L["Number Abbreviations"] = "数字缩写"
 L["How unit frames, nameplates and the resource display shorten large numbers."] = "单位框架、姓名板和个人资源显示中大数字的缩写方式。"
+
+-- Loot Roll
+L["Auto Greed/DE"] = "自动贪婪/分解"
+L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."] = "在可用时自动对绿色品质物品选择贪婪或分解。仅在满级时有效。"
 L["Settings Window"] = "设置窗口"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "此窗口在界面缩放之上的大小；1.0 与其他面板相同。窗口不会超出屏幕。"
 

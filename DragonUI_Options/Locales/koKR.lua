@@ -57,6 +57,10 @@ L["Choose the language used by the DragonUI interface."] = "DragonUI 인터페�
 L["Follow the client language"] = "클라이언트 언어 따르기"
 L["Number Abbreviations"] = "숫자 단위 표기"
 L["How unit frames, nameplates and the resource display shorten large numbers."] = "유닛 프레임, 이름표, 자원 표시에서 큰 숫자를 줄여 쓰는 방식입니다."
+
+-- Loot Roll
+L["Auto Greed/DE"] = "자동 탐욕/분해"
+L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."] = "사용 가능한 경우 초록색 등급 아이템에 대해 자동으로 탐욕 또는 분해를 선택합니다. 최대 레벨에서만 작동합니다."
 L["Settings Window"] = "설정 창"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "UI 크기에 더해 적용되는 이 창의 크기입니다. 1.0이 다른 창과 같습니다. 화면을 벗어나지 않습니다."
 
