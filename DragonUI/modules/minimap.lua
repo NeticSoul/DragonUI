@@ -90,6 +90,8 @@ local FOREVER_BAND_RADIUS = 99.75
 -- The day/night ring doubles as the button border; its band sits further in than ours, so it draws larger.
 local FOREVER_BUTTON_RING_GROWTH = 1.1
 local FOREVER_BUTTON_RING_ATLAS = "Minimap-Forever-Frame-Cycle"
+-- Zoom buttons' centre x, y and width, height (Minimap.xml): Retail's art, riding Forever's wider ring.
+local FOREVER_ZOOM_IN, FOREVER_ZOOM_OUT = { 88, -68, 17, 17 }, { 72, -84, 17, 9 }
 -- 3.3.5a's LibDBIcon puts launchers a fixed 80 units out; only their scale can move them.
 local LIBDBICON_ORBIT = 80
 local MAP_OFFSET_Y = -25
@@ -534,6 +536,28 @@ local function SyncCornerIconLevels(foreverActive)
     LiftAbove(MiniMapInstanceDifficulty, "InstanceDifficultyLevel", cover)
     LiftAbove(MiniMapBattlefieldFrame, "BattlefieldLevel", square and cover or nil)
     LiftAbove(MiniMapMailFrame, "MailLevel", square and cover or nil)
+    local foreverRound = foreverActive and not square
+    LiftAbove(MinimapZoomIn, "ZoomInLevel", foreverRound and cover or nil)
+    LiftAbove(MinimapZoomOut, "ZoomOutLevel", foreverRound and cover or nil)
+end
+
+local function UpdateZoomButtonsLayout()
+    if not MinimapZoomIn or not MinimapZoomOut or IsHybridMinimapModeActive() then return end
+    MinimapZoomIn:ClearAllPoints()
+    MinimapZoomOut:ClearAllPoints()
+    if IsForeverActive() and not IsSquareLayout() then
+        for _, spot in ipairs({ { MinimapZoomIn, FOREVER_ZOOM_IN }, { MinimapZoomOut, FOREVER_ZOOM_OUT } }) do
+            local button, place = spot[1], spot[2]
+            local unit = Minimap:GetWidth() * Minimap:GetEffectiveScale() / button:GetEffectiveScale() / FOREVER_MAP_SIZE
+            button:SetSize(place[3] * unit, place[4] * unit)
+            button:SetPoint("CENTER", Minimap, "CENTER", place[1] * unit, place[2] * unit)
+        end
+    else
+        MinimapZoomIn:SetPoint("BOTTOMRIGHT", 0, 15)
+        MinimapZoomIn:SetSize(25, 24)
+        MinimapZoomOut:SetPoint("BOTTOMRIGHT", -22, 0)
+        MinimapZoomOut:SetSize(20, 12)
+    end
 end
 
 -- The collector asks this when it hands a button back to the map; a module restore keeps the original scale.
@@ -597,13 +621,49 @@ local function SyncThinSquareBorder()
 end
 MinimapModule.SyncThinSquareBorder = SyncThinSquareBorder
 
+-- Calendar and tracking art share one 21x19 cell: pushed art sits one cell pixel down-right.
+local function PressShift(frame)
+    return frame:GetWidth() / 21, frame:GetHeight() / 19
+end
+
+-- The ADD highlight must follow the pushed art's shift or the icon draws twice.
+local function AnchorPushedHighlight(button, cellFrame, pushed)
+    local highlightTexture = button:GetHighlightTexture()
+    if not highlightTexture then
+        return
+    end
+    if pushed == nil then
+        pushed = button:GetButtonState() == "PUSHED"
+    end
+    local dx, dy = 0, 0
+    if pushed then
+        dx, dy = PressShift(cellFrame)
+    end
+    highlightTexture:ClearAllPoints()
+    highlightTexture:SetPoint("TOPLEFT", button, "TOPLEFT", dx, -dy)
+    highlightTexture:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", dx, -dy)
+end
+
+-- The plate's shadow rim widens it right and down, so its centre sits up-left of the frame's.
+local function TrackingPlateCenter(pushed)
+    local w, h = MiniMapTracking:GetWidth(), MiniMapTracking:GetHeight()
+    local x, y = -2 * w / 21, 1.5 * h / 19
+    if pushed then
+        local sx, sy = PressShift(MiniMapTracking)
+        x, y = x + sx, y - sy
+    end
+    return x, y
+end
+
 local function UpdateMailPosition()
     if not MiniMapMailFrame or not MiniMapTracking then return end
     MiniMapMailFrame:ClearAllPoints()
+    local plateX, plateY = TrackingPlateCenter()
     if IsSquareLayout() then
-        MiniMapMailFrame:SetPoint("RIGHT", MiniMapTracking, "LEFT", -3, 0)
+        MiniMapMailFrame:SetPoint("RIGHT", MiniMapTracking, "LEFT", -3, plateY)
     else
-        MiniMapMailFrame:SetPoint("TOP", MiniMapTracking, "BOTTOM", 0, -3)
+        -- The plate ends two cell px above the frame's bottom; keep 3 units under what is drawn.
+        MiniMapMailFrame:SetPoint("TOP", MiniMapTracking, "BOTTOM", plateX, 2 * MiniMapTracking:GetHeight() / 19 - 3)
     end
 end
 
@@ -707,6 +767,7 @@ local function UpdateForeverStyle()
     UpdateMinimapCircleSize()
     SyncForeverOverlay()
     SyncCornerIconLevels(active)
+    UpdateZoomButtonsLayout()
     if square or GetCVar("rotateMinimap") ~= "1" then
         ResetRingRotation()
     end
@@ -761,7 +822,7 @@ local function SetupSecureHooks()
         if not MinimapModule.applied then return end
         if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
             MiniMapTrackingIcon:ClearAllPoints()
-            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
+            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter())
         end
     end
     hooksecurefunc("CloseDropDownMenus", MinimapModule.hooks.CloseDropDownMenus)
@@ -814,7 +875,7 @@ local function UpdateCalendarDate()
 
     local highlightTexture = gameTimeFrame:GetHighlightTexture()
     if highlightTexture then
-        highlightTexture:SetAllPoints(gameTimeFrame)
+        AnchorPushedHighlight(gameTimeFrame, gameTimeFrame)
         highlightTexture:SetAtlasTexture('Minimap-Calendar-' .. day .. '-Highlight', true)
     end
 
@@ -1006,6 +1067,24 @@ local function ReplaceBlizzardFrame(frame)
                     UpdateCalendarDate()
                 end
             end)
+            gameTimeFrame:HookScript("OnMouseDown", function(self)
+                if MinimapModule.applied then
+                    AnchorPushedHighlight(self, self, true)
+                    -- GetButtonState lags the mouse events by a frame.
+                    addon:After(0, function() AnchorPushedHighlight(self, self) end)
+                end
+            end)
+            gameTimeFrame:HookScript("OnMouseUp", function(self)
+                if MinimapModule.applied then
+                    addon:After(0, function() AnchorPushedHighlight(self, self) end)
+                end
+            end)
+            -- Released off the button, OnMouseUp never arrives; resync before the highlight shows again.
+            gameTimeFrame:HookScript("OnEnter", function(self)
+                if MinimapModule.applied then
+                    AnchorPushedHighlight(self, self)
+                end
+            end)
         end
     end
 
@@ -1036,7 +1115,8 @@ local function ReplaceBlizzardFrame(frame)
 
         local minimapTracking = MiniMapTracking
         minimapTracking:ClearAllPoints()
-        minimapTracking:SetPoint("RIGHT", MinimapBorderTop, "LEFT", -3, 0)
+        -- Mirrors the calendar's gap: the plate stops 3 cell px short of this frame's right edge.
+        minimapTracking:SetPoint("RIGHT", MinimapBorderTop, "LEFT", -3 + 3 * 26 / 21, -1)
         minimapTracking:SetSize(26, 24)
 
         local minimapMailFrame = MiniMapMailFrame
@@ -1054,9 +1134,10 @@ local function ReplaceBlizzardFrame(frame)
 
         local minimapTrackingButton = _G[minimapTracking:GetName() .. 'Button']
         minimapTrackingButton:ClearAllPoints()
-        minimapTrackingButton:SetPoint("CENTER", 0, 0)
+        minimapTrackingButton:SetPoint("CENTER", minimapTracking, "CENTER", TrackingPlateCenter())
 
-        minimapTrackingButton:SetSize(17, 15)
+        -- 17x15 binoculars plus room for the press shift (gen_minimap_tracking.py).
+        minimapTrackingButton:SetSize(20, 18)
         minimapTrackingButton:SetHitRectInsets(0, 0, 0, 0)
 
         -- Left clicks stay Blizzard's own OnClick: the tracking menu must open from secure code.
@@ -1248,10 +1329,6 @@ local function ReplaceBlizzardFrame(frame)
         UpdateForeverStyle()
 
         local zoomInButton = MinimapZoomIn
-        zoomInButton:ClearAllPoints()
-        zoomInButton:SetPoint("BOTTOMRIGHT", 0, 15)
-
-        zoomInButton:SetSize(25, 24)
         zoomInButton:SetHitRectInsets(0, 0, 0, 0)
 
         local normalTexture = zoomInButton:GetNormalTexture()
@@ -1271,10 +1348,6 @@ local function ReplaceBlizzardFrame(frame)
         disabledTexture:SetAtlasTexture('Minimap-ZoomIn-Pushed', true)
 
         local zoomOutButton = MinimapZoomOut
-        zoomOutButton:ClearAllPoints()
-        zoomOutButton:SetPoint("BOTTOMRIGHT", -22, 0)
-
-        zoomOutButton:SetSize(20, 12)
         zoomOutButton:SetHitRectInsets(0, 0, 0, 0)
 
         local normalTexture = zoomOutButton:GetNormalTexture()
@@ -1292,6 +1365,8 @@ local function ReplaceBlizzardFrame(frame)
         local disabledTexture = zoomOutButton:GetDisabledTexture()
         disabledTexture:SetAllPoints(zoomOutButton)
         disabledTexture:SetAtlasTexture('Minimap-ZoomOut-Pushed', true)
+
+        UpdateZoomButtonsLayout()
     end -- not isHybridMode (backdrop, border, circle, zoom buttons)
 
     -- Reposition a single WorldStateCaptureBar to below the minimap
@@ -1386,28 +1461,44 @@ local function ReplaceBlizzardFrame(frame)
     if not isHybridMode then
         --  MANUALLY CONTROL BUTTON MOVEMENT
         minimapTrackingButton:SetScript("OnMouseDown", function(self, button)
+            AnchorPushedHighlight(self, MiniMapTracking, true)
+            -- GetButtonState lags the mouse events by a frame.
+            addon:After(0, function() AnchorPushedHighlight(self, MiniMapTracking) end)
             if button == "LeftButton" then
-                -- Move the icon/button manually - YOU CONTROL HOW MUCH
+                -- Old style's tracking icon gets the same press shift as the pushed art.
                 if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
-                    -- Move icon OLD STYLE: 1 pixel down-right (subtle)
                     MiniMapTrackingIcon:ClearAllPoints()
-                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 2, -2)
+                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter(true))
                 end
             end
         end)
 
         minimapTrackingButton:SetScript("OnMouseUp", function(self, button)
+            addon:After(0, function() AnchorPushedHighlight(self, MiniMapTracking) end)
             if button == "LeftButton" then
                 -- Restore original position on release
                 if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
                     MiniMapTrackingIcon:ClearAllPoints()
-                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
+                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter())
                 end
             elseif button == "RightButton" and self:IsMouseOver() then
                 SetTracking()
                 MinimapModule:UpdateTrackingIcon()
             end
         end)
+
+        if not minimapTrackingButton.DragonUI_PushedHighlightHooked then
+            minimapTrackingButton.DragonUI_PushedHighlightHooked = true
+            minimapTrackingButton:HookScript("OnEnter", function(self)
+                if not MinimapModule.applied then return end
+                -- Released off the button, OnMouseUp never arrives; resync before the highlight shows again.
+                AnchorPushedHighlight(self, MiniMapTracking)
+                -- Blizzard's ANCHOR_RIGHT lays the tooltip over the icon and the zone bar; Retail opens it left.
+                GameTooltip:SetOwner(self, "ANCHOR_NONE")
+                GameTooltip:SetPoint("TOPRIGHT", MiniMapTracking, "TOPLEFT", -2, 0)
+                GameTooltip:SetTracking()
+            end)
+        end
 
         --  HOOK TO RESET ICON POSITION AFTER CLICKS
     end -- not isHybridMode (tracking button scripts)
@@ -2337,7 +2428,7 @@ function MinimapModule:UpdateTrackingIcon()
             MiniMapTrackingIcon:SetSize(20, 20)
             MiniMapTrackingIcon:SetAlpha(1)
             MiniMapTrackingIcon:ClearAllPoints()
-            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
+            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter())
 
             -- Clear button textures so they don't interfere with the specific icon
             MiniMapTrackingButton:SetNormalTexture('')
