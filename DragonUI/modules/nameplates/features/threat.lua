@@ -54,7 +54,9 @@ function NP.threat.IsCombatAggroPlate(plateData)
     if reaction == "FRIENDLY" or unitType == "PLAYER" then
         return false
     end
-    return NP.threat.ResolveAggroStatus(plateData) > 0
+    -- ProcessThreatTransitions already resolved this per bucket; resolving again per frame here
+    -- would run UnitDetailedThreatSituation for every plate and skip that budget entirely.
+    return (plateData._lastThreatStatus or 0) > 0
 end
 
 -- With unit token: UnitDetailedThreatSituation; else native glow color buckets.

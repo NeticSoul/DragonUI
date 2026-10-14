@@ -412,8 +412,8 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
                 obj:SetAlpha(compensatedAlpha)
             end
         end
-        -- Children keep alpha 1 while the plate dims, but an alpha-0 plate (onlyTargetPlates
-        -- filter) must not leave the name text floating on its own.
+        -- Children keep alpha 1 while the plate dims, but an alpha-0 plate (onlyTargetPlates filter)
+        -- must not leave the name text floating on its own.
         local forcedAlpha = compensatedAlpha == 0 and 0 or nil
         KeepNameRowChildOpaque(plateData.minaName, forcedAlpha)
         KeepNameRowChildOpaque(plateData.minaHpPct, forcedAlpha)
@@ -435,6 +435,26 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
         if math.abs(partyAlpha - compensatedAlpha) >= 0.005 then
             partyCast:SetAlpha(compensatedAlpha)
         end
+    end
+end
+
+function NP.layout.SetPlateClickable(plateData, clickable)
+    if not plateData or not plateData.plate or not plateData.plate.SetHitRectInsets then return end
+    local wantInset = not clickable
+    -- Logical flag on every call: drives the retail stacking exclusion, which must work in combat.
+    plateData._hitRectInset = wantInset or nil
+    -- A protected plate refuses geometry changes while the lockdown is up. shortcut: a plate gated
+    -- out mid-combat keeps its hit rect until combat ends, the applied flag re-applies right after.
+    if InCombatLockdown() then return end
+    if plateData._hitRectApplied == wantInset then return end
+    plateData._hitRectApplied = wantInset
+    local plate = plateData.plate
+    if wantInset then
+        -- Inset past the plate on every side: alpha 0 alone leaves a clickable ghost.
+        local w, h = plate:GetSize()
+        plate:SetHitRectInsets(w, 0, h, 0)
+    else
+        plate:SetHitRectInsets(0, 0, 0, 0)
     end
 end
 
@@ -671,8 +691,9 @@ local function UpdateRetailStacking()
         local plate = plateData and plateData.plate
         local reaction = NP.native_style.GetPlateReaction(plateData)
         local isFriendly = reaction == "FRIENDLY"
-        -- Non-friendly plates only.
-        if plate and plate.IsShown and plate:IsShown() and not isFriendly then
+        -- Non-friendly plates only; a gated-out plate (alpha 0) is invisible and must not
+        -- push the visible ones around.
+        if plate and plate.IsShown and plate:IsShown() and not isFriendly and not plateData._hitRectInset then
             stackable[#stackable + 1] = plateData
             activeStackable[plateData] = true
             local state = EnsureRetailStackState(plateData)

@@ -331,7 +331,8 @@ function NP.clickbox.ApplyPlateClickbox(plateData)
     end
 
     if plate.SetHitRectInsets then
-        plate:SetHitRectInsets(0, 0, 0, 0)
+        -- Route through the gate helper: it also clears the cached inset flag the engine reads.
+        NP.layout.SetPlateClickable(plateData, true)
     end
 
     plateData._clickAreaPending = nil
@@ -391,7 +392,7 @@ function NP.clickbox.RestorePlate(plateData)
         plate._dragonUIClickboxSized = nil
     end
     if plate.SetHitRectInsets then
-        plate:SetHitRectInsets(0, 0, 0, 0)
+        NP.layout.SetPlateClickable(plateData, true)
     end
     return true
 end

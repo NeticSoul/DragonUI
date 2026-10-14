@@ -1146,7 +1146,7 @@ local function BuildTargetSubTab(scroll)
 
     C:AddToggle(targetThreat, {
         label = LO["Only Show Target Nameplate"],
-        desc = LO["Show only your target's nameplate. In combat, also show hostile NPCs that are attacking you. Overrides the opacity options while enabled."],
+        desc = LO["Show only your target's hostile nameplate. In combat, also show hostile NPCs attacking you, all of them fully opaque. Friendly plates are never hidden by this."],
         dbPath = DB .. ".onlyTargetPlates",
         callback = RefreshNameplates,
     })

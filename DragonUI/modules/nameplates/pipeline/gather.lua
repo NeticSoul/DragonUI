@@ -280,13 +280,19 @@ function NP.gather.IsGroupMemberPlate(plateData)
     return NP.gather.GetGroupUnitForPlate(plateData) ~= nil
 end
 
--- Only-target mode: the target's plate out of combat; in combat every hostile NPC on the player.
+-- Only-target mode: friendly plates are never gated (they follow the Friendly Units setting); the
+-- target's hostile plate and, in combat, every hostile NPC on the player.
 function NP.gather.IsOnlyTargetPlateAllowed(plateData)
-    if NP.module.playerInCombat then
-        return NP.threat.IsCombatAggroPlate(plateData)
+    if not plateData then
+        return false
     end
-    return UnitExists("target") and plateData == NP.module.targetPlate
-        and NP.native_style.GetPlateReaction(plateData) ~= "FRIENDLY"
+    if NP.native_style.GetPlateReaction(plateData) == "FRIENDLY" then
+        return true
+    end
+    if plateData == NP.module.targetPlate and UnitExists("target") then
+        return true
+    end
+    return NP.module.playerInCombat and NP.threat.IsCombatAggroPlate(plateData) or false
 end
 
 -- Headline mode for party/raid: name only; reaction checked before group lookup.
