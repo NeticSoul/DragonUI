@@ -130,6 +130,22 @@ local function ApplyNativeCastShieldSnap(plateData, bar)
     bar._notInterruptible = shieldNow
 end
 
+-- The shield gets alpha only: hiding it would blank the IsShown the snap above reads a frame later.
+local function MuteNativeCastChrome(plateData)
+    local border, shield, icon = plateData.castBarBorder, plateData.castBarShield, plateData.castBarIcon
+    if border and border.SetAlpha then
+        border:SetAlpha(0)
+        border:Hide()
+    end
+    if shield and shield.SetAlpha then
+        shield:SetAlpha(0)
+    end
+    if icon and icon.SetAlpha then
+        icon:SetAlpha(0)
+        icon:Hide()
+    end
+end
+
 local function ResolveCastNotInterruptible(plateData, bar, fromCastInfo)
     -- The unit API is authoritative when it says yes: the native snap is taken on the
     -- bar's OnShow, before Blizzard shows the shield, so it can cache a stale false.
@@ -288,10 +304,11 @@ function NP.castbar.OnNativeCastShown(plateData)
         CastLog(plateData, "patched exe detected (native cast bar off-target)")
     end
     plateData._nativeCastShownAt = GetTime()
+    plateData._nativeCastDropped = nil
     CastLog(plateData, "native show")
-    -- Alpha only: hiding its regions now would blank the shield the snap below reads a frame later.
     if plateData.castBar and plateData.castBar.SetAlpha and NP.config.GetCfg().showCastBar ~= false then
         plateData.castBar:SetAlpha(0)
+        MuteNativeCastChrome(plateData)
     end
     -- Reset first: leaving headline mid-cast would otherwise read a stale max value
     -- left by the previous cast on this recycled plate.
@@ -334,6 +351,7 @@ function NP.castbar.OnNativeCastShown(plateData)
 end
 
 function NP.castbar.OnNativeCastHidden(plateData)
+    plateData._nativeCastDropped = nil
     local snapFrame = plateData._castShieldSnapFrame
     if snapFrame then
         snapFrame:Hide()
@@ -3228,17 +3246,9 @@ function NP.castbar.HideNativeCastVisual(plateData)
     local src = plateData.castBar
     if not src then return end
     if src.SetAlpha then src:SetAlpha(0) end
-    if plateData.castBarBorder and plateData.castBarBorder.Hide then
-        plateData.castBarBorder:Hide()
-    end
+    MuteNativeCastChrome(plateData)
     if plateData.castBarShield and plateData.castBarShield.Hide then
         plateData.castBarShield:Hide()
-    end
-    if plateData.castBarIcon and plateData.castBarIcon.Hide then
-        plateData.castBarIcon:Hide()
-        if plateData.castBarIcon.SetAlpha then
-            plateData.castBarIcon:SetAlpha(0)
-        end
     end
     -- Hide any extra native cast textures (recycled plates can re-show them).
     if src.GetNumRegions and src.GetRegions then
@@ -3877,6 +3887,7 @@ function NP.castbar.SyncCastBar(plateData)
         local shownAt, endedAt = plateData._nativeCastShownAt, bar._endedAt
         local newerNative = shownAt and endedAt and shownAt >= endedAt
         if not hasResolvedCast and not newerNative then
+            MuteNativeCastChrome(plateData)
             return
         end
     end
@@ -4136,6 +4147,12 @@ function NP.castbar.OnNativeCastValueChanged(plateData, val)
     local bar = plateData.minaCast
     val = tonumber(val)
     if val and val >= 0.002 then
+        -- The client starts a cast inside its 1 s end fade on the still-shown bar, so no OnShow fires.
+        if plateData._nativeCastDropped then
+            CastLog(plateData, "native restart without a show")
+            NP.castbar.OnNativeCastShown(plateData)
+            bar = plateData.minaCast
+        end
         UpdateNativeCastTrack(plateData, val)
         -- The icon can land a frame after the bar; keep trying until the name is found or given up.
         if awaitingCastName[plateData] then
@@ -4143,6 +4160,7 @@ function NP.castbar.OnNativeCastValueChanged(plateData, val)
         end
     elseif val and val < 0.002 and plateData._nativeCastLastVal then
         -- Only a drop after real progress is an end; RefinedBlizzPlates guards the same way.
+        plateData._nativeCastDropped = true
         CastLog(plateData, "native reset last=%.3f max=%s", plateData._nativeCastLastVal,
             tostring(plateData._nativeCastMaxVal))
         if NP.castbar.BeginNativeCastEnd(plateData) or TryShowNativeInterrupt(plateData) then
@@ -4165,10 +4183,13 @@ function NP.castbar.OnNativeCastValueChanged(plateData, val)
     end
     -- Keep the interrupted hold visual stable while the interrupt timer runs.
     if bar and (bar._intHideAt or bar._interrupted or bar._applyingInterruptVisual) then
+        -- A cast chained right after the cut runs natively here and nothing else hides its border.
+        MuteNativeCastChrome(plateData)
         return
     end
     -- Success fade owns the bar until SyncCastBar clears it; do not patch fill mid-fade.
     if bar and (bar._successHoldUntil or bar._successHideAt or bar._successFading) then
+        MuteNativeCastChrome(plateData)
         NP.engine.QueuePlate(plateData, NP.engine.Callbacks.OnUpdateCastbar)
         return
     end
