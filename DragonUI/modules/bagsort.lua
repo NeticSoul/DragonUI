@@ -201,6 +201,13 @@ local plannedMoves = {}
 local nextMoveIndex = 1
 local awaitedDrop
 local tickAccumulator = 0
+-- A move the server rejects (e.g. in combat) never lands, so a sort with no progress for this long gives up.
+local SORT_STALL_TIMEOUT = 3
+local lastProgressTime = 0
+-- Sort requested in combat (or interrupted by it); runs again once combat ends.
+local pendingCombatSort
+-- Sort function behind the current run, so a run cut short by combat can start over afterwards.
+local activeSortFunc
 
 local bank_open = false
 local guild_bank_open = false
@@ -1179,6 +1186,7 @@ tickDriver:Hide()
 
 StopSorting = function(reason)
     running = false
+    activeSortFunc = nil
     guildBankSortActive = false
     awaitedDrop = nil
     ResetPlan()
@@ -1201,11 +1209,18 @@ local function IssueNextMoves()
             return
         end
     end
+    if GetTime() - lastProgressTime > SORT_STALL_TIMEOUT then
+        -- Hand a stuck item back to its slot instead of leaving it on the cursor.
+        if CursorHasItem() then ClearCursor() end
+        StopSorting("DragonUI: Sort stalled, stopping. Press sort again.")
+        return
+    end
     if awaitedDrop then
         if ItemIDFromLink(BagGetItemLink(awaitedDrop.bag, awaitedDrop.slot)) ~= awaitedDrop.item then
             return
         end
         awaitedDrop = nil
+        lastProgressTime = GetTime()
     end
 
     while nextMoveIndex <= #plannedMoves do
@@ -1214,6 +1229,7 @@ local function IssueNextMoves()
         local fromBag, fromSlot, toBag, toSlot = move.fromBag, move.fromSlot, move.toBag, move.toSlot
         if IsSlotBusy(fromBag, fromSlot) or IsSlotBusy(toBag, toSlot) then return end
         nextMoveIndex = nextMoveIndex + 1
+        lastProgressTime = GetTime()
 
         local sourceLink = BagGetItemLink(fromBag, fromSlot)
         if not sourceLink then
@@ -1255,13 +1271,25 @@ tickDriver:SetScript("OnUpdate", function(_, elapsed)
     end
 end)
 
-local function BeginMoves()
+local function BeginMoves(sortFunc)
     ReleaseSnapshot()
     if #plannedMoves == 0 then
         return false
     end
     running = true
+    activeSortFunc = sortFunc
+    lastProgressTime = GetTime()
     tickDriver:Show()
+    return true
+end
+
+-- Item moves in combat can be rejected by the server, so sorts wait for combat to end.
+local function DeferSortInCombat(sortFunc)
+    if not UnitAffectingCombat("player") then
+        return false
+    end
+    pendingCombatSort = sortFunc
+    Notify("In combat: bags will sort when combat ends.", 1, 0.8, 0)
     return true
 end
 
@@ -1298,10 +1326,11 @@ local function SortPlayerBags()
         Notify("Sort already in progress.", 1, 0.8, 0)
         return
     end
+    if DeferSortInCombat(SortPlayerBags) then return end
     ResetPlan()
     CaptureBags(personalBags)
     PlanFamilyPools(playerPoolBags)
-    if not BeginMoves() then
+    if not BeginMoves(SortPlayerBags) then
         Notify("Bags already sorted!", 0.4, 1, 0.4)
     end
 end
@@ -1315,6 +1344,7 @@ local function SortBankBags()
         Notify("You must be at the bank.", 1, 0.4, 0.4)
         return
     end
+    if DeferSortInCombat(SortBankBags) then return end
     ResetPlan()
     CaptureBags(personalBags)
     if addon.debugMode then
@@ -1328,7 +1358,7 @@ local function SortBankBags()
     if addon.debugMode then
         PrintPlannedMoves()
     end
-    if not BeginMoves() then
+    if not BeginMoves(SortBankBags) then
         Notify("Bank already sorted!", 0.4, 1, 0.4)
     end
 end
@@ -2094,9 +2124,27 @@ ApplyBagSortSystem = function()
             end)
         elseif event == "GUILDBANKFRAME_CLOSED" then
             guild_bank_open = false
+        elseif event == "PLAYER_REGEN_DISABLED" then
+            if running then
+                local resume = activeSortFunc
+                if CursorHasItem() then ClearCursor() end
+                StopSorting()
+                if resume then
+                    pendingCombatSort = resume
+                    Notify("Entered combat: sort paused until combat ends.", 1, 0.8, 0)
+                else
+                    Notify("Entered combat: sort stopped.", 1, 0.4, 0.4)
+                end
+            end
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            local sortFunc = pendingCombatSort
+            pendingCombatSort = nil
+            if sortFunc and not running then
+                sortFunc()
+            end
         end
     end)
-    for _, eventName in ipairs({ "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "GUILDBANKFRAME_OPENED", "GUILDBANKFRAME_CLOSED" }) do
+    for _, eventName in ipairs({ "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "GUILDBANKFRAME_OPENED", "GUILDBANKFRAME_CLOSED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
         eventFrame:RegisterEvent(eventName)
         BagSortModule.registeredEvents[eventName] = true
     end
@@ -2139,6 +2187,7 @@ local function RestoreBagSortSystem()
 
     -- Stop any running sort
     StopSorting()
+    pendingCombatSort = nil
 
     -- Unregister events
     eventFrame:UnregisterAllEvents()
