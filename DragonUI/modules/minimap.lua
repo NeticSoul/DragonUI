@@ -816,22 +816,54 @@ local function GetStyleOffsets()
     return 0, MAP_OFFSET_Y
 end
 
--- Live style switches only; ReplaceBlizzardFrame anchors both frames itself on every apply.
+-- Farm mode grows the map from the screen corner it sits in, so a map at an edge grows inward.
+local function GetMinimapGrowthPivot(mover)
+    local settings = GetMinimapSettings()
+    if not (mover and settings and settings.farm_mode_enabled == true) then return "CENTER" end
+    local x, y = mover:GetCenter()
+    local width, height = UIParent:GetWidth(), UIParent:GetHeight()
+    if not (x and y and width and height and width > 0 and height > 0) then return "CENTER" end
+    -- GetCenter answers in the mover's own scaled units.
+    local ratio = mover:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    x, y = x * ratio / width, y * ratio / height
+    local pivot = ((y > 2 / 3 and "TOP") or (y < 1 / 3 and "BOTTOM") or "")
+        .. ((x > 2 / 3 and "RIGHT") or (x < 1 / 3 and "LEFT") or "")
+    return pivot ~= "" and pivot or "CENTER"
+end
+
+-- The shift SetEditorBoxScale gives the editor box for that pivot, in the cluster's own units.
+local function GetClusterGrowthShift(mover)
+    local pivot = GetMinimapGrowthPivot(mover)
+    if pivot == "CENTER" then return 0, 0 end
+    local grow = MinimapCluster:GetScale() - 1
+    local fromLeft = pivot:find("LEFT") and 0 or (pivot:find("RIGHT") and 1 or 0.5)
+    local fromTop = pivot:find("TOP") and 0 or (pivot:find("BOTTOM") and 1 or 0.5)
+    local ratio = mover:GetEffectiveScale() / MinimapCluster:GetEffectiveScale()
+    return mover:GetWidth() * grow * (0.5 - fromLeft) * ratio, mover:GetHeight() * grow * (fromTop - 0.5) * ratio
+end
+
+-- Live style switches and farm growth; ReplaceBlizzardFrame anchors both frames itself on every apply.
 local function ApplyStyleAnchors()
     local mover = MinimapModule.minimapFrame
+    if not mover then return end
     local clusterLift, mapOffsetY = GetStyleOffsets()
-    if not mover or MinimapModule.appliedMapOffsetY == mapOffsetY then return end
+    local shiftX, shiftY = GetClusterGrowthShift(mover)
+    if MinimapModule.appliedMapOffsetY == mapOffsetY and MinimapModule.appliedShiftX == shiftX
+        and MinimapModule.appliedShiftY == shiftY then
+        return
+    end
     if InCombatLockdown() then
         addon.CombatQueue:Add("minimap_style_anchors", ApplyStyleAnchors)
         return
     end
 
     MinimapCluster:ClearAllPoints()
-    MinimapCluster:SetPoint("CENTER", mover, "CENTER", 0, clusterLift)
+    MinimapCluster:SetPoint("CENTER", mover, "CENTER", shiftX, clusterLift + shiftY)
     -- Anchor offsets are read in the map's own scaled units.
     Minimap:ClearAllPoints()
     Minimap:SetPoint("CENTER", MinimapCluster, "CENTER", 0, mapOffsetY / blipScale)
     MinimapModule.appliedMapOffsetY = mapOffsetY
+    MinimapModule.appliedShiftX, MinimapModule.appliedShiftY = shiftX, shiftY
 end
 
 -- SECURE HOOKS: Add secure hooks for critical functions
@@ -1010,6 +1042,7 @@ local function ReplaceBlizzardFrame(frame)
     local minimapCluster = MinimapCluster
     minimapCluster:ClearAllPoints()
     minimapCluster:SetPoint("CENTER", frame, "CENTER", 0, clusterLift)
+    MinimapModule.appliedShiftX, MinimapModule.appliedShiftY = 0, 0
 
     -- In hybrid mode with SexyMap, skip border/zone text customization
     -- SexyMap handles: borders, zone text styling, shapes
@@ -3092,7 +3125,7 @@ function MinimapModule:UpdateSettings()
         --  APPLY SCALE (works perfectly now)
         if MinimapCluster then
             MinimapCluster:SetScale(scale)
-            addon.SetEditorBoxScale(self.minimapFrame, scale)
+            addon.SetEditorBoxScale(self.minimapFrame, scale, GetMinimapGrowthPivot(self.minimapFrame))
         end
 
         if self.borderFrame then
