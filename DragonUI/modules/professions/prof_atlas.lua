@@ -5,8 +5,8 @@ local addon = select(2, ...)
 local DIR = addon._dir .. "Professions\\"
 
 addon.Professions.Atlas = {
-    ["banner-left"] = { DIR .. "Backdrop1", 332, 142, 2/1024, 666/1024, 576/1024, 860/1024 },
-    ["banner-right"] = { DIR .. "Backdrop2", 332, 142, 2/1024, 666/1024, 576/1024, 860/1024 },
+    ["banner-left"] = { DIR .. "Banners", 332, 142, 2/1024, 666/1024, 2/1024, 286/1024 },
+    ["banner-right"] = { DIR .. "Banners", 332, 142, 2/1024, 666/1024, 290/1024, 574/1024 },
     ["bannerdraw-Alchemy"] = { DIR .. "Drawings1", 226, 132, 564/1024, 1016/1024, 2/1024, 266/1024 },
     ["bannerdraw-Blacksmithing"] = { DIR .. "Drawings1", 226, 132, 564/1024, 1016/1024, 270/1024, 534/1024 },
     ["bannerdraw-Enchanting"] = { DIR .. "Drawings1", 226, 132, 564/1024, 1016/1024, 538/1024, 802/1024 },
@@ -108,6 +108,22 @@ addon.Professions.Atlas = {
     ["square-frame"] = { DIR .. "ProfessionsUI", 48, 48, 668/1024, 764/1024, 4/512, 100/512 },
     ["unlearn"] = { DIR .. "ProfessionsUI", 22, 22, 760/1024, 804/1024, 352/512, 396/512 },
     ["unlearn-pressed"] = { DIR .. "ProfessionsUI", 22, 22, 812/1024, 856/1024, 352/512, 396/512 },
+}
+
+-- DXT sheets stored brightened by 255/m so block error shrinks; vertex colour m/255 restores them.
+addon.Professions.SheetShade = {
+    [DIR .. "Backdrop1"] = 49/255,
+    [DIR .. "Backdrop2"] = 120/255,
+    [DIR .. "Banners"] = 118/255,
+    [DIR .. "CardBase"] = 40/255,
+    [DIR .. "Drawings1"] = 81/255,
+    [DIR .. "Drawings2"] = 81/255,
+    [DIR .. "Drawings3"] = 81/255,
+    [DIR .. "Drawings4"] = 83/255,
+    [DIR .. "Drawings5"] = 100/255,
+    [DIR .. "Drawings6"] = 100/255,
+    [DIR .. "Drawings7"] = 100/255,
+    [DIR .. "Drawings8"] = 55/255,
 }
 
 -- Where the per-profession drawings sit on the shared card and banner, in UI units.
