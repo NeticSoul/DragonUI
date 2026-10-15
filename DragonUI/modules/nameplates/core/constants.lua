@@ -101,10 +101,6 @@ NP.const = {
     TOKEN_PROBE_PLATES_PER_TICK = 3,
     -- Max BuildPlateState refreshes per tick; caps mass-refresh spikes.
     FULL_REFRESH_PLATES_PER_TICK = 8,
-    -- Ticks of native-chrome sweep armed when onlyTargetPlates is on: at login, when the option
-    -- flips on, and on every plate show. The client repaints its own name/bar for a fresh plate
-    -- faster than the budgeted full refresh can suppose them.
-    ONLY_TARGET_CHROME_TICKS = 3,
 }
 
 local C = NP.const
