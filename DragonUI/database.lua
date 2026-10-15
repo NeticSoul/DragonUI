@@ -1200,6 +1200,8 @@ local defaults = {
                 target_of_target = true, -- Show target-of-target line
                 health_bar = true, -- Show health bar on tooltip
                 anchor_cursor = false, -- Anchor tooltip to cursor
+                anchor_cursor_x = 0, -- X offset from the cursor
+                anchor_cursor_y = 0, -- Y offset from the cursor
                 show_aura_source = true, -- Show caster name on buff/debuff tooltips
                 show_aura_spell_id = false, -- Show spell ID on buff/debuff tooltips
             },
