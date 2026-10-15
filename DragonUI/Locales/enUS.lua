@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI - English Locale (Default)
@@ -626,6 +628,9 @@ L["New Equipment Set"] = true
 L["Rename or change the icon"] = true
 L["Assign To:"] = true
 L["Panel settings"] = true
+L["Group Member Pins"] = true
+L["Class Icons"] = true
+L["Class Colors"] = true
 L["Background"] = true
 L["Stone"] = true
 L["Dark"] = true
@@ -696,6 +701,40 @@ L["Level Up Enhance"] = true
 L["Enhanced level-up notification with animated frame"] = true
 L["You've Reached"] = true
 L["Level %d"] = true
+L["Dual Talent Specialization"] = true
+L["Major Glyph Slot"] = true
+L["Minor Glyph Slot"] = true
+L["Feature Unlocked!"] = true
+L["Ready to Spend!"] = true
+L["New Ability!"] = true
+L["New Rank!"] = true
+L["New Battleground!"] = true
+L["New Dungeon!"] = true
+L["New Raid!"] = true
+L["Heroic Dungeons!"] = true
+L["%d New Ranks!"] = true
+L["%d New Raids!"] = true
+L["%d New Dungeons!"] = true
+L["%d New Battlegrounds!"] = true
+L["%d New Abilities!"] = true
+L["New feature unlocked:"] = true
+L["New ability available:"] = true
+L["New battleground unlocked:"] = true
+L["New dungeon unlocked:"] = true
+L["New raid unlocked:"] = true
+L["New heroic dungeons unlocked:"] = true
+L["Learn it from your class trainer."] = true
+L["Learned from a class quest."] = true
+L["Learn it from a riding trainer."] = true
+L["Talent Point"] = true
+L["%d Talent Points"] = true
+L["Pet Talent Point"] = true
+L["%s Has Reached"] = true
+L["%s has reached level %d!"] = true
+L["List Unlocks"] = true
+L["Open the List Automatically"] = true
+L["Unlocks in Chat"] = true
+L["Pet Level-Up Banner"] = true
 
 -- ============================================================================
 -- LOW HP ALERT MODULE

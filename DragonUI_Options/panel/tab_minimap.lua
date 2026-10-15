@@ -277,6 +277,12 @@ local function BuildMinimapTab(scroll)
         callback = RefreshMinimap,
     })
 
+    C:AddToggle(basic, {
+        label = LO["Show Ping Sender"],
+        desc = LO["Show who pinged the minimap, in their class color."],
+        dbPath = "minimap.ping_sender",
+    })
+
     C:AddSlider(basic, {
         label = LO["Player Arrow Size"],
         dbPath = "minimap.player_arrow_size",

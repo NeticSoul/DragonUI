@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- GENERATED from Map.dbc, AreaTable.dbc, WorldMapArea.dbc and LFGDungeons.dbc. Do not edit.
 -- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
 

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - English Locale (Default)
@@ -709,6 +711,8 @@ L["Addon icons fade out when not hovered."] = "Значки аддонов за�
 L["Player Arrow Size"] = "Размер стрелки игрока"
 L["New Blip Style"] = "Новый стиль точек"
 L["Use newer-style minimap blip icons."] = "Использовать значки миникарты нового стиля."
+L["Show Ping Sender"] = "Показывать автора сигнала"
+L["Show who pinged the minimap, in their class color."] = "Показывает цветом класса, кто подал сигнал на миникарте."
 L["Minimap Decorations"] = "Декорации миникарты"
 L["Border presets from SexyMap by funkydude, used with permission."] = "Стили рамки из SexyMap от funkydude, используются с разрешения автора."
 L["Adds decorative animated texture layers around the DragonUI minimap."] = "Добавляет декоративные анимированные слои текстур вокруг миникарты DragonUI."
@@ -1576,6 +1580,10 @@ L["Show Zone Levels"] = "Показывать уровни зон"
 L["Show the recommended level range next to zone names and instance pins."] = "Показывает рекомендуемый диапазон уровней рядом с названиями зон и метками подземелий."
 L["Fade Map While Moving"] = "Затемнять карту при движении"
 L["Dim the map while you move, unless the cursor is over it."] = "Затемняет карту, пока вы двигаетесь, если курсор не находится над ней."
+L["Group Member Pins"] = "Метки участников группы"
+L["How party and raid members show on the world map and the battlefield map. Class colors and class icons also color their names in the tooltip and add their health."] = "Как участники группы и рейда отображаются на карте мира и карте поля боя. Цвета и значки классов также окрашивают их имена в подсказке и добавляют их здоровье."
+L["Class Colors"] = "Цвета классов"
+L["Class Icons"] = "Значки классов"
 L["Moving Map Alpha"] = "Прозрачность при движении"
 L["How visible the map stays while you move."] = "Насколько карта остается видимой, пока вы двигаетесь."
 L["Show towns, flight points and other landmark pins on the map."] = "Показывает города, точки полета и другие ориентиры на карте."
@@ -1614,6 +1622,20 @@ L["Personal Resource Display"] = "Индикатор личных ресурсо
 L["Add Health and Resource below your Character."] = "Добавляет здоровье и ресурс под вашим персонажем."
 L["Swing Timer"] = "Таймер удара"
 L["Show a bar with the time left until each weapon's next swing."] = "Показывает полосу с временем до следующего удара каждым оружием."
+L["Level Up Enhance"] = "Уровень Повышен"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "Анимированное оповещение о новом уровне со списком того, что он открывает: способности, возможности, подземелья, рейды и поля боя."
+L["Enable Level-Up Banner"] = "Включить оповещение"
+L["Size of the banner and its list."] = "Размер оповещения и его списка."
+L["List Unlocks"] = "Дополнительные оповещения"
+L["Show what the new level unlocks under the banner."] = "Показывать под оповещением, что открывает новый уровень."
+L["Open the List Automatically"] = "Открывать список автоматически"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "Открывать список сразу при появлении оповещения. Иначе нажмите на точку под ним."
+L["Unlocks in Chat"] = "Оповещения в чате"
+L["Print the unlocks after the level-up message in chat."] = "Выводить открытое в чат после сообщения о новом уровне."
+L["Pet Level-Up Banner"] = "Оповещение уровня питомца"
+L["Show a banner when your hunter pet reaches a new level."] = "Показывать оповещение, когда ваш питомец охотника получает новый уровень."
+L["Test Banner"] = "Тестовое оповещение"
+L["Show the banner for your next level (or /lvltest <level>)."] = "Показать оповещение для вашего следующего уровня (или /lvltest <уровень>)."
 L["Show Bar Title"] = "Показывать название полосы"
 L["Show Time"] = "Показывать время"
 

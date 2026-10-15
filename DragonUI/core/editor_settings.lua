@@ -388,6 +388,9 @@ end
 R.comboPoints = function()
     if addon.RefreshComboPointsSystem then addon.RefreshComboPointsSystem() end
 end
+R.levelUp = function()
+    if addon.RefreshLevelUpEnhance then addon.RefreshLevelUpEnhance() end
+end
 
 E.refresh = R
 
@@ -1748,6 +1751,16 @@ E.Register("personalresource", { settings = {
         hidden = NotDruid }),
     Check(T("Show Class Color"), "personalresource.class_color", R.personalResource),
     Check(T("Show Bar Text"), "personalresource.bar_text", R.personalResource),
+} })
+
+E.Register("levelupenhance", { settings = {
+    Slider(T("Scale"), "levelupenhance.scale", 0.6, 1.6, 0.05, R.levelUp, { resize = true }),
+    Check(T("List Unlocks"), "levelupenhance.show_unlocks", R.levelUp, { after = function() E.Rebuild() end }),
+    Check(T("Open the List Automatically"), "levelupenhance.auto_expand", R.levelUp, {
+        disabled = function() return not GetDB("levelupenhance.show_unlocks") end }),
+    Check(T("Unlocks in Chat"), "levelupenhance.chat_unlocks", nil, {
+        disabled = function() return not GetDB("levelupenhance.show_unlocks") end }),
+    Check(T("Pet Level-Up Banner"), "levelupenhance.pet_levelup"),
 } })
 
 -- The player's combo point orbs; their location and the target gems stay in Options > Unit Frames.

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - English Locale (Default)
@@ -837,6 +839,8 @@ L["Addon icons fade out when not hovered."] = true
 L["Player Arrow Size"] = true
 L["New Blip Style"] = true
 L["Use newer-style minimap blip icons."] = true
+L["Show Ping Sender"] = true
+L["Show who pinged the minimap, in their class color."] = true
 L["Minimap Decorations"] = true
 L["Border presets from SexyMap by funkydude, used with permission."] = true
 L["Adds decorative animated texture layers around the DragonUI minimap."] = true
@@ -1568,6 +1572,10 @@ L["Show Zone Levels"] = true
 L["Show the recommended level range next to zone names and instance pins."] = true
 L["Fade Map While Moving"] = true
 L["Dim the map while you move, unless the cursor is over it."] = true
+L["Group Member Pins"] = true
+L["How party and raid members show on the world map and the battlefield map. Class colors and class icons also color their names in the tooltip and add their health."] = true
+L["Class Colors"] = true
+L["Class Icons"] = true
 L["Moving Map Alpha"] = true
 L["How visible the map stays while you move."] = true
 L["Show towns, flight points and other landmark pins on the map."] = true
@@ -1606,6 +1614,20 @@ L["Personal Resource Display"] = true
 L["Add Health and Resource below your Character."] = true
 L["Swing Timer"] = true
 L["Show a bar with the time left until each weapon's next swing."] = true
+L["Level Up Enhance"] = true
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = true
+L["Enable Level-Up Banner"] = true
+L["Size of the banner and its list."] = true
+L["List Unlocks"] = true
+L["Show what the new level unlocks under the banner."] = true
+L["Open the List Automatically"] = true
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = true
+L["Unlocks in Chat"] = true
+L["Print the unlocks after the level-up message in chat."] = true
+L["Pet Level-Up Banner"] = true
+L["Show a banner when your hunter pet reaches a new level."] = true
+L["Test Banner"] = true
+L["Show the banner for your next level (or /lvltest <level>)."] = true
 L["Show Bar Title"] = true
 L["Show Time"] = true
 

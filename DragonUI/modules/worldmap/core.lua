@@ -143,6 +143,7 @@ local function layoutCanvas()
 
     scaleArrows(WM.poiScale)
     if WM.RefreshPlayerArrow then WM.RefreshPlayerArrow() end
+    if WM.SizeGroupPins then WM.SizeGroupPins() end
     if WM.RefreshPins then WM.RefreshPins() end
     if WM.RefreshMapPins then WM.RefreshMapPins() end
     if WM.RefreshBlobs then WM.RefreshBlobs() end
@@ -511,6 +512,8 @@ local function onWindowedChanged()
         WM.ground:Hide()
         -- Blizzard never touches this scale, so our canvas compensation would follow it into fullscreen.
         scaleArrows(1)
+        -- No canvas layout runs fullscreen, so the pins take Blizzard's scale here.
+        if WM.SizeGroupPins then WM.SizeGroupPins() end
         restoreBlizzardWidgets()
     end
     if WM.OnModeChanged then WM.OnModeChanged(windowed) end
@@ -579,6 +582,7 @@ local function boot()
     if WM.BuildMapPins then WM.BuildMapPins() end
     if WM.BuildCoords then WM.BuildCoords() end
     if WM.BuildPlayerArrow then WM.BuildPlayerArrow() end
+    if WM.BuildGroupPins then WM.BuildGroupPins() end
     if WM.BuildFade then WM.BuildFade() end
     if WM.BuildZoom then WM.BuildZoom() end
 
@@ -602,6 +606,7 @@ function addon.RefreshWorldMapSystem()
     WM.RefreshNavBar()
     WM.RefreshZoneLabel()
     WM.RefreshCoords()
+    WM.RefreshGroupPins()
     WM.RefreshFade()
 end
 
