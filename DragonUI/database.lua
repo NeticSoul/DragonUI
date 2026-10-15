@@ -1340,6 +1340,12 @@ local defaults = {
                 enabled = true, -- AddOns button in the Esc menu opening the in-game addon list
                 scale = 1, -- Addon list window scale on top of the UI scale
             },
+            mail = {
+                 enabled = true 
+            },
+            taxiframe = {
+                 enabled = true 
+            },
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)

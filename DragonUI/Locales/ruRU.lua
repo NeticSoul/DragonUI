@@ -1091,3 +1091,15 @@ L["Set Favorite"] = "Добавить в избранное"
 L["Guaranteed chance of gaining %d skill ups"] = "Гарантированное повышение навыка на %d"
 L["High chance of gaining skill"] = "Высокий шанс повысить навык"
 L["Low chance of gaining skill"] = "Низкий шанс повысить навык"
+
+-- ============================================================================
+-- FLIGHT MAP & MAIL
+-- ============================================================================
+L["Flight Map"] = "Карта полетов"
+L["Retail-style flight master map window chrome"] = "Окно распорядителя полетов в стиле Retail"
+L["Mail"] = "Почта"
+L["Retail-style mail window with Open All button"] = "Окно почты в стиле Retail с кнопкой «Открыть все»"
+L["Open All"] = "Открыть все"
+L["Opening..."] = "Открытие..."
+L["Loot all mail attachments and gold (skips COD mail)"] = "Забрать все вложения и золото из писем (пропускает наложенный платеж)"
+L["Inventory is full."] = "Инвентарь полон."

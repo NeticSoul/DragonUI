@@ -80,6 +80,13 @@
 
     <!-- Retail-style quest and gossip dialog reskin -->
     <Script file="questdialog.lua"/>
+    
+    <!-- Retail-style flight master map window reskin -->
+    <Script file="taxiframe.lua"/>
+
+    <!-- Retail-style mail window reskin with Open All button -->
+    <Script file="mail.lua"/>
+    
     <!-- Spellbook module (own window; takes over the book's keys, micro button and Blizzard's frame after login) -->
     <Include file="spellbook\spellbook.xml"/>
     <!-- Professions module (Forever professions window built on Blizzard's TradeSkillFrame) -->

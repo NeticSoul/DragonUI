@@ -1092,3 +1092,15 @@ L["Set Favorite"] = true
 L["Guaranteed chance of gaining %d skill ups"] = true
 L["High chance of gaining skill"] = true
 L["Low chance of gaining skill"] = true
+
+-- ============================================================================
+-- FLIGHT MAP & MAIL
+-- ============================================================================
+L["Flight Map"] = true
+L["Retail-style flight master map window chrome"] = true
+L["Mail"] = true
+L["Retail-style mail window with Open All button"] = true
+L["Open All"] = true
+L["Opening..."] = true
+L["Loot all mail attachments and gold (skips COD mail)"] = true
+L["Inventory is full."] = true
