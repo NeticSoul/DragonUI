@@ -48,6 +48,12 @@ local LIST_TOP, LIST_BOTTOM = 8, 6
 local SCREEN_MARGIN = 140
 local TITLE_SIZE, TITLE_MIN, SUB_SIZE, SUB_MIN = 14, 9, 11, 8
 
+-- The aura borders' default "detailed" buff ring, sized off a 45px icon as auraborders.lua does.
+local RING_TEXTURE = addon._dir .. "ActionBars\\uiactionbar2x_new"
+local RING_COORDS = { 359 / 512, 451 / 512, 649 / 2048, 739 / 2048 }
+local RING_SCALE = ICON_SIZE / 45 * 1.14
+local ICON_CROP = 0.06
+
 local TIME_EXPAND, TIME_TEXT_IN, TIME_FADE = 1.75, 1.85, 0.35
 local HOLD_COLLAPSED, HOLD_LIST, HOLD_PER_ROW, HOLD_LIST_MAX = 4, 4, 1, 10
 local CHAT_DELAY = 0.5
@@ -514,13 +520,17 @@ local function CreateRow()
 
     local iconFrame = CreateFrame("Frame", nil, row)
     iconFrame:SetSize(ICON_SIZE, ICON_SIZE)
-    iconFrame:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-    iconFrame:SetBackdropBorderColor(0.12, 0.12, 0.12, 0.95)
     row.iconFrame = iconFrame
 
-    row.icon = iconFrame:CreateTexture(nil, "ARTWORK")
+    row.icon = iconFrame:CreateTexture(nil, "BORDER")
     row.icon:SetAllPoints()
-    row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    row.icon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
+
+    row.ring = iconFrame:CreateTexture(nil, "ARTWORK")
+    row.ring:SetTexture(RING_TEXTURE)
+    row.ring:SetTexCoord(unpack(RING_COORDS))
+    row.ring:SetSize(46 * RING_SCALE, 45 * RING_SCALE)
+    row.ring:SetPoint("TOPLEFT", -1.4, 1.4)
 
     row.badge = iconFrame:CreateTexture(nil, "OVERLAY")
     row.badge:SetSize(16, 18)
@@ -566,6 +576,10 @@ local function RefreshList()
 
     local display = DisplayList()
     local left = max(12, floor((WIDTH - (ICON_SIZE + TEXT_GAP + entries.widest)) / 2))
+    -- Dark mode shades the ring exactly as it shades the aura and action-button rings.
+    local tint = addon.GetDarkModeTint and addon.GetDarkModeTint()
+    local ringR, ringG, ringB = 1, 1, 1
+    if tint then ringR, ringG, ringB = tint[1], tint[2], tint[3] end
     for i, entry in ipairs(display) do
         local row = rows[i] or CreateRow()
         rows[i] = row
@@ -575,6 +589,7 @@ local function RefreshList()
         row.iconFrame:ClearAllPoints()
         row.iconFrame:SetPoint("LEFT", row, "LEFT", left, 0)
         row.icon:SetTexture(entry.icon)
+        row.ring:SetVertexColor(ringR, ringG, ringB)
         row.badge:SetTexCoord(unpack(BADGE[entry.of or entry.kind] or BADGE_LOCK))
 
         local color = EntryColor(entry)
