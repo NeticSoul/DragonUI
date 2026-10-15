@@ -6,7 +6,6 @@ local WM = addon.WorldMap
 -- Zone maps, out of combat: only while zoomed does the canvas leave Blizzard's own hierarchy.
 
 local LEVELS = { 1, 1.5, 2, 2.5, 3 }
-local UNIT_SIZE = 16
 -- The blob, button and POI frames are anchored to the detail frame, so moving it pans them all.
 local CANVAS = { WorldMapDetailFrame, WorldMapBlobFrame, WorldMapButton, WorldMapPOIFrame }
 
@@ -41,19 +40,6 @@ end
 
 local function anchorDetail()
     WorldMapDetailFrame:SetPoint("TOPLEFT", content, "TOPLEFT", -viewX * WM.DETAIL_W, viewY * WM.DETAIL_H)
-end
-
--- Size, not scale: Blizzard re-anchors these every frame in the button's own units.
-local function sizeUnits(zoom)
-    local size = UNIT_SIZE / zoom
-    for i = 1, MAX_PARTY_MEMBERS do
-        local unit = _G["WorldMapParty" .. i]
-        if unit then unit:SetSize(size, size) end
-    end
-    for i = 1, MAX_RAID_MEMBERS do
-        local unit = _G["WorldMapRaid" .. i]
-        if unit then unit:SetSize(size, size) end
-    end
 end
 
 local function mute(frame)
@@ -98,7 +84,6 @@ function WM.LayoutZoom()
     content:SetSize(WM.canvasW, WM.canvasH)
     clampView()
     anchorDetail()
-    sizeUnits(WM.zoom)
     return true
 end
 
@@ -130,7 +115,6 @@ local function unzoom()
     moveTo(WorldMapFrameAreaFrame, WorldMapButton)
     WorldMapFrameAreaFrame:ClearAllPoints()
     WorldMapFrameAreaFrame:SetPoint("TOP", WorldMapButton, "TOP", 0, -10)
-    sizeUnits(1)
     clip:Hide()
     WM.Layout(true)
 end

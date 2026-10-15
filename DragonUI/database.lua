@@ -596,6 +596,7 @@ local defaults = {
             square_top_arrow = true, -- Forever square: north pointer on the top edge
             border_alpha = 1,
             blip_skin = true, -- true = new/modern style, false = old/classic Blizzard style
+            ping_sender = true, -- Name of whoever pinged the minimap, in their class color
             tracking_icons = true,
             zoom_buttons = false,
             calendar = true,
@@ -1331,6 +1332,7 @@ local defaults = {
                 inns = true, -- Innkeeper pins on zone maps, the hearthstone's inn drawn larger
                 coordinates = true, -- Cursor and player coordinates in the canvas corner
                 zoneLevels = true, -- Recommended level ranges beside zone names and instance pins
+                groupPins = "color", -- Party/raid pins on the world and battlefield maps: "blizzard", "color" or "icon"
                 fadeWhenMoving = false, -- Dim the map while you move with the cursor off it
                 moveAlpha = 0.4, -- Alpha the map fades to while moving
             },

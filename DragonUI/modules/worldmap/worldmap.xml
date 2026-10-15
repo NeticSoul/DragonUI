@@ -15,6 +15,7 @@
     <Script file="mappins.lua"/>
     <Script file="coords.lua"/>
     <Script file="playerarrow.lua"/>
+    <Script file="grouppins.lua"/>
     <Script file="fade.lua"/>
     <Script file="zoom.lua"/>
 </Ui>

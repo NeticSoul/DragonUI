@@ -35,6 +35,7 @@
     <Script file="minimap_collector.lua"/>
     <Script file="minimap.lua"/>
     <Script file="minimap_decorations.lua"/>
+    <Script file="minimap_ping.lua"/>
     <Script file="objectivetracker.lua"/>   
     <Script file="lootroll.lua"/>
 
