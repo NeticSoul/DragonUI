@@ -25,6 +25,9 @@ L["Cannot toggle keybind mode during combat!"] = "Tastenbelegungsmodus kann im K
 L["Cannot move frames during combat!"] = "Fenster können im Kampf nicht bewegt werden!"
 L["Cannot open options in combat."] = "Optionen können im Kampf nicht geöffnet werden."
 L["Options panel not available. Try /reload."] = "Optionsfeld nicht verfügbar. Versuche /reload."
+L["Farm mode enabled"] = "Farmmodus aktiviert"
+L["Farm mode disabled"] = "Farmmodus deaktiviert"
+L["Minimap module not available."] = "Minikartenmodul nicht verfügbar."
 
 -- Module availability
 L["Editor mode not available."] = "Editor-Modus ist nicht verfügbar."
@@ -53,6 +56,7 @@ L["/dragonui config - Open configuration"] = "/dragonui config - Konfiguration �
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = "/dragonui edit - Editor-Modus umschalten (UI-Elemente verschieben)"
 L["/dragonui reset - Reset all positions to defaults"] = "/dragonui reset - Alle Positionen auf Standard zurücksetzen"
 L["/dragonui status - Show module status"] = "/dragonui status - Modulstatus anzeigen"
+L["/dragonui farm - Toggle farm mode (big minimap, chrome hidden)"] = "/dragonui farm - Farmmodus umschalten (große Minikarte, Rahmenelemente ausgeblendet)"
 L["/dragonui kb - Toggle keybind mode"] = "/dragonui kb - Tastenbelegungsmodus umschalten"
 L["/dragonui version - Show version info"] = "/dragonui version - Versionsinfo anzeigen"
 L["/dragonui help - Show this help"] = "/dragonui help - Diese Hilfe anzeigen"

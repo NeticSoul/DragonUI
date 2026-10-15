@@ -16,7 +16,7 @@ local MinimapModule = {
     initialized = false,
     applied = false,
     originalStates = {},
-    farmMode = { active = false, holder = nil, parents = {}, unparkable = {} },
+    farmMode = { active = false, holder = nil, parents = {}, layers = {} },
     hooks = {},
     stateDrivers = {},
     frames = {},
@@ -56,21 +56,6 @@ end
 
 local function GetMinimapSettings()
     return addon.db and addon.db.profile and addon.db.profile.minimap
-end
-
--- Farm mode can keep its own editor position, falling back to screen center until moved.
-local function GetMinimapPositionConfig()
-    local settings = GetMinimapSettings()
-    if settings and settings.farm_mode_enabled == true then
-        local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
-        local farm = widgets and widgets.minimap_farm
-        if farm and farm.anchor and farm.posX ~= nil and farm.posY ~= nil then
-            return farm
-        end
-        return { anchor = "CENTER", posX = 0, posY = 0 }
-    end
-
-    return (addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.minimap) or nil
 end
 
 -- The player's minimap scale, times the farm bonus while farm mode is on.
@@ -2980,14 +2965,11 @@ function MinimapModule:InitializeMinimapSystem()
     end
 
     --  AUTOMATIC REGISTRATION IN THE CENTRALIZED SYSTEM
-    local farmPositionConfigPath = (GetMinimapSettings() and GetMinimapSettings().farm_mode_enabled == true)
-        and {"widgets", "minimap_farm"} or {"widgets", "minimap"}
-
     addon:RegisterEditableFrame({
         name = "minimap",
         frame = self.minimapFrame,
         blizzardFrame = MinimapCluster,
-        configPath = farmPositionConfigPath,
+        configPath = {"widgets", "minimap"},
         onShow = function()
             -- Match quest tracker behavior: clamp while editing.
             -- Allow a small overflow so users can fine-tune near edges.
@@ -3011,15 +2993,11 @@ function MinimapModule:InitializeMinimapSystem()
     self:RegisterDurabilityEditorFrame()
 
     local defaultX, defaultY = -7, 0
-    local widgetConfig = GetMinimapPositionConfig()
+    local widgetConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.minimap
 
     if widgetConfig then
         self.minimapFrame:SetPoint(widgetConfig.anchor or "TOPRIGHT", UIParent, widgetConfig.anchor or "TOPRIGHT",
             widgetConfig.posX or defaultX, widgetConfig.posY or defaultY)
-    elseif addon.db and addon.db.profile.widgets and addon.db.profile.widgets.minimap then
-        local fallback = addon.db.profile.widgets.minimap
-        self.minimapFrame:SetPoint(fallback.anchor or "TOPRIGHT", UIParent, fallback.anchor or "TOPRIGHT",
-            fallback.posX or defaultX, fallback.posY or defaultY)
     else
         self.minimapFrame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", defaultX, defaultY)
     end
@@ -3095,14 +3073,14 @@ function MinimapModule:UpdateSettings()
     local scale = GetEffectiveMinimapScale()
 
     if self.minimapFrame then
-        local widgetConfig = GetMinimapPositionConfig() or addon.db.profile.widgets.minimap
+        local widgetConfig = addon.db.profile.widgets.minimap
         local anchor = widgetConfig.anchor or "TOPRIGHT"
         local x = widgetConfig.posX or 0
         local y = widgetConfig.posY or 0
 
         -- Update DurabilityFrame position
         if DurabilityFrame then
-            DurabilityFrame:SetScale(scale)
+            DurabilityFrame:SetScale(addon.db.profile.minimap.scale or 1.0)
             SyncDurabilityMover()
             ApplyDurabilityPosition()
         end
@@ -3243,17 +3221,13 @@ end
 -- FARM MODE TOGGLE
 -- ============================================================================
 
--- Names are read as globals, so one missing from this client is simply skipped.
--- Every one is parked on a hidden holder, which hides it whatever calls Show().
+-- Parked on a hidden holder, so they stay hidden whatever calls Show(); missing globals are skipped.
 local FARM_MODE_CHROME = {
     "MinimapBorderTop",
     "MinimapZoneTextButton",
     "GameTimeFrame",
     "TimeManagerClockButton",
-    "MiniMapTrackingButton",
     "MiniMapTracking",
-    "MiniMapTrackingIcon",
-    "MiniMapTrackingIconOverlay",
     "MiniMapMailFrame",
     "MiniMapInstanceDifficulty",
     "MiniMapBattlefieldFrame",
@@ -3271,12 +3245,6 @@ function MinimapModule:ToggleFarmMode()
     local active = settings.farm_mode_enabled == true
     settings.farm_mode_enabled = not active
 
-    -- Let /dui edit keep farm mode on its own saved slot.
-    if addon.EditableFrames and addon.EditableFrames.minimap then
-        addon.EditableFrames.minimap.configPath = settings.farm_mode_enabled
-            and {"widgets", "minimap_farm"} or {"widgets", "minimap"}
-    end
-
     addon:Print(active and L["Farm mode disabled"] or L["Farm mode enabled"])
 
     addon:RefreshMinimap()
@@ -3288,24 +3256,42 @@ local function CreateFarmModeHolder()
     return holder
 end
 
+local function SaveFrameLayers(frame, layers)
+    if not frame.GetFrameLevel then return end
+    layers[frame] = { frame:GetFrameStrata(), frame:GetFrameLevel() }
+    local children = { frame:GetChildren() }
+    for index = 1, #children do
+        SaveFrameLayers(children[index], layers)
+    end
+end
+
+-- Top-down, since a parent's SetFrameStrata also moves its children.
+local function RestoreFrameLayers(frame, layers)
+    if not frame.GetFrameLevel then return end
+    local saved = layers[frame]
+    if saved then
+        if frame:GetFrameStrata() ~= saved[1] then frame:SetFrameStrata(saved[1]) end
+        if frame:GetFrameLevel() ~= saved[2] then frame:SetFrameLevel(saved[2]) end
+    end
+    local children = { frame:GetChildren() }
+    for index = 1, #children do
+        RestoreFrameLayers(children[index], layers)
+    end
+end
+
 -- Parents are read for everything before anything moves: a parked child would record the holder.
 local function ParkFarmModeFrames()
     local holder = MinimapModule.farmMode.holder or CreateFarmModeHolder()
     MinimapModule.farmMode.holder = holder
-    local parents, unparkable = MinimapModule.farmMode.parents, MinimapModule.farmMode.unparkable
+    local parents, layers = MinimapModule.farmMode.parents, MinimapModule.farmMode.layers
 
     local parkable = {}
     for index = 1, #FARM_MODE_CHROME do
         local region = _G[FARM_MODE_CHROME[index]]
-        if region then
-            if region.SetParent then
-                parents[region] = parents[region] or region:GetParent()
-                parkable[#parkable + 1] = region
-            else
-                -- A texture this client cannot reparent: hide it, and put its own flag back.
-                unparkable[region] = region:IsShown() == true
-                region:Hide()
-            end
+        if region and not parents[region] then
+            parents[region] = region:GetParent()
+            SaveFrameLayers(region, layers)
+            parkable[#parkable + 1] = region
         end
     end
 
@@ -3314,19 +3300,18 @@ local function ParkFarmModeFrames()
     end
 end
 
--- Putting the parents back is the whole restore; the settings pass right after decides visibility.
+-- SetParent resets strata and level (e.g. the gear sits at Minimap + 20), so both are put back.
 local function RestoreFarmModeFrames()
-    local parents, unparkable = MinimapModule.farmMode.parents, MinimapModule.farmMode.unparkable
+    local parents, layers = MinimapModule.farmMode.parents, MinimapModule.farmMode.layers
 
     for region, parent in pairs(parents) do
         region:SetParent(parent)
     end
-    wipe(parents)
-
-    for region, wasShown in pairs(unparkable) do
-        if wasShown then region:Show() end
+    for region in pairs(parents) do
+        RestoreFrameLayers(region, layers)
     end
-    wipe(unparkable)
+    wipe(parents)
+    wipe(layers)
 end
 
 function MinimapModule:RestoreFarmMode()
@@ -3334,28 +3319,21 @@ function MinimapModule:RestoreFarmMode()
     self.farmMode.active = false
 end
 
--- Only the on/off transition acts; RefreshMinimap already queues this while in combat.
+-- RefreshMinimap already queues this while in combat.
 function MinimapModule:ApplyFarmMode()
     local settings = GetMinimapSettings()
     if not settings then return end
 
-    local active = settings.farm_mode_enabled == true
-    if active == self.farmMode.active then return end
-    self.farmMode.active = active
-
-    if addon.EditableFrames and addon.EditableFrames.minimap then
-        addon.EditableFrames.minimap.configPath = active
-            and {"widgets", "minimap_farm"} or {"widgets", "minimap"}
-    end
-
-    -- Hybrid hands the chrome to SexyMap; the bigger map still applies there.
-    if IsHybridMinimapModeActive() then return end
-
-    if not active then
-        self:RestoreFarmMode()
+    if settings.farm_mode_enabled ~= true then
+        if self.farmMode.active then self:RestoreFarmMode() end
         return
     end
 
+    self.farmMode.active = true
+    -- Hybrid hands the chrome to SexyMap; the bigger map still applies there.
+    if IsHybridMinimapModeActive() then return end
+
+    -- Runs while active too: chrome created since (the gear once the collector is enabled) gets parked.
     ParkFarmModeFrames()
 end
 
@@ -3460,20 +3438,15 @@ end
 
 function MinimapModule:UpdateWidgets()
     -- Use correct database: addon.db (not addon.core.db)
-    local widgetOptions = GetMinimapPositionConfig()
-    if not widgetOptions then
-        if not (addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.minimap) then
-            self:LoadDefaultSettings()
-            return
-        end
-        widgetOptions = addon.db.profile.widgets.minimap
+    if not addon.db or not addon.db.profile.widgets or not addon.db.profile.widgets.minimap then
+
+        self:LoadDefaultSettings()
+        return
     end
 
-    if self.minimapFrame then
-        self.minimapFrame:ClearAllPoints()
-        self.minimapFrame:SetPoint(widgetOptions.anchor or "TOPRIGHT", UIParent, widgetOptions.anchor or "TOPRIGHT",
-            widgetOptions.posX or 0, widgetOptions.posY or 0)
-    end
+    local widgetOptions = addon.db.profile.widgets.minimap
+    self.minimapFrame:SetPoint(widgetOptions.anchor, widgetOptions.posX, widgetOptions.posY)
+
 end
 
 -- Editor mode uses centralized system
@@ -3511,6 +3484,9 @@ function addon:RefreshMinimap()
         if addon.MinimapDecorations and addon.MinimapDecorations.Refresh then
             addon.MinimapDecorations:Refresh()
         end
+
+        -- Parks chrome this pass just created, e.g. the gear when the collector gets enabled.
+        MinimapModule:ApplyFarmMode()
     end
 end
 

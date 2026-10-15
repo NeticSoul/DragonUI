@@ -1673,3 +1673,9 @@ L["Auto-Accept"] = "초대 자동 수락"
 L["Accept Party Invites"] = "그룹 초대 수락"
 L["Automatically accept party invites from your friends and guild members."] = "친구와 길드 멤버의 그룹 초대를 자동으로 수락합니다."
 L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "그룹 초대를 대신 처리합니다. 친구와 길드 멤버의 초대만 자동으로 수락하며, 그 외 초대는 직접 판단할 수 있도록 남겨 둡니다."
+
+-- Farm mode
+L["Farm Mode"] = "파밍 모드"
+L["Extra scale"] = "추가 크기 비율"
+L["Bigger minimap with the surrounding clutter hidden."] = "미니맵을 크게 키우고 주변 요소를 숨깁니다."
+L["Extra scale applied on top of the minimap scale."] = "미니맵 크기 비율에 추가로 적용되는 비율입니다."

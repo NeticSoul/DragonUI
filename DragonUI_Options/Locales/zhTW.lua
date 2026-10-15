@@ -1679,3 +1679,9 @@ L["Auto-Accept"] = "自動接受"
 L["Accept Party Invites"] = "接受組隊邀請"
 L["Automatically accept party invites from your friends and guild members."] = "自動接受來自好友和公會成員的組隊邀請。"
 L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "替你處理組隊邀請。只有好友和公會成員的邀請會被自動接受，其餘留給你自己決定。"
+
+-- Farm mode
+L["Farm Mode"] = "刷怪模式"
+L["Extra scale"] = "額外縮放"
+L["Bigger minimap with the surrounding clutter hidden."] = "放大小地圖，並隱藏周圍的雜項元素。"
+L["Extra scale applied on top of the minimap scale."] = "在小地圖縮放比例之上額外套用的縮放。"

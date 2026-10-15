@@ -25,6 +25,9 @@ L["Cannot toggle keybind mode during combat!"] = "전투 중에는 단축키 모
 L["Cannot move frames during combat!"] = "전투 중에는 프레임을 옮길 수 없습니다!"
 L["Cannot open options in combat."] = "전투 중에는 설정을 열 수 없습니다."
 L["Options panel not available. Try /reload."] = "설정 창을 사용할 수 없습니다. /reload 를 시도하세요."
+L["Farm mode enabled"] = "파밍 모드 켜짐"
+L["Farm mode disabled"] = "파밍 모드 꺼짐"
+L["Minimap module not available."] = "미니맵 모듈을 사용할 수 없습니다."
 
 -- Module availability
 L["Editor mode not available."] = "편집 모드를 사용할 수 없습니다."
@@ -53,6 +56,7 @@ L["/dragonui config - Open configuration"] = "/dragonui config - 설정 열기"
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = "/dragonui edit - 편집 모드 전환 (UI 요소 이동)"
 L["/dragonui reset - Reset all positions to defaults"] = "/dragonui reset - 모든 위치를 기본값으로 초기화"
 L["/dragonui status - Show module status"] = "/dragonui status - 모듈 상태 표시"
+L["/dragonui farm - Toggle farm mode (big minimap, chrome hidden)"] = "/dragonui farm - 파밍 모드 전환 (큰 미니맵, 주변 요소 숨김)"
 L["/dragonui kb - Toggle keybind mode"] = "/dragonui kb - 단축키 모드 전환"
 L["/dragonui version - Show version info"] = "/dragonui version - 버전 정보 표시"
 L["/dragonui help - Show this help"] = "/dragonui help - 도움말 표시"

@@ -1672,3 +1672,9 @@ L["Auto-Accept"] = "Автопринятие"
 L["Accept Party Invites"] = "Принимать приглашения в группу"
 L["Automatically accept party invites from your friends and guild members."] = "Автоматически принимать приглашения в группу от друзей и участников гильдии."
 L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "Отвечает на приглашения в группу за вас. Принимаются только приглашения от друзей и участников гильдии; остальные остаются на ваше усмотрение."
+
+-- Farm mode
+L["Farm Mode"] = "Режим фарма"
+L["Extra scale"] = "Дополнительный масштаб"
+L["Bigger minimap with the surrounding clutter hidden."] = "Увеличенная миникарта без окружающих элементов."
+L["Extra scale applied on top of the minimap scale."] = "Дополнительный масштаб поверх масштаба миникарты."

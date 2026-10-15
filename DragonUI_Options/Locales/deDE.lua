@@ -1671,3 +1671,9 @@ L["Auto-Accept"] = "Automatisch annehmen"
 L["Accept Party Invites"] = "Gruppeneinladungen annehmen"
 L["Automatically accept party invites from your friends and guild members."] = "Nimmt Gruppeneinladungen von Freunden und Gildenmitgliedern automatisch an."
 L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "Beantwortet Gruppeneinladungen für dich. Nur Einladungen von Freunden und Gildenmitgliedern werden angenommen; alle anderen bleiben bei dir."
+
+-- Farm mode
+L["Farm Mode"] = "Farmmodus"
+L["Extra scale"] = "Zusätzliche Skalierung"
+L["Bigger minimap with the surrounding clutter hidden."] = "Größere Minikarte, die Elemente drumherum werden ausgeblendet."
+L["Extra scale applied on top of the minimap scale."] = "Zusätzliche Skalierung, die zur Skalierung der Minikarte hinzukommt."

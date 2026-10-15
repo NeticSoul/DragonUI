@@ -25,6 +25,9 @@ L["Cannot toggle keybind mode during combat!"] = "Невозможно пере�
 L["Cannot move frames during combat!"] = "Невозможно перемещать фреймы во время боя!"
 L["Cannot open options in combat."] = "Невозможно открыть настройки во время боя."
 L["Options panel not available. Try /reload."] = "Панель настроек недоступна. Попробуйте /reload."
+L["Farm mode enabled"] = "Режим фарма включён"
+L["Farm mode disabled"] = "Режим фарма выключен"
+L["Minimap module not available."] = "Модуль миникарты недоступен."
 
 -- Module availability
 L["Editor mode not available."] = "Режим редактора недоступен."
@@ -53,6 +56,7 @@ L["/dragonui config - Open configuration"] = "/dragonui config — Открыт�
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = "/dragonui edit — Переключить режим редактора (перемещение элементов)"
 L["/dragonui reset - Reset all positions to defaults"] = "/dragonui reset — Сбросить все позиции по умолчанию"
 L["/dragonui status - Show module status"] = "/dragonui status — Показать статус модулей"
+L["/dragonui farm - Toggle farm mode (big minimap, chrome hidden)"] = "/dragonui farm - Переключить режим фарма (большая миникарта, лишние элементы скрыты)"
 L["/dragonui kb - Toggle keybind mode"] = "/dragonui kb — Переключить режим назначения клавиш"
 L["/dragonui version - Show version info"] = "/dragonui version — Показать версию"
 L["/dragonui help - Show this help"] = "/dragonui help — Показать справку"
