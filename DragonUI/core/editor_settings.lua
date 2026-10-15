@@ -1688,6 +1688,12 @@ E.Register("tooltip", { settings = {
             E.Rebuild()
         end,
         disabled = TooltipOff }),
+    Slider(T("Cursor Anchor Offset X"), "modules.tooltip.anchor_cursor_x", -128, 128, 1, nil, {
+        hidden = function() return GetDB("modules.tooltip.anchor_cursor") ~= true end,
+        disabled = function() return TooltipOff() or GetDB("modules.tooltip.anchor_cursor") ~= true end }),
+    Slider(T("Cursor Anchor Offset Y"), "modules.tooltip.anchor_cursor_y", -128, 128, 1, nil, {
+        hidden = function() return GetDB("modules.tooltip.anchor_cursor") ~= true end,
+        disabled = function() return TooltipOff() or GetDB("modules.tooltip.anchor_cursor") ~= true end }),
     Section(T("Tooltip"), true),
     TooltipSwitch(T("Class-Colored Border"), "class_colored_border"),
     TooltipSwitch(T("Class-Colored Name"), "class_colored_name"),

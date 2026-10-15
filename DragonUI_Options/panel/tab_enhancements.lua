@@ -776,8 +776,43 @@ local function BuildEnhancementsTab(scroll)
         end,
         setFunc = function(val)
             EnsureModuleTable("tooltip").anchor_cursor = val
+            Panel:SelectTab("enhancements")
         end,
         disabled = function() return not IsEnabled("tooltip") end,
+        requiresReload = false,
+    })
+
+    C:AddSlider(ttSection, {
+        label = LO["Cursor Anchor Offset X"],
+        desc = LO["Horizontal offset from the cursor."],
+        min = -128, max = 128, step = 1,
+        getFunc = function()
+            return tonumber(GetModuleField("tooltip", "anchor_cursor_x")) or 0
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("tooltip").anchor_cursor_x = val
+        end,
+        disabled = function()
+            return not IsEnabled("tooltip")
+                or GetModuleField("tooltip", "anchor_cursor") ~= true
+        end,
+        requiresReload = false,
+    })
+
+    C:AddSlider(ttSection, {
+        label = LO["Cursor Anchor Offset Y"],
+        desc = LO["Vertical offset from the cursor."],
+        min = -128, max = 128, step = 1,
+        getFunc = function()
+            return tonumber(GetModuleField("tooltip", "anchor_cursor_y")) or 0
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("tooltip").anchor_cursor_y = val
+        end,
+        disabled = function()
+            return not IsEnabled("tooltip")
+                or GetModuleField("tooltip", "anchor_cursor") ~= true
+        end,
         requiresReload = false,
     })
 

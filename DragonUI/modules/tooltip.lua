@@ -267,6 +267,28 @@ local function IsTooltipCursorAnchored()
     return config and config.anchor_cursor == true
 end
 
+local function GetTooltipCursorAnchorX()
+    local config = GetModuleConfig()
+    return (config and tonumber(config.anchor_cursor_x)) or 0
+end
+
+local function GetTooltipCursorAnchorY()
+    local config = GetModuleConfig()
+    return (config and tonumber(config.anchor_cursor_y)) or 0
+end
+
+local function PositionTooltipAtCursor(tooltip)
+    if not IsTooltipCursorAnchored() or not tooltip then return end
+
+    local scale = (UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale()) or 1
+    local mx, my = GetCursorPosition()
+    mx = (mx or 0) / scale + (GetTooltipCursorAnchorX() or 0)
+    my = (my or 0) / scale + (GetTooltipCursorAnchorY() or 0)
+
+    tooltip:ClearAllPoints()
+    tooltip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", mx, my)
+end
+
 local function ApplyTooltipWidgetPosition()
     local anchorFrame = TooltipModule.frames and TooltipModule.frames.tooltipAnchor
     local cfg = GetTooltipWidgetConfig()
@@ -376,11 +398,22 @@ local function EnsureTooltipAnchorHook()
         return
     end
 
+    if not TooltipModule.hooks["CursorFollow"] then
+        GameTooltip:HookScript("OnUpdate", function(self)
+            if not self:IsShown() then return end
+            if not IsTooltipCursorAnchored() then return end
+            PositionTooltipAtCursor(self)
+        end)
+        TooltipModule.hooks["CursorFollow"] = true
+    end
+
     hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
         if tooltip ~= GameTooltip then return end
 
         if IsTooltipCursorAnchored() then
-            tooltip:SetOwner(parent, "ANCHOR_CURSOR")
+            tooltip:SetOwner(parent or UIParent, "ANCHOR_NONE")
+            tooltip:ClearAllPoints()
+            PositionTooltipAtCursor(tooltip)
             return
         end
 
