@@ -1180,6 +1180,16 @@ function GetSwipeStyle(cfg)
     return SwipeStyle[style] or SwipeStyle.squareSwirl
 end
 
+-- The swirl is a 1024 TGA (~75 ms on first draw), which would otherwise land on the first debuff swipe mid-fight.
+addon:RegisterTextureWarmup(function()
+    if not addon:IsModuleEnabled("nameplates") then return nil end
+    local cfg = NP.config.GetCfg()
+    if not (cfg.showDebuffs and cfg.debuffCooldownSwipe) or GetSwipeStyle(cfg) ~= SwipeStyle.squareSwirl then
+        return nil
+    end
+    return SQUARE_SWIRL_TEXTURE
+end)
+
 -- Hide whichever style's widgets are currently attached to the icon, if it
 -- differs from the one about to be used (covers a live style change).
 local function HideOtherSwipeStyles(icon, active)
