@@ -342,6 +342,7 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._clampTargetEnabled = cfg.clampTarget == true
     NP.module._clampBossEnabled = cfg.clampBoss == true
     NP.module._clampTopInset = cfg.clampTopInset or 0
+    NP.unitcache.SyncConfig(cfg)
 
     -- Re-verify WorldFrame height each sync; external resets can invalidate the cached flag.
     local wantExtended = (NP.module._clampTargetEnabled or NP.module._clampBossEnabled) and true or false
@@ -426,6 +427,7 @@ local function EngineOnUpdate(_, elapsed)
     end
 
     -- 2. Deferred queues. Roster map first: it queues plates, so it cannot run inside a drain.
+    NP.unitcache.Flush()
     NP.identity.TickGroupTargetMatches()
     E.ProcessQueues()
 
@@ -563,11 +565,13 @@ local function EngineOnEvent(_, event, unit, ...)
         -- Target alpha stale at event time; resolved on next engine tick.
         NP.module.targetGUID = UnitGUID("target")
         NP.module._deferredTargetResolveFrames = 1
+        NP.unitcache.LearnUnit("target")
         return
     end
     if event == "PLAYER_FOCUS_CHANGED" then
         NP.module.focusGUID = UnitGUID("focus")
         E.QueueMass(CB.OnUpdateCastbar)
+        NP.unitcache.LearnUnit("focus")
         return
     end
     if event == "UPDATE_MOUSEOVER_UNIT" then
@@ -575,6 +579,7 @@ local function EngineOnEvent(_, event, unit, ...)
         if NP.quest and NP.quest.OnMouseover then
             NP.quest.OnMouseover()
         end
+        NP.unitcache.LearnUnit("mouseover")
         return
     end
     if event == "UNIT_TARGET" and unit then
@@ -633,12 +638,14 @@ local function EngineOnEvent(_, event, unit, ...)
         if NP.quest_coexist and NP.quest_coexist.Check then
             NP.quest_coexist.Check()
         end
+        NP.unitcache.MarkGroupDirty()
         return
     end
     if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
         E.UpdatePartyArenaTokenMaps()
         NP.identity.RefreshGroupTargetMatches()
         E.QueueMass(CB.OnUpdateCastbar)
+        NP.unitcache.MarkGroupDirty()
         return
     end
     if event == "ARENA_OPPONENT_UPDATE" then
@@ -740,6 +747,10 @@ local function EngineOnEvent(_, event, unit, ...)
         -- Gate CLEU once via exported event sets and config snapshot.
         local timestamp = unit
         local subevent = ...
+        if NP.module._unitCacheCLEU then
+            local _, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags = ...
+            NP.unitcache.OnCombatLog(srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags)
+        end
         if NP.auras.AURA_COMBATLOG_EVENTS[subevent] then
             NP.auras.HandleCombatLog(timestamp, ...)
         end
@@ -1030,6 +1041,7 @@ local function RunNameplatesRestore()
     for icon in pairs(NP.state.AuraGUIDByRaidIcon) do
         NP.state.AuraGUIDByRaidIcon[icon] = nil
     end
+    NP.unitcache.Stop()
 
     for _, plateData in pairs(NP.module.plates) do
         -- Hide module visuals and restore native chrome.

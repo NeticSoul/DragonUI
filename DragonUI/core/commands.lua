@@ -243,6 +243,23 @@ local function SlashCommandHandler(input)
             addon:Print(string.format("Cast log is %s, %d lines. Usage: /dui castlog on|off|clear",
                 NP.castbar.IsCastLogOn() and "on" or "off", log and #log or 0))
         end
+    elseif cmd == "unitcache" then
+        local UC = addon.Nameplates and addon.Nameplates.unitcache
+        if not UC then
+            addon:Print("Nameplate unit cache not available")
+            return
+        end
+        arg = arg and arg:trim() or ""
+        if arg:lower() == "forget" then
+            UC.Forget()
+            addon:Print("Nameplate unit cache cleared")
+        elseif arg ~= "" then
+            addon:Print(arg .. ": " .. (UC.Describe(arg) or "not known"))
+        else
+            local s = UC.GetStats()
+            addon:Print(string.format("Unit cache: %d players, %d guilds, %d titles, %d NPCs, %d GUIDs seen; active=%s remember=%s background=%s",
+                s.players, s.guilds, s.titles, s.npcs, s.seenGUIDs, tostring(s.active), tostring(s.persist), tostring(s.background)))
+        end
     elseif cmd == "npclamp" then
         local NP = addon.Nameplates
         if NP and NP.layout and NP.layout.DebugPrintClampState then

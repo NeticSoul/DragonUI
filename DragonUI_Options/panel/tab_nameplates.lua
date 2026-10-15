@@ -1014,6 +1014,34 @@ local function BuildHealthSubTab(scroll)
         dbPath = DB .. ".friendlyClassColors",
         callback = RefreshDependents,
     })
+    C:AddToggle(colorSection, {
+        label = LO["Remember Players and NPCs"],
+        desc = LO["Remember the class, guild and title of players you have seen and the titles of NPCs you have hovered, so they show at once next time. Used only by the class color, guild and title options. When off, everything learned is forgotten at logout."],
+        dbPath = DB .. ".unitCacheRemember",
+        callback = RefreshNameplates,
+    })
+    C:AddButton(colorSection, {
+        label = LO["Forget Learned Players and NPCs"],
+        desc = LO["Delete the players learned on this realm and every learned NPC title."],
+        callback = function()
+            StaticPopupDialogs["DRAGONUI_FORGET_UNIT_CACHE"] = StaticPopupDialogs["DRAGONUI_FORGET_UNIT_CACHE"] or {
+                text = LO["Forget every player and NPC title that nameplates have learned?"],
+                button1 = LO["Yes"],
+                button2 = LO["No"],
+                OnAccept = function()
+                    local NP = addon.Nameplates
+                    if NP and NP.unitcache then
+                        NP.unitcache.Forget()
+                    end
+                end,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                preferredIndex = 3,
+            }
+            StaticPopup_Show("DRAGONUI_FORGET_UNIT_CACHE")
+        end,
+    })
 
     C:AddHeading(colorSection, LO["Enemy Units"])
     C:AddToggle(colorSection, {
