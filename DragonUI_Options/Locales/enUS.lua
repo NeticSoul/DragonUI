@@ -1661,6 +1661,8 @@ L["Hide the orbs and the gems at 0 points instead of showing them empty."] = tru
 
 -- Auto-Accept
 L["Auto-Accept"] = true
-L["Accept Party Invites"] = true
-L["Automatically accept party invites from your friends and guild members."] = true
-L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = true
+L["Party invites from the players you pick below are accepted for you; anyone else is left for you to answer."] = true
+L["Accept Invites from Friends"] = true
+L["Automatically accept party invites from players on your friends list."] = true
+L["Accept Invites from Guild Members"] = true
+L["Automatically accept party invites from members of your guild."] = true

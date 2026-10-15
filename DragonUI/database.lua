@@ -292,7 +292,8 @@ local defaults = {
         },
         -- Party Invites
         autoaccept = {
-            party = false, -- Accept party invites from friends and guild members
+            friends = false, -- Accept party invites from players on the friends list
+            guild = false, -- Accept party invites from guild members
         },
         -- ACTIONBAR SETTINGS
         mainbars = {

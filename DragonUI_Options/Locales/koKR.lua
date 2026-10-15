@@ -1670,9 +1670,11 @@ L["Hide the orbs and the gems at 0 points instead of showing them empty."] = "0�
 
 -- Auto-Accept
 L["Auto-Accept"] = "초대 자동 수락"
-L["Accept Party Invites"] = "그룹 초대 수락"
-L["Automatically accept party invites from your friends and guild members."] = "친구와 길드 멤버의 그룹 초대를 자동으로 수락합니다."
-L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "그룹 초대를 대신 처리합니다. 친구와 길드 멤버의 초대만 자동으로 수락하며, 그 외 초대는 직접 판단할 수 있도록 남겨 둡니다."
+L["Party invites from the players you pick below are accepted for you; anyone else is left for you to answer."] = "아래에서 선택한 대상의 그룹 초대는 자동으로 수락하며, 그 외 초대는 직접 판단할 수 있도록 남겨 둡니다."
+L["Accept Invites from Friends"] = "친구 초대 수락"
+L["Automatically accept party invites from players on your friends list."] = "친구 목록에 있는 플레이어의 그룹 초대를 자동으로 수락합니다."
+L["Accept Invites from Guild Members"] = "길드원 초대 수락"
+L["Automatically accept party invites from members of your guild."] = "길드원의 그룹 초대를 자동으로 수락합니다."
 
 -- Farm mode
 L["Farm Mode"] = "파밍 모드"

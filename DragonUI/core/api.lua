@@ -1592,6 +1592,15 @@ function addon:ApplyDatabaseMigrations()
         extrabar1.slots = nil
     end
 
+    -- Auto-accept: the one friends-and-guild toggle became one toggle each.
+    local autoaccept = rawget(profile, "autoaccept")
+    if autoaccept and rawget(autoaccept, "party") ~= nil then
+        if autoaccept.party == true then
+            autoaccept.friends, autoaccept.guild = true, true
+        end
+        autoaccept.party = nil
+    end
+
     local global = self.db.global
     if global then
         local oldCache = rawget(global, "combuctorCache")

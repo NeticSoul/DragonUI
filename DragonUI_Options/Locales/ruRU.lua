@@ -1669,9 +1669,11 @@ L["Hide the orbs and the gems at 0 points instead of showing them empty."] = "С
 
 -- Auto-Accept
 L["Auto-Accept"] = "Автопринятие"
-L["Accept Party Invites"] = "Принимать приглашения в группу"
-L["Automatically accept party invites from your friends and guild members."] = "Автоматически принимать приглашения в группу от друзей и участников гильдии."
-L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "Отвечает на приглашения в группу за вас. Принимаются только приглашения от друзей и участников гильдии; остальные остаются на ваше усмотрение."
+L["Party invites from the players you pick below are accepted for you; anyone else is left for you to answer."] = "Приглашения в группу от выбранных ниже игроков принимаются за вас; остальные остаются на ваше усмотрение."
+L["Accept Invites from Friends"] = "Принимать приглашения от друзей"
+L["Automatically accept party invites from players on your friends list."] = "Автоматически принимать приглашения в группу от игроков из списка друзей."
+L["Accept Invites from Guild Members"] = "Принимать приглашения от участников гильдии"
+L["Automatically accept party invites from members of your guild."] = "Автоматически принимать приглашения в группу от участников вашей гильдии."
 
 -- Farm mode
 L["Farm Mode"] = "Режим фарма"

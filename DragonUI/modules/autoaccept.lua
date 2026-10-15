@@ -6,9 +6,9 @@ local addon = select(2, ...)
 
 local DIALOG = "PARTY_INVITE"
 
-local function IsEnabled()
+local function GetConfig()
     local profile = addon.db and addon.db.profile
-    return (profile and profile.autoaccept and profile.autoaccept.party) == true
+    return profile and profile.autoaccept
 end
 
 -- Names cannot contain "-", so anything from the first one on is the realm and is dropped.
@@ -43,9 +43,10 @@ local function AcceptVisibleInvite()
 end
 
 local function OnPartyInvite(_, _, inviter)
-    if not IsEnabled() then return end
-    local name = baseName(inviter)
-    if not (name and (IsFriend(name) or IsGuildMember(name))) then return end
+    local cfg = GetConfig()
+    local name = cfg and baseName(inviter)
+    if not name then return end
+    if not ((cfg.friends == true and IsFriend(name)) or (cfg.guild == true and IsGuildMember(name))) then return end
 
     -- Event order isn't guaranteed: UIParent may show the popup after this handler runs.
     if not AcceptVisibleInvite() then
@@ -57,10 +58,10 @@ addon.package:Subscribe(OnPartyInvite, "PARTY_INVITE_REQUEST")
 
 -- Fills the caches the handler reads; the roster is not in them until it is asked for.
 function addon.RefreshAutoAcceptCaches()
-    ShowFriends()
-    if IsInGuild() then GuildRoster() end
+    local cfg = GetConfig()
+    if not cfg then return end
+    if cfg.friends == true then ShowFriends() end
+    if cfg.guild == true and IsInGuild() then GuildRoster() end
 end
 
-addon.package:Subscribe(function()
-    if IsEnabled() then addon.RefreshAutoAcceptCaches() end
-end, "PLAYER_LOGIN")
+addon.package:Subscribe(addon.RefreshAutoAcceptCaches, "PLAYER_LOGIN")

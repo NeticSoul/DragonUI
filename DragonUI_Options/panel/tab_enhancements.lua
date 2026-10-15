@@ -779,15 +779,25 @@ local function BuildEnhancementsTab(scroll)
     C:AddSpacer(scroll)
     local autoAcceptSection = C:AddSection(scroll, LO["Auto-Accept"])
 
-    C:AddDescription(autoAcceptSection, LO["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."])
+    C:AddDescription(autoAcceptSection, LO["Party invites from the players you pick below are accepted for you; anyone else is left for you to answer."])
+
+    local function RefreshAutoAcceptCaches(value)
+        if value and addon.RefreshAutoAcceptCaches then addon.RefreshAutoAcceptCaches() end
+    end
 
     C:AddToggle(autoAcceptSection, {
-        label = LO["Accept Party Invites"],
-        desc = LO["Automatically accept party invites from your friends and guild members."],
-        dbPath = "autoaccept.party",
-        callback = function(value)
-            if value and addon.RefreshAutoAcceptCaches then addon.RefreshAutoAcceptCaches() end
-        end,
+        label = LO["Accept Invites from Friends"],
+        desc = LO["Automatically accept party invites from players on your friends list."],
+        dbPath = "autoaccept.friends",
+        callback = RefreshAutoAcceptCaches,
+        requiresReload = false,
+    })
+
+    C:AddToggle(autoAcceptSection, {
+        label = LO["Accept Invites from Guild Members"],
+        desc = LO["Automatically accept party invites from members of your guild."],
+        dbPath = "autoaccept.guild",
+        callback = RefreshAutoAcceptCaches,
         requiresReload = false,
     })
 end
