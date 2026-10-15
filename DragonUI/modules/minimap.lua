@@ -58,6 +58,21 @@ local function GetMinimapSettings()
     return addon.db and addon.db.profile and addon.db.profile.minimap
 end
 
+-- Farm mode can keep its own editor position, falling back to screen center until moved.
+local function GetMinimapPositionConfig()
+    local settings = GetMinimapSettings()
+    if settings and settings.farm_mode_enabled == true then
+        local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
+        local farm = widgets and widgets.minimap_farm
+        if farm and farm.anchor and farm.posX ~= nil and farm.posY ~= nil then
+            return farm
+        end
+        return { anchor = "CENTER", posX = 0, posY = 0 }
+    end
+
+    return (addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.minimap) or nil
+end
+
 -- The player's minimap scale, times the farm bonus while farm mode is on.
 local function GetEffectiveMinimapScale()
     local settings = GetMinimapSettings()
@@ -2965,11 +2980,14 @@ function MinimapModule:InitializeMinimapSystem()
     end
 
     --  AUTOMATIC REGISTRATION IN THE CENTRALIZED SYSTEM
+    local farmPositionConfigPath = (GetMinimapSettings() and GetMinimapSettings().farm_mode_enabled == true)
+        and {"widgets", "minimap_farm"} or {"widgets", "minimap"}
+
     addon:RegisterEditableFrame({
         name = "minimap",
         frame = self.minimapFrame,
         blizzardFrame = MinimapCluster,
-        configPath = {"widgets", "minimap"},
+        configPath = farmPositionConfigPath,
         onShow = function()
             -- Match quest tracker behavior: clamp while editing.
             -- Allow a small overflow so users can fine-tune near edges.
@@ -2993,11 +3011,15 @@ function MinimapModule:InitializeMinimapSystem()
     self:RegisterDurabilityEditorFrame()
 
     local defaultX, defaultY = -7, 0
-    local widgetConfig = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.minimap
+    local widgetConfig = GetMinimapPositionConfig()
 
     if widgetConfig then
         self.minimapFrame:SetPoint(widgetConfig.anchor or "TOPRIGHT", UIParent, widgetConfig.anchor or "TOPRIGHT",
             widgetConfig.posX or defaultX, widgetConfig.posY or defaultY)
+    elseif addon.db and addon.db.profile.widgets and addon.db.profile.widgets.minimap then
+        local fallback = addon.db.profile.widgets.minimap
+        self.minimapFrame:SetPoint(fallback.anchor or "TOPRIGHT", UIParent, fallback.anchor or "TOPRIGHT",
+            fallback.posX or defaultX, fallback.posY or defaultY)
     else
         self.minimapFrame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", defaultX, defaultY)
     end
@@ -3073,7 +3095,7 @@ function MinimapModule:UpdateSettings()
     local scale = GetEffectiveMinimapScale()
 
     if self.minimapFrame then
-        local widgetConfig = addon.db.profile.widgets.minimap
+        local widgetConfig = GetMinimapPositionConfig() or addon.db.profile.widgets.minimap
         local anchor = widgetConfig.anchor or "TOPRIGHT"
         local x = widgetConfig.posX or 0
         local y = widgetConfig.posY or 0
@@ -3249,6 +3271,12 @@ function MinimapModule:ToggleFarmMode()
     local active = settings.farm_mode_enabled == true
     settings.farm_mode_enabled = not active
 
+    -- Let /dui edit keep farm mode on its own saved slot.
+    if addon.EditableFrames and addon.EditableFrames.minimap then
+        addon.EditableFrames.minimap.configPath = settings.farm_mode_enabled
+            and {"widgets", "minimap_farm"} or {"widgets", "minimap"}
+    end
+
     addon:Print(active and L["Farm mode disabled"] or L["Farm mode enabled"])
 
     addon:RefreshMinimap()
@@ -3314,6 +3342,11 @@ function MinimapModule:ApplyFarmMode()
     local active = settings.farm_mode_enabled == true
     if active == self.farmMode.active then return end
     self.farmMode.active = active
+
+    if addon.EditableFrames and addon.EditableFrames.minimap then
+        addon.EditableFrames.minimap.configPath = active
+            and {"widgets", "minimap_farm"} or {"widgets", "minimap"}
+    end
 
     -- Hybrid hands the chrome to SexyMap; the bigger map still applies there.
     if IsHybridMinimapModeActive() then return end
@@ -3427,15 +3460,20 @@ end
 
 function MinimapModule:UpdateWidgets()
     -- Use correct database: addon.db (not addon.core.db)
-    if not addon.db or not addon.db.profile.widgets or not addon.db.profile.widgets.minimap then
-
-        self:LoadDefaultSettings()
-        return
+    local widgetOptions = GetMinimapPositionConfig()
+    if not widgetOptions then
+        if not (addon.db and addon.db.profile and addon.db.profile.widgets and addon.db.profile.widgets.minimap) then
+            self:LoadDefaultSettings()
+            return
+        end
+        widgetOptions = addon.db.profile.widgets.minimap
     end
 
-    local widgetOptions = addon.db.profile.widgets.minimap
-    self.minimapFrame:SetPoint(widgetOptions.anchor, widgetOptions.posX, widgetOptions.posY)
-
+    if self.minimapFrame then
+        self.minimapFrame:ClearAllPoints()
+        self.minimapFrame:SetPoint(widgetOptions.anchor or "TOPRIGHT", UIParent, widgetOptions.anchor or "TOPRIGHT",
+            widgetOptions.posX or 0, widgetOptions.posY or 0)
+    end
 end
 
 -- Editor mode uses centralized system
