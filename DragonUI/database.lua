@@ -231,6 +231,14 @@ local defaults = {
             class_color = false,  -- Health bar in the class colour
             bar_text = false,     -- Percentage and value on the bars
         },
+        -- Level-up banner (the enable flag is modules.levelupenhance.enabled; position in widgets.levelupenhance)
+        levelupenhance = {
+            scale = 1,            -- Banner and list scale (0.6-1.6)
+            show_unlocks = true,  -- List what the level unlocks (abilities, features, dungeons, raids, battlegrounds)
+            auto_expand = true,   -- Open the list on its own, as retail shows the unlocks without a click
+            chat_unlocks = true,  -- Print the unlocks in the windows that get the level-up message
+            pet_levelup = true,   -- Banner when a hunter pet levels up
+        },
         -- Combo points (the enable flag is modules.combopoints.enabled)
         combopoints = {
             location = "auto",    -- auto | both | player | target; auto follows unitframe.frame_style

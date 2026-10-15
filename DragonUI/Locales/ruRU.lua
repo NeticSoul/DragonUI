@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI - English Locale (Default)
@@ -683,8 +685,42 @@ L["Show Map Coordinates"] = "Показывать координаты карт�
 L["LevelUpFrame"] = "Level Up"
 L["Level Up Enhance"] = "Уровень Повышен"
 L["Enhanced level-up notification with animated frame"] = "Расширенное уведомление о повышении уровня с анимированной рамкой"
-L["You've Reached"] = "Ты достиг"
+L["You've Reached"] = "Вы достигли"
 L["Level %d"] = "Уровень %d"
+L["Dual Talent Specialization"] = "Двойная специализация"
+L["Major Glyph Slot"] = "Ячейка большого символа"
+L["Minor Glyph Slot"] = "Ячейка малого символа"
+L["Feature Unlocked!"] = "Новая возможность!"
+L["Ready to Spend!"] = "Можно распределить!"
+L["New Ability!"] = "Новая способность!"
+L["New Rank!"] = "Новый ранг!"
+L["New Battleground!"] = "Новое поле боя!"
+L["New Dungeon!"] = "Новое подземелье!"
+L["New Raid!"] = "Новый рейд!"
+L["Heroic Dungeons!"] = "Героические подземелья!"
+L["%d New Ranks!"] = "Новые ранги: %d!"
+L["%d New Raids!"] = "Новые рейды: %d!"
+L["%d New Dungeons!"] = "Новые подземелья: %d!"
+L["%d New Battlegrounds!"] = "Новые поля боя: %d!"
+L["%d New Abilities!"] = "Новые способности: %d!"
+L["New feature unlocked:"] = "Открыта новая возможность:"
+L["New ability available:"] = "Доступна новая способность:"
+L["New battleground unlocked:"] = "Открыто новое поле боя:"
+L["New dungeon unlocked:"] = "Открыто новое подземелье:"
+L["New raid unlocked:"] = "Открыт новый рейд:"
+L["New heroic dungeons unlocked:"] = "Открыты героические подземелья:"
+L["Learn it from your class trainer."] = "Изучите у учителя своего класса."
+L["Learned from a class quest."] = "Изучается в задании класса."
+L["Learn it from a riding trainer."] = "Изучите у учителя верховой езды."
+L["Talent Point"] = "Очко талантов"
+L["%d Talent Points"] = "Очков талантов: %d"
+L["Pet Talent Point"] = "Очко талантов питомца"
+L["%s Has Reached"] = "%s достигает"
+L["%s has reached level %d!"] = "%s достигает уровня %d!"
+L["List Unlocks"] = "Дополнительные оповещения"
+L["Open the List Automatically"] = "Открывать список автоматически"
+L["Unlocks in Chat"] = "Оповещения в чате"
+L["Pet Level-Up Banner"] = "Оповещение уровня питомца"
 
 -- ============================================================================
 -- LOW HP ALERT MODULE

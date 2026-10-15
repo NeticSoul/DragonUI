@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - English Locale (Default)
@@ -1615,6 +1617,20 @@ L["Personal Resource Display"] = "개인 자원 표시"
 L["Add Health and Resource below your Character."] = "캐릭터 아래에 생명력과 자원을 표시합니다."
 L["Swing Timer"] = "스윙 타이머"
 L["Show a bar with the time left until each weapon's next swing."] = "각 무기의 다음 공격까지 남은 시간을 막대로 표시합니다."
+L["Level Up Enhance"] = "레벨 업 강화"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "새 레벨에서 해제되는 능력, 기능, 던전, 공격대, 전장을 보여주는 레벨 업 배너입니다."
+L["Enable Level-Up Banner"] = "레벨 업 배너 사용"
+L["Size of the banner and its list."] = "배너와 목록의 크기입니다."
+L["List Unlocks"] = "해제 항목 목록"
+L["Show what the new level unlocks under the banner."] = "새 레벨에서 해제되는 항목을 배너 아래에 표시합니다."
+L["Open the List Automatically"] = "목록 자동으로 열기"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "배너가 나타나면 바로 목록을 엽니다. 아니면 배너 아래의 점을 클릭하세요."
+L["Unlocks in Chat"] = "대화창에 해제 항목 표시"
+L["Print the unlocks after the level-up message in chat."] = "레벨 업 메시지 다음에 해제 항목을 대화창에 출력합니다."
+L["Pet Level-Up Banner"] = "소환수 레벨업 배너"
+L["Show a banner when your hunter pet reaches a new level."] = "사냥꾼 소환수가 새 레벨에 도달하면 배너를 표시합니다."
+L["Test Banner"] = "배너 테스트"
+L["Show the banner for your next level (or /lvltest <level>)."] = "다음 레벨의 배너를 표시합니다 (또는 /lvltest <레벨>)."
 L["Show Bar Title"] = "바 제목 표시"
 L["Show Time"] = "시간 표시"
 

@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
  DragonUI_Options - Portuguese (Brazil) Locale (ptBR)
  Community translation — Edit this file to contribute!
@@ -1442,6 +1444,20 @@ L["Personal Resource Display"] = "Exibição de Recursos Pessoais"
 L["Add Health and Resource below your Character."] = "Adiciona vida e recurso abaixo do seu personagem."
 L["Swing Timer"] = "Temporizador de golpe"
 L["Show a bar with the time left until each weapon's next swing."] = "Mostra uma barra com o tempo restante até o próximo golpe de cada arma."
+L["Level Up Enhance"] = "Subida de Nível"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "Faixa animada de subida de nível que mostra o que cada nível desbloqueia: habilidades, recursos, masmorras, raides e campos de batalha."
+L["Enable Level-Up Banner"] = "Ativar faixa de subida de nível"
+L["Size of the banner and its list."] = "Tamanho da faixa e da sua lista."
+L["List Unlocks"] = "Listar desbloqueios"
+L["Show what the new level unlocks under the banner."] = "Mostra abaixo da faixa o que o novo nível desbloqueia."
+L["Open the List Automatically"] = "Abrir a lista automaticamente"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "Abre a lista assim que a faixa aparece. Caso contrário, clique no ponto abaixo da faixa."
+L["Unlocks in Chat"] = "Desbloqueios no chat"
+L["Print the unlocks after the level-up message in chat."] = "Escreve os desbloqueios no chat após a mensagem de subida de nível."
+L["Pet Level-Up Banner"] = "Faixa de nível do ajudante"
+L["Show a banner when your hunter pet reaches a new level."] = "Mostra uma faixa quando seu ajudante de caçador alcança um novo nível."
+L["Test Banner"] = "Testar faixa"
+L["Show the banner for your next level (or /lvltest <level>)."] = "Mostra a faixa do seu próximo nível (ou /lvltest <nível>)."
 L["Show Bar Title"] = "Mostrar título da barra"
 L["Show Time"] = "Mostrar tempo"
 

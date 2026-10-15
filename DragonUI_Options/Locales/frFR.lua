@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
  DragonUI_Options - French Locale (frFR)
  Community translation — Edit this file to contribute!
@@ -1446,6 +1448,20 @@ L["Personal Resource Display"] = "Affichage des ressources personnelles"
 L["Add Health and Resource below your Character."] = "Ajoute la santé et la ressource sous votre personnage."
 L["Swing Timer"] = "Minuteur de frappe"
 L["Show a bar with the time left until each weapon's next swing."] = "Affiche une barre avec le temps restant avant la prochaine frappe de chaque arme."
+L["Level Up Enhance"] = "Montée de niveau améliorée"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "Bannière animée de montée de niveau qui liste ce que chaque niveau débloque : techniques, fonctionnalités, donjons, raids et champs de bataille."
+L["Enable Level-Up Banner"] = "Activer la bannière de montée de niveau"
+L["Size of the banner and its list."] = "Taille de la bannière et de sa liste."
+L["List Unlocks"] = "Lister les déblocages"
+L["Show what the new level unlocks under the banner."] = "Affiche sous la bannière ce que le nouveau niveau débloque."
+L["Open the List Automatically"] = "Ouvrir la liste automatiquement"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "Ouvre la liste dès que la bannière apparaît. Sinon, cliquez sur le point sous la bannière."
+L["Unlocks in Chat"] = "Déblocages dans la discussion"
+L["Print the unlocks after the level-up message in chat."] = "Affiche les déblocages dans la discussion après le message de montée de niveau."
+L["Pet Level-Up Banner"] = "Bannière de niveau du familier"
+L["Show a banner when your hunter pet reaches a new level."] = "Affiche une bannière quand votre familier de chasseur atteint un nouveau niveau."
+L["Test Banner"] = "Tester la bannière"
+L["Show the banner for your next level (or /lvltest <level>)."] = "Affiche la bannière de votre prochain niveau (ou /lvltest <niveau>)."
 L["Show Bar Title"] = "Afficher le titre de la barre"
 L["Show Time"] = "Afficher le temps"
 

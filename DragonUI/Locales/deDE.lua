@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI - English Locale (Default)
@@ -685,6 +687,40 @@ L["Level Up Enhance"] = "Level-Up-Verstärkung"
 L["Enhanced level-up notification with animated frame"] = "Erweiterte Level-Up-Benachrichtigung mit animiertem Rahmen"
 L["You've Reached"] = "Du hast erreicht"
 L["Level %d"] = "Level %d"
+L["Dual Talent Specialization"] = "Dualspezialisierung"
+L["Major Glyph Slot"] = "Sockel für erhebliche Glyphe"
+L["Minor Glyph Slot"] = "Sockel für geringe Glyphe"
+L["Feature Unlocked!"] = "Funktion freigeschaltet!"
+L["Ready to Spend!"] = "Bereit zum Verteilen!"
+L["New Ability!"] = "Neue Fähigkeit!"
+L["New Rank!"] = "Neuer Rang!"
+L["New Battleground!"] = "Neues Schlachtfeld!"
+L["New Dungeon!"] = "Neuer Dungeon!"
+L["New Raid!"] = "Neuer Schlachtzug!"
+L["Heroic Dungeons!"] = "Heroische Dungeons!"
+L["%d New Ranks!"] = "%d neue Ränge!"
+L["%d New Raids!"] = "%d neue Schlachtzüge!"
+L["%d New Dungeons!"] = "%d neue Dungeons!"
+L["%d New Battlegrounds!"] = "%d neue Schlachtfelder!"
+L["%d New Abilities!"] = "%d neue Fähigkeiten!"
+L["New feature unlocked:"] = "Neue Funktion freigeschaltet:"
+L["New ability available:"] = "Neue Fähigkeit verfügbar:"
+L["New battleground unlocked:"] = "Neues Schlachtfeld freigeschaltet:"
+L["New dungeon unlocked:"] = "Neuer Dungeon freigeschaltet:"
+L["New raid unlocked:"] = "Neuer Schlachtzug freigeschaltet:"
+L["New heroic dungeons unlocked:"] = "Neue heroische Dungeons freigeschaltet:"
+L["Learn it from your class trainer."] = "Erlerne sie bei deinem Klassenlehrer."
+L["Learned from a class quest."] = "Durch eine Klassenquest erlernt."
+L["Learn it from a riding trainer."] = "Erlerne sie bei einem Reitlehrer."
+L["Talent Point"] = "Talentpunkt"
+L["%d Talent Points"] = "%d Talentpunkte"
+L["Pet Talent Point"] = "Begleitertalentpunkt"
+L["%s Has Reached"] = "%s hat erreicht"
+L["%s has reached level %d!"] = "%s hat Stufe %d erreicht!"
+L["List Unlocks"] = "Freischaltungen auflisten"
+L["Open the List Automatically"] = "Liste automatisch öffnen"
+L["Unlocks in Chat"] = "Freischaltungen im Chat"
+L["Pet Level-Up Banner"] = "Banner für Begleiter-Stufenaufstieg"
 
 -- ============================================================================
 -- LOW HP ALERT MODULE

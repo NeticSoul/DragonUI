@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
  DragonUI - Portuguese (Brazil) Locale (ptBR)
  Community translation — Edit this file to contribute!
@@ -616,6 +618,40 @@ L["Level Up Enhance"] = "Subida de Nível"
 L["Enhanced level-up notification with animated frame"] = "Notificação de nível melhorada com moldura animada"
 L["You've Reached"] = "Você alcançou"
 L["Level %d"] = "Nível %d"
+L["Dual Talent Specialization"] = "Especialização Dupla"
+L["Major Glyph Slot"] = "Espaço de glifo maior"
+L["Minor Glyph Slot"] = "Espaço de glifo menor"
+L["Feature Unlocked!"] = "Recurso desbloqueado!"
+L["Ready to Spend!"] = "Pronto para usar!"
+L["New Ability!"] = "Nova habilidade!"
+L["New Rank!"] = "Novo grau!"
+L["New Battleground!"] = "Novo campo de batalha!"
+L["New Dungeon!"] = "Nova masmorra!"
+L["New Raid!"] = "Nova raide!"
+L["Heroic Dungeons!"] = "Masmorras heroicas!"
+L["%d New Ranks!"] = "%d novos graus!"
+L["%d New Raids!"] = "%d novas raides!"
+L["%d New Dungeons!"] = "%d novas masmorras!"
+L["%d New Battlegrounds!"] = "%d novos campos de batalha!"
+L["%d New Abilities!"] = "%d novas habilidades!"
+L["New feature unlocked:"] = "Novo recurso desbloqueado:"
+L["New ability available:"] = "Nova habilidade disponível:"
+L["New battleground unlocked:"] = "Novo campo de batalha desbloqueado:"
+L["New dungeon unlocked:"] = "Nova masmorra desbloqueada:"
+L["New raid unlocked:"] = "Nova raide desbloqueada:"
+L["New heroic dungeons unlocked:"] = "Novas masmorras heroicas desbloqueadas:"
+L["Learn it from your class trainer."] = "Aprenda com o instrutor da sua classe."
+L["Learned from a class quest."] = "Aprendida em uma missão de classe."
+L["Learn it from a riding trainer."] = "Aprenda com um instrutor de montaria."
+L["Talent Point"] = "Ponto de talento"
+L["%d Talent Points"] = "%d pontos de talento"
+L["Pet Talent Point"] = "Ponto de talento do ajudante"
+L["%s Has Reached"] = "%s alcançou"
+L["%s has reached level %d!"] = "%s alcançou o nível %d!"
+L["List Unlocks"] = "Listar desbloqueios"
+L["Open the List Automatically"] = "Abrir a lista automaticamente"
+L["Unlocks in Chat"] = "Desbloqueios no chat"
+L["Pet Level-Up Banner"] = "Faixa de nível do ajudante"
 
 -- ============================================================================
 -- LOW HP ALERT MODULE

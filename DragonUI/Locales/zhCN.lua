@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI - 简体中文本地化文件
@@ -678,6 +680,40 @@ L["Level Up Enhance"] = "升级增强"
 L["Enhanced level-up notification with animated frame"] = "带有动画边框的增强升级通知"
 L["You've Reached"] = "你已达到"
 L["Level %d"] = "等级 %d"
+L["Dual Talent Specialization"] = "双天赋"
+L["Major Glyph Slot"] = "大型雕文栏位"
+L["Minor Glyph Slot"] = "小型雕文栏位"
+L["Feature Unlocked!"] = "新功能解锁！"
+L["Ready to Spend!"] = "可以分配！"
+L["New Ability!"] = "新技能！"
+L["New Rank!"] = "新等级！"
+L["New Battleground!"] = "新战场！"
+L["New Dungeon!"] = "新地下城！"
+L["New Raid!"] = "新团队副本！"
+L["Heroic Dungeons!"] = "英雄地下城！"
+L["%d New Ranks!"] = "%d个新等级！"
+L["%d New Raids!"] = "%d个新团队副本！"
+L["%d New Dungeons!"] = "%d个新地下城！"
+L["%d New Battlegrounds!"] = "%d个新战场！"
+L["%d New Abilities!"] = "%d个新技能！"
+L["New feature unlocked:"] = "新功能解锁："
+L["New ability available:"] = "可学习新技能："
+L["New battleground unlocked:"] = "新战场解锁："
+L["New dungeon unlocked:"] = "新地下城解锁："
+L["New raid unlocked:"] = "新团队副本解锁："
+L["New heroic dungeons unlocked:"] = "英雄地下城解锁："
+L["Learn it from your class trainer."] = "向你的职业训练师学习。"
+L["Learned from a class quest."] = "通过职业任务学会。"
+L["Learn it from a riding trainer."] = "向骑术训练师学习。"
+L["Talent Point"] = "天赋点数"
+L["%d Talent Points"] = "%d点天赋点数"
+L["Pet Talent Point"] = "宠物天赋点数"
+L["%s Has Reached"] = "%s 已达到"
+L["%s has reached level %d!"] = "%s 已达到%d级！"
+L["List Unlocks"] = "列出解锁内容"
+L["Open the List Automatically"] = "自动打开列表"
+L["Unlocks in Chat"] = "在聊天框显示解锁内容"
+L["Pet Level-Up Banner"] = "宠物升级横幅"
 
 -- ============================================================================
 -- LOW HP ALERT MODULE

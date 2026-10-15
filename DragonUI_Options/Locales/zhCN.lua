@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - 简体中文本地化文件
@@ -1611,6 +1613,20 @@ L["Personal Resource Display"] = "个人资源显示"
 L["Add Health and Resource below your Character."] = "在你的角色下方添加生命值和资源。"
 L["Swing Timer"] = "攻击计时条"
 L["Show a bar with the time left until each weapon's next swing."] = "显示每把武器距离下一次攻击的剩余时间。"
+L["Level Up Enhance"] = "升级增强"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "动画升级横幅，列出每个新等级解锁的内容：技能、功能、地下城、团队副本和战场。"
+L["Enable Level-Up Banner"] = "启用升级横幅"
+L["Size of the banner and its list."] = "横幅及其列表的大小。"
+L["List Unlocks"] = "列出解锁内容"
+L["Show what the new level unlocks under the banner."] = "在横幅下方显示新等级解锁的内容。"
+L["Open the List Automatically"] = "自动打开列表"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "横幅出现时立即打开列表。否则点击横幅下方的圆点。"
+L["Unlocks in Chat"] = "在聊天框显示解锁内容"
+L["Print the unlocks after the level-up message in chat."] = "在升级信息之后把解锁内容输出到聊天框。"
+L["Pet Level-Up Banner"] = "宠物升级横幅"
+L["Show a banner when your hunter pet reaches a new level."] = "猎人宠物升级时显示横幅。"
+L["Test Banner"] = "测试横幅"
+L["Show the banner for your next level (or /lvltest <level>)."] = "显示你下一级的横幅（或 /lvltest <等级>）。"
 L["Show Bar Title"] = "显示计时条标题"
 L["Show Time"] = "显示时间"
 

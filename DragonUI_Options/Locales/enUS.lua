@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - English Locale (Default)
@@ -1606,6 +1608,20 @@ L["Personal Resource Display"] = true
 L["Add Health and Resource below your Character."] = true
 L["Swing Timer"] = true
 L["Show a bar with the time left until each weapon's next swing."] = true
+L["Level Up Enhance"] = true
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = true
+L["Enable Level-Up Banner"] = true
+L["Size of the banner and its list."] = true
+L["List Unlocks"] = true
+L["Show what the new level unlocks under the banner."] = true
+L["Open the List Automatically"] = true
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = true
+L["Unlocks in Chat"] = true
+L["Print the unlocks after the level-up message in chat."] = true
+L["Pet Level-Up Banner"] = true
+L["Show a banner when your hunter pet reaches a new level."] = true
+L["Test Banner"] = true
+L["Show the banner for your next level (or /lvltest <level>)."] = true
 L["Show Bar Title"] = true
 L["Show Time"] = true
 

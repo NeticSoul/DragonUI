@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - English Locale (Default)
@@ -1614,6 +1616,20 @@ L["Personal Resource Display"] = "Индикатор личных ресурсо
 L["Add Health and Resource below your Character."] = "Добавляет здоровье и ресурс под вашим персонажем."
 L["Swing Timer"] = "Таймер удара"
 L["Show a bar with the time left until each weapon's next swing."] = "Показывает полосу с временем до следующего удара каждым оружием."
+L["Level Up Enhance"] = "Уровень Повышен"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "Анимированное оповещение о новом уровне со списком того, что он открывает: способности, возможности, подземелья, рейды и поля боя."
+L["Enable Level-Up Banner"] = "Включить оповещение"
+L["Size of the banner and its list."] = "Размер оповещения и его списка."
+L["List Unlocks"] = "Дополнительные оповещения"
+L["Show what the new level unlocks under the banner."] = "Показывать под оповещением, что открывает новый уровень."
+L["Open the List Automatically"] = "Открывать список автоматически"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "Открывать список сразу при появлении оповещения. Иначе нажмите на точку под ним."
+L["Unlocks in Chat"] = "Оповещения в чате"
+L["Print the unlocks after the level-up message in chat."] = "Выводить открытое в чат после сообщения о новом уровне."
+L["Pet Level-Up Banner"] = "Оповещение уровня питомца"
+L["Show a banner when your hunter pet reaches a new level."] = "Показывать оповещение, когда ваш питомец охотника получает новый уровень."
+L["Test Banner"] = "Тестовое оповещение"
+L["Show the banner for your next level (or /lvltest <level>)."] = "Показать оповещение для вашего следующего уровня (или /lvltest <уровень>)."
 L["Show Bar Title"] = "Показывать название полосы"
 L["Show Time"] = "Показывать время"
 

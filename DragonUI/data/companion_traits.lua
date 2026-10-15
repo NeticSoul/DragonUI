@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
 
 local addon = select(2, ...)

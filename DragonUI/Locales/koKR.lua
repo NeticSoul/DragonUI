@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI - English Locale (Default)
@@ -680,9 +682,43 @@ L["Show Map Coordinates"] = "지도 좌표 표시"
 -- Level Up Enhance Module
 L["LevelUpFrame"] = "Level Up"
 L["Level Up Enhance"] = "레벨 업 강화"
-L["Enhanced level-up notification with animated frame"] = "애니메이션 프레ーム이 있는 향상된 레벨 업 알림"
+L["Enhanced level-up notification with animated frame"] = "애니메이션 프레임이 있는 향상된 레벨 업 알림"
 L["You've Reached"] = "당신이 달성"
 L["Level %d"] = "레벨 %d"
+L["Dual Talent Specialization"] = "이중 특성"
+L["Major Glyph Slot"] = "상위 문양 칸"
+L["Minor Glyph Slot"] = "하위 문양 칸"
+L["Feature Unlocked!"] = "새 기능 해제!"
+L["Ready to Spend!"] = "사용 가능!"
+L["New Ability!"] = "새 능력!"
+L["New Rank!"] = "새 등급!"
+L["New Battleground!"] = "새 전장!"
+L["New Dungeon!"] = "새 던전!"
+L["New Raid!"] = "새 공격대!"
+L["Heroic Dungeons!"] = "영웅 던전!"
+L["%d New Ranks!"] = "새 등급 %d개!"
+L["%d New Raids!"] = "새 공격대 %d개!"
+L["%d New Dungeons!"] = "새 던전 %d개!"
+L["%d New Battlegrounds!"] = "새 전장 %d개!"
+L["%d New Abilities!"] = "새 능력 %d개!"
+L["New feature unlocked:"] = "새 기능 해제:"
+L["New ability available:"] = "새 능력 습득 가능:"
+L["New battleground unlocked:"] = "새 전장 해제:"
+L["New dungeon unlocked:"] = "새 던전 해제:"
+L["New raid unlocked:"] = "새 공격대 해제:"
+L["New heroic dungeons unlocked:"] = "새 영웅 던전 해제:"
+L["Learn it from your class trainer."] = "직업 훈련사에게 배우세요."
+L["Learned from a class quest."] = "직업 퀘스트로 배웁니다."
+L["Learn it from a riding trainer."] = "탈것 조련사에게 배우세요."
+L["Talent Point"] = "특성 점수"
+L["%d Talent Points"] = "특성 점수 %d점"
+L["Pet Talent Point"] = "소환수 특성 점수"
+L["%s Has Reached"] = "%s 도달"
+L["%s has reached level %d!"] = "%s: %d 레벨 달성!"
+L["List Unlocks"] = "해제 항목 목록"
+L["Open the List Automatically"] = "목록 자동으로 열기"
+L["Unlocks in Chat"] = "대화창에 해제 항목 표시"
+L["Pet Level-Up Banner"] = "소환수 레벨업 배너"
 
 -- ============================================================================
 -- LOW HP ALERT MODULE

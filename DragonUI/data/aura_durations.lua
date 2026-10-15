@@ -1,3 +1,4 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
 -- Generated from the client's own Spell.dbc, SpellDuration.dbc and SpellMechanic.dbc
 -- (3.3.5a build 12340); spellIds and mechanics are locale-independent.

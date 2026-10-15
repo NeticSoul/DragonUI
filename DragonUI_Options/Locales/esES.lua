@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 --[[
 ================================================================================
 DragonUI_Options - English Locale (Default)
@@ -1613,6 +1615,20 @@ L["Personal Resource Display"] = "Visualización de recursos personales"
 L["Add Health and Resource below your Character."] = "Añade salud y recurso bajo tu personaje."
 L["Swing Timer"] = "Temporizador de golpe"
 L["Show a bar with the time left until each weapon's next swing."] = "Muestra una barra con el tiempo que falta para el siguiente golpe de cada arma."
+L["Level Up Enhance"] = "Nivel Subido"
+L["Animated level-up banner that lists what each new level unlocks: abilities, features, dungeons, raids and battlegrounds."] = "Banner animado de subida de nivel que muestra lo que desbloquea cada nivel: habilidades, funciones, mazmorras, bandas y campos de batalla."
+L["Enable Level-Up Banner"] = "Activar banner de subida de nivel"
+L["Size of the banner and its list."] = "Tamaño del banner y de su lista."
+L["List Unlocks"] = "Mostrar desbloqueos"
+L["Show what the new level unlocks under the banner."] = "Muestra bajo el banner lo que desbloquea el nuevo nivel."
+L["Open the List Automatically"] = "Abrir la lista automáticamente"
+L["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."] = "Abre la lista en cuanto aparece el banner. Si no, haz clic en el punto bajo el banner."
+L["Unlocks in Chat"] = "Desbloqueos en el chat"
+L["Print the unlocks after the level-up message in chat."] = "Escribe los desbloqueos en el chat tras el mensaje de subida de nivel."
+L["Pet Level-Up Banner"] = "Aviso de nivel de mascota"
+L["Show a banner when your hunter pet reaches a new level."] = "Muestra un banner cuando tu mascota de cazador alcanza un nuevo nivel."
+L["Test Banner"] = "Probar banner"
+L["Show the banner for your next level (or /lvltest <level>)."] = "Muestra el banner de tu próximo nivel (o /lvltest <nivel>)."
 L["Show Bar Title"] = "Mostrar título de la barra"
 L["Show Time"] = "Mostrar tiempo"
 
