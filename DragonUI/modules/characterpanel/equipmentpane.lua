@@ -439,9 +439,11 @@ StaticPopupDialogs["DRAGONUI_SAVE_EQUIPMENT_SET"] = {
 -- Entering a child button fires the row's OnLeave, so both ends re-test the row rect (which stays
 -- true over a child) instead of hiding blind.
 local function updateRowActions(row)
-    local wanted = row.setName ~= nil and row:IsMouseOver()
+    local over = row:IsMouseOver() and true or false
+    local wanted = row.setName ~= nil and over
     row.Edit:SetShownCompat(wanted)
     row.Delete:SetShownCompat(wanted)
+    if row.HighlightBar then row.HighlightBar:SetShownCompat(over) end
 end
 
 local function buildActionButton(row, texture, tooltip, warning, onClick)
@@ -517,10 +519,10 @@ function CP.BuildEquipmentRow(parent, index)
     top:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, 1)
     row.BgTop = top
 
-    -- Retail rotates the same cap 180 degrees.
+    -- Flipped, not rotated like retail: the cap's side borders sit a texel apart, so rotating misaligns the corners.
     local bottom = row:CreateTexture(nil, "BACKGROUND")
     bottom:SetTexture(PARTS)
-    bottom:SetTexCoord(CAP_COORDS[2], CAP_COORDS[1], CAP_COORDS[4], CAP_COORDS[3])
+    bottom:SetTexCoord(CAP_COORDS[1], CAP_COORDS[2], CAP_COORDS[4], CAP_COORDS[3])
     bottom:SetHeight(CAP_H)
     bottom:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, -CAP_OVERHANG_BOTTOM)
     bottom:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, -CAP_OVERHANG_BOTTOM)
@@ -540,12 +542,12 @@ function CP.BuildEquipmentRow(parent, index)
     stripe:SetAlpha(index % 2 == 0 and 0.1 or 0)
     row.Stripe = stripe
 
-    local selected = row:CreateTexture(nil, "BORDER")
+    -- OVERLAY like retail's SelectedBar, so the icon takes the gold wash too.
+    local selected = row:CreateTexture(nil, "OVERLAY")
     selected:SetTexture("Interface\\FriendsFrame\\UI-FriendsFrame-HighlightBar")
     selected:SetTexCoord(0.2, 0.8, 0, 1)
     selected:SetBlendMode("ADD")
     selected:SetAlpha(0.4)
-    selected:SetAllPoints(row)
     selected:Hide()
     row.Selected = selected
 
@@ -578,19 +580,26 @@ function CP.BuildEquipmentRow(parent, index)
     row.Text = text
 
     -- The vanilla UI-CheckBox-Check has uneven padding inside its art; the atlas glyph is cut tight.
-    local check = row:CreateTexture(nil, "OVERLAY")
+    local check = row:CreateTexture(nil, "ARTWORK")
     check:SetAtlasTexture("common-icon-checkmark")
     check:SetSize(CHECK_SIZE, CHECK_SIZE)
     check:SetPoint("RIGHT", row, "RIGHT", -8, 0)
     check:Hide()
     row.Check = check
 
-    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-    local hl = row:GetHighlightTexture()
-    if hl then
-        hl:SetBlendMode("ADD")
-        hl:SetAlpha(0.4)
+    -- Retail's HighlightBar: lit while the cursor is over the row, its gear and delete buttons included.
+    local hover = row:CreateTexture(nil, "OVERLAY")
+    hover:SetTexture("Interface\\FriendsFrame\\UI-FriendsFrame-HighlightBar")
+    hover:SetTexCoord(0.2, 0.8, 0, 1)
+    hover:SetBlendMode("ADD")
+    hover:SetAlpha(0.4)
+    -- 3.3.5a lacks HighlightBar-Blue; its gold twin greyed, tinted and at 0.46 adds what the blue at 0.4 does.
+    if hover:SetDesaturated(true) then
+        hover:SetVertexColor(0.29, 0.6, 1)
+        hover:SetAlpha(0.46)
     end
+    hover:Hide()
+    row.HighlightBar = hover
 
     row.Delete = buildActionButton(row, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", DELETE, nil,
         function(self)
@@ -650,8 +659,20 @@ local function layout()
     scrollChild:SetWidth(scroll:GetWidth() or span)
 end
 
+-- Inside the card's border lines; past the top cap's curve on the first row, into the bottom overhang on the last.
+local BAR_INSET, BAR_FIRST_TOP, BAR_LAST_BOTTOM = 2, 2, 2
+
+local function placeBar(bar, row, first, last)
+    if not bar then return end
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", row, "TOPLEFT", BAR_INSET, first and -BAR_FIRST_TOP or 0)
+    bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -BAR_INSET, last and -BAR_LAST_BOTTOM or 0)
+end
+
 -- The sets share one card: only the first shows its top cap and only the last its bottom one.
 local function shapeCard(row, first, last)
+    placeBar(row.Selected, row, first, last)
+    placeBar(row.HighlightBar, row, first, last)
     row.BgTop:SetShownCompat(first)
     row.BgBottom:SetShownCompat(last)
     row.BgMiddle:ClearAllPoints()
@@ -691,13 +712,13 @@ function refresh()
         local spec = specForSet(info.name)
         if spec then row.SpecBadge.Icon:SetTexture(specIcon(spec)) end
         row.SpecBadge:SetShownCompat(spec ~= nil)
-        updateRowActions(row)
         shapeCard(row, i == 1, i == #sets)
         local y = LIST_PAD_TOP + (i - 1) * ROW_H
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", ROW_X, -y)
         row:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
         row:Show()
+        updateRowActions(row)
     end
     for i = #sets + 1, #rows do rows[i]:Hide() end
 
@@ -711,6 +732,7 @@ function refresh()
         listBottom = y + ROW_H
     end
     newRow:SetShownCompat(canAdd)
+    updateRowActions(newRow)
 
     scrollChild:SetHeight(math.max(1, listBottom + CAP_OVERHANG_BOTTOM))
     if CP.SyncScrollBarVisibility then CP.SyncScrollBarVisibility(scroll) end
