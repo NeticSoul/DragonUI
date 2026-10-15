@@ -14,6 +14,11 @@ local E = NP.engine
 
 local DRIFT_INTERVAL = 0.2
 
+-- The onlyTargetPlates gate lives in step 7 of the tick, but the client paints a fresh plate's own
+-- chrome the moment it is shown, and the full refresh that suppresses it is budgeted (8 plates/tick).
+-- Every show re-arms a short native-chrome sweep so a plate entering range is stomped at once.
+local BOOT_GATE_FRAMES = C.ONLY_TARGET_CHROME_TICKS
+
 -- 3.3.5a CLEU: OnEvent(_, event, timestamp, subevent, sourceGUID, ...) — no hideCaster slot.
 
 -- Queues (weak keys)
@@ -339,6 +344,9 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
     NP.module._opacityFullParty = (cfg.opacityFullParty == true)
     NP.module._onlyTargetPlates = cfg.onlyTargetPlates == true
+    if NP.module._onlyTargetPlates and not prevOnlyTargetPlates then
+        NP.module._bootGateFrames = BOOT_GATE_FRAMES
+    end
     -- The CVar pair is snapshot-skipped sometimes; flipping the option must still reach the client.
     if skipStackingCVar and NP.module._onlyTargetPlates ~= prevOnlyTargetPlates then
         skipStackingCVar = false
@@ -390,6 +398,25 @@ local function EngineOnUpdate(_, elapsed)
 
     if NP.quest and NP.quest.TickDeferredRebuild then
         NP.quest.TickDeferredRebuild(NP.module._engineFrame)
+    end
+
+    -- 0. Boot gate sweep (a few ticks after login / after the option flips on, and after any plate
+    -- shows). Stomp native chrome on every gated plate for those ticks, so a fresh plate never keeps
+    -- its slave name/bar/text up while the full refresh that suppresses it is still queued.
+    -- Alpha and clickability stay owned by step 7, and only that pass may call SetPlateVisualAlpha:
+    -- that call writes the _lastAppliedVisualAlpha memo, so a pre-emptive 0 here would make step 7
+    -- skip the plate and leave it fully drawn.
+    if NP.module._bootGateFrames then
+        if NP.module._bootGateFrames > 0 then
+            NP.module._bootGateFrames = NP.module._bootGateFrames - 1
+            for _, pd in pairs(NP.module.plates) do
+                if not NP.gather.IsOnlyTargetPlateAllowed(pd) then
+                    NP.discovery.SuppressNativeChrome(pd)
+                end
+            end
+        else
+            NP.module._bootGateFrames = nil
+        end
     end
 
     -- 0. Castbar progress on active plates.

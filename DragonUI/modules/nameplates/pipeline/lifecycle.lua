@@ -7,6 +7,11 @@ local NP = addon.Nameplates
 
 NP.lifecycle = NP.lifecycle or {}
 
+-- Ticks of native-chrome sweep armed on every gated plate show; same value the engine applies at
+-- login / when the option flips on. Read from the shared constant: lifecycle must not force engine.lua
+-- to load first, so the value cannot be a module-local here.
+local BOOT_GATE_FRAMES = NP.const.ONLY_TARGET_CHROME_TICKS
+
 -- Per-plate visual invalidation
 
 function NP.lifecycle.InvalidatePlateVisuals(plateData, clearGuid)
@@ -236,6 +241,19 @@ end
 function NP.lifecycle.OnShowNameplate(plateData, reason)
     plateData._isVisible = true
     NP.lifecycle.PrepareNameplate(plateData)
+    -- onlyTargetPlates is enforced in the engine's per-frame alpha pass, so a plate showing
+    -- before that tick paints its native chrome once. Stomp that chrome here, at the show itself,
+    -- and re-arm the engine's sweep: the client re-shows native name/bar on its own a tick later.
+    -- Unconditional while the option is on - the native art is replaced by our widgets either way,
+    -- and the allowed (target) plate must not flash native art before its full refresh lands.
+    -- Do NOT touch the visual alpha from here: the plate's widgets do not exist until the queued
+    -- full refresh builds them, and SetPlateVisualAlpha records the value in
+    -- _lastAppliedVisualAlpha, so a pre-emptive 0 makes step 7 skip the plate and its widgets are
+    -- created at alpha 1 - every gated plate then stays fully drawn.
+    if NP.module._onlyTargetPlates then
+        NP.discovery.SuppressNativeChrome(plateData)
+        NP.module._bootGateFrames = BOOT_GATE_FRAMES
+    end
     NP.identity.RequestGroupTargetRefresh()
     if NP.module.inArena and NP.identity.UpdateArenaCastBindingForPlate then
         NP.identity.UpdateArenaCastBindingForPlate(plateData)
