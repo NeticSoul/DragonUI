@@ -32,17 +32,25 @@ local function IsGuildMember(name)
     return false
 end
 
+local function AcceptVisibleInvite()
+    local info = StaticPopupDialogs[DIALOG]
+    local popup = info and StaticPopup_FindVisible(DIALOG)
+    if not popup then return false end
+    -- Through the dialog: a bare AcceptGroup() gets declined by its OnHide.
+    info.OnAccept(popup)
+    popup:Hide()
+    return true
+end
+
 local function OnPartyInvite(_, _, inviter)
     if not IsEnabled() then return end
     local name = baseName(inviter)
     if not (name and (IsFriend(name) or IsGuildMember(name))) then return end
 
-    local info = StaticPopupDialogs[DIALOG]
-    local popup = info and StaticPopup_FindVisible(DIALOG)
-    if not popup then return end
-    -- Through the dialog: a bare AcceptGroup() gets declined by its OnHide.
-    info.OnAccept(popup)
-    popup:Hide()
+    -- Event order isn't guaranteed: UIParent may show the popup after this handler runs.
+    if not AcceptVisibleInvite() then
+        addon:After(0, AcceptVisibleInvite)
+    end
 end
 
 addon.package:Subscribe(OnPartyInvite, "PARTY_INVITE_REQUEST")
