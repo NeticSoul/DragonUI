@@ -787,7 +787,7 @@ local function BuildEnhancementsTab(scroll)
         desc = LO["Horizontal offset from the cursor."],
         min = -128, max = 128, step = 1,
         getFunc = function()
-            return tonumber(GetModuleField("tooltip", "anchor_cursor_x")) or 0
+            return tonumber(GetModuleField("tooltip", "anchor_cursor_x")) or 20
         end,
         setFunc = function(val)
             EnsureModuleTable("tooltip").anchor_cursor_x = val
@@ -804,7 +804,7 @@ local function BuildEnhancementsTab(scroll)
         desc = LO["Vertical offset from the cursor."],
         min = -128, max = 128, step = 1,
         getFunc = function()
-            return tonumber(GetModuleField("tooltip", "anchor_cursor_y")) or 0
+            return tonumber(GetModuleField("tooltip", "anchor_cursor_y")) or 20
         end,
         setFunc = function(val)
             EnsureModuleTable("tooltip").anchor_cursor_y = val
