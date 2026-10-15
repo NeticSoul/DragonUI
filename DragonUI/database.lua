@@ -290,6 +290,10 @@ local defaults = {
             y = 220,
             autoRoll = false, -- Auto greed/disenchant green BoE rolls at max level
         },
+        -- Party Invites
+        autoaccept = {
+            party = false, -- Accept party invites from friends and guild members
+        },
         -- ACTIONBAR SETTINGS
         mainbars = {
             -- Per-bar layout (nested sub-tables with rows/columns/buttons_shown)

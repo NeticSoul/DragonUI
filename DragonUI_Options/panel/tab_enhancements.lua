@@ -772,6 +772,24 @@ local function BuildEnhancementsTab(scroll)
         dbPath = "lootroll.autoRoll",
         requiresReload = false,
     })
+
+    -- ====================================================================
+    -- AUTO-ACCEPT
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local autoAcceptSection = C:AddSection(scroll, LO["Auto-Accept"])
+
+    C:AddDescription(autoAcceptSection, LO["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."])
+
+    C:AddToggle(autoAcceptSection, {
+        label = LO["Accept Party Invites"],
+        desc = LO["Automatically accept party invites from your friends and guild members."],
+        dbPath = "autoaccept.party",
+        callback = function(value)
+            if value and addon.RefreshAutoAcceptCaches then addon.RefreshAutoAcceptCaches() end
+        end,
+        requiresReload = false,
+    })
 end
 
 -- Register the tab (order 11 = after Quest Tracker, before Profiles)

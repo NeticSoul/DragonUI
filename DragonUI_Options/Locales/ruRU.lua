@@ -1666,3 +1666,9 @@ L["Orb Style"] = "Стиль сфер"
 L["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."] = "Авто следует стилю рамок. Forever использует бронзовые сферы и для разбойников, и для друидов."
 L["Hide When Empty"] = "Скрывать, если пусто"
 L["Hide the orbs and the gems at 0 points instead of showing them empty."] = "Скрывает сферы и камни при 0 очков вместо показа пустых."
+
+-- Auto-Accept
+L["Auto-Accept"] = "Автопринятие"
+L["Accept Party Invites"] = "Принимать приглашения в группу"
+L["Automatically accept party invites from your friends and guild members."] = "Автоматически принимать приглашения в группу от друзей и участников гильдии."
+L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = "Отвечает на приглашения в группу за вас. Принимаются только приглашения от друзей и участников гильдии; остальные остаются на ваше усмотрение."

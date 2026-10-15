@@ -1652,3 +1652,9 @@ L["Orb Style"] = true
 L["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."] = true
 L["Hide When Empty"] = true
 L["Hide the orbs and the gems at 0 points instead of showing them empty."] = true
+
+-- Auto-Accept
+L["Auto-Accept"] = true
+L["Accept Party Invites"] = true
+L["Automatically accept party invites from your friends and guild members."] = true
+L["Answer party invites for you. Only friends and guild members are accepted; anyone else is left for you to answer."] = true
