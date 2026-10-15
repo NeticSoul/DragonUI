@@ -3241,8 +3241,7 @@ local FARM_MODE_CHROME = {
 
 function MinimapModule:ToggleFarmMode()
     local settings = GetMinimapSettings()
-    if not settings then return end
-    if not IsMinimapSystemActive() then
+    if not settings or not IsMinimapSystemActive() then
         addon:Print(L["Minimap module not available."])
         return
     end
@@ -3317,11 +3316,12 @@ function MinimapModule:ApplyFarmMode()
     self.farmMode.active = active
 
     -- Hybrid hands the chrome to SexyMap; the bigger map still applies there.
+    if IsHybridMinimapModeActive() then return end
+
     if not active then
         self:RestoreFarmMode()
         return
     end
-    if IsHybridMinimapModeActive() then return end
 
     ParkFarmModeFrames()
 end
