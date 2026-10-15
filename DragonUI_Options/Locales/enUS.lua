@@ -137,6 +137,12 @@ L["KeyBind Mode"] = true
 L["Quest Tracker"] = true
 L["Version Check"] = true
 
+-- Farm mode
+L["Farm Mode"] = true
+L["Extra scale"] = true
+L["Bigger minimap with the surrounding clutter hidden."] = true
+L["Extra scale applied on top of the minimap scale."] = true
+
 -- Module toggle descriptions
 L["Enable DragonUI player castbar styling."] = true
 L["Enable DragonUI target castbar styling."] = true

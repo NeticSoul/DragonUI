@@ -26,6 +26,11 @@ L["Cannot move frames during combat!"] = true
 L["Cannot open options in combat."] = true
 L["Options panel not available. Try /reload."] = true
 
+-- Farm mode
+L["Farm mode enabled"] = true
+L["Farm mode disabled"] = true
+L["Minimap module not available."] = true
+
 -- Module availability
 L["Editor mode not available."] = true
 L["Position editor not available."] = true
@@ -55,6 +60,7 @@ L["/dragonui config - Open configuration"] = true
 L["/dragonui edit - Toggle editor mode (move UI elements)"] = true
 L["/dragonui reset - Reset all positions to defaults"] = true
 L["/dragonui status - Show module status"] = true
+L["/dragonui farm - Toggle farm mode (big minimap, chrome hidden)"] = true
 L["/dragonui kb - Toggle keybind mode"] = true
 L["/dragonui version - Show version info"] = true
 L["/dragonui help - Show this help"] = true
