@@ -73,6 +73,9 @@
     <!-- Item Level on gear icons -->
     <Script file="itemlevel.lua"/>
 
+    <!-- Server-kept currencies (before the Currency tab and Bagster's token bar, which list them) -->
+    <Script file="servercurrency.lua"/>
+
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>
 

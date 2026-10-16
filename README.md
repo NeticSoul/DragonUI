@@ -84,6 +84,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 
 - 🎒 Auto-sort for bags and bank with slot locking, plus integrated module (Bagster) for unified inventory browsing.
 - 🗺️ Custom Retail-style minimap (compatible with SexyMap).
+- 🪙 Server currencies: a server module can list currencies it keeps outside the bags (an account-wide balance, say) in the Currency tab and on the backpack, by whispering the player addon messages with the prefix `DUI_CURRENCY` (`S:<itemID>:<count>:<section>:<name>` sets one, `D:<itemID>` drops it; DragonUI asks with `HELLO` at login and after `/reload`). See `DragonUI/modules/servercurrency.lua`.
 
 ### Utility And Quality Of Life
 
