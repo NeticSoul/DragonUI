@@ -11,9 +11,10 @@ local SIZE = 36
 
 local arrow, driver, facing
 
--- Texture:SetRotation reads the texture's on-screen rect, which is unresolved before the map's first
--- draw: the arrow came out as a stretched sliver until you turned. Corners at radius 1 around the
--- middle are SetRotation's own, so the art keeps the size SIZE was tuned at.
+-- Texture:SetRotation appears to depend on the texture's on-screen rect, unresolved before the map's
+-- first draw: on first open the arrow came out as a stretched sliver of its art. Corners at radius 1
+-- around the middle are SetRotation's own, so the art keeps the size SIZE was tuned at. Not
+-- minimap.lua's RotateTexCoords: that one turns at radius sqrt(0.5) and draws the art larger.
 local HALF = math.sqrt(0.5)
 
 local function rotate(angle)
