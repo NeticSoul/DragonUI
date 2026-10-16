@@ -722,6 +722,8 @@ L["Party"] = "小隊"
 -- 通用選項
 L["Class Color Health"] = "生命條職業顏色"
 L["Class Portrait"] = "職業頭像"
+L["Portrait Off"] = "關閉頭像"
+L["Hide the portrait and draw the compact frame instead."] = "隱藏頭像，改為繪製緊湊框架。"
 L["Class icon instead of 3D model for players."] = "玩家頭像使用職業圖示而非3D模型。"
 L["Alternative Class Icons"] = "替代職業圖示"
 L["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."] = "使用 DragonUI 的替代職業圖示，而不是 Blizzard 的職業圖示圖集。"

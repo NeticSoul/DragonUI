@@ -749,6 +749,7 @@ L["Combo Points"] = true
 L["Combo points as orbs under the player frame and/or gems around the target portrait."] = true
 L["ComboPoints"] = "Combo Points"
 L["DKRunes"] = "Death Knight Runes"
+L["Totems"] = "Totems"
 L["Orb Style"] = true
 L["Hide When Empty"] = true
 L["Hide the orbs and the gems at 0 points instead of showing them empty."] = true

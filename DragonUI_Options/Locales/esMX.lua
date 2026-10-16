@@ -804,6 +804,8 @@ L["Party"] = "Grupo"
 -- Common options
 L["Class Color Health"] = "Vida con Color de Clase"
 L["Class Portrait"] = "Retrato de Clase"
+L["Portrait Off"] = "Sin retrato"
+L["Hide the portrait and draw the compact frame instead."] = "Oculta el retrato y dibuja en su lugar el marco compacto."
 L["Class icon instead of 3D model for players."] = "Icono de clase en lugar de modelo 3D para jugadores."
 L["Alternative Class Icons"] = "Iconos de clase alternativos"
 L["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."] = "Usar los iconos de clase alternativos de DragonUI en lugar del atlas de iconos de clase de Blizzard."

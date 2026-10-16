@@ -30,6 +30,8 @@ local MAX_TARGET_DEBUFFS = _G.MAX_TARGET_DEBUFFS or 16
 local AURA_OFFSET_Y = _G.AURA_OFFSET_Y or 3
 local AURA_START_X = _G.AURA_START_X or 5
 local AURA_START_Y = _G.AURA_START_Y or 32
+-- Portrait Off anchors the auras to the plate: first aura's offset from its bottom-left corner.
+local PORTRAIT_OFF_AURA_X, PORTRAIT_OFF_AURA_Y = 5, -2
 local SMALL_AURA_SIZE = _G.SMALL_AURA_SIZE or 17
 local LARGE_AURA_SIZE = _G.LARGE_AURA_SIZE or 21
 local DEFAULT_AURA_ROW_WIDTH = 122
@@ -189,8 +191,19 @@ local function UpdateBuffAnchorDetached(self, buffName, index, numDebuffs, ancho
     end
 
     if index == 1 then
+        -- Anchored to the plate while it is shown: turning the option off only HIDES it, so
+        -- testing for the object alone leaves the auras on an invisible plate.
+        local plate = self.DragonUI_PortraitOffPlate
+        if plate and not plate:IsShown() then
+            plate = nil
+        end
         if UnitIsFriend("player", self.unit) or numDebuffs == 0 then
-            buff:SetPoint(point .. "LEFT", self, relativePoint .. "LEFT", AURA_START_X, startY)
+            if plate then
+                buff:SetPoint(point .. "LEFT", plate, relativePoint .. "LEFT",
+                    PORTRAIT_OFF_AURA_X, PORTRAIT_OFF_AURA_Y)
+            else
+                buff:SetPoint(point .. "LEFT", self, relativePoint .. "LEFT", AURA_START_X, startY)
+            end
         else
             buff:SetPoint(point .. "LEFT", self.debuffs, relativePoint .. "LEFT", 0, -offsetY)
         end
@@ -237,7 +250,17 @@ local function UpdateDebuffAnchorDetached(self, debuffName, index, numBuffs, anc
         if isFriend and numBuffs > 0 then
             debuff:SetPoint(point .. "LEFT", self.buffs, relativePoint .. "LEFT", 0, -offsetY)
         else
-            debuff:SetPoint(point .. "LEFT", self, relativePoint .. "LEFT", AURA_START_X, startY)
+            -- First debuff, as the buffs: off the plate while it is shown (same IsShown test).
+            local plate = self.DragonUI_PortraitOffPlate
+            if plate and not plate:IsShown() then
+                plate = nil
+            end
+            if plate then
+                debuff:SetPoint(point .. "LEFT", plate, relativePoint .. "LEFT",
+                    PORTRAIT_OFF_AURA_X, PORTRAIT_OFF_AURA_Y)
+            else
+                debuff:SetPoint(point .. "LEFT", self, relativePoint .. "LEFT", AURA_START_X, startY)
+            end
         end
         self.debuffs:SetPoint(point .. "LEFT", debuff, point .. "LEFT", 0, 0)
         self.debuffs:SetPoint(relativePoint .. "LEFT", debuff, relativePoint .. "LEFT", 0, -auraOffsetY)
@@ -306,7 +329,10 @@ local function ApplyDragonAuraLayout(frame)
     local buffSize, debuffSize = GetCustomAuraSizes()
     local blizzardSpacing = not detached and not buffSize
     -- With Blizzard's spacing only a third row beside the lowered ToT differs from Blizzard's own pass.
-    if blizzardSpacing and not hiding and (not shortRows or (frame.auraRows or 0) <= 2) then
+    -- Portrait Off is the exception: its auras anchor to the plate, which Blizzard's own pass
+    -- does not know about, so this file runs its own layout pass.
+    local onPlate = frame.DragonUI_PortraitOffPlate and frame.DragonUI_PortraitOffPlate:IsShown()
+    if blizzardSpacing and not hiding and not onPlate and (not shortRows or (frame.auraRows or 0) <= 2) then
         return
     end
     buffSize = buffSize or SMALL_AURA_SIZE
