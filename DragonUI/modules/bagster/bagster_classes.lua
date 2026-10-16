@@ -1682,13 +1682,43 @@ do
             self:Refresh()
         end)
 
+        -- Server-kept currencies ticked for the backpack (servercurrency.lua)
+        if addon.ServerCurrency then
+            addon.ServerCurrency.OnChange(function() bar:Refresh() end)
+        end
+
         return bar
     end
 
-    function TokenBar:Refresh()
-        local numTokens = 0
+    -- Blizzard's watched currencies, then the server-kept ones ticked for the backpack, each as
+    -- name, count, extraCurrencyType, icon, itemID, section. No more than MAX_WATCHED_TOKENS in
+    -- all: the server ticks are account-wide, so another character's Blizzard ones can fill the bar.
+    local function WatchedTokens()
+        local tokens = {}
         for i = 1, MAX_WATCHED_TOKENS do
             local name, count, extraCurrencyType, icon, itemID = GetBackpackCurrencyInfo(i)
+            if name then
+                tokens[#tokens + 1] = { name, count, extraCurrencyType, icon, itemID }
+            end
+        end
+        local SC = addon.ServerCurrency
+        if SC then
+            for _, row in ipairs(SC.Watched()) do
+                if #tokens >= MAX_WATCHED_TOKENS then break end
+                tokens[#tokens + 1] = { SC.Name(row), row.count, nil, SC.Icon(row), row.itemID, row.section }
+            end
+        end
+        return tokens
+    end
+
+    function TokenBar:Refresh()
+        local tokens = WatchedTokens()
+        local numTokens = 0
+        for i = 1, math.max(#tokens, #self.tokenButtons) do
+            local name, count, extraCurrencyType, icon, itemID, section
+            if tokens[i] then
+                name, count, extraCurrencyType, icon, itemID, section = unpack(tokens[i], 1, 6)
+            end
             if name then
                 numTokens = numTokens + 1
                 local btn = self.tokenButtons[i]
@@ -1698,6 +1728,7 @@ do
                 end
                 btn.extraCurrencyType = extraCurrencyType
                 btn.itemID = itemID
+                btn.section = section
 
                 -- Icon selection (matches Blizzard BackpackTokenFrame logic)
                 if extraCurrencyType == 1 then
@@ -1735,7 +1766,7 @@ do
         if numTokens > 0 then
             self._tokenCount = numTokens
             local previous
-            for i = 1, MAX_WATCHED_TOKENS do
+            for i = 1, #self.tokenButtons do
                 local btn = self.tokenButtons[i]
                 if btn and btn:IsShown() then
                     btn:ClearAllPoints()
@@ -1784,6 +1815,10 @@ do
                 GameTooltip:Show()
             elseif self.itemID then
                 GameTooltip:SetHyperlink("item:" .. self.itemID)
+                if self.section then
+                    GameTooltip:AddLine(self.section, 0.5, 0.5, 0.5)
+                    GameTooltip:Show()
+                end
             end
         end)
         btn:SetScript("OnLeave", function()

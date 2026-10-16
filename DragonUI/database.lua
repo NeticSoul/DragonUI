@@ -18,6 +18,7 @@ local defaults = {
         defaultProfile = "", -- Profile new characters start on; "" gives each its own
         bagsterCache = {}, -- Per-character bank snapshot (realm|name keys); used by bagster module
         characterMoney = {}, -- Gold per character (realm|name keys); used by the altmoney tooltip
+        serverCurrencyWatched = {}, -- Server-kept currencies shown on the backpack: [itemID] = true
         questLootLearned = {}, -- Learned quest loot sources for nameplates: [mobName] = {objectiveText=true}
         talentBuilds = {}, -- Saved talent builds per class: [CLASS] = { {name, ranks[tab][index], reqLevel}, ... }
         auraDurations = {}, -- Observed debuff durations for nameplates: [spellId] = seconds

@@ -53,15 +53,47 @@ local flat = {}
 -- Declared here because toggleHeader hands it to the reveal driver, and it is defined further down.
 local repaint
 
+-- Currencies the server keeps outside the bags (servercurrency.lua) follow Blizzard's list, each
+-- section under a header of its own. Their headers' index is SERVER_HEADER .. section, a string,
+-- which is how toggleHeader tells them from Blizzard's; their collapsed state lasts the session.
+local SC = addon.ServerCurrency
+local SERVER_HEADER = "server:"
+local serverCollapsed = {}
+
+local function flatPosition(index)
+    for i, data in ipairs(flat) do
+        if data.kind == "header" and data.index == index then return i end
+    end
+end
+
+local function toggleServerHeader(index, collapsed)
+    local section = index:sub(#SERVER_HEADER + 1)
+    if collapsed then
+        serverCollapsed[section] = nil
+        CP.RefreshCurrencyPane()
+        CP.RevealChildrenOf(flat, flatPosition(index), repaint)
+    else
+        CP.FadeOutChildrenOf(flat, flatPosition(index), repaint, function()
+            serverCollapsed[section] = true
+            CP.RefreshCurrencyPane()
+        end)
+    end
+end
+
 local function toggleHeader(index, collapsed)
+    if type(index) == "string" then
+        toggleServerHeader(index, collapsed)
+        return
+    end
+    -- The reveal takes a position in `flat`, which "Hide empty" can put ahead of the list index.
     if collapsed then
         if ExpandCurrencyList then ExpandCurrencyList(index, 1) end
         CP.RefreshCurrencyPane()
         -- After the refresh, so the run being revealed is read off the rebuilt list.
-        CP.RevealChildrenOf(flat, index, repaint)
+        CP.RevealChildrenOf(flat, flatPosition(index), repaint)
     else
         -- The rows are still live here; collapsing for real is what `finish` does.
-        CP.FadeOutChildrenOf(flat, index, repaint, function()
+        CP.FadeOutChildrenOf(flat, flatPosition(index), repaint, function()
             if ExpandCurrencyList then ExpandCurrencyList(index, 0) end
             CP.RefreshCurrencyPane()
         end)
@@ -87,14 +119,24 @@ local function applyIcon(tex, extraCurrencyType, icon)
     end
 end
 
-local function setWatched(index, watched)
-    if not SetCurrencyBackpack then return end
-    if watched and GetNumWatchedTokens and MAX_WATCHED_TOKENS
-        and GetNumWatchedTokens() >= MAX_WATCHED_TOKENS then
-        UIErrorsFrame:AddMessage(format(TOO_MANY_WATCHED_TOKENS, MAX_WATCHED_TOKENS), 1, 0.1, 0.1, 1)
+-- Blizzard's limit counts the server currencies on the backpack too: they share its one bar.
+local function tooManyWatched()
+    if not (GetNumWatchedTokens and MAX_WATCHED_TOKENS) then return false end
+    if GetNumWatchedTokens() + (SC and #SC.Watched() or 0) < MAX_WATCHED_TOKENS then return false end
+    UIErrorsFrame:AddMessage(format(TOO_MANY_WATCHED_TOKENS, MAX_WATCHED_TOKENS), 1, 0.1, 0.1, 1)
+    return true
+end
+
+-- `index` is a Blizzard currency index, or the item id of a server currency with `server` set.
+local function setWatched(index, watched, server)
+    if not server and not SetCurrencyBackpack then return end
+    if watched and tooManyWatched() then return end
+    PlaySound(watched and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
+    if server then
+        -- SC's change listeners repaint this pane and the token bar.
+        SC.SetWatched(index, watched)
         return
     end
-    PlaySound(watched and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
     SetCurrencyBackpack(index, watched and 1 or 0)
     if BackpackTokenFrame_Update then BackpackTokenFrame_Update() end
     if ManageBackpackTokenFrame then ManageBackpackTokenFrame() end
@@ -119,7 +161,7 @@ local function buildEntry(parent)
     tick:SetPoint("CENTER", check, "CENTER", 0, 0)
     check.Tick = tick
     check:SetScript("OnClick", function(self)
-        if self._index then setWatched(self._index, not self._watched) end
+        if self._index then setWatched(self._index, not self._watched, self._server) end
     end)
     check:SetScript("OnEnter", function(self)
         if not self._watched then self.Tick:SetAlpha(CHECK_HOVER_ALPHA) end
@@ -159,7 +201,12 @@ local function buildEntry(parent)
     row:SetScript("OnEnter", function(self)
         if not self._index then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetCurrencyToken(self._index)
+        if self._server then
+            GameTooltip:SetHyperlink("item:" .. self._itemID)
+            GameTooltip:AddLine(self._section, 0.5, 0.5, 0.5)
+        else
+            GameTooltip:SetCurrencyToken(self._index)
+        end
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -168,6 +215,7 @@ end
 
 local function updateEntry(row, info)
     row._index, row._itemID = info.index, info.itemID
+    row._server, row._section = info.server, info.section
     row.Text:SetText(info.name or "")
     row.Count:SetText(info.count or 0)
     applyIcon(row.Icon, info.extraCurrencyType, info.icon)
@@ -181,7 +229,7 @@ local function updateEntry(row, info)
     row.Count:SetJustifyH("RIGHT")
 
     local check = row.Check
-    check._index, check._watched = info.index, info.isWatched
+    check._index, check._watched, check._server = info.index, info.isWatched, info.server
     check.Tick:SetAlpha(info.isWatched and 1 or CHECK_OFF_ALPHA)
 end
 
@@ -215,6 +263,33 @@ local function refresh()
                 isWatched = isWatched, count = count, itemID = itemID,
                 extraCurrencyType = extraCurrencyType, icon = icon,
             }
+        end
+    end
+
+    if SC then
+        local sections, bySection = {}, {}
+        for _, row in ipairs(SC.Rows()) do
+            if not bySection[row.section] then
+                bySection[row.section] = {}
+                sections[#sections + 1] = row.section
+            end
+            table.insert(bySection[row.section], row)
+        end
+        for _, section in ipairs(sections) do
+            local collapsed = serverCollapsed[section] and true or false
+            flat[#flat + 1] = {
+                kind = "header", index = SERVER_HEADER .. section, name = section, isCollapsed = collapsed,
+            }
+            for _, row in ipairs(collapsed and {} or bySection[section]) do
+                if not (hideEmpty() and row.count <= 0) then
+                    -- A server row's index is its item id; `server` is what says so.
+                    flat[#flat + 1] = {
+                        kind = "entry", server = true, index = row.itemID, itemID = row.itemID,
+                        section = section, name = SC.Name(row), count = row.count, icon = SC.Icon(row),
+                        isWatched = SC.IsWatched(row.itemID),
+                    }
+                end
+            end
         end
     end
     repaint()
@@ -300,5 +375,6 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 events:RegisterEvent("KNOWN_CURRENCY_TYPES_UPDATE")
 events:SetScript("OnEvent", refresh)
+if SC then SC.OnChange(refresh) end
 
 CP:RegisterBuilder("currencypane", build)
