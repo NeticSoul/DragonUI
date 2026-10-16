@@ -28,17 +28,6 @@ local MailModule = {
     applied = false,
 }
 
-if addon.defaults and addon.defaults.profile and addon.defaults.profile.modules then
-    if addon.defaults.profile.modules.mail == nil then
-        addon.defaults.profile.modules.mail = { enabled = true }
-    end
-end
-if addon.db and addon.db.profile and addon.db.profile.modules then
-    if addon.db.profile.modules.mail == nil then
-        addon.db.profile.modules.mail = { enabled = true }
-    end
-end
-
 local function localized(key)
     local strings = addon.L
     local text = strings and strings[key]
@@ -109,19 +98,10 @@ local function IsModuleEnabled()
 end
 
 local function applySlices(host, layoutName)
-    local slicer = _G.DragonUI_NineSlice or _G.NineSliceUtils
+    local slicer = _G.DragonUI_NineSlice
     local layout = slicer and slicer.GetLayout and slicer.GetLayout(layoutName)
     if layout and slicer.ApplyLayout then
         slicer.ApplyLayout(host, layout)
-    end
-end
-
-local function setAtlas(tex, name)
-    if not tex then return end
-    if tex.SetAtlasTexture then
-        tex:SetAtlasTexture(name)
-    elseif tex.set_atlas then
-        tex:set_atlas(name)
     end
 end
 
@@ -140,26 +120,7 @@ local function dressCloseButton(cb, owner)
     if CP and CP.ModernizeCloseButton then
         CP.ModernizeCloseButton(cb, owner)
         cb:SetFrameLevel((owner:GetFrameLevel() or 1) + 22)
-        return
     end
-    cb._duiModernized = true
-    cb:SetSize(24, 24)
-    cb:ClearAllPoints()
-    cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", 1, 0)
-    cb:SetFrameLevel((owner:GetFrameLevel() or 1) + 22)
-
-    local function dress(getter, l, r, t, b, blend)
-        local tex = cb[getter] and cb[getter](cb)
-        if not tex then return end
-        tex:SetTexture(REDBUTTON)
-        tex:SetTexCoord(l, r, t, b)
-        if blend then tex:SetBlendMode(blend) end
-    end
-
-    dress("GetNormalTexture", 39/256, 75/256, 1/128, 39/128)
-    dress("GetPushedTexture", 39/256, 75/256, 81/128, 119/128)
-    dress("GetDisabledTexture", 39/256, 75/256, 41/128, 79/128)
-    dress("GetHighlightTexture", 115/256, 151/256, 1/128, 39/128, "ADD")
 end
 
 local function skinActionButton(btn, width, height)
@@ -218,7 +179,7 @@ local function paintWindowChrome(window, closeBtn, insetBounds)
 
     local streaks = window:CreateTexture(nil, "BORDER")
     streaks._duiOwned = true
-    setAtlas(streaks, "_UI-Frame-TopTileStreaks")
+    streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
     streaks:SetHorizTile(true)
     streaks:SetPoint("TOPLEFT", window, "TOPLEFT", 2, -21)
     streaks:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -2, -64)
@@ -236,14 +197,13 @@ local function paintWindowChrome(window, closeBtn, insetBounds)
     placeInset(inset, window, insetBounds or INSET_INBOX)
     applySlices(inset, "InsetFrameTemplate")
 
-    -- Drawn in window's BACKGROUND layer so ARTWORK regions on OpenMailFrame stay above it.
-    local marble = window:CreateTexture(nil, "BACKGROUND", nil, -2)
+    local marble = window:CreateTexture(nil, "BORDER")
     marble._duiOwned = true
     marble:SetTexture(MARBLE)
     marble:SetHorizTile(true)
     marble:SetVertTile(true)
     marble:SetAllPoints(inset)
-    inset._duiMarble = marble
+    window._duiMarble = marble
     window._duiInset = inset
 
     return inset
@@ -460,7 +420,6 @@ local function syncMailTabState(tab)
     end
 
     tab:SetDisabledFontObject(GameFontNormalSmall)
-    tab:Enable()
 end
 
 local function resizeMailTab(tab)
@@ -534,6 +493,19 @@ local function setupMailTabHooks()
     end
 end
 
+local function HasPostal()
+    if _G.PostalOpenAllButton then
+        return true
+    end
+    if _G.Postal and _G.Postal.GetModule and _G.Postal:GetModule("OpenAll", true) then
+        return true
+    end
+    if IsAddOnLoaded and (IsAddOnLoaded("Postal") or IsAddOnLoaded("Postal_OpenAll")) then
+        return true
+    end
+    return false
+end
+
 -- Sequential mail looter that skips COD and Guild Master letters.
 local openAllBtn
 local openAllFrame = CreateFrame("Frame")
@@ -545,6 +517,16 @@ local currentAttachIndex = 0
 local lastInboxCount = 0
 local waitTimer = 0
 local WAIT_DELAY = 0.15
+
+local waitingForServer = false
+local serverTimeout = 0
+local SERVER_TIMEOUT_DELAY = 1.0
+local retryCount = 0
+local MAX_RETRIES = 3
+local lastActionType = nil
+local lastActionSlot = nil
+local lastMoneyAmount = nil
+local skippedSlots = {}
 
 local function CountFreeBagSlots()
     local totalFree = 0
@@ -572,6 +554,11 @@ end
 
 local function UpdateOpenAllButtonState()
     if not openAllBtn then return end
+    if HasPostal() then
+        openAllBtn:Hide()
+        return
+    end
+    openAllBtn:Show()
     if isOpeningAll then
         openAllBtn:Disable()
         openAllBtn:SetText(localized("Opening..."))
@@ -589,8 +576,15 @@ local function StopOpenAll(reasonMsg)
     isOpeningAll = false
     openAllFrame:Hide()
     openAllFrame:UnregisterEvent("UI_ERROR_MESSAGE")
+    openAllFrame:UnregisterEvent("MAIL_INBOX_UPDATE")
+    openAllFrame:UnregisterEvent("MAIL_CLOSED")
+    waitingForServer = false
     currentMailIndex = 0
     currentAttachIndex = 0
+    retryCount = 0
+    lastActionType = nil
+    lastActionSlot = nil
+    lastMoneyAmount = nil
     waitTimer = 0
     UpdateOpenAllButtonState()
     if reasonMsg and addon.Print then
@@ -610,6 +604,7 @@ local function ProcessNextMailAction()
         if currentMailIndex > numItems then
             currentMailIndex = numItems
             currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
+            retryCount = 0
         end
     end
 
@@ -619,33 +614,45 @@ local function ProcessNextMailAction()
         if isGM or (codAmount and codAmount > 0) then
             currentMailIndex = currentMailIndex - 1
             currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
+            retryCount = 0
         else
-            if money and money > 0 then
-                TakeInboxMoney(currentMailIndex)
+            if money and money > 0 and retryCount < MAX_RETRIES then
+                waitingForServer = true
+                serverTimeout = SERVER_TIMEOUT_DELAY
+                lastActionType = "money"
+                lastMoneyAmount = money
                 waitTimer = WAIT_DELAY
+                TakeInboxMoney(currentMailIndex)
                 return
             end
 
             if hasItem and hasItem > 0 then
                 while currentAttachIndex >= 1 do
-                    local itemName = GetInboxItem(currentMailIndex, currentAttachIndex)
-                    if itemName then
-                        if CountFreeBagSlots() == 0 then
-                            StopOpenAll(localized("Inventory is full."))
+                    local slotKey = currentMailIndex .. "_" .. currentAttachIndex
+                    if not skippedSlots[slotKey] then
+                        local itemName = GetInboxItem(currentMailIndex, currentAttachIndex)
+                        if itemName then
+                            if CountFreeBagSlots() == 0 then
+                                StopOpenAll(localized("Inventory is full."))
+                                return
+                            end
+                            waitingForServer = true
+                            serverTimeout = SERVER_TIMEOUT_DELAY
+                            lastActionType = "item"
+                            lastActionSlot = currentAttachIndex
+                            waitTimer = WAIT_DELAY
+                            TakeInboxItem(currentMailIndex, currentAttachIndex)
                             return
                         end
-                        local slotToTake = currentAttachIndex
-                        currentAttachIndex = currentAttachIndex - 1
-                        TakeInboxItem(currentMailIndex, slotToTake)
-                        waitTimer = WAIT_DELAY
-                        return
                     end
                     currentAttachIndex = currentAttachIndex - 1
+                    retryCount = 0
                 end
             end
 
             currentMailIndex = currentMailIndex - 1
             currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
+            retryCount = 0
         end
     end
 
@@ -654,9 +661,39 @@ local function ProcessNextMailAction()
 end
 
 openAllFrame:SetScript("OnEvent", function(_, event, message)
-    if event == "UI_ERROR_MESSAGE" and isOpeningAll then
-        if message == _G.ERR_INV_FULL or message == _G.ERR_ITEM_MAX_COUNT then
-            StopOpenAll()
+    if not isOpeningAll then return end
+    if event == "MAIL_CLOSED" then
+        StopOpenAll()
+    elseif event == "UI_ERROR_MESSAGE" then
+        if message == _G.ERR_INV_FULL then
+            StopOpenAll(localized("Inventory is full."))
+        elseif message == _G.ERR_ITEM_MAX_COUNT then
+            if lastActionType == "item" and lastActionSlot then
+                skippedSlots[currentMailIndex .. "_" .. lastActionSlot] = true
+            end
+            waitingForServer = false
+            currentAttachIndex = currentAttachIndex - 1
+            retryCount = 0
+            waitTimer = 0.05
+        end
+    elseif event == "MAIL_INBOX_UPDATE" then
+        if waitingForServer then
+            if lastActionType == "money" then
+                local _, _, _, _, money = GetInboxHeaderInfo(currentMailIndex)
+                if not money or money == 0 or money ~= lastMoneyAmount then
+                    waitingForServer = false
+                    retryCount = 0
+                    waitTimer = 0.05
+                end
+            elseif lastActionType == "item" and lastActionSlot then
+                local itemName = GetInboxItem(currentMailIndex, lastActionSlot)
+                if not itemName then
+                    waitingForServer = false
+                    currentAttachIndex = currentAttachIndex - 1
+                    retryCount = 0
+                    waitTimer = 0.05
+                end
+            end
         end
     end
 end)
@@ -666,6 +703,24 @@ openAllFrame:SetScript("OnUpdate", function(_, elapsed)
         openAllFrame:Hide()
         return
     end
+
+    if waitingForServer then
+        serverTimeout = serverTimeout - elapsed
+        if serverTimeout <= 0 then
+            waitingForServer = false
+            retryCount = retryCount + 1
+            if retryCount >= MAX_RETRIES then
+                if lastActionType == "item" and lastActionSlot then
+                    skippedSlots[currentMailIndex .. "_" .. lastActionSlot] = true
+                    currentAttachIndex = currentAttachIndex - 1
+                end
+                retryCount = 0
+            end
+            waitTimer = WAIT_DELAY
+        end
+        return
+    end
+
     waitTimer = waitTimer - elapsed
     if waitTimer <= 0 then
         waitTimer = WAIT_DELAY
@@ -689,11 +744,21 @@ local function StartOpenAll()
     end
 
     isOpeningAll = true
+    waitingForServer = false
+    serverTimeout = 0
+    retryCount = 0
+    lastActionType = nil
+    lastActionSlot = nil
+    lastMoneyAmount = nil
+    skippedSlots = {}
     lastInboxCount = numItems
     currentMailIndex = numItems
     currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
     waitTimer = 0
+
     openAllFrame:RegisterEvent("UI_ERROR_MESSAGE")
+    openAllFrame:RegisterEvent("MAIL_INBOX_UPDATE")
+    openAllFrame:RegisterEvent("MAIL_CLOSED")
     UpdateOpenAllButtonState()
     openAllFrame:Show()
 end
