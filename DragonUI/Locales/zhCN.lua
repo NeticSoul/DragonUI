@@ -1113,3 +1113,8 @@ L["Set Favorite"] = "设为收藏"
 L["Guaranteed chance of gaining %d skill ups"] = "必定获得%d点技能"
 L["High chance of gaining skill"] = "提升技能的几率很高"
 L["Low chance of gaining skill"] = "提升技能的几率很低"
+
+-- ============================================================================
+-- FLIGHT MAP & MAIL
+-- ============================================================================
+L["Flight Map"] = "飞行地图"

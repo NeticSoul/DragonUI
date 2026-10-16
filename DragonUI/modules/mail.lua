@@ -8,7 +8,6 @@ local ipairs = ipairs
 local unpack = unpack
 local type = type
 local math_floor = math.floor
-local math_max = math.max
 local math_min = math.min
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
@@ -16,6 +15,8 @@ local UpdateUIPanelPositions = UpdateUIPanelPositions
 local GetInboxNumItems = GetInboxNumItems
 local GetInboxHeaderInfo = GetInboxHeaderInfo
 local GetInboxItem = GetInboxItem
+local GetSendMailItem = GetSendMailItem
+local SetPortraitToTexture = SetPortraitToTexture
 local TakeInboxMoney = TakeInboxMoney
 local TakeInboxItem = TakeInboxItem
 local GetContainerNumFreeSlots = GetContainerNumFreeSlots
@@ -47,28 +48,30 @@ end
 local DIR = addon._dir
 local ROCK = DIR .. "UI\\ui-background-rock"
 local MARBLE = DIR .. "UI\\ui-background-marble"
-local REDBUTTON = DIR .. "UI\\redbutton2x"
-local PAGE_BG = DIR .. "Merchant\\pagebutton-background"
-local PAGE_HILITE = DIR .. "Merchant\\pagebutton-hover"
+local INBOX_BG = DIR .. "Mail\\ui-mailframebg"
+local ICON_BORDER = DIR .. "Mail\\whiteiconframe"
+local MAIL_ICON = "Interface\\MailFrame\\Mail-Icon"
+local MAIL_ICON_HD = DIR .. "Mail\\mail-icon"
+local COINBOX = DIR .. "Coins\\commoncoinbox"
 local TAB_TEX = DIR .. "UI\\uiframetabs"
-local PAGE_BTN_TEX = {
-    InboxPrevPageButton = {
-        up = DIR .. "Merchant\\pagebutton-prev-normal",
-        down = DIR .. "Merchant\\pagebutton-prev-pressed",
-        disabled = DIR .. "Merchant\\pagebutton-prev-disabled",
-    },
-    InboxNextPageButton = {
-        up = DIR .. "Merchant\\pagebutton-next-normal",
-        down = DIR .. "Merchant\\pagebutton-next-pressed",
-        disabled = DIR .. "Merchant\\pagebutton-next-disabled",
-    },
+
+-- SetItemButtonQuality's bag colours by item quality; poor items get no border.
+local QUALITY_BORDER_COLORS = {
+    [1] = { 0.65882, 0.65882, 0.65882 },
+    [2] = { 0.08235, 0.70196, 0 },
+    [3] = { 0, 0.56863, 0.94902 },
+    [4] = { 0.78431, 0.27059, 0.98039 },
+    [5] = { 1, 0.50196, 0 },
+    [6] = { 0.90196, 0.8, 0.50196 },
+    [7] = { 0, 0.8, 1 },
 }
 
 local WIDTH, HEIGHT = 338, 424
-local INSET_INBOX = { 4, -60, -6, 4 }
-local INSET_SEND  = { 4, -80, -6, 28 }
-local INSET_OPEN  = { 4, -80, -6, 28 }
-local PAGE_X, PAGE_Y, PAGE_W, PAGE_H = 7, -63, 321, 354
+-- Retail's InboxFrame/SendMailFrame stay 384x512 behind a 338x424 window; ours fill the window.
+local RETAIL_DROP, RETAIL_WIDEN = 512 - HEIGHT, 384 - WIDTH
+local INSET_INBOX = { 4, -58, -6, 4 }
+local INSET_SEND  = { 4, -80, -6, 26 }
+local INSET_OPEN  = { 4, -80, -6, 26 }
 local PANEL_X_NUDGE = 6
 local ATTACHMENTS_MAX = _G.ATTACHMENTS_MAX or 16
 local ATTACHMENTS_MAX_RECEIVE = _G.ATTACHMENTS_MAX_RECEIVE or 16
@@ -76,19 +79,20 @@ local ATTACHMENTS_PER_ROW_RECEIVE = _G.ATTACHMENTS_PER_ROW_RECEIVE or 7
 local ATTACHMENTS_MAX_SEND = _G.ATTACHMENTS_MAX_SEND or 12
 local ATTACHMENTS_PER_ROW_SEND = _G.ATTACHMENTS_PER_ROW_SEND or 7
 
+-- Retail PanelTabButtonTemplate / PanelTemplates_TabResize values; MailFrame caps tabs at width / 3.
 local TAB_H = 32
-local CAP_OVERHANG = 5
-local ACTIVE_OVERHANG_L, ACTIVE_OVERHANG_R = 4, 6
-local TAB_TEXT_PAD = 30
-local TAB_MIN_W = 62
+local TAB_LEFT_X, TAB_RIGHT_X = -3, 7
+local TAB_ACTIVE_LEFT_X, TAB_ACTIVE_RIGHT_X = -1, 8
+local TAB_SIDES_PADDING = 20
+local TAB_MIN_W = 35 + 37
+local TAB_MAX_W = math_floor(WIDTH / 3)
+local TAB_TEXT_Y, TAB_SELECTED_TEXT_Y = 2, -3
+local TAB_START_X, TAB_START_Y = 14, 2
+local TAB_GAP = 3
 local HL_ALPHA, HL_H = 0.4, 30
 local HL_LEFT_TC   = { 0.015625, 0.5625, 0.816406, 0.933594 }
 local HL_RIGHT_TC  = { 0.015625, 0.59375, 0.667969, 0.785156 }
 local HL_MIDDLE_TC = { 0, 0.015625, 0.175781, 0.292969 }
-local TEXT_ACTIVE_DROP = -7
-local TEXT_NUDGE_X = -2
-local TAB_START_X = 11
-local TAB_GAP = 1
 
 local function IsModuleEnabled()
     if addon.IsModuleEnabled then
@@ -140,6 +144,17 @@ local function placeInset(inset, window, bounds)
     inset:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", bounds[3], bounds[4])
 end
 
+-- SetFrameLevel leaves existing children behind, so they could sink under the parchment.
+local function liftChildren(frame)
+    local base = frame:GetFrameLevel()
+    for _, child in ipairs({ frame:GetChildren() }) do
+        if child:GetFrameLevel() <= base then
+            child:SetFrameLevel(base + 1)
+        end
+        liftChildren(child)
+    end
+end
+
 local function neuterTexture(tex)
     if not tex or tex._duiNeutered then return end
     tex._duiNeutered = true
@@ -148,27 +163,45 @@ local function neuterTexture(tex)
     tex.Show = tex.Hide
 end
 
-local function hideMailIcons(window)
-    if not window or not window.GetRegions then return end
+-- MailFrame's portrait is an unnamed region in 3.3.5a's XML.
+local function findMailIcon(window)
     for _, region in ipairs({ window:GetRegions() }) do
-        if region.GetObjectType and region:GetObjectType() == "Texture" and not region._duiOwned then
+        if region:GetObjectType() == "Texture" then
             local tex = region:GetTexture()
             if type(tex) == "string" and tex:lower():find("mail%-icon") then
-                neuterTexture(region)
+                return region
             end
         end
     end
 end
 
-local function paintWindowChrome(window, closeBtn, insetBounds)
+-- Where retail's CircleMask shows the portrait (62x62 at -5,7 inset 2,0,-2,4), under the OVERLAY ring.
+local function seatPortrait(window, icon)
+    if not icon then return end
+    icon:ClearAllPoints()
+    icon:SetPoint("TOPLEFT", window, "TOPLEFT", -3, 7)
+    icon:SetSize(58, 58)
+    icon:SetDrawLayer("ARTWORK")
+end
+
+local function dressTitle(window, label)
+    if not label then return end
+    label:ClearAllPoints()
+    label:SetPoint("TOPLEFT", window, "TOPLEFT", 60, -5)
+    label:SetPoint("TOPRIGHT", window, "TOPRIGHT", -24, -5)
+    label:SetHeight(16)
+    label:SetJustifyH("CENTER")
+end
+
+local function paintWindowChrome(window, closeBtn, insetBounds, portrait)
     window:SetSize(WIDTH, HEIGHT)
     if window.SetHitRectInsets then
         window:SetHitRectInsets(0, 0, 0, 0)
     end
     nudgePanel(window)
-    hideMailIcons(window)
+    seatPortrait(window, portrait)
 
-    local rock = window:CreateTexture(nil, "BACKGROUND", nil, -6)
+    local rock = window:CreateTexture(nil, "BACKGROUND")
     rock._duiOwned = true
     rock:SetTexture(ROCK, "REPEAT", "REPEAT")
     rock:SetHorizTile(true)
@@ -181,11 +214,11 @@ local function paintWindowChrome(window, closeBtn, insetBounds)
     streaks._duiOwned = true
     streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
     streaks:SetHorizTile(true)
-    streaks:SetPoint("TOPLEFT", window, "TOPLEFT", 2, -21)
+    streaks:SetPoint("TOPLEFT", window, "TOPLEFT", 6, -21)
     streaks:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -2, -64)
     window._duiStreaks = streaks
 
-    applySlices(window, "NoPortraitFrameTemplate")
+    applySlices(window, "PortraitFrameTemplate")
 
     if closeBtn then
         dressCloseButton(closeBtn, window)
@@ -193,13 +226,13 @@ local function paintWindowChrome(window, closeBtn, insetBounds)
 
     local inset = CreateFrame("Frame", nil, window)
     inset:EnableMouse(false)
-    inset:SetFrameLevel(window:GetFrameLevel())
+    inset:SetFrameLevel(window:GetFrameLevel() + 1)
     placeInset(inset, window, insetBounds or INSET_INBOX)
     applySlices(inset, "InsetFrameTemplate")
 
     local marble = window:CreateTexture(nil, "BORDER")
     marble._duiOwned = true
-    marble:SetTexture(MARBLE)
+    marble:SetTexture(MARBLE, "REPEAT", "REPEAT")
     marble:SetHorizTile(true)
     marble:SetVertTile(true)
     marble:SetAllPoints(inset)
@@ -221,20 +254,21 @@ local function hideScrollBarBackground(scrollFrame)
     end
 end
 
-local function styleMailScrollBar(scrollFrame, ownerFrame)
+-- ScrollFrameTemplate's scrollBarX/TopY/BottomY; anchored to the scroll frame, it follows its resizes.
+local function styleMailScrollBar(scrollFrame, ownerFrame, topY, bottomY)
     if not scrollFrame or not ownerFrame then return end
     hideScrollBarBackground(scrollFrame)
+    -- Retail's ScrollBarMixin hides the thumb when nothing scrolls and keeps the track.
+    scrollFrame.hideThumbWhenUnscrollable = true
     local CP = addon.CharacterPanel
     if CP and CP.ReskinScrollBar then
         CP.ReskinScrollBar(scrollFrame, ownerFrame, 83, -11, 143, true)
     end
     local bar = _G[scrollFrame:GetName() .. "ScrollBar"]
     if bar then
-        -- Anchor top and bottom to scrollFrame so dynamic height updates keep the bar aligned.
         bar:ClearAllPoints()
-        bar:SetPoint("TOP", scrollFrame, "TOP", 0, -7)
-        bar:SetPoint("BOTTOM", scrollFrame, "BOTTOM", 0, 7)
-        bar:SetPoint("RIGHT", ownerFrame, "RIGHT", -13, 0)
+        bar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", 10, topY)
+        bar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", 10, bottomY)
     end
 end
 
@@ -245,54 +279,114 @@ local function syncMailScrollThumb(scrollFrame)
     end
 end
 
-local function clampHorizontalBars(parentFrame)
-    if not parentFrame or not parentFrame.GetRegions then return end
-    for _, region in ipairs({ parentFrame:GetRegions() }) do
-        if region.GetObjectType and region:GetObjectType() == "Texture" and not region:GetName() then
-            local tex = region:GetTexture()
-            if type(tex) == "string" and tex:lower():find("ui%-classtrainer%-horizontalbar") then
-                region:SetWidth(68)
-            end
+local function place(region, point, relativeTo, relativePoint, x, y)
+    if not region then return end
+    region:ClearAllPoints()
+    region:SetPoint(point, relativeTo, relativePoint, x, y)
+end
+
+-- Retail's Common-Input-Border layout: the left cap sits 8px out, the middle sets the visible width.
+local function dressInputBorder(editBox, width, middleWidth, leftY)
+    if not editBox then return end
+    local name = editBox:GetName()
+    local left, middle, right = _G[name .. "Left"], _G[name .. "Middle"], _G[name .. "Right"]
+    if not (left and middle and right) then return end
+    left:SetSize(8, 20)
+    place(left, "TOPLEFT", editBox, "TOPLEFT", -8, leftY)
+    middle:SetSize(middleWidth, 20)
+    place(middle, "LEFT", left, "RIGHT", 0, 0)
+    right:SetSize(8, 20)
+    place(right, "LEFT", middle, "RIGHT", 0, 0)
+    editBox:SetWidth(width)
+end
+
+-- ThinGoldEdgeTemplate, drawn with the bags' coin box: the same black plate and gold rim at 2x.
+local function buildGoldEdge(parent, level)
+    local edge = CreateFrame("Frame", nil, parent)
+    edge:EnableMouse(false)
+    edge:SetFrameLevel(level)
+    local left = edge:CreateTexture(nil, "BACKGROUND")
+    left:SetTexture(COINBOX)
+    left:SetTexCoord(0.03125, 0.53125, 0.289062, 0.554688)
+    left:SetWidth(8)
+    left:SetPoint("TOPLEFT")
+    left:SetPoint("BOTTOMLEFT")
+    local right = edge:CreateTexture(nil, "BACKGROUND")
+    right:SetTexture(COINBOX)
+    right:SetTexCoord(0.03125, 0.53125, 0.570312, 0.835938)
+    right:SetWidth(8)
+    right:SetPoint("TOPRIGHT")
+    right:SetPoint("BOTTOMRIGHT")
+    local middle = edge:CreateTexture(nil, "BACKGROUND")
+    middle:SetTexture(COINBOX)
+    middle:SetTexCoord(0, 0.5, 0.0078125, 0.273438)
+    middle:SetPoint("TOPLEFT", left, "TOPRIGHT")
+    middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT")
+    return edge
+end
+
+-- Retail's IconBorder: 37x37 centred on item buttons, over the icon (inset 0,0,-1,1) on inbox rows.
+local function iconBorder(button, overIcon)
+    local border = button._duiIconBorder
+    if not border then
+        border = button:CreateTexture(nil, "OVERLAY")
+        border:SetTexture(ICON_BORDER)
+        if overIcon then
+            border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+            border:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+        else
+            border:SetSize(37, 37)
+            border:SetPoint("CENTER", button, "CENTER", 0, 0)
+        end
+        button._duiIconBorder = border
+    end
+    return border
+end
+
+local function showQuality(border, quality, dimmed)
+    local color = quality and QUALITY_BORDER_COLORS[quality]
+    if not color then
+        border:Hide()
+        return
+    end
+    if dimmed then
+        border:SetVertexColor(0.5, 0.5, 0.5)
+    else
+        border:SetVertexColor(color[1], color[2], color[3])
+    end
+    border:Show()
+end
+
+local function firstAttachmentQuality(index)
+    for slot = 1, ATTACHMENTS_MAX_RECEIVE do
+        local name, _, _, quality = GetInboxItem(index, slot)
+        if name then
+            return quality
         end
     end
 end
 
-local function stretchEditBoxBorder(editBox)
-    if not editBox or not editBox.GetName then return end
-    local name = editBox:GetName()
-    local left = _G[name .. "Left"]
-    local middle = _G[name .. "Middle"]
-    local right = _G[name .. "Right"]
-    if left and middle and right then
-        right:ClearAllPoints()
-        right:SetPoint("TOPRIGHT", editBox, "TOPRIGHT", 0, 0)
-        middle:ClearAllPoints()
-        middle:SetPoint("TOPLEFT", left, "TOPRIGHT", 0, 0)
-        middle:SetPoint("BOTTOMRIGHT", right, "BOTTOMLEFT", 0, 0)
-    end
-end
-
-local function reskinPageNav(btnName)
-    local btn = _G[btnName]
-    local set = PAGE_BTN_TEX[btnName]
-    if not (btn and set) then return end
-
-    btn:SetSize(28, 28)
-
-    if not btn._duiPageBg then
-        local bg = btn:CreateTexture(nil, "BACKGROUND")
-        bg:SetTexture(PAGE_BG)
-        bg:SetAllPoints(btn)
-        btn._duiPageBg = bg
-    end
-
-    btn:SetNormalTexture(set.up)
-    btn:SetPushedTexture(set.down)
-    btn:SetDisabledTexture(set.disabled)
-    btn:SetHighlightTexture(PAGE_HILITE, "ADD")
-    local hl = btn:GetHighlightTexture()
-    if hl then
-        hl:SetBlendMode("ADD")
+-- Retail borders each row by its first attachment and greys the border once the letter is read.
+local function updateInboxBorders()
+    if not IsModuleEnabled() then return end
+    local inbox = _G.InboxFrame
+    local perPage = _G.INBOXITEMS_TO_DISPLAY or 7
+    local offset = ((inbox and inbox.pageNum or 1) - 1) * perPage
+    local numItems = GetInboxNumItems() or 0
+    for i = 1, perPage do
+        local button = _G["MailItem" .. i .. "Button"]
+        if button then
+            local index = offset + i
+            local quality, wasRead
+            if index <= numItems then
+                local _, _, _, _, _, _, _, itemCount, read = GetInboxHeaderInfo(index)
+                wasRead = read
+                if itemCount then
+                    quality = firstAttachmentQuality(index)
+                end
+            end
+            showQuality(iconBorder(button, true), quality, wasRead)
+        end
     end
 end
 
@@ -313,14 +407,14 @@ local function reskinSingleTab(tabName)
         left:SetSize(35, 36)
         left:SetTexture(TAB_TEX)
         left:SetTexCoord(0.015625, 0.5625, 0.816406, 0.957031)
-        left:SetPoint("TOPLEFT", tab, "TOPLEFT", -CAP_OVERHANG, 0)
+        left:SetPoint("TOPLEFT", tab, "TOPLEFT", TAB_LEFT_X, 0)
     end
     if right then
         right:ClearAllPoints()
         right:SetSize(37, 36)
         right:SetTexture(TAB_TEX)
         right:SetTexCoord(0.015625, 0.59375, 0.667969, 0.808594)
-        right:SetPoint("TOPRIGHT", tab, "TOPRIGHT", CAP_OVERHANG, 0)
+        right:SetPoint("TOPRIGHT", tab, "TOPRIGHT", TAB_RIGHT_X, 0)
     end
     if middle and left and right then
         middle:ClearAllPoints()
@@ -337,14 +431,14 @@ local function reskinSingleTab(tabName)
         leftD:SetSize(35, 42)
         leftD:SetTexture(TAB_TEX)
         leftD:SetTexCoord(0.015625, 0.5625, 0.496094, 0.660156)
-        leftD:SetPoint("TOPLEFT", tab, "TOPLEFT", -ACTIVE_OVERHANG_L, 0)
+        leftD:SetPoint("TOPLEFT", tab, "TOPLEFT", TAB_ACTIVE_LEFT_X, 0)
     end
     if rightD then
         rightD:ClearAllPoints()
         rightD:SetSize(37, 42)
         rightD:SetTexture(TAB_TEX)
         rightD:SetTexCoord(0.015625, 0.59375, 0.324219, 0.488281)
-        rightD:SetPoint("TOPRIGHT", tab, "TOPRIGHT", ACTIVE_OVERHANG_R, 0)
+        rightD:SetPoint("TOPRIGHT", tab, "TOPRIGHT", TAB_ACTIVE_RIGHT_X, 0)
     end
     if midD and leftD and rightD then
         midD:ClearAllPoints()
@@ -388,10 +482,7 @@ local function reskinSingleTab(tabName)
     end)()
 
     tab._duiHighlight = { hlLeft, hlRight, hlMid }
-
-    tab:SetNormalFontObject(GameFontNormalSmall)
     tab:SetHighlightFontObject(GameFontHighlightSmall)
-    tab:SetDisabledFontObject(GameFontNormalSmall)
 end
 
 local function syncMailTabState(tab)
@@ -403,7 +494,7 @@ local function syncMailTabState(tab)
     local text = _G[name .. "Text"]
     if text then
         text:ClearAllPoints()
-        text:SetPoint("CENTER", tab, "CENTER", TEXT_NUDGE_X, selected and TEXT_ACTIVE_DROP or 0)
+        text:SetPoint("CENTER", tab, "CENTER", 0, selected and TAB_SELECTED_TEXT_Y or TAB_TEXT_Y)
     end
 
     if tab._duiHighlight then
@@ -419,7 +510,11 @@ local function syncMailTabState(tab)
         tab:SetFrameLevel((mf:GetFrameLevel() or 1) + (selected and 4 or 1))
     end
 
-    tab:SetDisabledFontObject(GameFontNormalSmall)
+    -- The selected tab is disabled, so its label shows the disabled font: white in retail.
+    local labelFont = selected and GameFontHighlightSmall or GameFontNormalSmall
+    tab:SetNormalFontObject(labelFont)
+    tab:SetDisabledFontObject(labelFont)
+    if text then text:SetFontObject(labelFont) end
 end
 
 local function resizeMailTab(tab)
@@ -427,9 +522,14 @@ local function resizeMailTab(tab)
     local text = _G[tab:GetName() .. "Text"]
     if not text then return end
 
-    -- Clear FriendsFrameTabTemplate 88px clamp so localized labels never truncate.
     text:SetWidth(0)
-    local w = math_max(TAB_MIN_W, (text:GetStringWidth() or 0) + TAB_TEXT_PAD)
+    local w = (text:GetStringWidth() or 0) + TAB_SIDES_PADDING
+    if w > TAB_MAX_W then
+        w = TAB_MAX_W
+        text:SetWidth(w - TAB_SIDES_PADDING)
+    elseif w < TAB_MIN_W then
+        w = TAB_MIN_W
+    end
     tab:SetWidth(math_floor(w + 0.5))
     tab:SetHeight(TAB_H)
     syncMailTabState(tab)
@@ -448,7 +548,7 @@ local function rechainMailTabs()
             if prev then
                 tab:SetPoint("TOPLEFT", prev, "TOPRIGHT", TAB_GAP, 0)
             else
-                tab:SetPoint("TOPLEFT", mf, "BOTTOMLEFT", TAB_START_X, 2)
+                tab:SetPoint("TOPLEFT", mf, "BOTTOMLEFT", TAB_START_X, TAB_START_Y)
             end
             prev = tab
         end
@@ -511,22 +611,13 @@ local openAllBtn
 local openAllFrame = CreateFrame("Frame")
 openAllFrame:Hide()
 
-local isOpeningAll = false
-local currentMailIndex = 0
-local currentAttachIndex = 0
-local lastInboxCount = 0
-local waitTimer = 0
-local WAIT_DELAY = 0.15
+local STEP_DELAY = 0.05
+local SERVER_TIMEOUT = 2.0
 
-local waitingForServer = false
-local serverTimeout = 0
-local SERVER_TIMEOUT_DELAY = 1.0
-local retryCount = 0
-local MAX_RETRIES = 3
-local lastActionType = nil
-local lastActionSlot = nil
-local lastMoneyAmount = nil
-local skippedSlots = {}
+local isOpeningAll = false
+local waitTimer = 0
+local pending
+local skipped = {}
 
 local function CountFreeBagSlots()
     local totalFree = 0
@@ -542,11 +633,9 @@ end
 local function HasLootableMail()
     local numItems = GetInboxNumItems() or 0
     for i = 1, numItems do
-        local _, _, _, _, money, codAmount, _, hasItem, _, _, _, _, isGM = GetInboxHeaderInfo(i)
-        if not isGM and (not codAmount or codAmount == 0) then
-            if (money and money > 0) or (hasItem and hasItem > 0) then
-                return true
-            end
+        local _, _, _, _, money, codAmount, _, itemCount, _, _, _, _, isGM = GetInboxHeaderInfo(i)
+        if not isGM and (codAmount or 0) == 0 and ((money or 0) > 0 or (itemCount or 0) > 0) then
+            return true
         end
     end
     return false
@@ -563,175 +652,129 @@ local function UpdateOpenAllButtonState()
         openAllBtn:Disable()
         openAllBtn:SetText(localized("Opening..."))
     else
+        openAllBtn:Enable()
         openAllBtn:SetText(localized("Open All"))
-        if HasLootableMail() then
-            openAllBtn:Enable()
-        else
-            openAllBtn:Disable()
+    end
+end
+
+local function StopOpenAll()
+    isOpeningAll = false
+    pending = nil
+    openAllFrame:Hide()
+    openAllFrame:UnregisterAllEvents()
+    UpdateOpenAllButtonState()
+end
+
+-- Letters have no id and indexes shift when one is deleted, so failed takes are keyed by content.
+local function takeKey(sender, subject, slot, itemName)
+    return (sender or "") .. "\031" .. (subject or "") .. "\031" .. (slot or "money") .. "\031" .. (itemName or "")
+end
+
+local function FindNextTake()
+    for index = (GetInboxNumItems() or 0), 1, -1 do
+        local _, _, sender, subject, money, codAmount, _, itemCount, _, _, _, _, isGM = GetInboxHeaderInfo(index)
+        if not isGM and (codAmount or 0) == 0 then
+            if (money or 0) > 0 then
+                local key = takeKey(sender, subject)
+                if not skipped[key] then
+                    return "money", index, nil, money, key
+                end
+            end
+            if (itemCount or 0) > 0 then
+                for slot = ATTACHMENTS_MAX_RECEIVE, 1, -1 do
+                    local itemName = GetInboxItem(index, slot)
+                    if itemName then
+                        local key = takeKey(sender, subject, slot, itemName)
+                        if not skipped[key] then
+                            return "item", index, slot, itemName, key
+                        end
+                    end
+                end
+            end
         end
     end
 end
 
-local function StopOpenAll(reasonMsg)
-    isOpeningAll = false
-    openAllFrame:Hide()
-    openAllFrame:UnregisterEvent("UI_ERROR_MESSAGE")
-    openAllFrame:UnregisterEvent("MAIL_INBOX_UPDATE")
-    openAllFrame:UnregisterEvent("MAIL_CLOSED")
-    waitingForServer = false
-    currentMailIndex = 0
-    currentAttachIndex = 0
-    retryCount = 0
-    lastActionType = nil
-    lastActionSlot = nil
-    lastMoneyAmount = nil
-    waitTimer = 0
-    UpdateOpenAllButtonState()
-    if reasonMsg and addon.Print then
-        addon:Print(reasonMsg)
-    end
-end
-
-local function ProcessNextMailAction()
-    if not _G.MailFrame or not _G.MailFrame:IsShown() then
+local function TakeNext()
+    if not (_G.MailFrame and _G.MailFrame:IsShown()) then
         StopOpenAll()
         return
     end
 
-    local numItems = GetInboxNumItems() or 0
-    if numItems ~= lastInboxCount then
-        lastInboxCount = numItems
-        if currentMailIndex > numItems then
-            currentMailIndex = numItems
-            currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
-            retryCount = 0
+    local kind, index, slot, value, key = FindNextTake()
+    if not kind then
+        StopOpenAll()
+        local shown, total = GetInboxNumItems()
+        if (total or 0) > (shown or 0) then
+            CheckInbox()
         end
+        return
+    end
+    if kind == "item" and CountFreeBagSlots() == 0 then
+        StopOpenAll()
+        return
     end
 
-    while currentMailIndex >= 1 do
-        local _, _, _, _, money, codAmount, _, hasItem, _, _, _, _, isGM = GetInboxHeaderInfo(currentMailIndex)
-
-        if isGM or (codAmount and codAmount > 0) then
-            currentMailIndex = currentMailIndex - 1
-            currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
-            retryCount = 0
-        else
-            if money and money > 0 and retryCount < MAX_RETRIES then
-                waitingForServer = true
-                serverTimeout = SERVER_TIMEOUT_DELAY
-                lastActionType = "money"
-                lastMoneyAmount = money
-                waitTimer = WAIT_DELAY
-                TakeInboxMoney(currentMailIndex)
-                return
-            end
-
-            if hasItem and hasItem > 0 then
-                while currentAttachIndex >= 1 do
-                    local slotKey = currentMailIndex .. "_" .. currentAttachIndex
-                    if not skippedSlots[slotKey] then
-                        local itemName = GetInboxItem(currentMailIndex, currentAttachIndex)
-                        if itemName then
-                            if CountFreeBagSlots() == 0 then
-                                StopOpenAll(localized("Inventory is full."))
-                                return
-                            end
-                            waitingForServer = true
-                            serverTimeout = SERVER_TIMEOUT_DELAY
-                            lastActionType = "item"
-                            lastActionSlot = currentAttachIndex
-                            waitTimer = WAIT_DELAY
-                            TakeInboxItem(currentMailIndex, currentAttachIndex)
-                            return
-                        end
-                    end
-                    currentAttachIndex = currentAttachIndex - 1
-                    retryCount = 0
-                end
-            end
-
-            currentMailIndex = currentMailIndex - 1
-            currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
-            retryCount = 0
-        end
+    pending = { kind = kind, index = index, slot = slot, value = value, key = key, timeout = SERVER_TIMEOUT }
+    if kind == "money" then
+        TakeInboxMoney(index)
+    else
+        TakeInboxItem(index, slot)
     end
+end
 
-    CheckInbox()
-    StopOpenAll()
+-- Takes go from the last letter up, so deleting a finished letter never shifts the pending one.
+local function PendingResolved()
+    if pending.kind == "money" then
+        local _, _, _, _, money = GetInboxHeaderInfo(pending.index)
+        return money ~= pending.value
+    end
+    return GetInboxItem(pending.index, pending.slot) ~= pending.value
+end
+
+local function SkipPending()
+    skipped[pending.key] = true
+    pending = nil
+    waitTimer = STEP_DELAY
 end
 
 openAllFrame:SetScript("OnEvent", function(_, event, message)
-    if not isOpeningAll then return end
     if event == "MAIL_CLOSED" then
         StopOpenAll()
-    elseif event == "UI_ERROR_MESSAGE" then
-        if message == _G.ERR_INV_FULL then
-            StopOpenAll(localized("Inventory is full."))
-        elseif message == _G.ERR_ITEM_MAX_COUNT then
-            if lastActionType == "item" and lastActionSlot then
-                skippedSlots[currentMailIndex .. "_" .. lastActionSlot] = true
-            end
-            waitingForServer = false
-            currentAttachIndex = currentAttachIndex - 1
-            retryCount = 0
-            waitTimer = 0.05
-        end
-    elseif event == "MAIL_INBOX_UPDATE" then
-        if waitingForServer then
-            if lastActionType == "money" then
-                local _, _, _, _, money = GetInboxHeaderInfo(currentMailIndex)
-                if not money or money == 0 or money ~= lastMoneyAmount then
-                    waitingForServer = false
-                    retryCount = 0
-                    waitTimer = 0.05
-                end
-            elseif lastActionType == "item" and lastActionSlot then
-                local itemName = GetInboxItem(currentMailIndex, lastActionSlot)
-                if not itemName then
-                    waitingForServer = false
-                    currentAttachIndex = currentAttachIndex - 1
-                    retryCount = 0
-                    waitTimer = 0.05
-                end
-            end
-        end
+    elseif not pending then
+        return
+    elseif message == _G.ERR_INV_FULL then
+        StopOpenAll()
+    elseif (pending.kind == "item" and message == _G.ERR_ITEM_MAX_COUNT)
+        or (pending.kind == "money" and message == _G.ERR_TOO_MUCH_GOLD) then
+        SkipPending()
     end
 end)
 
+-- Polled rather than tied to MAIL_INBOX_UPDATE; a take is never resent while it may still land.
 openAllFrame:SetScript("OnUpdate", function(_, elapsed)
-    if not isOpeningAll then
-        openAllFrame:Hide()
-        return
-    end
-
-    if waitingForServer then
-        serverTimeout = serverTimeout - elapsed
-        if serverTimeout <= 0 then
-            waitingForServer = false
-            retryCount = retryCount + 1
-            if retryCount >= MAX_RETRIES then
-                if lastActionType == "item" and lastActionSlot then
-                    skippedSlots[currentMailIndex .. "_" .. lastActionSlot] = true
-                    currentAttachIndex = currentAttachIndex - 1
-                end
-                retryCount = 0
+    if pending then
+        if PendingResolved() then
+            pending = nil
+            waitTimer = STEP_DELAY
+        else
+            pending.timeout = pending.timeout - elapsed
+            if pending.timeout <= 0 then
+                SkipPending()
             end
-            waitTimer = WAIT_DELAY
         end
         return
     end
 
     waitTimer = waitTimer - elapsed
     if waitTimer <= 0 then
-        waitTimer = WAIT_DELAY
-        ProcessNextMailAction()
+        TakeNext()
     end
 end)
 
 local function StartOpenAll()
     if isOpeningAll then return end
-    local numItems = GetInboxNumItems() or 0
-    if numItems == 0 or not HasLootableMail() then
+    if not HasLootableMail() then
         UpdateOpenAllButtonState()
         return
     end
@@ -744,20 +787,11 @@ local function StartOpenAll()
     end
 
     isOpeningAll = true
-    waitingForServer = false
-    serverTimeout = 0
-    retryCount = 0
-    lastActionType = nil
-    lastActionSlot = nil
-    lastMoneyAmount = nil
-    skippedSlots = {}
-    lastInboxCount = numItems
-    currentMailIndex = numItems
-    currentAttachIndex = ATTACHMENTS_MAX_RECEIVE
+    pending = nil
+    wipe(skipped)
     waitTimer = 0
 
     openAllFrame:RegisterEvent("UI_ERROR_MESSAGE")
-    openAllFrame:RegisterEvent("MAIL_INBOX_UPDATE")
     openAllFrame:RegisterEvent("MAIL_CLOSED")
     UpdateOpenAllButtonState()
     openAllFrame:Show()
@@ -777,7 +811,7 @@ local function afterSendMailUpdate()
     local gapY1, gapY2 = 5, 6
     local height = gapY2 * 2 + gapY1 * (ranks - 1) + iconY * ranks
     local indentX = 14 + gapX2
-    local indentY = 82 + gapY2 + iconY
+    local indentY = 170 - RETAIL_DROP + gapY2 + iconY
     local stepX = iconX + gapX1 - 2
     local stepY = iconY + gapY1
     local scrollHeight = 249 - height
@@ -790,19 +824,25 @@ local function afterSendMailUpdate()
     end
     if _G.SendMailHorizontalBarLeft2 then
         _G.SendMailHorizontalBarLeft2:ClearAllPoints()
-        _G.SendMailHorizontalBarLeft2:SetPoint("TOPLEFT", sendFrame, "BOTTOMLEFT", 4, 96 + height)
+        _G.SendMailHorizontalBarLeft2:SetPoint("TOPLEFT", sendFrame, "BOTTOMLEFT", 2, 184 - RETAIL_DROP + height)
     end
     if _G.SendStationeryBackgroundLeft then
-        _G.SendStationeryBackgroundLeft:SetWidth(256)
         _G.SendStationeryBackgroundLeft:SetHeight(math_min(scrollHeight, 256))
         _G.SendStationeryBackgroundLeft:SetTexCoord(0, 1.0, 0, math_min(scrollHeight, 256) / 256)
     end
     if _G.SendStationeryBackgroundRight then
-        _G.SendStationeryBackgroundRight:SetWidth(68)
         _G.SendStationeryBackgroundRight:SetHeight(math_min(scrollHeight, 256))
         _G.SendStationeryBackgroundRight:SetTexCoord(0, 1.0, 0, math_min(scrollHeight, 256) / 256)
     end
     syncMailScrollThumb(_G.SendMailScrollFrame)
+
+    for i = 1, ATTACHMENTS_MAX_SEND do
+        local btn = _G["SendMailAttachment" .. i]
+        if btn then
+            local name, _, _, quality = GetSendMailItem(i)
+            showQuality(iconBorder(btn), name and quality)
+        end
+    end
 
     local cx, cy = 0, ranks - 1
     for i = 1, ATTACHMENTS_MAX_SEND do
@@ -826,18 +866,22 @@ local function afterOpenMailUpdate()
     local id = inbox and inbox.openMailID
     if not (openFrame and id and id > 0) then return end
 
-    if _G.OpenMailFrameIcon then
-        neuterTexture(_G.OpenMailFrameIcon)
+    for i = 1, ATTACHMENTS_MAX_RECEIVE do
+        local btn = _G["OpenMailAttachmentButton" .. i]
+        if btn then
+            local name, _, _, quality = GetInboxItem(id, i)
+            showQuality(iconBorder(btn), name and quality)
+        end
     end
 
     local sender = _G.OpenMailSender
     if sender and _G.OpenMailSenderLabel then
         sender:ClearAllPoints()
-        sender:SetPoint("LEFT", _G.OpenMailSenderLabel, "RIGHT", 6, 0)
+        sender:SetPoint("TOPLEFT", _G.OpenMailSenderLabel, "TOPRIGHT", 5, 0)
         if _G.OpenMailReportSpamButton and _G.OpenMailReportSpamButton:IsShown() then
-            sender:SetPoint("RIGHT", _G.OpenMailReportSpamButton, "LEFT", -6, 0)
+            sender:SetPoint("BOTTOMRIGHT", _G.OpenMailReportSpamButton, "BOTTOMLEFT", -5, 0)
         else
-            sender:SetPoint("RIGHT", openFrame, "RIGHT", -12, 0)
+            sender:SetPoint("BOTTOMRIGHT", openFrame, "TOPRIGHT", -12, -54)
         end
     end
 
@@ -871,15 +915,13 @@ local function afterOpenMailUpdate()
     end
     if _G.OpenMailHorizontalBarLeft then
         _G.OpenMailHorizontalBarLeft:ClearAllPoints()
-        _G.OpenMailHorizontalBarLeft:SetPoint("TOPLEFT", openFrame, "BOTTOMLEFT", 4, 39 + height)
+        _G.OpenMailHorizontalBarLeft:SetPoint("TOPLEFT", openFrame, "BOTTOMLEFT", 2, 39 + height)
     end
     if _G.OpenStationeryBackgroundLeft then
-        _G.OpenStationeryBackgroundLeft:SetWidth(256)
         _G.OpenStationeryBackgroundLeft:SetHeight(scrollHeight)
         _G.OpenStationeryBackgroundLeft:SetTexCoord(0, 1.0, 0, math_min(scrollHeight, 256) / 256)
     end
     if _G.OpenStationeryBackgroundRight then
-        _G.OpenStationeryBackgroundRight:SetWidth(68)
         _G.OpenStationeryBackgroundRight:SetHeight(scrollHeight)
         _G.OpenStationeryBackgroundRight:SetTexCoord(0, 1.0, 0, math_min(scrollHeight, 256) / 256)
     end
@@ -931,7 +973,6 @@ local function syncMailTabView()
     local mailFrame = _G.MailFrame
     if not mailFrame or not mailFrame._duiInset then return end
     hideMailChromePieces()
-    hideMailIcons(mailFrame)
     local selected = (PanelTemplates_GetSelectedTab and PanelTemplates_GetSelectedTab(mailFrame))
         or mailFrame.selectedTab or 1
     placeInset(mailFrame._duiInset, mailFrame, selected == 2 and INSET_SEND or INSET_INBOX)
@@ -945,7 +986,12 @@ local function buildMailFrame()
 
     hideMailChromePieces()
 
-    local inset = paintWindowChrome(mailFrame, _G.InboxCloseButton, INSET_INBOX)
+    -- Pre-rounded HD portrait; without that file, SetPortraitToTexture cuts the client's icon to a circle.
+    local mailIcon = findMailIcon(mailFrame)
+    if mailIcon and not mailIcon:SetTexture(MAIL_ICON_HD) and SetPortraitToTexture then
+        SetPortraitToTexture(mailIcon, MAIL_ICON)
+    end
+    local inset = paintWindowChrome(mailFrame, _G.InboxCloseButton, INSET_INBOX, mailIcon)
 
     local inbox = _G.InboxFrame
     if inbox then
@@ -954,80 +1000,36 @@ local function buildMailFrame()
         inbox:SetSize(WIDTH, HEIGHT)
         inbox:SetFrameLevel(inset:GetFrameLevel() + 2)
 
-        local page = inbox:CreateTexture(nil, "BACKGROUND")
-        page._duiOwned = true
-        setAtlas(page, "questbg-parchment")
-        page:SetSize(PAGE_W, PAGE_H)
-        page:SetPoint("TOPLEFT", inbox, "TOPLEFT", PAGE_X, PAGE_Y)
-        inbox._duiPage = page
+        local bg = inbox:CreateTexture(nil, "BACKGROUND")
+        bg:SetTexture(INBOX_BG)
+        bg:SetSize(512, 512)
+        bg:SetPoint("TOPLEFT", inbox, "TOPLEFT", 7, -62)
+        inbox._duiBg = bg
 
-        if _G.InboxTitleText then
-            _G.InboxTitleText:ClearAllPoints()
-            _G.InboxTitleText:SetPoint("TOPLEFT", mailFrame, "TOPLEFT", 24, -5)
-            _G.InboxTitleText:SetPoint("TOPRIGHT", mailFrame, "TOPRIGHT", -24, -5)
-            _G.InboxTitleText:SetHeight(16)
-            _G.InboxTitleText:SetJustifyH("CENTER")
-        end
-
-        if _G.InboxTooMuchMail then
-            _G.InboxTooMuchMail:ClearAllPoints()
-            _G.InboxTooMuchMail:SetPoint("TOP", inbox, "TOP", 0, -24)
-        end
-
+        dressTitle(mailFrame, _G.InboxTitleText)
+        place(_G.InboxTooMuchMail, "TOP", inbox, "TOP", 0, -25)
         if _G.InboxCurrentPage then
             neuterTexture(_G.InboxCurrentPage)
         end
-
-        -- Center 305x45 MailItem1..7 rows inside the 321px parchment page.
-        if _G.MailItem1 then
-            _G.MailItem1:ClearAllPoints()
-            _G.MailItem1:SetPoint("TOPLEFT", inbox, "TOPLEFT", 15, -67)
-        end
-
-        reskinPageNav("InboxPrevPageButton")
-        reskinPageNav("InboxNextPageButton")
-
-        local prevBtn = _G.InboxPrevPageButton
-        if prevBtn then
-            prevBtn:ClearAllPoints()
-            prevBtn:SetPoint("BOTTOMLEFT", inbox, "BOTTOMLEFT", 15, 10)
-            for _, r in ipairs({ prevBtn:GetRegions() }) do
-                if r.GetObjectType and r:GetObjectType() == "FontString" then
-                    r:ClearAllPoints()
-                    r:SetPoint("LEFT", prevBtn, "RIGHT", 4, 0)
-                end
-            end
-        end
-
-        local nextBtn = _G.InboxNextPageButton
-        if nextBtn then
-            nextBtn:ClearAllPoints()
-            nextBtn:SetPoint("BOTTOMRIGHT", inbox, "BOTTOMRIGHT", -18, 10)
-            for _, r in ipairs({ nextBtn:GetRegions() }) do
-                if r.GetObjectType and r:GetObjectType() == "FontString" then
-                    r:ClearAllPoints()
-                    r:SetPoint("RIGHT", nextBtn, "LEFT", -4, 0)
-                end
-            end
-        end
+        place(_G.MailItem1, "TOPLEFT", inbox, "TOPLEFT", 13, -70)
+        place(_G.InboxPrevPageButton, "BOTTOMLEFT", inbox, "BOTTOMLEFT", 14, 10)
+        place(_G.InboxNextPageButton, "BOTTOMRIGHT", inbox, "BOTTOMRIGHT", -14, 10)
 
         if not openAllBtn then
             openAllBtn = CreateFrame("Button", "DragonUIOpenAllMailButton", inbox, "UIPanelButtonTemplate")
-            skinActionButton(openAllBtn, 104, 22)
-            openAllBtn:SetPoint("CENTER", inbox, "BOTTOM", -1, 24)
+            skinActionButton(openAllBtn, 120, 24)
+            openAllBtn:SetPoint("CENTER", inbox, "BOTTOM", 0, 26)
             openAllBtn:SetText(localized("Open All"))
             openAllBtn:SetScript("OnClick", StartOpenAll)
-            openAllBtn:SetScript("OnEnter", function(self)
-                if not _G.GameTooltip then return end
-                _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                _G.GameTooltip:SetText(localized("Open All"), 1, 0.82, 0)
-                _G.GameTooltip:AddLine(localized("Loot all mail attachments and gold (skips COD mail)"), 1, 1, 1, true)
-                _G.GameTooltip:Show()
-            end)
-            openAllBtn:SetScript("OnLeave", function()
-                if _G.GameTooltip then _G.GameTooltip:Hide() end
+            -- Like retail's OpenAllMailMixin: leaving the inbox (tab switch, close) ends the run.
+            openAllBtn:SetScript("OnHide", function()
+                if isOpeningAll then
+                    StopOpenAll()
+                end
             end)
         end
+
+        liftChildren(inbox)
     end
 
     local sendFrame = _G.SendMailFrame
@@ -1036,99 +1038,66 @@ local function buildMailFrame()
         sendFrame:SetAllPoints(mailFrame)
         sendFrame:SetSize(WIDTH, HEIGHT)
         sendFrame:SetFrameLevel(inset:GetFrameLevel() + 2)
-        clampHorizontalBars(sendFrame)
+        local level = sendFrame:GetFrameLevel()
 
-        if _G.SendMailTitleText then
-            _G.SendMailTitleText:ClearAllPoints()
-            _G.SendMailTitleText:SetPoint("TOPLEFT", mailFrame, "TOPLEFT", 24, -5)
-            _G.SendMailTitleText:SetPoint("TOPRIGHT", mailFrame, "TOPRIGHT", -24, -5)
-            _G.SendMailTitleText:SetHeight(16)
-            _G.SendMailTitleText:SetJustifyH("CENTER")
-        end
+        dressTitle(mailFrame, _G.SendMailTitleText)
+        place(_G.SendMailHorizontalBarLeft, "TOPLEFT", sendFrame, "TOPLEFT", 2, -337)
 
-        if _G.SendMailHorizontalBarLeft then
-            _G.SendMailHorizontalBarLeft:ClearAllPoints()
-            _G.SendMailHorizontalBarLeft:SetPoint("TOPLEFT", sendFrame, "TOPLEFT", 4, -337)
+        local nameBox, subjectBox = _G.SendMailNameEditBox, _G.SendMailSubjectEditBox
+        if nameBox then
+            nameBox:SetHeight(25)
+            place(nameBox, "TOPLEFT", sendFrame, "TOPLEFT", 90, -30)
+            dressInputBorder(nameBox, 109, 100, -2)
         end
-
-        if _G.SendMailNameEditBox then
-            _G.SendMailNameEditBox:SetSize(115, 20)
-            _G.SendMailNameEditBox:ClearAllPoints()
-            _G.SendMailNameEditBox:SetPoint("TOPLEFT", sendFrame, "TOPLEFT", 68, -29)
-            stretchEditBoxBorder(_G.SendMailNameEditBox)
+        if subjectBox and nameBox then
+            subjectBox:SetHeight(20)
+            place(subjectBox, "TOPLEFT", nameBox, "BOTTOMLEFT", 0, 0)
+            dressInputBorder(subjectBox, 220, 221, 0)
         end
-
-        if _G.SendMailSubjectEditBox and _G.SendMailNameEditBox then
-            _G.SendMailSubjectEditBox:SetSize(255, 20)
-            _G.SendMailSubjectEditBox:ClearAllPoints()
-            _G.SendMailSubjectEditBox:SetPoint("TOPLEFT", _G.SendMailNameEditBox, "BOTTOMLEFT", 0, -4)
-            stretchEditBoxBorder(_G.SendMailSubjectEditBox)
-        end
-
-        -- SmallMoneyFrameTemplate parks its copper coin 13px inside its right edge.
-        if _G.SendMailCostMoneyFrame then
-            _G.SendMailCostMoneyFrame:ClearAllPoints()
-            _G.SendMailCostMoneyFrame:SetPoint("RIGHT", sendFrame, "TOPRIGHT", -2, -39)
-        end
+        place(_G.SendMailCostMoneyFrame, "TOPRIGHT", sendFrame, "TOPRIGHT", RETAIL_WIDEN - 50, -34)
 
         if _G.SendMailScrollFrame then
-            _G.SendMailScrollFrame:ClearAllPoints()
-            _G.SendMailScrollFrame:SetPoint("TOPLEFT", sendFrame, "TOPLEFT", 7, -83)
-            styleMailScrollBar(_G.SendMailScrollFrame, sendFrame)
+            place(_G.SendMailScrollFrame, "TOPLEFT", sendFrame, "TOPLEFT", 8, -83)
+            styleMailScrollBar(_G.SendMailScrollFrame, sendFrame, -4, 3)
         end
 
-        if _G.SendMailMoneyButton then
-            _G.SendMailMoneyButton:ClearAllPoints()
-            _G.SendMailMoneyButton:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 12, 38)
-        end
-
-        if _G.SendMailMoney and _G.SendMailMoneyText then
-            _G.SendMailMoney:ClearAllPoints()
-            _G.SendMailMoney:SetPoint("TOPLEFT", _G.SendMailMoneyText, "BOTTOMLEFT", 2, -4)
-        end
-
-        -- Anchor radio buttons left of the right border so localized COD labels never overflow.
-        if _G.SendMailSendMoneyButton then
-            _G.SendMailSendMoneyButton:ClearAllPoints()
-            _G.SendMailSendMoneyButton:SetPoint("TOPLEFT", sendFrame, "BOTTOMLEFT", 178, 73)
-        end
-        if _G.SendMailCODButton and _G.SendMailSendMoneyButton then
-            _G.SendMailCODButton:ClearAllPoints()
-            _G.SendMailCODButton:SetPoint("TOPLEFT", _G.SendMailSendMoneyButton, "BOTTOMLEFT", 0, -3)
+        place(_G.SendMailMoneyButton, "BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 15, 125 - RETAIL_DROP)
+        if _G.SendMailMoney then
+            place(_G.SendMailSendMoneyButton, "TOPLEFT", _G.SendMailMoney, "TOPRIGHT", 20, 12)
         end
 
         local moneyInset = CreateFrame("Frame", nil, sendFrame)
         moneyInset:EnableMouse(false)
-        moneyInset:SetFrameLevel(sendFrame:GetFrameLevel())
-        moneyInset:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 4, 4)
-        moneyInset:SetPoint("TOPRIGHT", sendFrame, "BOTTOMLEFT", 168, 26)
+        moneyInset:SetFrameLevel(level + 1)
+        moneyInset:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 4, 92 - RETAIL_DROP)
+        moneyInset:SetPoint("TOPRIGHT", sendFrame, "BOTTOMLEFT", 170, 115 - RETAIL_DROP)
         applySlices(moneyInset, "InsetFrameTemplate")
-        local moneyMarble = sendFrame:CreateTexture(nil, "BACKGROUND", nil, -2)
-        moneyMarble._duiOwned = true
-        moneyMarble:SetTexture(MARBLE)
+        local moneyMarble = sendFrame:CreateTexture(nil, "BACKGROUND")
+        moneyMarble:SetTexture(MARBLE, "REPEAT", "REPEAT")
         moneyMarble:SetHorizTile(true)
         moneyMarble:SetVertTile(true)
         moneyMarble:SetAllPoints(moneyInset)
 
-        -- Overhangs moneyInset by 7px so SmallMoneyFrameTemplate's 13px right pad leaves 6px inside the rim.
+        local moneyBg = buildGoldEdge(sendFrame, level + 2)
+        moneyBg:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 7, 94 - RETAIL_DROP)
+        moneyBg:SetPoint("TOPRIGHT", sendFrame, "BOTTOMLEFT", 166, 113 - RETAIL_DROP)
+
+        -- SmallMoneyFrameTemplate parks the copper coin 13px inside its right edge: 5px clear of the rim.
         if _G.SendMailMoneyFrame then
-            _G.SendMailMoneyFrame:ClearAllPoints()
-            _G.SendMailMoneyFrame:SetPoint("BOTTOMRIGHT", moneyInset, "BOTTOMRIGHT", 7, 5)
-            _G.SendMailMoneyFrame:SetFrameLevel(sendFrame:GetFrameLevel() + 2)
+            place(_G.SendMailMoneyFrame, "RIGHT", moneyBg, "RIGHT", 8, 0)
+            _G.SendMailMoneyFrame:SetFrameLevel(level + 3)
             if addon.RegisterBlizzardMoneyFrame then
                 addon.RegisterBlizzardMoneyFrame(_G.SendMailMoneyFrame)
             end
         end
 
         if _G.SendMailCancelButton then
-            _G.SendMailCancelButton:ClearAllPoints()
-            _G.SendMailCancelButton:SetPoint("BOTTOMRIGHT", sendFrame, "BOTTOMRIGHT", -6, 4)
-            skinActionButton(_G.SendMailCancelButton, 78, 22)
+            place(_G.SendMailCancelButton, "BOTTOMRIGHT", sendFrame, "BOTTOMRIGHT", RETAIL_WIDEN - 53, 92 - RETAIL_DROP)
+            skinActionButton(_G.SendMailCancelButton, 80, 22)
         end
         if _G.SendMailMailButton and _G.SendMailCancelButton then
-            _G.SendMailMailButton:ClearAllPoints()
-            _G.SendMailMailButton:SetPoint("RIGHT", _G.SendMailCancelButton, "LEFT", -4, 0)
-            skinActionButton(_G.SendMailMailButton, 78, 22)
+            place(_G.SendMailMailButton, "RIGHT", _G.SendMailCancelButton, "LEFT", 0, 0)
+            skinActionButton(_G.SendMailMailButton, 80, 22)
         end
 
         for i = 1, ATTACHMENTS_MAX do
@@ -1142,6 +1111,8 @@ local function buildMailFrame()
                 end
             end
         end
+
+        liftChildren(sendFrame)
 
         if _G.SendMailFrame_Update and not sendFrame._duiSendHooked then
             sendFrame._duiSendHooked = true
@@ -1158,70 +1129,41 @@ local function buildMailFrame()
         openFrame._duiSkinned = true
 
         for _, name in ipairs({
-            "OpenMailFrameIcon",
             "OpenMailFrameTopLeft", "OpenMailFrameTopRight", "OpenMailFrameBotLeft", "OpenMailFrameBotRight",
         }) do
-            local tex = _G[name]
-            if tex then
-                neuterTexture(tex)
-            end
-        end
-        clampHorizontalBars(openFrame)
-
-        local openInset = paintWindowChrome(openFrame, _G.OpenMailCloseButton, INSET_OPEN)
-        openFrame:ClearAllPoints()
-        openFrame:SetPoint("TOPLEFT", mailFrame, "TOPRIGHT", 10, 0)
-
-        if _G.OpenMailTitleText then
-            _G.OpenMailTitleText:ClearAllPoints()
-            _G.OpenMailTitleText:SetPoint("TOPLEFT", openFrame, "TOPLEFT", 24, -5)
-            _G.OpenMailTitleText:SetPoint("TOPRIGHT", openFrame, "TOPRIGHT", -24, -5)
-            _G.OpenMailTitleText:SetHeight(16)
-            _G.OpenMailTitleText:SetJustifyH("CENTER")
+            neuterTexture(_G[name])
         end
 
-        if _G.OpenMailSenderLabel then
-            _G.OpenMailSenderLabel:ClearAllPoints()
-            _G.OpenMailSenderLabel:SetPoint("TOPRIGHT", openFrame, "TOPLEFT", 68, -34)
-        end
-        if _G.OpenMailSubjectLabel then
-            _G.OpenMailSubjectLabel:ClearAllPoints()
-            _G.OpenMailSubjectLabel:SetPoint("TOPRIGHT", openFrame, "TOPLEFT", 68, -54)
-        end
+        local openInset = paintWindowChrome(openFrame, _G.OpenMailCloseButton, INSET_OPEN, _G.OpenMailFrameIcon)
+        place(openFrame, "TOPLEFT", mailFrame, "TOPRIGHT", RETAIL_WIDEN, 0)
+
+        dressTitle(openFrame, _G.OpenMailTitleText)
+        place(_G.OpenMailSenderLabel, "TOPRIGHT", openFrame, "TOPLEFT", 105, -33)
+        place(_G.OpenMailSubjectLabel, "TOPRIGHT", openFrame, "TOPLEFT", 105, -55)
         if _G.OpenMailSender then
             _G.OpenMailSender:SetJustifyH("LEFT")
         end
-        if _G.OpenMailSubject and _G.OpenMailSubjectLabel then
-            _G.OpenMailSubject:ClearAllPoints()
-            _G.OpenMailSubject:SetPoint("TOPLEFT", _G.OpenMailSubjectLabel, "TOPRIGHT", 6, -2)
-            _G.OpenMailSubject:SetPoint("RIGHT", openFrame, "RIGHT", -12, 0)
-        end
         if _G.OpenMailReportSpamButton then
-            _G.OpenMailReportSpamButton:ClearAllPoints()
-            _G.OpenMailReportSpamButton:SetPoint("TOPRIGHT", openFrame, "TOPRIGHT", -10, -30)
-            skinActionButton(_G.OpenMailReportSpamButton, 106, 22)
+            place(_G.OpenMailReportSpamButton, "TOPRIGHT", openFrame, "TOPRIGHT", -12, -32)
+            skinActionButton(_G.OpenMailReportSpamButton, 110, 22)
         end
 
         if _G.OpenMailScrollFrame then
-            _G.OpenMailScrollFrame:ClearAllPoints()
-            _G.OpenMailScrollFrame:SetPoint("TOPLEFT", openFrame, "TOPLEFT", 7, -83)
-            styleMailScrollBar(_G.OpenMailScrollFrame, openFrame)
+            place(_G.OpenMailScrollFrame, "TOPLEFT", openFrame, "TOPLEFT", 8, -84)
+            styleMailScrollBar(_G.OpenMailScrollFrame, openFrame, -3, 5)
         end
 
         if _G.OpenMailCancelButton then
-            _G.OpenMailCancelButton:ClearAllPoints()
-            _G.OpenMailCancelButton:SetPoint("BOTTOMRIGHT", openFrame, "BOTTOMRIGHT", -6, 4)
+            place(_G.OpenMailCancelButton, "BOTTOMRIGHT", openFrame, "BOTTOMRIGHT", -6, 4)
             skinActionButton(_G.OpenMailCancelButton, 80, 22)
         end
         if _G.OpenMailDeleteButton and _G.OpenMailCancelButton then
-            _G.OpenMailDeleteButton:ClearAllPoints()
-            _G.OpenMailDeleteButton:SetPoint("RIGHT", _G.OpenMailCancelButton, "LEFT", -4, 0)
-            skinActionButton(_G.OpenMailDeleteButton, 80, 22)
+            place(_G.OpenMailDeleteButton, "RIGHT", _G.OpenMailCancelButton, "LEFT", 0, 0)
+            skinActionButton(_G.OpenMailDeleteButton, 82, 22)
         end
         if _G.OpenMailReplyButton and _G.OpenMailDeleteButton then
-            _G.OpenMailReplyButton:ClearAllPoints()
-            _G.OpenMailReplyButton:SetPoint("RIGHT", _G.OpenMailDeleteButton, "LEFT", -4, 0)
-            skinActionButton(_G.OpenMailReplyButton, 80, 22)
+            place(_G.OpenMailReplyButton, "RIGHT", _G.OpenMailDeleteButton, "LEFT", 0, 0)
+            skinActionButton(_G.OpenMailReplyButton, 82, 22)
         end
 
         for _, child in ipairs({ openFrame:GetChildren() }) do
@@ -1230,6 +1172,7 @@ local function buildMailFrame()
                 child:SetFrameLevel(openInset:GetFrameLevel() + 2)
             end
         end
+        liftChildren(openFrame)
 
         openFrame:HookScript("OnShow", function()
             if isOpeningAll then
@@ -1244,12 +1187,9 @@ local function buildMailFrame()
         end
     end
 
-    if _G.InboxFrame_Update and not mailFrame._duiUpdateHooked then
-        mailFrame._duiUpdateHooked = true
-        hooksecurefunc("InboxFrame_Update", function()
-            if not IsModuleEnabled() then return end
-            UpdateOpenAllButtonState()
-        end)
+    if _G.InboxFrame_Update and not mailFrame._duiInboxHooked then
+        mailFrame._duiInboxHooked = true
+        hooksecurefunc("InboxFrame_Update", updateInboxBorders)
     end
 
     if _G.MailFrameTab_OnClick and not mailFrame._duiTabHooked then
@@ -1291,8 +1231,6 @@ end
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
 boot:RegisterEvent("MAIL_SHOW")
-boot:RegisterEvent("MAIL_INBOX_UPDATE")
-boot:RegisterEvent("MAIL_CLOSED")
 boot:SetScript("OnEvent", function(_, event)
     if not IsModuleEnabled() then return end
     if event == "PLAYER_LOGIN" then
@@ -1301,9 +1239,5 @@ boot:SetScript("OnEvent", function(_, event)
         buildMailFrame()
         syncMailTabView()
         UpdateOpenAllButtonState()
-    elseif event == "MAIL_INBOX_UPDATE" then
-        UpdateOpenAllButtonState()
-    elseif event == "MAIL_CLOSED" then
-        StopOpenAll()
     end
 end)

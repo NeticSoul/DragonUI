@@ -1118,3 +1118,8 @@ L["Set Favorite"] = "즐겨찾기 설정"
 L["Guaranteed chance of gaining %d skill ups"] = "숙련도 %d 상승 확정"
 L["High chance of gaining skill"] = "숙련도 상승 확률 높음"
 L["Low chance of gaining skill"] = "숙련도 상승 확률 낮음"
+
+-- ============================================================================
+-- FLIGHT MAP & MAIL
+-- ============================================================================
+L["Flight Map"] = "비행 지도"

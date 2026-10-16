@@ -1120,3 +1120,8 @@ L["Set Favorite"] = "Als Favorit festlegen"
 L["Guaranteed chance of gaining %d skill ups"] = "Garantierte Chance auf %d Fertigkeitspunkte"
 L["High chance of gaining skill"] = "Hohe Chance auf Fertigkeitsanstieg"
 L["Low chance of gaining skill"] = "Geringe Chance auf Fertigkeitsanstieg"
+
+-- ============================================================================
+-- FLIGHT MAP & MAIL
+-- ============================================================================
+L["Flight Map"] = "Flugkarte"

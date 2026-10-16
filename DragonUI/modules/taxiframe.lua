@@ -9,7 +9,10 @@ local type = type
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local UpdateUIPanelPositions = UpdateUIPanelPositions
-local SetPortraitTexture = SetPortraitTexture
+local NumTaxiNodes = NumTaxiNodes
+local TaxiNodeGetType = TaxiNodeGetType
+local TaxiNodePosition = TaxiNodePosition
+local SetPortraitToTexture = SetPortraitToTexture
 
 local TaxiModule = {
     initialized = false,
@@ -33,12 +36,34 @@ if addon.RegisterModule then
 end
 
 local DIR = addon._dir
-local ROCK = DIR .. "UI\ui-background-rock"
-local MARBLE = DIR .. "UI\ui-background-marble"
+local ROCK = DIR .. "UI\\ui-background-rock"
+local FLYING_ICON = DIR .. "Taxi\\icon_petfamily_flying"
 
-local WIDTH, HEIGHT = 338, 424
-local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = 4, -60, -6, 4
-local MAP_X, MAP_Y, MAP_W, MAP_H = 10, -64, 316, 352
+-- 4x-UltraSharp redraws of the client's 512px flight maps; empty this table to show the client's own.
+local HD_MAPS = {
+    taximap0 = DIR .. "Taxi\\Maps\\taximap0",
+    taximap1 = DIR .. "Taxi\\Maps\\taximap1",
+    taximap530 = DIR .. "Taxi\\Maps\\taximap530",
+    taximap571 = DIR .. "Taxi\\Maps\\taximap571",
+}
+
+-- FlightMap_FlightPointPinMixin's art and pin sizes; 3.3.5a's DISTANT is retail's unreachable nub.
+local NODE_STYLES = {
+    -- Retail's 28 is on a ~1000px canvas; on our 330 map it buried close neighbours (Dalaran).
+    CURRENT = { atlas = "Taxi_Frame_Green", glow = "Taxi_Frame_Gray", size = 24, layer = 2 },
+    REACHABLE = { atlas = "Taxi_Frame_Gray", glow = "Taxi_Frame_Gray", hover = "Taxi_Frame_Yellow", size = 20, layer = 3 },
+    DISTANT = { atlas = "UI-Taxi-Icon-Nub", glow = "UI-Taxi-Icon-Nub", size = 14, layer = 1 },
+}
+local HOVER_LAYER = 4
+-- TaxiButtonTemplate's 16px button: in 3.3.5a only that core takes the mouse, not its 32px hover glow.
+local MOUSE_SIZE = 16
+local GLOW_ALPHA = 0.25
+local ROUTE_ALPHA = 0.85
+
+-- The maps are square art (retail draws them 580x580); 330 keeps the window at the PR's 338 width.
+local MAP_SIZE = 330
+local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = 4, -60, -4, 4
+local WIDTH, HEIGHT = INSET_LEFT + MAP_SIZE - INSET_RIGHT, MAP_SIZE - INSET_TOP + INSET_BOTTOM
 local PANEL_X_NUDGE = 6
 
 local function IsModuleEnabled()
@@ -53,12 +78,6 @@ local function applySlices(host, layoutName)
     local layout = slicer and slicer.GetLayout and slicer.GetLayout(layoutName)
     if layout and slicer.ApplyLayout then
         slicer.ApplyLayout(host, layout)
-    end
-end
-
-local function setAtlas(tex, name)
-    if tex and tex.SetAtlasTexture then
-        tex:SetAtlasTexture(name)
     end
 end
 
@@ -93,6 +112,137 @@ local function stripStockChrome(taxiFrame)
     end
 end
 
+local function styleNode(button, style)
+    button:SetSize(style.size, style.size)
+    local inset = (style.size - MOUSE_SIZE) / 2
+    if inset < 0 then inset = 0 end
+    button:SetHitRectInsets(inset, inset, inset, inset)
+    local icon = button:GetNormalTexture()
+    if icon then
+        icon:SetAtlasTexture(style.atlas)
+        icon:ClearAllPoints()
+        icon:SetAllPoints(button)
+    end
+    local glow = button:GetHighlightTexture()
+    if glow then
+        glow:SetAtlasTexture(style.glow)
+        glow:ClearAllPoints()
+        glow:SetAllPoints(button)
+        glow:SetBlendMode("ADD")
+        glow:SetAlpha(GLOW_ALPHA)
+    end
+end
+
+local function stackNode(button, layer)
+    local routeMap = _G.TaxiRouteMap
+    button:SetFrameLevel((routeMap and routeMap:GetFrameLevel() or 1) + layer)
+end
+
+-- 3.3.5a's hover glow draws over the neighbours without changing which button owns the mouse.
+local hoverPin
+
+local function onNodeEnter(button)
+    local style = NODE_STYLES[TaxiNodeGetType(button:GetID())]
+    if not style or not hoverPin then return end
+    hoverPin.owner = button
+    -- Retail lights a reachable pin yellow while hovered.
+    hoverPin.icon:SetAtlasTexture(style.hover or style.atlas)
+    hoverPin.glow:SetAtlasTexture(style.glow)
+    stackNode(hoverPin, HOVER_LAYER)
+    hoverPin:ClearAllPoints()
+    hoverPin:SetAllPoints(button)
+    hoverPin:Show()
+end
+
+local function onNodeLeave(button)
+    if hoverPin and hoverPin.owner == button then
+        hoverPin.owner = nil
+        hoverPin:Hide()
+    end
+end
+
+-- TaxiFrame_OnEvent re-stamps every button's NormalTexture file on each TAXIMAP_OPENED.
+local function styleNodes()
+    for index = 1, NumTaxiNodes() do
+        local button = _G["TaxiButton" .. index]
+        if button then
+            if not button._duiHoverHooked then
+                button._duiHoverHooked = true
+                button:HookScript("OnEnter", onNodeEnter)
+                button:HookScript("OnLeave", onNodeLeave)
+            end
+            local style = NODE_STYLES[TaxiNodeGetType(index)]
+            if style then
+                styleNode(button, style)
+                -- Destinations stack over the green pin, which isn't a destination, so clusters stay clickable.
+                stackNode(button, style.layer)
+            end
+        end
+    end
+end
+
+-- TaxiFrame_OnEvent pins nodes to its fixed TAXI_MAP_WIDTH/HEIGHT; redo it on the square map, same nudge.
+local function placeNodes()
+    local map = _G.TaxiMap
+    if not map then return end
+    local halfW, halfH = _G.TAXI_BUTTON_HALF_WIDTH or 8, _G.TAXI_BUTTON_HALF_HEIGHT or 8
+    local spots = {}
+    for index = 1, NumTaxiNodes() do
+        local spot = {}
+        spots[index] = spot
+        local button = _G["TaxiButton" .. index]
+        if button and TaxiNodeGetType(index) ~= "NONE" then
+            local x, y = TaxiNodePosition(index)
+            x, y = x * MAP_SIZE, y * MAP_SIZE
+            spot.x, spot.y = x, y
+            for check = 1, index - 1 do
+                local other = spots[check]
+                if other.x and x > other.x - halfW and x < other.x + halfW
+                    and y > other.y - halfH and y < other.y + halfH then
+                    spot.x, spot.y = x + (x - other.x) * 0.5, y + (y - other.y) * 0.5
+                    other.x, other.y = other.x + (other.x - x) * 0.5, other.y + (other.y - y) * 0.5
+                end
+            end
+            button:ClearAllPoints()
+            button:SetPoint("CENTER", map, "BOTTOMLEFT", spot.x, spot.y)
+        end
+    end
+end
+
+local function fadeRoutes()
+    for index = 1, (_G.NUM_TAXI_ROUTES or 0) do
+        local line = _G["TaxiRoute" .. index]
+        if line then
+            line:SetAlpha(ROUTE_ALPHA)
+        end
+    end
+end
+
+-- SetTaxiMap stamps the client file on every open; a missing HD file falls back to it.
+local function swapHDMap()
+    local map = _G.TaxiMap
+    local path = map and map:GetTexture()
+    if type(path) ~= "string" then return end
+    local name = path:match("([^\\/]+)$"):gsub("%.%w+$", ""):lower()
+    local hd = HD_MAPS[name]
+    if hd and not map:SetTexture(hd) then
+        map:SetTexture(path)
+    end
+end
+
+local function dressOpenedMap()
+    if hoverPin then
+        hoverPin.owner = nil
+        hoverPin:Hide()
+    end
+    swapHDMap()
+    placeNodes()
+    styleNodes()
+    if _G.TaxiPortrait and SetPortraitToTexture then
+        SetPortraitToTexture(_G.TaxiPortrait, FLYING_ICON)
+    end
+end
+
 local function buildTaxiFrame()
     local taxiFrame = _G.TaxiFrame
     if not taxiFrame or taxiFrame._duiSkinned then return end
@@ -115,7 +265,7 @@ local function buildTaxiFrame()
 
     local streaks = taxiFrame:CreateTexture(nil, "BORDER")
     streaks._duiOwned = true
-    setAtlas(streaks, "_UI-Frame-TopTileStreaks")
+    streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
     streaks:SetHorizTile(true)
     streaks:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", 6, -21)
     streaks:SetPoint("BOTTOMRIGHT", taxiFrame, "TOPRIGHT", -2, -64)
@@ -126,21 +276,27 @@ local function buildTaxiFrame()
     if portrait then
         portrait._duiOwned = true
         portrait:ClearAllPoints()
-        portrait:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", -2, 4)
-        portrait:SetSize(56, 56)
+        -- Retail's CircleMask window over its 62x62 portrait at -5,7 (inset 2,0,-2,4).
+        portrait:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", -3, 7)
+        portrait:SetSize(58, 58)
         portrait:SetDrawLayer("ARTWORK")
         portrait:SetAlpha(1)
         portrait:Show()
     end
 
-    local title = _G.TaxiMerchant
-    if title then
-        title:ClearAllPoints()
-        title:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", 60, -5)
-        title:SetPoint("TOPRIGHT", taxiFrame, "TOPRIGHT", -24, -5)
-        title:SetHeight(16)
-        title:SetJustifyH("CENTER")
+    -- Retail's TitleContainer: TaxiMerchant sits on the window itself, under the OVERLAY title metal.
+    if _G.TaxiMerchant then
+        _G.TaxiMerchant:Hide()
     end
+    local titleBar = CreateFrame("Frame", nil, taxiFrame)
+    titleBar:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", 58, -1)
+    titleBar:SetPoint("TOPRIGHT", taxiFrame, "TOPRIGHT", -24, -1)
+    titleBar:SetHeight(20)
+    local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    title:SetPoint("TOPLEFT", titleBar, "TOPLEFT", 0, -5)
+    title:SetPoint("TOPRIGHT", titleBar, "TOPRIGHT", 0, -5)
+    title:SetJustifyH("CENTER")
+    title:SetText(localized("Flight Map"))
 
     dressCloseButton(_G.TaxiCloseButton, taxiFrame)
 
@@ -151,19 +307,12 @@ local function buildTaxiFrame()
     inset:SetPoint("BOTTOMRIGHT", taxiFrame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
     applySlices(inset, "InsetFrameTemplate")
 
-    local marble = taxiFrame:CreateTexture(nil, "BORDER")
-    marble._duiOwned = true
-    marble:SetTexture(MARBLE)
-    marble:SetHorizTile(true)
-    marble:SetVertTile(true)
-    marble:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", INSET_LEFT, INSET_TOP)
-    marble:SetPoint("BOTTOMRIGHT", taxiFrame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
-
+    -- Retail's map IS the inset background, its trim drawn over the map edge: no margin to squeeze it.
     local taxiMap = _G.TaxiMap
     if taxiMap then
         taxiMap:ClearAllPoints()
-        taxiMap:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", MAP_X, MAP_Y)
-        taxiMap:SetSize(MAP_W, MAP_H)
+        taxiMap:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", INSET_LEFT, INSET_TOP)
+        taxiMap:SetSize(MAP_SIZE, MAP_SIZE)
         taxiMap:SetDrawLayer("ARTWORK")
     end
 
@@ -171,15 +320,33 @@ local function buildTaxiFrame()
     if routeMap and taxiMap then
         routeMap:ClearAllPoints()
         routeMap:SetAllPoints(taxiMap)
-        routeMap:SetSize(MAP_W, MAP_H)
+        routeMap:SetSize(MAP_SIZE, MAP_SIZE)
         routeMap:SetFrameLevel(inset:GetFrameLevel() + 2)
+
+        hoverPin = CreateFrame("Frame", nil, routeMap)
+        hoverPin:Hide()
+        hoverPin.icon = hoverPin:CreateTexture(nil, "ARTWORK")
+        hoverPin.icon:SetAllPoints(hoverPin)
+        hoverPin.glow = hoverPin:CreateTexture(nil, "OVERLAY")
+        hoverPin.glow:SetAllPoints(hoverPin)
+        hoverPin.glow:SetBlendMode("ADD")
+        hoverPin.glow:SetAlpha(GLOW_ALPHA)
     end
 
-    taxiFrame:HookScript("OnShow", function()
-        if _G.TaxiPortrait and SetPortraitTexture then
-            SetPortraitTexture(_G.TaxiPortrait, "npc")
+    -- Runs after the XML-bound TaxiFrame_OnEvent, which hooksecurefunc on the global would miss.
+    taxiFrame:HookScript("OnEvent", function(_, event)
+        if event == "TAXIMAP_OPENED" then
+            dressOpenedMap()
         end
     end)
+    for _, drawer in ipairs({ "DrawOneHopLines", "TaxiNodeOnButtonEnter" }) do
+        if _G[drawer] then
+            hooksecurefunc(drawer, fadeRoutes)
+        end
+    end
+    if taxiFrame:IsShown() then
+        dressOpenedMap()
+    end
 end
 
 function addon.ApplyTaxiFrameSystem()

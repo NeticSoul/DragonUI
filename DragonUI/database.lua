@@ -1354,10 +1354,10 @@ local defaults = {
                 scale = 1, -- Addon list window scale on top of the UI scale
             },
             mail = {
-                 enabled = true 
+                enabled = true, -- Retail-style mail window with the Open All button
             },
             taxiframe = {
-                 enabled = true 
+                enabled = true, -- Retail-style flight master map window
             },
         },
 
