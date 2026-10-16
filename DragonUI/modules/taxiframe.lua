@@ -33,8 +33,8 @@ if addon.RegisterModule then
 end
 
 local DIR = addon._dir
-local ROCK = DIR .. "UI\\ui-background-rock"
-local MARBLE = DIR .. "UI\\ui-background-marble"
+local ROCK = DIR .. "UI\ui-background-rock"
+local MARBLE = DIR .. "UI\ui-background-marble"
 
 local WIDTH, HEIGHT = 338, 424
 local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = 4, -60, -6, 4
@@ -151,12 +151,13 @@ local function buildTaxiFrame()
     inset:SetPoint("BOTTOMRIGHT", taxiFrame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
     applySlices(inset, "InsetFrameTemplate")
 
-    local marble = inset:CreateTexture(nil, "BACKGROUND")
+    local marble = taxiFrame:CreateTexture(nil, "BORDER")
     marble._duiOwned = true
     marble:SetTexture(MARBLE)
     marble:SetHorizTile(true)
     marble:SetVertTile(true)
-    marble:SetAllPoints(inset)
+    marble:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", INSET_LEFT, INSET_TOP)
+    marble:SetPoint("BOTTOMRIGHT", taxiFrame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
 
     local taxiMap = _G.TaxiMap
     if taxiMap then
