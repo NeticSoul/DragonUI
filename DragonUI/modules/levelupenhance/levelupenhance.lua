@@ -55,7 +55,9 @@ local RING_SCALE = ICON_SIZE / 45 * 1.14
 local ICON_CROP = 0.06
 
 local TIME_EXPAND, TIME_TEXT_IN, TIME_FADE = 1.75, 1.85, 0.35
-local HOLD_COLLAPSED, HOLD_LIST, HOLD_PER_ROW, HOLD_LIST_MAX = 4, 4, 1, 10
+local HOLD_COLLAPSED, HOLD_LIST, HOLD_PER_ROW, HOLD_LIST_MAX, HOLD_QUEUED = 4, 4, 1, 10, 5
+-- Levels in a row that get a banner each, as retail queues them; the rest share one banner.
+local MAX_SINGLE_BANNERS = 3
 local CHAT_DELAY = 0.5
 
 local COLOR_TITLE = { 0.96, 0.82, 0.45 }
@@ -160,14 +162,15 @@ local function KnownInChain(index, spellID, memo)
     return answer
 end
 
-local function SpellEntry(spellID, kind, hint)
+local function SpellEntry(spellID, kind, hint, level)
     local name, rank, icon = GetSpellInfo(spellID)
     if not name then return nil end
     local text = name
     if kind == "rank" and rank and rank ~= "" then
         text = format("%s |cffb3b3b3(%s)|r", name, rank)
     end
-    return { kind = kind, text = text, name = name, icon = icon or ICON_UNKNOWN, spellID = spellID, hint = hint }
+    return { kind = kind, text = text, name = name, icon = icon or ICON_UNKNOWN, spellID = spellID, hint = hint,
+        level = level }
 end
 
 local function Add(list, entry)
@@ -177,18 +180,20 @@ end
 local function AddFeatures(out, from, to)
     for level = from, to do
         for _, feature in ipairs(FEATURES[level] or EMPTY) do
-            Add(out, { kind = "feature", text = feature[1], icon = feature[2] })
+            Add(out, { kind = "feature", text = feature[1], icon = feature[2], level = level })
         end
         if GLYPH_SLOT_AT[level] then
-            Add(out, { kind = "feature", text = GLYPH_SLOT_AT[level], icon = ICON_GLYPHS })
+            Add(out, { kind = "feature", text = GLYPH_SLOT_AT[level], icon = ICON_GLYPHS, level = level })
         end
     end
 end
 
 local function AddRiding(out, data, from, to)
+    local Book = addon.SpellbookModule
     for _, row in ipairs(data.riding or EMPTY) do
-        if row[1] >= from and row[1] <= to and not IsSpellKnown(row[2]) then
-            Add(out, SpellEntry(row[2], "feature", HINT_RIDING))
+        local level = Book and Book.TrainerLevel and Book.TrainerLevel(row[2]) or row[1]
+        if level >= from and level <= to then
+            Add(out, SpellEntry(row[2], "feature", HINT_RIDING, level))
         end
     end
 end
@@ -210,15 +215,15 @@ local function AddClassSpells(features, spells, data, from, to)
         local memo = {}
         for _, record in ipairs(index.list) do
             local level, spellID, previous, talent = record[1], record[2], record[4], record[5]
+            -- Known spells stay: servers that teach on level-up still unlocked them at this level.
             if level >= from and level <= to and not seen[spellID] and RaceAllows(record[6], raceBit)
-                and not IsSpellKnown(spellID)
                 and (talent == 0 or KnownInChain(index, talent, memo)
                     or (previous ~= 0 and KnownInChain(index, previous, memo))) then
                 seen[spellID] = true
                 if FEATURE_SPELLS[spellID] then
-                    Add(features, SpellEntry(spellID, "feature", HINT_TRAINER))
+                    Add(features, SpellEntry(spellID, "feature", HINT_TRAINER, level))
                 else
-                    Add(spells, SpellEntry(spellID, previous ~= 0 and "rank" or "spell", HINT_TRAINER))
+                    Add(spells, SpellEntry(spellID, previous ~= 0 and "rank" or "spell", HINT_TRAINER, level))
                 end
             end
         end
@@ -226,10 +231,9 @@ local function AddClassSpells(features, spells, data, from, to)
 
     for _, row in ipairs(data.questSpells and data.questSpells[class] or EMPTY) do
         local spellID = row[2]
-        if row[1] >= from and row[1] <= to and not seen[spellID] and RaceAllows(row[3], raceBit)
-            and not IsSpellKnown(spellID) then
+        if row[1] >= from and row[1] <= to and not seen[spellID] and RaceAllows(row[3], raceBit) then
             seen[spellID] = true
-            Add(spells, SpellEntry(spellID, "spell", HINT_QUEST))
+            Add(spells, SpellEntry(spellID, "spell", HINT_QUEST, row[1]))
         end
     end
     table.sort(spells, SpellSort)
@@ -258,7 +262,8 @@ local function AddBattlegrounds(out, data, from, to)
     for _, row in ipairs(data.battlegrounds or EMPTY) do
         if row[1] >= from and row[1] <= to and row[1] ~= first then
             names = names or BattlegroundNames()
-            Add(out, { kind = "battleground", text = names[row[2]] or row[4], icon = "Interface\\Icons\\" .. row[3] })
+            Add(out, { kind = "battleground", text = names[row[2]] or row[4], icon = "Interface\\Icons\\" .. row[3],
+                level = row[1] })
         end
     end
 end
@@ -275,19 +280,19 @@ local function AddInstances(dungeons, heroics, raids, data, from, to)
     for _, row in ipairs(data.dungeons or EMPTY) do
         if row[1] >= from and row[1] <= to and (row[3] == -1 or row[3] == faction) then
             Add(dungeons, { kind = "dungeon", text = GetLFGDungeonInfo(row[2]) or row[5], hint = LevelRangeHint(row[2]),
-                icon = row[4] and (LFG_ICON .. row[4]) or ICON_DUNGEON })
+                icon = row[4] and (LFG_ICON .. row[4]) or ICON_DUNGEON, level = row[1] })
         end
     end
     for _, row in ipairs(data.heroics or EMPTY) do
         local name = _G["EXPANSION_NAME" .. row[2]]
         if row[1] >= from and row[1] <= to and name then
-            Add(heroics, { kind = "heroic", text = name, icon = HEROIC_ICONS[row[2]] or ICON_DUNGEON })
+            Add(heroics, { kind = "heroic", text = name, icon = HEROIC_ICONS[row[2]] or ICON_DUNGEON, level = row[1] })
         end
     end
     for _, row in ipairs(data.raids or EMPTY) do
         if row[1] >= from and row[1] <= to then
             Add(raids, { kind = "raid", text = GetLFGDungeonInfo(row[2]) or row[4], hint = LevelRangeHint(row[2]),
-                icon = row[3] and (LFG_ICON .. row[3]) or ICON_RAID })
+                icon = row[3] and (LFG_ICON .. row[3]) or ICON_RAID, level = row[1] })
         end
     end
 end
@@ -321,6 +326,14 @@ local function BuildCharacterUnlocks(from, to, talentPoints)
     Append(out, dungeons)
     Append(out, heroics)
     Append(out, raids)
+    if from < to then
+        for _, entry in ipairs(out) do
+            if entry.level and entry.level < to then
+                entry.tag = format(L["Level %d"], entry.level)
+                entry.sub = format("%s |cffb3b3b3(%s)|r", SUBTEXT[entry.kind] or SUBTEXT.feature, entry.tag)
+            end
+        end
+    end
     return out
 end
 
@@ -387,7 +400,8 @@ end
 
 local function ChatLine(entry)
     local prefix = CHAT_PREFIX[entry.kind]
-    if not prefix then return nil end
+    -- A spell the server already taught got the client's own "You have learned" line.
+    if not prefix or (entry.spellID and IsSpellKnown(entry.spellID)) then return nil end
     local link
     if entry.spellID then
         link = GetSpellLink(entry.spellID)
@@ -404,14 +418,13 @@ end
 
 -- Mirrors the client's own level-up lines: same windows, system color, after them.
 local function PrintToChat(header, entries)
-    local lines = {}
-    if header then lines[1] = header end
-    for _, entry in ipairs(entries) do
-        local line = ChatLine(entry)
-        if line then lines[#lines + 1] = line end
-    end
-    if #lines == 0 then return end
     addon:After(CHAT_DELAY, function()
+        local lines = {}
+        if header then lines[1] = header end
+        for _, entry in ipairs(entries) do
+            local line = ChatLine(entry)
+            if line then lines[#lines + 1] = line end
+        end
         local info = ChatTypeInfo["SYSTEM"]
         for _, frame in ipairs(ChatFrames()) do
             for _, line in ipairs(lines) do
@@ -433,6 +446,10 @@ local entries = EMPTY
 local expanded = false
 local animState, stateTimer = "IDLE", 0
 local queuedPet
+-- Player banners waiting their turn: { level, talents, unlocks } or, past the limit, { from, level, talents }.
+local playerQueue = {}
+local runLength = 0
+local loading = false
 
 local function IsEditorActive()
     return addon.EditorMode and addon.EditorMode:IsActive()
@@ -490,14 +507,16 @@ local function RowEnter(self)
     if entry.items then
         GameTooltip:SetText(entry.sub, 1, 1, 1)
         for _, item in ipairs(entry.items) do
-            GameTooltip:AddLine(format("|T%s:16|t %s", item.icon, item.text), COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+            local line = format("|T%s:16|t %s", item.icon, item.text)
+            if item.tag then line = format("%s |cffb3b3b3(%s)|r", line, item.tag) end
+            GameTooltip:AddLine(line, COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
         end
     elseif entry.spellID then
         GameTooltip:SetHyperlink("spell:" .. entry.spellID)
     else
         GameTooltip:SetText(entry.text, 1, 1, 1)
     end
-    if entry.hint then
+    if entry.hint and not (entry.spellID and IsSpellKnown(entry.spellID)) then
         GameTooltip:AddLine(entry.hint, NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b, true)
     end
     GameTooltip:Show()
@@ -619,8 +638,10 @@ local function SetExpanded(value)
 end
 
 local function HoldTime()
-    if not expanded then return HOLD_COLLAPSED end
-    return min(HOLD_LIST + HOLD_PER_ROW * #(entries.display or entries), HOLD_LIST_MAX)
+    local hold = HOLD_COLLAPSED
+    if expanded then hold = min(HOLD_LIST + HOLD_PER_ROW * #(entries.display or entries), HOLD_LIST_MAX) end
+    if playerQueue[1] or queuedPet then hold = min(hold, HOLD_QUEUED) end
+    return hold
 end
 
 local function IsHovered()
@@ -719,14 +740,6 @@ local function Present(request)
     banner:SetScript("OnUpdate", OnUpdate)
 end
 
-ShowNext = function()
-    if queuedPet and not IsEditorActive() then
-        local request = queuedPet
-        queuedPet = nil
-        Present(request)
-    end
-end
-
 local function CreateBanner()
     anchor = addon.CreateUIFrame(WIDTH, HEIGHT, "LevelUpFrame")
 
@@ -812,11 +825,12 @@ end
 -- REQUESTS
 -- =============================================================================
 
-local function CharacterRequest(from, to, talents, preview, unlocks)
+-- from: first level of a banner that covers several (the run past MAX_SINGLE_BANNERS).
+local function CharacterRequest(level, talents, preview, unlocks, from)
     return {
-        kind = "player", from = from, level = to, talents = talents, preview = preview,
+        kind = "player", level = level, from = from, talents = talents, preview = preview,
         header = L["You've Reached"],
-        unlocks = unlocks or Setting("show_unlocks") and BuildCharacterUnlocks(from, to, talents) or {},
+        unlocks = unlocks or Setting("show_unlocks") and BuildCharacterUnlocks(from or level, level, talents) or {},
     }
 end
 
@@ -828,46 +842,57 @@ local function PetRequest(level, name)
     }
 end
 
-local pendingPlayer
-local loading = false
-
--- unlocks: the list already built for this single level, reused unless a burst widens the range.
-local function ShowPlayerLevel(level, talents, unlocks)
-    -- A burst (several levels in a row) keeps one banner that lists every level it covers.
-    local from = level
-    if current and current.kind == "player" and not current.preview and current.level < level then
-        from, unlocks = current.from, nil
-        talents = talents + (current.talents or 0)
-    elseif current and current.kind == "pet" then
-        queuedPet = current
+ShowNext = function()
+    if loading or IsEditorActive() then return end
+    local nextPlayer = table.remove(playerQueue, 1)
+    if nextPlayer then
+        Present(CharacterRequest(nextPlayer.level, nextPlayer.talents, nil, nextPlayer.unlocks, nextPlayer.from))
+        return
     end
-    Present(CharacterRequest(from, level, talents, nil, unlocks))
+    runLength = 0
+    if queuedPet then
+        local request = queuedPet
+        queuedPet = nil
+        Present(request)
+    end
+end
+
+-- A banner cut short (loading screen, editor, test) plays again first.
+local function Requeue(request)
+    if request.kind == "player" then
+        table.insert(playerQueue, 1, { from = request.from, level = request.level, talents = request.talents or 0,
+            unlocks = request.unlocks })
+    else
+        queuedPet = request
+    end
+end
+
+local function QueuePlayerLevel(level, talents, unlocks)
+    local last = playerQueue[#playerQueue]
+    if last and last.from then
+        last.level, last.talents, last.unlocks = level, last.talents + talents, nil
+    elseif runLength < MAX_SINGLE_BANNERS then
+        playerQueue[#playerQueue + 1] = { level = level, talents = talents, unlocks = unlocks }
+    else
+        playerQueue[#playerQueue + 1] = { from = level, level = level, talents = talents }
+    end
+    runLength = runLength + 1
 end
 
 local function OnPlayerLevelUp(level, talents, unlocks)
-    if IsEditorActive() or loading then
-        if pendingPlayer and pendingPlayer.level < level then
-            pendingPlayer = { from = pendingPlayer.from, level = level, talents = pendingPlayer.talents + talents }
-        elseif not pendingPlayer then
-            pendingPlayer = { from = level, level = level, talents = talents }
-        end
-        return
+    if current and current.kind == "pet" then
+        Requeue(current)
+        Finish()
     end
-    ShowPlayerLevel(level, talents, unlocks)
-end
-
-local function FlushPending()
-    if not pendingPlayer or loading or IsEditorActive() then return end
-    local request = pendingPlayer
-    pendingPlayer = nil
-    Present(CharacterRequest(request.from, request.level, request.talents))
+    QueuePlayerLevel(level, talents, unlocks)
+    if not current then ShowNext() end
 end
 
 -- =============================================================================
 -- EVENTS
 -- =============================================================================
 
-local shownLevel
+local shownLevel, playerLevel
 local petGUID, petLevel
 
 local function TrackPet()
@@ -892,7 +917,7 @@ local function OnPetLevel()
     if Setting("show_unlocks") and Setting("chat_unlocks") then
         PrintToChat(format(L["%s has reached level %d!"], name, level), request.unlocks)
     end
-    if loading or IsEditorActive() or (current and current.kind == "player") then
+    if loading or IsEditorActive() or playerQueue[1] or (current and current.kind == "player") then
         queuedPet = request
     else
         Present(request)
@@ -914,24 +939,31 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, _, _, arg4)
         -- Like retail, a banner cut by a loading screen starts over once the world is back.
         loading = true
         if current and not current.preview then
-            if current.kind == "player" then
-                pendingPlayer = { from = current.from, level = current.level, talents = current.talents or 0 }
-            else
-                queuedPet = current
-            end
+            Requeue(current)
             Finish()
         end
     elseif event == "PLAYER_ENTERING_WORLD" then
         loading = false
         local level = UnitLevel("player")
-        if level and level > 0 and (not shownLevel or level < shownLevel) then shownLevel = level end
+        if level and level > 0 then
+            if not shownLevel or level < shownLevel then shownLevel = level end
+            playerLevel = level
+        end
         TrackPet()
-        FlushPending()
         if not current then ShowNext() end
     elseif event == "UNIT_PET" then
         if arg1 == "player" then TrackPet() end
     elseif event == "UNIT_LEVEL" then
-        if arg1 == "pet" then OnPetLevel() end
+        if arg1 == "pet" then
+            OnPetLevel()
+        elseif arg1 == "player" then
+            -- Only a real drop (GM command, level reset) re-arms levels already shown.
+            local level = UnitLevel("player")
+            if level and level > 0 then
+                if playerLevel and level < playerLevel and shownLevel and level < shownLevel then shownLevel = level end
+                playerLevel = level
+            end
+        end
     end
 end)
 LevelUpEnhance.eventFrame = eventFrame
@@ -954,9 +986,8 @@ local function ApplyScale()
 end
 
 local function PreviewLevel()
-    local level = UnitLevel("player") or 1
-    if level < 80 then level = level + 1 end
-    return level
+    local level = UnitLevel("player")
+    return level and level > 0 and level or 1
 end
 
 local function RegisterEditor()
@@ -969,23 +1000,16 @@ local function RegisterEditor()
             return addon:IsModuleEnabled("levelupenhance")
         end,
         showTest = function()
-            if current and not current.preview then
-                if current.kind == "player" then
-                    pendingPlayer = { from = current.from, level = current.level, talents = current.talents or 0 }
-                else
-                    queuedPet = current
-                end
-            end
+            if current and not current.preview then Requeue(current) end
             local level = PreviewLevel()
             anchor:Show()
-            Present(CharacterRequest(level, level, level > FIRST_TALENT_LEVEL and 1 or 0, true))
+            Present(CharacterRequest(level, level > FIRST_TALENT_LEVEL and 1 or 0, true))
         end,
         hideTest = function()
             if current and current.preview then Finish() end
         end,
         onHide = function()
             ApplyWidgetPosition()
-            FlushPending()
             if not current then ShowNext() end
         end,
         module = LevelUpEnhance,
@@ -1008,7 +1032,10 @@ function addon.ApplyLevelUpEnhanceSystem()
     for _, event in ipairs(EVENTS) do eventFrame:RegisterEvent(event) end
 
     local level = UnitLevel("player")
-    if level and level > 0 then shownLevel = max(shownLevel or 0, level) end
+    if level and level > 0 then
+        shownLevel = max(shownLevel or 0, level)
+        playerLevel = level
+    end
     TrackPet()
     LevelUpEnhance.initialized = true
     LevelUpEnhance.applied = true
@@ -1016,7 +1043,7 @@ end
 
 function addon.RestoreLevelUpEnhanceSystem()
     eventFrame:UnregisterAllEvents()
-    pendingPlayer, queuedPet, loading = nil, nil, false
+    playerQueue, runLength, queuedPet, loading = {}, 0, nil, false
     if banner then Finish() end
     LevelUpEnhance.applied = false
 end
@@ -1033,8 +1060,7 @@ function addon.RefreshLevelUpEnhance()
     if not banner then return end
     ApplyScale()
     if current and current.preview then
-        local level = current.level
-        Present(CharacterRequest(level, level, current.talents, true))
+        Present(CharacterRequest(current.level, current.talents, true))
     end
 end
 
@@ -1051,10 +1077,11 @@ function addon.TestLevelUpEnhance(level)
     if not level or level < 1 or level > 80 then level = PreviewLevel() end
     level = floor(level)
     local talents = level >= FIRST_TALENT_LEVEL and 1 or 0
-    local request = CharacterRequest(level, level, talents)
+    local request = CharacterRequest(level, talents)
     if Setting("show_unlocks") and Setting("chat_unlocks") then
         PrintToChat(nil, request.unlocks)
     end
+    if current and not current.preview then Requeue(current) end
     Present(request)
 end
 
