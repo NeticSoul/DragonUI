@@ -214,6 +214,11 @@ local defaults = {
                 anchor = "BOTTOM",
                 posX = 0,
                 posY = 235
+            },
+            buff_reminder = {
+                anchor = "TOPRIGHT",
+                posX = -228,
+                posY = -15
             }
         },
         -- Personal Resource Display: settings (the enable flag is modules.personalresource.enabled)
@@ -646,6 +651,32 @@ local defaults = {
             layout_preview = false,
             layout_preview_buffs = 40,
             layout_preview_debuffs = 16,
+        },
+
+        -- BUFF REMINDER (icons next to the minimap)
+        buff_reminder = {
+            icon_size = 30,
+            spacing = 0,
+            direction = "DOWN", -- LEFT | RIGHT | UP | DOWN (growth from the mover)
+            show_timer = true,
+            show_cooldown = true, -- clock-style cooldown swipe on active buffs
+            timer_font_size = 8,
+            warn_below = 2, -- minutes left before the timer turns red
+            show_only_missing = false,
+            only_in_group = false,
+            only_in_instance = false,
+            flask_also_elixirs = true, -- battle + guardian elixir counts as flasked
+            class_filter = true, -- only show buffs useful for your class and spec
+            track = {
+                flask = true,
+                food = true,
+                kings = true,
+                might = true,
+                wisdom = true,
+                gift = true,
+                fort = true,
+                intellect = true,
+            },
         },
 
         -- CASTBAR SETTINGS
@@ -1358,6 +1389,9 @@ local defaults = {
             },
             taxiframe = {
                 enabled = true, -- Retail-style flight master map window
+            },
+            buff_reminder = {
+                enabled = true, -- Buff reminder next to the minimap
             },
         },
 

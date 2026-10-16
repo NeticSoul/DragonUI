@@ -71,6 +71,14 @@ local function RefreshPlayerAuraSpacing()
     end
 end
 
+local function RefreshBuffReminder()
+    if addon.RefreshBuffReminder then
+        addon.RefreshBuffReminder()
+    elseif addon.RefreshBuffReminderSystem then
+        addon:RefreshBuffReminderSystem()
+    end
+end
+
 local AURA_ANCHORS = {
     TOP = LO["Top"],
     BOTTOM = LO["Bottom"],
@@ -376,6 +384,146 @@ local function BuildPlayerAuras(scroll)
 
     C:AddDescription(weaponSection,
         "|cff888888" .. LO["When enabled, a 'Weapon Enchants' mover appears in Editor Mode that you can drag to any position on screen."] .. "|r")
+
+    C:AddSpacer(scroll)
+
+    -- ====================================================================
+    -- BUFF REMINDER (next to the minimap)
+    -- ====================================================================
+    local reminderSection = C:AddSection(scroll, LO["Buff Reminder"])
+
+    C:AddDescription(reminderSection, LO["Icons next to the minimap showing flask, food and raid buffs with remaining time."])
+
+    C:AddDropdown(reminderSection, {
+        label = LO["Growth Direction"],
+        desc = LO["Which way new icons extend from the mover."],
+        values = {
+            LEFT = LO["Grow Left"],
+            RIGHT = LO["Grow Right"],
+            UP = LO["Grow Up"],
+            DOWN = LO["Grow Down"],
+        },
+        width = 220,
+        dbPath = "buff_reminder.direction",
+        getFunc = function()
+            return C:GetDBValue("buff_reminder.direction") or "DOWN"
+        end,
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddSlider(reminderSection, {
+        label = LO["Icon Size"],
+        dbPath = "buff_reminder.icon_size",
+        min = 16, max = 64, step = 1,
+        width = 220,
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddSlider(reminderSection, {
+        label = LO["Icon Spacing"],
+        dbPath = "buff_reminder.spacing",
+        min = 0, max = 20, step = 1,
+        width = 220,
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Show Remaining Time"],
+        desc = LO["Show the remaining buff time under each icon."],
+        dbPath = "buff_reminder.show_timer",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Show Cooldown Swipe"],
+        desc = LO["Show a clock-style cooldown swipe on icons for active buffs."],
+        dbPath = "buff_reminder.show_cooldown",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddSlider(reminderSection, {
+        label = LO["Timer Font Size"],
+        dbPath = "buff_reminder.timer_font_size",
+        min = 8, max = 24, step = 1,
+        width = 220,
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddSlider(reminderSection, {
+        label = LO["Warn Below (Minutes)"],
+        desc = LO["Timer turns red when less than this many minutes remain."],
+        dbPath = "buff_reminder.warn_below",
+        min = 1, max = 30, step = 1,
+        width = 220,
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Show Only When Missing"],
+        desc = LO["Hide icons for buffs you already have; only missing buffs are shown."],
+        dbPath = "buff_reminder.show_only_missing",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Only In Group"],
+        desc = LO["Hide the reminder while solo."],
+        dbPath = "buff_reminder.only_in_group",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Only In Instance"],
+        desc = LO["Hide the reminder outside instances."],
+        dbPath = "buff_reminder.only_in_instance",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Elixirs Count As Flask"],
+        desc = LO["A battle plus guardian elixir counts as flasked."],
+        dbPath = "buff_reminder.flask_also_elixirs",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddToggle(reminderSection, {
+        label = LO["Class Filter"],
+        desc = LO["Only show buffs useful for your class and spec (e.g. no Wisdom for rogues, Might for Ret and Wisdom for Holy)."],
+        dbPath = "buff_reminder.class_filter",
+        callback = RefreshBuffReminder,
+    })
+
+    C:AddHeading(reminderSection, LO["Tracked Buffs"])
+
+    local reminderTracks = {
+        { key = "flask", label = LO["Flask"] },
+        { key = "food", label = LO["Food"] },
+        { key = "kings", label = LO["Blessing of Kings"] },
+        { key = "might", label = LO["Blessing of Might"] },
+        { key = "wisdom", label = LO["Blessing of Wisdom"] },
+        { key = "gift", label = LO["Mark / Gift of the Wild"] },
+        { key = "fort", label = LO["Power Word: Fortitude"] },
+        { key = "intellect", label = LO["Arcane Intellect"] },
+    }
+    for _, t in ipairs(reminderTracks) do
+        C:AddToggle(reminderSection, {
+            label = t.label,
+            desc = t.desc,
+            dbPath = "buff_reminder.track." .. t.key,
+            callback = RefreshBuffReminder,
+        })
+    end
+
+    C:AddButton(reminderSection, {
+        label = LO["Reset Buff Reminder Position"],
+        width = 220,
+        callback = function()
+            if addon.BuffReminderModule and addon.BuffReminderModule.ResetPosition then
+                addon.BuffReminderModule:ResetPosition()
+            end
+            addon:Print(LO["Buff reminder position reset."])
+        end,
+    })
 
     C:AddSpacer(scroll)
     local playerAuraSection = C:AddSection(scroll, LO["Player Buffs & Debuffs"])

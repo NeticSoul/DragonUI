@@ -54,7 +54,7 @@ end
 
 -- Sections of the individual module list; the titles are the options tab and group names (LO keys).
 local ADVANCED_SECTIONS = {
-    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "auraborders", "auracooldowns" } },
+    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "auraborders", "auracooldowns", "buff_reminder" } },
     { title = "Bars", modules = { "mainbars", "vehicle", "stance", "petbar", "multicast", "extrabar1", "buttons", "cooldowns", "noop", "keybinding" } },
     { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance", "addonmanager" } },
     { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "professions", "talents", "worldmap", "loot_skin", "mail", "taxiframe" } },
@@ -145,6 +145,16 @@ local function BuildModulesTab(scroll)
             if addon.BuffFrameModule then
                 addon.BuffFrameModule:Toggle(val)
             end
+        end,
+    })
+
+    ModuleToggle(uiSection, {
+        label = LO["Buff Reminder"],
+        desc = LO["Icons next to the minimap showing flask, food and raid buffs with remaining time."],
+        moduleName = "buff_reminder",
+        requiresReload = false,
+        callback = function()
+            if addon.RefreshBuffReminderSystem then addon:RefreshBuffReminderSystem() end
         end,
     })
 

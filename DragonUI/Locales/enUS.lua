@@ -757,6 +757,9 @@ L["Show a bar with the time left until each weapon's next swing."] = true
 L["SwingTimerMainHand"] = "Main Hand Swing Timer"
 L["SwingTimerOffHand"] = "Off Hand Swing Timer"
 L["SwingTimerRanged"] = "Ranged Swing Timer"
+L["Buff Reminder"] = true
+L["Buff reminder next to the minimap with remaining time."] = true
+L["BuffReminder"] = "Buff Reminder"
 
 -- Talents
 L["Talents"] = true
