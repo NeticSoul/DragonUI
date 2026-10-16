@@ -298,7 +298,7 @@ end
 local function buildDetail()
     detail = CreateFrame("Frame", "DragonUIGuildMemberDetail", GU.frame)
     detail:SetSize(250, 372)
-    detail:SetPoint("TOPLEFT", GU.frame, "TOPRIGHT", 38, -26)
+    detail:SetPoint("TOPLEFT", GU.frame, "TOPRIGHT", GU.FLYOUT_X, -26)
     detail:EnableMouse(true)
     detail:SetFrameLevel(GU.frame:GetFrameLevel() + 5)
     local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate")
@@ -564,7 +564,7 @@ local function build(frame)
         -- Stock initialises it from the guild tab's roster updates, which never run now.
         if GuildControlPopupFrame_Initialize then GuildControlPopupFrame_Initialize() end
         popup:ClearAllPoints()
-        popup:SetPoint("TOPLEFT", GU.frame, "TOPRIGHT", 38, -6)
+        popup:SetPoint("TOPLEFT", GU.frame, "TOPRIGHT", GU.FLYOUT_X, -6)
         popup:SetFrameStrata("DIALOG")
         popup:Show()
     end)

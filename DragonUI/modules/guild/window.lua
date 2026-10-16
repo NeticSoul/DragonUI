@@ -27,6 +27,8 @@ local PORTRAIT_SIZE, PORTRAIT_X, PORTRAIT_Y = 58, -2, 6
 local TABARD_ICON = "Interface\\Icons\\INV_Shirt_GuildTabard_01"
 
 local REFRESH_ROSTER_EVERY = 20
+-- Panels beside the window start past the side tabs, whose plates reach 61px out.
+GU.FLYOUT_X = 64
 
 local frame, title, portrait
 local panes, paneOrder, tabs = {}, {}, {}
@@ -39,7 +41,7 @@ end
 -- SetAtlasTexture raises on a name the atlas table doesn't have; a missing piece of art should
 -- only cost that piece.
 local function atlas(texture, name)
-    return texture.SetAtlasTexture and pcall(texture.SetAtlasTexture, texture, name) or false
+    return addon:SafeSetAtlas(texture, name)
 end
 
 -- ---------------------------------------------------------------------------------------------

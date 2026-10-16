@@ -14,6 +14,7 @@ local LEFT_W = 250
 local pane, motdText, motdEdit, infoScroll, infoText, infoEdit, infoButton
 local newsInset, newsScroll, newsRows, newsEmpty = nil, nil, {}, nil
 local news = {}
+local newsSource, newsBuiltAt, newsDirty = nil, 0, true
 local editingInfo = false
 
 -- ---------------------------------------------------------------------------------------------
@@ -113,9 +114,18 @@ local function levelsItem(item, now)
     return entry
 end
 
+-- Ages are kept as of the build and aged at draw time, so the list is only rebuilt when the
+-- GuildLevels feed or the event log changes, not on every roster update.
+function GU.MarkNewsDirty()
+    newsDirty = true
+end
+
 local function buildNews()
-    wipe(news)
     local gl = GU.Levels()
+    local source = gl and gl.news
+    if not newsDirty and source == newsSource then return end
+    newsDirty, newsSource, newsBuiltAt = false, source, time()
+    wipe(news)
     if gl then
         local now = time() + (gl.newsClockOffset or 0)
         for _, item in ipairs(gl.news or {}) do
@@ -204,7 +214,7 @@ function GU.RefreshNews()
         if entry then
             row.icon:SetTexture(entry.icon)
             row.text:SetText(entry.text)
-            row.time:SetText(entry.agoText or GU.Ago(entry.ago))
+            row.time:SetText(entry.agoText or GU.Ago(entry.ago + time() - newsBuiltAt))
             row:Show()
         else
             row:Hide()
@@ -322,8 +332,10 @@ GU.RegisterPane({
         refreshText()
         GU.RefreshNews()
     end,
+    -- An edit in progress survives closing the window; only Save or Escape in the box ends it.
     shown = function()
-        if editingInfo then setEditingInfo(false) end
+        -- Item names and icons not cached at the last build may be by now.
+        GU.MarkNewsDirty()
         QueryGuildEventLog()
         GU.RequestLevels("NEWS")
     end,

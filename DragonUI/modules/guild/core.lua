@@ -158,6 +158,12 @@ function GU.BuildRoster()
         }
     end
     sortRoster()
+    -- The stock note popups read GetGuildRosterSelection() when they accept, and the index a
+    -- member sits at moves with every rebuild: keep it on the selected member.
+    if GU.selectedName then
+        local member = GU.FindMember(GU.selectedName)
+        SetGuildRosterSelection(member and member.index or 0)
+    end
 end
 
 -- The roster as the list shows it: offline members only when the box is ticked.
@@ -232,15 +238,22 @@ end
 
 local GUILD_TAB = 3
 local handoffInstalled
+local friendsOpen   -- the Social window was already up before this FriendsFrame_Update
 
 -- The Social window never shows its Guild tab. Clicking the tab opens the guild window; the
 -- "Toggle Guild Tab" key binding and other addons call ToggleFriendsFrame(3), which lands in
 -- FriendsFrame_Update with the tab selected, and that toggles the guild window instead. That
 -- runs inside ShowUIPanel, so the Social window is only made invisible here and handed back to
 -- the panel manager to close on the next frame.
+-- When the Social window was already open, it stays open on Friends instead.
 local function takeOverGuildTab()
     if not (GU:Enabled() and FriendsFrame and FriendsFrame:IsShown() and FriendsFrame.selectedTab == GUILD_TAB) then return end
     PanelTemplates_SetTab(FriendsFrame, 1)
+    if friendsOpen then
+        FriendsFrame_Update()
+        GU.Toggle()
+        return
+    end
     FriendsFrame:SetAlpha(0)
     addon:After(0, function()
         HideUIPanel(FriendsFrame)
@@ -268,6 +281,13 @@ local function installHandoff()
     end
 
     hooksecurefunc("FriendsFrame_Update", takeOverGuildTab)
+    -- Post-hooks: they run after the stock OnShow, so during it friendsOpen still says whether
+    -- the window was up before. Opening the Social window also clears the roster selection.
+    FriendsFrame:HookScript("OnShow", function()
+        friendsOpen = true
+        if GU.selectedName then GU.BuildRoster() end
+    end)
+    FriendsFrame:HookScript("OnHide", function() friendsOpen = false end)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -292,6 +312,7 @@ events:SetScript("OnEvent", function(_, event)
         GU.RequestLevels("STATE")
     end
     if event == "GUILD_EVENT_LOG_UPDATE" then
+        if GU.MarkNewsDirty then GU.MarkNewsDirty() end
         if GU.RefreshNews then GU.RefreshNews() end
         return
     end
