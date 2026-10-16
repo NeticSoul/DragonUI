@@ -267,6 +267,27 @@ local function IsTooltipCursorAnchored()
     return config and config.anchor_cursor == true
 end
 
+local function GetTooltipCursorOffsets()
+    local config = GetModuleConfig()
+    if not config then return 0, 0 end
+    return tonumber(config.anchor_cursor_x) or 20, tonumber(config.anchor_cursor_y) or 20
+end
+
+local cursorFollow = false
+local followX, followY
+
+local function PositionTooltipAtCursor(tooltip)
+    local offsetX, offsetY = GetTooltipCursorOffsets()
+    local scale = tooltip:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    x, y = x / scale + offsetX, y / scale + offsetY
+    if x == followX and y == followY then return end
+    followX, followY = x, y
+
+    tooltip:ClearAllPoints()
+    tooltip:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x, y)
+end
+
 local function ApplyTooltipWidgetPosition()
     local anchorFrame = TooltipModule.frames and TooltipModule.frames.tooltipAnchor
     local cfg = GetTooltipWidgetConfig()
@@ -376,11 +397,27 @@ local function EnsureTooltipAnchorHook()
         return
     end
 
+    -- Any other SetOwner (bags, buttons, custom anchors) takes the tooltip back from the cursor follow.
+    hooksecurefunc(GameTooltip, "SetOwner", function()
+        cursorFollow = false
+    end)
+    GameTooltip:HookScript("OnUpdate", function(self)
+        if cursorFollow then PositionTooltipAtCursor(self) end
+    end)
+
     hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
         if tooltip ~= GameTooltip then return end
 
         if IsTooltipCursorAnchored() then
-            tooltip:SetOwner(parent, "ANCHOR_CURSOR")
+            local offsetX, offsetY = GetTooltipCursorOffsets()
+            if offsetX == 0 and offsetY == 0 then
+                -- The engine's own follow, so setups without offsets place it exactly as before.
+                tooltip:SetOwner(parent, "ANCHOR_CURSOR")
+            else
+                cursorFollow = true
+                followX, followY = nil, nil
+                PositionTooltipAtCursor(tooltip)
+            end
             return
         end
 

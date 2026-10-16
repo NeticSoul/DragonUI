@@ -916,7 +916,7 @@ local function buildSearch()
     glow:SetBlendMode("ADD")
     glow:SetAlpha(0.4)
     cog:SetScript("OnClick", function(self)
-        addon.Menu.Open(self, {
+        local entries = {
             { text = L["Panel settings"], isTitle = true },
             {
                 text = QUEST_OBJECTIVES,
@@ -927,7 +927,9 @@ local function buildSearch()
                     requestRepaint()
                 end,
             },
-        })
+        }
+        WM.AddGroupPinEntries(entries)
+        addon.Menu.Open(self, entries)
     end)
     cog:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")

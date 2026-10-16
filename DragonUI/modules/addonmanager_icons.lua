@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 
 -- Each addon's launcher icon as its own source sets it; relative paths sit in its folder, tables add texcoords.

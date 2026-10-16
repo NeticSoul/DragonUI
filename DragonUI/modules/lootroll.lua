@@ -372,3 +372,26 @@ addon.package:Subscribe(function()
     end
 end, "PLAYER_ENTERING_WORLD")
 
+-- =============================================================================
+-- AUTO ROLL (Auto Greed/DE)
+-- =============================================================================
+
+local ROLL_GREED, ROLL_DISENCHANT, GREEN_QUALITY = 2, 3, 2
+
+local function AutoRollOnLoot(_, _, rollID)
+    local cfg = addon.db and addon.db.profile and addon.db.profile.lootroll
+    if not (cfg and cfg.autoRoll) then return end
+
+    if UnitLevel("player") ~= (MAX_PLAYER_LEVEL or 80) then return end
+
+    local _, _, _, quality, bindOnPickUp, _, canGreed, canDisenchant = GetLootRollItemInfo(rollID)
+    if quality ~= GREEN_QUALITY or bindOnPickUp then return end
+
+    if canDisenchant then
+        RollOnLoot(rollID, ROLL_DISENCHANT)
+    elseif canGreed then
+        RollOnLoot(rollID, ROLL_GREED)
+    end
+end
+
+addon.package:Subscribe(AutoRollOnLoot, "START_LOOT_ROLL")

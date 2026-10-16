@@ -185,13 +185,11 @@ local function syncState(t)
     local owner = t:GetParent()
     if owner then t:SetFrameLevel(owner:GetFrameLevel() + (selected and 4 or 1)) end
 
-    -- PanelTemplates_SelectTab swaps the disabled font to the highlight one, which is what turned
-    -- the selected label white. White belongs to hover alone.
-    t:SetDisabledFontObject(GameFontNormalSmall)
-
-    -- SelectTab also disables the tab, and a disabled button gets no OnEnter -- 3.3.5a has no
-    -- SetMotionScriptsWhileDisabled. Re-enabling costs nothing: clicking the active tab reselects it.
-    t:Enable()
+    -- Retail labels the selected tab white; SelectTab disables it, so the disabled font is what shows.
+    local labelFont = selected and GameFontHighlightSmall or GameFontNormalSmall
+    t:SetNormalFontObject(labelFont)
+    t:SetDisabledFontObject(labelFont)
+    if text then text:SetFontObject(labelFont) end
 end
 
 local function resize(t)

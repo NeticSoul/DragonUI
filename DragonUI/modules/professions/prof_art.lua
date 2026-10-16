@@ -42,10 +42,17 @@ function Art.RankText(parent)
     return rt
 end
 
+-- Brightened DXT sheets (SheetShade) are darkened back by the vertex colour; every other sheet resets it to white.
+local function paint(texture, file)
+    texture:SetTexture(file)
+    local shade = P.SheetShade[file] or 1
+    texture:SetVertexColor(shade, shade, shade)
+end
+
 function Art.Set(texture, name, useSize)
     local info = P.Atlas[name]
     if not info then return nil end
-    texture:SetTexture(info[1])
+    paint(texture, info[1])
     texture:SetTexCoord(info[4], info[5], info[6], info[7])
     if useSize then texture:SetSize(info[2], info[3]) end
     return info
@@ -76,7 +83,7 @@ end
 function Art.SetSpan(texture, name, from, to)
     local info = P.Atlas[name]
     local w, span = info[2], info[5] - info[4]
-    texture:SetTexture(info[1])
+    paint(texture, info[1])
     texture:SetTexCoord(info[4] + span * from / w, info[4] + span * to / w, info[6], info[7])
     texture:SetSize(to - from, info[3])
 end
@@ -88,7 +95,7 @@ function Art.ThreeSlice(parent, layer, name, cap)
     local left = parent:CreateTexture(nil, layer)
     local middle = parent:CreateTexture(nil, layer)
     local right = parent:CreateTexture(nil, layer)
-    for _, t in ipairs({ left, middle, right }) do t:SetTexture(info[1]) end
+    for _, t in ipairs({ left, middle, right }) do paint(t, info[1]) end
     left:SetTexCoord(info[4], info[4] + capTex, info[6], info[7])
     middle:SetTexCoord(info[4] + capTex, info[5] - capTex, info[6], info[7])
     right:SetTexCoord(info[5] - capTex, info[5], info[6], info[7])
@@ -114,7 +121,7 @@ function Art.NineSlice(parent, layer, name, margin, withCentre)
         for col = 1, 3 do
             if withCentre or row ~= 2 or col ~= 2 then
                 local tex = parent:CreateTexture(nil, layer)
-                tex:SetTexture(info[1])
+                paint(tex, info[1])
                 tex:SetTexCoord(xs[col], xs[col + 1], ys[row], ys[row + 1])
                 pieces[row * 3 + col - 3] = tex
             end
@@ -153,7 +160,7 @@ function Art.CardNeedsIcon(key)
     return Art.CardDrawing(key) == nil
 end
 
--- Primary banners: the plain banner in two halves (one 1024 sheet each) plus the profession's drawing box.
+-- Primary banners: the plain banner in two halves plus the profession's drawing box.
 function Art.BannerDrawing(key)
     local name = key and ("bannerdraw-" .. key)
     return name and P.Atlas[name] and name or nil
