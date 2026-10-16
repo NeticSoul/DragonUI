@@ -27,6 +27,10 @@ function WM.RefreshPlayerArrow()
     arrow:SetSize(SIZE / scale, SIZE / scale)
     -- Where the client drew its own arrow: over the quest pins, which would bury it otherwise.
     WorldMapPlayer:SetFrameLevel(WORLDMAP_POI_FRAMELEVEL + 100)
+    -- A carried flag sits on its carrier, you included; under the arrow it would vanish.
+    for i = 1, NUM_WORLDMAP_FLAGS do
+        _G["WorldMapFlag" .. i]:SetFrameLevel(WORLDMAP_POI_FRAMELEVEL + 101)
+    end
 end
 
 function WM.BuildPlayerArrow()

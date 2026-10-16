@@ -4,6 +4,7 @@
     <Script file="core\atlas.lua"/>
     <Script file="core\config.lua"/>
     <Script file="core\state.lua"/>
+    <Script file="core\unitcache.lua"/>
     <Script file="pipeline\native_style.lua"/>
     <Script file="pipeline\discovery.lua"/>
     <Script file="pipeline\identity.lua"/>

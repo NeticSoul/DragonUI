@@ -1134,19 +1134,18 @@ SwipeStyle.pie = {
 
 -- squareSwirl: pre-rendered square radial flipbook. 3.3.5a cannot mask a
 -- diagonal/radial region at runtime, so each atlas cell is one ready state.
-local SQUARE_SWIRL_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\Nameplates\\cooldown-square-swirl"
-local SQUARE_SWIRL_GRID = 32
+local SQUARE_SWIRL_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\Nameplates\\cooldown-square-swirl-edge"
+local SQUARE_SWIRL_GRID = 30
 local SQUARE_SWIRL_FRAMES = SQUARE_SWIRL_GRID * SQUARE_SWIRL_GRID
-local SQUARE_SWIRL_TEXEL_INSET = 0.5 / 1024
+-- 32px frames in 34px cells: the 1px copied border keeps filtering off the next frame's needle.
+local SQUARE_SWIRL_CELL = 34 / 1024
+local SQUARE_SWIRL_BORDER = 1 / 1024
+local SQUARE_SWIRL_SPAN = 32 / 1024
 
 local function SetSquareSwirlFrame(tex, frame)
-    local col = frame % SQUARE_SWIRL_GRID
-    local row = floor(frame / SQUARE_SWIRL_GRID)
-    local left = (col / SQUARE_SWIRL_GRID) + SQUARE_SWIRL_TEXEL_INSET
-    local right = ((col + 1) / SQUARE_SWIRL_GRID) - SQUARE_SWIRL_TEXEL_INSET
-    local top = (row / SQUARE_SWIRL_GRID) + SQUARE_SWIRL_TEXEL_INSET
-    local bottom = ((row + 1) / SQUARE_SWIRL_GRID) - SQUARE_SWIRL_TEXEL_INSET
-    tex:SetTexCoord(left, right, top, bottom)
+    local left = (frame % SQUARE_SWIRL_GRID) * SQUARE_SWIRL_CELL + SQUARE_SWIRL_BORDER
+    local top = floor(frame / SQUARE_SWIRL_GRID) * SQUARE_SWIRL_CELL + SQUARE_SWIRL_BORDER
+    tex:SetTexCoord(left, left + SQUARE_SWIRL_SPAN, top, top + SQUARE_SWIRL_SPAN)
 end
 
 SwipeStyle.squareSwirl = {
@@ -1166,8 +1165,8 @@ SwipeStyle.squareSwirl = {
         if frame ~= icon._swipeSquareSwirlFrame then
             icon._swipeSquareSwirlFrame = frame
             SetSquareSwirlFrame(tex, frame)
+            tex:Show()
         end
-        tex:Show()
     end,
     hide = function(icon)
         if icon._swipeSquareSwirl then icon._swipeSquareSwirl:Hide() end
@@ -1179,6 +1178,16 @@ function GetSwipeStyle(cfg)
     local style = cfg and cfg.debuffCooldownSwipeStyle
     return SwipeStyle[style] or SwipeStyle.squareSwirl
 end
+
+-- The swirl is a 1024 TGA (~75 ms on first draw), which would otherwise land on the first debuff swipe mid-fight.
+addon:RegisterTextureWarmup(function()
+    if not addon:IsModuleEnabled("nameplates") then return nil end
+    local cfg = NP.config.GetCfg()
+    if not (cfg.showDebuffs and cfg.debuffCooldownSwipe) or GetSwipeStyle(cfg) ~= SwipeStyle.squareSwirl then
+        return nil
+    end
+    return SQUARE_SWIRL_TEXTURE
+end)
 
 -- Hide whichever style's widgets are currently attached to the icon, if it
 -- differs from the one about to be used (covers a live style change).

@@ -764,3 +764,12 @@ function addon.RefreshComboPointsSystem()
         addon.RestoreComboPointsSystem()
     end
 end
+
+-- The bar's sheet is a 1024x512 TGA (~30 ms on first draw), which would otherwise land on the first point mid-fight.
+addon:RegisterTextureWarmup(function()
+    local class = PlayerClass()
+    if not (ComboPoints.applied and bar and bar.onPlayer and bar.family) or (class ~= "ROGUE" and class ~= "DRUID") then
+        return nil
+    end
+    return bar.family.file
+end)

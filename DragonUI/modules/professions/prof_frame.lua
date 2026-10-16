@@ -262,6 +262,28 @@ local function hookScanButton()
     hooksecurefunc(arl, "TRADE_SKILL_SHOW", liftScanButton)
 end
 
+-- Everything the two pages draw for this character's professions; the TGA sheets are what slow PCs stall on.
+addon:RegisterTextureWarmup(function()
+    if not (P.Module.applied and addon:IsModuleEnabled("professions")) or P.YieldsTo() then return nil end
+    local files = {}
+    local function add(name)
+        local info = name and P.Atlas[name]
+        if info then files[#files + 1] = info[1] end
+    end
+    for _, name in ipairs({ "bg-crafting", "bg-overview", "banner-left", "card-base", "rankbar-fill", "favorite",
+                            "small-Cooking", "small-Fishing", "small-FirstAid" }) do
+        add(name)
+    end
+    for key in pairs(P.Professions.KnownKeys()) do
+        add(Art.CardDrawing(key))
+        add(Art.BannerDrawing(key))
+        add(Art.Fill(key))
+    end
+    local edge = ForeverAtlas()["_ui-frame-metal-edgetop"]
+    if edge then files[#files + 1] = edge[1] end
+    return files
+end)
+
 hookScanButton()
 -- AddonLoader can load ARL on the first TRADE_SKILL_SHOW, long after us.
 if not scanHooked then

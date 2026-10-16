@@ -290,3 +290,13 @@ function Prof.SkillIndex(skillName)
         i = i + 1
     end
 end
+
+-- The professions in the spellbook, keyed by catalog key; unlike Discover it leaves the skill headers alone.
+function Prof.KnownKeys()
+    local keys = {}
+    for id in pairs(spellBookIds()) do
+        local hit = byId[id]
+        if hit then keys[hit.entry.key] = true end
+    end
+    return keys
+end

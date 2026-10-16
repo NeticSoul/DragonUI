@@ -304,7 +304,7 @@ function NP.gather.IsFriendlyNameOnlyActive(plateData)
     return false
 end
 
--- Headline mode for friendly NPCs; title subtitle needs awesome_wotlk (tooltip scan needs token).
+-- Headline mode for friendly NPCs; the title subtitle needs a token or a unit-cache hit.
 function NP.gather.IsFriendlyNPCNameOnlyActive(plateData)
     if not plateData then
         return false
@@ -349,6 +349,30 @@ end
 local SubtitleScanTip = CreateFrame("GameTooltip", "DragonUINPSubtitleScan", UIParent, "GameTooltipTemplate")
 SubtitleScanTip:SetOwner(UIParent, "ANCHOR_NONE")
 
+-- Line 2 is a subtitle only when line 3 carries the level and line 2 does not; no localized pattern needed.
+function NP.gather.ScanNPCSubtitle(unit)
+    -- A hidden GameTooltip loses its owner, and SetUnit then silently does nothing.
+    SubtitleScanTip:SetOwner(UIParent, "ANCHOR_NONE")
+    SubtitleScanTip:ClearLines()
+    SubtitleScanTip:SetUnit(unit)
+    if SubtitleScanTip:NumLines() < 3 then
+        return nil
+    end
+    local line2 = _G["DragonUINPSubtitleScanTextLeft2"]
+    local line3 = _G["DragonUINPSubtitleScanTextLeft3"]
+    local subtitle = line2 and line2:GetText()
+    local levelLine = line3 and line3:GetText()
+    if not subtitle or subtitle == "" or not levelLine then
+        return nil
+    end
+    local level = UnitLevel(unit)
+    local levelText = (level and level > 0) and tostring(level) or "??"
+    if not levelLine:find(levelText, 1, true) or subtitle:find(levelText, 1, true) then
+        return nil
+    end
+    return subtitle
+end
+
 -- Best-effort unit token for a plate, preferring the most stable source.
 local function ResolvePlateToken(plateData)
     local groupUnit = NP.gather.GetGroupUnitForPlate(plateData)
@@ -372,30 +396,37 @@ NP.gather.ResolvePlateToken = ResolvePlateToken
 function NP.gather.GetPlateSubtitleText(plateData, unit)
     local cfg = NP.config.GetCfg()
     unit = unit or ResolvePlateToken(plateData)
-    if not (unit and UnitExists(unit)) then
-        return nil
+    if unit and not UnitExists(unit) then
+        unit = nil
     end
+    local name = plateData.plateName
     if NP.gather.IsFriendlyNameOnlyActive(plateData) then
         if cfg.friendlyNameOnlyGuild then
-            local guild = GetGuildInfo(unit)
+            local guild = unit and GetGuildInfo(unit)
+            -- Cache even with a token: the guild name can reach the client after the unit does.
+            if not guild or guild == "" then
+                guild = NP.unitcache.GetGuild(name)
+            end
             if guild and guild ~= "" then
                 return "<" .. guild .. ">"
             end
         end
     elseif NP.gather.IsFriendlyNPCNameOnlyActive(plateData) then
         if cfg.friendlyNPCNameOnlyTitle then
-            SubtitleScanTip:ClearLines()
-            SubtitleScanTip:SetUnit(unit)
-            if SubtitleScanTip:NumLines() >= 2 then
-                local line2 = _G["DragonUINPSubtitleScanTextLeft2"]
-                local txt = line2 and line2.GetText and line2:GetText()
-                -- Line 2 holds the subname only when it is not the "Level X ..." line.
-                if txt and txt ~= "" and not txt:find("%d") and not txt:find(LEVEL or "Level") then
-                    if not txt:find("^<") then
-                        txt = "<" .. txt .. ">"
-                    end
-                    return txt
+            local txt
+            if unit then
+                txt = NP.gather.ScanNPCSubtitle(unit)
+                if not UnitPlayerControlled(unit) and UnitName(unit) == name then
+                    NP.unitcache.SetNPCTitle(name, txt)
                 end
+            else
+                txt = NP.unitcache.GetNPCTitle(name)
+            end
+            if txt then
+                if not txt:find("^<") then
+                    txt = "<" .. txt .. ">"
+                end
+                return txt
             end
         end
     end
@@ -412,7 +443,7 @@ function NP.gather.GetPlateTitleName(plateData, unit)
             return NP.native_style.StripRealm(pvp)
         end
     end
-    return nil
+    return NP.unitcache.GetTitledName(plateData.plateName)
 end
 
 function NP.gather.IsPlayerPlate(plateData)
@@ -446,6 +477,8 @@ function NP.gather.GetFriendlyPlayerClassColor(plateData)
                 if class then
                     plateData._friendlyHealthClass = class
                 end
+            else
+                plateData._friendlyHealthClass = NP.unitcache.GetClass(plateData.plateName)
             end
         end
         local cc = plateData._friendlyHealthClass and RAID_CLASS_COLORS
@@ -829,6 +862,8 @@ function NP.gather.SyncName(plateData, unit)
         if token and UnitExists(token) and UnitIsPlayer(token) then
             local _, class = UnitClass(token)
             if class then plateData._headlineClass = class end
+        else
+            plateData._headlineClass = NP.unitcache.GetClass(plateData.plateName)
         end
     end
     if nameOnly and cfg.friendlyNameOnlyClassColor then

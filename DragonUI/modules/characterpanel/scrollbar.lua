@@ -66,16 +66,16 @@ local function buildThumb(bar, thumb)
     grip:SetWidth(BAR_W)
 
     local top = bar:CreateTexture(nil, "ARTWORK")
-    top:SetAtlasTexture("minimal-scrollbar-thumb-top", true)
+    top:SetAtlasTexture("minimal-scrollbar-small-thumb-top", true)
     top:SetPoint("TOP", grip, "TOP", 0, 0)
 
     local bottom = bar:CreateTexture(nil, "ARTWORK")
-    bottom:SetAtlasTexture("minimal-scrollbar-thumb-bottom", true)
+    bottom:SetAtlasTexture("minimal-scrollbar-small-thumb-bottom", true)
     bottom:SetPoint("BOTTOM", grip, "BOTTOM", 0, 0)
 
     -- A pixel into each cap: butted edges round apart off UI scale 1 and the track blinks through.
     local mid = bar:CreateTexture(nil, "ARTWORK", nil, -1)
-    mid:SetAtlasTexture("minimal-scrollbar-thumb-middle")
+    mid:SetAtlasTexture("minimal-scrollbar-small-thumb-middle")
     mid:SetWidth(BAR_W)
     mid:SetPoint("TOP", top, "BOTTOM", 0, THUMB_OVERLAP)
     mid:SetPoint("BOTTOM", bottom, "TOP", 0, -THUMB_OVERLAP)

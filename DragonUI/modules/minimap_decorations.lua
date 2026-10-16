@@ -1,4 +1,6 @@
-﻿-- ============================================================================
+﻿-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
+-- ============================================================================
 -- DragonUI - Minimap Decorations
 -- ============================================================================
 -- Border presets and rotation helper from SexyMap by funkydude, used with permission (2026-09-27).

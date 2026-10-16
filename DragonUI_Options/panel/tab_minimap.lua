@@ -277,10 +277,34 @@ local function BuildMinimapTab(scroll)
         callback = RefreshMinimap,
     })
 
+    C:AddToggle(basic, {
+        label = LO["Show Ping Sender"],
+        desc = LO["Show who pinged the minimap, in their class color."],
+        dbPath = "minimap.ping_sender",
+    })
+
     C:AddSlider(basic, {
         label = LO["Player Arrow Size"],
         dbPath = "minimap.player_arrow_size",
         min = 8, max = 50, step = 1,
+        width = 200,
+        callback = RefreshMinimap,
+    })
+
+    local farm = C:AddSection(scroll, LO["Farm Mode"])
+    C:AddDescription(farm, LO["Bigger minimap with the surrounding clutter hidden."])
+
+    C:AddToggle(farm, {
+        label = LO["Enable"],
+        dbPath = "minimap.farm_mode_enabled",
+        callback = RefreshMinimap,
+    })
+
+    C:AddSlider(farm, {
+        label = LO["Extra scale"],
+        desc = LO["Extra scale applied on top of the minimap scale."],
+        dbPath = "minimap.farm_mode_scale",
+        min = 1.0, max = 2.0, step = 0.05,
         width = 200,
         callback = RefreshMinimap,
     })

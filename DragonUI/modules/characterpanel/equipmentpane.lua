@@ -5,8 +5,22 @@ local CP = addon.CharacterPanel
 
 -- The equipment manager as a sidebar pane instead of Blizzard's floating GearManagerDialog.
 -- Written against Wrath's NAME-keyed API, so names are the identity throughout.
-local ROW_H = 40
-local ICON_SIZE = 34
+-- Retail's GearSetButtonTemplate: 44 tall, a 36px icon at x 4 and the name from x 44.
+local ROW_H = 44
+local ICON_SIZE = 36
+local TEXT_X = 44
+-- Retail's view pads its rows 3 in from the left of the scroll box.
+local ROW_X = 3
+local NEW_ICON_SIZE, NEW_ICON_X = 30, 7
+-- Card caps are Char-Stat-Top (flipped for the bottom), overhanging the row 1 above and 4 below.
+local CAP_H = 9
+local CAP_COORDS = { 0.00390625, 0.66406250, 0.50781250, 0.57812500 }
+local LIST_PAD_TOP, CAP_OVERHANG_BOTTOM = 1, 4
+-- Retail's new-set card sits apart from the sets' card; 12 leaves ~7 of gap past the overhangs.
+local NEW_SET_GAP = 12
+local PARTS = addon._dir .. "CharacterPanel\\charpaperdollparts"
+local STAT_MIDDLE = addon._dir .. "CharacterPanel\\charstatmiddle"
+local CHARACTER_PLUS = addon._dir .. "CharacterPanel\\characterplus"
 -- retail PaperDollFrame.xml gives EquipSet and SaveSet 87x22 over a 172-wide pane -- half each.
 -- The height is the number worth copying; the width is derived in layout() from our own pane.
 local BUTTON_H = 22
@@ -14,6 +28,8 @@ local BUTTON_GAP = 4
 local BUTTON_INSET = 2
 -- Everything below the button row: their height plus the inset above and the gap under them.
 local LIST_TOP = BUTTON_H + BUTTON_INSET + BUTTON_GAP
+-- The scrollbar's column, the list panes' gutter: retail keeps it beside the buttons as well.
+local BAR_COLUMN = 22
 local ACTION_SIZE = 15
 local CHECK_SIZE = 16
 local SPEC_BADGE_SIZE = 16
@@ -423,9 +439,11 @@ StaticPopupDialogs["DRAGONUI_SAVE_EQUIPMENT_SET"] = {
 -- Entering a child button fires the row's OnLeave, so both ends re-test the row rect (which stays
 -- true over a child) instead of hiding blind.
 local function updateRowActions(row)
-    local wanted = row.setName ~= nil and row:IsMouseOver()
+    local over = row:IsMouseOver() and true or false
+    local wanted = row.setName ~= nil and over
     row.Edit:SetShownCompat(wanted)
     row.Delete:SetShownCompat(wanted)
+    if row.HighlightBar then row.HighlightBar:SetShownCompat(over) end
 end
 
 local function buildActionButton(row, texture, tooltip, warning, onClick)
@@ -493,24 +511,49 @@ function CP.BuildEquipmentRow(parent, index)
     local row = CreateFrame("Button", "DragonUIEquipSetRow" .. index, parent)
     row:SetHeight(ROW_H)
 
-    local stripe = row:CreateTexture(nil, "BACKGROUND")
-    stripe:SetAllPoints(row)
+    local top = row:CreateTexture(nil, "BACKGROUND")
+    top:SetTexture(PARTS)
+    top:SetTexCoord(CAP_COORDS[1], CAP_COORDS[2], CAP_COORDS[3], CAP_COORDS[4])
+    top:SetHeight(CAP_H)
+    top:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 1)
+    top:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, 1)
+    row.BgTop = top
+
+    -- Flipped, not rotated like retail: the cap's side borders sit a texel apart, so rotating misaligns the corners.
+    local bottom = row:CreateTexture(nil, "BACKGROUND")
+    bottom:SetTexture(PARTS)
+    bottom:SetTexCoord(CAP_COORDS[1], CAP_COORDS[2], CAP_COORDS[4], CAP_COORDS[3])
+    bottom:SetHeight(CAP_H)
+    bottom:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, -CAP_OVERHANG_BOTTOM)
+    bottom:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, -CAP_OVERHANG_BOTTOM)
+    row.BgBottom = bottom
+
+    -- Vertically uniform, so stretched rather than tiled; refresh() hangs it between the caps.
+    local middle = row:CreateTexture(nil, "BACKGROUND")
+    middle:SetTexture(STAT_MIDDLE)
+    middle:SetTexCoord(CAP_COORDS[1], CAP_COORDS[2], 0, 1)
+    row.BgMiddle = middle
+
+    -- BORDER, not BACKGROUND: 3.3.5a ignores sublevels, so in one layer the card could cover it.
+    local stripe = row:CreateTexture(nil, "BORDER")
+    stripe:SetPoint("TOPLEFT", row, "TOPLEFT", 1, 0)
+    stripe:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
     stripe:SetTexture(0.9, 0.9, 1)
     stripe:SetAlpha(index % 2 == 0 and 0.1 or 0)
+    row.Stripe = stripe
 
-    local selected = row:CreateTexture(nil, "BORDER")
+    -- OVERLAY like retail's SelectedBar, so the icon takes the gold wash too.
+    local selected = row:CreateTexture(nil, "OVERLAY")
     selected:SetTexture("Interface\\FriendsFrame\\UI-FriendsFrame-HighlightBar")
     selected:SetTexCoord(0.2, 0.8, 0, 1)
     selected:SetBlendMode("ADD")
     selected:SetAlpha(0.4)
-    selected:SetAllPoints(row)
     selected:Hide()
     row.Selected = selected
 
     local icon = row:CreateTexture(nil, "ARTWORK")
     icon:SetSize(ICON_SIZE, ICON_SIZE)
     icon:SetPoint("LEFT", row, "LEFT", 4, 0)
-    icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     row.Icon = icon
 
     -- Retail's spec badge on the icon's lower right; its own frame so it draws over the icon.
@@ -527,26 +570,36 @@ function CP.BuildEquipmentRow(parent, index)
     badge:Hide()
     row.SpecBadge = badge
 
+    -- Retail's 38px box: a long name, or a long translation of "new set", wraps onto a second line.
     local text = row:CreateFontString(nil, "ARTWORK", "GameFontNormalLeft")
-    text:SetPoint("LEFT", row, "LEFT", 42, 0)
+    text:SetPoint("LEFT", row, "LEFT", TEXT_X, 0)
     text:SetPoint("RIGHT", row, "RIGHT", -CHECK_SIZE - 12, 0)
+    text:SetHeight(38)
     text:SetJustifyH("LEFT")
+    text:SetJustifyV("MIDDLE")
     row.Text = text
 
     -- The vanilla UI-CheckBox-Check has uneven padding inside its art; the atlas glyph is cut tight.
-    local check = row:CreateTexture(nil, "OVERLAY")
+    local check = row:CreateTexture(nil, "ARTWORK")
     check:SetAtlasTexture("common-icon-checkmark")
     check:SetSize(CHECK_SIZE, CHECK_SIZE)
     check:SetPoint("RIGHT", row, "RIGHT", -8, 0)
     check:Hide()
     row.Check = check
 
-    row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-    local hl = row:GetHighlightTexture()
-    if hl then
-        hl:SetBlendMode("ADD")
-        hl:SetAlpha(0.4)
+    -- Retail's HighlightBar: lit while the cursor is over the row, its gear and delete buttons included.
+    local hover = row:CreateTexture(nil, "OVERLAY")
+    hover:SetTexture("Interface\\FriendsFrame\\UI-FriendsFrame-HighlightBar")
+    hover:SetTexCoord(0.2, 0.8, 0, 1)
+    hover:SetBlendMode("ADD")
+    hover:SetAlpha(0.4)
+    -- 3.3.5a lacks HighlightBar-Blue; its gold twin greyed, tinted and at 0.46 adds what the blue at 0.4 does.
+    if hover:SetDesaturated(true) then
+        hover:SetVertexColor(0.29, 0.6, 1)
+        hover:SetAlpha(0.46)
     end
+    hover:Hide()
+    row.HighlightBar = hover
 
     row.Delete = buildActionButton(row, "Interface\\Buttons\\UI-GroupLoot-Pass-Up", DELETE, nil,
         function(self)
@@ -598,12 +651,41 @@ local function layout()
     local width = pane:GetWidth() or 0
     if width <= 0 then return end
 
-    -- Half the pane each, butted together. Retail hardcodes 87, but its pane is 172 wide, so that
-    -- IS half -- the pair is meant to span the pane, and a literal 87 leaves a gap on a wider one.
-    local half = math.floor(width / 2)
+    -- Retail's 87 is half its 172 pane: the pair spans the list, leaving the scrollbar's column free.
+    local span = width - BAR_COLUMN
+    local half = math.floor(span / 2)
     equipButton:SetWidth(half)
-    saveButton:SetWidth(width - half)
-    scrollChild:SetWidth(scroll:GetWidth() or width)
+    saveButton:SetWidth(span - half)
+    scrollChild:SetWidth(scroll:GetWidth() or span)
+end
+
+-- Inside the card's border lines; past the top cap's curve on the first row, into the bottom overhang on the last.
+local BAR_INSET, BAR_FIRST_TOP, BAR_LAST_BOTTOM = 2, 2, 2
+
+local function placeBar(bar, row, first, last)
+    if not bar then return end
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", row, "TOPLEFT", BAR_INSET, first and -BAR_FIRST_TOP or 0)
+    bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -BAR_INSET, last and -BAR_LAST_BOTTOM or 0)
+end
+
+-- The sets share one card: only the first shows its top cap and only the last its bottom one.
+local function shapeCard(row, first, last)
+    placeBar(row.Selected, row, first, last)
+    placeBar(row.HighlightBar, row, first, last)
+    row.BgTop:SetShownCompat(first)
+    row.BgBottom:SetShownCompat(last)
+    row.BgMiddle:ClearAllPoints()
+    if first then
+        row.BgMiddle:SetPoint("TOPLEFT", row.BgTop, "BOTTOMLEFT", 1, 0)
+    else
+        row.BgMiddle:SetPoint("TOPLEFT", row, "TOPLEFT", 1, 0)
+    end
+    if last then
+        row.BgMiddle:SetPoint("BOTTOMRIGHT", row.BgBottom, "TOPRIGHT", 1, 0)
+    else
+        row.BgMiddle:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 1, 0)
+    end
 end
 
 function refresh()
@@ -617,7 +699,6 @@ function refresh()
         row.setName = info.name
         row.Icon:Show()
         row.Icon:SetTexture(info.texture or QUESTION_MARK)
-        row.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         row.Text:SetText(info.name)
 
         if missingCount(info.name) > 0 then
@@ -631,20 +712,29 @@ function refresh()
         local spec = specForSet(info.name)
         if spec then row.SpecBadge.Icon:SetTexture(specIcon(spec)) end
         row.SpecBadge:SetShownCompat(spec ~= nil)
-        updateRowActions(row)
+        shapeCard(row, i == 1, i == #sets)
+        local y = LIST_PAD_TOP + (i - 1) * ROW_H
         row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -(i - 1) * ROW_H)
-        row:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -(i - 1) * ROW_H)
+        row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", ROW_X, -y)
+        row:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
         row:Show()
+        updateRowActions(row)
     end
     for i = #sets + 1, #rows do rows[i]:Hide() end
 
-    newRow:ClearAllPoints()
-    newRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, -#sets * ROW_H)
-    newRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -#sets * ROW_H)
-    newRow:SetShownCompat(#sets < maxSets())
+    local listBottom = LIST_PAD_TOP + #sets * ROW_H
+    local canAdd = #sets < maxSets()
+    if canAdd then
+        local y = listBottom + (#sets > 0 and NEW_SET_GAP or 0)
+        newRow:ClearAllPoints()
+        newRow:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", ROW_X, -y)
+        newRow:SetPoint("TOPRIGHT", scrollChild, "TOPRIGHT", 0, -y)
+        listBottom = y + ROW_H
+    end
+    newRow:SetShownCompat(canAdd)
+    updateRowActions(newRow)
 
-    scrollChild:SetHeight(math.max(1, (#sets + 1) * ROW_H))
+    scrollChild:SetHeight(math.max(1, listBottom + CAP_OVERHANG_BOTTOM))
     if CP.SyncScrollBarVisibility then CP.SyncScrollBarVisibility(scroll) end
     if CP.SyncScrollThumb then CP.SyncScrollThumb(scroll) end
 
@@ -696,9 +786,11 @@ local function build()
 
     scroll = CreateFrame("ScrollFrame", "DragonUIEquipmentScroll", pane, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, -LIST_TOP)
-    scroll:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -12, 0)
-    if CP.ReskinScrollBar then CP.ReskinScrollBar(scroll, pane, LIST_TOP) end
-    if CP.AutoHideScrollBar then CP.AutoHideScrollBar(scroll, pane, 12, 0, layout) end
+    scroll:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", -BAR_COLUMN, 0)
+    -- Retail keeps the bar up even for a short list; only the grip goes while nothing scrolls.
+    scroll.scrollBarHideable = false
+    scroll.hideThumbWhenUnscrollable = true
+    if CP.ReskinScrollBar then CP.ReskinScrollBar(scroll, pane, 0, CP.LIST_SCROLLBAR_X, 0, true) end
 
     scrollChild = CreateFrame("Frame", "DragonUIEquipmentScrollChild", scroll)
     scroll:SetScrollChild(scrollChild)
@@ -709,11 +801,14 @@ local function build()
     end)
     pane:SetScript("OnHide", function() setSlotFlyoutsShown(false) end)
 
-    -- No icon: 3.3.5a ships no Character-Plus, and a pooled row would keep the set above's art.
+    -- Its own card and never pooled for a set, so it keeps the plus and both caps for good.
     newRow = CP.BuildEquipmentRow(scrollChild, 0)
     newRow.setName = nil
-    newRow.Icon:Hide()
-    newRow.Text:SetPoint("LEFT", newRow, "LEFT", 8, 0)
+    newRow.Stripe:SetAlpha(0)
+    newRow.Icon:SetTexture(CHARACTER_PLUS)
+    newRow.Icon:SetSize(NEW_ICON_SIZE, NEW_ICON_SIZE)
+    newRow.Icon:SetPoint("LEFT", newRow, "LEFT", NEW_ICON_X, 0)
+    shapeCard(newRow, true, true)
     newRow.Text:SetText(addon.L["New Equipment Set"])
     newRow.Text:SetTextColor(GREEN.r, GREEN.g, GREEN.b)
     newRow:SetScript("OnDoubleClick", nil)

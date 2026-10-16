@@ -136,6 +136,30 @@ end
 
 local trainerIndexes = {}
 
+-- Keyed by realmlist too: private servers reuse realm names.
+local function serverLevels(create)
+    local global = addon.db and addon.db.global
+    if not global then return nil end
+    local key = (GetCVar("realmList") or "") .. "|" .. (GetRealmName() or "")
+    local servers = global.trainerLevels
+    if not servers then
+        if not create then return nil end
+        servers = {}
+        global.trainerLevels = servers
+    end
+    local levels = servers[key]
+    if not levels and create then
+        levels = {}
+        servers[key] = levels
+    end
+    return levels
+end
+
+function Book.TrainerLevel(spellID)
+    local levels = serverLevels()
+    return levels and levels[spellID]
+end
+
 function Book.TrainerIndex(classToken)
     local list = addon.SpellbookTrainerData[classToken]
     if not list then return nil end
@@ -151,9 +175,83 @@ function Book.TrainerIndex(classToken)
             successors[#successors + 1] = record
         end
     end
+    for spellID, level in pairs(serverLevels() or NONE) do
+        if byID[spellID] then byID[spellID][1] = level end
+    end
     trainerIndexes[classToken] = { list = list, after = links, byID = byID }
     return trainerIndexes[classToken]
 end
+
+local function nameKey(name, rank)
+    return name .. "\001" .. (rank or "")
+end
+
+local nameMaps = {}
+
+-- Fallback for servers whose trainer lists a teaching spell instead of the spell itself.
+local function idsByName(index)
+    local map = nameMaps[index]
+    if not map then
+        map = {}
+        for _, record in ipairs(index.list) do
+            local name, rank = GetSpellInfo(record[2])
+            if name then
+                local key = nameKey(name, rank)
+                map[key] = map[key] or {}
+                local ids = map[key]
+                ids[#ids + 1] = record[2]
+            end
+        end
+        nameMaps[index] = map
+    end
+    return map
+end
+
+local scanTip
+
+local function serviceSpellID(service)
+    if not scanTip then
+        scanTip = CreateFrame("GameTooltip", "DragonUITrainerScanTooltip", nil, "GameTooltipTemplate")
+    end
+    scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
+    scanTip:SetTrainerService(service)
+    local _, _, spellID = scanTip:GetSpell()
+    scanTip:Hide()
+    return spellID
+end
+
+local function learnLevel(levels, index, spellID, level)
+    levels[spellID] = level
+    local record = index and index.byID[spellID]
+    if record then record[1] = level end
+end
+
+-- Reads what the window lists now (its filters and folded headers decide); never touches them.
+function Book.ReadTrainer()
+    if not (addon:IsModuleEnabled("spellbook") or addon:IsModuleEnabled("levelupenhance")) then return end
+    if IsTradeskillTrainer() then return end
+    local levels = serverLevels(true)
+    if not levels then return end
+    local index = Book.TrainerIndex(select(2, UnitClass("player")))
+    for service = 1, GetNumTrainerServices() do
+        local name, rank, kind = GetTrainerServiceInfo(service)
+        local level = name and kind ~= "header" and GetTrainerServiceLevelReq(service)
+        if level and level > 0 then
+            local spellID = serviceSpellID(service)
+            if spellID then learnLevel(levels, index, spellID, level) end
+            if index and not (spellID and index.byID[spellID]) then
+                for _, id in ipairs(idsByName(index)[nameKey(name, rank)] or NONE) do
+                    learnLevel(levels, index, id, level)
+                end
+            end
+        end
+    end
+end
+
+local trainerWatch = CreateFrame("Frame")
+trainerWatch:RegisterEvent("TRAINER_SHOW")
+trainerWatch:RegisterEvent("TRAINER_UPDATE")
+trainerWatch:SetScript("OnEvent", Book.ReadTrainer)
 
 -- Learning a rank can drop the lower ones from the book, so any higher known rank counts too.
 local function knownInChain(spellID, filters)

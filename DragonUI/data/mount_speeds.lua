@@ -1,8 +1,9 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- Game data (c) Blizzard Entertainment; not covered by DragonUI's MIT license.
 
 local addon = select(2, ...)
 
--- Read from the client's own Spell.dbc (build 12340) by scripts/gen_mount_speeds.py.
+-- Read from the client's own Spell.dbc (build 12340).
 -- [spellID] = { ground %, flying % }; 0 = the mount has no such speed. Scripted mounts are absent.
 addon.MountSpeeds = {
     [458]={60,0},[459]={60,0},[468]={60,0},[470]={60,0},[471]={60,0},[472]={60,0},

@@ -16,6 +16,7 @@ local MinimapModule = {
     initialized = false,
     applied = false,
     originalStates = {},
+    farmMode = { active = false, holder = nil, parents = {}, layers = {} },
     hooks = {},
     stateDrivers = {},
     frames = {},
@@ -47,6 +48,28 @@ end
 
 local function IsDragonUIMinimapControlling()
     return MinimapModule.applied or MinimapModule._initializingMinimapSystem
+end
+
+-- ============================================================================
+-- FARM MODE
+-- ============================================================================
+
+local function GetMinimapSettings()
+    return addon.db and addon.db.profile and addon.db.profile.minimap
+end
+
+-- The player's minimap scale, times the farm bonus while farm mode is on.
+local function GetEffectiveMinimapScale()
+    local settings = GetMinimapSettings()
+    local scale = tonumber(settings and settings.scale) or 1
+    if scale <= 0 then scale = 1 end
+
+    if settings and settings.farm_mode_enabled == true then
+        local bonus = tonumber(settings.farm_mode_scale) or 1
+        scale = scale * math.min(math.max(bonus, 1), 2)
+    end
+
+    return scale
 end
 
 local blipScale = 1.12
@@ -90,6 +113,8 @@ local FOREVER_BAND_RADIUS = 99.75
 -- The day/night ring doubles as the button border; its band sits further in than ours, so it draws larger.
 local FOREVER_BUTTON_RING_GROWTH = 1.1
 local FOREVER_BUTTON_RING_ATLAS = "Minimap-Forever-Frame-Cycle"
+-- Zoom buttons' centre x, y and width, height (Minimap.xml): Retail's art, riding Forever's wider ring.
+local FOREVER_ZOOM_IN, FOREVER_ZOOM_OUT = { 88, -68, 17, 17 }, { 72, -84, 17, 9 }
 -- 3.3.5a's LibDBIcon puts launchers a fixed 80 units out; only their scale can move them.
 local LIBDBICON_ORBIT = 80
 local MAP_OFFSET_Y = -25
@@ -534,6 +559,28 @@ local function SyncCornerIconLevels(foreverActive)
     LiftAbove(MiniMapInstanceDifficulty, "InstanceDifficultyLevel", cover)
     LiftAbove(MiniMapBattlefieldFrame, "BattlefieldLevel", square and cover or nil)
     LiftAbove(MiniMapMailFrame, "MailLevel", square and cover or nil)
+    local foreverRound = foreverActive and not square
+    LiftAbove(MinimapZoomIn, "ZoomInLevel", foreverRound and cover or nil)
+    LiftAbove(MinimapZoomOut, "ZoomOutLevel", foreverRound and cover or nil)
+end
+
+local function UpdateZoomButtonsLayout()
+    if not MinimapZoomIn or not MinimapZoomOut or IsHybridMinimapModeActive() then return end
+    MinimapZoomIn:ClearAllPoints()
+    MinimapZoomOut:ClearAllPoints()
+    if IsForeverActive() and not IsSquareLayout() then
+        for _, spot in ipairs({ { MinimapZoomIn, FOREVER_ZOOM_IN }, { MinimapZoomOut, FOREVER_ZOOM_OUT } }) do
+            local button, place = spot[1], spot[2]
+            local unit = Minimap:GetWidth() * Minimap:GetEffectiveScale() / button:GetEffectiveScale() / FOREVER_MAP_SIZE
+            button:SetSize(place[3] * unit, place[4] * unit)
+            button:SetPoint("CENTER", Minimap, "CENTER", place[1] * unit, place[2] * unit)
+        end
+    else
+        MinimapZoomIn:SetPoint("BOTTOMRIGHT", 0, 15)
+        MinimapZoomIn:SetSize(25, 24)
+        MinimapZoomOut:SetPoint("BOTTOMRIGHT", -22, 0)
+        MinimapZoomOut:SetSize(20, 12)
+    end
 end
 
 -- The collector asks this when it hands a button back to the map; a module restore keeps the original scale.
@@ -597,13 +644,49 @@ local function SyncThinSquareBorder()
 end
 MinimapModule.SyncThinSquareBorder = SyncThinSquareBorder
 
+-- Calendar and tracking art share one 21x19 cell: pushed art sits one cell pixel down-right.
+local function PressShift(frame)
+    return frame:GetWidth() / 21, frame:GetHeight() / 19
+end
+
+-- The ADD highlight must follow the pushed art's shift or the icon draws twice.
+local function AnchorPushedHighlight(button, cellFrame, pushed)
+    local highlightTexture = button:GetHighlightTexture()
+    if not highlightTexture then
+        return
+    end
+    if pushed == nil then
+        pushed = button:GetButtonState() == "PUSHED"
+    end
+    local dx, dy = 0, 0
+    if pushed then
+        dx, dy = PressShift(cellFrame)
+    end
+    highlightTexture:ClearAllPoints()
+    highlightTexture:SetPoint("TOPLEFT", button, "TOPLEFT", dx, -dy)
+    highlightTexture:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", dx, -dy)
+end
+
+-- The plate's shadow rim widens it right and down, so its centre sits up-left of the frame's.
+local function TrackingPlateCenter(pushed)
+    local w, h = MiniMapTracking:GetWidth(), MiniMapTracking:GetHeight()
+    local x, y = -2 * w / 21, 1.5 * h / 19
+    if pushed then
+        local sx, sy = PressShift(MiniMapTracking)
+        x, y = x + sx, y - sy
+    end
+    return x, y
+end
+
 local function UpdateMailPosition()
     if not MiniMapMailFrame or not MiniMapTracking then return end
     MiniMapMailFrame:ClearAllPoints()
+    local plateX, plateY = TrackingPlateCenter()
     if IsSquareLayout() then
-        MiniMapMailFrame:SetPoint("RIGHT", MiniMapTracking, "LEFT", -3, 0)
+        MiniMapMailFrame:SetPoint("RIGHT", MiniMapTracking, "LEFT", -3, plateY)
     else
-        MiniMapMailFrame:SetPoint("TOP", MiniMapTracking, "BOTTOM", 0, -3)
+        -- The plate ends two cell px above the frame's bottom; keep 3 units under what is drawn.
+        MiniMapMailFrame:SetPoint("TOP", MiniMapTracking, "BOTTOM", plateX, 2 * MiniMapTracking:GetHeight() / 19 - 3)
     end
 end
 
@@ -707,6 +790,7 @@ local function UpdateForeverStyle()
     UpdateMinimapCircleSize()
     SyncForeverOverlay()
     SyncCornerIconLevels(active)
+    UpdateZoomButtonsLayout()
     if square or GetCVar("rotateMinimap") ~= "1" then
         ResetRingRotation()
     end
@@ -732,22 +816,54 @@ local function GetStyleOffsets()
     return 0, MAP_OFFSET_Y
 end
 
--- Live style switches only; ReplaceBlizzardFrame anchors both frames itself on every apply.
+-- Farm mode grows the map from the screen corner it sits in, so a map at an edge grows inward.
+local function GetMinimapGrowthPivot(mover)
+    local settings = GetMinimapSettings()
+    if not (mover and settings and settings.farm_mode_enabled == true) then return "CENTER" end
+    local x, y = mover:GetCenter()
+    local width, height = UIParent:GetWidth(), UIParent:GetHeight()
+    if not (x and y and width and height and width > 0 and height > 0) then return "CENTER" end
+    -- GetCenter answers in the mover's own scaled units.
+    local ratio = mover:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    x, y = x * ratio / width, y * ratio / height
+    local pivot = ((y > 2 / 3 and "TOP") or (y < 1 / 3 and "BOTTOM") or "")
+        .. ((x > 2 / 3 and "RIGHT") or (x < 1 / 3 and "LEFT") or "")
+    return pivot ~= "" and pivot or "CENTER"
+end
+
+-- The shift SetEditorBoxScale gives the editor box for that pivot, in the cluster's own units.
+local function GetClusterGrowthShift(mover)
+    local pivot = GetMinimapGrowthPivot(mover)
+    if pivot == "CENTER" then return 0, 0 end
+    local grow = MinimapCluster:GetScale() - 1
+    local fromLeft = pivot:find("LEFT") and 0 or (pivot:find("RIGHT") and 1 or 0.5)
+    local fromTop = pivot:find("TOP") and 0 or (pivot:find("BOTTOM") and 1 or 0.5)
+    local ratio = mover:GetEffectiveScale() / MinimapCluster:GetEffectiveScale()
+    return mover:GetWidth() * grow * (0.5 - fromLeft) * ratio, mover:GetHeight() * grow * (fromTop - 0.5) * ratio
+end
+
+-- Live style switches and farm growth; ReplaceBlizzardFrame anchors both frames itself on every apply.
 local function ApplyStyleAnchors()
     local mover = MinimapModule.minimapFrame
+    if not mover then return end
     local clusterLift, mapOffsetY = GetStyleOffsets()
-    if not mover or MinimapModule.appliedMapOffsetY == mapOffsetY then return end
+    local shiftX, shiftY = GetClusterGrowthShift(mover)
+    if MinimapModule.appliedMapOffsetY == mapOffsetY and MinimapModule.appliedShiftX == shiftX
+        and MinimapModule.appliedShiftY == shiftY then
+        return
+    end
     if InCombatLockdown() then
         addon.CombatQueue:Add("minimap_style_anchors", ApplyStyleAnchors)
         return
     end
 
     MinimapCluster:ClearAllPoints()
-    MinimapCluster:SetPoint("CENTER", mover, "CENTER", 0, clusterLift)
+    MinimapCluster:SetPoint("CENTER", mover, "CENTER", shiftX, clusterLift + shiftY)
     -- Anchor offsets are read in the map's own scaled units.
     Minimap:ClearAllPoints()
     Minimap:SetPoint("CENTER", MinimapCluster, "CENTER", 0, mapOffsetY / blipScale)
     MinimapModule.appliedMapOffsetY = mapOffsetY
+    MinimapModule.appliedShiftX, MinimapModule.appliedShiftY = shiftX, shiftY
 end
 
 -- SECURE HOOKS: Add secure hooks for critical functions
@@ -761,7 +877,7 @@ local function SetupSecureHooks()
         if not MinimapModule.applied then return end
         if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
             MiniMapTrackingIcon:ClearAllPoints()
-            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
+            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter())
         end
     end
     hooksecurefunc("CloseDropDownMenus", MinimapModule.hooks.CloseDropDownMenus)
@@ -814,7 +930,7 @@ local function UpdateCalendarDate()
 
     local highlightTexture = gameTimeFrame:GetHighlightTexture()
     if highlightTexture then
-        highlightTexture:SetAllPoints(gameTimeFrame)
+        AnchorPushedHighlight(gameTimeFrame, gameTimeFrame)
         highlightTexture:SetAtlasTexture('Minimap-Calendar-' .. day .. '-Highlight', true)
     end
 
@@ -926,6 +1042,7 @@ local function ReplaceBlizzardFrame(frame)
     local minimapCluster = MinimapCluster
     minimapCluster:ClearAllPoints()
     minimapCluster:SetPoint("CENTER", frame, "CENTER", 0, clusterLift)
+    MinimapModule.appliedShiftX, MinimapModule.appliedShiftY = 0, 0
 
     -- In hybrid mode with SexyMap, skip border/zone text customization
     -- SexyMap handles: borders, zone text styling, shapes
@@ -1006,6 +1123,24 @@ local function ReplaceBlizzardFrame(frame)
                     UpdateCalendarDate()
                 end
             end)
+            gameTimeFrame:HookScript("OnMouseDown", function(self)
+                if MinimapModule.applied then
+                    AnchorPushedHighlight(self, self, true)
+                    -- GetButtonState lags the mouse events by a frame.
+                    addon:After(0, function() AnchorPushedHighlight(self, self) end)
+                end
+            end)
+            gameTimeFrame:HookScript("OnMouseUp", function(self)
+                if MinimapModule.applied then
+                    addon:After(0, function() AnchorPushedHighlight(self, self) end)
+                end
+            end)
+            -- Released off the button, OnMouseUp never arrives; resync before the highlight shows again.
+            gameTimeFrame:HookScript("OnEnter", function(self)
+                if MinimapModule.applied then
+                    AnchorPushedHighlight(self, self)
+                end
+            end)
         end
     end
 
@@ -1036,7 +1171,8 @@ local function ReplaceBlizzardFrame(frame)
 
         local minimapTracking = MiniMapTracking
         minimapTracking:ClearAllPoints()
-        minimapTracking:SetPoint("RIGHT", MinimapBorderTop, "LEFT", -3, 0)
+        -- Mirrors the calendar's gap: the plate stops 3 cell px short of this frame's right edge.
+        minimapTracking:SetPoint("RIGHT", MinimapBorderTop, "LEFT", -3 + 3 * 26 / 21, -1)
         minimapTracking:SetSize(26, 24)
 
         local minimapMailFrame = MiniMapMailFrame
@@ -1054,9 +1190,10 @@ local function ReplaceBlizzardFrame(frame)
 
         local minimapTrackingButton = _G[minimapTracking:GetName() .. 'Button']
         minimapTrackingButton:ClearAllPoints()
-        minimapTrackingButton:SetPoint("CENTER", 0, 0)
+        minimapTrackingButton:SetPoint("CENTER", minimapTracking, "CENTER", TrackingPlateCenter())
 
-        minimapTrackingButton:SetSize(17, 15)
+        -- 17x15 binoculars plus room for the press shift (gen_minimap_tracking.py).
+        minimapTrackingButton:SetSize(20, 18)
         minimapTrackingButton:SetHitRectInsets(0, 0, 0, 0)
 
         -- Left clicks stay Blizzard's own OnClick: the tracking menu must open from secure code.
@@ -1248,10 +1385,6 @@ local function ReplaceBlizzardFrame(frame)
         UpdateForeverStyle()
 
         local zoomInButton = MinimapZoomIn
-        zoomInButton:ClearAllPoints()
-        zoomInButton:SetPoint("BOTTOMRIGHT", 0, 15)
-
-        zoomInButton:SetSize(25, 24)
         zoomInButton:SetHitRectInsets(0, 0, 0, 0)
 
         local normalTexture = zoomInButton:GetNormalTexture()
@@ -1271,10 +1404,6 @@ local function ReplaceBlizzardFrame(frame)
         disabledTexture:SetAtlasTexture('Minimap-ZoomIn-Pushed', true)
 
         local zoomOutButton = MinimapZoomOut
-        zoomOutButton:ClearAllPoints()
-        zoomOutButton:SetPoint("BOTTOMRIGHT", -22, 0)
-
-        zoomOutButton:SetSize(20, 12)
         zoomOutButton:SetHitRectInsets(0, 0, 0, 0)
 
         local normalTexture = zoomOutButton:GetNormalTexture()
@@ -1292,6 +1421,8 @@ local function ReplaceBlizzardFrame(frame)
         local disabledTexture = zoomOutButton:GetDisabledTexture()
         disabledTexture:SetAllPoints(zoomOutButton)
         disabledTexture:SetAtlasTexture('Minimap-ZoomOut-Pushed', true)
+
+        UpdateZoomButtonsLayout()
     end -- not isHybridMode (backdrop, border, circle, zoom buttons)
 
     -- Reposition a single WorldStateCaptureBar to below the minimap
@@ -1386,28 +1517,44 @@ local function ReplaceBlizzardFrame(frame)
     if not isHybridMode then
         --  MANUALLY CONTROL BUTTON MOVEMENT
         minimapTrackingButton:SetScript("OnMouseDown", function(self, button)
+            AnchorPushedHighlight(self, MiniMapTracking, true)
+            -- GetButtonState lags the mouse events by a frame.
+            addon:After(0, function() AnchorPushedHighlight(self, MiniMapTracking) end)
             if button == "LeftButton" then
-                -- Move the icon/button manually - YOU CONTROL HOW MUCH
+                -- Old style's tracking icon gets the same press shift as the pushed art.
                 if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
-                    -- Move icon OLD STYLE: 1 pixel down-right (subtle)
                     MiniMapTrackingIcon:ClearAllPoints()
-                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 2, -2)
+                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter(true))
                 end
             end
         end)
 
         minimapTrackingButton:SetScript("OnMouseUp", function(self, button)
+            addon:After(0, function() AnchorPushedHighlight(self, MiniMapTracking) end)
             if button == "LeftButton" then
                 -- Restore original position on release
                 if MiniMapTrackingIcon and MiniMapTrackingIcon:GetAlpha() > 0 then
                     MiniMapTrackingIcon:ClearAllPoints()
-                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
+                    MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter())
                 end
             elseif button == "RightButton" and self:IsMouseOver() then
                 SetTracking()
                 MinimapModule:UpdateTrackingIcon()
             end
         end)
+
+        if not minimapTrackingButton.DragonUI_PushedHighlightHooked then
+            minimapTrackingButton.DragonUI_PushedHighlightHooked = true
+            minimapTrackingButton:HookScript("OnEnter", function(self)
+                if not MinimapModule.applied then return end
+                -- Released off the button, OnMouseUp never arrives; resync before the highlight shows again.
+                AnchorPushedHighlight(self, MiniMapTracking)
+                -- Blizzard's ANCHOR_RIGHT lays the tooltip over the icon and the zone bar; Retail opens it left.
+                GameTooltip:SetOwner(self, "ANCHOR_NONE")
+                GameTooltip:SetPoint("TOPRIGHT", MiniMapTracking, "TOPLEFT", -2, 0)
+                GameTooltip:SetTracking()
+            end)
+        end
 
         --  HOOK TO RESET ICON POSITION AFTER CLICKS
     end -- not isHybridMode (tracking button scripts)
@@ -2337,7 +2484,7 @@ function MinimapModule:UpdateTrackingIcon()
             MiniMapTrackingIcon:SetSize(20, 20)
             MiniMapTrackingIcon:SetAlpha(1)
             MiniMapTrackingIcon:ClearAllPoints()
-            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', 0, 0)
+            MiniMapTrackingIcon:SetPoint('CENTER', MiniMapTracking, 'CENTER', TrackingPlateCenter())
 
             -- Clear button textures so they don't interfere with the specific icon
             MiniMapTrackingButton:SetNormalTexture('')
@@ -2583,6 +2730,8 @@ function MinimapModule:RestoreMinimapSystem()
     end
 
     if addon.VisibilityFade then addon.VisibilityFade.Reset("minimap", 1) end
+
+    self:RestoreFarmMode()
 
     SetCollectorSyncEnabled(false)
 
@@ -2922,6 +3071,8 @@ function MinimapModule:InitializeMinimapSystem()
         self:UpdateTrackingIcon()
     end
 
+    -- A /reload with farm mode on never goes through RefreshMinimap, so park here too.
+    self:ApplyFarmMode()
 end
 
 function MinimapModule:Initialize()
@@ -2952,7 +3103,7 @@ end
 
 -- Remove functions that no longer exist and convert to DragonUI functions
 function MinimapModule:UpdateSettings()
-    local scale = addon.db.profile.minimap.scale or 1.0
+    local scale = GetEffectiveMinimapScale()
 
     if self.minimapFrame then
         local widgetConfig = addon.db.profile.widgets.minimap
@@ -2962,7 +3113,7 @@ function MinimapModule:UpdateSettings()
 
         -- Update DurabilityFrame position
         if DurabilityFrame then
-            DurabilityFrame:SetScale(scale)
+            DurabilityFrame:SetScale(addon.db.profile.minimap.scale or 1.0)
             SyncDurabilityMover()
             ApplyDurabilityPosition()
         end
@@ -2974,7 +3125,7 @@ function MinimapModule:UpdateSettings()
         --  APPLY SCALE (works perfectly now)
         if MinimapCluster then
             MinimapCluster:SetScale(scale)
-            addon.SetEditorBoxScale(self.minimapFrame, scale)
+            addon.SetEditorBoxScale(self.minimapFrame, scale, GetMinimapGrowthPivot(self.minimapFrame))
         end
 
         if self.borderFrame then
@@ -3097,6 +3248,126 @@ local function ApplyClockAndZoneLayout(showClock)
             MinimapZoneText:SetAllPoints(MinimapZoneTextButton)
         end
     end
+end
+
+-- ============================================================================
+-- FARM MODE TOGGLE
+-- ============================================================================
+
+-- Parked on a hidden holder, so they stay hidden whatever calls Show(); missing globals are skipped.
+local FARM_MODE_CHROME = {
+    "MinimapBorderTop",
+    "MinimapZoneTextButton",
+    "GameTimeFrame",
+    "TimeManagerClockButton",
+    "MiniMapTracking",
+    "MiniMapMailFrame",
+    "MiniMapInstanceDifficulty",
+    "MiniMapBattlefieldFrame",
+    "DragonUI_MinimapSettingsButton",
+    "DragonUI_MinimapIconCollector",
+}
+
+function MinimapModule:ToggleFarmMode()
+    local settings = GetMinimapSettings()
+    if not settings or not IsMinimapSystemActive() then
+        addon:Print(L["Minimap module not available."])
+        return
+    end
+
+    local active = settings.farm_mode_enabled == true
+    settings.farm_mode_enabled = not active
+
+    addon:Print(active and L["Farm mode disabled"] or L["Farm mode enabled"])
+
+    addon:RefreshMinimap()
+end
+
+local function CreateFarmModeHolder()
+    local holder = CreateFrame("Frame", nil, UIParent)
+    holder:Hide()
+    return holder
+end
+
+local function SaveFrameLayers(frame, layers)
+    if not frame.GetFrameLevel then return end
+    layers[frame] = { frame:GetFrameStrata(), frame:GetFrameLevel() }
+    local children = { frame:GetChildren() }
+    for index = 1, #children do
+        SaveFrameLayers(children[index], layers)
+    end
+end
+
+-- Top-down, since a parent's SetFrameStrata also moves its children.
+local function RestoreFrameLayers(frame, layers)
+    if not frame.GetFrameLevel then return end
+    local saved = layers[frame]
+    if saved then
+        if frame:GetFrameStrata() ~= saved[1] then frame:SetFrameStrata(saved[1]) end
+        if frame:GetFrameLevel() ~= saved[2] then frame:SetFrameLevel(saved[2]) end
+    end
+    local children = { frame:GetChildren() }
+    for index = 1, #children do
+        RestoreFrameLayers(children[index], layers)
+    end
+end
+
+-- Parents are read for everything before anything moves: a parked child would record the holder.
+local function ParkFarmModeFrames()
+    local holder = MinimapModule.farmMode.holder or CreateFarmModeHolder()
+    MinimapModule.farmMode.holder = holder
+    local parents, layers = MinimapModule.farmMode.parents, MinimapModule.farmMode.layers
+
+    local parkable = {}
+    for index = 1, #FARM_MODE_CHROME do
+        local region = _G[FARM_MODE_CHROME[index]]
+        if region and not parents[region] then
+            parents[region] = region:GetParent()
+            SaveFrameLayers(region, layers)
+            parkable[#parkable + 1] = region
+        end
+    end
+
+    for index = 1, #parkable do
+        parkable[index]:SetParent(holder)
+    end
+end
+
+-- SetParent resets strata and level (e.g. the gear sits at Minimap + 20), so both are put back.
+local function RestoreFarmModeFrames()
+    local parents, layers = MinimapModule.farmMode.parents, MinimapModule.farmMode.layers
+
+    for region, parent in pairs(parents) do
+        region:SetParent(parent)
+    end
+    for region in pairs(parents) do
+        RestoreFrameLayers(region, layers)
+    end
+    wipe(parents)
+    wipe(layers)
+end
+
+function MinimapModule:RestoreFarmMode()
+    RestoreFarmModeFrames()
+    self.farmMode.active = false
+end
+
+-- RefreshMinimap already queues this while in combat.
+function MinimapModule:ApplyFarmMode()
+    local settings = GetMinimapSettings()
+    if not settings then return end
+
+    if settings.farm_mode_enabled ~= true then
+        if self.farmMode.active then self:RestoreFarmMode() end
+        return
+    end
+
+    self.farmMode.active = true
+    -- Hybrid hands the chrome to SexyMap; the bigger map still applies there.
+    if IsHybridMinimapModeActive() then return end
+
+    -- Runs while active too: chrome created since (the gear once the collector is enabled) gets parked.
+    ParkFarmModeFrames()
 end
 
 -- Apply all minimap settings from the database
@@ -3223,6 +3494,8 @@ function addon:RefreshMinimap()
     end
 
     if MinimapModule.isEnabled then
+        -- Parks or restores the chrome first: the settings pass below re-applies visibility.
+        MinimapModule:ApplyFarmMode()
         MinimapModule:UpdateSettings()
         -- Also update tracking icon when settings change
         MinimapModule:UpdateTrackingIcon()
@@ -3244,6 +3517,9 @@ function addon:RefreshMinimap()
         if addon.MinimapDecorations and addon.MinimapDecorations.Refresh then
             addon.MinimapDecorations:Refresh()
         end
+
+        -- Parks chrome this pass just created, e.g. the gear when the collector gets enabled.
+        MinimapModule:ApplyFarmMode()
     end
 end
 
