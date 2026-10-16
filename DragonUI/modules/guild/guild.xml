@@ -1,0 +1,8 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Script file="core.lua"/>
+    <Script file="window.lua"/>
+    <!-- Panes register in this order, which is the order of the side tabs. -->
+    <Script file="roster.lua"/>
+    <Script file="info.lua"/>
+    <Script file="benefits.lua"/>
+</Ui>
