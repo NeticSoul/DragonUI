@@ -11,12 +11,23 @@ local SIZE = 36
 
 local arrow, driver, facing
 
+-- Texture:SetRotation reads the texture's on-screen rect, which is unresolved before the map's first
+-- draw: the arrow came out as a stretched sliver until you turned. Corners at radius 1 around the
+-- middle are SetRotation's own, so the art keeps the size SIZE was tuned at.
+local HALF = math.sqrt(0.5)
+
+local function rotate(angle)
+    local s, c = math.sin(angle), math.cos(angle)
+    local p, q = HALF * (s + c), HALF * (s - c)
+    arrow:SetTexCoord(0.5 + q, 0.5 - p, 0.5 - p, 0.5 - q, 0.5 + p, 0.5 + q, 0.5 - q, 0.5 + p)
+end
+
 -- Every frame, like the client turns the minimap's: throttling this reads as a stuttering arrow.
 local function tick()
     local now = GetPlayerFacing() or 0
     if now == facing then return end
     facing = now
-    arrow:SetRotation(now)
+    rotate(now)
 end
 
 -- WorldMapPlayer hangs off WorldMapButton, which carries the canvas scale; retail keeps pins one size.
