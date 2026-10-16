@@ -709,7 +709,7 @@ local function Present(request)
     if request.preview then
         EnterHold()
         animState = "PREVIEW"
-        SetExpanded(true)
+        SetExpanded(false)
         return
     end
     animState, stateTimer = "EXPAND", 0
