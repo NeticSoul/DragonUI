@@ -1691,7 +1691,8 @@ do
     end
 
     -- Blizzard's watched currencies, then the server-kept ones ticked for the backpack, each as
-    -- name, count, extraCurrencyType, icon, itemID, section.
+    -- name, count, extraCurrencyType, icon, itemID, section. No more than MAX_WATCHED_TOKENS in
+    -- all: the server ticks are account-wide, so another character's Blizzard ones can fill the bar.
     local function WatchedTokens()
         local tokens = {}
         for i = 1, MAX_WATCHED_TOKENS do
@@ -1703,6 +1704,7 @@ do
         local SC = addon.ServerCurrency
         if SC then
             for _, row in ipairs(SC.Watched()) do
+                if #tokens >= MAX_WATCHED_TOKENS then break end
                 tokens[#tokens + 1] = { SC.Name(row), row.count, nil, SC.Icon(row), row.itemID, row.section }
             end
         end

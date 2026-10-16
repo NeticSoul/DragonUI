@@ -85,14 +85,15 @@ local function toggleHeader(index, collapsed)
         toggleServerHeader(index, collapsed)
         return
     end
+    -- The reveal takes a position in `flat`, which "Hide empty" can put ahead of the list index.
     if collapsed then
         if ExpandCurrencyList then ExpandCurrencyList(index, 1) end
         CP.RefreshCurrencyPane()
         -- After the refresh, so the run being revealed is read off the rebuilt list.
-        CP.RevealChildrenOf(flat, index, repaint)
+        CP.RevealChildrenOf(flat, flatPosition(index), repaint)
     else
         -- The rows are still live here; collapsing for real is what `finish` does.
-        CP.FadeOutChildrenOf(flat, index, repaint, function()
+        CP.FadeOutChildrenOf(flat, flatPosition(index), repaint, function()
             if ExpandCurrencyList then ExpandCurrencyList(index, 0) end
             CP.RefreshCurrencyPane()
         end)
