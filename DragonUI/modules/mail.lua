@@ -15,6 +15,7 @@ local UpdateUIPanelPositions = UpdateUIPanelPositions
 local GetInboxNumItems = GetInboxNumItems
 local GetInboxHeaderInfo = GetInboxHeaderInfo
 local GetInboxItem = GetInboxItem
+local GetInboxText = GetInboxText
 local GetSendMailItem = GetSendMailItem
 local SetPortraitToTexture = SetPortraitToTexture
 local TakeInboxMoney = TakeInboxMoney
@@ -713,6 +714,13 @@ local function TakeNext()
     if kind == "item" and CountFreeBagSlots() == 0 then
         StopOpenAll()
         return
+    end
+
+    -- An emptied letter is deleted, and one deleted unread still counts as new mail on the server,
+    -- which keeps the minimap mail icon lit. GetInboxText marks it read, as opening it would.
+    local wasRead = select(9, GetInboxHeaderInfo(index))
+    if not wasRead then
+        GetInboxText(index)
     end
 
     pending = { kind = kind, index = index, slot = slot, value = value, key = key, timeout = SERVER_TIMEOUT }
