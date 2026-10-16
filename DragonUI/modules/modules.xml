@@ -91,6 +91,12 @@
     <!-- Retail-style mail window reskin with Open All button -->
     <Script file="mail.lua"/>
 
+    <!-- Retail-style Social window reskin (friends, who, chat, raid) -->
+    <Script file="social_skin.lua"/>
+
+    <!-- Retail-style guild window (replaces the Social window's Guild tab) -->
+    <Include file="guild\guild.xml"/>
+
     <!-- Spellbook module (own window; takes over the book's keys, micro button and Blizzard's frame after login) -->
     <Include file="spellbook\spellbook.xml"/>
     <!-- Professions module (Forever professions window built on Blizzard's TradeSkillFrame) -->

@@ -1360,6 +1360,12 @@ local defaults = {
             taxiframe = {
                 enabled = true, -- Retail-style flight master map window
             },
+            guild = {
+                enabled = true, -- Retail-style guild window with roster, news and guild perks
+            },
+            socialskin = {
+                enabled = true, -- Retail-style friends, who, chat and raid window
+            },
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)
