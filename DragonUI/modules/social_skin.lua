@@ -143,14 +143,16 @@ end
 
 -- The pieces are FriendsFrame's own regions, anchored to `anchor`. A child frame holding them would
 -- share a frame level with Blizzard's subframes, and its art could land on top of their rows.
-local function applySlicesOn(owner, anchor, layoutName, regions)
+-- `layer` overrides the layout's own draw layer; this client ignores sublevels, so a piece that
+-- must sit above another region on the same frame needs a higher layer.
+local function applySlicesOn(owner, anchor, layoutName, regions, layer)
     local slicer = _G.DragonUI_NineSlice
     local layout = slicer and slicer.GetLayout and slicer.GetLayout(layoutName)
     if not (layout and slicer.ApplyLayout) then return end
     for _, piece in ipairs(SLICE_PIECES) do
         local spec = layout[piece]
         if spec and not anchor[piece] then
-            local tex = owner:CreateTexture(nil, spec.layer or "BORDER", nil, spec.subLevel or 0)
+            local tex = owner:CreateTexture(nil, layer or spec.layer or "BORDER", nil, spec.subLevel or 0)
             anchor[piece] = tex
             if regions then
                 regions[#regions + 1] = tex
@@ -220,8 +222,10 @@ local function paintWindowChrome(window)
     host:SetPoint("TOPLEFT", window, "TOPLEFT", CHROME_X, CHROME_Y)
     window._duiChrome = host
 
-    -- Sublevels keep the rock under the streaks and both under the marble an inset lays over them.
-    local rock = window:CreateTexture(nil, "BACKGROUND", nil, -8)
+    -- This client ignores sublevels, so the inset's marble and trim (buildInset) take BORDER and
+    -- ARTWORK over the rock. The streaks stay on BACKGROUND: they reach 10px into the Who, Chat
+    -- and Raid insets, and on BORDER they could draw over the marble there.
+    local rock = window:CreateTexture(nil, "BACKGROUND")
     rock._duiOwned = true
     rock:SetTexture(ROCK, "REPEAT", "REPEAT")
     rock:SetHorizTile(true)
@@ -230,7 +234,7 @@ local function paintWindowChrome(window)
     rock:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", -2, 2)
     window._duiRockBg = rock
 
-    local streaks = window:CreateTexture(nil, "BACKGROUND", nil, -7)
+    local streaks = window:CreateTexture(nil, "BACKGROUND")
     streaks._duiOwned = true
     if streaks.SetAtlasTexture then
         streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
@@ -252,14 +256,15 @@ local function paintWindowChrome(window)
 end
 
 -- An anchor-only frame; its marble and trim are FriendsFrame regions so every subframe draws above.
--- The marble goes on BORDER, under the trim's sublevel: on BACKGROUND it tied with the rock and the
--- rock won, so every tab showed one flat tone where the guild window shows dark insets on rock.
+-- The marble goes on BORDER and the trim on ARTWORK (FriendsFrame's own ARTWORK pieces are hidden):
+-- on BACKGROUND the marble tied with the rock and the rock won, so every tab showed one flat tone
+-- where the guild window shows dark insets on rock.
 local function buildInset(window)
     local inset = CreateFrame("Frame", nil, window)
     inset:EnableMouse(false)
     local regions = {}
 
-    local marble = window:CreateTexture(nil, "BORDER", nil, -8)
+    local marble = window:CreateTexture(nil, "BORDER")
     marble._duiOwned = true
     marble:SetTexture(MARBLE, "REPEAT", "REPEAT")
     marble:SetHorizTile(true)
@@ -267,7 +272,7 @@ local function buildInset(window)
     marble:SetAllPoints(inset)
     regions[#regions + 1] = marble
 
-    applySlicesOn(window, inset, "InsetFrameTemplate", regions)
+    applySlicesOn(window, inset, "InsetFrameTemplate", regions, "ARTWORK")
     inset._duiRegions = regions
     return inset
 end
