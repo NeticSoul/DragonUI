@@ -44,11 +44,12 @@ local WINDOWS = {
         "Coins\\coinsilver", "Coins\\commoncoinbox", "Coins\\commoncurrencybox", "UI\\buttonhilight-square",
         "UI\\ui-background-rock", "UI\\ui-quickslot2",
     },
-    addonmanager = { "ForeverUI\\chrome-dialog", "ForeverUI\\chrome-frame", "ForeverUI\\controls-basic" },
+    addonmanager = { "ForeverUI\\chrome-dialog", "ForeverUI\\controls-basic" },
 }
 
 -- DragonUI's own windows, there whatever modules are on: the options panel and editor mode. Plus the
--- bronze chrome and filigree inset trim every window (ours and the addons we skin) now wears.
+-- bronze chrome and filigree inset trim: every window wears them, including addons that borrow
+-- DragonUI's layouts, which use them whatever DragonUI modules are on.
 local ALWAYS = {
     "ForeverUI\\chrome-options", "ForeverUI\\controls-dropdown", "Editmode\\editmodeui",
     "Editmode\\editmodeuihighlightbackground", "Editmode\\editmodeuivertical",

@@ -106,49 +106,48 @@ local function EnsureChrome(frame, key)
     return chrome
 end
 
--- The professions window's bronze chrome, as every other window wears it (nineslice.lua's
--- NoPortraitFrameTemplate): same atlas pieces and offsets, scaled down for compact one-slot bags.
+-- The bronze chrome every window wears: pieces and offsets read from the shared layout
+-- (nineslice.lua's NoPortraitFrameTemplate), scaled down for compact one-slot bags.
 local function SetBronze(texture, name, scale)
     local e = addon.atlasinfo[name]
     ConfigureTexture(texture, e[1], e[2] * scale, e[3] * scale, e[4], e[5], e[6], e[7])
 end
 
+local CORNERS = {
+    { "topLeft", "TopLeftCorner", "TOPLEFT" },
+    { "topRight", "TopRightCorner", "TOPRIGHT" },
+    { "bottomLeft", "BottomLeftCorner", "BOTTOMLEFT" },
+    { "bottomRight", "BottomRightCorner", "BOTTOMRIGHT" },
+}
+
 local function LayoutChrome(frame, chrome, compact)
     local s = compact and 0.7 or 1
+    local layout = DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate")
 
-    SetBronze(chrome.topLeft, "UI-Frame-Bronze-CornerTopLeft", s)
-    chrome.topLeft:ClearAllPoints()
-    chrome.topLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", -13 * s, 16 * s)
-
-    SetBronze(chrome.topRight, "UI-Frame-Bronze-CornerTopRight", s)
-    chrome.topRight:ClearAllPoints()
-    chrome.topRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 2 * s, 16 * s)
-
-    SetBronze(chrome.bottomLeft, "UI-Frame-Bronze-CornerBottomLeft", s)
-    chrome.bottomLeft:ClearAllPoints()
-    chrome.bottomLeft:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", -13 * s, -8 * s)
-
-    SetBronze(chrome.bottomRight, "UI-Frame-Bronze-CornerBottomRight", s)
-    chrome.bottomRight:ClearAllPoints()
-    chrome.bottomRight:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 2 * s, -8 * s)
+    for _, c in ipairs(CORNERS) do
+        local texture, spec, point = chrome[c[1]], layout[c[2]], c[3]
+        SetBronze(texture, spec.atlas, s)
+        texture:ClearAllPoints()
+        texture:SetPoint(point, frame, point, spec.x * s, spec.y * s)
+    end
 
     -- Edges run flush between the corners, stretched.
-    SetBronze(chrome.top, "_UI-Frame-Bronze-EdgeTop", s)
+    SetBronze(chrome.top, layout.TopEdge.atlas, s)
     chrome.top:ClearAllPoints()
     chrome.top:SetPoint("TOPLEFT", chrome.topLeft, "TOPRIGHT")
     chrome.top:SetPoint("TOPRIGHT", chrome.topRight, "TOPLEFT")
 
-    SetBronze(chrome.bottom, "_UI-Frame-Bronze-EdgeBottom", s)
+    SetBronze(chrome.bottom, layout.BottomEdge.atlas, s)
     chrome.bottom:ClearAllPoints()
     chrome.bottom:SetPoint("BOTTOMLEFT", chrome.bottomLeft, "BOTTOMRIGHT")
     chrome.bottom:SetPoint("BOTTOMRIGHT", chrome.bottomRight, "BOTTOMLEFT")
 
-    SetBronze(chrome.left, "!UI-Frame-Bronze-EdgeLeft", s)
+    SetBronze(chrome.left, layout.LeftEdge.atlas, s)
     chrome.left:ClearAllPoints()
     chrome.left:SetPoint("TOPLEFT", chrome.topLeft, "BOTTOMLEFT")
     chrome.left:SetPoint("BOTTOMLEFT", chrome.bottomLeft, "TOPLEFT")
 
-    SetBronze(chrome.right, "!UI-Frame-Bronze-EdgeRight", s)
+    SetBronze(chrome.right, layout.RightEdge.atlas, s)
     chrome.right:ClearAllPoints()
     chrome.right:SetPoint("TOPRIGHT", chrome.topRight, "BOTTOMRIGHT")
     chrome.right:SetPoint("BOTTOMRIGHT", chrome.bottomRight, "TOPRIGHT")
@@ -271,14 +270,22 @@ local function HideClassicBackgrounds(frame)
     end
 end
 
--- No portrait (no window carries one): the bag's name is in the title. Blizzard re-textures the
--- portrait on every bag open, so it is hidden again each refresh.
-local function HideContainerPortrait(frame)
+-- No portrait (no window carries one). Its button stays as an invisible strip over the title band,
+-- so hovering the band still shows the bag's tooltip: the only label a compact bag has, as its
+-- title is hidden. Blizzard re-textures the portrait on every bag open, so this runs each refresh.
+local function DressContainerPortrait(frame, compact)
     local name = frame:GetName()
     local portrait = _G[name .. "Portrait"]
     local portraitButton = _G[name .. "PortraitButton"]
     if portrait then portrait:Hide() end
-    if portraitButton then portraitButton:Hide() end
+    if portraitButton then
+        portraitButton:ClearAllPoints()
+        portraitButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, 0)
+        portraitButton:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", compact and -22 or -26, compact and -16 or -22)
+        local highlight = portraitButton:GetHighlightTexture()
+        if highlight then highlight:SetTexture(nil) end
+        portraitButton:Show()
+    end
 end
 
 local function RefreshContainerTitle(frame, compact)
@@ -513,7 +520,7 @@ function BagSkinModule:RefreshContainerFrame(frame)
     HideClassicBackgrounds(frame)
     LayoutChrome(frame, chrome, compact)
     SkinCloseButton(_G[frame:GetName() .. "CloseButton"], compact)
-    HideContainerPortrait(frame)
+    DressContainerPortrait(frame, compact)
     RefreshContainerTitle(frame, compact)
 
     if bagID == BACKPACK_CONTAINER then

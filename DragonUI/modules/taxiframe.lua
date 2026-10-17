@@ -289,7 +289,8 @@ local function buildTaxiFrame()
     inset:SetFrameLevel((taxiFrame:GetFrameLevel() or 1) + 1)
     inset:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", INSET_LEFT, INSET_TOP)
     inset:SetPoint("BOTTOMRIGHT", taxiFrame, "BOTTOMRIGHT", INSET_RIGHT, INSET_BOTTOM)
-    applySlices(inset, "InsetFrameTemplate")
+    -- The small trim: this inset draws over the map, and the full one's deep shadow would dim it.
+    applySlices(inset, "SmallInsetFrameTemplate")
 
     -- Retail's map IS the inset background, its trim drawn over the map edge: no margin to squeeze it.
     local taxiMap = _G.TaxiMap

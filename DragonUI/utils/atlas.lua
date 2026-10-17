@@ -672,6 +672,13 @@ local atlasinfo = {
 	['_UI-Frame-Bronze-EdgeBottom'] = { rui_Bronze, 128, 100, 400/1024, 656/1024, 4/512, 204/512 },
 	['!UI-Frame-Bronze-EdgeLeft'] = { rui_Bronze, 95, 128, 4/1024, 194/1024, 4/512, 260/512 },
 	['!UI-Frame-Bronze-EdgeRight'] = { rui_Bronze, 95, 128, 202/1024, 392/1024, 4/512, 260/512 },
+	-- Untitled (dialog) tops: the bottom corners and edge flipped, so all four sides are the thin rail.
+	['UI-Frame-Bronze-CornerTopLeft-Thin'] = { rui_Bronze, 95, 40, 664/1024, 854/1024, 204/512, 124/512 },
+	['UI-Frame-Bronze-CornerTopRight-Thin'] = { rui_Bronze, 95, 40, 4/1024, 194/1024, 468/512, 388/512 },
+	['_UI-Frame-Bronze-EdgeTop-Thin'] = { rui_Bronze, 128, 100, 400/1024, 656/1024, 204/512, 4/512 },
+	-- The professions output icon's ring (Profession-Ring-Frame), sized for a 62 portrait: the ring
+	-- holds a 45 icon at 64, so 62 * 64 / 45.
+	['UI-Frame-Bronze-PortraitRing'] = { rui_Filigree, 88, 88, 424/1024, 552/1024, 4/512, 132/512 },
 
 	-- The professions recipe card's filigree frame (common-insideframe) as inset trim: 26-unit
 	-- corners cut from the 107-unit piece, drawn at 16 so a 23-unit money inset still fits.
@@ -683,6 +690,16 @@ local atlasinfo = {
 	['_UI-Frame-Filigree-EdgeBottom'] = { rui_Filigree, 34, 16, 56/1024, 166/1024, 166/512, 218/512 },
 	['!UI-Frame-Filigree-EdgeLeft'] = { rui_Filigree, 16, 34, 4/1024, 56/1024, 56/512, 166/512 },
 	['!UI-Frame-Filigree-EdgeRight'] = { rui_Filigree, 16, 34, 166/1024, 218/1024, 56/512, 166/512 },
+	-- The same trim at 10 for insets too short for the 16 one (Send Mail's 23-unit money box) and for
+	-- content that IS the inset, like the flight map, where a deep inner shadow would dim it.
+	['UI-Frame-FiligreeSmall-CornerTopLeft'] = { rui_Filigree, 10, 10, 4/1024, 56/1024, 4/512, 56/512 },
+	['UI-Frame-FiligreeSmall-CornerTopRight'] = { rui_Filigree, 10, 10, 166/1024, 218/1024, 4/512, 56/512 },
+	['UI-Frame-FiligreeSmall-CornerBottomLeft'] = { rui_Filigree, 10, 10, 4/1024, 56/1024, 166/512, 218/512 },
+	['UI-Frame-FiligreeSmall-CornerBottomRight'] = { rui_Filigree, 10, 10, 166/1024, 218/1024, 166/512, 218/512 },
+	['_UI-Frame-FiligreeSmall-EdgeTop'] = { rui_Filigree, 21, 10, 56/1024, 166/1024, 4/512, 56/512 },
+	['_UI-Frame-FiligreeSmall-EdgeBottom'] = { rui_Filigree, 21, 10, 56/1024, 166/1024, 166/512, 218/512 },
+	['!UI-Frame-FiligreeSmall-EdgeLeft'] = { rui_Filigree, 10, 21, 4/1024, 56/1024, 56/512, 166/512 },
+	['!UI-Frame-FiligreeSmall-EdgeRight'] = { rui_Filigree, 10, 21, 166/1024, 218/1024, 56/512, 166/512 },
 
 	-- RedButton maximize/minimize glyphs, on the sheet the close button is cut from.
 	['redbutton-expand'] = { rui_RedButton, 36, 38, 77/256, 113/256, 1/128, 39/128 },

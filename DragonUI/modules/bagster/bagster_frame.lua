@@ -915,9 +915,8 @@ local function BagsterSkinFrame(frame)
         ns.Bg:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -3, 3)
     end
 
-    -- No portrait (no window carries one; C opens the character window). The icon button and its
-    -- texture stay, hidden, so the guild vault's emblem code still finds them; the search box
-    -- moves into the space the portrait took.
+    -- No portrait (no window carries one; C opens the character window): the icon button is
+    -- hidden and the search box moves into the space it took.
     local icon = _G[frame:GetName() .. 'IconButton']
     if icon then
         icon:Hide()
@@ -947,15 +946,6 @@ local function BagsterSkinFrame(frame)
     if bagToggle then
         bagToggle:ClearAllPoints()
         bagToggle:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', -18, -30)
-    end
-
-    -- Portrait click opens CharacterFrame
-    local portBtn = _G[frame:GetName() .. 'PortraitButton']
-    if portBtn then
-        portBtn:EnableMouse(true)
-        portBtn:SetScript('OnClick', function()
-            ToggleCharacter('PaperDollFrame')
-        end)
     end
 end
 

@@ -280,14 +280,6 @@ do
     local GuildFrame = mod:NewClass("Frame")
     mod.GuildFrame = GuildFrame
 
-    -- Static vault portrait: the ornate coffer icon, round-masked
-    function GuildFrame:UpdateEmblem()
-        if self.portraitDisc then
-            SetPortraitToTexture(self.portraitDisc, [[Interface\Icons\INV_Misc_Coin_02]])
-            self.portraitDisc:SetVertexColor(1, 1, 1)
-        end
-    end
-
     local function CreateGuildTabButton(f, i)
         local tab = CreateFrame("CheckButton", f:GetName() .. "SideTab" .. i, f)
         mod.SetupSideTabButton(tab)
@@ -583,32 +575,6 @@ do
         tinsert(UISpecialFrames, name)
         mod.BagsterSkinFrame(f)
         f.title:SetText(GUILD_BANK)
-
-        -- Guild emblem takes the portrait's spot: the portrait texture becomes the round disc
-        local skinnedIcon = _G[name .. "IconButton"]
-        if skinnedIcon and skinnedIcon.icon then
-            skinnedIcon:SetScript("OnShow", nil)
-            skinnedIcon:SetScript("OnEvent", nil)
-            f.portraitDisc = skinnedIcon.icon
-
-            -- Press zoom: texcoords would break the file-portrait mask, so GROW the disc
-            -- instead — the image zooms in and its edge slides under the ring, which clips it
-            local disc = f.portraitDisc
-            local pSize = disc:GetWidth()
-            local pPoint, pRel, pRelPoint, pX, pY = disc:GetPoint(1)
-            skinnedIcon:SetScript("OnMouseDown", function()
-                disc:SetSize(pSize + 4, pSize + 4)
-                disc:SetPoint(pPoint, pRel, pRelPoint, pX - 2, pY + 2)
-            end)
-            skinnedIcon:SetScript("OnMouseUp", function()
-                disc:SetSize(pSize, pSize)
-                disc:SetPoint(pPoint, pRel, pRelPoint, pX, pY)
-            end)
-            -- Same action as the TOGGLEGUILDTAB key binding
-            skinnedIcon:SetScript("OnClick", function()
-                ToggleFriendsFrame(3)
-            end)
-        end
 
         f:LoadPosition()
         f:UpdateItemFrameSize()
@@ -996,7 +962,6 @@ do
         self:RegisterEvent("GUILDBANK_UPDATE_TEXT")
         self.itemFrame:SetTab(GetCurrentGuildBankTab() or 1)
         self:UpdateTabs()
-        self:UpdateEmblem()
         self.itemFrame:UpdateAll()
         self.moneyFrame:Update()
         self:UpdateItemFrameSize()

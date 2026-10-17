@@ -57,30 +57,34 @@ addRule("Center", {
 kitPieces.Center = { atlas = "%s-nineslice-center" }
 
 local layoutRegistry = {
-	-- Retail's PortraitFrameTemplate. The top-left corner carries the portrait cutout, so it
-	-- overhangs 13px left / 16px up; the bottom-left must match or LeftEdge joins two offsets.
+	-- PortraitFrameTemplate in bronze: the professions output icon's ring takes the top-left corner,
+	-- centred on the 62 portrait at TOPLEFT(-5,7) (characterpanel/portrait.lua), so 88 at (-18,20).
+	-- The title band starts under the ring's metal and the left rail under its lower arc. The ring is
+	-- the one OVERLAY piece; the rest sit on ARTWORK (above the BACKGROUND portrait) so it covers the
+	-- band's end: this client ignores sublevels and same-layer pieces tie.
 	PortraitFrameTemplate = {
-		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-PortraitMetal-CornerTopLeft", x = -13, y = 16},
-		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRight", x = 4, y = 16},
-		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -13, y = -3},
-		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
-		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = -4, y = 0, x1 = 4, y1 = 0},
-		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
-		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
-		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-PortraitRing", x = -18, y = 20},
+		TopRightCorner = {layer = "ARTWORK", atlas = "UI-Frame-Bronze-CornerTopRight", x = 2, y = 16},
+		BottomLeftCorner = {layer = "ARTWORK", atlas = "UI-Frame-Bronze-CornerBottomLeft", x = -13, y = -8},
+		BottomRightCorner = {layer = "ARTWORK", atlas = "UI-Frame-Bronze-CornerBottomRight", x = 2, y = -8},
+		TopEdge = {layer = "ARTWORK", atlas = "_UI-Frame-Bronze-EdgeTop", x = -10, y = -4, x1 = 0, y1 = 0},
+		BottomEdge = {layer = "ARTWORK", atlas = "_UI-Frame-Bronze-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "ARTWORK", atlas = "!UI-Frame-Bronze-EdgeLeft", x = 5, y = 10, x1 = 0, y1 = 0},
+		RightEdge = {layer = "ARTWORK", atlas = "!UI-Frame-Bronze-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
-	-- PortraitFrameTemplate with the wide top-right corner for a maximize button beside close.
+	-- The bronze sheet has no wide top-right corner; the maximize button sits on the title band.
 	PortraitFrameTemplateMinimizable = {
-		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-PortraitMetal-CornerTopLeft", x = -13, y = 16},
-		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRightDouble", x = 4, y = 16},
-		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -13, y = -3},
-		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
-		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = -4, y = 0, x1 = 4, y1 = 0},
-		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
-		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
-		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-PortraitRing", x = -18, y = 20},
+		TopRightCorner = {layer = "ARTWORK", atlas = "UI-Frame-Bronze-CornerTopRight", x = 2, y = 16},
+		BottomLeftCorner = {layer = "ARTWORK", atlas = "UI-Frame-Bronze-CornerBottomLeft", x = -13, y = -8},
+		BottomRightCorner = {layer = "ARTWORK", atlas = "UI-Frame-Bronze-CornerBottomRight", x = 2, y = -8},
+		TopEdge = {layer = "ARTWORK", atlas = "_UI-Frame-Bronze-EdgeTop", x = -10, y = -4, x1 = 0, y1 = 0},
+		BottomEdge = {layer = "ARTWORK", atlas = "_UI-Frame-Bronze-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "ARTWORK", atlas = "!UI-Frame-Bronze-EdgeLeft", x = 5, y = 10, x1 = 0, y1 = 0},
+		RightEdge = {layer = "ARTWORK", atlas = "!UI-Frame-Bronze-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
+
 
 	-- The professions window's bronze chrome, which every no-portrait window wears so they all
 	-- match it. Offsets are that window's: they put the bronze rails within a unit of where the
@@ -123,35 +127,43 @@ local layoutRegistry = {
 		RightEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-Filigree-EdgeRight" },
 	},
 
-	-- What DialogBorderTemplate resolves to: retail frames a popup with this, NOT with the inset trim.
-	-- Every piece is pushed out by RAIL_PAD because the rail is only 16 thick inside a 64 piece and
-	-- sits 8.5 in; anchored flush the whole border draws inset and the window's ground shows past it.
-	Dialog = {
-		TopLeftCorner = {atlas = "UI-Frame-DiamondMetal-CornerTopLeft", x = -8, y = 8},
-		TopRightCorner = {atlas = "UI-Frame-DiamondMetal-CornerTopRight", x = 8, y = 8},
-		BottomLeftCorner = {atlas = "UI-Frame-DiamondMetal-CornerBottomLeft", x = -8, y = -8},
-		BottomRightCorner = {atlas = "UI-Frame-DiamondMetal-CornerBottomRight", x = 8, y = -8},
-		-- No offsets of their own: SetupEdge chains these to the CORNERS, so they already carry the
-		-- corners' push. Repeating it here is what left the rails floating off their own frame.
-		TopEdge = {atlas = "_UI-Frame-DiamondMetal-EdgeTop"},
-		BottomEdge = {atlas = "_UI-Frame-DiamondMetal-EdgeBottom"},
-		LeftEdge = {atlas = "!UI-Frame-DiamondMetal-EdgeLeft"},
-		RightEdge = {atlas = "!UI-Frame-DiamondMetal-EdgeRight"}
+	-- The same trim at 10 (rail pushed 1.5 out): for an inset too short for the 16 corners and for
+	-- content that is itself the inset, like the flight map, which the deeper shadow would dim.
+	SmallInsetFrameTemplate = {
+		TopLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-FiligreeSmall-CornerTopLeft", x = -1.5, y = 1.5 },
+		TopRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-FiligreeSmall-CornerTopRight", x = 1.5, y = 1.5 },
+		BottomLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-FiligreeSmall-CornerBottomLeft", x = -1.5, y = -1.5 },
+		BottomRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-FiligreeSmall-CornerBottomRight", x = 1.5, y = -1.5 },
+		TopEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-FiligreeSmall-EdgeTop" },
+		BottomEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-FiligreeSmall-EdgeBottom" },
+		LeftEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-FiligreeSmall-EdgeLeft" },
+		RightEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-FiligreeSmall-EdgeRight" },
 	},
 
-	-- The metal frame without the portrait cutout. All four corners are the 32px pair, the top two
-	-- flipped: mixing them with the ornate 75px tops makes each side edge join two widths.
+	-- What DialogBorderTemplate resolves to, in bronze: the thin rail on all four sides (the bottom
+	-- corners and edge, flipped for the top). Two units further in than the windows' offsets so the
+	-- rail's inner edge (7) meets the popups' ground, which starts 7 in (DIALOG_INSET).
+	Dialog = {
+		TopLeftCorner = {atlas = "UI-Frame-Bronze-CornerTopLeft-Thin", x = -11, y = 6},
+		TopRightCorner = {atlas = "UI-Frame-Bronze-CornerTopRight-Thin", x = 1, y = 6},
+		BottomLeftCorner = {atlas = "UI-Frame-Bronze-CornerBottomLeft", x = -11, y = -6},
+		BottomRightCorner = {atlas = "UI-Frame-Bronze-CornerBottomRight", x = 1, y = -6},
+		TopEdge = {atlas = "_UI-Frame-Bronze-EdgeTop-Thin"},
+		BottomEdge = {atlas = "_UI-Frame-Bronze-EdgeBottom"},
+		LeftEdge = {atlas = "!UI-Frame-Bronze-EdgeLeft"},
+		RightEdge = {atlas = "!UI-Frame-Bronze-EdgeRight"}
+	},
+
+	-- The bronze frame without a title band: thin rail all round, at the windows' offsets.
 	MetalFrameTemplate = {
-		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopLeft-Thin", x = -4, y = 3},
-		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRight-Thin", x = 4, y = 3},
-		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -4, y = -3},
-		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
-		-- Flush against both corners. The portrait layout insets the top edge because its left
-		-- corner overhangs 13px; with symmetric corners that inset just opens a gap at the join.
-		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = 0, y = 0, x1 = 0, y1 = 0},
-		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
-		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
-		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerTopLeft-Thin", x = -13, y = 8},
+		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerTopRight-Thin", x = 2, y = 8},
+		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerBottomLeft", x = -13, y = -8},
+		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerBottomRight", x = 2, y = -8},
+		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Bronze-EdgeTop-Thin", x = 0, y = 0, x1 = 0, y1 = 0},
+		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Bronze-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Bronze-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
+		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Bronze-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 }
 

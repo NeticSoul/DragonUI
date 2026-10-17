@@ -100,15 +100,6 @@ local function BagsterAddNineSlice(frame)
     local ns = {}
     frame._BagSkin_NineSlice = ns
 
-    ns.TopLeftCorner     = frame:CreateTexture(nil, 'OVERLAY')
-    ns.TopRightCorner    = frame:CreateTexture(nil, 'OVERLAY')
-    ns.BottomLeftCorner  = frame:CreateTexture(nil, 'OVERLAY')
-    ns.BottomRightCorner = frame:CreateTexture(nil, 'OVERLAY')
-    ns.TopEdge           = frame:CreateTexture(nil, 'OVERLAY')
-    ns.BottomEdge        = frame:CreateTexture(nil, 'OVERLAY')
-    ns.LeftEdge          = frame:CreateTexture(nil, 'OVERLAY')
-    ns.RightEdge         = frame:CreateTexture(nil, 'OVERLAY')
-
     local bg = CreateFrame('Frame', nil, frame)
     bg:SetPoint('TOPLEFT', frame, 'TOPLEFT', 2, -18)
     bg:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -3, 3)
@@ -121,50 +112,9 @@ local function BagsterAddNineSlice(frame)
     bgTex:SetAlpha(0.8)
     ns.BgTex = bgTex
 
-    -- The professions window's bronze chrome, as every other window wears it (nineslice.lua's
-    -- NoPortraitFrameTemplate): same atlas pieces and offsets, edges flush between the corners.
-    local function bronze(texture, atlasName)
-        local e = addon.atlasinfo[atlasName]
-        texture:SetTexture(e[1])
-        texture:SetTexCoord(e[4], e[5], e[6], e[7])
-        texture:SetSize(e[2], e[3])
-    end
-
-    local tlc = ns.TopLeftCorner
-    bronze(tlc, 'UI-Frame-Bronze-CornerTopLeft')
-    tlc:SetPoint('TOPLEFT', -13, 16)
-
-    local trc = ns.TopRightCorner
-    bronze(trc, 'UI-Frame-Bronze-CornerTopRight')
-    trc:SetPoint('TOPRIGHT', 2, 16)
-
-    local blc = ns.BottomLeftCorner
-    bronze(blc, 'UI-Frame-Bronze-CornerBottomLeft')
-    blc:SetPoint('BOTTOMLEFT', -13, -8)
-
-    local brc = ns.BottomRightCorner
-    bronze(brc, 'UI-Frame-Bronze-CornerBottomRight')
-    brc:SetPoint('BOTTOMRIGHT', 2, -8)
-
-    local te = ns.TopEdge
-    bronze(te, '_UI-Frame-Bronze-EdgeTop')
-    te:SetPoint('TOPLEFT', tlc, 'TOPRIGHT', 0, 0)
-    te:SetPoint('TOPRIGHT', trc, 'TOPLEFT', 0, 0)
-
-    local be = ns.BottomEdge
-    bronze(be, '_UI-Frame-Bronze-EdgeBottom')
-    be:SetPoint('BOTTOMLEFT', blc, 'BOTTOMRIGHT', 0, 0)
-    be:SetPoint('BOTTOMRIGHT', brc, 'BOTTOMLEFT', 0, 0)
-
-    local le = ns.LeftEdge
-    bronze(le, '!UI-Frame-Bronze-EdgeLeft')
-    le:SetPoint('TOPLEFT', tlc, 'BOTTOMLEFT', 0, 0)
-    le:SetPoint('BOTTOMLEFT', blc, 'TOPLEFT', 0, 0)
-
-    local re = ns.RightEdge
-    bronze(re, '!UI-Frame-Bronze-EdgeRight')
-    re:SetPoint('TOPRIGHT', trc, 'BOTTOMRIGHT', 0, 0)
-    re:SetPoint('BOTTOMRIGHT', brc, 'TOPRIGHT', 0, 0)
+    -- The bronze chrome every window wears: the shared layout itself, so its pieces and offsets
+    -- live in one place (nineslice.lua).
+    DragonUI_NineSlice.ApplyLayout(frame, DragonUI_NineSlice.GetLayout('NoPortraitFrameTemplate'))
 
     local closeBtn = frame.ClosePanelButton or _G[frame:GetName() .. 'CloseButton']
     if closeBtn then
