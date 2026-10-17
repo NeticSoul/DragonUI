@@ -73,6 +73,9 @@
     <!-- Item Level on gear icons -->
     <Script file="itemlevel.lua"/>
 
+    <!-- Per-character bag, bank and equipped counts in item tooltips -->
+    <Script file="itemownership.lua"/>
+
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>
 
