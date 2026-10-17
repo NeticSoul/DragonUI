@@ -40,7 +40,7 @@ local WINDOWS = {
         "WorldMap\\squarebuttons", "WorldMap\\trackingborder", "WorldMap\\zoomhighlight",
     },
     bagster = {
-        "Bags\\INV_Misc_Bag_08_round", "Bags\\bagsitemslot2x", "Coins\\coincopper", "Coins\\coingold",
+        "Bags\\bagsitemslot2x", "Coins\\coincopper", "Coins\\coingold",
         "Coins\\coinsilver", "Coins\\commoncoinbox", "Coins\\commoncurrencybox", "UI\\buttonhilight-square",
         "UI\\ui-background-rock", "UI\\ui-quickslot2",
     },

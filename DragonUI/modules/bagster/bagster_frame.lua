@@ -915,53 +915,19 @@ local function BagsterSkinFrame(frame)
         ns.Bg:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -3, 3)
     end
 
-    -- Tweak only the portrait's size/point: click button and hover glow follow it automatically
+    -- No portrait (no window carries one; C opens the character window). The icon button and its
+    -- texture stay, hidden, so the guild vault's emblem code still finds them; the search box
+    -- moves into the space the portrait took.
     local icon = _G[frame:GetName() .. 'IconButton']
     if icon then
-        local origIcon = icon.icon
-        local portrait = frame:CreateTexture(nil, 'BORDER')
-        portrait:SetSize(56, 56)
-        portrait:SetPoint('TOPLEFT', frame, 'TOPLEFT', -3, 6)
-        icon.icon = portrait
-        if origIcon then
-            origIcon:Hide()
-        end
-
-        icon:ClearAllPoints()
-        icon:SetPoint('TOPLEFT', portrait, 'TOPLEFT', 0, 0)
-        icon:SetPoint('BOTTOMRIGHT', portrait, 'BOTTOMRIGHT', 0, 0)
-
-        icon:EnableMouse(true)
-        -- Glow art is 54px of a 61px region, centered -2.5px; scale/shift so it matches the portrait
-        local hl = icon:GetHighlightTexture()
-        if hl then
-            local size = portrait:GetWidth() * 61 / 54
-            local shift = 2.5 * size / 61
-            hl:SetTexture(mod.CT.bagslot)
-            hl:SetTexCoord(358 / 512, 419 / 512, 1 / 128, 62 / 128)
-            hl:SetBlendMode('ADD')
-            hl:ClearAllPoints()
-            hl:SetSize(size, size)
-            hl:SetPoint('CENTER', portrait, 'CENTER', shift, -shift)
-        end
-        -- Click zoom: texcoord crop + center-kept 6px shrink keeps the circle inside the ring
-        local pSize = portrait:GetWidth()
-        local pPoint, pRel, pRelPoint, pX, pY = portrait:GetPoint(1)
-        icon:SetScript('OnMouseDown', function()
-            portrait:SetSize(pSize - 6, pSize - 6)
-            portrait:SetPoint(pPoint, pRel, pRelPoint, pX + 3, pY - 3)
-            portrait:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        end)
-        icon:SetScript('OnMouseUp', function()
-            portrait:SetSize(pSize, pSize)
-            portrait:SetPoint(pPoint, pRel, pRelPoint, pX, pY)
-            portrait:SetTexCoord(0, 1, 0, 1)
-        end)
-        icon:SetScript('OnClick', function()
-            ToggleCharacter('PaperDollFrame')
-        end)
+        icon:Hide()
+        if icon.icon then icon.icon:Hide() end
     end
-
+    local search = _G[frame:GetName() .. 'Search']
+    if search then
+        search:ClearAllPoints()
+        search:SetPoint('TOPLEFT', frame, 'TOPLEFT', 16, -31)
+    end
 
     -- CloseButton: reposition
     local close = _G[frame:GetName() .. 'CloseButton']

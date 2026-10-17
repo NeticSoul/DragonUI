@@ -80,9 +80,6 @@ local CT = {
     slot_bg           = BagsterAssets .. 'Bags\\bagsitemslot2x',
     slot_depress      = BagsterAssets .. 'UI\\ui-quickslot-depress',
     slot_highlight    = BagsterAssets .. 'UI\\buttonhilight-square',
-    frame_metal       = BagsterAssets .. 'UI\\uiframemetal2x',
-    frame_metal_h     = BagsterAssets .. 'UI\\uiframemetalhorizontal2x',
-    frame_metal_v     = BagsterAssets .. 'UI\\uiframemetalvertical2x',
     frame_bg          = BagsterAssets .. 'UI\\ui-background-rock',
     close_btn         = BagsterAssets .. 'UI\\redbutton2x',
     bagslot           = BagsterAssets .. 'Bags\\bagslots2x',
@@ -124,57 +121,48 @@ local function BagsterAddNineSlice(frame)
     bgTex:SetAlpha(0.8)
     ns.BgTex = bgTex
 
-    -- Corner variant with the big portrait circle baked in (bags_skin "large")
+    -- The professions window's bronze chrome, as every other window wears it (nineslice.lua's
+    -- NoPortraitFrameTemplate): same atlas pieces and offsets, edges flush between the corners.
+    local function bronze(texture, atlasName)
+        local e = addon.atlasinfo[atlasName]
+        texture:SetTexture(e[1])
+        texture:SetTexCoord(e[4], e[5], e[6], e[7])
+        texture:SetSize(e[2], e[3])
+    end
+
     local tlc = ns.TopLeftCorner
-    tlc:SetTexture(CT.frame_metal)
-    tlc:SetTexCoord(0.00195312, 0.294922, 0.298828, 0.591797)
-    tlc:SetSize(75, 75)
+    bronze(tlc, 'UI-Frame-Bronze-CornerTopLeft')
     tlc:SetPoint('TOPLEFT', -13, 16)
 
     local trc = ns.TopRightCorner
-    trc:SetTexture(CT.frame_metal)
-    trc:SetTexCoord(0.298828, 0.591797, 0.00195312, 0.294922)
-    trc:SetSize(75, 75)
-    trc:SetPoint('TOPRIGHT', 4, 16)
+    bronze(trc, 'UI-Frame-Bronze-CornerTopRight')
+    trc:SetPoint('TOPRIGHT', 2, 16)
 
-    -- Same -13 as the top-left corner or the LeftEdge connects two misaligned corners
     local blc = ns.BottomLeftCorner
-    blc:SetTexture(CT.frame_metal)
-    blc:SetTexCoord(0.298828, 0.423828, 0.298828, 0.423828)
-    blc:SetSize(32, 32)
-    blc:SetPoint('BOTTOMLEFT', -13, -3)
+    bronze(blc, 'UI-Frame-Bronze-CornerBottomLeft')
+    blc:SetPoint('BOTTOMLEFT', -13, -8)
 
     local brc = ns.BottomRightCorner
-    brc:SetTexture(CT.frame_metal)
-    brc:SetTexCoord(0.427734, 0.552734, 0.298828, 0.423828)
-    brc:SetSize(32, 32)
-    brc:SetPoint('BOTTOMRIGHT', 4, -3)
+    bronze(brc, 'UI-Frame-Bronze-CornerBottomRight')
+    brc:SetPoint('BOTTOMRIGHT', 2, -8)
 
     local te = ns.TopEdge
-    te:SetTexture(CT.frame_metal_h)
-    te:SetTexCoord(0, 1, 0.00390625, 0.589844)
-    te:SetSize(32, 75)
-    te:SetPoint('TOPLEFT', tlc, 'TOPRIGHT', -4, 0)
-    te:SetPoint('TOPRIGHT', trc, 'TOPLEFT', 4, 0)
+    bronze(te, '_UI-Frame-Bronze-EdgeTop')
+    te:SetPoint('TOPLEFT', tlc, 'TOPRIGHT', 0, 0)
+    te:SetPoint('TOPRIGHT', trc, 'TOPLEFT', 0, 0)
 
     local be = ns.BottomEdge
-    be:SetTexture(CT.frame_metal_h)
-    be:SetTexCoord(0, 0.5, 0.597656, 0.847656)
-    be:SetSize(16, 32)
-    be:SetPoint('TOPLEFT', blc, 'TOPRIGHT', 0, 0)
-    be:SetPoint('TOPRIGHT', brc, 'TOPLEFT', 0, 0)
+    bronze(be, '_UI-Frame-Bronze-EdgeBottom')
+    be:SetPoint('BOTTOMLEFT', blc, 'BOTTOMRIGHT', 0, 0)
+    be:SetPoint('BOTTOMRIGHT', brc, 'BOTTOMLEFT', 0, 0)
 
     local le = ns.LeftEdge
-    le:SetTexture(CT.frame_metal_v)
-    le:SetTexCoord(0.00195312, 0.294922, 0, 1)
-    le:SetSize(75, 16)
+    bronze(le, '!UI-Frame-Bronze-EdgeLeft')
     le:SetPoint('TOPLEFT', tlc, 'BOTTOMLEFT', 0, 0)
     le:SetPoint('BOTTOMLEFT', blc, 'TOPLEFT', 0, 0)
 
     local re = ns.RightEdge
-    re:SetTexture(CT.frame_metal_v)
-    re:SetTexCoord(0.298828, 0.591797, 0, 1)
-    re:SetSize(75, 16)
+    bronze(re, '!UI-Frame-Bronze-EdgeRight')
     re:SetPoint('TOPRIGHT', trc, 'BOTTOMRIGHT', 0, 0)
     re:SetPoint('BOTTOMRIGHT', brc, 'TOPRIGHT', 0, 0)
 

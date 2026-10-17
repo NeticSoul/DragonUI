@@ -661,10 +661,13 @@ local atlasinfo = {
 
 	-- The professions window's bronze chrome (ForeverUI's chrome-frame, same rects as its
 	-- ui-frame-metal-* entries). Every no-portrait window wears it so they all match that window.
-	['UI-Frame-Bronze-CornerTopLeft'] = { rui_Bronze, 95, 95, 466/1024, 656/1024, 268/512, 458/512 },
-	['UI-Frame-Bronze-CornerTopRight'] = { rui_Bronze, 95, 95, 664/1024, 854/1024, 268/512, 458/512 },
-	['UI-Frame-Bronze-CornerBottomLeft'] = { rui_Bronze, 95, 100, 664/1024, 854/1024, 4/512, 204/512 },
-	['UI-Frame-Bronze-CornerBottomRight'] = { rui_Bronze, 95, 100, 4/1024, 194/1024, 268/512, 468/512 },
+	-- Corners cropped to their bevel (top 48 of 95, bottom 40 of 100) and the stretched side edges
+	-- fill the rest: uncropped, a short window (one-row bag, loot) had the bottom corners' side rails
+	-- poking up past its top bevel.
+	['UI-Frame-Bronze-CornerTopLeft'] = { rui_Bronze, 95, 48, 466/1024, 656/1024, 268/512, 364/512 },
+	['UI-Frame-Bronze-CornerTopRight'] = { rui_Bronze, 95, 48, 664/1024, 854/1024, 268/512, 364/512 },
+	['UI-Frame-Bronze-CornerBottomLeft'] = { rui_Bronze, 95, 40, 664/1024, 854/1024, 124/512, 204/512 },
+	['UI-Frame-Bronze-CornerBottomRight'] = { rui_Bronze, 95, 40, 4/1024, 194/1024, 388/512, 468/512 },
 	['_UI-Frame-Bronze-EdgeTop'] = { rui_Bronze, 128, 95, 202/1024, 458/1024, 268/512, 458/512 },
 	['_UI-Frame-Bronze-EdgeBottom'] = { rui_Bronze, 128, 100, 400/1024, 656/1024, 4/512, 204/512 },
 	['!UI-Frame-Bronze-EdgeLeft'] = { rui_Bronze, 95, 128, 4/1024, 194/1024, 4/512, 260/512 },
