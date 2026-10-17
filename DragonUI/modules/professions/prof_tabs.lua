@@ -12,8 +12,9 @@ P.Tabs = Tabs
 
 -- Forever sizes the tab to the art minus its 5 transparent rows (55 x 55) and centres the 55 x 60 art on it.
 local TAB_SIZE, TAB_GAP, FIRST_Y = 55, 2, -60
--- Ten tabs fit at the default scale; servers allowing every profession need up to fourteen.
-local FIT_TABS, MAX_TABS = 10, 14
+-- Ten tabs fit at the default scale; servers allowing every profession need up to fourteen, and
+-- another addon's tabs (P.Host) come on top.
+local FIT_TABS, MAX_TABS = 10, 18
 -- What Forever's 50 x 50 icon (4 left, texcoords 1/32 in) shows through common-sidetab-mask: a 45 x 44 hole at (2, 5.5).
 local ICON_X, ICON_Y, ICON_W, ICON_H = 2, -5.5, 45, 44
 local ICON_L, ICON_R, ICON_T, ICON_B = 0.096875, 0.940625, 0.0875, 0.9125
@@ -48,9 +49,12 @@ local function pressIcon(tab, down)
 end
 
 local function onClick(tab)
-    if not tab.prof then
+    if tab.host then
+        P.Host.ClickTab(tab.host)
+    elseif not tab.prof then
         P.Frame.ShowPage("overview")
     elseif isCurrent(tab.prof) then
+        P.Host.Notify("onCraftingTab", tab.prof)
         P.Frame.ShowPage("crafting")
     elseif InCombatLockdown() then
         UIErrorsFrame:AddMessage(ERR_NOT_IN_COMBAT, 1, 0.1, 0.1, 1)
@@ -123,10 +127,24 @@ local function newTab(i)
 end
 
 function Tabs.RefreshSelection()
-    local overview = P.Frame.page == "overview"
+    local page, Host = P.Frame.page, P.Host
+    -- A selected tab of another addon (its view of the open profession) stands in for the profession's.
+    local hostSelected = false
     for _, tab in ipairs(Tabs.buttons) do
-        local selected = tab:IsShown() and ((not tab.prof and overview) or (not overview and isCurrent(tab.prof)))
-        tab.selected:SetShownCompat(selected)
+        if tab:IsShown() and tab.host and Host.TabSelected(tab.host, page) then hostSelected = true end
+    end
+    for _, tab in ipairs(Tabs.buttons) do
+        local selected = false
+        if tab:IsShown() then
+            if tab.host then
+                selected = Host.TabSelected(tab.host, page)
+            elseif not tab.prof then
+                selected = page == "overview"
+            else
+                selected = page == "crafting" and not hostSelected and isCurrent(tab.prof)
+            end
+        end
+        tab.selected:SetShownCompat(selected and true or false)
     end
 end
 
@@ -138,11 +156,25 @@ function Tabs.Bind()
     end
     Tabs.pendingBind = false
     for i, tab in ipairs(Tabs.buttons) do
-        if tab:IsShown() and tab.prof and not isCurrent(tab.prof) then
-            Catchers.Bind(i, tab, tab.prof.craftSpell, {
+        local spell
+        if tab:IsShown() then
+            if tab.host then
+                spell = P.Host.TabSpell(tab.host)
+            elseif tab.prof and not isCurrent(tab.prof) then
+                spell = tab.prof.craftSpell
+            end
+        end
+        if spell then
+            local host = tab.host
+            Catchers.Bind(i, tab, spell, {
                 onEnter = function() setHover(tab, true) end,
                 onLeave = function() setHover(tab, false) end,
-                onDown = function(_, button) if button == "LeftButton" then pressIcon(tab, true) end end,
+                onDown = function(_, button)
+                    if button ~= "LeftButton" then return end
+                    pressIcon(tab, true)
+                    -- Before the cast, so what it opens can know why.
+                    if host and host.onDown then pcall(host.onDown) end
+                end,
                 onUp = function() pressIcon(tab, false) end,
             })
         else
@@ -155,21 +187,30 @@ function Tabs.Rebuild()
     local list = Prof.Tabs(Prof.Discover())
     Tabs.list = list
     local entries = { { label = TRADE_SKILLS, icon = P.Frame.OVERVIEW_ICON } }
+    local Host = P.Host
+    local function addHostTabs(where)
+        for _, spec in ipairs(Host.TabsAt(where)) do
+            if #entries >= MAX_TABS then break end
+            entries[#entries + 1] = { label = Host.TabLabel(spec), icon = Host.TabIcon(spec), host = spec }
+        end
+    end
+    addHostTabs("overview")
     for _, prof in ipairs(list) do
         if #entries >= MAX_TABS then break end
         entries[#entries + 1] = { label = prof.craftSpell, icon = prof.icon or Prof.IconFor(prof.entry), prof = prof }
     end
+    addHostTabs("professions")
     Tabs.count = #entries
     for i, e in ipairs(entries) do
         local tab = Tabs.buttons[i] or newTab(i)
-        tab.label, tab.prof = e.label, e.prof
+        tab.label, tab.prof, tab.host = e.label, e.prof, e.host
         tab.icon:SetTexture(e.icon)
         tab:SetFrameLevel(P.Frame.TopLevel())
         tab:Show()
     end
     for i = #entries + 1, #Tabs.buttons do
         Tabs.buttons[i]:Hide()
-        Tabs.buttons[i].prof = nil
+        Tabs.buttons[i].prof, Tabs.buttons[i].host = nil, nil
         if not InCombatLockdown() then Catchers.Unbind(i) end
     end
     Tabs.ApplyScale()

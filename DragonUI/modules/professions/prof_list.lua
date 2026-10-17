@@ -265,6 +265,8 @@ end
 
 function List.Refresh()
     if not List.frame or not TradeSkillFrame:IsShown() then return end
+    -- Another addon's list stands in for ours (P.Host).
+    if P.Host and P.Host.Replaces("list") then return end
     local data = layout(Model.Build(F.skillUpOnly, List.LocalSearch()))
     List.data = data
     -- Forever skips SkillUps while IsRuneforging(): runes are always 1/1, there is no skill to gain.
