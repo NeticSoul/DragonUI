@@ -9,6 +9,10 @@ local P = addon.Professions
 -- pages and side tabs. The window, its art, the rank bar, the profession tabs and the Overview
 -- stay ours. With no provider nothing here changes the window.
 --
+-- Any addon (provider or not) can also add a standalone page and its side tab, with
+-- standalone = true in the page's and the tab's spec: such a page is built with or without a
+-- provider and stays when the provider goes (Archaeology's research window, for one).
+--
 -- provider = {
 --     list(parent), card(parent), controls(parent), header(parent): optional builders returning a
 --         frame; each replaces our piece in that spot (list column, card form, create strip,
@@ -18,7 +22,7 @@ local P = addon.Professions
 --         the Overview's tab goes and the window opens on that page where it would open on the Overview.
 --     onShow(), onHide(), onPage(page), onCraftingTab(prof), onScale(scale): optional notifications.
 -- }
-local Host = { VERSION = 2, pages = {}, tabs = {}, parked = {}, regions = {}, nextCatcher = 500 }
+local Host = { VERSION = 3, pages = {}, tabs = {}, parked = {}, regions = {}, nextCatcher = 500 }
 P.Host = Host
 
 local function safe(fn, ...)
@@ -96,6 +100,7 @@ local CONTROLS = { "TradeSkillCreateButton", "TradeSkillCreateAllButton", "Trade
 local function buildPage(key)
     local page = Host.pages[key]
     if not page or page.frame or not P.Frame.built then return end
+    if not (Host.applied or page.spec.standalone) then return end
     local frame = safe(page.spec.build, P.Frame.scaler)
     if not frame then return end
     frame:ClearAllPoints()
@@ -160,21 +165,27 @@ function Host.Register(provider)
     return true
 end
 
--- Gives the window back: our pieces return, the provider's pages and tabs go.
+-- Gives the window back: our pieces return, the provider's pages and tabs go (standalone ones stay).
 function Host.Unregister(provider)
     if not provider or Host.provider ~= provider then return end
-    local onOverview = P.Frame.built and P.Frame.page == Host.OverviewPage()
+    local current = P.Frame.built and P.Frame.page
+    local onOverview = current and current == Host.OverviewPage()
     for _, frame in pairs(Host.regions) do frame:Hide() end
     wipe(Host.regions)
-    for _, page in pairs(Host.pages) do
-        if page.frame then page.frame:Hide() end
+    for key, page in pairs(Host.pages) do
+        if not page.spec.standalone then
+            if page.frame then page.frame:Hide() end
+            Host.pages[key] = nil
+        end
     end
-    wipe(Host.pages)
-    wipe(Host.tabs)
+    for i = #Host.tabs, 1, -1 do
+        if not Host.tabs[i].standalone then table.remove(Host.tabs, i) end
+    end
     unparkAll()
     Host.provider, Host.applied = nil, false
     if P.Frame.built then
-        P.Frame.ShowPage(onOverview and "overview" or "crafting")
+        local stays = current and Host.IsPage(current)
+        P.Frame.ShowPage(onOverview and "overview" or stays and current or "crafting")
         Host.RefreshTabs()
         if TradeSkillFrame:IsShown() then TradeSkillFrame_Update() end
     end
@@ -186,10 +197,12 @@ end
 
 -- Pages -------------------------------------------------------------------------------------------
 
--- spec = { build(parent) -> frame over the whole window, title (string or function), portrait (path) }
+-- spec = { build(parent) -> frame over the whole window, title (string or function), portrait (path),
+--          standalone = true for a page that doesn't belong to the provider }
 function Host.AddPage(key, spec)
-    Host.pages[key] = { spec = spec }
-    if Host.applied then buildPage(key) end
+    local old = Host.pages[key]
+    Host.pages[key] = { spec = spec, frame = old and old.frame }
+    buildPage(key)
 end
 
 function Host.IsPage(key)
@@ -211,6 +224,21 @@ end
 
 function Host.SetPage(key)
     if P.Frame.built then P.Frame.ShowPage(key) end
+end
+
+-- Opens the window on an added page, or switches it there; on that page already, closes it.
+-- It opens with no trade skill behind it, as the Overview does.
+function Host.TogglePage(key)
+    if not (Host.IsPage(key) and P.EnsureHost()) then return false end
+    local host = TradeSkillFrame
+    if host:IsShown() then
+        if P.Frame.page == key then HideUIPanel(host) else P.Frame.ShowPage(key) end
+        return true
+    end
+    P.Frame.openOnPage = key
+    ShowUIPanel(host)
+    P.Frame.openOnPage = nil
+    return true
 end
 
 function Host.PageHeader(key)
@@ -236,7 +264,7 @@ end
 -- spec = { key, label and icon (each a value or a function), after = "overview" | "professions",
 --          page = key it shows | spell (name or function: the spell to cast first, nil when none),
 --          onClick(spec) for a click that casts nothing, onDown() before a cast,
---          shown() and selected(page) optional }
+--          shown() and selected(page) optional, standalone = true to stay without the provider }
 function Host.AddTab(spec)
     for i, tab in ipairs(Host.tabs) do
         if tab.key == spec.key then
@@ -330,7 +358,11 @@ end
 
 Host.Catchers = P.Professions.Catchers
 
-P.On("Built", apply)
+-- Standalone pages are built with the window; the provider's (and the rest) when it registers.
+P.On("Built", function()
+    for key in pairs(Host.pages) do buildPage(key) end
+    apply()
+end)
 P.On("Show", function() notify("onShow") end)
 P.On("Hide", function() notify("onHide") end)
 P.On("Page", function(page) notify("onPage", page) end)
