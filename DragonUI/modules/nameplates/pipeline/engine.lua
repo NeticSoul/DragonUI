@@ -283,7 +283,7 @@ function E.SyncRetailStackingCVars()
         end
     end
 
-    if onlyTarget or (NP.config.IsRetailBehavior() and cfg.retailStackingEnabled == true) then
+    if NP.config.IsRetailBehavior() and cfg.retailStackingEnabled == true then
         if NP.module.savedNameplateAllowOverlap == nil then
             NP.module.savedNameplateAllowOverlap = GetCVar("nameplateAllowOverlap")
         end
