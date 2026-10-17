@@ -47,10 +47,12 @@ local WINDOWS = {
     addonmanager = { "ForeverUI\\chrome-dialog", "ForeverUI\\chrome-frame", "ForeverUI\\controls-basic" },
 }
 
--- DragonUI's own windows, there whatever modules are on: the options panel and editor mode.
+-- DragonUI's own windows, there whatever modules are on: the options panel and editor mode. Plus the
+-- bronze chrome and filigree inset trim every window (ours and the addons we skin) now wears.
 local ALWAYS = {
     "ForeverUI\\chrome-options", "ForeverUI\\controls-dropdown", "Editmode\\editmodeui",
     "Editmode\\editmodeuihighlightbackground", "Editmode\\editmodeuivertical",
+    "ForeverUI\\chrome-frame", "Professions\\ProfessionsUI",
 }
 
 addon:RegisterTextureWarmup(function()

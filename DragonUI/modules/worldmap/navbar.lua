@@ -357,8 +357,9 @@ function WM.BuildNavBar()
     bar.sheen:SetHeight(BAR_H)
     bar.sheen:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
 
-    -- Outset so the inset trim rings the bar from outside instead of biting into its own rim.
-    addon.CharacterPanel.DrawPaneBorder(rim, bar, RIM_OUTSET)
+    -- Outset so the inset trim rings the bar from outside instead of biting into its own rim. Thin:
+    -- the filigree's inner shadow would dim the breadcrumb buttons drawn under this rim.
+    addon.CharacterPanel.DrawPaneBorder(rim, bar, RIM_OUTSET, "thin")
 
     bar:SetScript("OnSizeChanged", relayout)
     bar:SetScript("OnShow", refresh)

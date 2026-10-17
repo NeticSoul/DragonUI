@@ -82,42 +82,45 @@ local layoutRegistry = {
 		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
-	-- Retail's ButtonFrameTemplateNoPortrait: PortraitFrameTemplate with the cutout corner swapped
-	-- for the plain one. Geometry is untouched because both carry the same 12px of left padding --
-	-- the -13 is what every left-side piece on this sheet needs, cutout or not.
+	-- The professions window's bronze chrome, which every no-portrait window wears so they all
+	-- match it. Offsets are that window's: they put the bronze rails within a unit of where the
+	-- steel PortraitFrameTemplate's sat, so title text, close buttons and grounds keep their places.
+	-- Edges run flush between the corners, stretched (the strips are uniform).
 	NoPortraitFrameTemplate = {
-		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopLeft", x = -13, y = 16},
-		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRight", x = 4, y = 16},
-		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -13, y = -3},
-		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
-		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = -4, y = 0, x1 = 4, y1 = 0},
-		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
-		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
-		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerTopLeft", x = -13, y = 16},
+		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerTopRight", x = 2, y = 16},
+		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerBottomLeft", x = -13, y = -8},
+		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerBottomRight", x = 2, y = -8},
+		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Bronze-EdgeTop", x = 0, y = 0, x1 = 0, y1 = 0},
+		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Bronze-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Bronze-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
+		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Bronze-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
-	-- NoPortraitFrameTemplate with the wide top-right corner for a maximize button beside close.
+	-- The bronze sheet has no wide top-right corner; its title band is deep enough that the
+	-- maximize button sits on it beside the close one, so this is the same frame.
 	NoPortraitFrameTemplateMinimizable = {
-		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopLeft", x = -13, y = 16},
-		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRightDouble", x = 4, y = 16},
-		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -13, y = -3},
-		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
-		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = -4, y = 0, x1 = 4, y1 = 0},
-		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
-		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
-		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerTopLeft", x = -13, y = 16},
+		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerTopRight", x = 2, y = 16},
+		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerBottomLeft", x = -13, y = -8},
+		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Bronze-CornerBottomRight", x = 2, y = -8},
+		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Bronze-EdgeTop", x = 0, y = 0, x1 = 0, y1 = 0},
+		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Bronze-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Bronze-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
+		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Bronze-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
-	-- Retail InsetFrameTemplate: thin inner gold trim around a recessed content area.
+	-- Inset trim in the professions style: the recipe card's filigree frame, pushed 2.5 out so its
+	-- rail lands on the inset's edge and its soft inner shadow falls on the content.
 	InsetFrameTemplate = {
-		TopLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerTopLeft" },
-		TopRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerTopRight" },
-		BottomLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerBotLeftCorner", y = -1 },
-		BottomRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerBotRight", y = -1 },
-		TopEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-InnerTopTile" },
-		BottomEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-InnerBotTile" },
-		LeftEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-InnerLeftTile" },
-		RightEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-InnerRightTile" },
+		TopLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-Filigree-CornerTopLeft", x = -2.5, y = 2.5 },
+		TopRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-Filigree-CornerTopRight", x = 2.5, y = 2.5 },
+		BottomLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-Filigree-CornerBottomLeft", x = -2.5, y = -2.5 },
+		BottomRightCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-Filigree-CornerBottomRight", x = 2.5, y = -2.5 },
+		TopEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-Filigree-EdgeTop" },
+		BottomEdge = { layer = "BORDER", subLevel = -5, atlas = "_UI-Frame-Filigree-EdgeBottom" },
+		LeftEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-Filigree-EdgeLeft" },
+		RightEdge = { layer = "BORDER", subLevel = -5, atlas = "!UI-Frame-Filigree-EdgeRight" },
 	},
 
 	-- What DialogBorderTemplate resolves to: retail frames a popup with this, NOT with the inset trim.
