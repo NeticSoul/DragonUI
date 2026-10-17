@@ -137,22 +137,12 @@ local function buildInset(window)
     return inset
 end
 
--- No masks in 3.3.5a: a bigger face would spill past the nine-slice ring.
-local function seatPortrait(window, face)
-    if not face then
-        return
-    end
-    face:ClearAllPoints()
-    face:SetPoint("TOPLEFT", window, "TOPLEFT", -2, 4)
-    face:SetSize(56, 56)
-end
-
 local function dressTitle(window, holder, label)
     if not holder or not label then
         return
     end
     holder:ClearAllPoints()
-    holder:SetPoint("TOPLEFT", window, "TOPLEFT", 60, -5)
+    holder:SetPoint("TOPLEFT", window, "TOPLEFT", 24, -5)
     holder:SetPoint("TOPRIGHT", window, "TOPRIGHT", -24, -5)
     holder:SetHeight(16)
 
@@ -169,9 +159,9 @@ local function dressWindow(stem)
     window:SetSize(WIDTH, HEIGHT)
     window:SetHitRectInsets(0, 0, 0, 0)
     nudgePanel(window)
-    applySlices(window, "PortraitFrameTemplate")
+    applySlices(window, "NoPortraitFrameTemplate")
     paintBody(window)
-    seatPortrait(window, _G[stem .. "FramePortrait"])
+    addon.HidePortrait(_G[stem .. "FramePortrait"])
     dressTitle(window, _G[stem .. "NpcNameFrame"], _G[stem .. "FrameNpcNameText"])
 
     local CP = addon.CharacterPanel

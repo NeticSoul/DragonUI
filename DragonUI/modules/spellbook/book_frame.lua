@@ -57,24 +57,19 @@ local function buildPaper(stage)
     art.wood:SetPoint("TOPRIGHT", stage, "TOPRIGHT", -8, -26)
 end
 
--- Metal frame, portrait and title -----------------------------------------------------------------
+-- Metal frame and title (no portrait: the title says which window it is) --------------------------
 
 local function buildChrome(root)
     local chrome = CreateFrame("Frame", nil, root)
     chrome:SetAllPoints(root)
     chrome:SetFrameLevel(Book.Level("chrome"))
-    DragonUI_NineSlice.ApplyLayout(chrome, DragonUI_NineSlice.GetLayout("PortraitFrameTemplateMinimizable"))
-
-    local portrait = chrome:CreateTexture(nil, "ARTWORK")
-    portrait:SetSize(57, 57)
-    portrait:SetPoint("TOPLEFT", root, "TOPLEFT", -3, 6)
-    portrait:SetTexture(addon._dir .. "ClassIcons\\" .. select(2, UnitClass("player")))
+    DragonUI_NineSlice.ApplyLayout(chrome, DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplateMinimizable"))
 
     local band = CreateFrame("Frame", nil, root)
     band:SetAllPoints(root)
     band:SetFrameLevel(Book.Level("title"))
     local title = band:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOPLEFT", root, "TOPLEFT", 58, -6)
+    title:SetPoint("TOPLEFT", root, "TOPLEFT", 24, -6)
     title:SetPoint("TOPRIGHT", root, "TOPRIGHT", -24, -6)
     title:SetJustifyH("CENTER")
     title:SetText(SPELLBOOK)

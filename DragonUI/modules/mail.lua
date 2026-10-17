@@ -17,7 +17,6 @@ local GetInboxHeaderInfo = GetInboxHeaderInfo
 local GetInboxItem = GetInboxItem
 local GetInboxText = GetInboxText
 local GetSendMailItem = GetSendMailItem
-local SetPortraitToTexture = SetPortraitToTexture
 local TakeInboxMoney = TakeInboxMoney
 local TakeInboxItem = TakeInboxItem
 local GetContainerNumFreeSlots = GetContainerNumFreeSlots
@@ -51,8 +50,6 @@ local ROCK = DIR .. "UI\\ui-background-rock"
 local MARBLE = DIR .. "UI\\ui-background-marble"
 local INBOX_BG = DIR .. "Mail\\ui-mailframebg"
 local ICON_BORDER = DIR .. "Mail\\whiteiconframe"
-local MAIL_ICON = "Interface\\MailFrame\\Mail-Icon"
-local MAIL_ICON_HD = DIR .. "Mail\\mail-icon"
 local COINBOX = DIR .. "Coins\\commoncoinbox"
 local TAB_TEX = DIR .. "UI\\uiframetabs"
 
@@ -176,19 +173,11 @@ local function findMailIcon(window)
     end
 end
 
--- Where retail's CircleMask shows the portrait (62x62 at -5,7 inset 2,0,-2,4), under the OVERLAY ring.
-local function seatPortrait(window, icon)
-    if not icon then return end
-    icon:ClearAllPoints()
-    icon:SetPoint("TOPLEFT", window, "TOPLEFT", -3, 7)
-    icon:SetSize(58, 58)
-    icon:SetDrawLayer("ARTWORK")
-end
 
 local function dressTitle(window, label)
     if not label then return end
     label:ClearAllPoints()
-    label:SetPoint("TOPLEFT", window, "TOPLEFT", 60, -5)
+    label:SetPoint("TOPLEFT", window, "TOPLEFT", 24, -5)
     label:SetPoint("TOPRIGHT", window, "TOPRIGHT", -24, -5)
     label:SetHeight(16)
     label:SetJustifyH("CENTER")
@@ -200,7 +189,7 @@ local function paintWindowChrome(window, closeBtn, insetBounds, portrait)
         window:SetHitRectInsets(0, 0, 0, 0)
     end
     nudgePanel(window)
-    seatPortrait(window, portrait)
+    addon.HidePortrait(portrait)
 
     local rock = window:CreateTexture(nil, "BACKGROUND")
     rock._duiOwned = true
@@ -219,7 +208,7 @@ local function paintWindowChrome(window, closeBtn, insetBounds, portrait)
     streaks:SetPoint("BOTTOMRIGHT", window, "TOPRIGHT", -2, -64)
     window._duiStreaks = streaks
 
-    applySlices(window, "PortraitFrameTemplate")
+    applySlices(window, "NoPortraitFrameTemplate")
 
     if closeBtn then
         dressCloseButton(closeBtn, window)
@@ -994,12 +983,7 @@ local function buildMailFrame()
 
     hideMailChromePieces()
 
-    -- Pre-rounded HD portrait; without that file, SetPortraitToTexture cuts the client's icon to a circle.
-    local mailIcon = findMailIcon(mailFrame)
-    if mailIcon and not mailIcon:SetTexture(MAIL_ICON_HD) and SetPortraitToTexture then
-        SetPortraitToTexture(mailIcon, MAIL_ICON)
-    end
-    local inset = paintWindowChrome(mailFrame, _G.InboxCloseButton, INSET_INBOX, mailIcon)
+    local inset = paintWindowChrome(mailFrame, _G.InboxCloseButton, INSET_INBOX, findMailIcon(mailFrame))
 
     local inbox = _G.InboxFrame
     if inbox then

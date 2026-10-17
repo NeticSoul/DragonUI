@@ -1212,7 +1212,7 @@ local defaults = {
             },
             characterpanel = {
                 enabled = true, -- Retail-style reskin of the Blizzard character window
-                portrait_style = "spec", -- Portrait art: "character" face, "class" icon or "spec" icon
+                portrait_style = "none", -- Portrait art: "none", "character" face, "class" icon or "spec" icon
                 class_level_text = true, -- Class-colored "Level X Race Class" line
                 dark_background = false, -- Tint the panel's stone grounds down; the cog toggles it
                 grey_model_backdrop = true, -- Desaturate and dim the race backdrop behind the model

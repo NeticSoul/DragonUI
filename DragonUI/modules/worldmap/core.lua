@@ -28,7 +28,6 @@ local WINDOWED_CANVAS_W = 697
 -- Kept clear of the action bars and the screen's right edge when maximized.
 local MAX_BOTTOM_MARGIN, MAX_RIGHT_MARGIN = 96, 24
 local MAP_REPLACERS = { "Mapster" }
-local PORTRAIT = "Interface\\QuestFrame\\UI-QuestLog-BookIcon"
 local ROCK = addon._dir .. "UI\\ui-background-rock"
 local BASE_LEVEL = 10
 
@@ -298,7 +297,8 @@ local function buildChrome()
     rock:SetVertTile(true)
     rock:SetAllPoints(ground)
 
-    DragonUI_NineSlice.ApplyLayout(border, DragonUI_NineSlice.GetLayout("PortraitFrameTemplateMinimizable"))
+    -- No portrait: the title says which window it is.
+    DragonUI_NineSlice.ApplyLayout(border, DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplateMinimizable"))
 
     -- Retail's TitleCanvasSpacerFrame: the band the breadcrumb lives in, stopping at the canvas.
     local spacer = CreateFrame("Frame", "DragonUIWorldMapSpacer", border)
@@ -313,13 +313,6 @@ local function buildChrome()
     separator:SetPoint("TOPLEFT", border, "TOPLEFT", WM.INSET_L, -(WM.SPACER_H - 4))
     separator:SetPoint("RIGHT", spacer, "RIGHT", 0, 0)
 
-    -- ARTWORK, under the OVERLAY corner whose ring frames it. Square art shrinks to clear the ring.
-    local portrait = border:CreateTexture(nil, "ARTWORK")
-    portrait:SetTexture(PORTRAIT)
-    portrait:SetSize(56, 56)
-    -- The book does not fill its own art, so it hangs low unless lifted inside the ring.
-    portrait:SetPoint("TOPLEFT", border, "TOPLEFT", -2, 7)
-
     local title = border:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", border, "TOP", 0, -5)
     title:SetText(L["Map & Quest Log"])
@@ -329,7 +322,7 @@ local function buildChrome()
     local titleBar = CreateFrame("Frame", "DragonUIWorldMapTitleBar", border)
     -- Over the spacer and the panel: at a shared level the spacer won, so only its right end dragged.
     titleBar:SetFrameLevel(BASE_LEVEL + 4)
-    titleBar:SetPoint("TOPLEFT", border, "TOPLEFT", 58, -1)
+    titleBar:SetPoint("TOPLEFT", border, "TOPLEFT", 24, -1)
     titleBar:SetPoint("TOPRIGHT", border, "TOPRIGHT", -52, -1)
     titleBar:SetHeight(20)
     titleBar:EnableMouse(true)

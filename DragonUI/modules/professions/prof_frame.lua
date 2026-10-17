@@ -17,11 +17,12 @@ local function ForeverAtlas()
     return addon.ForeverAtlas
 end
 
+-- No portrait: the title says which window it is, so the top-left is the plain metal corner (the
+-- same 95px piece as the portrait one, kept at its -13 so the left edge still lines up).
 local function chromeLayout()
-    ForeverAtlas()["dragonui-professions-portraitcorner"] = P.Atlas["portrait-corner"]
     return {
         corners = {
-            TopLeft = { "dragonui-professions-portraitcorner", -13, 16 },
+            TopLeft = { "ui-frame-metal-cornertopleft", -13, 16 },
             TopRight = { "ui-frame-metal-cornertopright", 2, 16 },
             BottomLeft = { "ui-frame-metal-cornerbottomleft", -13, -8 },
             BottomRight = { "ui-frame-metal-cornerbottomright", 2, -8 },
@@ -64,19 +65,8 @@ function Frame.SetTitle(text)
     if Frame.title then Frame.title:SetText(text or "") end
 end
 
--- SetPortraitToTexture re-renders the circle; every TradeSkillFrame_Update asks, so only a new icon pays for it.
-function Frame.SetPortrait(icon)
-    if not Frame.portrait then return end
-    if icon then
-        if icon ~= Frame.portraitIcon then
-            SetPortraitToTexture(Frame.portrait, icon)
-            Frame.portraitIcon = icon
-        end
-        Frame.portrait:Show()
-    else
-        Frame.portrait:Hide()
-    end
-end
+-- The window carries no portrait; the pages still name their icon, so this stays as a no-op for them.
+function Frame.SetPortrait() end
 
 function Frame.ApplyScale(scale)
     if not Frame.built then return end
@@ -137,12 +127,8 @@ function Frame.Build()
     win:SetSize(Frame.WIDTH, Frame.HEIGHT)
     Frame.win = win
 
-    -- Regions of the scaler draw under every child: page background, then the portrait under the corner ring.
+    -- Regions of the scaler draw under every child.
     Frame.bg = scaler:CreateTexture(nil, "BACKGROUND")
-    Frame.portrait = scaler:CreateTexture(nil, "BORDER")
-    -- 1 left of Forever's mask, on the ring's centre: the metal must hide the icon border SetPortraitToTexture keeps.
-    Frame.portrait:SetSize(58, 58)
-    Frame.portrait:SetPoint("TOPLEFT", win, "TOPLEFT", -4, 7)
 
     local level = scaler:GetFrameLevel()
     Frame.craft = CreateFrame("Frame", nil, scaler)
@@ -162,7 +148,7 @@ function Frame.Build()
 
     Frame.title = chrome:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     Frame.title:SetHeight(12)
-    Frame.title:SetPoint("TOPLEFT", win, "TOPLEFT", 58, -5)
+    Frame.title:SetPoint("TOPLEFT", win, "TOPLEFT", 24, -5)
     Frame.title:SetPoint("TOPRIGHT", win, "TOPRIGHT", -24, -5)
     Frame.title:SetJustifyH("CENTER")
 

@@ -280,24 +280,13 @@ local function ensureTitle(frame)
     local title = frame.Title
     if not title then
         title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        title:SetPoint("TOPLEFT", frame, "TOPLEFT", 60, -5)
+        title:SetPoint("TOPLEFT", frame, "TOPLEFT", 24, -5)
         title:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -24, -5)
         title:SetHeight(16)
         title:SetJustifyH("CENTER")
         frame.Title = title
     end
     title:SetText(titleText())
-end
-
--- No masks in 3.3.5a: a bigger face would spill past the nine-slice ring.
-local function seatPortrait(frame)
-    local face = _G.MerchantFramePortrait
-    if not face then
-        return
-    end
-    place(face, "TOPLEFT", frame, "TOPLEFT", -2, 4)
-    face:SetSize(56, 56)
-    face:SetDrawLayer("ARTWORK")
 end
 
 local function buildGrid(frame, level)
@@ -764,11 +753,11 @@ local function buildWindow()
     local window = _G.MerchantFrame
     local insetLevel = window:GetFrameLevel() + 1
 
-    applySlices(window, "PortraitFrameTemplate")
+    applySlices(window, "NoPortraitFrameTemplate")
     paintBody(window)
     addStreaks(window)
     ensureTitle(window)
-    seatPortrait(window)
+    addon.HidePortrait(_G.MerchantFramePortrait)
     -- Equal-level siblings stack by creation order, which is what keeps grid < band < purse.
     buildGrid(window, insetLevel)
     buildBand(window, insetLevel)
