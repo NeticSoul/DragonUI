@@ -79,6 +79,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 - 🖼️ HD textures for player frame (normal mode), target and focus name backgrounds. More HD assets coming in future updates.
 - 🌙 Dark Mode with three intensity presets and custom color picker.
 - ✨ Glow effects with separate combat and rest status controls and opacity slider.
+- 🟫 One window style everywhere, the professions window's: bronze frame, gold-cornered insets and warm brown grounds, on every DragonUI window, the bags and any addon that borrows DragonUI's layouts. `ui-background-rock` and `ui-background-marble` are recoloured in place, so after merging upstream run `python3 tools/recolour_grounds.py --check` (it says how to regenerate them).
 
 ### Inventory And Navigation
 

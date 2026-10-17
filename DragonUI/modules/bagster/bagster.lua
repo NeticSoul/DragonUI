@@ -80,9 +80,6 @@ local CT = {
     slot_bg           = BagsterAssets .. 'Bags\\bagsitemslot2x',
     slot_depress      = BagsterAssets .. 'UI\\ui-quickslot-depress',
     slot_highlight    = BagsterAssets .. 'UI\\buttonhilight-square',
-    frame_metal       = BagsterAssets .. 'UI\\uiframemetal2x',
-    frame_metal_h     = BagsterAssets .. 'UI\\uiframemetalhorizontal2x',
-    frame_metal_v     = BagsterAssets .. 'UI\\uiframemetalvertical2x',
     frame_bg          = BagsterAssets .. 'UI\\ui-background-rock',
     close_btn         = BagsterAssets .. 'UI\\redbutton2x',
     bagslot           = BagsterAssets .. 'Bags\\bagslots2x',
@@ -103,15 +100,6 @@ local function BagsterAddNineSlice(frame)
     local ns = {}
     frame._BagSkin_NineSlice = ns
 
-    ns.TopLeftCorner     = frame:CreateTexture(nil, 'OVERLAY')
-    ns.TopRightCorner    = frame:CreateTexture(nil, 'OVERLAY')
-    ns.BottomLeftCorner  = frame:CreateTexture(nil, 'OVERLAY')
-    ns.BottomRightCorner = frame:CreateTexture(nil, 'OVERLAY')
-    ns.TopEdge           = frame:CreateTexture(nil, 'OVERLAY')
-    ns.BottomEdge        = frame:CreateTexture(nil, 'OVERLAY')
-    ns.LeftEdge          = frame:CreateTexture(nil, 'OVERLAY')
-    ns.RightEdge         = frame:CreateTexture(nil, 'OVERLAY')
-
     local bg = CreateFrame('Frame', nil, frame)
     bg:SetPoint('TOPLEFT', frame, 'TOPLEFT', 2, -18)
     bg:SetPoint('BOTTOMRIGHT', frame, 'BOTTOMRIGHT', -3, 3)
@@ -124,59 +112,9 @@ local function BagsterAddNineSlice(frame)
     bgTex:SetAlpha(0.8)
     ns.BgTex = bgTex
 
-    -- Corner variant with the big portrait circle baked in (bags_skin "large")
-    local tlc = ns.TopLeftCorner
-    tlc:SetTexture(CT.frame_metal)
-    tlc:SetTexCoord(0.00195312, 0.294922, 0.298828, 0.591797)
-    tlc:SetSize(75, 75)
-    tlc:SetPoint('TOPLEFT', -13, 16)
-
-    local trc = ns.TopRightCorner
-    trc:SetTexture(CT.frame_metal)
-    trc:SetTexCoord(0.298828, 0.591797, 0.00195312, 0.294922)
-    trc:SetSize(75, 75)
-    trc:SetPoint('TOPRIGHT', 4, 16)
-
-    -- Same -13 as the top-left corner or the LeftEdge connects two misaligned corners
-    local blc = ns.BottomLeftCorner
-    blc:SetTexture(CT.frame_metal)
-    blc:SetTexCoord(0.298828, 0.423828, 0.298828, 0.423828)
-    blc:SetSize(32, 32)
-    blc:SetPoint('BOTTOMLEFT', -13, -3)
-
-    local brc = ns.BottomRightCorner
-    brc:SetTexture(CT.frame_metal)
-    brc:SetTexCoord(0.427734, 0.552734, 0.298828, 0.423828)
-    brc:SetSize(32, 32)
-    brc:SetPoint('BOTTOMRIGHT', 4, -3)
-
-    local te = ns.TopEdge
-    te:SetTexture(CT.frame_metal_h)
-    te:SetTexCoord(0, 1, 0.00390625, 0.589844)
-    te:SetSize(32, 75)
-    te:SetPoint('TOPLEFT', tlc, 'TOPRIGHT', -4, 0)
-    te:SetPoint('TOPRIGHT', trc, 'TOPLEFT', 4, 0)
-
-    local be = ns.BottomEdge
-    be:SetTexture(CT.frame_metal_h)
-    be:SetTexCoord(0, 0.5, 0.597656, 0.847656)
-    be:SetSize(16, 32)
-    be:SetPoint('TOPLEFT', blc, 'TOPRIGHT', 0, 0)
-    be:SetPoint('TOPRIGHT', brc, 'TOPLEFT', 0, 0)
-
-    local le = ns.LeftEdge
-    le:SetTexture(CT.frame_metal_v)
-    le:SetTexCoord(0.00195312, 0.294922, 0, 1)
-    le:SetSize(75, 16)
-    le:SetPoint('TOPLEFT', tlc, 'BOTTOMLEFT', 0, 0)
-    le:SetPoint('BOTTOMLEFT', blc, 'TOPLEFT', 0, 0)
-
-    local re = ns.RightEdge
-    re:SetTexture(CT.frame_metal_v)
-    re:SetTexCoord(0.298828, 0.591797, 0, 1)
-    re:SetSize(75, 16)
-    re:SetPoint('TOPRIGHT', trc, 'BOTTOMRIGHT', 0, 0)
-    re:SetPoint('BOTTOMRIGHT', brc, 'TOPRIGHT', 0, 0)
+    -- The bronze chrome every window wears: the shared layout itself, so its pieces and offsets
+    -- live in one place (nineslice.lua).
+    DragonUI_NineSlice.ApplyLayout(frame, DragonUI_NineSlice.GetLayout('NoPortraitFrameTemplate'))
 
     local closeBtn = frame.ClosePanelButton or _G[frame:GetName() .. 'CloseButton']
     if closeBtn then

@@ -19,9 +19,6 @@ local assets = addon._dir
 local textures = {
     slot = assets .. "Bags\\bagsitemslot2x",
     bankSlot = assets .. "Bags\\bagsitembankslot2x",
-    metal = assets .. "UI\\uiframemetal2x",
-    metalHorizontal = assets .. "UI\\uiframemetalhorizontal2x",
-    metalVertical = assets .. "UI\\uiframemetalvertical2x",
     background = assets .. "UI\\ui-background-rock",
     close = assets .. "UI\\redbutton2x",
     pushed = assets .. "UI\\ui-quickslot-depress",
@@ -32,16 +29,14 @@ local textures = {
     coinGold = assets .. "Coins\\coingold",
     coinSilver = assets .. "Coins\\coinsilver",
     coinCopper = assets .. "Coins\\coincopper",
-    -- pre-masked (round alpha baked in offline, no runtime mask API exists in 3.3.5a)
-    backpackIcon = assets .. "Bags\\INV_Misc_Bag_08_round",
 }
 
 -- Native layout splits CONTAINER_WIDTH's 29px slack 17/12 left-right; this recenters the grid.
 local ITEM_GRID_X_NUDGE = -2.5
 local ITEM_GRID_Y_NUDGE = 3
 
--- Same clearances the corner ornament (portrait) and close button already reserve elsewhere.
-local TITLE_LEFT_CLEARANCE = 58
+-- Room the close button takes on the right, kept on the left too so the title stays centred.
+local TITLE_LEFT_CLEARANCE = 24
 local TITLE_RIGHT_CLEARANCE = 24
 
 local classicBackgrounds = {
@@ -84,7 +79,7 @@ local function ConfigureTexture(texture, path, width, height, left, right, top, 
     texture:SetTexCoord(left, right, top, bottom)
 end
 
-local function EnsureChrome(frame, key, portraitKind)
+local function EnsureChrome(frame, key)
     local chrome = frame[key]
     if chrome then
         return chrome
@@ -99,7 +94,6 @@ local function EnsureChrome(frame, key, portraitKind)
         bottom = frame:CreateTexture(nil, "OVERLAY"),
         left = frame:CreateTexture(nil, "OVERLAY"),
         right = frame:CreateTexture(nil, "OVERLAY"),
-        portraitKind = portraitKind,
     }
 
     local background = frame:CreateTexture(nil, "BACKGROUND")
@@ -112,129 +106,48 @@ local function EnsureChrome(frame, key, portraitKind)
     return chrome
 end
 
-local function LayoutChrome(frame, chrome, compact)
-    local leftOffset = chrome.portraitKind and -13 or -8
-    local topSize = compact and 52 or 75
-    local topHeight = compact and 52 or 75
-    local bottomSize = compact and 24 or 32
-    local topY = compact and 11 or 16
-    local bottomY = compact and -2 or -3
-    local rightOffset = compact and 3 or 4
+-- The bronze chrome every window wears: pieces and offsets read from the shared layout
+-- (nineslice.lua's NoPortraitFrameTemplate), scaled down for compact one-slot bags.
+local function SetBronze(texture, name, scale)
+    local e = addon.atlasinfo[name]
+    ConfigureTexture(texture, e[1], e[2] * scale, e[3] * scale, e[4], e[5], e[6], e[7])
+end
 
-    local topLeftTop = 0.00195312
-    local topLeftBottom = 0.294922
-    if chrome.portraitKind == "small" then
-        topLeftTop = 0.595703
-        topLeftBottom = 0.888672
-    elseif chrome.portraitKind == "large" then
-        topLeftTop = 0.298828
-        topLeftBottom = 0.591797
+local CORNERS = {
+    { "topLeft", "TopLeftCorner", "TOPLEFT" },
+    { "topRight", "TopRightCorner", "TOPRIGHT" },
+    { "bottomLeft", "BottomLeftCorner", "BOTTOMLEFT" },
+    { "bottomRight", "BottomRightCorner", "BOTTOMRIGHT" },
+}
+
+local function LayoutChrome(frame, chrome, compact)
+    local s = compact and 0.7 or 1
+    local layout = DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate")
+
+    for _, c in ipairs(CORNERS) do
+        local texture, spec, point = chrome[c[1]], layout[c[2]], c[3]
+        SetBronze(texture, spec.atlas, s)
+        texture:ClearAllPoints()
+        texture:SetPoint(point, frame, point, spec.x * s, spec.y * s)
     end
 
-    ConfigureTexture(
-        chrome.topLeft,
-        textures.metal,
-        topSize,
-        topHeight,
-        0.00195312,
-        0.294922,
-        topLeftTop,
-        topLeftBottom
-    )
-    chrome.topLeft:ClearAllPoints()
-    chrome.topLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", compact and -9 or leftOffset, topY)
-
-    ConfigureTexture(
-        chrome.topRight,
-        textures.metal,
-        topSize,
-        topHeight,
-        0.298828,
-        0.591797,
-        0.00195312,
-        0.294922
-    )
-    chrome.topRight:ClearAllPoints()
-    chrome.topRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", rightOffset, topY)
-
-    ConfigureTexture(
-        chrome.bottomLeft,
-        textures.metal,
-        bottomSize,
-        bottomSize,
-        0.298828,
-        0.423828,
-        0.298828,
-        0.423828
-    )
-    chrome.bottomLeft:ClearAllPoints()
-    chrome.bottomLeft:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", compact and -9 or leftOffset, bottomY)
-
-    ConfigureTexture(
-        chrome.bottomRight,
-        textures.metal,
-        bottomSize,
-        bottomSize,
-        0.427734,
-        0.552734,
-        0.298828,
-        0.423828
-    )
-    chrome.bottomRight:ClearAllPoints()
-    chrome.bottomRight:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", rightOffset, bottomY)
-
-    ConfigureTexture(
-        chrome.top,
-        textures.metalHorizontal,
-        32,
-        topHeight,
-        0,
-        1,
-        0.00390625,
-        0.589844
-    )
+    -- Edges run flush between the corners, stretched.
+    SetBronze(chrome.top, layout.TopEdge.atlas, s)
     chrome.top:ClearAllPoints()
     chrome.top:SetPoint("TOPLEFT", chrome.topLeft, "TOPRIGHT")
     chrome.top:SetPoint("TOPRIGHT", chrome.topRight, "TOPLEFT")
 
-    ConfigureTexture(
-        chrome.bottom,
-        textures.metalHorizontal,
-        16,
-        bottomSize,
-        0,
-        0.5,
-        0.597656,
-        0.847656
-    )
+    SetBronze(chrome.bottom, layout.BottomEdge.atlas, s)
     chrome.bottom:ClearAllPoints()
-    chrome.bottom:SetPoint("TOPLEFT", chrome.bottomLeft, "TOPRIGHT")
-    chrome.bottom:SetPoint("TOPRIGHT", chrome.bottomRight, "TOPLEFT")
+    chrome.bottom:SetPoint("BOTTOMLEFT", chrome.bottomLeft, "BOTTOMRIGHT")
+    chrome.bottom:SetPoint("BOTTOMRIGHT", chrome.bottomRight, "BOTTOMLEFT")
 
-    ConfigureTexture(
-        chrome.left,
-        textures.metalVertical,
-        topSize,
-        16,
-        0.00195312,
-        0.294922,
-        0,
-        1
-    )
+    SetBronze(chrome.left, layout.LeftEdge.atlas, s)
     chrome.left:ClearAllPoints()
     chrome.left:SetPoint("TOPLEFT", chrome.topLeft, "BOTTOMLEFT")
     chrome.left:SetPoint("BOTTOMLEFT", chrome.bottomLeft, "TOPLEFT")
 
-    ConfigureTexture(
-        chrome.right,
-        textures.metalVertical,
-        topSize,
-        16,
-        0.298828,
-        0.591797,
-        0,
-        1
-    )
+    SetBronze(chrome.right, layout.RightEdge.atlas, s)
     chrome.right:ClearAllPoints()
     chrome.right:SetPoint("TOPRIGHT", chrome.topRight, "BOTTOMRIGHT")
     chrome.right:SetPoint("BOTTOMRIGHT", chrome.bottomRight, "TOPRIGHT")
@@ -357,37 +270,21 @@ local function HideClassicBackgrounds(frame)
     end
 end
 
-local function RefreshContainerPortrait(frame, compact)
+-- No portrait (no window carries one). Its button stays as an invisible strip over the title band,
+-- so hovering the band still shows the bag's tooltip: the only label a compact bag has, as its
+-- title is hidden. Blizzard re-textures the portrait on every bag open, so this runs each refresh.
+local function DressContainerPortrait(frame, compact)
     local name = frame:GetName()
     local portrait = _G[name .. "Portrait"]
     local portraitButton = _G[name .. "PortraitButton"]
-    local bagID = frame:GetID()
-    local size = compact and 28 or 36
-    local x = compact and -2 or -4
-    local y = compact and 0 or 1
-
-    if portrait then
-        if bagID == KEYRING_CONTAINER then
-            SetPortraitToTexture(portrait, "Interface\\ContainerFrame\\KeyRing-Bag-Icon")
-        elseif bagID == BACKPACK_CONTAINER then
-            -- SetPortraitToTexture over-crops this edge-to-edge HD asset; masked offline instead.
-            portrait:SetTexture(textures.backpackIcon)
-            portrait:SetTexCoord(0, 1, 0, 1)
-        elseif type(bagID) == "number" then
-            SetBagPortraitTexture(portrait, bagID)
-        end
-
-        portrait:SetSize(size, size)
-        portrait:ClearAllPoints()
-        portrait:SetPoint("TOPLEFT", frame, "TOPLEFT", x, y)
-        portrait:SetDrawLayer("BORDER")
-        portrait:Show()
-    end
-
+    if portrait then portrait:Hide() end
     if portraitButton then
-        portraitButton:SetSize(size, size)
         portraitButton:ClearAllPoints()
-        portraitButton:SetPoint("TOPLEFT", frame, "TOPLEFT", x, y)
+        portraitButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, 0)
+        portraitButton:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", compact and -22 or -26, compact and -16 or -22)
+        local highlight = portraitButton:GetHighlightTexture()
+        if highlight then highlight:SetTexture(nil) end
+        portraitButton:Show()
     end
 end
 
@@ -426,7 +323,7 @@ local function PrepareContainerFrame(frame)
     end
 
     frame._dragonuiBagSkinPrepared = true
-    local chrome = EnsureChrome(frame, "_dragonuiBagChrome", "small")
+    local chrome = EnsureChrome(frame, "_dragonuiBagChrome")
     chrome.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     SkinCloseButton(_G[frame:GetName() .. "CloseButton"], false)
 
@@ -623,7 +520,7 @@ function BagSkinModule:RefreshContainerFrame(frame)
     HideClassicBackgrounds(frame)
     LayoutChrome(frame, chrome, compact)
     SkinCloseButton(_G[frame:GetName() .. "CloseButton"], compact)
-    RefreshContainerPortrait(frame, compact)
+    DressContainerPortrait(frame, compact)
     RefreshContainerTitle(frame, compact)
 
     if bagID == BACKPACK_CONTAINER then
