@@ -844,6 +844,24 @@ local function BuildEnhancementsTab(scroll)
         requiresReload = false,
     })
 
+    C:AddToggle(ttSection, {
+        label = LO["Automatic Equipment Comparison"],
+        desc = LO["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."],
+        getFunc = function()
+            return IsEnabled("equipmentcompare")
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("equipmentcompare").enabled = val
+        end,
+        callback = function()
+            if addon.RefreshEquipmentCompareSystem then
+                addon.RefreshEquipmentCompareSystem()
+            end
+        end,
+        disabled = function() return not IsEnabled("tooltip") end,
+        requiresReload = false,
+    })
+
     -- ====================================================================
     -- MERCHANT AUTO SERVICES
     -- ====================================================================

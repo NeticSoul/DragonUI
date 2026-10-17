@@ -1305,6 +1305,8 @@ L["Ask"] = "詢問"
 -- 拾取視窗
 L["Loot Window"] = "拾取視窗"
 L["Configure the DragonUI loot window."] = "設定 DragonUI 拾取視窗。"
+L["Automatic Equipment Comparison"] = "自動裝備對比"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "無需按住 Shift 即可將可裝備物品與目前裝備對比，包括從聊天中開啟的物品連結。按住 Ctrl 可暫時關閉對比。"
 L["Enable Loot Window"] = "啟用拾取視窗"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "將 DragonUI 外觀套用至暴雪拾取視窗。"
 L["Open at Cursor"] = "在游標位置開啟"

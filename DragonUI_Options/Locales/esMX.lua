@@ -282,6 +282,8 @@ L["Legendary"] = "Legendario"
 -- Ventana de botín
 L["Loot Window"] = "Ventana de botín"
 L["Configure the DragonUI loot window."] = "Configura la ventana de botín de DragonUI."
+L["Automatic Equipment Comparison"] = "Comparación automática de equipo"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Compara los objetos equipables con tu equipo sin mantener Shift, incluidos los enlaces abiertos desde el chat. Mantén Ctrl para suprimir la comparación."
 L["Enable Loot Window"] = "Activar ventana de botín"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica la apariencia de DragonUI a la ventana de botín de Blizzard."
 L["Open at Cursor"] = "Abrir bajo el cursor"

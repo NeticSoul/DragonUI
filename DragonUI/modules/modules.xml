@@ -73,6 +73,9 @@
     <!-- Item Level on gear icons -->
     <Script file="itemlevel.lua"/>
 
+    <!-- Automatic equipped-item comparison for normal and linked item tooltips -->
+    <Script file="equipmentcompare.lua"/>
+
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>
 

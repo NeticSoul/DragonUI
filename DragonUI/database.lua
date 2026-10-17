@@ -1277,6 +1277,9 @@ local defaults = {
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin
             },
+            equipmentcompare = {
+                enabled = false, -- Compare equippable items without holding Shift (Ctrl suppresses)
+            },
             loot_skin = {
                 enabled = true, -- Retail-style skin for the Blizzard loot window
                 animated_reflow = true, -- Compact collected loot with animated rows and panel resizing
