@@ -28,41 +28,54 @@ local EMPTY = {}
 -- =============================================================================
 
 local TEXTURE = addon._dir .. "NewLevelUp\\levelup"
+-- Retail's redrawn LevelUpUI pieces, truecolor: LevelUpTex's DXT copies band the gold into flat steps.
+local PIECES = addon._dir .. "NewLevelUp\\levelup_retail"
 local FONT = addon.Fonts.PRIMARY
 
+local BADGE_BOOK = { 2 / 512, 42 / 512, 2 / 64, 40 / 64 }
+local BADGE_LOCK = { 46 / 512, 76 / 512, 2 / 64, 37 / 64 }
+local BADGE_ARROW = { 80 / 512, 110 / 512, 2 / 64, 36 / 64 }
+local DOT = { 114 / 512, 135 / 512, 2 / 64, 24 / 64 }
+local LINE = { 2 / 512, 420 / 512, 44 / 64, 51 / 64 }
 -- Regions of Blizzard's LevelUpTex sheet (512x512).
-local BADGE_BOOK = { 0.64257813, 0.72070313, 0.03710938, 0.11132813 }
-local BADGE_LOCK = { 0.64257813, 0.70117188, 0.11523438, 0.18359375 }
-local BADGE_ARROW = { 0.72460938, 0.78320313, 0.03710938, 0.10351563 }
-local DOT = { 0.64257813, 0.68359375, 0.18750000, 0.23046875 }
-local LINE_LEFT, LINE_RIGHT, LINE_TOP, LINE_BOTTOM = 0.00195313, 0.81835938, 0.01953125, 0.03320313
-local BACK_LEFT, BACK_RIGHT, BACK_TOP, BACK_BOTTOM = 0.00195313, 0.55859375, 0.24609375, 0.38671875
-local LINE_CENTER, LINE_HALF = (LINE_LEFT + LINE_RIGHT) / 2, (LINE_RIGHT - LINE_LEFT) / 2
-local BACK_CENTER, BACK_HALF = (BACK_LEFT + BACK_RIGHT) / 2, (BACK_RIGHT - BACK_LEFT) / 2
+local SHADOW = { 0.00195313, 0.63867188, 0.03710938, 0.23828125 }
+local LIST_SHADOW = { 0.00195313, 0.55664063, 0.24218750, 0.82031250 }
 
-local WIDTH, HEIGHT, LINE_HEIGHT = 326, 72, 7
-local ICON_SIZE, ROW_HEIGHT, TEXT_GAP = 34, 42, 12
+-- WIDTH is the shadow's and the list's; the gold lines run wider, as in LevelUpDisplay.
+local WIDTH, HEIGHT, LINE_HEIGHT, BANNER_WIDTH = 326, 72, 7, 418
+local SHADOW_HEIGHT, SHADOW_ALPHA = 103, 0.6
+-- The list shadow fades to nothing at its foot, so the rows only cover its darker top.
+local LIST_SHADOW_SPAN = 0.75
+-- Retail's unlock layout (EventToastWithIconNormalTemplate, LevelUpSkillTemplate's 44 px rows + 1).
+local ICON_SIZE, BADGE_SIZE, ROW_HEIGHT, TEXT_GAP = 36, 22, 45, 10
 -- 8 rows hold 89% of level-ups whole; the rest fold by kind (Condense), so the list never scrolls.
 local MAX_TEXT_WIDTH, MIN_ROWS, MAX_ROWS = 245, 4, 8
 local LIST_TOP, LIST_BOTTOM = 8, 6
 local SCREEN_MARGIN = 140
-local TITLE_SIZE, TITLE_MIN, SUB_SIZE, SUB_MIN = 14, 9, 11, 8
+-- GameFontNormalLarge title over a GameFontNormal subtitle; long names shrink to fit.
+local TITLE_SIZE, TITLE_MIN, SUB_SIZE, SUB_MIN = 16, 11, 12, 9
 
--- The aura borders' default "detailed" buff ring, sized off a 45px icon as auraborders.lua does.
+-- Icons come with or without a baked bevel: crop it and frame them all with the aura borders' ring.
 local RING_TEXTURE = addon._dir .. "ActionBars\\uiactionbar2x_new"
 local RING_COORDS = { 359 / 512, 451 / 512, 649 / 2048, 739 / 2048 }
-local RING_SCALE = ICON_SIZE / 45 * 1.14
-local ICON_CROP = 0.06
+-- The ring's rounded corners can't cover a square's: the icon sits 1 px inside a darkened copy of itself.
+local RING_SCALE = ICON_SIZE / 45 * 1.1375
+local RING_X, RING_Y = -1.8, 1.8
+local ICON_CROP, ICON_INSET, ICON_BACK_SHADE = 0.06, 1, 0.3
 
-local TIME_EXPAND, TIME_TEXT_IN, TIME_FADE = 1.75, 1.85, 0.35
+-- Blizzard's LevelUpDisplay timeline; the delay lets the ding spell visual play first.
+local TIME_DELAY, TIME_LINES, SHADOW_DELAY, TIME_SHADOW, TIME_TEXT_IN = 1.5, 0.5, 0.25, 0.15, 0.7
+local TIME_TEXT_OUT, TIME_FADE, TIME_LIST_IN, TIME_ROW_IN = 0.5, 1.0, 0.5, 0.4
+-- One-at-a-time cards, timed as LevelUpSkillTemplate's showAnim.
+local CARD_IN, CARD_HOLD, CARD_OUT = 0.5, 1.8, 0.5
 local HOLD_COLLAPSED, HOLD_LIST, HOLD_PER_ROW, HOLD_LIST_MAX, HOLD_QUEUED = 4, 4, 1, 10, 5
 -- Levels in a row that get a banner each, as retail queues them; the rest share one banner.
 local MAX_SINGLE_BANNERS = 3
 local CHAT_DELAY = 0.5
 
-local COLOR_TITLE = { 0.96, 0.82, 0.45 }
-local COLOR_SUB = { 0.12, 0.95, 0.12 }
-local COLOR_SUB_PLACE = { 0.25, 0.78, 0.92 }
+-- NORMAL_FONT_COLOR and GREEN_FONT_COLOR.
+local COLOR_TITLE = { 1, 0.82, 0 }
+local COLOR_SUB = { 0.1, 1, 0.1 }
 
 -- =============================================================================
 -- UNLOCK DEFINITIONS
@@ -444,7 +457,9 @@ local measure
 local current
 local entries = EMPTY
 local expanded = false
-local animState, stateTimer = "IDLE", 0
+local animState, stateTimer, revealDelay = "IDLE", 0, 0
+local cascade
+local cardIndex = 0
 local queuedPet
 -- Player banners waiting their turn: { level, talents, unlocks } or, past the limit, { from, level, talents }.
 local playerQueue = {}
@@ -455,24 +470,20 @@ local function IsEditorActive()
     return addon.EditorMode and addon.EditorMode:IsActive()
 end
 
-local function EntryColor(entry)
-    return PLACE[entry.of or entry.kind] and COLOR_SUB_PLACE or COLOR_SUB
-end
-
 local function FitText(text, startSize, minSize)
     local size = startSize
-    measure:SetFont(FONT, size, "OUTLINE")
+    measure:SetFont(FONT, size)
     measure:SetText(text)
     while measure:GetStringWidth() > MAX_TEXT_WIDTH and size > minSize do
         size = size - 1
-        measure:SetFont(FONT, size, "OUTLINE")
+        measure:SetFont(FONT, size)
     end
     return size, measure:GetStringWidth()
 end
 
 local function GroupTitle(group)
     local items, n = group.items, #group.items
-    measure:SetFont(FONT, TITLE_MIN + 3, "OUTLINE")
+    measure:SetFont(FONT, TITLE_MIN + 3)
     for shown = n, 1, -1 do
         local names = {}
         for i = 1, shown do names[i] = items[i].name or items[i].text end
@@ -495,7 +506,8 @@ local function MeasureEntries(list)
         entry.titleSize, width = FitText(entry.text, TITLE_SIZE, TITLE_MIN)
         entry.sub = entry.sub or SUBTEXT[entry.kind] or SUBTEXT.feature
         entry.subSize, subWidth = FitText(entry.sub, SUB_SIZE, SUB_MIN)
-        widest = max(widest, width, subWidth)
+        entry.width = max(width, subWidth)
+        widest = max(widest, entry.width)
     end
     return widest
 end
@@ -503,7 +515,7 @@ end
 local function RowEnter(self)
     local entry = self.entry
     if not entry then return end
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetOwner(self.tooltipOwner or self, self.tooltipAnchor or "ANCHOR_RIGHT")
     if entry.items then
         GameTooltip:SetText(entry.sub, 1, 1, 1)
         for _, item in ipairs(entry.items) do
@@ -530,43 +542,71 @@ local function RowClick(self)
     end
 end
 
-local function CreateRow()
-    local row = CreateFrame("Button", nil, banner.list)
+local function CreateRow(parent)
+    local row = CreateFrame("Button", nil, parent)
     row:SetSize(WIDTH, ROW_HEIGHT)
     row:SetScript("OnEnter", RowEnter)
     row:SetScript("OnLeave", GameTooltip_Hide)
     row:SetScript("OnClick", RowClick)
 
-    local iconFrame = CreateFrame("Frame", nil, row)
-    iconFrame:SetSize(ICON_SIZE, ICON_SIZE)
-    row.iconFrame = iconFrame
+    row.iconBack = row:CreateTexture(nil, "BACKGROUND")
+    row.iconBack:SetSize(ICON_SIZE, ICON_SIZE)
+    row.iconBack:SetVertexColor(ICON_BACK_SHADE, ICON_BACK_SHADE, ICON_BACK_SHADE)
 
-    row.icon = iconFrame:CreateTexture(nil, "BORDER")
-    row.icon:SetAllPoints()
-    row.icon:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
+    row.icon = row:CreateTexture(nil, "BORDER")
+    row.icon:SetPoint("TOPLEFT", row.iconBack, "TOPLEFT", ICON_INSET, -ICON_INSET)
+    row.icon:SetPoint("BOTTOMRIGHT", row.iconBack, "BOTTOMRIGHT", -ICON_INSET, ICON_INSET)
+    for _, texture in ipairs({ row.iconBack, row.icon }) do
+        texture:SetTexCoord(ICON_CROP, 1 - ICON_CROP, ICON_CROP, 1 - ICON_CROP)
+    end
 
-    row.ring = iconFrame:CreateTexture(nil, "ARTWORK")
+    row.ring = row:CreateTexture(nil, "ARTWORK")
     row.ring:SetTexture(RING_TEXTURE)
     row.ring:SetTexCoord(unpack(RING_COORDS))
     row.ring:SetSize(46 * RING_SCALE, 45 * RING_SCALE)
-    row.ring:SetPoint("TOPLEFT", -1.4, 1.4)
+    row.ring:SetPoint("TOPLEFT", row.iconBack, "TOPLEFT", RING_X, RING_Y)
 
-    row.badge = iconFrame:CreateTexture(nil, "OVERLAY")
-    row.badge:SetSize(16, 18)
-    row.badge:SetPoint("BOTTOMLEFT", iconFrame, "BOTTOMLEFT", -5, -4)
-    row.badge:SetTexture(TEXTURE)
-
-    row.sub = row:CreateFontString(nil, "ARTWORK")
-    row.sub:SetWordWrap(false)
-    row.sub:SetJustifyH("LEFT")
-    row.sub:SetPoint("LEFT", iconFrame, "RIGHT", TEXT_GAP, 7)
+    row.badge = row:CreateTexture(nil, "OVERLAY")
+    row.badge:SetSize(BADGE_SIZE, BADGE_SIZE)
+    row.badge:SetPoint("CENTER", row.iconBack, "BOTTOMLEFT", 2, 2)
+    row.badge:SetTexture(PIECES)
 
     row.title = row:CreateFontString(nil, "ARTWORK")
-    row.title:SetWordWrap(false)
-    row.title:SetJustifyH("LEFT")
-    row.title:SetPoint("LEFT", iconFrame, "RIGHT", TEXT_GAP, -7)
+    row.title:SetPoint("BOTTOMLEFT", row.iconBack, "BOTTOMRIGHT", TEXT_GAP, 4)
     row.title:SetTextColor(COLOR_TITLE[1], COLOR_TITLE[2], COLOR_TITLE[3])
+
+    row.sub = row:CreateFontString(nil, "ARTWORK")
+    row.sub:SetPoint("BOTTOMLEFT", row.title, "TOPLEFT", 0, 1)
+    row.sub:SetTextColor(COLOR_SUB[1], COLOR_SUB[2], COLOR_SUB[3])
+
+    for _, text in ipairs({ row.title, row.sub }) do
+        text:SetWordWrap(false)
+        text:SetJustifyH("LEFT")
+        text:SetShadowOffset(1, -1)
+        text:SetShadowColor(0, 0, 0, 1)
+    end
     return row
+end
+
+local function FillRow(row, entry, left)
+    row.entry = entry
+    row.iconBack:ClearAllPoints()
+    row.iconBack:SetPoint("LEFT", row, "LEFT", left, -2)
+    row.icon:SetTexture(entry.icon)
+    row.iconBack:SetTexture(entry.icon)
+    -- Dark mode shades the ring exactly as it shades the aura and action-button rings.
+    local tint = addon.GetDarkModeTint and addon.GetDarkModeTint()
+    if tint then
+        row.ring:SetVertexColor(tint[1], tint[2], tint[3])
+    else
+        row.ring:SetVertexColor(1, 1, 1)
+    end
+    row.badge:SetTexCoord(unpack(BADGE[entry.of or entry.kind] or BADGE_LOCK))
+    row.sub:SetFont(FONT, entry.subSize)
+    row.sub:SetText(entry.sub)
+    row.title:SetFont(FONT, entry.titleSize)
+    row.title:SetText(entry.text)
+    row:Show()
 end
 
 local function RowsThatFit()
@@ -576,14 +616,33 @@ local function RowsThatFit()
     return min(MAX_ROWS, max(MIN_ROWS, fit))
 end
 
-local function DisplayList()
-    local fit = RowsThatFit()
+local function DisplayList(fit)
+    fit = fit or RowsThatFit()
     if entries.fit ~= fit then
         entries.fit = fit
         entries.display = Condense(entries, fit)
         entries.widest = MeasureEntries(entries.display)
     end
     return entries.display
+end
+
+local function Progress(t, duration)
+    return max(0, min(1, t / duration))
+end
+
+-- The drawer fades in, then its rows one after another, as LevelUpDisplaySide does.
+local function ApplyCascade()
+    local count = #(entries.display or EMPTY)
+    if not cascade then
+        banner.list:SetAlpha(1)
+        for i = 1, count do rows[i]:SetAlpha(1) end
+        return
+    end
+    banner.list:SetAlpha(Progress(cascade, TIME_LIST_IN))
+    for i = 1, count do
+        rows[i]:SetAlpha(Progress(cascade - TIME_LIST_IN - (i - 1) * TIME_ROW_IN, TIME_ROW_IN))
+    end
+    if cascade >= TIME_LIST_IN + count * TIME_ROW_IN then cascade = nil end
 end
 
 local function RefreshList()
@@ -595,40 +654,33 @@ local function RefreshList()
 
     local display = DisplayList()
     local left = max(12, floor((WIDTH - (ICON_SIZE + TEXT_GAP + entries.widest)) / 2))
-    -- Dark mode shades the ring exactly as it shades the aura and action-button rings.
-    local tint = addon.GetDarkModeTint and addon.GetDarkModeTint()
-    local ringR, ringG, ringB = 1, 1, 1
-    if tint then ringR, ringG, ringB = tint[1], tint[2], tint[3] end
     for i, entry in ipairs(display) do
-        local row = rows[i] or CreateRow()
+        local row = rows[i] or CreateRow(list)
         rows[i] = row
-        row.entry = entry
         row:ClearAllPoints()
         row:SetPoint("TOPLEFT", list, "TOPLEFT", 0, -LIST_TOP - (i - 1) * ROW_HEIGHT)
-        row.iconFrame:ClearAllPoints()
-        row.iconFrame:SetPoint("LEFT", row, "LEFT", left, 0)
-        row.icon:SetTexture(entry.icon)
-        row.ring:SetVertexColor(ringR, ringG, ringB)
-        row.badge:SetTexCoord(unpack(BADGE[entry.of or entry.kind] or BADGE_LOCK))
-
-        local color = EntryColor(entry)
-        row.sub:SetFont(FONT, entry.subSize, "OUTLINE")
-        row.sub:SetText(entry.sub)
-        row.sub:SetTextColor(color[1], color[2], color[3])
-        row.title:SetFont(FONT, entry.titleSize, "OUTLINE")
-        row.title:SetText(entry.text)
-        row:Show()
+        FillRow(row, entry, left)
     end
     for i = #display + 1, #rows do
         rows[i].entry = nil
         rows[i]:Hide()
     end
-    list:SetHeight(LIST_TOP + #display * ROW_HEIGHT + LIST_BOTTOM)
+    local height = LIST_TOP + #display * ROW_HEIGHT + LIST_BOTTOM
+    list:SetHeight(height)
+    list.back:SetHeight(height / LIST_SHADOW_SPAN)
+    ApplyCascade()
     list:Show()
 end
 
 local function SetExpanded(value)
+    local opening = value and not expanded
     expanded = value and #entries > 0
+    -- The editor's still preview has no OnUpdate to run the cascade.
+    if not expanded then
+        cascade = nil
+    elseif opening then
+        cascade = animState ~= "PREVIEW" and 0 or nil
+    end
     if expanded then
         banner.toggle.dot:SetVertexColor(1, 1, 1, 1)
     else
@@ -649,17 +701,41 @@ local function IsHovered()
     if IsMouselooking() then return false end
     return (banner.list:IsVisible() and banner.list:IsMouseOver())
         or (banner.toggle:IsVisible() and banner.toggle:IsMouseOver())
+        or (banner.card:IsVisible() and banner.card:IsMouseOver())
 end
 
-local function SetRevealed(progress)
-    local width = max(2, WIDTH * progress)
-    banner:SetWidth(width)
-    local back = BACK_HALF * progress
-    banner.art:SetTexCoord(BACK_CENTER - back, BACK_CENTER + back, BACK_TOP, BACK_BOTTOM)
-    local line = LINE_HALF * progress
+-- unlock_style: "banner" gives each unlock the banner in turn, as retail; "list" opens a drawer under it.
+local function ListMode()
+    return Setting("unlock_style") == "list"
+end
+
+local function CardMode()
+    return not ListMode() and #entries > 0
+end
+
+local function ShowCard(index)
+    local entry = DisplayList(MAX_ROWS)[index]
+    animState, stateTimer, cardIndex = "CARDS", 0, index
+    if not entry then
+        banner.card:Hide()
+        -- The level text faded before the first card, so the fade starts at its second step.
+        animState, stateTimer = "FADE", TIME_TEXT_OUT
+        return
+    end
+    FillRow(banner.card, entry, max(12, floor((WIDTH - (ICON_SIZE + TEXT_GAP + entry.width)) / 2)))
+    banner.card:SetAlpha(0)
+end
+
+-- Scaled like LevelUpDisplay's grow animations: lines from the centre, the shadow up from the bottom line.
+local function SetRevealed(lines, shadow)
     for _, texture in ipairs(banner.lines) do
-        texture:SetWidth(width)
-        texture:SetTexCoord(LINE_CENTER - line, LINE_CENTER + line, LINE_TOP, LINE_BOTTOM)
+        texture:SetWidth(max(1, BANNER_WIDTH * lines))
+    end
+    if shadow > 0 then
+        banner.art:SetHeight(SHADOW_HEIGHT * shadow)
+        banner.art:Show()
+    else
+        banner.art:Hide()
     end
 end
 
@@ -668,21 +744,27 @@ local ShowNext
 local function Finish()
     animState, stateTimer = "IDLE", 0
     current, entries = nil, EMPTY
-    expanded = false
+    expanded, cascade, cardIndex = false, nil, 0
     if banner then
         banner:SetScript("OnUpdate", nil)
         banner.list:Hide()
         banner.toggle:Hide()
+        banner.card:Hide()
         banner:Hide()
     end
 end
 
-local function EnterHold()
+local function Unfade()
     animState, stateTimer = "HOLD", 0
-    SetRevealed(1)
     banner:SetAlpha(1)
     banner.content:SetAlpha(1)
-    if #entries > 0 then
+    banner.list:SetAlpha(1)
+end
+
+local function EnterHold()
+    Unfade()
+    SetRevealed(1, 1)
+    if #entries > 0 and ListMode() then
         banner.toggle:Show()
         SetExpanded(expanded or Setting("auto_expand"))
     end
@@ -690,33 +772,61 @@ end
 
 local function OnUpdate(_, elapsed)
     stateTimer = stateTimer + elapsed
+    if cascade then
+        cascade = cascade + elapsed
+        ApplyCascade()
+    end
     if animState == "EXPAND" then
-        local p = min(1, stateTimer / TIME_EXPAND)
-        SetRevealed(1 - (1 - p) ^ 3)
-        banner:SetAlpha(min(1, p * 2))
-        banner.content:SetAlpha(min(1, stateTimer / TIME_TEXT_IN))
-        if stateTimer >= max(TIME_EXPAND, TIME_TEXT_IN) then EnterHold() end
+        local t = stateTimer - revealDelay
+        if t >= TIME_TEXT_IN then
+            EnterHold()
+        elseif t >= 0 then
+            banner:SetAlpha(1)
+            SetRevealed(Progress(t, TIME_LINES), Progress(t - SHADOW_DELAY, TIME_SHADOW))
+            banner.content:SetAlpha(Progress(t, TIME_TEXT_IN))
+        end
     elseif animState == "HOLD" then
         if IsHovered() then
             stateTimer = 0
         elseif stateTimer >= HoldTime() then
-            animState, stateTimer = "FADE", 0
+            if CardMode() then
+                animState, stateTimer, cardIndex = "CARDS", 0, 0
+            else
+                animState, stateTimer = "FADE", 0
+            end
+        end
+    elseif animState == "CARDS" then
+        if cardIndex == 0 then
+            banner.content:SetAlpha(1 - Progress(stateTimer, TIME_TEXT_OUT))
+            if stateTimer >= TIME_TEXT_OUT then ShowCard(1) end
+        else
+            -- The mouse keeps the card up, as retail pauses its toasts under the cursor.
+            if IsHovered() then stateTimer = min(stateTimer, CARD_IN) end
+            if stateTimer >= CARD_IN + CARD_HOLD + CARD_OUT then
+                ShowCard(cardIndex + 1)
+            else
+                banner.card:SetAlpha(min(Progress(stateTimer, CARD_IN),
+                    1 - Progress(stateTimer - CARD_IN - CARD_HOLD, CARD_OUT)))
+            end
         end
     elseif animState == "FADE" then
+        -- Text and list go first, then the lines and shadow, as LevelUpDisplay fades out.
         if IsHovered() then
-            animState, stateTimer = "HOLD", 0
-            banner:SetAlpha(1)
-        elseif stateTimer >= TIME_FADE then
+            Unfade()
+        elseif stateTimer >= TIME_TEXT_OUT + TIME_FADE then
             Finish()
             ShowNext()
         else
-            banner:SetAlpha(1 - stateTimer / TIME_FADE)
+            local text = 1 - Progress(stateTimer, TIME_TEXT_OUT)
+            banner.content:SetAlpha(text)
+            banner.list:SetAlpha(text)
+            banner:SetAlpha(1 - Progress(stateTimer - TIME_TEXT_OUT, TIME_FADE))
         end
     end
 end
 
 -- request = { kind = "player"|"pet", level, from, talents, unlocks, header, preview }
-local function Present(request)
+local function Present(request, fresh)
     Finish()
     current = request
     entries = request.unlocks
@@ -726,6 +836,9 @@ local function Present(request)
     banner.footer:SetFormattedText(L["Level %d"], request.level)
     banner.toggle:Hide()
     banner:Show()
+    -- Retail centres the block on the banner; measured, as this client may cap the 32 px level font.
+    local block = 3 + banner.header:GetStringHeight() + 3 + banner.footer:GetStringHeight()
+    banner.header:SetPoint("TOP", banner.content, "CENTER", 0, floor(block / 2) - 3)
 
     if request.preview then
         EnterHold()
@@ -734,49 +847,68 @@ local function Present(request)
         return
     end
     animState, stateTimer = "EXPAND", 0
-    SetRevealed(0)
+    -- Only a banner shown at the ding waits for its spell visual; one that queued has none left.
+    revealDelay = fresh and TIME_DELAY or 0
+    SetRevealed(0, 0)
     banner:SetAlpha(0)
     banner.content:SetAlpha(0)
     banner:SetScript("OnUpdate", OnUpdate)
 end
 
 local function CreateBanner()
-    anchor = addon.CreateUIFrame(WIDTH, HEIGHT, "LevelUpFrame")
+    anchor = addon.CreateUIFrame(BANNER_WIDTH, HEIGHT, "LevelUpFrame")
 
     banner = CreateFrame("Frame", nil, UIParent)
     banner:SetFrameStrata("HIGH")
     banner:SetPoint("CENTER", anchor, "CENTER", 0, 0)
-    banner:SetSize(WIDTH, HEIGHT)
+    banner:SetSize(BANNER_WIDTH, HEIGHT)
     banner:Hide()
 
     banner.art = banner:CreateTexture(nil, "BACKGROUND")
     banner.art:SetTexture(TEXTURE)
-    banner.art:SetPoint("TOPLEFT", 0, -6)
-    banner.art:SetPoint("BOTTOMRIGHT", 0, -1)
-    banner.art:SetAlpha(0.85)
+    banner.art:SetTexCoord(unpack(SHADOW))
+    banner.art:SetPoint("BOTTOM")
+    banner.art:SetSize(WIDTH, SHADOW_HEIGHT)
+    banner.art:SetAlpha(SHADOW_ALPHA)
 
     local topLine = banner:CreateTexture(nil, "BORDER")
     topLine:SetHeight(LINE_HEIGHT)
     topLine:SetPoint("TOP")
-    topLine:SetTexture(TEXTURE)
     local bottomLine = banner:CreateTexture(nil, "OVERLAY")
     bottomLine:SetHeight(LINE_HEIGHT)
     bottomLine:SetPoint("BOTTOM")
-    bottomLine:SetTexture(TEXTURE)
     banner.lines = { topLine, bottomLine }
+    for _, texture in ipairs(banner.lines) do
+        texture:SetTexture(PIECES)
+        texture:SetTexCoord(unpack(LINE))
+        texture:SetWidth(BANNER_WIDTH)
+    end
 
     banner.content = CreateFrame("Frame", nil, banner)
     banner.content:SetAllPoints()
 
+    -- Retail's SystemFont_Shadow_Large over GameFont_Gigantic; 3.3.5a has no Gigantic font object.
     banner.header = banner.content:CreateFontString(nil, "OVERLAY")
-    banner.header:SetFont(FONT, 14, "OUTLINE")
-    banner.header:SetPoint("CENTER", 0, 14)
-    banner.header:SetTextColor(237 / 255, 217 / 255, 150 / 255)
+    banner.header:SetFont(FONT, 16)
+    banner.header:SetTextColor(1, 1, 1)
 
     banner.footer = banner.content:CreateFontString(nil, "OVERLAY")
-    banner.footer:SetFont(FONT, 28, "OUTLINE")
-    banner.footer:SetPoint("CENTER", 0, -12)
-    banner.footer:SetTextColor(1, 215 / 255, 0)
+    banner.footer:SetFont(FONT, 32)
+    banner.footer:SetPoint("TOP", banner.header, "BOTTOM", 0, -3)
+    banner.footer:SetTextColor(1, 0.82, 0)
+
+    for _, text in ipairs({ banner.footer, banner.header }) do
+        text:SetShadowOffset(1, -1)
+        text:SetShadowColor(0, 0, 0, 1)
+    end
+
+    banner.card = CreateRow(banner)
+    banner.card:SetPoint("CENTER")
+    banner.card:Hide()
+    -- Retail hangs a toast's tooltip off its title, to the left (EventToastAnimationsMixin:MouseOverTitle).
+    banner.card.tooltipOwner = CreateFrame("Frame", nil, banner.card)
+    banner.card.tooltipOwner:SetAllPoints(banner.card.title)
+    banner.card.tooltipAnchor = "ANCHOR_LEFT"
 
     local list = CreateFrame("Frame", nil, banner)
     list:SetPoint("TOP", bottomLine, "BOTTOM")
@@ -785,27 +917,26 @@ local function CreateBanner()
     list:Hide()
     banner.list = list
 
-    local listBack = list:CreateTexture(nil, "BACKGROUND")
-    listBack:SetAllPoints()
-    listBack:SetTexture(TEXTURE)
-    listBack:SetTexCoord(BACK_LEFT, BACK_RIGHT, BACK_TOP, BACK_BOTTOM)
-    listBack:SetAlpha(0.85)
+    list.back = list:CreateTexture(nil, "BACKGROUND")
+    list.back:SetPoint("TOP")
+    list.back:SetWidth(WIDTH)
+    list.back:SetTexture(TEXTURE)
+    list.back:SetTexCoord(unpack(LIST_SHADOW))
+    list.back:SetAlpha(SHADOW_ALPHA)
 
     local toggle = CreateFrame("Button", nil, banner)
     toggle:SetSize(21, 22)
-    toggle:SetPoint("CENTER", bottomLine, "CENTER", 0, -3)
+    -- Whole pixels (centred, the 21x22 dot blurs); the bar's gold is its bottom row, so centre on that.
+    toggle:SetPoint("TOPLEFT", bottomLine, "BOTTOM", -10, 12)
     toggle:SetFrameLevel(banner:GetFrameLevel() + 10)
     toggle:Hide()
     toggle.dot = toggle:CreateTexture(nil, "ARTWORK")
     toggle.dot:SetAllPoints()
-    toggle.dot:SetTexture(TEXTURE)
+    toggle.dot:SetTexture(PIECES)
     toggle.dot:SetTexCoord(unpack(DOT))
     toggle:SetScript("OnClick", function()
         if animState == "HOLD" or animState == "FADE" or animState == "PREVIEW" then
-            if animState == "FADE" then
-                animState = "HOLD"
-                banner:SetAlpha(1)
-            end
+            if animState == "FADE" then Unfade() end
             stateTimer = 0
             SetExpanded(not expanded)
         end
@@ -842,11 +973,11 @@ local function PetRequest(level, name)
     }
 end
 
-ShowNext = function()
+ShowNext = function(fresh)
     if loading or IsEditorActive() then return end
     local nextPlayer = table.remove(playerQueue, 1)
     if nextPlayer then
-        Present(CharacterRequest(nextPlayer.level, nextPlayer.talents, nil, nextPlayer.unlocks, nextPlayer.from))
+        Present(CharacterRequest(nextPlayer.level, nextPlayer.talents, nil, nextPlayer.unlocks, nextPlayer.from), fresh)
         return
     end
     runLength = 0
@@ -885,7 +1016,7 @@ local function OnPlayerLevelUp(level, talents, unlocks)
         Finish()
     end
     QueuePlayerLevel(level, talents, unlocks)
-    if not current then ShowNext() end
+    if not current then ShowNext(true) end
 end
 
 -- =============================================================================
@@ -920,7 +1051,7 @@ local function OnPetLevel()
     if loading or IsEditorActive() or playerQueue[1] or (current and current.kind == "player") then
         queuedPet = request
     else
-        Present(request)
+        Present(request, true)
     end
 end
 
@@ -1082,7 +1213,7 @@ function addon.TestLevelUpEnhance(level)
         PrintToChat(nil, request.unlocks)
     end
     if current and not current.preview then Requeue(current) end
-    Present(request)
+    Present(request, true)
 end
 
 SLASH_DRAGONUI_TESTLEVEL1 = "/testlevel"
