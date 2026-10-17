@@ -629,7 +629,6 @@ local function ApplySimpleClamp(plateData)
     local plate = plateData.plate
     if not plate or not plate.SetClampedToScreen then return end
 
-    -- A gated plate is 1x1 on purpose: the clamp/inset math wants the real size, from the cached base.
     local want = PlateWantsClamp(plateData)
     plateData._clamped = want
 
@@ -650,11 +649,8 @@ local ANCHOR_TO_TOP = {
 local FROM_SCREEN_BOTTOM = { BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true }
 
 -- Clamp rect bottom `lift` under the screen edge: the clamp pushes the plate up exactly that far.
--- getHeight (the exact C++ method) is used because the plate's Lua GetHeight is overridden during the
--- animation phase, which would collapse the clamp rect and let a plate animate off screen.
 local function ApplyLiftClamp(plateData, lift, screenClamps)
     local plate = plateData.plate
-    local exGetH = getHeight or function(f) return f:GetHeight() end
     local point, _, relativePoint, _, y = plate:GetPoint(1)
     local toTop = point and ANCHOR_TO_TOP[point]
     -- y has to count up from the screen bottom; any other anchoring keeps the plain clamp.
@@ -662,14 +658,7 @@ local function ApplyLiftClamp(plateData, lift, screenClamps)
         ApplySimpleClamp(plateData)
         return
     end
-    local width, height
-    if plateData._hitRectInset then
-        -- A gated plate is 1x1; the clamp math still wants the real size, from the cached base.
-        width = plateData._clickboxBaseW or plate:GetWidth()
-        height = plateData._clickboxBaseH or exGetH(plate)
-    else
-        width, height = plate:GetSize()
-    end
+    local width, height = plate:GetSize()
     local top = y + height * toTop
     local topInset = screenClamps and PlateWantsClamp(plateData) and (NP.module._clampTopInset or 0) or -height
     plateData._clamped = true

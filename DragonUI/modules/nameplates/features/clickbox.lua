@@ -403,11 +403,6 @@ function NP.clickbox.RestorePlate(plateData)
         -- Route through the gate helper: it also clears the size/inset caches the engine reads.
         NP.layout.SetPlateClickable(plateData, true)
     end
-    if plate.SetClampedToScreen then
-        -- A clamp rect latched while animated (getHeight pitfall) survives forever otherwise.
-        plate:SetClampedToScreen(false)
-        plate:SetClampRectInsets(0, 0, 0, 0)
-    end
     NP.module._gatedLayoutPending = nil
     plateData._clickAreaPending = nil
     return true
