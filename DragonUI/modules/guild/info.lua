@@ -10,6 +10,8 @@ local L = GU.L
 
 local NEWS_ROW_H = 36
 local LEFT_W = 250
+-- EDIT is a Cataclysm global string; 3.3.5 has no such global, so the buttons came up blank.
+local EDIT_TEXT = EDIT or L("Edit")
 
 local pane, motdText, motdEdit, infoScroll, infoText, infoEdit, infoButton
 local newsInset, newsScroll, newsRows, newsEmpty = nil, nil, {}, nil
@@ -36,7 +38,7 @@ end
 
 local function setEditingInfo(on)
     editingInfo = on
-    infoButton:SetText(on and SAVE or EDIT)
+    infoButton:SetText(on and SAVE or EDIT_TEXT)
     if on then
         infoText:Hide()
         infoEdit:SetText(GetGuildInfoText() or "")
@@ -242,7 +244,7 @@ local function build(frame)
     motdText:SetPoint("BOTTOMRIGHT", motdInset, "BOTTOMRIGHT", -10, 8)
     motdText:SetJustifyH("LEFT")
     motdText:SetJustifyV("TOP")
-    motdEdit = GU.Button(motdInset, EDIT, 60)
+    motdEdit = GU.Button(motdInset, EDIT_TEXT, 60)
     motdEdit:SetHeight(18)
     motdEdit:SetPoint("TOPRIGHT", motdInset, "TOPRIGHT", -8, -6)
     motdEdit:SetScript("OnClick", function() StaticPopup_Show("SET_GUILDMOTD") end)
@@ -289,7 +291,7 @@ local function build(frame)
     end)
     infoEdit:Hide()
 
-    infoButton = GU.Button(infoInset, EDIT, 60)
+    infoButton = GU.Button(infoInset, EDIT_TEXT, 60)
     infoButton:SetHeight(18)
     infoButton:SetPoint("TOPRIGHT", infoInset, "TOPRIGHT", -8, -6)
     infoButton:SetScript("OnClick", function()
