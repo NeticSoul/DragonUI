@@ -6,56 +6,78 @@ local WM = addon.WorldMap
 
 local STOCK_ICON = "Interface\\WorldMap\\WorldMapPartyIcon"
 local CLASS_ICONS = "Interface\\TargetingFrame\\UI-Classes-Circles"
-local BLIPS = "Interface\\Minimap\\PartyRaidBlips"
--- The minimap's own class blips: an 8x4 grid in class-ID order, the raid variant in the lower half.
-local BLIP_CELL = {
-    WARRIOR = 0, PALADIN = 1, HUNTER = 2, ROGUE = 3, PRIEST = 4,
-    DEATHKNIGHT = 5, SHAMAN = 6, MAGE = 7, WARLOCK = 8, DRUID = 10,
-}
--- Class emblems blur at the stock pin size; on the world map theirs holds on screen, like the arrow.
-local WORLD_ICON_SIZE, BATTLEFIELD_ICON_SIZE = 17, 18
+local CIRCLE = addon._dir .. "WorldMap\\whitecircle-raidblips"
+local DOT_CIRCLE = addon._dir .. "WorldMap\\whitedotcircle-raidblips"
+-- party/raid are retail's GroupMembersDataProvider sizes; class emblems blur any smaller.
+local WORLD_SIZES = { blizzard = 12, icon = 17, party = 11, raid = 8.25 }
+local BATTLEFIELD_SIZES = { blizzard = 12, icon = 18, party = 8, raid = 8 }
+local PVP_INACTIVE = { r = 0.5, g = 0.2, b = 0.8 }
 local POLL = 0.2
 local NAME_HEALTH = "%s |cffb3b3b3%s|r"
 local MENU_STYLES = { { "icon", "Class Icons" }, { "color", "Class Colors" }, { "blizzard", "Default (Blizzard)" } }
 
--- Looks are { texture, left, right, top, bottom }, compared by identity to skip unchanged pins.
-local STOCK = { STOCK_ICON, 0, 1, 0, 1 }
-local ICONS, PARTY_BLIPS, RAID_BLIPS, NAME_COLORS = {}, {}, {}, {}
+-- Looks are { texture, left, right, top, bottom, size key }, compared by identity to skip unchanged pins.
+local STOCK = { STOCK_ICON, 0, 1, 0, 1, "blizzard" }
+-- Retail's circles: in a raid your own subgroup carries the centre dot and the rest draw smaller.
+local PARTY = { CIRCLE, 0, 1, 0, 1, "party" }
+local SUBGROUP = { DOT_CIRCLE, 0, 1, 0, 1, "party" }
+local RAID = { CIRCLE, 0, 1, 0, 1, "raid" }
+local ICONS, NAME_COLORS = {}, {}
 
 for class, c in pairs(CLASS_ICON_TCOORDS) do
-    ICONS[class] = { CLASS_ICONS, c[1], c[2], c[3], c[4] }
-end
-for class, cell in pairs(BLIP_CELL) do
-    local left, top = cell % 8 / 8, math.floor(cell / 8) / 4
-    PARTY_BLIPS[class] = { BLIPS, left, left + 0.125, top, top + 0.25 }
-    RAID_BLIPS[class] = { BLIPS, left, left + 0.125, top + 0.5, top + 0.75 }
+    ICONS[class] = { CLASS_ICONS, c[1], c[2], c[3], c[4], "icon" }
 end
 for class, c in pairs(RAID_CLASS_COLORS) do
     NAME_COLORS[class] = format("|cff%02x%02x%02x%%s|r", c.r * 255, c.g * 255, c.b * 255)
 end
 
 local pinStyle = "color"
-local pins, looks, owners, drivers, roster, sets = {}, {}, {}, {}, {}, {}
+local pins, partyPins, looks, owners, colors, drivers, roster, sets = {}, {}, {}, {}, {}, {}, {}, {}
 
-local function lookFor(who, unit)
+local function lookFor(pin, who)
     if pinStyle == "blizzard" or not who then return STOCK end
     local _, class = UnitClass(who)
     if pinStyle == "icon" then return ICONS[class] or STOCK end
-    local blips = unit and UnitInParty(unit) and PARTY_BLIPS or RAID_BLIPS
-    return blips[class] or STOCK
+    local color = RAID_CLASS_COLORS[class]
+    if not color then return STOCK end
+    if partyPins[pin] then return PARTY, color end
+    return pin.unit and UnitInParty(pin.unit) and SUBGROUP or RAID, color
 end
 
--- In a raid Blizzard re-shows a pin every frame, so an unchanged owner costs one compare.
+local function canvasFactor(set)
+    if not set.onCanvas then return 1 end
+    return WorldMapFrame:GetEffectiveScale() / WorldMapButton:GetEffectiveScale()
+end
+
+-- Size, not scale: Blizzard re-anchors these every frame in the button's own units.
+local function resize(pin, set, factor)
+    local size = set.sizes[(looks[pin] or STOCK)[6]] * factor
+    pin:SetSize(size, size)
+end
+
+-- Each WorldMapUnit_Update resets the colour to white or PvP-AFK purple; ours goes back on after it.
+local function tint(pin, who)
+    local c = who and PlayerIsPVPInactive(who) and PVP_INACTIVE or colors[pin]
+    if c then pin.icon:SetVertexColor(c.r, c.g, c.b) else pin.icon:SetVertexColor(1, 1, 1) end
+end
+
+-- In a raid Blizzard re-shows a pin every frame, so an unchanged owner only gets its colour back.
 local function dress(pin)
+    local set = pins[pin]
+    if not set then return end
     local who = pin.unit or pin.name
-    if not pins[pin] or owners[pin] == who then return end
-    owners[pin] = who
-    local look = lookFor(who, pin.unit)
-    if looks[pin] == look then return end
-    looks[pin] = look
-    -- Only texture and coords: Blizzard's own vertex colour carries the PvP-inactive tint.
-    pin.icon:SetTexture(look[1])
-    pin.icon:SetTexCoord(look[2], look[3], look[4], look[5])
+    if owners[pin] ~= who then
+        owners[pin] = who
+        local look, color = lookFor(pin, who)
+        colors[pin] = color
+        if looks[pin] ~= look then
+            looks[pin] = look
+            pin.icon:SetTexture(look[1])
+            pin.icon:SetTexCoord(look[2], look[3], look[4], look[5])
+            resize(pin, set, canvasFactor(set))
+        end
+    end
+    tint(pin, who)
 end
 
 -- Roster and style changes alter a look behind an unchanged owner, so they start over.
@@ -65,14 +87,18 @@ local function dressAll()
 end
 
 -- When a raid member leaves the map the later pins shift to other units with no fresh OnShow.
-local function watch(map, prefix, size, iconSize, onCanvas)
-    local set, raid = { size = size, iconSize = iconSize, onCanvas = onCanvas }, {}
-    for i = 1, MAX_PARTY_MEMBERS do set[#set + 1] = _G[prefix .. "Party" .. i] end
+local function watch(map, prefix, sizes, onCanvas)
+    local set, raid = { sizes = sizes, onCanvas = onCanvas }, {}
+    for i = 1, MAX_PARTY_MEMBERS do
+        local pin = _G[prefix .. "Party" .. i]
+        partyPins[pin] = true
+        set[#set + 1] = pin
+    end
     for i = 1, MAX_RAID_MEMBERS do
         raid[i] = _G[prefix .. "Raid" .. i]
         set[#set + 1] = raid[i]
     end
-    for i = 1, #set do pins[set[i]] = true end
+    for i = 1, #set do pins[set[i]] = set end
     sets[#sets + 1] = set
 
     local since = 0
@@ -129,22 +155,15 @@ end
 -- ============================================================================
 
 local function attachBattlefieldMap()
-    watch(BattlefieldMinimap, "BattlefieldMinimap", 12, BATTLEFIELD_ICON_SIZE, false)
+    watch(BattlefieldMinimap, "BattlefieldMinimap", BATTLEFIELD_SIZES, false)
     hooksecurefunc("BattlefieldMinimapUnit_OnEnter", function() decorateTooltip(GameTooltip) end)
 end
 
-local function pinSize(set, icons)
-    if not set.onCanvas then return icons and set.iconSize or set.size end
-    if not icons then return set.size / (WM.zoom or 1) end
-    return set.iconSize * WorldMapFrame:GetEffectiveScale() / WorldMapButton:GetEffectiveScale()
-end
-
--- Size, not scale: Blizzard re-anchors these every frame in the button's own units.
+-- The canvas scale carries map size and zoom; pins cancel both to hold one screen size, like retail.
 function WM.SizeGroupPins()
-    local icons = pinStyle == "icon"
     for _, set in ipairs(sets) do
-        local size = pinSize(set, icons)
-        for i = 1, #set do set[i]:SetSize(size, size) end
+        local factor = canvasFactor(set)
+        for i = 1, #set do resize(set[i], set, factor) end
     end
 end
 
@@ -177,7 +196,7 @@ function WM.AddGroupPinEntries(entries)
 end
 
 function WM.BuildGroupPins()
-    watch(WorldMapFrame, "WorldMap", 16, WORLD_ICON_SIZE, true)
+    watch(WorldMapFrame, "WorldMap", WORLD_SIZES, true)
     hooksecurefunc("WorldMapUnit_Update", dress)
     hooksecurefunc("WorldMapUnit_OnEnter", function() decorateTooltip(WorldMapTooltip) end)
 

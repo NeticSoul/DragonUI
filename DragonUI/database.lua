@@ -235,8 +235,9 @@ local defaults = {
         -- Level-up banner (the enable flag is modules.levelupenhance.enabled; position in widgets.levelupenhance)
         levelupenhance = {
             scale = 1,            -- Banner and list scale (0.6-1.6)
-            show_unlocks = true,  -- List what the level unlocks (abilities, features, dungeons, raids, battlegrounds)
+            show_unlocks = true,  -- Show what the level unlocks (abilities, features, dungeons, raids, battlegrounds)
             auto_expand = true,   -- Open the list on its own, as retail shows the unlocks without a click
+            unlock_style = "banner", -- banner: one at a time inside the banner, as retail | list: a list under it
             chat_unlocks = true,  -- Print the unlocks in the windows that get the level-up message
             pet_levelup = true,   -- Banner when a hunter pet levels up
         },

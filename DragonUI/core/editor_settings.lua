@@ -1761,9 +1761,17 @@ E.Register("personalresource", { settings = {
 
 E.Register("levelupenhance", { settings = {
     Slider(T("Scale"), "levelupenhance.scale", 0.6, 1.6, 0.05, R.levelUp, { resize = true }),
-    Check(T("List Unlocks"), "levelupenhance.show_unlocks", R.levelUp, { after = function() E.Rebuild() end }),
+    Check(T("Show Unlocks"), "levelupenhance.show_unlocks", R.levelUp, { after = function() E.Rebuild() end }),
+    Drop(T("Unlock Style"), "levelupenhance.unlock_style", {
+        { "banner", T("One at a Time") },
+        { "list", T("List") },
+    }, R.levelUp, {
+        disabled = function() return not GetDB("levelupenhance.show_unlocks") end,
+        after = function() E.Rebuild() end }),
     Check(T("Open the List Automatically"), "levelupenhance.auto_expand", R.levelUp, {
-        disabled = function() return not GetDB("levelupenhance.show_unlocks") end }),
+        disabled = function()
+            return not GetDB("levelupenhance.show_unlocks") or GetDB("levelupenhance.unlock_style") ~= "list"
+        end }),
     Check(T("Unlocks in Chat"), "levelupenhance.chat_unlocks", nil, {
         disabled = function() return not GetDB("levelupenhance.show_unlocks") end }),
     Check(T("Pet Level-Up Banner"), "levelupenhance.pet_levelup"),
