@@ -441,7 +441,6 @@ end
 function NP.layout.SetPlateClickable(plateData, clickable)
     if not plateData or not plateData.plate or not plateData.plate.SetHitRectInsets then return end
     local plate = plateData.plate
-    -- Cache before any shrink: layout reads plate:GetWidth() for visualRoot and would build it 1x1.
     if plateData._clickboxBaseW == nil and plate.GetSize then
         local w, h = plate:GetSize()
         if w and w > 1 and h and h > 1 then
@@ -449,17 +448,14 @@ function NP.layout.SetPlateClickable(plateData, clickable)
         end
     end
     local wantInset = not clickable
-    -- Logical flag on every call: drives the retail stacking exclusion, which must work in combat.
-    plateData._hitRectInset = wantInset or nil
-    -- A protected plate refuses geometry changes while the lockdown is up. shortcut: a plate gated
-    -- out mid-combat keeps its hit rect until combat ends, the re-apply below catches it right after.
+    if plateData._hitRectInset ~= (wantInset or nil) then
+        plateData._hitRectInset = wantInset or nil
+    end
     if InCombatLockdown() then
         NP.module._gatedLayoutPending = true
         return
     end
     NP.module._gatedLayoutPending = nil
-    -- Squared away first, so the ApplyPlateClickbox call below cannot re-enter this function and
-    -- recurse (it re-applies the hit rect itself).
     if plateData._hitRectApplied ~= wantInset then
         plateData._hitRectApplied = wantInset
         if wantInset then
@@ -468,13 +464,15 @@ function NP.layout.SetPlateClickable(plateData, clickable)
             plate:SetHitRectInsets(0, 0, 0, 0)
         end
     end
-    plate._dragonUIHiddenSize = wantInset or nil
-    if plate.SetAttribute then
-        -- The secure resize snippet runs sandboxed and cannot read frame fields; its guard is an attribute.
-        plate:SetAttribute("dragonUIHiddenSize", wantInset or nil)
+    if plate._dragonUIHiddenSize ~= (wantInset or nil) then
+        plate._dragonUIHiddenSize = wantInset or nil
     end
-    -- Resize order matters: SetHitRectInsets is relative to the frame, so insetting before the shrink
-    -- would leave a gap of the original size.
+    if plate.SetAttribute then
+        local current = plate:GetAttribute("dragonUIHiddenSize")
+        if current ~= (wantInset or nil) then
+            plate:SetAttribute("dragonUIHiddenSize", wantInset or nil)
+        end
+    end
     if wantInset then
         if not plateData._gatedSizeApplied then
             plateData._gatedSizeApplied = true
