@@ -267,6 +267,8 @@ L["Fire abilities on key press instead of key release."] = "Активирует
 L["Enable Item Quality Borders"] = "Включить рамки качества предметов"
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = "Показывать цветные рамки качества на предметах в сумках, окне персонажа, банке, у торговца и при осмотре."
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "Добавляет цветные рамки качества на предметы в сумках, окне персонажа, банке, у торговца и при осмотре: зелёный = необычный, синий = редкий, фиолетовый = эпический, оранжевый = легендарный."
+L["Show Repair Cost"] = "Показывать стоимость ремонта"
+L["Show the total repair cost of your equipped items in the character window."] = "Показывать общую стоимость ремонта снаряжения в окне персонажа."
 L["Minimum Quality"] = "Минимальное качество"
 L["Poor"] = "Низкое"
 L["Common"] = "Обычное"

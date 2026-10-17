@@ -274,6 +274,8 @@ L["Fire abilities on key press instead of key release."] = "키를 뗄 때가 �
 L["Enable Item Quality Borders"] = "아이템 품질 테두리 활성화"
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = "가방, 캐릭터 창, 은행, 상점 등의 아이템에 품질 색상 테두리를 표시합니다."
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "가방, 캐릭터 창, 은행, 상인, 살펴보기 창의 아이템에 품질별 빛나는 테두리를 표시합니다: 녹색 = 고급, 파란색 = 희귀, 보라색 = 영웅, 주황색 = 전설."
+L["Show Repair Cost"] = "수리 비용 표시"
+L["Show the total repair cost of your equipped items in the character window."] = "캐릭터 창에 장비 전체의 수리 비용 합계를 표시합니다."
 L["Minimum Quality"] = "최소 품질"
 L["Poor"] = "저급"
 L["Common"] = "일반"

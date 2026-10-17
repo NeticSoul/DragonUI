@@ -887,6 +887,8 @@ L["Color action button icons when target is out of range or ability is unusable.
 L["Enable Item Quality Borders"] = "Ativar bordas de qualidade dos itens"
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = "Mostra bordas coloridas por qualidade nas bolsas, no painel do personagem, no banco, no vendedor e ao inspecionar."
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "Adiciona bordas brilhantes coloridas por qualidade aos itens nas bolsas, no painel do personagem, no banco, no vendedor e ao inspecionar: verde = incomum, azul = raro, roxo = épico, laranja = lendário."
+L["Show Repair Cost"] = "Mostrar custo de reparo"
+L["Show the total repair cost of your equipped items in the character window."] = "Mostra o custo total de reparo do seu equipamento na janela de personagem."
 L["Minimum Quality"] = "Qualidade mínima"
 L["Poor"] = "Pobre"
 L["Common"] = "Comum"

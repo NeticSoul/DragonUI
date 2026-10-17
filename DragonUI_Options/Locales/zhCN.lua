@@ -266,6 +266,8 @@ L["Fire abilities on key press instead of key release."] = "按下按键时触�
 L["Enable Item Quality Borders"] = "启用物品品质边框"
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = "在背包、角色面板、银行、商人窗口和观察窗口中的物品上显示按品质着色的边框。"
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "为背包、角色面板、银行、商人和观察窗口中的物品添加按品质着色的发光边框：绿色=优秀，蓝色=精良，紫色=史诗，橙色=传说。"
+L["Show Repair Cost"] = "显示修理费用"
+L["Show the total repair cost of your equipped items in the character window."] = "在角色窗口中显示已装备物品的总修理费用。"
 L["Minimum Quality"] = "最低品质"
 L["Poor"] = "粗糙"
 L["Common"] = "普通"

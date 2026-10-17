@@ -265,6 +265,8 @@ L["Fire abilities on key press instead of key release."] = "Fähigkeiten beim Dr
 L["Enable Item Quality Borders"] = "Rahmen nach Gegenstandsqualität aktivieren"
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = "Rahmen nach Qualität bei Gegenständen in Taschen, Charakterfenster, Bank, Händler und Inspizieren anzeigen."
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "Fügt Leuchtrahmen nach Qualität in Taschen hinzu, Charakterfenster, Bank, Händler und Inspizieren: grün = ungewöhnlich, blau = selten, lila = episch, orange = legendär."
+L["Show Repair Cost"] = "Reparaturkosten anzeigen"
+L["Show the total repair cost of your equipped items in the character window."] = "Zeigt die gesamten Reparaturkosten deiner Ausrüstung im Charakterfenster."
 L["Minimum Quality"] = "Mindestqualität"
 L["Poor"] = "Schlecht"
 L["Common"] = "Gewöhnlich"

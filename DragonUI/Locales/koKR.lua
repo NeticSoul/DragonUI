@@ -413,6 +413,8 @@ L["Dark Mode"] = "다크 모드"
 L["Darken UI borders and chrome"] = "UI 테두리와 외곽을 어둡게"
 L["Item Quality"] = "아이템 등급"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "가방·캐릭터 창·은행·상인에서 아이템 테두리를 등급 색으로 표시"
+L["Repair Cost"] = "수리 비용"
+L["No Repairs Needed"] = "수리 불필요"
 -- Item Level
 L["Item Level"] = "아이템 레벨"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "가방, 캐릭터 창, 은행 등에서 장비 아이콘에 아이템 레벨을 표시합니다"

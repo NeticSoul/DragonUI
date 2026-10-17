@@ -1,6 +1,7 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
 local addon = select(2, ...)
+local L = addon.L
 
 -- ============================================================================
 -- ITEM QUALITY BORDERS MODULE FOR DRAGONUI
@@ -37,6 +38,11 @@ end
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("itemquality")
+end
+
+local function IsRepairCostEnabled()
+    local config = GetModuleConfig()
+    return config and config.show_repair_cost ~= false
 end
 
 -- ============================================================================
@@ -137,7 +143,7 @@ end
 
 -- Equipment slot names → global frame names
 -- GetInventorySlotInfo takes a NAME string, not a numeric ID
-local EQUIP_SLOTS = {
+EQUIP_SLOTS = {
     { name = "AmmoSlot",       frame = "CharacterAmmoSlot" },
     { name = "HeadSlot",       frame = "CharacterHeadSlot" },
     { name = "NeckSlot",       frame = "CharacterNeckSlot" },
@@ -162,7 +168,106 @@ local EQUIP_SLOTS = {
 
 -- Bag equipment slot IDs (20-23) — these live on the bag-bar and should NOT get
 -- quality overlays.  Only character-panel gear slots should be decorated.
-local BAG_EQUIP_SLOT_IDS = { [20] = true, [21] = true, [22] = true, [23] = true }
+BAG_EQUIP_SLOT_IDS = { [20] = true, [21] = true, [22] = true, [23] = true }
+
+-- ============================================================================
+-- TOTAL REPAIR COST
+-- ============================================================================
+-- SetInventoryItem returns the repair cost of one equipped item; summing those
+-- gives the same total the merchant would charge for the whole set.
+
+local function EnsureRepairTooltip()
+    if ItemQualityModule.frames.repairTooltip then
+        return ItemQualityModule.frames.repairTooltip
+    end
+
+    local tooltip = CreateFrame("GameTooltip", "DragonUIRepairTooltip", UIParent, "GameTooltipTemplate")
+    tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+    tooltip:SetAlpha(0)
+
+    ItemQualityModule.frames.repairTooltip = tooltip
+    return tooltip
+end
+
+local function EnsureRepairCostFrame()
+    if ItemQualityModule.frames.repairCostFrame then
+        return ItemQualityModule.frames.repairCostFrame
+    end
+
+    local parent = _G.PaperDollFrame or _G.CharacterFrame or UIParent
+    -- The HD client hides PlayerStatFrameLeftDropDown, so anchoring to it leaves the
+    -- label without a usable position; the model frame is always visible with the panel.
+    local model = _G.CharacterModelFrame2 or _G.CharacterModelFrame
+    local anchor = model or _G.PlayerStatFrameLeftDropDown or _G.PaperDollFrame or _G.CharacterFrame or UIParent
+    local frame = CreateFrame("Frame", "DragonUICharacterRepairFrame", parent)
+    frame:SetSize(160, 24)
+    -- The character panel sits on DIALOG; a plain MEDIUM frame would be drawn underneath it.
+    -- Follow the panel's strata and sit above its content.
+    frame:SetFrameStrata((parent and parent.GetFrameStrata and parent:GetFrameStrata()) or "MEDIUM")
+    frame:SetFrameLevel((parent and parent.GetFrameLevel and parent:GetFrameLevel() or 0) + 20)
+    -- The HD client hangs the weapon slots off the model frame's bottom edge; anchoring
+    -- to BOTTOMLEFT would cover the main hand slot, so the label sits 45 units higher.
+    frame:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", 10, 45)
+
+    local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 12)
+    label:SetJustifyH("LEFT")
+    local lFont, _, lFlags = label:GetFont()
+    label:SetFont(lFont, 10, lFlags)
+    label:SetText(L["Repair Cost"])
+    frame.label = label
+
+    local amount = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    amount:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -1)
+    amount:SetJustifyH("LEFT")
+    local aFont, _, aFlags = amount:GetFont()
+    amount:SetFont(aFont, 10, aFlags)
+    frame.amount = amount
+
+    ItemQualityModule.frames.repairCostFrame = frame
+    return frame
+end
+
+local function UpdateRepairCostDisplay()
+    local frame = EnsureRepairCostFrame()
+    if not frame then
+        return
+    end
+
+    if not IsModuleEnabled() or not IsRepairCostEnabled() then
+        frame:Hide()
+        return
+    end
+
+    local tooltip = EnsureRepairTooltip()
+    local totalRepairCost = 0
+
+    for _, slot in ipairs(EQUIP_SLOTS) do
+        local slotID = GetInventorySlotInfo(slot.name)
+        if slotID and not BAG_EQUIP_SLOT_IDS[slotID] then
+            local hasItem, _, repairCost = tooltip:SetInventoryItem("player", slotID)
+            if hasItem and repairCost and repairCost > 0 then
+                totalRepairCost = totalRepairCost + repairCost
+            end
+        end
+    end
+
+    if totalRepairCost > 0 then
+        if type(GetCoinTextureString) == "function" then
+            frame.amount:SetText(GetCoinTextureString(totalRepairCost))
+        else
+            frame.amount:SetText(tostring(totalRepairCost))
+        end
+    else
+        frame.amount:SetText(L["No Repairs Needed"])
+    end
+
+    if _G.CharacterFrame and _G.CharacterFrame:IsShown() then
+        frame:Show()
+    else
+        frame:Hide()
+    end
+end
 
 local function UpdateCharacterSlot(button)
     if not button then return end
@@ -192,6 +297,8 @@ local function UpdateAllCharacterSlots()
             UpdateCharacterSlot(button)
         end
     end
+
+    UpdateRepairCostDisplay()
 end
 
 -- ============================================================================
@@ -549,6 +656,22 @@ local function ApplyItemQualitySystem()
     -- Initial update
     addon:After(0.5, UpdateAllQualityBorders)
 
+    -- The repair total has to follow the panel, not just inventory events.
+    if not ItemQualityModule.hooks["CharacterFrameVisibility"] and CharacterFrame then
+        CharacterFrame:HookScript("OnShow", function()
+            if not IsModuleEnabled() then return end
+            addon:After(0.05, function()
+                UpdateAllCharacterSlots()
+            end)
+        end)
+        CharacterFrame:HookScript("OnHide", function()
+            if ItemQualityModule.frames.repairCostFrame then
+                ItemQualityModule.frames.repairCostFrame:Hide()
+            end
+        end)
+        ItemQualityModule.hooks["CharacterFrameVisibility"] = true
+    end
+
     ItemQualityModule.applied = true
     ItemQualityModule.initialized = true
 end
@@ -559,6 +682,10 @@ local function RestoreItemQualitySystem()
     -- Hide all tracked quality overlays
     for frame, overlay in pairs(ItemQualityModule.overlays) do
         if overlay then overlay:Hide() end
+    end
+
+    if ItemQualityModule.frames.repairCostFrame then
+        ItemQualityModule.frames.repairCostFrame:Hide()
     end
 
     ItemQualityModule.applied = false
@@ -598,6 +725,7 @@ eventFrame:RegisterEvent("MERCHANT_UPDATE")
 eventFrame:RegisterEvent("GUILDBANKFRAME_OPENED")
 eventFrame:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED")
 eventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+eventFrame:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
 
 -- Borders clear the moment a new player is requested and repaint once their reply lands
 addon:RegisterInspectDataCallback(function(ownerGUID)
@@ -662,6 +790,10 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         if InspectFrame and InspectFrame:IsShown() and InspectFrame.unit and arg1 == InspectFrame.unit then
             addon:After(0.2, UpdateAllInspectSlots)
         end
+
+    elseif event == "UPDATE_INVENTORY_DURABILITY" then
+        if not IsModuleEnabled() then return end
+        addon:After(0.2, UpdateAllCharacterSlots)
 
     elseif event == "MERCHANT_SHOW" or event == "MERCHANT_UPDATE" then
         if not IsModuleEnabled() then return end

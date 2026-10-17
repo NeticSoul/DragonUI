@@ -429,6 +429,8 @@ L["Dark Mode"] = "暗色模式"
 L["Darken UI borders and chrome"] = "加深界面边框与装饰"
 L["Item Quality"] = "物品品质"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "在背包、角色面板、银行和商人界面中按品质为物品边框着色"
+L["Repair Cost"] = "修理费用"
+L["No Repairs Needed"] = "无需修理"
 -- Item Level
 L["Item Level"] = "物品等级"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "在背包、角色面板、银行等界面的装备图标上显示物品等级"

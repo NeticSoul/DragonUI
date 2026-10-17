@@ -321,6 +321,8 @@ L["Fire abilities on key press instead of key release."] = true
 L["Enable Item Quality Borders"] = true
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = true
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = true
+L["Show Repair Cost"] = true
+L["Show the total repair cost of your equipped items in the character window."] = true
 L["Minimum Quality"] = true
 L["Poor"] = true
 L["Common"] = true
