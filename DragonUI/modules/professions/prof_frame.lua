@@ -199,7 +199,7 @@ end)
 
 P.On("Show", function()
     if not Frame.built then return end
-    Frame.ShowPage(Frame.openOnOverview and "overview" or "crafting")
+    Frame.ShowPage(Frame.openOnPage or (Frame.openOnOverview and "overview") or "crafting")
     addon.ForeverUI.EnforceLayering(Frame.scaler)
 end)
 
