@@ -14,7 +14,7 @@ local P = addon.Professions
 --         frame; each replaces our piece in that spot (list column, card form, create strip,
 --         right of the link button). Called again after an Unregister/Register: return the same frame.
 --     title(): optional, the window title on the crafting page (nil keeps Blizzard's).
---     onShow(), onHide(), onPage(page), onCraftingTab(prof): optional notifications.
+--     onShow(), onHide(), onPage(page), onCraftingTab(prof), onScale(scale): optional notifications.
 -- }
 local Host = { VERSION = 1, pages = {}, tabs = {}, parked = {}, regions = {}, nextCatcher = 500 }
 P.Host = Host
@@ -210,6 +210,11 @@ function Host.PageHeader(key)
     return title, page.spec.portrait
 end
 
+-- Reads the title and portrait again (after the provider's own view changed).
+function Host.RefreshHeader()
+    if P.Frame.built then P.Frame.RefreshHeader() end
+end
+
 function Host.Title()
     local provider = Host.provider
     return provider and provider.title and safe(provider.title) or nil
@@ -318,3 +323,4 @@ P.On("Built", apply)
 P.On("Show", function() notify("onShow") end)
 P.On("Hide", function() notify("onHide") end)
 P.On("Page", function(page) notify("onPage", page) end)
+P.On("Scale", function(scale) notify("onScale", scale) end)
