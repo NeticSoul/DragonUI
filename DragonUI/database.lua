@@ -1208,7 +1208,8 @@ local defaults = {
             },
             itemquality = {
                 enabled = true, -- Color item borders by quality in bags, character panel, bank, merchant
-                min_quality = 2 -- Minimum quality to show (2 = Uncommon/green)
+                min_quality = 2, -- Minimum quality to show (2 = Uncommon/green)
+                show_repair_cost = true -- Total repair cost of the equipped set in the character window
             },
             characterpanel = {
                 enabled = true, -- Retail-style reskin of the Blizzard character window

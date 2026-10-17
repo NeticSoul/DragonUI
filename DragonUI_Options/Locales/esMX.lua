@@ -271,6 +271,8 @@ L["Fire abilities on key press instead of key release."] = "Activa habilidades a
 L["Enable Item Quality Borders"] = "Activar Bordes de Calidad de Objetos"
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = "Mostrar bordes de color por calidad en objetos de bolsas, panel de personaje, banco, mercader y marco de inspección."
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "Añade bordes brillantes de calidad a objetos en bolsas, panel de personaje, banco, mercader y marco de inspección: verde = poco común, azul = raro, morado = épico, naranja = legendario."
+L["Show Repair Cost"] = "Mostrar coste de reparación"
+L["Show the total repair cost of your equipped items in the character window."] = "Muestra el coste total de reparación de tu equipo en la ventana de personaje."
 L["Minimum Quality"] = "Calidad Mínima"
 L["Poor"] = "Pobre"
 L["Common"] = "Común"

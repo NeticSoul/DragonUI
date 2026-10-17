@@ -415,6 +415,8 @@ L["Dark Mode"] = "Тёмный режим"
 L["Darken UI borders and chrome"] = "Затемнение рамок и элементов интерфейса"
 L["Item Quality"] = "Качество предметов"
 L["Color item borders by quality in bags, character panel, bank, and merchant"] = "Окрашивание рамок предметов по качеству в сумках, окне персонажа, банке и у торговца"
+L["Repair Cost"] = "Стоимость ремонта"
+L["No Repairs Needed"] = "Ремонт не требуется"
 -- Item Level
 L["Item Level"] = "Уровень предмета"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "Показывать уровень предмета на значках экипировки в сумках, окне персонажа, банке и других местах"

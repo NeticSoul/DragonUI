@@ -228,6 +228,22 @@ local function BuildEnhancementsTab(scroll)
         width = 200,
     })
 
+    C:AddToggle(iqSection, {
+        label = LO["Show Repair Cost"],
+        desc = LO["Show the total repair cost of your equipped items in the character window."],
+        getFunc = function()
+            return GetModuleField("itemquality", "show_repair_cost") ~= false
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("itemquality").show_repair_cost = val
+        end,
+        callback = function()
+            if addon.UpdateAllQualityBorders then addon.UpdateAllQualityBorders() end
+        end,
+        disabled = function() return not IsEnabled("itemquality") end,
+        requiresReload = false,
+    })
+
     -- ====================================================================
     -- ITEM LEVEL
     -- ====================================================================
