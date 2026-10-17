@@ -396,6 +396,27 @@ local function BuildEnhancementsTab(scroll)
     end
 
     -- ====================================================================
+    -- CHARACTER ITEM COUNTS
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local ioSection = C:AddSection(scroll, LO["Character Item Counts"])
+
+    C:AddToggle(ioSection, {
+        label = LO["Show Character Item Counts"],
+        desc = LO["Shows how many of the hovered item each of your characters on this realm holds, split into bags, bank and equipped."],
+        getFunc = function() return IsEnabled("itemownership") end,
+        setFunc = function(val)
+            EnsureModuleTable("itemownership").enabled = val
+            if val then
+                if addon.ApplyItemOwnershipSystem then addon.ApplyItemOwnershipSystem() end
+            else
+                if addon.RestoreItemOwnershipSystem then addon.RestoreItemOwnershipSystem() end
+            end
+        end,
+        requiresReload = false,
+    })
+
+    -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================
     C:AddSpacer(scroll)
