@@ -1159,6 +1159,7 @@ local defaults = {
                 opacityNonTarget = 0.5, -- default non-target opacity
                 opacityFullNoTarget = true, -- when no target exists, use full target opacity
                 opacityFullParty = false, -- always show party/raid member nameplates at full opacity
+                onlyTargetPlates = false, -- show only the target's hostile plate; in combat also hostile NPCs attacking the player; friendly plates are never gated
                 offsetX = 0, -- horizontal offset from the center of the screen
                 offsetY = 0, -- vertical offset from the center of the screen
                 clickboxWidthFactor = 1, -- width factor for the clickbox
