@@ -283,6 +283,23 @@ local function buildCard(inset)
     card.nextName:SetJustifyH("LEFT")
     card.nextLevel = inset:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     card.nextLevel:SetPoint("TOPLEFT", card.nextName, "BOTTOMLEFT", 0, -2)
+
+    -- Hovering the perk shows the same tooltip as its row on the Perks & Rewards tab.
+    local hover = CreateFrame("Frame", nil, inset)
+    hover:SetPoint("TOPLEFT", card.nextIcon, "TOPLEFT", 0, 0)
+    hover:SetPoint("BOTTOMLEFT", card.nextIcon, "BOTTOMLEFT", 0, 0)
+    hover:SetPoint("RIGHT", inset, "RIGHT", -10, 0)
+    hover:EnableMouse(true)
+    hover:SetScript("OnEnter", function(self)
+        local perk = card.nextPerk
+        if not perk then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText(perk.name, 1, 0.82, 0)
+        if perk.description then GameTooltip:AddLine(perk.description, 1, 1, 1, true) end
+        GameTooltip:Show()
+    end)
+    hover:SetScript("OnLeave", GameTooltip_Hide)
+    card.nextHover = hover
 end
 
 local function refreshCard()
@@ -299,7 +316,9 @@ local function refreshCard()
         region:SetShownCompat(levels)
     end
     local nextPerk = levels and gl.NextPerk and gl.NextPerk()
-    for _, region in ipairs({ card.nextHeading, card.nextHeading.rule, card.nextIcon, card.nextName, card.nextLevel }) do
+    card.nextPerk = nextPerk or nil
+    for _, region in ipairs({ card.nextHeading, card.nextHeading.rule, card.nextIcon, card.nextName, card.nextLevel,
+                              card.nextHover }) do
         region:SetShownCompat(nextPerk ~= nil)
     end
     if not levels then return end
