@@ -1122,6 +1122,18 @@ local function buildMailFrame()
 
         liftChildren(sendFrame)
 
+        -- AutoComplete_Update reparents the name list onto the To: box every keystroke, which drops it
+        -- into the window's strata level-tied with the lifted parchment, so it draws underneath.
+        if _G.AutoComplete_Update and not sendFrame._duiAutoCompleteHooked then
+            sendFrame._duiAutoCompleteHooked = true
+            hooksecurefunc("AutoComplete_Update", function(parent)
+                local box = _G.AutoCompleteBox
+                if box and parent == _G.SendMailNameEditBox then
+                    box:SetFrameStrata("DIALOG")
+                end
+            end)
+        end
+
         if _G.SendMailFrame_Update and not sendFrame._duiSendHooked then
             sendFrame._duiSendHooked = true
             hooksecurefunc("SendMailFrame_Update", afterSendMailUpdate)
