@@ -186,8 +186,12 @@ end
 function Tabs.Rebuild()
     local list = Prof.Tabs(Prof.Discover())
     Tabs.list = list
-    local entries = { { label = TRADE_SKILLS, icon = P.Frame.OVERVIEW_ICON } }
     local Host = P.Host
+    -- No Overview tab while another addon's page stands in for it.
+    local entries = {}
+    if Host.OverviewPage() == "overview" then
+        entries[1] = { label = TRADE_SKILLS, icon = P.Frame.OVERVIEW_ICON }
+    end
     local function addHostTabs(where)
         for _, spec in ipairs(Host.TabsAt(where)) do
             if #entries >= MAX_TABS then break end
