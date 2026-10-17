@@ -653,8 +653,8 @@ local function BuildEnhancementsTab(scroll)
     })
 
     C:AddToggle(levelUpSection, {
-        label = LO["List Unlocks"],
-        desc = LO["Show what the new level unlocks under the banner."],
+        label = LO["Show Unlocks"],
+        desc = LO["Show what the new level unlocks, such as new abilities, features and dungeons."],
         dbPath = "levelupenhance.show_unlocks",
         disabled = LevelUpDisabled,
         callback = function() Panel:SelectTab("enhancements") end,
@@ -664,12 +664,27 @@ local function BuildEnhancementsTab(scroll)
         return LevelUpDisabled() or not C:GetDBValue("levelupenhance.show_unlocks")
     end
 
+    C:AddDropdown(levelUpSection, {
+        label = LO["Unlock Style"],
+        desc = LO["One at a time shows each unlock inside the banner in turn, as retail does. List shows them all together under the banner."],
+        values = {
+            banner = LO["One at a Time"],
+            list = LO["List"],
+        },
+        dbPath = "levelupenhance.unlock_style",
+        disabled = ListDisabled,
+        callback = function() Panel:SelectTab("enhancements") end,
+        width = 200,
+    })
+
     C:AddToggle(levelUpSection, {
         label = LO["Open the List Automatically"],
         desc = LO["Open the list as soon as the banner appears. Otherwise, click the dot under the banner."],
         dbPath = "levelupenhance.auto_expand",
         indent = 18,
-        disabled = ListDisabled,
+        disabled = function()
+            return ListDisabled() or C:GetDBValue("levelupenhance.unlock_style") ~= "list"
+        end,
     })
 
     C:AddToggle(levelUpSection, {
