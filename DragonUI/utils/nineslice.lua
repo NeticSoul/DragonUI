@@ -96,6 +96,18 @@ local layoutRegistry = {
 		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
 	},
 
+	-- NoPortraitFrameTemplate with the wide top-right corner for a maximize button beside close.
+	NoPortraitFrameTemplateMinimizable = {
+		TopLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopLeft", x = -13, y = 16},
+		TopRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerTopRightDouble", x = 4, y = 16},
+		BottomLeftCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomLeft", x = -13, y = -3},
+		BottomRightCorner = {layer = "OVERLAY", atlas = "UI-Frame-Metal-CornerBottomRight", x = 4, y = -3},
+		TopEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeTop", x = -4, y = 0, x1 = 4, y1 = 0},
+		BottomEdge = {layer = "OVERLAY", atlas = "_UI-Frame-Metal-EdgeBottom", x = 0, y = 0, x1 = 0, y1 = 0},
+		LeftEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeLeft", x = 0, y = 0, x1 = 0, y1 = 0},
+		RightEdge = {layer = "OVERLAY", atlas = "!UI-Frame-Metal-EdgeRight", x = 0, y = 0, x1 = 0, y1 = 0}
+	},
+
 	-- Retail InsetFrameTemplate: thin inner gold trim around a recessed content area.
 	InsetFrameTemplate = {
 		TopLeftCorner = { layer = "BORDER", subLevel = -5, atlas = "UI-Frame-InnerTopLeft" },

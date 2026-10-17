@@ -3,8 +3,9 @@
 local addon = select(2, ...)
 local CO = addon.Collections
 
--- The window shell; journal.lua fills the panes. PortraitFrameTemplate, not MetalFrameTemplate:
+-- The window shell; journal.lua fills the panes. NoPortraitFrameTemplate, not MetalFrameTemplate:
 -- the latter pairs 32px corners with 75px side edges, so every edge meets its corner at a step.
+-- No portrait: the title says which window it is.
 
 local FRAME_NAME = "DragonUICollectionsFrame"
 local FRAME_W, FRAME_H = 640, 480
@@ -24,16 +25,12 @@ local ROCK = addon._dir .. "UI\\ui-background-rock"
 -- The near-black marble is what makes an inset read as recessed; the body rock alone reads flat.
 local MARBLE = addon._dir .. "UI\\ui-background-marble"
 
--- Measured off the corner atlas: the cutout is r22.75, the metal turns opaque by r29 and its outer
--- edge is r33. Our art is full bleed, so it needs r29 -- not the panel's 62, whose icons have padding.
-local PORTRAIT_SIZE, PORTRAIT_X, PORTRAIT_Y = 58, -2, 6
-
 local TABS = {
     { kind = "MOUNT", label = MOUNTS },
     { kind = "CRITTER", label = PETS },
 }
 
-local frame, title, portrait, tabsBuilt
+local frame, title, tabsBuilt
 
 -- Lazy: the character panel loads later in modules.xml, but nothing here runs before first open.
 local function CP()
@@ -41,7 +38,7 @@ local function CP()
 end
 
 local function buildChrome()
-    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate")
     if layout then DragonUI_NineSlice.ApplyLayout(frame, layout) end
 
     local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
@@ -57,11 +54,6 @@ local function buildChrome()
     streaks:SetHeight(STREAK_H)
     streaks:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -STREAK_Y)
     streaks:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -STREAK_Y)
-
-    -- ARTWORK, under the OVERLAY corner piece whose cutout is the ring around it.
-    portrait = frame:CreateTexture(nil, "ARTWORK")
-    portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
-    portrait:SetPoint("TOPLEFT", frame, "TOPLEFT", PORTRAIT_X, PORTRAIT_Y)
 
     title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", frame, "TOP", 0, -5)
@@ -264,7 +256,6 @@ function CO.SelectKind(kind)
         if info.kind == kind then
             if PanelTemplates_SetTab then PanelTemplates_SetTab(frame, i) end
             title:SetText(info.label)
-            portrait:SetTexture(kind == "MOUNT" and CO.TEX.mountPortrait or CO.TEX.petPortrait)
         end
     end
     layoutTabs()

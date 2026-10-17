@@ -79,27 +79,12 @@ function ns.DominantTree(pointsByTree, count)
     return best
 end
 
--- Portrait and title ------------------------------------------------------------------------------
+-- Title ------------------------------------------------------------------------------------------
 
-function ns.SetPortraitClass(classToken)
-    if not (CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classToken]) then return end
-    local portrait = ns.portrait
-    portrait:ClearAllPoints()
-    portrait:SetSize(57, 57)
-    portrait:SetPoint("TOPLEFT", ns.win, "TOPLEFT", -3, 6)
-    portrait:SetTexture(addon._dir .. "ClassIcons\\" .. classToken)
-    portrait:SetTexCoord(0, 1, 0, 1)
-end
-
-function ns.SetPortraitUnit(unit)
-    local portrait = ns.portrait
-    portrait:ClearAllPoints()
-    portrait:SetSize(58, 58)
-    portrait:SetPoint("TOPLEFT", ns.win, "TOPLEFT", -3, 7)
-    -- SetPortraitTexture keeps whatever texcoords the class icon left behind.
-    portrait:SetTexCoord(0, 1, 0, 1)
-    SetPortraitTexture(portrait, unit)
-end
+-- The window carries no portrait (the title says which window it is). The views still say which
+-- class or pet they show, so these stay as no-ops for them to call.
+function ns.SetPortraitClass() end
+function ns.SetPortraitUnit() end
 
 function ns.SetTitle(text)
     if ns.title then ns.title:SetText(text) end
@@ -315,17 +300,15 @@ local function buildChrome(win, level)
     local chrome = CreateFrame("Frame", nil, win)
     chrome:SetAllPoints(win)
     chrome:SetFrameLevel(level)
-    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate")
     if layout then DragonUI_NineSlice.ApplyLayout(chrome, layout) end
 
     local title = chrome:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOPLEFT", chrome, "TOPLEFT", 58, -6)
+    title:SetPoint("TOPLEFT", chrome, "TOPLEFT", 24, -6)
     title:SetPoint("TOPRIGHT", chrome, "TOPRIGHT", -24, -6)
     title:SetJustifyH("CENTER")
     title:SetText(TALENTS)
     ns.title = title
-
-    ns.portrait = chrome:CreateTexture(nil, "ARTWORK")
 end
 
 local function buildFooter(win, level)

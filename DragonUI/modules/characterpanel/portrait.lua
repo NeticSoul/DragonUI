@@ -140,20 +140,28 @@ local function setSpecPortrait()
     return true
 end
 
--- "character", "class" or "spec"; profiles from before stored a class/face toggle, false being the face.
+-- "none" (the default: the window's title says whose it is), "character", "class" or "spec";
+-- profiles from before stored a class/face toggle, false being the face.
 function CP.PortraitStyle()
     local cfg = CP:Config()
     if cfg.class_portrait ~= nil then
         if cfg.class_portrait == false then cfg.portrait_style = "character" end
         cfg.class_portrait = nil
     end
-    return cfg.portrait_style or "spec"
+    return cfg.portrait_style or "none"
 end
 
 local function refreshPortrait()
     if not CP:Enabled() then return end
     local style = CP.PortraitStyle()
-    if style == "character" then
+    local p = _G.CharacterFramePortrait
+    if p then
+        -- Blizzard never re-shows it itself; only SetPortraitTexture touches it, over a hidden texture.
+        if style == "none" then p:Hide() else p:Show() end
+    end
+    if style == "none" then
+        return
+    elseif style == "character" then
         showPlayerFace()
     elseif style == "class" or not setSpecPortrait() then
         -- No talents yet, no spec: the class icon stands in.
@@ -176,6 +184,7 @@ function CP.RestorePortrait()
     -- The class icon samples a sub-rect, and SetPortraitTexture does not reset it.
     p:SetTexCoord(0, 1, 0, 1)
     if SetPortraitTexture then SetPortraitTexture(p, "player") end
+    p:Show()
 end
 
 -- Blizzard redoes its portrait on a display resize without going through CharacterFrame_OnEvent.

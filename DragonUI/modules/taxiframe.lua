@@ -12,7 +12,6 @@ local UpdateUIPanelPositions = UpdateUIPanelPositions
 local NumTaxiNodes = NumTaxiNodes
 local TaxiNodeGetType = TaxiNodeGetType
 local TaxiNodePosition = TaxiNodePosition
-local SetPortraitToTexture = SetPortraitToTexture
 
 local TaxiModule = {
     initialized = false,
@@ -37,7 +36,6 @@ end
 
 local DIR = addon._dir
 local ROCK = DIR .. "UI\\ui-background-rock"
-local FLYING_ICON = DIR .. "Taxi\\icon_petfamily_flying"
 
 -- 4x-UltraSharp redraws of the client's 512px flight maps; empty this table to show the client's own.
 local HD_MAPS = {
@@ -238,9 +236,6 @@ local function dressOpenedMap()
     swapHDMap()
     placeNodes()
     styleNodes()
-    if _G.TaxiPortrait and SetPortraitToTexture then
-        SetPortraitToTexture(_G.TaxiPortrait, FLYING_ICON)
-    end
 end
 
 local function buildTaxiFrame()
@@ -270,26 +265,15 @@ local function buildTaxiFrame()
     streaks:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", 6, -21)
     streaks:SetPoint("BOTTOMRIGHT", taxiFrame, "TOPRIGHT", -2, -64)
 
-    applySlices(taxiFrame, "PortraitFrameTemplate")
-
-    local portrait = _G.TaxiPortrait
-    if portrait then
-        portrait._duiOwned = true
-        portrait:ClearAllPoints()
-        -- Retail's CircleMask window over its 62x62 portrait at -5,7 (inset 2,0,-2,4).
-        portrait:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", -3, 7)
-        portrait:SetSize(58, 58)
-        portrait:SetDrawLayer("ARTWORK")
-        portrait:SetAlpha(1)
-        portrait:Show()
-    end
+    applySlices(taxiFrame, "NoPortraitFrameTemplate")
+    addon.HidePortrait(_G.TaxiPortrait)
 
     -- Retail's TitleContainer: TaxiMerchant sits on the window itself, under the OVERLAY title metal.
     if _G.TaxiMerchant then
         _G.TaxiMerchant:Hide()
     end
     local titleBar = CreateFrame("Frame", nil, taxiFrame)
-    titleBar:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", 58, -1)
+    titleBar:SetPoint("TOPLEFT", taxiFrame, "TOPLEFT", 24, -1)
     titleBar:SetPoint("TOPRIGHT", taxiFrame, "TOPRIGHT", -24, -1)
     titleBar:SetHeight(20)
     local title = titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")

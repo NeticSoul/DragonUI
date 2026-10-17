@@ -1511,6 +1511,16 @@ function addon:SafeSetAtlas(texture, atlasName, useAtlasSize)
     return false
 end
 
+-- DragonUI's windows carry no portrait: the title and tabs already say which window it is. Hides a
+-- portrait texture for good, so Blizzard code that re-shows it later lands on a no-op.
+function addon.HidePortrait(texture)
+    if not texture or texture._duiPortraitHidden then return end
+    texture._duiPortraitHidden = true
+    texture:SetAlpha(0)
+    texture:Hide()
+    texture.Show = texture.Hide
+end
+
 function addon:SafeSetTexture(texture, path, fallback)
     if not texture then
         return false

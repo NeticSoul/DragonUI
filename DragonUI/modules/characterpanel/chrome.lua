@@ -94,12 +94,17 @@ local function applyDimensions(cf)
     cf:SetHeight(CP.PANEL_HEIGHT)
 end
 
+-- portrait.lua loads after this file and owns the style.
+local function noPortrait()
+    return CP.PortraitStyle and CP.PortraitStyle() == "none"
+end
+
 -- Blizzard centers the name over the wooden header; retail sits it in the metal title band.
 local function applyTitle(cf)
     local title = _G.CharacterNameFrame
     if not title then return end
     title:ClearAllPoints()
-    title:SetPoint("TOPLEFT", cf, "TOPLEFT", 58, -1)
+    title:SetPoint("TOPLEFT", cf, "TOPLEFT", noPortrait() and 24 or 58, -1)
     title:SetPoint("TOPRIGHT", cf, "TOPRIGHT", -24, -1)
     title:SetHeight(20)
 
@@ -181,7 +186,10 @@ end
 
 local function applyNineSlice(cf)
     if cf._duiNineSlice then return end
-    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    -- Without a portrait the top-left corner is the plain one, with no ring to fill. Picked once, as
+    -- the nine-slice goes on once: a style change to or from "none" shows after a reload.
+    local name = noPortrait() and "NoPortraitFrameTemplate" or "PortraitFrameTemplate"
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout(name)
     if not layout then return end
     DragonUI_NineSlice.ApplyLayout(cf, layout)
     cf._duiNineSlice = true

@@ -81,6 +81,7 @@ local function BuildCharacterSubTab(scroll)
     C:AddDropdown(cpSection, {
         label = LO["Portrait"],
         values = {
+            none = LO["None"],
             character = LO["Character"],
             class = LO["Class Icon"],
             spec = LO["Specialization Icon"],
@@ -88,10 +89,15 @@ local function BuildCharacterSubTab(scroll)
         width = 200,
         getFunc = function()
             local CP = addon.CharacterPanel
-            return CP and CP.PortraitStyle and CP.PortraitStyle() or "spec"
+            return CP and CP.PortraitStyle and CP.PortraitStyle() or "none"
         end,
         setFunc = function(val)
             local cfg = EnsureModuleTable("characterpanel")
+            -- The frame corner (ring or plain) and the title's room for it are set once per
+            -- session, so going to or from "none" needs a reload to look right.
+            local was = addon.CharacterPanel and addon.CharacterPanel.PortraitStyle
+                and addon.CharacterPanel.PortraitStyle() or "none"
+            if (was == "none") ~= (val == "none") then StaticPopup_Show("DRAGONUI_RELOAD_UI") end
             cfg.portrait_style = val
             cfg.class_portrait = nil
             if addon.CharacterPanel and addon.CharacterPanel.UpdatePortrait then
