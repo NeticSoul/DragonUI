@@ -12,4 +12,5 @@
     <Script file="prof_tabs.lua"/>
     <Script file="prof_overview.lua"/>
     <Script file="prof_track.lua"/>
+    <Script file="prof_host.lua"/>
 </Ui>

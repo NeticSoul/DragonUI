@@ -94,10 +94,14 @@ function Frame.Scale()
     return cfg and tonumber(cfg.scale) or 1
 end
 
+-- "overview", "crafting", or a page another addon added through P.Host.
 function Frame.ShowPage(page)
+    local Host = P.Host
+    if page ~= "overview" and not (Host and Host.IsPage(page)) then page = "crafting" end
     Frame.page = page
     local overview = page == "overview"
-    Frame.craft:SetShownCompat(not overview)
+    local hosted = Host and Host.ShowPage(page)
+    Frame.craft:SetShownCompat(not overview and not hosted)
     Frame.overview:SetShownCompat(overview)
     if overview then
         Art.Set(Frame.bg, "bg-overview")
@@ -183,11 +187,16 @@ end
 -- Blizzard keeps writing the title into its own (hidden) font string; the Forever title mirrors it.
 function Frame.RefreshHeader()
     if not Frame.built then return end
+    local Host = P.Host
     if Frame.page == "overview" then
         Frame.SetTitle(TRADE_SKILLS)
         Frame.SetPortrait(Frame.OVERVIEW_ICON)
+    elseif Host and Host.IsPage(Frame.page) then
+        local title, portrait = Host.PageHeader(Frame.page)
+        Frame.SetTitle(title or TRADE_SKILLS)
+        Frame.SetPortrait(portrait or Frame.OVERVIEW_ICON)
     else
-        Frame.SetTitle(TradeSkillFrameTitleText:GetText())
+        Frame.SetTitle(Host and Host.Title() or TradeSkillFrameTitleText:GetText())
         local Prof = P.Professions
         Frame.SetPortrait(Prof.IconFor(Prof.EntryForLine(P.Model.Rank())))
     end

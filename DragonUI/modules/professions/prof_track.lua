@@ -188,7 +188,9 @@ function Track.Refresh()
     local _, name = selectedRecipe()
     local entry = P.Professions.EntryForLine(GetTradeSkillLine())
     -- Runeforging takes no reagents, so there is nothing to gather.
+    -- Another addon's card (P.Host) brings its own.
     local show = name ~= nil and tracker() ~= nil and not (entry and entry.key == "Runeforging")
+        and not (P.Host and P.Host.Replaces("card"))
     box:SetShownCompat(show)
     if show then box:SetChecked(Track.IsTracked(name)) end
 end
