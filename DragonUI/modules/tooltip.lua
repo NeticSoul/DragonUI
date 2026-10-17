@@ -557,6 +557,69 @@ local function HookAuraTooltips()
     TooltipModule.hooks["AuraSource"] = true
 end
 
+-- The same Show Spell IDs switch also covers spell tooltips (spellbook, skill windows)
+-- and chat spell links, hovered or opened in ItemRefTooltip.
+local function SpellIdAlreadyOn(tt, spellId)
+    local name = tt and tt.GetName and tt:GetName()
+    if not name then
+        return false
+    end
+    local needle = tostring(spellId)
+    for i = 1, tt:NumLines() do
+        local left = _G[name .. "TextLeft" .. i]
+        local text = left and left:GetText()
+        if text and text:find(needle, 1, true) and text:find(AURA_ID_LABEL, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function AppendSpellIdLine(tt, spellId)
+    if not ShouldShowAuraSpellId() then
+        return
+    end
+    spellId = tonumber(spellId)
+    if not tt or not spellId or SpellIdAlreadyOn(tt, spellId) then
+        return
+    end
+    tt:AddLine(string.format("|cFFCA3C3C%s|r %d", AURA_ID_LABEL, spellId))
+    tt:Show()
+end
+
+local function HookSpellIdExtras()
+    if TooltipModule.hooks["SpellIdExtras"] then
+        return
+    end
+
+    -- Spellbook, skill and trainer spell tooltips.
+    GameTooltip:HookScript("OnTooltipSetSpell", function(self)
+        if not IsModuleEnabled() then return end
+        local _, _, spellId = self:GetSpell()
+        AppendSpellIdLine(self, spellId)
+    end)
+
+    -- Chat link hover: the link path sets the hyperlink on GameTooltip directly.
+    hooksecurefunc(GameTooltip, "SetHyperlink", function(self, link)
+        if not IsModuleEnabled() or type(link) ~= "string" then return end
+        local spellId = string.match(link, "^spell:(%d+)")
+        if spellId then
+            AppendSpellIdLine(self, spellId)
+        end
+    end)
+
+    -- Chat link click opens ItemRefTooltip.
+    hooksecurefunc("SetItemRef", function(link)
+        if not IsModuleEnabled() or type(link) ~= "string" then return end
+        local spellId = string.match(link, "^spell:(%d+)")
+        if spellId then
+            AppendSpellIdLine(ItemRefTooltip, spellId)
+        end
+    end)
+
+    TooltipModule.hooks["SpellIdExtras"] = true
+end
+
 -- ============================================================================
 -- APPLY / RESTORE SYSTEM
 -- ============================================================================
@@ -568,6 +631,7 @@ local function ApplyTooltipSystem()
     EnsureTooltipWidget()
     ApplyTooltipWidgetPosition()
     HookAuraTooltips()
+    HookSpellIdExtras()
 
     -- Hook GameTooltip:SetUnit
     if not TooltipModule.hooks["SetUnit"] then

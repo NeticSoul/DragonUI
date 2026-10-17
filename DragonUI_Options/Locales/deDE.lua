@@ -344,8 +344,8 @@ L["Vertical offset from the cursor."] = "Vertikaler Versatz zum Cursor."
 L["Show Aura Source"] = "Aura-Quelle anzeigen"
 L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "Zeigt den klassengefärbten Namen des Wirkenden in Buff-/Debuff-Tooltips."
 L["Aura Tooltips"] = "Aura-Tooltips"
-L["Show Aura Spell ID"] = "Zauber-ID der Aura anzeigen"
-L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "Zeigt die Zauber-ID in Buff-/Debuff-Tooltips. Erfordert das Tooltip-Modul."
+L["Show Spell IDs"] = "Zauber-IDs anzeigen"
+L["Show spell IDs on aura, spell and chat-link tooltips. Requires the Tooltip module."] = "Zeigt die Zauber-ID in Aura-, Zauber- und Chatlink-Tooltips. Erfordert das Tooltip-Modul."
 
 -- Chat Mods
 L["Enable Chat Mods"] = "Chat-Mods aktivieren"
