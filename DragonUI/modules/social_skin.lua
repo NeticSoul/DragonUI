@@ -6,11 +6,9 @@ if not addon then return end
 local _G = _G
 local ipairs = ipairs
 local type = type
-local pcall = pcall
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local UpdateUIPanelPositions = UpdateUIPanelPositions
-local SetPortraitToTexture = SetPortraitToTexture
 local hooksecurefunc = hooksecurefunc
 
 local SocialModule = {
@@ -37,7 +35,6 @@ end
 local DIR = addon._dir
 local ROCK = DIR .. "UI\\ui-background-rock"
 local MARBLE = DIR .. "UI\\ui-background-marble"
-local FRIENDS_ICON = "Interface\\FriendsFrame\\FriendsFrameScrollIcon"
 
 -- A reskin, not a rebuild: every subframe is anchored by fixed offsets into the stock 384x512 frame,
 -- so FriendsFrame keeps that size and the retail window is drawn over the rect its old art showed.
@@ -190,45 +187,24 @@ local function hideFriendsChromePieces()
     end
 end
 
--- The scroll portrait is an unnamed region in 3.3.5a's XML.
-local function findFriendsIcon(window)
+-- No portrait: the tabs already say which window this is. The scroll icon is an unnamed region in
+-- 3.3.5a's XML, so it is found by its file.
+local function hidePortrait(window)
     for _, region in ipairs({ window:GetRegions() }) do
         if region:GetObjectType() == "Texture" then
             local tex = region:GetTexture()
             if type(tex) == "string" and tex:lower():find("friendsframescrollicon") then
-                return region
+                neuterTexture(region)
             end
         end
     end
-end
-
--- Where retail's CircleMask shows the portrait (62x62 at -5,7 inset 2,0,-2,4), under the OVERLAY ring.
-local function seatPortrait(host, icon)
-    if not icon then return end
-    icon:ClearAllPoints()
-    icon:SetPoint("TOPLEFT", host, "TOPLEFT", -3, 7)
-    icon:SetSize(58, 58)
-    icon:SetDrawLayer("ARTWORK")
-end
-
--- The square scroll icon would poke its corners past the ring; cut it round the way mail.lua does.
-local function dressPortrait(window, host)
-    local icon = findFriendsIcon(window)
-    if not icon then
-        icon = window:CreateTexture(nil, "ARTWORK")
-        icon:SetTexture(FRIENDS_ICON)
-    end
-    if SetPortraitToTexture then
-        pcall(SetPortraitToTexture, icon, FRIENDS_ICON)
-    end
-    seatPortrait(host, icon)
 end
 
 -- The title is a FriendsFrame region like the nine-slice, so it is lifted above the metal it sits on.
 local function dressTitle(host, label)
     if not label then return end
     label:ClearAllPoints()
-    label:SetPoint("TOPLEFT", host, "TOPLEFT", 60, -5)
+    label:SetPoint("TOPLEFT", host, "TOPLEFT", 24, -5)
     label:SetPoint("TOPRIGHT", host, "TOPRIGHT", -24, -5)
     label:SetHeight(16)
     label:SetJustifyH("CENTER")
@@ -266,7 +242,7 @@ local function paintWindowChrome(window)
     end
     window._duiStreaks = streaks
 
-    applySlicesOn(window, host, "PortraitFrameTemplate")
+    applySlicesOn(window, host, "NoPortraitFrameTemplate")
 
     if window.SetHitRectInsets then
         window:SetHitRectInsets(HIT_LEFT, HIT_RIGHT, HIT_TOP, HIT_BOTTOM)
@@ -276,12 +252,14 @@ local function paintWindowChrome(window)
 end
 
 -- An anchor-only frame; its marble and trim are FriendsFrame regions so every subframe draws above.
+-- The marble goes on BORDER, under the trim's sublevel: on BACKGROUND it tied with the rock and the
+-- rock won, so every tab showed one flat tone where the guild window shows dark insets on rock.
 local function buildInset(window)
     local inset = CreateFrame("Frame", nil, window)
     inset:EnableMouse(false)
     local regions = {}
 
-    local marble = window:CreateTexture(nil, "BACKGROUND", nil, -5)
+    local marble = window:CreateTexture(nil, "BORDER", nil, -8)
     marble._duiOwned = true
     marble:SetTexture(MARBLE, "REPEAT", "REPEAT")
     marble:SetHorizTile(true)
@@ -516,7 +494,7 @@ local function buildSocialFrame()
     nudgePanel(window)
 
     chrome = paintWindowChrome(window)
-    dressPortrait(window, chrome)
+    hidePortrait(window)
     dressTitle(chrome, _G.FriendsFrameTitleText)
     dressCloseButton(_G.FriendsFrameCloseButton, chrome, window)
 

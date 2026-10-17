@@ -4,7 +4,7 @@ local addon = select(2, ...)
 local GU = addon.Guild
 local L = GU.L
 
--- The window shell, after retail's Guild & Communities frame: a portrait frame with the guild's
+-- The window shell, after retail's Guild & Communities frame (minus its portrait): the guild's
 -- card on the left, the active pane on the right, and the panes' tabs standing on the right edge.
 -- The guild's level and XP bar run along the top. roster.lua, info.lua and benefits.lua fill it.
 
@@ -23,14 +23,13 @@ local STREAK_Y, STREAK_H = 21, 43
 local ROCK = GU.DIR .. "UI\\ui-background-rock"
 local MARBLE = GU.DIR .. "UI\\ui-background-marble"
 local SIDETAB = GU.DIR .. "UI\\sidetab"
-local PORTRAIT_SIZE, PORTRAIT_X, PORTRAIT_Y = 58, -2, 6
 local TABARD_ICON = "Interface\\Icons\\INV_Shirt_GuildTabard_01"
 
 local REFRESH_ROSTER_EVERY = 20
 -- Panels beside the window start past the side tabs, whose plates reach 61px out.
 GU.FLYOUT_X = 64
 
-local frame, title, portrait
+local frame, title
 local panes, paneOrder, tabs = {}, {}, {}
 GU.activePane = nil
 
@@ -60,7 +59,8 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 local function buildChrome()
-    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    -- No portrait: the window's title already names the guild.
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("NoPortraitFrameTemplate")
     if layout then DragonUI_NineSlice.ApplyLayout(frame, layout) end
 
     local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
@@ -76,15 +76,6 @@ local function buildChrome()
     streaks:SetHeight(STREAK_H)
     streaks:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -STREAK_Y)
     streaks:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -STREAK_Y)
-
-    portrait = frame:CreateTexture(nil, "ARTWORK")
-    portrait:SetSize(PORTRAIT_SIZE, PORTRAIT_SIZE)
-    portrait:SetPoint("TOPLEFT", frame, "TOPLEFT", PORTRAIT_X, PORTRAIT_Y)
-    if SetPortraitToTexture then
-        SetPortraitToTexture(portrait, TABARD_ICON)
-    else
-        portrait:SetTexture(TABARD_ICON)
-    end
 
     title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", frame, "TOP", 0, -5)
@@ -142,7 +133,7 @@ local band = {}
 local function buildTopBand()
     local top = CreateFrame("Frame", FRAME_NAME .. "TopBand", frame)
     top:SetFrameLevel(frame:GetFrameLevel() + 3)
-    top:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDE_PAD + 50, -(TITLE_H + 4))
+    top:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDE_PAD, -(TITLE_H + 4))
     top:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -SIDE_PAD, -(TITLE_H + 4))
     top:SetHeight(TOP_H)
     band.frame = top
