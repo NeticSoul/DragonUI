@@ -1280,6 +1280,7 @@ local defaults = {
             loot_skin = {
                 enabled = true, -- Retail-style skin for the Blizzard loot window
                 animated_reflow = true, -- Compact collected loot with animated rows and panel resizing
+                auto_hide_empty = false, -- Close the loot window when there is nothing left to loot
             },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons
