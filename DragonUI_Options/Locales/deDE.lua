@@ -276,6 +276,8 @@ L["Legendary"] = "Legendär"
 -- Beutefenster
 L["Loot Window"] = "Beutefenster"
 L["Configure the DragonUI loot window."] = "Das DragonUI-Beutefenster konfigurieren."
+L["Automatic Equipment Comparison"] = "Automatischer Ausrüstungsvergleich"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Vergleicht anlegbare Gegenstände ohne Shift mit der angelegten Ausrüstung, auch bei Gegenstandslinks aus dem Chat. Strg gedrückt halten, um den Vergleich zu unterdrücken."
 L["Enable Loot Window"] = "Beutefenster aktivieren"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Das DragonUI-Design auf Blizzards Beutefenster anwenden."
 L["Open at Cursor"] = "Am Cursor öffnen"

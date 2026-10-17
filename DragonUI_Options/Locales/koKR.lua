@@ -285,6 +285,8 @@ L["Legendary"] = "전설"
 -- 전리품 창
 L["Loot Window"] = "전리품 창"
 L["Configure the DragonUI loot window."] = "DragonUI 전리품 창을 설정합니다."
+L["Automatic Equipment Comparison"] = "자동 장비 비교"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Shift를 누르지 않아도 착용 가능한 아이템을 현재 장비와 비교하며, 채팅에서 연 링크도 포함합니다. Ctrl을 누르면 비교를 끕니다."
 L["Enable Loot Window"] = "전리품 창 사용"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Blizzard 전리품 창에 DragonUI 스킨을 적용합니다."
 L["Open at Cursor"] = "커서에서 열기"

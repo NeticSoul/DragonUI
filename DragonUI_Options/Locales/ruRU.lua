@@ -278,6 +278,8 @@ L["Legendary"] = "Легендарное"
 -- Окно добычи
 L["Loot Window"] = "Окно добычи"
 L["Configure the DragonUI loot window."] = "Настроить окно добычи DragonUI."
+L["Automatic Equipment Comparison"] = "Автоматическое сравнение снаряжения"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Сравнивает надеваемые предметы с надетым снаряжением без Shift, включая ссылки, открытые из чата. Удерживайте Ctrl, чтобы отключить сравнение."
 L["Enable Loot Window"] = "Включить окно добычи"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Применяет оформление DragonUI к окну добычи Blizzard."
 L["Open at Cursor"] = "Открывать у курсора"

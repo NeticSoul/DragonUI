@@ -699,6 +699,8 @@ L["Ask"] = "Demander"
 -- Fenêtre de butin
 L["Loot Window"] = "Fenêtre de butin"
 L["Configure the DragonUI loot window."] = "Configurer la fenêtre de butin de DragonUI."
+L["Automatic Equipment Comparison"] = "Comparaison automatique d'équipement"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Compare les objets équipables avec votre équipement sans maintenir Maj, y compris les liens ouverts depuis le chat. Maintenez Ctrl pour désactiver la comparaison."
 L["Enable Loot Window"] = "Activer la fenêtre de butin"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Applique l'apparence DragonUI à la fenêtre de butin de Blizzard."
 L["Open at Cursor"] = "Ouvrir au curseur"

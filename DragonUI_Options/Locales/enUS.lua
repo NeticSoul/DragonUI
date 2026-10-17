@@ -332,6 +332,8 @@ L["Legendary"] = true
 -- Loot Window
 L["Loot Window"] = true
 L["Configure the DragonUI loot window."] = true
+L["Automatic Equipment Comparison"] = true
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = true
 L["Enable Loot Window"] = true
 L["Apply the DragonUI skin to the Blizzard loot window."] = true
 L["Open at Cursor"] = true
