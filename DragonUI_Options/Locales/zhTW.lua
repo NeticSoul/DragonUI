@@ -295,8 +295,8 @@ L["Vertical offset from the cursor."] = "相對於游標的垂直偏移。"
 L["Show Aura Source"] = "顯示光環來源"
 L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "在增益/減益提示中顯示施放者的職業色名稱。"
 L["Aura Tooltips"] = "光環提示"
-L["Show Aura Spell ID"] = "顯示法術 ID"
-L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "在增益/減益提示中顯示法術 ID。需要啟用滑鼠提示模組。"
+L["Show Spell IDs"] = "顯示法術 ID"
+L["Show spell IDs on aura, spell and chat-link tooltips. Requires the Tooltip module."] = "在光環、法術與聊天連結提示中顯示法術 ID。需要啟用滑鼠提示模組。"
 
 -- 聊天修改
 L["Enable Chat Mods"] = "啟用聊天功能修改"

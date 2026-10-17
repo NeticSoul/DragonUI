@@ -1616,7 +1616,7 @@ local function TooltipOff()
 end
 
 local function SpellIdRow()
-    return Check(T("Show Aura Spell ID"), "modules.tooltip.show_aura_spell_id", nil, {
+    return Check(T("Show Spell IDs"), "modules.tooltip.show_aura_spell_id", nil, {
         get = function() return GetDB("modules.tooltip.show_aura_spell_id") == true end,
         disabled = TooltipOff })
 end
