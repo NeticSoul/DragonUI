@@ -14,9 +14,11 @@ local P = addon.Professions
 --         frame; each replaces our piece in that spot (list column, card form, create strip,
 --         right of the link button). Called again after an Unregister/Register: return the same frame.
 --     title(): optional, the window title on the crafting page (nil keeps Blizzard's).
+--     overview(): optional, the key of an added page that stands in for the Overview (nil keeps it):
+--         the Overview's tab goes and the window opens on that page where it would open on the Overview.
 --     onShow(), onHide(), onPage(page), onCraftingTab(prof), onScale(scale): optional notifications.
 -- }
-local Host = { VERSION = 1, pages = {}, tabs = {}, parked = {}, regions = {}, nextCatcher = 500 }
+local Host = { VERSION = 2, pages = {}, tabs = {}, parked = {}, regions = {}, nextCatcher = 500 }
 P.Host = Host
 
 local function safe(fn, ...)
@@ -47,6 +49,14 @@ end
 
 function Host.Active()
     return P.active and P.Frame.built and Host.provider ~= nil
+end
+
+-- The page the window opens on without a profession: the provider's stand-in, else the Overview.
+function Host.OverviewPage()
+    local provider = Host.provider
+    local key = provider and provider.overview and safe(provider.overview)
+    if key and Host.pages[key] and Host.pages[key].frame then return key end
+    return "overview"
 end
 
 function Host.ToggleOverview()
@@ -153,6 +163,7 @@ end
 -- Gives the window back: our pieces return, the provider's pages and tabs go.
 function Host.Unregister(provider)
     if not provider or Host.provider ~= provider then return end
+    local onOverview = P.Frame.built and P.Frame.page == Host.OverviewPage()
     for _, frame in pairs(Host.regions) do frame:Hide() end
     wipe(Host.regions)
     for _, page in pairs(Host.pages) do
@@ -163,7 +174,7 @@ function Host.Unregister(provider)
     unparkAll()
     Host.provider, Host.applied = nil, false
     if P.Frame.built then
-        if P.Frame.page ~= "overview" then P.Frame.ShowPage("crafting") end
+        P.Frame.ShowPage(onOverview and "overview" or "crafting")
         Host.RefreshTabs()
         if TradeSkillFrame:IsShown() then TradeSkillFrame_Update() end
     end

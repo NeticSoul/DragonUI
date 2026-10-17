@@ -94,9 +94,11 @@ function Frame.Scale()
     return cfg and tonumber(cfg.scale) or 1
 end
 
--- "overview", "crafting", or a page another addon added through P.Host.
+-- "overview", "crafting", or a page another addon added through P.Host. "overview" opens the
+-- page that stands in for it when there is one.
 function Frame.ShowPage(page)
     local Host = P.Host
+    if page == "overview" and Host then page = Host.OverviewPage() end
     if page ~= "overview" and not (Host and Host.IsPage(page)) then page = "crafting" end
     Frame.page = page
     local overview = page == "overview"
@@ -220,7 +222,8 @@ function Frame.ToggleOverview()
     if not P.EnsureHost() then return end
     local host = TradeSkillFrame
     if host:IsShown() then
-        if Frame.page == "overview" then HideUIPanel(host) else Frame.ShowPage("overview") end
+        local home = P.Host and P.Host.OverviewPage() or "overview"
+        if Frame.page == home then HideUIPanel(host) else Frame.ShowPage("overview") end
         return
     end
     Frame.openOnOverview = true
@@ -233,7 +236,7 @@ addon.ToggleProfessionsBook = Frame.ToggleOverview
 local function syncMicroButton(page)
     local button = _G.ProfessionMicroButton
     if not button then return end
-    if page == "overview" then
+    if page and page == (P.Host and P.Host.OverviewPage() or "overview") then
         button:SetButtonState("PUSHED", 1)
     else
         button:SetButtonState("NORMAL")
