@@ -780,6 +780,8 @@ L["Party"] = "파티"
 -- Common options
 L["Class Color Health"] = "생명력 바 직업 색상"
 L["Class Portrait"] = "직업 초상화"
+L["Portrait Off"] = "초상화 끄기"
+L["Hide the portrait and draw the compact frame instead."] = "초상화를 숨기고 대신 간결한 프레임을 표시합니다."
 L["Class icon instead of 3D model for players."] = "플레이어 초상화에 3D 모델 대신 직업 아이콘을 사용."
 L["Alternative Class Icons"] = "대체 직업 아이콘"
 L["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."] = "블리자드 직업 아이콘 아틀라스 대신 DragonUI 대체 직업 아이콘을 사용합니다."

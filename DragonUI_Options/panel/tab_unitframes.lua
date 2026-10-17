@@ -166,10 +166,15 @@ local function AddCommonControls(parent, unitKey, refreshFunc, opts)
     })
 
     if opts.hasClassPortrait then
+        -- Mutually exclusive: each draws or removes the portrait, so whichever is on greys the
+        -- other out.
         C:AddToggle(parent, {
             label = LO["Class Portrait"],
             desc = LO["Class icon instead of 3D model for players."],
             dbPath = "unitframe." .. unitKey .. ".classPortrait",
+            disabled = function()
+                return C:GetDBValue("unitframe." .. unitKey .. ".portrait_off") and true or false
+            end,
             callback = function(value)
                 HandleClassPortraitToggle(unitKey, refreshFunc, value)
             end,
@@ -180,11 +185,27 @@ local function AddCommonControls(parent, unitKey, refreshFunc, opts)
             desc = LO["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."],
             dbPath = "unitframe." .. unitKey .. ".alternativeClassIcons",
             disabled = function()
-                return not C:GetDBValue("unitframe." .. unitKey .. ".classPortrait")
+                return (not C:GetDBValue("unitframe." .. unitKey .. ".classPortrait"))
+                    or (C:GetDBValue("unitframe." .. unitKey .. ".portrait_off") and true or false)
             end,
             callback = refreshFunc,
         })
     end
+
+    -- Portrait Off hides the portrait, so it is meaningless while Class Portrait draws one.
+    C:AddToggle(parent, {
+        label = LO["Portrait Off"],
+        desc = LO["Hide the portrait and draw the compact frame instead."],
+        dbPath = "unitframe." .. unitKey .. ".portrait_off",
+        disabled = function()
+            return C:GetDBValue("unitframe." .. unitKey .. ".classPortrait") and true or false
+        end,
+        -- Rebuilds the tab: the disabled functions are evaluated when the panel is built, so
+        -- the Class Portrait toggle greys out right away.
+        callback = function()
+            RefreshUnitFramesTabAfterToggle(refreshFunc)
+        end,
+    })
 
     C:AddToggle(parent, {
         label = LO["Format Large Numbers"],

@@ -62,6 +62,30 @@ UF.TEXTURES = {
         },
     },
 
+    -- Portrait Off: retail's ui-hud-unitframe-player-portraitoff set. Authored at 1x, so it is
+    -- Retail ships it for the player frame only; Target and Focus reuse it, mirrored.
+    portraitOff = {
+        FRAME         = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff",
+        -- Plate contour (outer edge plus the wells' rims), split out of FRAME so it can be
+        -- drawn above the bars.
+        BORDER        = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-border",
+        -- Retail ships no portrait-off aggro glow: this one is generated from the plate
+        -- contour (dilated and blurred) and kept white so it can be tinted per threat level.
+        INCOMBAT      = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-incombat",
+        -- Name band retail uses on its portrait-off boss-small frame: 85x18 at 1x, single
+        -- neutral colour cell.
+        NAME_BACKGROUND = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-target-boss-small-portraitoff-type",
+        HEALTH_BAR    = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-health",
+        HEALTH_STATUS = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-health-status",
+        POWER_BARS = {
+            MANA        = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-mana",
+            RAGE        = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-rage",
+            FOCUS       = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-focus",
+            ENERGY      = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-energy",
+            RUNIC_POWER = "Interface\\AddOns\\DragonUI\\Textures\\UnitFrames\\Portraitoff\\ui-hud-unitframe-player-portraitoff-bar-runicpower",
+        },
+    },
+
     -- Party frames (unique textures)
     party = {
         healthBarStatus = "Interface\\Addons\\DragonUI\\Textures\\UnitFrames\\Party\\UI-HUD-UnitFrame-Party-PortraitOn-Bar-Health-Status",
@@ -95,6 +119,88 @@ UF.TEXTURES = {
     CLASS_ICON_ALTERNATIVE_SUFFIX = ".blp",
     CLASS_ICON = "Interface\\TargetingFrame\\UI-Classes-Circles",
 }
+
+
+-- ============================================================================
+-- PORTRAIT OFF
+-- ============================================================================
+-- Geometry measured on the shipped art at native 1x size: a 133x51 plate with a health well
+-- over a power well. x runs from the frame's left edge, y down from its top edge.
+
+-- In 1x units, the health slot's outline runs from y=13 to the divider at y=34, the power slot
+-- from there to y=45, and both wells' vertical outlines sit at x=2 and x=127. Health and mana
+-- cover their slot INCLUDING its outlines (x=2, 126 wide), while the other power arts are
+-- exactly the power well's 124x10 interior and sit one pixel inside it (x=3, y=35).
+UF.PORTRAIT_OFF = {
+    frame  = { w = 133, h = 51 },
+    health = { x = 2, y = 12, w = 126, h = 23 },
+    mana   = { x = 2, y = 34, w = 126, h = 12 },
+    power  = { w = 124, h = 10 },
+}
+
+-- Power type -> POWER_BARS key. Mana is the fallback for nil or unknown tokens.
+local PORTRAIT_OFF_POWER = {
+    MANA = "MANA", RAGE = "RAGE", FOCUS = "FOCUS", ENERGY = "ENERGY", RUNIC_POWER = "RUNIC_POWER",
+}
+
+-- Portrait Off is per-frame; config is that frame's db table (or nil).
+function UF.IsPortraitOffConfigured(config)
+    return config ~= nil and config.portrait_off == true
+end
+
+-- powerTypeString is UnitPowerType's second return ("MANA", "RAGE", ...).
+function UF.GetPortraitOffPowerTexture(powerTypeString)
+    local bars = UF.TEXTURES.portraitOff.POWER_BARS
+    return bars[PORTRAIT_OFF_POWER[powerTypeString] or "MANA"]
+end
+
+-- The 3.3.5a client only loads power-of-two textures, so every piece is padded into a POT
+-- canvas (512x128 plate, 256x64 health, 256x32 bars). The art is 2x, drawn at half size like
+-- the rest of the unit frame art, so each use crops back to the region it fills, given as
+-- { left, right, top, bottom }.
+UF.PORTRAIT_OFF_TEXCOORD = {
+    FRAME         = { 0, 266 / 512, 0, 102 / 128 },
+    HEALTH_BAR    = { 0, 252 / 256, 0, 46 / 64 },
+    HEALTH_STATUS = { 0, 248 / 256, 0, 40 / 64 },
+    POWER_MANA    = { 0, 252 / 256, 0, 24 / 32 },
+    POWER         = { 0, 248 / 256, 0, 20 / 32 },
+}
+
+-- The canvas crop key for a power token: mana fills its well, the rest are 124x10.
+function UF.GetPortraitOffPowerKey(powerTypeString)
+    return PORTRAIT_OFF_POWER[powerTypeString] == "MANA" and "POWER_MANA" or "POWER"
+end
+
+-- Crops a status bar texture to its Portrait Off art, and remembers the crop so the bars
+-- that fill through texcoords (player.lua's PlayerArt.ApplyFill) can clip inside it.
+function UF.SetPortraitOffTexCoord(texture, key)
+    if not texture then return end
+    local tc = UF.PORTRAIT_OFF_TEXCOORD[key]
+    if not tc then return end
+    texture.PortraitOffCrop = tc
+    texture:SetTexCoord(tc[1], tc[2], tc[3], tc[4])
+end
+
+-- Back to the whole texture: the portrait-on art fills its canvas, so it needs no crop.
+function UF.ClearPortraitOffTexCoord(texture)
+    if not texture or not texture.PortraitOffCrop then return end
+    texture.PortraitOffCrop = nil
+    texture:SetTexCoord(0, 1, 0, 1)
+end
+
+-- Clips a status bar texture to fraction (0..1) of its fill. When the texture carries a
+-- Portrait Off crop the clip stays inside the art instead of spanning the padded canvas.
+function UF.ClipPortraitOffFill(texture, fraction)
+    if not texture then return end
+    fraction = fraction or 1
+    local crop = texture.PortraitOffCrop
+    if crop then
+        local span = crop[2] - crop[1]
+        texture:SetTexCoord(crop[1], crop[1] + span * fraction, crop[3], crop[4])
+    else
+        texture:SetTexCoord(0, fraction, 0, 1)
+    end
+end
 
 
 -- ============================================================================
@@ -270,6 +376,12 @@ function UF.ShowPvPBadge(badge, kind, scale, mirrored)
     badge.icon:SetPoint("CENTER", badge, "CENTER", mirrored and -2 * (part[7] or 0) * scale or 0, 0)
     badge:Show()
     return true
+end
+
+
+-- Returns the scale to hand to ShowPvPBadge so the badge comes out `size` pixels wide.
+function UF.GetPvPBadgeScaleForSize(size)
+    return size / PVP_BADGE_PARTS.circle[5]
 end
 
 

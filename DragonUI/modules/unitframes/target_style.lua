@@ -76,13 +76,111 @@ function UF.TargetStyle.Create(opts)
         yellow = {1.0, 1.0, 0.0},
     }
 
+    -- ================================================================
+    -- PORTRAIT OFF
+    -- ================================================================
+    -- Retail ships no portrait-off art for Target/Focus, so the player's plate is reused,
+    -- mirrored (SetTexCoord flip) and hung off the frame's right edge, where these frames carry
+    -- their portrait. Offsets come from the art rather than the frame: Target-BACKGROUND's
+    -- visible contour runs (1.5,1.5)-(187.5,61.5) from its own top-left (the HD TGA is drawn at
+    -- half scale) and the plate's contour is inset 1px right and 5px top, so the plate's TOPRIGHT
+    -- lands 1px right of and 5px below the art's visible corner. Provisional values.
+    --
+    -- The name band (170x36 at 2x, drawn at 85x18) has its visible band at 4.5..14.5 of the cell:
+    -- 10px tall, centred 9.5 from the cell's top.
+    local PORTRAIT_OFF_BAND_W, PORTRAIT_OFF_BAND_VISIBLE_H = 85, 10
+    local PORTRAIT_OFF_BAND_CENTRE = (4.5 + 14.5) / 2
+
+    local PortraitOff = {
+        -- x/y are the plate's TOPRIGHT from the frame's TOPLEFT, constant across styles. -8 is
+        -- the player's own offset (Portrait.y), so the plate keeps the same distance from the
+        -- frame's top on both frames: same art mirrored only in X, so the padding matches.
+        x = 188,
+        y = -8,
+        piece = {
+            file = UF.TEXTURES.portraitOff.FRAME,
+            w = UF.PORTRAIT_OFF.frame.w,
+            h = UF.PORTRAIT_OFF.frame.h,
+            x = 0,
+            y = 0,
+            -- Mirrored (these frames hold the portrait on the right) and cropped, since the art
+            -- sits in the top-left of a power-of-two canvas.
+            tc = { UF.PORTRAIT_OFF_TEXCOORD.FRAME[2], 0, 0, UF.PORTRAIT_OFF_TEXCOORD.FRAME[4] },
+        },
+        -- Plate contour, same canvas and crop as the body, drawn above the bars so they read as
+        -- recessed inside the wells.
+        borderPiece = {
+            file = UF.TEXTURES.portraitOff.BORDER,
+            w = UF.PORTRAIT_OFF.frame.w,
+            h = UF.PORTRAIT_OFF.frame.h,
+            x = 0,
+            y = 0,
+            tc = { UF.PORTRAIT_OFF_TEXCOORD.FRAME[2], 0, 0, UF.PORTRAIT_OFF_TEXCOORD.FRAME[4] },
+        },
+        -- Anchored to the frame, not to the plate: these are frame positions in portrait-on as
+        -- well, and the plate's visible top-right corner is the frame art's, so the art-relative
+        -- spots transfer. Provisional values.
+        icons = {
+            -- CENTER on the frame's TOPLEFT, measured for the dragonui ELITE cell (80x79).
+            -- A bigger dragon keeps its left edge and grows away from the bars, exactly like
+            -- UF.DRAGON_PLACEMENT does in portrait-on (rareelite is 99 wide there, so its x
+            -- is 4.75 + (99-80)/2 = 13.75). Boss maps to the rareelite cell.
+            dragon = { x = 176.75, y = -35, w = 80 },
+            -- The level circle sits directly under the PvP icon: same centre line, the icon's
+            -- size plus a small gap below. CENTER from the frame's TOPLEFT. Derived from the
+            -- pvp spot above (the icon's top-left is the plate's top-right + pvp.x/y).
+            level = { x = 201, y = -53.5 },
+            -- The frame art it rides in the Forever level style is hidden here, so the name hangs
+            -- off the health bar instead (x/y from that bar's TOPLEFT, box 96 wide), anchored by
+            -- LEFT so it sits centred on its line and center_names can centre the text inside
+            -- the box.
+            name = { x = 6, y = 7.5, w = 96 },
+            -- Name band retail uses on its portrait-off boss-small frame (single neutral cell).
+            nameBackground = {
+                file = UF.TEXTURES.portraitOff.NAME_BACKGROUND,
+                w = 85, h = 18,            -- cell: 170x36 at 2x
+                x = 0, y = 0,
+                -- Coverage taken from the portrait-on strip's own piece (134 x 15.5 BOTTOMLEFT on
+                -- the bar's TOPLEFT at x = -0.5): the bar's left edge. coverH is the band's
+                -- VISIBLE height in px (this art's is 10, the old strip's was 15.5); the axes are
+                -- scaled independently, so coverH is the height knob.
+                coverW = 127, coverX = 0, coverH = 12,
+                -- Fine vertical nudge in px on top of the derived position: positive = up,
+                -- negative = down. The derived part keeps the band on the name's line.
+                coverY = -4,
+                blend = "BLEND",
+                tc = { 0, 170 / 256, 0, 36 / 64 },
+            },
+            -- One table per PvP style: x is measured from the plate's right edge, so a negative
+            -- value moves it left, over the plate.
+            pvp = { x = -3, y = 0, size = 48, badgeX = -3, badgeY = 0, badgeSize = 28 },
+        },
+    }
+
+    local function PortraitOffActive()
+        return UF.IsPortraitOffConfigured(UF.GetConfig(configKey))
+    end
+
     local function ApplyNameBackgroundLayout()
         if not NameBackground or not HealthBar then return end
 
-        local piece = UF.GetFrameSkin().target.nameBackground
+        local piece = (PortraitOffActive() and PortraitOff.icons.nameBackground)
+            or UF.GetFrameSkin().target.nameBackground
+        -- Retail's band has a mostly padding cell (visible band at 4.5..14.5 of 18px) and the
+        -- coverage to match is the portrait-on strip's (x = the bar's left edge, 134 x 15.5). The
+        -- axes scale independently (coverW width, coverH visible height) and y is derived so the
+        -- VISIBLE band lands on the name's line, with coverY as a nudge on top.
+        local w, h, x, y = piece.w, piece.h, piece.x, piece.y
+        if piece == PortraitOff.icons.nameBackground then
+            local sy = piece.coverH / PORTRAIT_OFF_BAND_VISIBLE_H
+            w = piece.coverW
+            h = piece.h * sy
+            x = piece.coverX
+            y = PortraitOff.icons.name.y - (h - PORTRAIT_OFF_BAND_CENTRE * sy) + piece.coverY
+        end
         NameBackground:ClearAllPoints()
-        NameBackground:SetPoint("BOTTOMLEFT", HealthBar, "TOPLEFT", piece.x, piece.y)
-        NameBackground:SetSize(piece.w, piece.h)
+        NameBackground:SetPoint("BOTTOMLEFT", HealthBar, "TOPLEFT", x, y)
+        NameBackground:SetSize(w, h)
     end
 
     local function ResolveNameBackgroundColorKey(r, g, b)
@@ -131,6 +229,17 @@ function UF.TargetStyle.Create(opts)
 
     local function GetConfig()
         return UF.GetConfig(configKey)
+    end
+
+    -- Own texture: the plate replaces the background art, so it cannot reuse it.
+    local function GetPortraitOffPlate()
+        if not frameElements.portraitOffPlate and BlizzFrame then
+            frameElements.portraitOffPlate = BlizzFrame:CreateTexture(nil, "BACKGROUND")
+        end
+        -- Exposed on the frame so target.lua can anchor the auras to it: that file lays out
+        -- Blizzard's auras and cannot see this factory's locals.
+        BlizzFrame.DragonUI_PortraitOffPlate = frameElements.portraitOffPlate
+        return frameElements.portraitOffPlate
     end
 
     -- ================================================================
@@ -215,6 +324,11 @@ function UF.TargetStyle.Create(opts)
     -- ================================================================
 
     local function RestoreNativePortrait()
+        if PortraitOffActive() then
+            -- Portrait Off: there is no portrait to restore, and the plate replaces the art.
+            Portrait:SetAlpha(0)
+            return
+        end
         if UnitExists(unitToken) then
             -- Do NOT force a draw layer here. Previously this set
             -- Portrait:SetDrawLayer("ARTWORK", 0) on every refresh, which
@@ -233,6 +347,12 @@ function UF.TargetStyle.Create(opts)
     local function UpdateClassPortrait()
         local config = GetConfig()
         if not config then return end
+
+        if PortraitOffActive() then
+            -- Portrait Off: no portrait, so no class icon either.
+            Portrait:SetAlpha(0)
+            return
+        end
 
         local useAlternative = config.alternativeClassIcons and true or false
 
@@ -296,10 +416,16 @@ function UF.TargetStyle.Create(opts)
         if not texture then return end
 
         if config.classcolor and UnitIsPlayer(unitToken) then
-            local statusPath = TEXTURES.BAR_PREFIX .. "Health-Status"
+            local statusPath = PortraitOffActive() and UF.TEXTURES.portraitOff.HEALTH_STATUS
+                or TEXTURES.BAR_PREFIX .. "Health-Status"
             if texture:GetTexture() ~= statusPath then
                 texture:SetTexture(statusPath)
                 texture:SetDrawLayer("ARTWORK", 1)
+            end
+            if PortraitOffActive() then
+                UF.SetPortraitOffTexCoord(texture, "HEALTH_STATUS")
+            else
+                UF.ClearPortraitOffTexCoord(texture)
             end
             local _, class = UnitClass(unitToken)
             local color = RAID_CLASS_COLORS[class]
@@ -309,10 +435,16 @@ function UF.TargetStyle.Create(opts)
                 texture:SetVertexColor(1, 1, 1, 1)
             end
         else
-            local normalPath = TEXTURES.BAR_PREFIX .. "Health"
+            local normalPath = PortraitOffActive() and UF.TEXTURES.portraitOff.HEALTH_BAR
+                or TEXTURES.BAR_PREFIX .. "Health"
             if texture:GetTexture() ~= normalPath then
                 texture:SetTexture(normalPath)
                 texture:SetDrawLayer("ARTWORK", 1)
+            end
+            if PortraitOffActive() then
+                UF.SetPortraitOffTexCoord(texture, "HEALTH_BAR")
+            else
+                UF.ClearPortraitOffTexCoord(texture)
             end
             texture:SetVertexColor(1, 1, 1, 1)
         end
@@ -329,22 +461,96 @@ function UF.TargetStyle.Create(opts)
         local texture = ManaBar:GetStatusBarTexture()
         if not texture then return end
 
-        local powerType = UnitPowerType(unitToken)
+        local powerType, powerToken = UnitPowerType(unitToken)
         local powerName = POWER_MAP[powerType] or "Mana"
-        texture:SetTexture(TEXTURES.BAR_PREFIX .. powerName)
+        local portraitOff = PortraitOffActive()
+        local powerKey = portraitOff and UF.GetPortraitOffPowerKey(powerToken) or nil
+        texture:SetTexture(portraitOff and UF.GetPortraitOffPowerTexture(powerToken)
+            or TEXTURES.BAR_PREFIX .. powerName)
         texture:SetDrawLayer("ARTWORK", 1)
         texture:SetVertexColor(1, 1, 1)
 
         local _, max = ManaBar:GetMinMaxValues()
         local current = ManaBar:GetValue()
         if max > 0 and current then
-            texture:SetTexCoord(0, current / max, 0, 1)
+            -- Kept left-to-right in both modes: 3.3.5a has no SetReverseFill, so the
+            -- health bar cannot drain towards the right edge either. Flipping only this
+            -- one would make the two bars fill in opposite directions.
+            if powerKey then
+                UF.SetPortraitOffTexCoord(texture, powerKey)
+            else
+                UF.ClearPortraitOffTexCoord(texture)
+            end
+            UF.ClipPortraitOffFill(texture, current / max)
         end
     end
 
     -- ================================================================
     -- SKIN (art and bar geometry from uf_skins.lua)
     -- ================================================================
+
+    -- Portrait Off draws its own frame, so the background art, its border and the
+    -- portrait all step aside and the bars move into the plate's wells.
+    local function ApplyPortraitOffLayout()
+        local bg = frameElements.background
+        -- Anchored to the FRAME, not to the background art: that art moves with the frame style
+        -- (UF.SKINS.forever lifts it by TARGET_LIFT), so anchoring to it would drag the plate and
+        -- the bars down on a style change. The plate sits at the same place in every style; the
+        -- style only changes the contour's tint.
+        local anchor, anchorPoint = BlizzFrame, "TOPLEFT"
+
+        local plate = GetPortraitOffPlate()
+        if plate then
+            UF.ApplySkinPiece(plate, PortraitOff.piece, "TOPRIGHT", anchor, anchorPoint,
+                PortraitOff.x, PortraitOff.y)
+            plate:SetDrawLayer("BACKGROUND", 1)
+            plate:Show()
+        end
+        if bg then bg:Hide() end
+        -- The contour goes on the border element, which lives on borderFrame, a level above the
+        -- bars: a texture of BlizzFrame itself can never outrank them.
+        if frameElements.border then
+            frameElements.border:Show()
+            UF.ApplySkinPiece(frameElements.border, PortraitOff.borderPiece,
+                "TOPRIGHT", anchor, anchorPoint, PortraitOff.x, PortraitOff.y)
+            -- The one thing the style changes: Forever's chrome is gold, so its contour goes
+            -- slightly brown.
+            local gold = UF.GetFrameStyle() == "forever"
+            frameElements.border:SetVertexColor(gold and 0.75 or 1, gold and 0.58 or 1, gold and 0.33 or 1)
+        end
+        if Portrait then Portrait:SetAlpha(0) end
+
+        -- Threat percentage, centred on the plate and attached to its top. Placed here and at
+        -- creation: this layout can run before the plate and the indicator exist.
+        if frameElements.threatNumeric and plate then
+            frameElements.threatNumeric:ClearAllPoints()
+            frameElements.threatNumeric:SetPoint("BOTTOM", plate, "TOP", 0, 0)
+        end
+
+        -- The art is mirrored, so the wells run from the plate's right edge: health 1px in, the
+        -- power bar 1px in below it (the 124x10 arts centred in it).
+        local health = UF.PORTRAIT_OFF.health
+        if HealthBar then
+            HealthBar:ClearAllPoints()
+            HealthBar:SetSize(health.w, health.h)
+            HealthBar:SetPoint("TOPRIGHT", anchor, anchorPoint,
+                PortraitOff.x - health.x, PortraitOff.y - health.y)
+        end
+        if ManaBar then
+            local well = UF.PORTRAIT_OFF.mana
+            local powerType = UnitPowerType(unitToken)
+            local w, h = well.w, well.h
+            if powerType and powerType ~= 0 then
+                w, h = UF.PORTRAIT_OFF.power.w, UF.PORTRAIT_OFF.power.h
+            end
+            ManaBar:ClearAllPoints()
+            ManaBar:SetSize(w, h)
+            ManaBar:SetPoint("TOPRIGHT", anchor, anchorPoint,
+                PortraitOff.x - well.x - (well.w - w) / 2,
+                PortraitOff.y - well.y - (well.h - h) / 2)
+        end
+        Module.appliedLayout = UF.GetFrameSkin().target
+    end
 
     local function ApplyBarLayout(bar, layout)
         bar:ClearAllPoints()
@@ -358,10 +564,34 @@ function UF.TargetStyle.Create(opts)
         Portrait:ClearAllPoints()
         Portrait:SetSize(layout.w, layout.h)
         Portrait:SetPoint("TOPRIGHT", BlizzFrame, "TOPRIGHT", layout.x, layout.y)
+        -- Back to the skin's spot for the threat percentage, which Portrait Off moves.
+        if frameElements.threatNumeric then
+            frameElements.threatNumeric:ClearAllPoints()
+            frameElements.threatNumeric:SetPoint("BOTTOM", BlizzFrame, "TOP", -45, -20)
+        end
     end
 
     -- Bars anchor to the portrait, so both go together; the dragons and the PvP badge follow it too.
     local function ApplyBarsLayout()
+        Module.appliedPortraitOff = PortraitOffActive()
+        if Module.appliedPortraitOff then
+            ApplyPortraitOffLayout()
+            return
+        end
+
+        if frameElements.portraitOffPlate then
+            frameElements.portraitOffPlate:Hide()
+        end
+        if frameElements.background then
+            frameElements.background:Show()
+        end
+        if frameElements.border then
+            frameElements.border:Show()
+        end
+        if Portrait then
+            Portrait:SetAlpha(1)
+        end
+
         local skin = UF.GetFrameSkin().target
         if Portrait then
             ApplyPortraitLayout()
@@ -381,13 +611,20 @@ function UF.TargetStyle.Create(opts)
     local function ApplyNameLayout()
         if not NameText or not HealthBar then return end
         local name = UF.GetNameSpot("target")
+        -- Portrait Off hides the frame art the Forever name spot was measured on, so the name
+        -- hangs off the health bar instead (it already lives on the plate): anchored by LEFT
+        -- with its own box, so center_names works.
+        local ref, spot = frameElements.background, name
+        if name and PortraitOffActive() and HealthBar then
+            ref, spot = HealthBar, PortraitOff.icons.name
+        end
         NameText:ClearAllPoints()
-        if name and frameElements.background then
+        if spot and ref then
             if not nameHome then
                 nameHome = { NameText:GetWidth(), NameText:GetJustifyH() }
             end
-            NameText:SetPoint("LEFT", frameElements.background, "TOPLEFT", name.x, name.y)
-            NameText:SetWidth(name.w)
+            NameText:SetPoint("LEFT", ref, "TOPLEFT", spot.x, spot.y)
+            NameText:SetWidth(spot.w)
             NameText:SetJustifyH(UF.GetNameSpotJustify())
         else
             NameText:SetPoint("BOTTOM", HealthBar, "TOP", 10, 3)
@@ -401,7 +638,15 @@ function UF.TargetStyle.Create(opts)
 
     local function ApplyLevelLayout()
         local circle, levelFrame = frameElements.levelCircle, frameElements.levelFrame
-        local onCircle = circle and UF.ApplyLevelCircle(circle, UF.GetLevelSpot("target"), frameElements.background)
+        -- The level badge only exists in the Forever level style: Portrait Off moves its spot,
+        -- but must NOT create one for the other style, which showed the Forever circle while the
+        -- style was DragonUI.
+        local spot = UF.GetLevelSpot("target")
+        local levelSpot, levelRef = spot, frameElements.background
+        if spot and PortraitOffActive() then
+            levelSpot, levelRef = PortraitOff.icons.level, BlizzFrame
+        end
+        local onCircle = circle and UF.ApplyLevelCircle(circle, levelSpot, levelRef)
         local textHome = levelFrame and levelFrame:GetParent()
         if levelFrame then
             -- Forever draws the level over the PvP badge, which sits one level above the text frame.
@@ -470,9 +715,11 @@ function UF.TargetStyle.Create(opts)
     local function ApplyStatusIcons()
         ApplyLeaderArt()
         local raidTargetIcon = _G[namePrefix .. "FrameTextureFrameRaidTargetIcon"]
-        if raidTargetIcon and Portrait then
+        -- Portrait Off hides the portrait the mark normally rides, so it moves onto the plate.
+        local markHost = (PortraitOffActive() and frameElements.portraitOffPlate) or Portrait
+        if raidTargetIcon and markHost then
             raidTargetIcon:ClearAllPoints()
-            raidTargetIcon:SetPoint("CENTER", Portrait, "TOP", 0, 0)
+            raidTargetIcon:SetPoint("CENTER", markHost, "TOP", 0, 0)
         end
     end
 
@@ -534,7 +781,7 @@ function UF.TargetStyle.Create(opts)
                     local _, max = self:GetMinMaxValues()
                     local cur = self:GetValue()
                     if max > 0 and cur then
-                        texture:SetTexCoord(0, cur / max, 0, 1)
+                        UF.ClipPortraitOffFill(texture, cur / max)
                     end
                 end
             end)
@@ -576,21 +823,11 @@ function UF.TargetStyle.Create(opts)
             hooksecurefunc(ManaBar, "SetValue", function(self, value)
                 shownPower = value
                 if not UnitExists(unitToken) then return end
-                local texture = self:GetStatusBarTexture()
-                if not texture then return end
-
-                local powerType = UnitPowerType(unitToken)
-                local powerName = POWER_MAP[powerType] or "Mana"
-                texture:SetTexture(TEXTURES.BAR_PREFIX .. powerName)
-                texture:SetDrawLayer("ARTWORK", 1)
-                texture:SetVertexColor(1, 1, 1)
+                -- Single owner of the texture, its Portrait Off crop and the fill: hardcoding the
+                -- portrait-on art and a raw SetTexCoord here wipes the Portrait Off art on every
+                -- power change.
+                ForceUpdatePowerBar()
                 ManaBar:SetStatusBarColor(1, 1, 1)
-
-                local _, max = self:GetMinMaxValues()
-                local cur = self:GetValue()
-                if max > 0 and cur then
-                    texture:SetTexCoord(0, cur / max, 0, 1)
-                end
             end)
 
             -- Blizzard polls only player/pet/vehicle; targeting yourself, predicted regen fires no UNIT_ENERGY.
@@ -725,7 +962,16 @@ function UF.TargetStyle.Create(opts)
         frameElements.elite:SetTexCoord(left, right, top, bottom)
         frameElements.elite:SetSize(place.w, place.h)
         frameElements.elite:ClearAllPoints()
-        frameElements.elite:SetPoint("CENTER", Portrait, "CENTER", place.x, place.y)
+        if PortraitOffActive() then
+            -- The frame position it had around the portrait. The offset is measured for the elite
+            -- cell, so a wider dragon is re-centred to keep its left edge and grow away from the
+            -- bars.
+            frameElements.elite:SetPoint("CENTER", BlizzFrame, "TOPLEFT",
+                PortraitOff.icons.dragon.x + (place.w - PortraitOff.icons.dragon.w) / 2,
+                PortraitOff.icons.dragon.y)
+        else
+            frameElements.elite:SetPoint("CENTER", Portrait, "CENTER", place.x, place.y)
+        end
         frameElements.elite:Show()
     end
 
@@ -831,12 +1077,15 @@ function UF.TargetStyle.Create(opts)
     -- ================================================================
 
     local function PaintNameBackground(r, g, b, tapDenied)
-        local piece = UF.GetFrameSkin().target.nameBackground
+        local piece = (PortraitOffActive() and PortraitOff.icons.nameBackground)
+            or UF.GetFrameSkin().target.nameBackground
         local tapped = tapDenied and piece.tapped
-        local cell = piece.cells[tapped and tapped.cell or ResolveNameBackgroundColorKey(r, g, b)]
-        local color = tapped and tapped.color or piece.color
+        local cell = piece.cells and piece.cells[tapped and tapped.cell or ResolveNameBackgroundColorKey(r, g, b)]
+        -- The portrait-on art carries one baked cell per colour; the portrait-off band has a
+        -- single neutral cell, so it is tinted with the unit's colour instead.
+        local color = tapped and tapped.color or (cell and piece.color) or { r, g, b }
         NameBackground:SetTexture(piece.file)
-        NameBackground:SetTexCoord(unpack(cell or piece.cells.yellow))
+        NameBackground:SetTexCoord(unpack(cell or piece.tc or piece.cells.yellow))
         NameBackground:SetBlendMode(tapped and tapped.blend or piece.blend)
         if NameBackground.SetDesaturated then
             NameBackground:SetDesaturated(tapped and tapped.desaturate or false)
@@ -898,12 +1147,36 @@ function UF.TargetStyle.Create(opts)
         end
         local badge = UF.GetFrameSkin().target.pvp
         pvpBadge:ClearAllPoints()
-        pvpBadge:SetPoint("TOP", frameElements.background or BlizzFrame, "TOPLEFT", badge.x, badge.y)
+        local badgeScale = badge.scale
+        if PortraitOffActive() and frameElements.portraitOffPlate then
+            -- Same reference, but its own offset and size: the two arts have different margins.
+            pvpBadge:SetPoint("TOPLEFT", frameElements.portraitOffPlate, "TOPRIGHT",
+                (PortraitOff.icons.pvp.badgeX or PortraitOff.icons.pvp.x),
+                PortraitOff.icons.pvp.badgeY or PortraitOff.icons.pvp.y)
+            badgeScale = UF.GetPvPBadgeScaleForSize(PortraitOff.icons.pvp.badgeSize or PortraitOff.icons.pvp.size)
+        else
+            pvpBadge:SetPoint("TOP", frameElements.background or BlizzFrame, "TOPLEFT", badge.x, badge.y)
+        end
         local onBadge = shown and UF.GetPvPIconStyle(config) == "forever"
-            and UF.ShowPvPBadge(pvpBadge, kind, badge.scale, true)
+            and UF.ShowPvPBadge(pvpBadge, kind, badgeScale, true)
         if not onBadge then
             pvpBadge:Hide()
         end
+        -- Blizzard's classic icon hangs off the portrait, which Portrait Off hides: it is
+        -- re-anchored to the plate's top-right corner and shrunk. Blizzard owns its size, so it
+        -- is read once and scaled from there.
+        if PortraitOffActive() and frameElements.portraitOffPlate then
+            if not PortraitOff.pvpIconBaseW then
+                PortraitOff.pvpIconBaseW, PortraitOff.pvpIconBaseH = pvpIcon:GetWidth(), pvpIcon:GetHeight()
+            end
+            local icon = PortraitOff.icons.pvp
+            pvpIcon:SetSize(icon.size, icon.size)
+            pvpIcon:ClearAllPoints()
+            pvpIcon:SetPoint("TOPLEFT", frameElements.portraitOffPlate, "TOPRIGHT", icon.x, icon.y)
+        elseif PortraitOff.pvpIconBaseW then
+            pvpIcon:SetSize(PortraitOff.pvpIconBaseW, PortraitOff.pvpIconBaseH)
+        end
+
         -- Alpha only: TargetFrame_CheckFaction owns Show/Hide, including the small focus that never shows it.
         pvpIcon:SetAlpha((shown and not onBadge) and 1 or 0)
         if fake then pvpIcon:Show() end
@@ -920,6 +1193,23 @@ function UF.TargetStyle.Create(opts)
         -- On eliteFrame like retail's: over the border, under the elite dragon.
         flash:SetParent(frameElements.eliteFrame)
         flash:SetDrawLayer("BACKGROUND")
+        if PortraitOffActive() then
+            -- Retail ships no portrait-off threat glow: this one is generated from the plate's
+            -- contour and kept white, since Blizzard tints it per threat level.
+            -- Anchored to the PLATE, not to the background art: that art moves with the frame
+            -- style (TARGET_LIFT) and sits at a different origin, 10.5px off the plate.
+            local plate = frameElements.portraitOffPlate
+            flash:SetTexture(UF.TEXTURES.portraitOff.INCOMBAT)
+            flash:SetTexCoord(unpack(PortraitOff.borderPiece.tc))
+            flash:ClearAllPoints()
+            flash:SetSize(UF.PORTRAIT_OFF.frame.w, UF.PORTRAIT_OFF.frame.h)
+            if plate then
+                flash:SetPoint("TOPRIGHT", plate, "TOPRIGHT", 0, 0)
+            else
+                flash:SetPoint("TOPRIGHT", BlizzFrame, "TOPLEFT", PortraitOff.x, PortraitOff.y)
+            end
+            return
+        end
         flash:SetTexture(TEXTURES.THREAT)
         flash:SetTexCoord(0, 376/512, 0, 134/256)
         local spot = UF.GetFrameSkin().target.flash
@@ -1039,7 +1329,13 @@ function UF.TargetStyle.Create(opts)
             numeric:SetFrameStrata("HIGH")
             numeric:SetFrameLevel(BlizzFrame:GetFrameLevel() + 10)
             numeric:SetSize(71, 13)
-            numeric:SetPoint("BOTTOM", BlizzFrame, "TOP", -45, -20)
+            -- Portrait Off: centred on the plate and attached to its top. The plate art carries
+            -- 5px of transparent padding above its visible contour, so -5 is what touches it.
+            if PortraitOffActive() and frameElements.portraitOffPlate then
+                numeric:SetPoint("BOTTOM", frameElements.portraitOffPlate, "TOP", 0, -5)
+            else
+                numeric:SetPoint("BOTTOM", BlizzFrame, "TOP", -45, -20)
+            end
             numeric:Hide()
 
             local bg = numeric:CreateTexture(nil, "ARTWORK")
@@ -1169,6 +1465,16 @@ function UF.TargetStyle.Create(opts)
         end
 
         -- ---- ShowTest / HideTest (editor mode) ----
+        -- Blizzard shows these frames on its own when their unit appears (Set Focus, target
+        -- swap), so the layout is re-asserted on Show: the plate and the bar art have to come
+        -- back with the frame, and the unit refresh path alone does not re-apply the layout.
+        if BlizzFrame.HookScript and not BlizzFrame.DragonUI_PortraitOffShowHooked then
+            BlizzFrame:HookScript("OnShow", function()
+                ApplyBarsLayout()
+            end)
+            BlizzFrame.DragonUI_PortraitOffShowHooked = true
+        end
+
         if not BlizzFrame.ShowTest then
             BlizzFrame.ShowTest = function(self)
                 self:Show()
@@ -1180,9 +1486,19 @@ function UF.TargetStyle.Create(opts)
                     ForceReapplyLayout()
                 end
 
+                -- Re-applied on every frame: it decides the Portrait Off visibility (plate in,
+                -- frame art out) and only the target passes forceLayoutOnUnitChange.
+                ApplyBarsLayout()
+
                 -- Custom textures
+                -- In Portrait Off the plate replaces the frame art, so the background stays
+                -- hidden here; the border does show, since it holds the plate's contour.
                 if frameElements.background then
-                    frameElements.background:Show()
+                    if PortraitOffActive() then
+                        frameElements.background:Hide()
+                    else
+                        frameElements.background:Show()
+                    end
                 end
                 if frameElements.border then
                     frameElements.border:Show()
@@ -1234,9 +1550,12 @@ function UF.TargetStyle.Create(opts)
                     local tex = HealthBar:GetStatusBarTexture()
                     if tex then
                         local cfg = GetConfig()
+                        -- The editor paints the fake frame by hand, so it picks the art itself.
+                        local off = PortraitOffActive()
+                        local statusKey = cfg.classcolor and "HEALTH_STATUS" or "HEALTH_BAR"
                         if cfg.classcolor then
-                            tex:SetTexture(
-                                TEXTURES.BAR_PREFIX .. "Health-Status")
+                            tex:SetTexture(off and UF.TEXTURES.portraitOff.HEALTH_STATUS
+                                or TEXTURES.BAR_PREFIX .. "Health-Status")
                             local _, cls = UnitClass("player")
                             local clr = RAID_CLASS_COLORS[cls]
                             if clr then
@@ -1246,12 +1565,17 @@ function UF.TargetStyle.Create(opts)
                                 tex:SetVertexColor(1, 1, 1, 1)
                             end
                         else
-                            tex:SetTexture(
-                                TEXTURES.BAR_PREFIX .. "Health")
+                            tex:SetTexture(off and UF.TEXTURES.portraitOff.HEALTH_BAR
+                                or TEXTURES.BAR_PREFIX .. "Health")
                             tex:SetVertexColor(1, 1, 1, 1)
                         end
+                        if off then
+                            UF.SetPortraitOffTexCoord(tex, statusKey)
+                        else
+                            UF.ClearPortraitOffTexCoord(tex)
+                        end
                         if maxHP > 0 then
-                            tex:SetTexCoord(0, curHP / maxHP, 0, 1)
+                            UF.ClipPortraitOffFill(tex, curHP / maxHP)
                         end
                     end
                     HealthBar:Show()
@@ -1268,11 +1592,19 @@ function UF.TargetStyle.Create(opts)
                     local tex = ManaBar:GetStatusBarTexture()
                     if tex then
                         local pName = POWER_MAP[pType] or "Mana"
-                        tex:SetTexture(TEXTURES.BAR_PREFIX .. pName)
+                        local off = PortraitOffActive()
+                        local _, pToken = UnitPowerType("player")
+                        tex:SetTexture(off and UF.GetPortraitOffPowerTexture(pToken)
+                            or TEXTURES.BAR_PREFIX .. pName)
                         tex:SetDrawLayer("ARTWORK", 1)
                         tex:SetVertexColor(1, 1, 1, 1)
+                        if off then
+                            UF.SetPortraitOffTexCoord(tex, UF.GetPortraitOffPowerKey(pToken))
+                        else
+                            UF.ClearPortraitOffTexCoord(tex)
+                        end
                         if maxPwr > 0 then
-                            tex:SetTexCoord(0, curPwr / maxPwr, 0, 1)
+                            UF.ClipPortraitOffFill(tex, curPwr / maxPwr)
                         end
                     end
                     ManaBar:Show()
@@ -1513,9 +1845,19 @@ function UF.TargetStyle.Create(opts)
         if frameElements.border then
             ApplySkinTextures()
         end
-        if Module.appliedLayout and Module.appliedLayout ~= UF.GetFrameSkin().target
-                and not InCombatLockdown() then
-            ApplyBarsLayout()
+        -- Re-asserted on EVERY refresh, not only when the state changes: the skin art is
+        -- re-applied above on every pass, so any other refresh (Class Color Health, a unit
+        -- change, a style switch) would leave the portrait-on art on the border and background.
+        -- Texture-only work, so it is safe in combat.
+        ApplyBarsLayout()
+        ApplyNameBackgroundLayout()
+        ApplyNameLayout()
+        ApplyLevelLayout()
+        ApplyStatusIcons()
+        ApplyThreatFlash()
+        -- The auras need Blizzard's own pass, which is not combat-safe.
+        if not InCombatLockdown() and addon.RefreshTargetFocusAuraLayout then
+            addon.RefreshTargetFocusAuraLayout()
         end
 
         ApplyWidgetPosition()

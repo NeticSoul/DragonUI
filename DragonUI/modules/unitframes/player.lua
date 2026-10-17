@@ -172,6 +172,112 @@ local function IsFatHealthbarActive()
     return true
 end
 
+-- ============================================================================
+-- PORTRAIT OFF (player)
+-- ============================================================================
+-- Retail's ui-hud-unitframe-player-portraitoff plate replaces the portrait and the border:
+-- a 133x51 texture whose wells hold both bars, drawn at the frame's top-left, so the frame
+-- becomes compact and the bars sit where the portrait-on row starts. Offsets are provisional,
+-- pending in-game tuning.
+
+-- Plate TOPLEFT measured from PlayerFrame's: it matches the portrait-on art's own top-left,
+-- so the frame keeps its outer contour.
+local Portrait = {
+    x = 33,
+    y = -8,
+    -- The plate is narrower than the portrait-on frame, so the icons that rode the portrait
+    -- move onto it.
+    icons = {
+        leader = { x = 172, y = -2, w = 16, h = 16 },
+        master = { x = 190, y = -2, w = 16, h = 16 },
+        role   = { x = 172, y = -20.5, w = 12, h = 12 },
+        tab    = { x = 202, y = -22.5 },
+    },
+    -- One table per PvP style: the classic icon (64x64 with padding) and the Forever badge
+    -- (bare 39px circle) have different margins, so each carries its own size. x is measured
+    -- from the plate's left edge; negative moves it right, over the plate.
+    pvp = { x = -20, y = 0, size = 48, badgeX = -3, badgeY = 0, badgeSize = 28 },
+    -- Directly under the PvP icon: same centre line, the icon's size plus a gap. Derived from
+    -- the icon above, so retuning it means retuning this.
+    level = { x = -14, y = -45.5 },
+    -- Kept for the frame's whole life so the art is never reloaded.
+    piece = {
+        file = UF.TEXTURES.portraitOff.FRAME,
+        w = UF.PORTRAIT_OFF.frame.w,
+        h = UF.PORTRAIT_OFF.frame.h,
+        x = 0,
+        y = 0,
+        tc = UF.PORTRAIT_OFF_TEXCOORD.FRAME,
+    },
+    -- Plate contour, same canvas and crop as the body. It goes on PlayerFrameBorder because
+    -- that frame sits a level above the bars: a texture of PlayerFrame itself can never
+    -- outrank them.
+    borderPiece = {
+        file = UF.TEXTURES.portraitOff.BORDER,
+        w = UF.PORTRAIT_OFF.frame.w,
+        h = UF.PORTRAIT_OFF.frame.h,
+        x = 0,
+        y = 0,
+        tc = UF.PORTRAIT_OFF_TEXCOORD.FRAME,
+    },
+    -- Aggro glow, same canvas and crop as the body. White, so the player can tint it red;
+    -- x/y follow the plate's and are filled in at placement time.
+    glowPiece = {
+        file = UF.TEXTURES.portraitOff.INCOMBAT,
+        w = UF.PORTRAIT_OFF.frame.w,
+        h = UF.PORTRAIT_OFF.frame.h,
+        x = 0,
+        y = 0,
+        tc = UF.PORTRAIT_OFF_TEXCOORD.FRAME,
+    },
+}
+
+-- Per-frame config, and off in a vehicle: its art has its own layout.
+function Portrait.IsActive()
+    return UF.IsPortraitOffConfigured(GetPlayerConfig()) and not IsInVehicle()
+end
+
+-- Sizes the power bar to the current power type's art and centres it in the plate's lower
+-- well (mana fills it whole; the other arts are 124x10).
+function Portrait.ApplyManaBar()
+    if not PlayerFrameManaBar then return end
+    local plate, well = UF.PORTRAIT_OFF, UF.PORTRAIT_OFF.mana
+    local powerType = UnitPowerType('player')
+    local w, h = well.w, well.h
+    if powerType and powerType ~= 0 then
+        w, h = plate.power.w, plate.power.h
+    end
+    PlayerFrameManaBar:ClearAllPoints()
+    PlayerFrameManaBar:SetSize(w, h)
+    -- Centred in the well on both axes: the 124x10 arts are inset 1px inside the 126x12 one.
+    PlayerFrameManaBar:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT',
+        Portrait.x + well.x + (well.w - w) / 2,
+        Portrait.y - well.y - (well.h - h) / 2)
+    PlayerFrameManaBar:Show()
+    if Module.fatManaFrame then
+        Module.fatManaFrame:SetSize(1, 1)
+    end
+end
+
+-- Both bars on the plate's wells, 11 and 35 down from its top like the art.
+function Portrait.ApplyBars()
+    local health = UF.PORTRAIT_OFF.health
+    PlayerFrameHealthBar:ClearAllPoints()
+    PlayerFrameHealthBar:SetSize(health.w, health.h)
+    PlayerFrameHealthBar:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT',
+        Portrait.x + health.x, Portrait.y - health.y)
+    Portrait.ApplyManaBar()
+end
+
+-- The icon's Portrait Off spot, or the given portrait-on one.
+function Portrait.IconSpot(key, fallback)
+    local spot = Portrait.icons[key]
+    if spot and Portrait.IsActive() then
+        return spot
+    end
+    return fallback
+end
+
 -- Get the correct BASE texture path (fat or normal, not vehicle — vehicle uses atlas)
 local function GetBaseTexture()
     return IsFatHealthbarActive() and TEXTURES.BASE_FAT or TEXTURES.BASE
@@ -217,6 +323,10 @@ local DF_POWER_COLORS = {
 
 -- Get the correct power bar texture path, applying user texture override ONLY in fat mode
 local function GetPowerBarTexture(powerTypeString)
+    if Portrait.IsActive() then
+        return UF.GetPortraitOffPowerTexture(powerTypeString)
+    end
+
     -- Override textures only apply when fat healthbar is active
     if IsFatHealthbarActive() then
         local config = GetPlayerConfig()
@@ -225,7 +335,7 @@ local function GetPowerBarTexture(powerTypeString)
             return MANABAR_TEXTURE_OVERRIDES[textureSetting]
         end
     end
-    
+
     -- Default DragonUI per-power-type textures (normal mode always uses these)
     return TEXTURES.POWER_BARS[powerTypeString] or TEXTURES.POWER_BARS.MANA
 end
@@ -260,6 +370,12 @@ end
 
 -- Apply fat mana bar config (size, visibility, position)
 local function ApplyFatManaBar()
+    -- Portrait Off owns the power bar's size and spot; fat settings do not apply.
+    if Portrait.IsActive() then
+        Portrait.ApplyManaBar()
+        return
+    end
+
     local fatMode = IsFatHealthbarActive()
     local hasVehicleUI = UnitHasVehicleUI("player")
 
@@ -531,6 +647,41 @@ local function UpdateGlowVisibility()
                 dragonFrame.VehicleStatusTexture:SetAlpha(1)
             else
                 dragonFrame.VehicleStatusGlow:Hide()
+            end
+        end
+        return
+    end
+
+    -- The elite glows trace the portrait's silhouette, so in Portrait Off they stay off. The
+    -- aggro and rest glows do draw (ApplyPlayerGlowArt) and keep the combat / resting rules
+    -- below.
+    if Portrait.IsActive() then
+        for _, key in ipairs({ "EliteStatusGlow", "EliteCombatGlow" }) do
+            if dragonFrame[key] then
+                dragonFrame[key]:Hide()
+            end
+        end
+        if PlayerStatusTexture then
+            PlayerStatusTexture:Hide()
+            PlayerStatusTexture:SetAlpha(0)
+        end
+        local elite = IsEliteModeActive()
+        local combatFlashEnabled = GetCombatFlashConfig()
+        local combat = dragonFrame.DragonUICombatGlow
+        if combat then
+            combat:SetAlpha(1)
+            if not elite and combatGlowVisible and combatFlashEnabled then
+                combat:Show()
+            else
+                combat:Hide()
+            end
+        end
+        local status = dragonFrame.DragonUIStatusGlow
+        if status then
+            if not elite and statusGlowVisible and restGlowEnabled then
+                status:Show()
+            else
+                status:Hide()
             end
         end
         return
@@ -870,6 +1021,78 @@ function Runes.CreateEditor()
     })
 end
 
+-- ============================================================================
+-- TOTEMS (elemental slots)
+-- ============================================================================
+-- Blizzard's TotemFrame, made movable from the editor. TotemFrame_Update re-anchors it on
+-- every update only for Death Knights, so for shamans (the class that uses it) the anchor
+-- holds. Attached keeps Blizzard's own spot; the editor detaches it to a saved position.
+-- Hangs off Module.Totems: player.lua has no room for new top level locals.
+Module.Totems = {}
+
+function Module.Totems.Detached()
+    return GetPlayerConfig().totems_detached == true
+end
+
+-- Attached: leave Blizzard's anchor alone. Detached: follow the editor box.
+function Module.Totems.Place()
+    local totems, box = _G.TotemFrame, Module.Totems.box
+    if not totems or not box or not Module.Totems.Detached() then return end
+    addon.ApplyWidgetPositionFromDB("totems", box)
+    totems:ClearAllPoints()
+    totems:SetPoint("TOPLEFT", box, "TOPLEFT", 0, 0)
+end
+
+-- Attached, the box rides on the totems so the editor marks the real frame.
+function Module.Totems.SyncBox()
+    local totems, box = _G.TotemFrame, Module.Totems.box
+    if not totems or not box or Module.Totems.Detached() or not totems:IsShown() then return end
+    box:ClearAllPoints()
+    box:SetPoint("TOPLEFT", totems, "TOPLEFT", 0, 0)
+end
+
+function Module.Totems.Detach()
+    Module.Totems.CreateEditor()
+    if not Module.Totems.box then return end
+    addon.SaveUIFramePosition(Module.Totems.box, "widgets", "totems")
+    GetPlayerConfig().totems_detached = true
+    Module.Totems.Place()
+end
+
+function Module.Totems.CreateEditor()
+    if Module.Totems.box or not addon.CreateUIFrame then return end
+    if select(2, UnitClass("player")) ~= "SHAMAN" then return end
+    local totems = _G.TotemFrame
+    if not totems then return end
+    local w, h = totems:GetWidth(), totems:GetHeight()
+    if not w or w <= 0 then w = 200 end
+    if not h or h <= 0 then h = 40 end
+    Module.Totems.box = addon.CreateUIFrame(w, h, "Totems")
+    Module.Totems.box:HookScript("OnDragStop", Module.Totems.Detach)
+    addon:RegisterEditableFrame({
+        name = "totems",
+        frame = Module.Totems.box,
+        configPath = { "widgets", "totems" },
+        editorVisible = function() return IsPlayerModuleEnabled() end,
+        showTest = Module.Totems.SyncBox,
+        onNudge = Module.Totems.Detach,
+        resetPosition = function()
+            GetPlayerConfig().totems_detached = false
+            Module.Totems.Place()
+            Module.Totems.SyncBox()
+        end,
+        isDefaultPosition = function() return not Module.Totems.Detached() end,
+        applyPosition = Module.Totems.Place,
+        module = Module,
+    })
+end
+
+function Module.Totems.Setup()
+    Module.Totems.CreateEditor()
+    Module.Totems.Place()
+    Module.Totems.SyncBox()
+end
+
 -- Setup Death Knight rune frame
 local function SetupRuneFrame()
     -- WoW automatically handles rune availability for DKs
@@ -938,7 +1161,7 @@ local function UpdatePlayerRoleIcon()
     local shown = role and not IsInVehicle()
 
     if shown then
-        local spot = UF.PLAYER_ICONS.role
+        local spot = Portrait.IsActive() and Portrait.icons.role or UF.PLAYER_ICONS.role
         if dragonFrame.EliteIconContainer then
             iconTexture:SetParent(dragonFrame.EliteIconContainer)
         end
@@ -972,7 +1195,7 @@ local function UpdateGroupIndicator()
     if PlayerFrame.state == "vehicle" then
         groupIndicatorFrame:SetPoint("BOTTOMLEFT", PlayerFrame, "TOPLEFT", 97, -13)
     else
-        local spot = UF.PLAYER_ICONS.tab
+        local spot = Portrait.IsActive() and Portrait.icons.tab or UF.PLAYER_ICONS.tab
         groupIndicatorFrame:SetPoint("BOTTOMRIGHT", PlayerFrame, "TOPLEFT", spot.x, spot.y)
     end
 
@@ -1038,6 +1261,12 @@ local function PlacePlayerPvPBadge(badge)
         badge:SetPoint("TOP", PlayerPortrait, "LEFT", UF.PLAYER_PVP_FALLBACK.x, UF.PLAYER_PVP_FALLBACK.y)
         return nil
     end
+    if Portrait.IsActive() then
+        -- Its own offset and size: the classic icon and the badge have different art margins.
+        badge:SetPoint("TOPRIGHT", art, "TOPLEFT",
+            -(Portrait.pvp.badgeX or Portrait.pvp.x), Portrait.pvp.badgeY or Portrait.pvp.y)
+        return UF.GetPvPBadgeScaleForSize(Portrait.pvp.badgeSize or Portrait.pvp.size)
+    end
     local place = UF.GetFrameSkin()[IsEliteModeActive() and "playerDecoration" or "player"].pvp
     badge:SetPoint("TOP", art, "TOPLEFT", place.x, place.y)
     return place.scale
@@ -1054,17 +1283,19 @@ local function PlacePlayerIcon(icon, spot)
     icon:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", spot.x, spot.y)
 end
 
+-- Portrait Off draws the compact plate, so the icons over the portrait move with it.
 -- The guide icon replaces the leader's in LFG groups (Blizzard shows one), so both share the slot.
 local function UpdateLeaderIconPosition()
     local art = UF.STATUS_ICONS
     local style = UF.GetStatusIconStyle()
     if PlayerLeaderIcon then
-        PlacePlayerIcon(PlayerLeaderIcon, UF.PLAYER_ICONS[style == "forever" and "foreverLeader" or "leader"])
+        PlacePlayerIcon(PlayerLeaderIcon, Portrait.IconSpot("leader",
+            UF.PLAYER_ICONS[style == "forever" and "foreverLeader" or "leader"]))
         PlayerLeaderIcon:SetTexture(art.file)
         PlayerLeaderIcon:SetTexCoord(unpack(art.leader[style]))
     end
     if PlayerGuideIcon then
-        PlacePlayerIcon(PlayerGuideIcon, UF.PLAYER_ICONS.leader)
+        PlacePlayerIcon(PlayerGuideIcon, Portrait.IconSpot("leader", UF.PLAYER_ICONS.leader))
         PlayerGuideIcon:SetTexture(art.file)
         PlayerGuideIcon:SetTexCoord(unpack(art.guide))
     end
@@ -1072,7 +1303,7 @@ end
 
 local function UpdateMasterIconPosition()
     if PlayerMasterIcon then
-        PlacePlayerIcon(PlayerMasterIcon, UF.PLAYER_ICONS.master)
+        PlacePlayerIcon(PlayerMasterIcon, Portrait.IconSpot("master", UF.PLAYER_ICONS.master))
     end
 end
 
@@ -1084,12 +1315,12 @@ local function UpdateDragonVisibilityForVehicle(inVehicle, hasEliteDecoration)
     if not dragonFrame then
         return
     end
-    
+
     -- Dragon decoration texture (only relevant with elite/rareelite decoration)
     if hasEliteDecoration and dragonFrame.PlayerDragonDecoration then
         dragonFrame.PlayerDragonDecoration:SetAlpha(inVehicle and 0 or 1)
     end
-    
+
     -- Update glow visibility: switches between atlas-based glows (vehicle)
     -- and DragonUI custom glows (normal) based on current vehicle/combat/rest state
     UpdateGlowVisibility()
@@ -1112,7 +1343,7 @@ local function UpdatePVPTimerPosition(isEliteMode)
         pvpTimerMoved = true
         return
     end
-    
+
     -- ONLY modify if there's elite decoration (elite, rareelite, worldboss, etc.)
     if isEliteMode then
         -- With elite decoration: use the SAME parent as the PVP icon (already above)
@@ -1121,11 +1352,11 @@ local function UpdatePVPTimerPosition(isEliteMode)
             -- 1. Reparent to the same container as the PVP icon
             pvpTimerText:SetParent(dragonFrame.EliteIconContainer)
             pvpTimerText:SetDrawLayer("OVERLAY", 7)
-            
+
             -- 2. Reposition the timer (adjust these coordinates as needed)
             pvpTimerText:ClearAllPoints()
             pvpTimerText:SetPoint("CENTER", PlayerPVPIcon, "LEFT", 22, 38)  -- To the left of the icon
-            
+
             -- Optional: adjust text size for better visibility
             pvpTimerText:SetFont(pvpTimerText:GetFont(), 11, "OUTLINE")
             pvpTimerMoved = true
@@ -1160,7 +1391,17 @@ local function UpdatePVPIconPosition()
     PlayerPVPIcon:SetParent(iconContainer)
     PlayerPVPIcon:ClearAllPoints()
 
-    if isEliteMode then
+    if Portrait.IsActive() then
+        -- Portrait Off: the plate is the frame, so the icon sits flush against its left edge.
+        -- Blizzard owns the 64x64 icon's size, so it is read once (to restore it when the
+        -- option goes off) and the Portrait Off size pinned.
+        if not Portrait.pvpBaseW then
+            Portrait.pvpBaseW, Portrait.pvpBaseH = PlayerPVPIcon:GetWidth(), PlayerPVPIcon:GetHeight()
+        end
+        PlayerPVPIcon:SetSize(Portrait.pvp.size, Portrait.pvp.size)
+        PlayerPVPIcon:SetPoint("TOPRIGHT", PlayerFrame, "TOPLEFT",
+            Portrait.x - Portrait.pvp.x, Portrait.y + Portrait.pvp.y)
+    elseif isEliteMode then
         -- Elite mode: specific position
         PlayerPVPIcon:SetPoint("TOPRIGHT", PlayerFrame, "TOPRIGHT", -155, -22)
     else
@@ -1173,7 +1414,12 @@ local function UpdatePVPIconPosition()
             PlayerPVPIcon:SetPoint("TOPRIGHT", PlayerFrame, "TOPRIGHT", -155, -22)
         end
     end
-    
+
+    -- Portrait Off shrinks the icon; every other mode keeps Blizzard's size.
+    if not Portrait.IsActive() and Portrait.pvpBaseW then
+        PlayerPVPIcon:SetSize(Portrait.pvpBaseW, Portrait.pvpBaseH)
+    end
+
     -- Reposition the PVP timer based on mode
     UpdatePVPTimerPosition(isEliteMode)
 end
@@ -1255,9 +1501,15 @@ local function UpdatePlayerHealthBarColor()
 
     if config.classcolor then
         --  USE STATUS TEXTURE (WHITE) FOR CLASS COLOR
-        local statusTexturePath = TEXTURES.HEALTH_STATUS
+        local statusTexturePath = Portrait.IsActive() and UF.TEXTURES.portraitOff.HEALTH_STATUS
+            or TEXTURES.HEALTH_STATUS
         if texture:GetTexture() ~= statusTexturePath then
             texture:SetTexture(statusTexturePath)
+        end
+        if Portrait.IsActive() then
+            UF.SetPortraitOffTexCoord(texture, "HEALTH_STATUS")
+        else
+            UF.ClearPortraitOffTexCoord(texture)
         end
 
         --  APPLY PLAYER CLASS COLOR
@@ -1270,9 +1522,15 @@ local function UpdatePlayerHealthBarColor()
         end
     else
         --  USE NORMAL TEXTURE (COLORED) WITHOUT CLASS COLOR
-        local normalTexturePath = TEXTURES.HEALTH_BAR
+        local normalTexturePath = Portrait.IsActive() and UF.TEXTURES.portraitOff.HEALTH_BAR
+            or TEXTURES.HEALTH_BAR
         if texture:GetTexture() ~= normalTexturePath then
             texture:SetTexture(normalTexturePath)
+        end
+        if Portrait.IsActive() then
+            UF.SetPortraitOffTexCoord(texture, "HEALTH_BAR")
+        else
+            UF.ClearPortraitOffTexCoord(texture)
         end
 
         --  WHITE COLOR (texture already has color)
@@ -1362,7 +1620,16 @@ function PlayerArt.ApplyFill(bar)
     local corner = bar == PlayerArt.bar
     if max > 0 and cur and cur >= 0 then
         local start = corner and PlayerArt.fillStart or 0
-        texture:SetTexCoord(start, start + (1 - start) * cur / max, 0, 1)
+        local fill = start + (1 - start) * cur / max
+        -- The art lives in the top-left of a POT canvas, so clipping happens inside that crop
+        -- instead of across the whole texture.
+        local crop = texture.PortraitOffCrop
+        if crop then
+            local span = crop[2] - crop[1]
+            texture:SetTexCoord(crop[1] + span * start, crop[1] + span * fill, crop[3], crop[4])
+        else
+            texture:SetTexCoord(start, fill, 0, 1)
+        end
     end
     if corner then
         PlayerArt.UpdateCorner()
@@ -1439,7 +1706,8 @@ end
 local function UpdateManaBarColor(statusBar)
     if statusBar ~= PlayerFrameManaBar then return end
 
-    local useOverride = IsFatHealthbarActive()
+    -- Portrait Off draws retail's art, whose colour is baked in: force white like normal mode.
+    local useOverride = IsFatHealthbarActive() and not Portrait.IsActive()
     if useOverride then
         local config = GetPlayerConfig()
         local textureSetting = config and config.manabar_texture or "dragonui"
@@ -1470,6 +1738,14 @@ local function UpdatePowerBarTexture(statusBar)
     if currentTexture ~= powerTexture then
         statusBar:GetStatusBarTexture():SetTexture(powerTexture)
         PlayerArt.LayoutCorner()
+    end
+
+    if Portrait.IsActive() then
+        Portrait.ApplyManaBar()
+        UF.SetPortraitOffTexCoord(statusBar:GetStatusBarTexture(),
+            UF.GetPortraitOffPowerKey(powerTypeString))
+    else
+        UF.ClearPortraitOffTexCoord(statusBar:GetStatusBarTexture())
     end
 
     -- Update color after texture change (druid form shifts change power type)
@@ -1506,7 +1782,7 @@ local function SetupAlternateManaTextElements()
     if not alternateManaBar or not addon.TextSystem then
         return
     end
-    
+
     -- Create dual text elements using TextSystem
     addon.TextSystem.CreateDualTextElements(
         alternateManaBar, -- parentFrame
@@ -1523,28 +1799,28 @@ local function UpdateAlternateManaText()
     if not alternateManaBar or not addon.TextSystem then
         return
     end
-    
+
     -- Get current mana values
     local currentMana = UnitPower("player", POWER_TYPE_MANA or 0)
     local maxMana = UnitPowerMax("player", POWER_TYPE_MANA or 0)
-    
+
     if not currentMana or not maxMana or maxMana == 0 then
         return
     end
-    
+
     -- Get configuration
     local config = GetPlayerConfig()
     local textFormat = config and config.alternateManaFormat or "both"
     local useBreakup = config and config.breakUpLargeNumbers
-    
+
     -- Custom handling for alternate mana bar
     if textFormat == "both" then
         -- Custom separation for alternate mana bar - adjust spacing here
         local currentText = useBreakup and addon.TextSystem.AbbreviateLargeNumbers(currentMana) or tostring(currentMana)
         local percent = math.floor((currentMana / maxMana) * 100)
-        local customSeparator = "    " -- Custom spacing for alternate mana bar (adjust here) 
+        local customSeparator = "    " -- Custom spacing for alternate mana bar (adjust here)
         local combinedText = percent .. "%" .. customSeparator .. currentText
-        
+
         -- Use as single text instead of dual
         addon.TextSystem.UpdateDualText(
             alternateManaBar,
@@ -1556,13 +1832,13 @@ local function UpdateAlternateManaText()
     else
         -- Use normal TextSystem for other formats
         local formattedText = addon.TextSystem.FormatStatusText(
-            currentMana, 
-            maxMana, 
-            textFormat, 
-            useBreakup, 
+            currentMana,
+            maxMana,
+            textFormat,
+            useBreakup,
             "alternateMana"
         )
-        
+
         addon.TextSystem.UpdateDualText(
             alternateManaBar,
             "AlternateMana",
@@ -1579,10 +1855,10 @@ local function SetupAlternateManaAlwaysVisible()
     if not alternateManaBar then
         return
     end
-    
+
     -- Phase 3C: Disable hover mode via flag (can't unhook HookScript)
     alternateManaBar.DragonUIHoverEnabled = false
-    
+
     -- Show text immediately and keep it visible
     UpdateAlternateManaText()
 end
@@ -1593,13 +1869,13 @@ local function HideAlternateManaTextElements()
     if not alternateManaBar or not addon.TextSystem then
         return
     end
-    
+
     -- Hide all text elements
     addon.TextSystem.UpdateDualText(
         alternateManaBar,
-        "AlternateMana", 
-        "", 
-        "numeric", 
+        "AlternateMana",
+        "",
+        "numeric",
         false -- shouldShow = false
     )
 end
@@ -1610,10 +1886,10 @@ local function SetupAlternateManaHoverBehavior()
     if not alternateManaBar then
         return
     end
-    
+
     -- Hide text initially
     HideAlternateManaTextElements()
-    
+
     -- Phase 3C: Use HookScript instead of SetScript on Blizzard frame
     -- Hook only once, use flag to enable/disable behavior
     if not alternateManaBar.DragonUIHoverHooked then
@@ -1622,7 +1898,7 @@ local function SetupAlternateManaHoverBehavior()
                 UpdateAlternateManaText()
             end
         end)
-        
+
         alternateManaBar:HookScript("OnLeave", function()
             if alternateManaBar.DragonUIHoverEnabled then
                 HideAlternateManaTextElements()
@@ -1630,7 +1906,7 @@ local function SetupAlternateManaHoverBehavior()
         end)
         alternateManaBar.DragonUIHoverHooked = true
     end
-    
+
     alternateManaBar.DragonUIHoverEnabled = true
 end
 
@@ -1640,26 +1916,26 @@ local function SetupAlternateManaBarAlwaysVisible()
     if playerClass ~= "DRUID" then
         return
     end
-    
+
     local alternateManaBar = _G.PlayerFrameAlternateManaBar
     if not alternateManaBar then
         return
     end
-    
+
     -- ALWAYS hide Blizzard text - we always use DragonUI system for druids
     local blizzardText = alternateManaBar.TextString or _G.PlayerFrameAlternateManaBarText
     if blizzardText then
         blizzardText:Hide()
         blizzardText:SetAlpha(0)
     end
-    
+
     -- ALWAYS setup DragonUI text elements for druids
     SetupAlternateManaTextElements()
-    
+
     -- Get configuration to determine visibility behavior
     local config = GetPlayerConfig()
     local alwaysShow = config and config.alwaysShowAlternateManaText
-    
+
     if alwaysShow then
         -- Show DragonUI text always
         UpdateAlternateManaText()
@@ -1683,7 +1959,7 @@ local function UpdatePlayerSwords(show)
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     local swords = UF.GetFrameSkin().player.swords
     local art = dragonFrame and dragonFrame.PlayerFrameBackground
-    show = show and swords and art and not IsInVehicle()
+    show = show and swords and art and not IsInVehicle() and not Portrait.IsActive()
     if show and not playerSwords then
         local container = dragonFrame.EliteIconContainer
         if not container then return end
@@ -1737,6 +2013,10 @@ local function UpdatePlayerLevelLayout()
     local level
     if container and dragonFrame.PlayerFrameBackground and not IsInVehicle() and not PlayerArt.LegacyFat() then
         level = UF.GetLevelSpot(IsEliteModeActive() and "playerDecoration" or "player")
+        -- Only the style carrying a level badge gets one; Portrait Off just moves its spot.
+        if level and Portrait.IsActive() then
+            level = Portrait.level
+        end
     end
     if level and not playerLevelFrame then
         -- Forever draws the level circle over the PvP one (OVERLAY 4 over 3): one level above the badge frame.
@@ -1786,6 +2066,18 @@ local function ApplyPlayerGlowArt()
     if not dragonFrame or not dragonFrame.DragonUIStatusGlow or not dragonFrame.EliteStatusGlow then return end
     UpdatePlayerSwords(playerCombatIconShown and not PlayerArt.LegacyFat() and not IsEliteModeActive())
     if IsInVehicle() then return end
+    if Portrait.IsActive() then
+        -- Retail ships no portrait-off glow: this one is generated from the plate contour and
+        -- kept white so it can be tinted -- the aggro glow red, the rest glow in retail's
+        -- resting gold.
+        local glow = Portrait.glowPiece
+        glow.x, glow.y = Portrait.x, Portrait.y
+        PlaceGlow(dragonFrame.DragonUICombatGlow, dragonFrame.DragonUICombatTexture, glow, PlayerFrame)
+        dragonFrame.DragonUICombatTexture:SetVertexColor(1, 0, 0)
+        PlaceGlow(dragonFrame.DragonUIStatusGlow, dragonFrame.DragonUIStatusTexture, glow, PlayerFrame)
+        dragonFrame.DragonUIStatusTexture:SetVertexColor(1.0, 0.88, 0.25) -- Retail's resting gold
+        return
+    end
     local skin = UF.GetFrameSkin()
     local art = dragonFrame.PlayerFrameBackground
     local fat = PlayerArt.LegacyFat()
@@ -1836,6 +2128,10 @@ function PlayerArt.PlaceRestIcon()
     PlayerRestIcon:ClearAllPoints()
     if rest and not iconShown then
         PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", rest.x, rest.y)
+    elseif Portrait.IsActive() then
+        -- No portrait to rise from: the Zzz rides the plate's top-right corner.
+        PlayerRestIcon:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT",
+            Portrait.x + UF.PORTRAIT_OFF.frame.w - 26, Portrait.y - 1)
     else
         PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", 40, 15)
     end
@@ -1843,6 +2139,12 @@ end
 
 -- Update decorative dragon for player frame
 local function UpdatePlayerDragonDecoration()
+    -- The contour tint is Portrait Off only and is cleared on every pass: this path runs for
+    -- both the decoration and the normal frame, so neither inherits a stale tint.
+    local dragonTintFrame = _G["DragonUIUnitframeFrame"]
+    if dragonTintFrame and dragonTintFrame.PlayerFrameBorder then
+        dragonTintFrame.PlayerFrameBorder:SetVertexColor(1, 1, 1)
+    end
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     if not dragonFrame then
         return
@@ -1859,6 +2161,10 @@ local function UpdatePlayerDragonDecoration()
     dragonFrame.PlayerDragonDecoration = nil
 
     local decoration = UF.PLAYER_DECORATIONS[decorationType]
+    -- Portrait Off draws the compact plate instead; the dragon is portrait art and steps aside.
+    if Portrait.IsActive() then
+        decoration = nil
+    end
     PlayerArt.PlaceRestIcon()
 
     --  Change background, border AND STRETCH MANA BAR based on decoration
@@ -1919,7 +2225,8 @@ local function UpdatePlayerDragonDecoration()
             dragonFrame.HitIndicatorFrame:SetFrameStrata("MEDIUM")
             dragonFrame.HitIndicatorFrame:SetFrameLevel(PlayerFrame:GetFrameLevel() + 11)
             dragonFrame.HitIndicatorFrame:ClearAllPoints()
-            dragonFrame.HitIndicatorFrame:SetPoint("CENTER", PlayerPortrait, "CENTER", 0, 0)
+            dragonFrame.HitIndicatorFrame:SetPoint("CENTER",
+                Portrait.IsActive() and PlayerFrameHealthBar or PlayerPortrait, "CENTER", 0, 0)
             dragonFrame.HitIndicatorFrame:Show()
             hitIndicator:SetParent(dragonFrame.HitIndicatorFrame)
             hitIndicator:ClearAllPoints()
@@ -1948,7 +2255,9 @@ local function UpdatePlayerDragonDecoration()
             dragonFrame.HitIndicatorFrame:SetFrameStrata("MEDIUM")
             dragonFrame.HitIndicatorFrame:SetFrameLevel(PlayerFrame:GetFrameLevel() + 11)
             dragonFrame.HitIndicatorFrame:ClearAllPoints()
-            dragonFrame.HitIndicatorFrame:SetPoint("CENTER", PlayerPortrait, "CENTER", 0, 0)
+            -- Portrait Off has no portrait: the combat text centres on the plate's bars.
+            dragonFrame.HitIndicatorFrame:SetPoint("CENTER",
+                Portrait.IsActive() and PlayerFrameHealthBar or PlayerPortrait, "CENTER", 0, 0)
             dragonFrame.HitIndicatorFrame:Show()
             hitIndicator:SetParent(dragonFrame.HitIndicatorFrame)
             hitIndicator:ClearAllPoints()
@@ -1993,7 +2302,28 @@ local function UpdatePlayerDragonDecoration()
             local borderTexture = GetBorderTexture()
             local HP_OFFSET = fatMode and 6 or 0
 
-            if PlayerArt.LegacyFat() then
+            if Portrait.IsActive() then
+                -- Body on the frame's own textures (below the bars); contour on the border
+                -- texture, which lives a level above the bars, so the bars read as recessed
+                -- inside the plate.
+                if dragonFrame.PlayerFrameBackground then
+                    dragonFrame.PlayerFrameBackground:Show()
+                    UF.ApplySkinPiece(dragonFrame.PlayerFrameBackground, Portrait.piece,
+                        'TOPLEFT', PlayerFrame, 'TOPLEFT', Portrait.x, Portrait.y)
+                end
+                if dragonFrame.PlayerFrameBorder then
+                    dragonFrame.PlayerFrameBorder:Show()
+                    UF.ApplySkinPiece(dragonFrame.PlayerFrameBorder, Portrait.borderPiece,
+                        'TOPLEFT', PlayerFrame, 'TOPLEFT', Portrait.x, Portrait.y)
+                    -- Same rule as the target: the frame style only changes the contour's tint.
+                    local gold = UF.GetFrameStyle() == "forever"
+                    dragonFrame.PlayerFrameBorder:SetVertexColor(
+                        gold and 0.75 or 1, gold and 0.58 or 1, gold and 0.33 or 1)
+                end
+                if dragonFrame.PlayerFrameDeco then
+                    dragonFrame.PlayerFrameDeco:Hide()
+                end
+            elseif PlayerArt.LegacyFat() then
                 if dragonFrame.PlayerFrameBackground then
                     dragonFrame.PlayerFrameBackground:Show()
                     dragonFrame.PlayerFrameBackground:SetTexture(baseTexture)
@@ -2033,7 +2363,7 @@ local function UpdatePlayerDragonDecoration()
             end
 
             -- Show deco dot when no dragon decoration
-            if dragonFrame.PlayerFrameDeco then
+            if dragonFrame.PlayerFrameDeco and not Portrait.IsActive() then
                 PlayerArt.PlaceCorner(dragonFrame.PlayerFrameDeco)
                 dragonFrame.PlayerFrameDeco:Show()
                 ApplyPlayerCornerAlpha(dragonFrame.PlayerFrameDeco)
@@ -2049,6 +2379,10 @@ local function UpdatePlayerDragonDecoration()
     UpdatePlayerLevelLayout()
     PlayerArt.PlaceTexts()
     PlayerArt.LayoutCorner()
+
+    -- Runs before the dragon guard below: Portrait Off builds no decoration, and sitting
+    -- behind the guard left BorderIcon/PvPIcon on Blizzard's own anchor and size.
+    UpdateLeadershipIcons()
 
     -- Don't create dragon if decoration is disabled or currently in vehicle
     if not decoration or inVehicle then
@@ -2086,8 +2420,6 @@ local function UpdatePlayerDragonDecoration()
     if addon.RefreshDarkModeUnitFrames then
         addon.RefreshDarkModeUnitFrames()
     end
-
-    UpdateLeadershipIcons() -- Reposition leadership icons
 
 end
 
@@ -2378,7 +2710,8 @@ local function RestorePlayerPortraitTexture()
         SetPortraitTexture(PlayerPortrait, "player")
         PlayerPortrait:SetTexCoord(0, 1, 0, 1)
     end
-    PlayerPortrait:SetAlpha(1)
+    -- Alpha 0 instead of Hide: the code below and Blizzard keep re-showing it.
+    PlayerPortrait:SetAlpha(Portrait.IsActive() and 0 or 1)
 end
 
 -- Apply class portrait if enabled in config
@@ -2443,7 +2776,7 @@ local function ChangePlayerframe()
     -- Configure portrait with vehicle-specific positioning
     PlayerPortrait:ClearAllPoints()
     PlayerPortrait:SetDrawLayer('ARTWORK', 2)  -- Lower layer so border is on top
-    
+
     if hasVehicleUI then
         -- Vehicle: position relative to PlayerFrame (matches RetailUI pattern)
         PlayerPortrait:SetPoint('LEFT', PlayerFrame, 'LEFT', 45, 5)
@@ -2452,8 +2785,9 @@ local function ChangePlayerframe()
         -- Normal player position
         PlayerPortrait:SetPoint('TOPLEFT', PlayerFrame, 'TOPLEFT', 42, -15)
         PlayerPortrait:SetSize(56, 56)
+        PlayerPortrait:SetAlpha(Portrait.IsActive() and 0 or 1)
     end
-    
+
     -- Apply class portrait if enabled
     UpdatePlayerClassPortrait()
 
@@ -2507,6 +2841,10 @@ local function ChangePlayerframe()
         -- Raise bars above vehicle border texture
         PlayerFrameHealthBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 3)
         PlayerFrameManaBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 3)
+    elseif Portrait.IsActive() then
+        Portrait.ApplyBars()
+        PlayerFrameHealthBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
+        PlayerFrameManaBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
     elseif PlayerArt.LegacyFat() then
         PlayerFrameHealthBar:SetSize(125, 29.5) -- Taller in fat mode
         PlayerFrameHealthBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', 1, -HP_OFFSET)
@@ -2527,6 +2865,13 @@ local function ChangePlayerframe()
     local powerType, powerTypeString = UnitPowerType('player')
     local powerTexture = GetPowerBarTexture(powerTypeString)
     PlayerFrameManaBar:GetStatusBarTexture():SetTexture(powerTexture)
+    -- Portrait Off art is padded into a POT canvas, so its crop has to be re-applied here.
+    if Portrait.IsActive() then
+        UF.SetPortraitOffTexCoord(PlayerFrameManaBar:GetStatusBarTexture(),
+            UF.GetPortraitOffPowerKey(powerTypeString))
+    else
+        UF.ClearPortraitOffTexCoord(PlayerFrameManaBar:GetStatusBarTexture())
+    end
 
     -- Configure status and flash textures 
     -- In vehicle: hide our custom glow effects (vehicle frame doesn't use them)
@@ -2602,6 +2947,8 @@ local function ChangePlayerframe()
     if config.show_runes ~= false then -- Only setup if not explicitly disabled
         SetupRuneFrame()
     end
+    -- Totems: Blizzard's TotemFrame, movable from the editor. Attached stays at its own spot.
+    Module.Totems.Setup()
     UpdatePlayerRoleIcon()
     UpdateGroupIndicator()
     UpdateHealthBarColor(PlayerFrameHealthBar, "player")
@@ -2885,7 +3232,7 @@ local function ApplyPlayerConfig()
 
     UpdatePlayerDragonDecoration()
     UpdateGlowVisibility()
-    
+
     -- Setup alternate mana bar text to always be visible for druids
     SetupAlternateManaBarAlwaysVisible()
 
@@ -2977,7 +3324,7 @@ local function InitializePlayerFrame()
         end
     end
 
-    
+
     -- These are hooked at file scope below with richer logic (vehicle transitions section)
     -- HandleRuneFrameVehicleTransition is called from the file-scope hooks instead
 
@@ -3015,7 +3362,7 @@ local function InitializePlayerFrame()
     else
         RegisterBlizzardHooks()
     end
-    
+
     -- Alternate mana bar text setup done once in ApplyPlayerConfig() - no need for hooks
 
     -- Hook to update PVP timer position when it appears/changes
@@ -3387,7 +3734,7 @@ local function SetupPlayerEvents()
                 if Module.textSystem and Module.textSystem.update then
                     Module.textSystem.update()
                 end
-                
+
                 -- Hide dragon decoration when entering vehicle
                 local config = GetPlayerConfig()
                 local decorationType = config.dragon_decoration or "none"
@@ -3404,7 +3751,7 @@ local function SetupPlayerEvents()
                 if Module.textSystem and Module.textSystem.update then
                     Module.textSystem.update()
                 end
-                
+
                 -- Show dragon decoration when exiting vehicle
                 local config = GetPlayerConfig()
                 local decorationType = config.dragon_decoration or "none"
