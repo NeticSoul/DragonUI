@@ -280,8 +280,7 @@ function NP.gather.IsGroupMemberPlate(plateData)
     return NP.gather.GetGroupUnitForPlate(plateData) ~= nil
 end
 
--- Only-target mode: friendly plates are never gated (they follow the Friendly Units setting); the
--- target's hostile plate and, in combat, every hostile NPC on the player.
+-- Only-target mode: friendly plates are never gated; target hostile plate and, in combat, hostile NPCs on the player.
 function NP.gather.IsOnlyTargetPlateAllowed(plateData)
     if not plateData then
         return false

@@ -257,9 +257,7 @@ function E.SyncEnemyClassColorCVar()
     end
 end
 
--- Force off a native plate-stacking engine (some servers have one) while DragonUI clamps/stacks itself; no-op on stock 3.3.5a.
--- Also while onlyTargetPlates blanks plates: a gated-out plate is invisible, so the client must not
--- reserve screen space for it and push the visible target plate around.
+-- Force off native plate-stacking while DragonUI clamps/stacks; gated-out plates must not reserve space.
 function E.SyncRetailStackingCVars()
     local cfg = NP.config.GetCfg()
     if not GetCVar or not SetCVar then return end
@@ -506,8 +504,6 @@ local function EngineOnUpdate(_, elapsed)
     NP.layout.UpdateDepthOrdering(elapsed)
 
     -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
-    -- onlyTargetPlates: everything outside the gate collapses to alpha 0 and loses its native
-    -- hit rect, so an invisible plate cannot be clicked.
     local onlyTarget = NP.module._onlyTargetPlates
     if NP.module._opacityEnabled or onlyTarget then
         local fullParty = NP.module._opacityFullParty
@@ -734,8 +730,7 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "PLAYER_REGEN_DISABLED" then
         NP.module.playerInCombat = true
-        -- Combat locks geometry; restore every plate's size before the lockdown so gated ones
-        -- can be clicked again and attacking mobs are not stuck at 1x1.
+        -- Restore plate sizes before the lockdown so gated ones stay clickable.
         for _, pd in pairs(NP.module.plates) do
             if pd and pd.plate then
                 NP.layout.SetPlateClickable(pd, true)

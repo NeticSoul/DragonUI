@@ -412,8 +412,7 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
                 obj:SetAlpha(compensatedAlpha)
             end
         end
-        -- Children keep alpha 1 while the plate dims, but an alpha-0 plate (onlyTargetPlates filter)
-        -- must not leave the name text floating on its own.
+        -- An alpha-0 plate (onlyTargetPlates) must not leave name text floating.
         local forcedAlpha = compensatedAlpha == 0 and 0 or nil
         KeepNameRowChildOpaque(plateData.minaName, forcedAlpha)
         KeepNameRowChildOpaque(plateData.minaHpPct, forcedAlpha)
@@ -723,8 +722,7 @@ local function UpdateRetailStacking()
         local plate = plateData and plateData.plate
         local reaction = NP.native_style.GetPlateReaction(plateData)
         local isFriendly = reaction == "FRIENDLY"
-        -- Non-friendly plates only; a gated-out plate (alpha 0) is invisible and must not
-        -- push the visible ones around.
+        -- Non-friendly plates only; gated-out (alpha 0) plates must not push visible ones around.
         if plate and plate.IsShown and plate:IsShown() and not isFriendly and not plateData._hitRectInset then
             stackable[#stackable + 1] = plateData
             activeStackable[plateData] = true
@@ -1430,8 +1428,7 @@ function NP.layout.FlushPendingPlateLayout()
         NP.clickbox.FlushPending()
     end
 
-    -- A plate gated out in combat keeps its full size until combat ends; the gate re-applies on that
-    -- pass, so the deferred flag only has to make sure the pass actually runs.
+    -- A plate gated in combat keeps its size until combat ends; the gate re-applies after.
     if NP.module._gatedLayoutPending then
         NP.module._gatedLayoutPending = nil
         for _, plateData in pairs(NP.module.plates) do
