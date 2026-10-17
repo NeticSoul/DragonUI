@@ -522,9 +522,12 @@ local function EngineOnUpdate(_, elapsed)
                     -- Overrides the opacity options: a plate that passes the gate is drawn fully.
                     local allowed = NP.gather.IsOnlyTargetPlateAllowed(pd)
                     visualAlpha = allowed and 1.0 or 0.0
-                    NP.layout.SetPlateClickable(pd, allowed)
+                    -- Size and hit rect cannot change in combat; gate alpha only there.
+                    if not InCombatLockdown() then
+                        NP.layout.SetPlateClickable(pd, allowed)
+                    end
                 else
-                    if pd._hitRectInset then
+                    if (not InCombatLockdown()) and pd._hitRectInset then
                         NP.layout.SetPlateClickable(pd, true)
                     end
                     if isTarget
@@ -542,7 +545,7 @@ local function EngineOnUpdate(_, elapsed)
             if pl and pl.IsShown and pl:IsShown() then
                 SyncTargetVisual(pd, NP.identity.IsTargetPlateVisual(pd, hasTarget))
                 NP.layout.SetPlateVisualAlpha(pd, 1.0)
-                if pd._hitRectInset then
+                if (not InCombatLockdown()) and pd._hitRectInset then
                     NP.layout.SetPlateClickable(pd, true)
                 end
             end
@@ -731,6 +734,13 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "PLAYER_REGEN_DISABLED" then
         NP.module.playerInCombat = true
+        -- Combat locks geometry; restore every plate's size before the lockdown so gated ones
+        -- can be clicked again and attacking mobs are not stuck at 1x1.
+        for _, pd in pairs(NP.module.plates) do
+            if pd and pd.plate then
+                NP.layout.SetPlateClickable(pd, true)
+            end
+        end
         if NP.clickbox and NP.clickbox.OnCombatStart then
             NP.clickbox.OnCombatStart()
         end
@@ -746,6 +756,14 @@ local function EngineOnEvent(_, event, unit, ...)
         NP.auras.PruneCaches()
         if NP.tap then
             NP.tap.PruneCache()
+        end
+        if NP.module._onlyTargetPlates then
+            for _, pd in pairs(NP.module.plates) do
+                if pd and pd.plate and pd.plate.IsShown and pd.plate:IsShown() then
+                    local allowed = NP.gather.IsOnlyTargetPlateAllowed(pd)
+                    NP.layout.SetPlateClickable(pd, allowed)
+                end
+            end
         end
         NP.layout.FlushPendingPlateLayout()
         if NP.config.IsOffTargetCastMonitorActive(NP.config.GetCfg())
