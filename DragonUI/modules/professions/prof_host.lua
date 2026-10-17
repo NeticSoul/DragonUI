@@ -187,7 +187,11 @@ function Host.Unregister(provider)
         local stays = current and Host.IsPage(current)
         P.Frame.ShowPage(onOverview and "overview" or stays and current or "crafting")
         Host.RefreshTabs()
-        if TradeSkillFrame:IsShown() then TradeSkillFrame_Update() end
+        if TradeSkillFrame:IsShown() then
+            TradeSkillFrame_Update()
+            -- The update can count as a profession change (none open yet) and go to crafting.
+            if stays and P.Frame.page ~= current then P.Frame.ShowPage(current) end
+        end
     end
 end
 
