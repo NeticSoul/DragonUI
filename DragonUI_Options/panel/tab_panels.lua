@@ -548,6 +548,19 @@ local function BuildLootSubTab(scroll)
         requiresReload = false,
     })
 
+    C:AddToggle(lootSection, {
+        label = LO["Auto-Hide Empty Loot"],
+        desc = LO["Close the loot window when there is nothing left to loot."],
+        getFunc = function()
+            return GetModuleField("loot_skin", "auto_hide_empty") == true
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("loot_skin").auto_hide_empty = val
+        end,
+        disabled = function() return not IsEnabled("loot_skin") end,
+        requiresReload = false,
+    })
+
     C:AddButton(lootSection, {
         label = LO["Reset Loot Window Position"],
         desc = LO["Clear the saved position. The Blizzard default will be used next time you open the loot window."],

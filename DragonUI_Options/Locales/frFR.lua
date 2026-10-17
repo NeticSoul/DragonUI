@@ -699,6 +699,8 @@ L["Ask"] = "Demander"
 -- Fenêtre de butin
 L["Loot Window"] = "Fenêtre de butin"
 L["Configure the DragonUI loot window."] = "Configurer la fenêtre de butin de DragonUI."
+L["Auto-Hide Empty Loot"] = "Masquer le butin vide"
+L["Close the loot window when there is nothing left to loot."] = "Ferme la fenêtre de butin quand il ne reste rien à ramasser."
 L["Enable Loot Window"] = "Activer la fenêtre de butin"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Applique l'apparence DragonUI à la fenêtre de butin de Blizzard."
 L["Open at Cursor"] = "Ouvrir au curseur"
