@@ -380,6 +380,43 @@ local function updateInboxBorders()
     end
 end
 
+-- Postal sizes its additions for the stock 384 frame: Select indents the rows 20px for checkboxes
+-- and hangs the expiry 10px past the row, DoNotWant hangs a return/delete icon under the expiry.
+-- In this narrower window that lands on the border and over long subjects, so the rows are
+-- re-laid on every refresh (Postal sets its points once, on enable).
+local ROW_X, ROW_Y, ROW_WIDTH = 13, -70, 305
+local CHECKBOX_INDENT = 22
+local SUBJECT_X = 47
+local function layoutInboxRows()
+    if not IsModuleEnabled() then return end
+    local inbox = _G.InboxFrame
+    if not (inbox and _G.MailItem1) then return end
+
+    local selectButton = _G.PostalSelectOpenButton
+    local indent = (selectButton and selectButton:IsShown()) and CHECKBOX_INDENT or 0
+    local width = ROW_WIDTH - indent
+    place(_G.MailItem1, "TOPLEFT", inbox, "TOPLEFT", ROW_X + indent, ROW_Y)
+
+    for i = 1, (_G.INBOXITEMS_TO_DISPLAY or 7) do
+        local row = _G["MailItem" .. i]
+        local expire = _G["MailItem" .. i .. "ExpireTime"]
+        local subject = _G["MailItem" .. i .. "Subject"]
+        if row and expire and subject then
+            row:SetWidth(width)
+            place(expire, "TOPRIGHT", row, "TOPRIGHT", -4, -4)
+            -- Stock leaves the subject 10px clear of the row edge; the icon needs 27.
+            subject:SetWidth(width - SUBJECT_X - (expire.returnicon and 27 or 10))
+        end
+    end
+
+    -- Same spot as our own Open All (hidden when Postal is loaded); its menu arrow hangs off the right.
+    local openAll = _G.PostalOpenAllButton
+    if openAll and not openAll._duiPlaced then
+        openAll._duiPlaced = true
+        place(openAll, "CENTER", inbox, "BOTTOM", -14, 26)
+    end
+end
+
 local function reskinSingleTab(tabName)
     local tab = _G[tabName]
     if not tab or tab._duiTabReskinned then return end
@@ -1003,7 +1040,7 @@ local function buildMailFrame()
         if _G.InboxCurrentPage then
             neuterTexture(_G.InboxCurrentPage)
         end
-        place(_G.MailItem1, "TOPLEFT", inbox, "TOPLEFT", 13, -70)
+        layoutInboxRows()
         place(_G.InboxPrevPageButton, "BOTTOMLEFT", inbox, "BOTTOMLEFT", 14, 10)
         place(_G.InboxNextPageButton, "BOTTOMRIGHT", inbox, "BOTTOMRIGHT", -14, 10)
 
@@ -1194,7 +1231,10 @@ local function buildMailFrame()
 
     if _G.InboxFrame_Update and not mailFrame._duiInboxHooked then
         mailFrame._duiInboxHooked = true
-        hooksecurefunc("InboxFrame_Update", updateInboxBorders)
+        hooksecurefunc("InboxFrame_Update", function()
+            updateInboxBorders()
+            layoutInboxRows()
+        end)
     end
 
     if _G.MailFrameTab_OnClick and not mailFrame._duiTabHooked then
