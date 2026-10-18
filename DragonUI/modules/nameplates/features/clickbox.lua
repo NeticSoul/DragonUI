@@ -12,9 +12,7 @@ local TRIGGER_PUSHABLE = 8
 local SECURE_RETRY_INTERVAL = 0.5
 local SIZE_TOLERANCE = 0.5
 
--- Plates the client creates mid-combat come up at native size; only those are touched.
--- A gated plate is 1x1 on purpose: the explicit _dragonUIHiddenSize guard also covers the secure
--- snippet, where the re-showed plate reports its native size and would be sized back up.
+-- Plates created mid-combat come up at native size; only those are touched. Gated plates stay 1x1.
 local RESIZE_SNIPPET = [[
     local world = self:GetFrameRef("world")
     local nativeW, nativeH = self:GetAttribute("nativew"), self:GetAttribute("nativeh")
@@ -328,8 +326,7 @@ function NP.clickbox.ApplyPlateClickbox(plateData)
         return false
     end
 
-    -- Un-gate first: the gate owns the 1x1 size and the hit rect, so it must run before the clickbox
-    -- sizes below, or the plate stays 1x1 while the gate thinks it is restored.
+    -- Un-gate first so the clickbox sizing below doesn't fight the gate.
     if plate.SetHitRectInsets then
         NP.layout.SetPlateClickable(plateData, true)
     end
@@ -402,11 +399,6 @@ function NP.clickbox.RestorePlate(plateData)
     if plate.SetHitRectInsets then
         -- Route through the gate helper: it also clears the size/inset caches the engine reads.
         NP.layout.SetPlateClickable(plateData, true)
-    end
-    if plate.SetClampedToScreen then
-        -- A clamp rect latched while animated (getHeight pitfall) survives forever otherwise.
-        plate:SetClampedToScreen(false)
-        plate:SetClampRectInsets(0, 0, 0, 0)
     end
     NP.module._gatedLayoutPending = nil
     plateData._clickAreaPending = nil

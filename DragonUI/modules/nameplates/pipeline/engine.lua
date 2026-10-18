@@ -257,9 +257,7 @@ function E.SyncEnemyClassColorCVar()
     end
 end
 
--- Force off a native plate-stacking engine (some servers have one) while DragonUI clamps/stacks itself; no-op on stock 3.3.5a.
--- Also while onlyTargetPlates blanks plates: a gated-out plate is invisible, so the client must not
--- reserve screen space for it and push the visible target plate around.
+-- Force off native plate-stacking while DragonUI clamps/stacks; gated-out plates must not reserve space.
 function E.SyncRetailStackingCVars()
     local cfg = NP.config.GetCfg()
     if not GetCVar or not SetCVar then return end
@@ -283,7 +281,7 @@ function E.SyncRetailStackingCVars()
         end
     end
 
-    if onlyTarget or (NP.config.IsRetailBehavior() and cfg.retailStackingEnabled == true) then
+    if NP.config.IsRetailBehavior() and cfg.retailStackingEnabled == true then
         if NP.module.savedNameplateAllowOverlap == nil then
             NP.module.savedNameplateAllowOverlap = GetCVar("nameplateAllowOverlap")
         end
@@ -506,8 +504,6 @@ local function EngineOnUpdate(_, elapsed)
     NP.layout.UpdateDepthOrdering(elapsed)
 
     -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
-    -- onlyTargetPlates: everything outside the gate collapses to alpha 0 and loses its native
-    -- hit rect, so an invisible plate cannot be clicked.
     local onlyTarget = NP.module._onlyTargetPlates
     if NP.module._opacityEnabled or onlyTarget then
         local fullParty = NP.module._opacityFullParty
@@ -522,9 +518,12 @@ local function EngineOnUpdate(_, elapsed)
                     -- Overrides the opacity options: a plate that passes the gate is drawn fully.
                     local allowed = NP.gather.IsOnlyTargetPlateAllowed(pd)
                     visualAlpha = allowed and 1.0 or 0.0
-                    NP.layout.SetPlateClickable(pd, allowed)
+                    -- Size and hit rect cannot change in combat; gate alpha only there.
+                    if not InCombatLockdown() then
+                        NP.layout.SetPlateClickable(pd, allowed)
+                    end
                 else
-                    if pd._hitRectInset then
+                    if (not InCombatLockdown()) and pd._hitRectInset then
                         NP.layout.SetPlateClickable(pd, true)
                     end
                     if isTarget
@@ -542,7 +541,7 @@ local function EngineOnUpdate(_, elapsed)
             if pl and pl.IsShown and pl:IsShown() then
                 SyncTargetVisual(pd, NP.identity.IsTargetPlateVisual(pd, hasTarget))
                 NP.layout.SetPlateVisualAlpha(pd, 1.0)
-                if pd._hitRectInset then
+                if (not InCombatLockdown()) and pd._hitRectInset then
                     NP.layout.SetPlateClickable(pd, true)
                 end
             end
@@ -731,6 +730,12 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "PLAYER_REGEN_DISABLED" then
         NP.module.playerInCombat = true
+        -- Restore plate sizes before the lockdown so gated ones stay clickable.
+        for _, pd in pairs(NP.module.plates) do
+            if pd and pd.plate then
+                NP.layout.SetPlateClickable(pd, true)
+            end
+        end
         if NP.clickbox and NP.clickbox.OnCombatStart then
             NP.clickbox.OnCombatStart()
         end
@@ -746,6 +751,14 @@ local function EngineOnEvent(_, event, unit, ...)
         NP.auras.PruneCaches()
         if NP.tap then
             NP.tap.PruneCache()
+        end
+        if NP.module._onlyTargetPlates then
+            for _, pd in pairs(NP.module.plates) do
+                if pd and pd.plate and pd.plate.IsShown and pd.plate:IsShown() then
+                    local allowed = NP.gather.IsOnlyTargetPlateAllowed(pd)
+                    NP.layout.SetPlateClickable(pd, allowed)
+                end
+            end
         end
         NP.layout.FlushPendingPlateLayout()
         if NP.config.IsOffTargetCastMonitorActive(NP.config.GetCfg())

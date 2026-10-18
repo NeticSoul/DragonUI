@@ -54,8 +54,7 @@ function NP.threat.IsCombatAggroPlate(plateData)
     if reaction == "FRIENDLY" or unitType == "PLAYER" then
         return false
     end
-    -- ProcessThreatTransitions already resolved this per bucket; resolving again per frame here
-    -- would run UnitDetailedThreatSituation for every plate and skip that budget entirely.
+    -- _lastThreatStatus is resolved per bucket in ProcessThreatTransitions; don't re-resolve here.
     return (plateData._lastThreatStatus or 0) > 0
 end
 
