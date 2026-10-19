@@ -1,3 +1,5 @@
+-- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
+
 local addon = select(2, ...)
 local L = addon.L
 
@@ -171,11 +173,11 @@ local function ScanEquipment()
     end
 
     local counts = {}
-    for slotID = 0, 19 do
+    -- Slot 0 is skipped: the ammo it reports is the stack in the bags, already counted there.
+    for slotID = 1, 19 do
         local itemLink = GetInventoryItemLink("player", slotID)
         if itemLink then
-            local count = GetInventoryItemCount and GetInventoryItemCount("player", slotID) or 1
-            AddItemCount(counts, itemLink, count)
+            AddItemCount(counts, itemLink, 1)
         end
     end
 

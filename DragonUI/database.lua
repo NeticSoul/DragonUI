@@ -1256,7 +1256,7 @@ local defaults = {
                 auction = true,
             },
             itemownership = {
-                enabled = true, -- Show per-character bag, bank and equipped counts in item tooltips
+                enabled = false, -- Show per-character bag, bank and equipped counts in item tooltips
             },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy

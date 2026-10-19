@@ -117,7 +117,6 @@ local function UseAutoHideEmpty()
     return GetConfig().auto_hide_empty == true
 end
 
--- Called a frame after LOOT_OPENED, once Blizzard's own handler has filled the window.
 local function HideIfEmpty()
     if not IsActive() or not UseAutoHideEmpty() then
         return
@@ -1209,9 +1208,7 @@ events:SetScript("OnEvent", function(_, event, arg1)
         end
         -- 3.3.5a passes autoLoot as a number, unlike retail's boolean.
         isAutoLoot = arg1 and arg1 ~= 0
-        -- Nothing to loot: an empty window only takes up space, so close it. Deferred one
-        -- frame because Blizzard's handler may run after ours, leaving GetNumLootItems at 0
-        -- for a window it is about to fill.
+        -- Deferred: Blizzard's handler may run after ours, before LootFrame is shown.
         if UseAutoHideEmpty() then
             addon:After(0, HideIfEmpty)
         end
