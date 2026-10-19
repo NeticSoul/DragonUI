@@ -53,11 +53,14 @@ local CHANNEL_TICKS_DATA = {
     -- Priest
     { id = 15407, ticks = 3  },  -- Mind Flay
     { id = 605,   ticks = 8  },  -- Mind Control
+    { id = 48045, ticks = 5  },  -- Mind Sear
     { id = 47540, ticks = 2  },  -- Penance
     -- Mage
     { id = 10,    ticks = 8  },  -- Blizzard
     { id = 12051, ticks = 4  },  -- Evocation
     { id = 5143,  ticks = 5  },  -- Arcane Missiles
+    -- Hunter
+    { id = 1510,  ticks = 6  },  -- Volley
     -- Druid
     { id = 740,   ticks = 4  },  -- Tranquility
     { id = 16914, ticks = 10 },  -- Hurricane
