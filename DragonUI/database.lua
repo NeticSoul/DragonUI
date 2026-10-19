@@ -1241,6 +1241,7 @@ local defaults = {
                 position = "BOTTOM", -- BOTTOM|CENTER|TOP vertical placement on the icon
                 show_average = true, -- Average item level on the character/inspect panel
                 show_durability = false, -- Durability % on the character panel slots
+                show_repair_cost = false, -- Total repair cost of the equipped set in the character window
                 tooltip_cvar = false, -- Also set Blizzard's showItemLevel CVar (tooltip line)
                 -- Per-context toggles
                 bags = true,

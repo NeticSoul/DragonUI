@@ -352,6 +352,18 @@ local function BuildEnhancementsTab(scroll)
     })
 
     C:AddToggle(ilvlSection, {
+        label = LO["Show Repair Cost"],
+        desc = LO["Show the total repair cost of your equipped items in the character window."],
+        getFunc = function() return GetModuleField("itemlevel", "show_repair_cost") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").show_repair_cost = val
+            if addon.RefreshItemLevel then addon:RefreshItemLevel() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(ilvlSection, {
         label = LO["Show in Tooltip"] or "Show in Tooltip",
         desc = LO["Also enable Blizzard's own item level line in item tooltips."]
             or "Also enable Blizzard's own item level line in item tooltips.",

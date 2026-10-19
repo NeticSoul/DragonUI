@@ -421,6 +421,8 @@ L["Bags: %d"] = "Taschen: %d"
 L["Bank: %d"] = "Bank: %d"
 L["Equipped: %d"] = "Angelegt: %d"
 L["Total: %d (%s)"] = "Gesamt: %d (%s)"
+L["Repair Cost"] = "Reparaturkosten"
+L["No Repairs Needed"] = "Keine Reparatur nötig"
 -- Item Level
 L["Item Level"] = "Gegenstandsstufe"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "Gegenstandsstufe auf Ausrüstungssymbolen in Taschen, Charakterfenster, Bank und mehr anzeigen"
