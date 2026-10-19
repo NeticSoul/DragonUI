@@ -189,3 +189,30 @@ DragonUI is a free, fan-made addon. No content is sold and no in-game advantages
 
 🪙 Bitcoin: `bc1q8yavz8857lzdfttas584892gf82y0u3wdfjz0a`
 
+
+### Achievement reward search (Evermore)
+
+Open the main Achievements window and click **Search**. Search by achievement name,
+description or reward name, or use a reward type: `mount` / `mounts`, `pet` / `pets`,
+`title` / `titles`, `tabard` / `tabards`, `toy` / `toys`, or `item` / `items`.
+Combine words to narrow results, for example `mount proto`. All words must match;
+reward types match the reward, not words in the achievement's description.
+Click a result to open its achievement. Blizzard's normal prerequisite navigation
+applies to locked tiers in a progressive achievement chain.
+
+Types come from `DragonUI/modules/achievement_rewards.lua`: the Wrath AzerothCore
+achievement reward table and Evermore's current retail achievement mount rewards.
+Names, descriptions and completion status come from the client's achievement APIs.
+Custom achievements require the matching Evermore client patches. New or changed
+realm rewards need a corresponding reward-type data update; unclassified rewards
+remain searchable by name. This does not query or change server rewards.
+
+Ship the updated `DragonUI` addon folder through the usual addon distribution, then
+restart the client or reload the UI. This addon-only change needs no server module
+pin, database migration or server restart. In-game layout and interaction still
+need verification on the 3.3.5a client.
+
+Developer check: from this repository's root, run
+`lua tools/achievement_search_test.lua` with Lua 5.1. It checks reward filtering,
+progressive achievement enumeration and the search panel's event handlers using
+mock client APIs.

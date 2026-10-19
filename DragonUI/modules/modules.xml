@@ -147,4 +147,7 @@
     <!-- Addon Manager module -->
     <Script file="addonmanager_icons.lua"/>
     <Script file="addonmanager.lua"/>
+    <!-- Search the main achievement window by name, reward and reward type. -->
+    <Script file="achievement_rewards.lua"/>
+    <Script file="achievement_search.lua"/>
 </Ui>
