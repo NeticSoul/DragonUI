@@ -133,8 +133,8 @@ UF.COMPACT = {
         noseRest = { size = 20, gap = 1 },
         -- Combat text CENTER on the portrait's.
         hit = { x = -4, y = 0 },
-        -- 2 under today's: the role icon clears the group tab.
-        role = { x = 209, y = -22.5, w = 12, h = 12 },
+        -- On the level's box, which it hides: 5 in from the bar's end, 3 over it (LFG roles never meet the raid tab).
+        role = { x = 208, y = -19, w = 12, h = 12 },
     },
     -- Moves with the player, so the two keep today's distance; the focus has no player beside it.
     targetShift = 41.5,
