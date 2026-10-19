@@ -1029,6 +1029,9 @@ local function ApplyItemLevelSystem()
         PaperDollFrame:HookScript("OnShow", function()
             addon:After(0.05, UpdateAllCharacterSlots)
         end)
+        PaperDollFrame:HookScript("OnHide", function()
+            if repairCostFrame then repairCostFrame:Hide() end
+        end)
         ItemLevelModule.hooks["PaperDollShow"] = true
     end
 
