@@ -1378,6 +1378,9 @@ local defaults = {
             socialskin = {
                 enabled = true, -- Retail-style friends, who, chat and raid window
             },
+            stockpanels = {
+                enabled = true, -- Retail-style quest log, dungeon finder, PvP and game menu chrome
+            },
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)

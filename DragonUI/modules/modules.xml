@@ -96,6 +96,9 @@
     <!-- Retail-style Social window reskin (friends, who, chat, raid) -->
     <Script file="social_skin.lua"/>
 
+    <!-- Retail-style chrome for the stock Quest Log, Dungeon Finder, PvP and Game Menu windows -->
+    <Script file="stockpanels.lua"/>
+
     <!-- Retail-style guild window (replaces the Social window's Guild tab) -->
     <Include file="guild\guild.xml"/>
 

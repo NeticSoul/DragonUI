@@ -9,6 +9,12 @@ local INSET_RIGHT = -6
 local INSET_BOTTOM = 4
 local INSET_ATTIC = -60
 
+-- The stats pane meets the window's own right and bottom edges, where the bronze rail runs about
+-- 6.5 deep on the right and 5.5 on the bottom. Its filigree (pushed 2.5 out, paneborder.lua) has
+-- to clear that or it is drawn over the rail and the window looks unframed on that side.
+local STATS_RIGHT = -10
+local STATS_BOTTOM = 10
+
 -- Sized from the Inset, not self-queried: right after Show(), this texture's own GetSize() lags.
 local function paintPanelGround(inset)
     if not inset._duiPanelGroundTex then
@@ -45,7 +51,7 @@ local function buildInsetRight()
     if owner and owner.Inset and owner.InsetRight == nil then
         local pane = newInset(owner, "DragonUICharacterFrameInsetRight",
             { "TOPLEFT", owner.Inset, "TOPRIGHT", 1, 0 },
-            { "BOTTOMRIGHT", owner, "BOTTOMRIGHT", -4, 4 })
+            { "BOTTOMRIGHT", owner, "BOTTOMRIGHT", STATS_RIGHT, STATS_BOTTOM })
         -- PaperDollFrame spans the whole window and would otherwise eat the stat rows' mouseover.
         pane:SetFrameLevel(owner:GetFrameLevel() + CP.SUBFRAME_LEVEL + 10)
         pane:Hide()
