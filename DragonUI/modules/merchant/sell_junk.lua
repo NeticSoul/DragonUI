@@ -55,6 +55,7 @@ local function finishSale(completed)
     if done.items > 0 then
         addon:Print(string.format(localized("Sold %d junk item(s) for %s."), done.items, GetMoneyString(done.copper)))
     end
+    if done.unconfirmed then addon:Print(localized("Some junk sales could not be confirmed. Check your bags and buyback.")) end
     if completed and done.onComplete then done.onComplete() end
 end
 
@@ -100,7 +101,12 @@ local function sellEveryJunkItem(onComplete)
                 return
             end
             tries = tries + 1
-            if tries >= 50 then finishSale(true); return end
+            if tries >= 50 then
+                -- Never resend an uncertain request, but do not abandon later stacks.
+                run.unconfirmed = true
+                nextItem()
+                return
+            end
             addon:After(0.1, check)
         end
         addon:After(0.1, check)

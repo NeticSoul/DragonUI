@@ -1242,3 +1242,5 @@ L["toy"] = true
 L["toys"] = true
 L["item"] = true
 L["items"] = true
+
+L["Some junk sales could not be confirmed. Check your bags and buyback."] = true

@@ -24,7 +24,8 @@ prove server behavior in a real client.
   money, buyback and printed totals; rejected requests must not count as sales.
   Check that auto-repair starts after selling and closing a vendor cancels its queue.
   Only cached, unlocked grey items with a positive vendor price are submitted;
-  an unconfirmed request stops the pass after five seconds without being retried.
+  an unconfirmed request is skipped after five seconds without being retried. Other
+  eligible stacks continue, and a notice asks you to check bags and buyback.
 - With full bags, receive items that fit a partial stack or profession bag. A rejected
   attachment is skipped for this Open All pass so other attachments and gold can be
   collected. COD and GM mail must remain untouched. Reopen after freeing space.

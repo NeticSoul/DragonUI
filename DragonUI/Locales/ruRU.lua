@@ -1171,3 +1171,5 @@ L["toy"] = "игрушка"
 L["toys"] = "игрушки"
 L["item"] = "предмет"
 L["items"] = "предметы"
+
+L["Some junk sales could not be confirmed. Check your bags and buyback."] = "Некоторые продажи не удалось подтвердить. Проверьте сумки и выкуп."

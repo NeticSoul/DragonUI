@@ -131,8 +131,26 @@ for _, failure in ipairs({'rejected','removed-unpaid'}) do
     mode, requests, messages = failure, 0, {}
     bag = { {link=grey,count=3} }
     assert(sell()); flush()
-    assert(requests == 1 and #messages == 0, 'Unconfirmed sale reported')
+    assert(requests == 1 and #messages == 1 and messages[1]:find('could not be confirmed',1,true), 'Unconfirmed sale counted or notice missing')
 end
+-- One failed/uncertain stack must not suppress the rest, including when money is spent concurrently.
+local originalUse = UseContainerItem
+for _, outcome in ipairs({'rejected', 'spent-payment'}) do
+    mode, requests, messages = 'delayed', 0, {}
+    bag = { {link=grey,count=3}, {link=grey,count=1} }
+    money = 0
+    function UseContainerItem(bagID, slot)
+        if slot == 1 then
+            requests = requests + 1
+            if outcome == 'spent-payment' then bag[slot] = nil end -- payment is immediately spent on repairs
+        else originalUse(bagID, slot) end
+    end
+    assert(sell()); flush()
+    assert(requests == 2 and bag[2] == nil, 'Uncertain stack abandoned the remaining queue')
+    assert(#messages == 2 and messages[1] == 'Sold 1 junk item(s) for 100.'
+        and messages[2]:find('could not be confirmed',1,true), 'Mixed confirmation totals were wrong')
+end
+UseContainerItem = originalUse
 mode, requests, messages = 'delayed', 0, {}
 bag = { {link=grey,count=3} }
 assert(sell()); made[1].scripts.OnEvent(made[1], 'MERCHANT_CLOSED')
