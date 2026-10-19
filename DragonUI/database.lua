@@ -22,6 +22,7 @@ local defaults = {
         talentBuilds = {}, -- Saved talent builds per class: [CLASS] = { {name, ranks[tab][index], reqLevel}, ... }
         auraDurations = {}, -- Observed debuff durations for nameplates: [spellId] = seconds
         addonIcons = {}, -- Addon manager icons learned from loaded addons: [lowercase folder] = { icon, coords }
+        itemOwnership = { version = 1, realms = {} }, -- Per-realm, per-character item counts for the tooltip module
         optionsPanelScale = 1 -- Settings window scale on top of the UI scale
     },
     profile = {
@@ -1253,6 +1254,9 @@ local defaults = {
                 lootroll = true,
                 mail = true,
                 auction = true,
+            },
+            itemownership = {
+                enabled = true, -- Show per-character bag, bank and equipped counts in item tooltips
             },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy

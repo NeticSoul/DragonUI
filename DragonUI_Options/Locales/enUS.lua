@@ -321,6 +321,9 @@ L["Fire abilities on key press instead of key release."] = true
 L["Enable Item Quality Borders"] = true
 L["Show quality-colored borders on items in bags, character panel, bank, merchant, and inspect frames."] = true
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = true
+L["Character Item Counts"] = true
+L["Show Character Item Counts"] = true
+L["Shows how many of the hovered item each of your characters on this realm holds, split into bags, bank and equipped."] = true
 L["Minimum Quality"] = true
 L["Poor"] = true
 L["Common"] = true
