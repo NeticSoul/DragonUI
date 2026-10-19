@@ -227,4 +227,8 @@ function Book.BuildWindow()
 
     root:HookScript("OnShow", Book.WindowShown)
     root:HookScript("OnHide", Book.WindowHidden)
+    addon.WindowPositions:Register(root, "DragonUI_SpellbookFrame", { onReset = function()
+        Book.position = nil
+        Book.ApplyScale()
+    end })
 end

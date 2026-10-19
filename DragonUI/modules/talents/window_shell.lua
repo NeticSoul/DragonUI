@@ -402,5 +402,9 @@ function ns.BuildWindow()
     ns.SetPortraitClass(ns.PlayerClass())
     ns.viewGroup = ns.ActiveGroup()
     ns.ApplyScale()
+    addon.WindowPositions:Register(win, "DragonUI_TalentFrame", { onReset = function()
+        ns.moved = false
+        ns.ApplyScale()
+    end })
     return win
 end

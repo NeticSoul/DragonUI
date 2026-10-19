@@ -166,6 +166,7 @@ function Frame.Build()
     Frame.ShowPage("crafting")
     P.Fire("Built")
     addon.ForeverUI.EnforceLayering(scaler)
+    addon.WindowPositions:Register(host, "TradeSkillFrame", { parent = chrome, anchor = win })
 end
 
 function Frame.TopLevel()

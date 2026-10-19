@@ -1156,3 +1156,8 @@ L["item"] = "gegenstand"
 L["items"] = "gegenstände"
 
 L["Some junk sales could not be confirmed. Check your bags and buyback."] = "Einige Verkäufe konnten nicht bestätigt werden. Prüft Taschen und Rückkauf."
+
+-- Movable main windows
+L["Drag to move. Alt-right-click to reset this window."] = "Zum Verschieben ziehen. Alt-Rechtsklick setzt dieses Fenster zurück."
+L["Window positions reset."] = "Fensterpositionen zurückgesetzt."
+L["Drag a window title to move it. Use /dui windows reset to reset window positions."] = "Zieht den Fenstertitel zum Verschieben. /dui windows reset setzt die Positionen zurück."

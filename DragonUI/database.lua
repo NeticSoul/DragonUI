@@ -27,6 +27,7 @@ local defaults = {
         optionsPanelScale = 1 -- Settings window scale on top of the UI scale
     },
     profile = {
+        windowPositions = {}, -- Main window positions, normalized to the screen for each profile
         -- Keep at 1: version-less legacy profiles read this default and must still run migrations.
         version = 1,
         -- Widgets

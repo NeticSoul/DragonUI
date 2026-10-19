@@ -451,6 +451,7 @@ local function build()
         if UpdateMicroButtons then UpdateMicroButtons() end
     end)
 
+    addon.WindowPositions:Register(frame, FRAME_NAME)
     tinsert(UISpecialFrames, FRAME_NAME)
     return frame
 end

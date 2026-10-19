@@ -73,6 +73,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 
 ### Core UI
 
+- 🪟 Move main windows by dragging their title bars; positions are remembered per profile after reload and kept on-screen when the display changes. Alt-right-click a title to reset it, or use `/dui windows reset` for all newly movable windows. Bagster, the world map and loot retain their existing movement controls.
 - 🧩 Modular system: enable or disable any major UI component independently.
 - ⚙️ Custom configuration panel with profile support and per-module controls.
 - ⌨️ Editor Mode: move and reposition nearly every UI element, with live X/Y coordinates and pixel-by-pixel position controls.
@@ -115,6 +116,7 @@ Extensive customization available directly in-game through the configuration pan
 |---------|--------|
 | `/dragonui` or `/dui` | Open the configuration panel |
 | `/dragonui edit` | Toggle Editor Mode |
+| `/dui windows reset` | Reset main-window positions |
 | `/dragonui help` | Show all available commands |
 | `/duicomp` | Compatibility diagnostics |
 | `/sort` | Sort your bags |

@@ -1244,3 +1244,8 @@ L["item"] = true
 L["items"] = true
 
 L["Some junk sales could not be confirmed. Check your bags and buyback."] = true
+
+-- Movable main windows
+L["Drag to move. Alt-right-click to reset this window."] = true
+L["Window positions reset."] = true
+L["Drag a window title to move it. Use /dui windows reset to reset window positions."] = true
