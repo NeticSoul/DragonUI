@@ -1158,6 +1158,8 @@ L["Opening..."] = true
 -- ============================================================================
 L["Social Window"] = true
 L["Retail-style friends, who and raid window"] = true
+L["Stock Windows"] = true
+L["Retail-style quest log, dungeon finder, PvP and game menu chrome"] = true
 L["%d Members  |cff808080·|r  %d Online"] = true
 L["%d Members  |cff808080·|r  |cff40ff40%d Online|r"] = true
 L["%d Online"] = true
