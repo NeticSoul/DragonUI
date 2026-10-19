@@ -1132,3 +1132,25 @@ L["Low chance of gaining skill"] = "숙련도 상승 확률 낮음"
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "비행 지도"
+
+-- Achievement search
+L["Search"] = "검색"
+L["Back"] = "뒤로"
+L["Previous"] = "이전"
+L["Next"] = "다음"
+L["%d results — %d / %d"] = "검색 결과 %d개 — %d / %d"
+L["Search names, rewards or types: mounts, pets, titles, tabards"] = "이름, 보상 또는 유형 검색: 탈것, 애완동물, 칭호, 휘장"
+L["mount"] = "탈것"
+L["mounts"] = "탈것"
+L["pet"] = "애완동물"
+L["pets"] = "애완동물"
+L["title"] = "칭호"
+L["titles"] = "칭호"
+L["tabard"] = "휘장"
+L["tabards"] = "휘장"
+L["toy"] = "장난감"
+L["toys"] = "장난감"
+L["item"] = "아이템"
+L["items"] = "아이템"
+
+L["Some junk sales could not be confirmed. Check your bags and buyback."] = "일부 잡동사니 판매를 확인하지 못했습니다. 가방과 재매입 목록을 확인하세요."

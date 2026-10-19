@@ -9,17 +9,18 @@ local localized = parts.localized
 local BUTTON_NAME = "DragonUI_MerchantSellAllJunkButton"
 local DIALOG_KEY = "DRAGONUI_SELL_ALL_JUNK"
 local WARNING_KEY = "You are about to sell all junk items and will not be able to buy them back.\n\nAre you sure you want to proceed?"
-local REFRESH_EVENTS = { "MERCHANT_SHOW", "MERCHANT_UPDATE", "BAG_UPDATE" }
+local REFRESH_EVENTS = { "MERCHANT_SHOW", "MERCHANT_UPDATE", "BAG_UPDATE", "GET_ITEM_INFO_RECEIVED" }
 
--- Grey links carry this colour code even while GetItemInfo knows nothing about the item.
+-- Only cached, priced grey items are eligible for automatic sales.
 local GREY_LINK_START = "|cff9d9d9d"
 
 local stateQueued = false
 
 local function isJunk(link)
     local grey = link ~= nil and link:sub(1, 10) == GREY_LINK_START
-    -- An unknown price (nil) still counts; only an explicit zero means the vendor refuses it.
-    return grey and select(11, GetItemInfo(link)) ~= 0
+    if not grey then return false end
+    local price = select(11, GetItemInfo(link))
+    return type(price) == "number" and price > 0
 end
 
 local function forEachJunkSlot(visit)
@@ -41,28 +42,83 @@ local function countJunk()
     return total
 end
 
-local function sellEveryJunkItem()
+local sale
+local function merchantOpen()
     local window = _G.MerchantFrame
-    if not window or not window:IsShown() or window.selectedTab ~= 1 then
-        return 0, 0
+    return window and window:IsShown() and window.selectedTab == 1
+end
+
+local function finishSale(completed)
+    local done = sale
+    sale = nil
+    if not done then return end
+    if done.items > 0 then
+        addon:Print(string.format(localized("Sold %d junk item(s) for %s."), done.items, GetMoneyString(done.copper)))
     end
-    -- Counts calls that did not raise, not sales the server confirmed.
-    local items, copper = 0, 0
+    if done.unconfirmed then addon:Print(localized("Some junk sales could not be confirmed. Check your bags and buyback.")) end
+    if completed and done.onComplete then done.onComplete() end
+end
+
+-- One request at a time; a Lua call succeeding does not mean the server sold the item.
+local function sellEveryJunkItem(onComplete)
+    if sale then return false end
+    if not merchantOpen() then return false end
+    local run = { queue = {}, index = 0, items = 0, copper = 0, onComplete = onComplete }
     forEachJunkSlot(function(bag, slot, link)
-        local _, count = GetContainerItemInfo(bag, slot)
-        count = count or 1
-        local price = select(11, GetItemInfo(link)) or 0
-        if pcall(UseContainerItem, bag, slot) then
-            items = items + count
-            copper = copper + price * count
+        local _, count, locked = GetContainerItemInfo(bag, slot)
+        if not locked and count and count > 0 then
+            run.queue[#run.queue + 1] = { bag = bag, slot = slot, link = link, count = count,
+                price = select(11, GetItemInfo(link)) }
         end
     end)
-    if items > 0 then
-        addon:Print(string.format(localized("Sold %d junk item(s) for %s."), items, GetMoneyString(copper)))
+    sale = run
+    local nextItem
+    nextItem = function()
+        if sale ~= run then return end
+        if not merchantOpen() then finishSale(false); return end
+        run.index = run.index + 1
+        local item = run.queue[run.index]
+        if not item then finishSale(true); return end
+        local link = GetContainerItemLink(item.bag, item.slot)
+        local _, count, locked = GetContainerItemInfo(item.bag, item.slot)
+        -- Do not use a stale slot after the player or another addon moved its contents.
+        if link ~= item.link or count ~= item.count or locked then
+            nextItem()
+            return
+        end
+        local before = GetMoney()
+        if not pcall(UseContainerItem, item.bag, item.slot) then finishSale(false); return end
+        local tries = 0
+        local function check()
+            if sale ~= run then return end
+            if not merchantOpen() then finishSale(false); return end
+            local current = GetContainerItemLink(item.bag, item.slot)
+            -- The whole stack must leave and its payment must arrive before it counts.
+            if current ~= item.link and GetMoney() >= before + item.price * item.count then
+                run.items = run.items + item.count
+                run.copper = run.copper + item.price * item.count
+                nextItem()
+                return
+            end
+            tries = tries + 1
+            if tries >= 50 then
+                -- Never resend an uncertain request, but do not abandon later stacks.
+                run.unconfirmed = true
+                nextItem()
+                return
+            end
+            addon:After(0.1, check)
+        end
+        addon:After(0.1, check)
     end
-    return items, copper
+    nextItem()
+    return true
 end
 parts.sellEveryJunkItem = sellEveryJunkItem
+
+local visits = CreateFrame("Frame")
+visits:RegisterEvent("MERCHANT_CLOSED")
+visits:SetScript("OnEvent", function() finishSale(false) end)
 
 local function applyJunkState(button)
     stateQueued = false

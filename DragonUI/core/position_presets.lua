@@ -362,8 +362,66 @@ function PositionPresets:Snapshot()
     return snapshot
 end
 
+local ANCHORS = { TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
+    RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true }
+local FLAGS = { override = true, custom_position = true, manual_position = true }
+local FRAME_NAMES = { UIParent = true, TargetFrame = true, FocusFrame = true }
+
+-- Validate every field before Restore writes any part of the active profile.
+local function ValidFields(fields, allowed)
+    if type(fields) ~= "table" then return false end
+    for key, value in pairs(fields) do
+        if not allowed[key] then return false end
+        if key == "anchor" or key == "anchorParent" then
+            if type(value) ~= "string" or not ANCHORS[value] then return false end
+        elseif key == "anchorFrame" then
+            if type(value) ~= "string" or not FRAME_NAMES[value] then return false end
+        elseif FLAGS[key] then
+            if type(value) ~= "boolean" then return false end
+        elseif type(value) ~= "number" or value ~= value or math.abs(value) > 1000000 then
+            return false
+        end
+    end
+    return true
+end
+
+function PositionPresets:ValidateSnapshot(snapshot)
+    if type(snapshot) ~= "table" or snapshot.version ~= SNAPSHOT_VERSION then return false end
+    local sections = { questtracker = QUESTTRACKER_POSITION_KEYS, lootroll = LOOTROLL_POSITION_KEYS }
+    for name, fields in pairs(sections) do
+        if snapshot[name] ~= nil and not ValidFields(snapshot[name], fields) then return false end
+    end
+    local groups = {
+        castbar = { player = CASTBAR_PLAYER_POSITION_KEYS, target = CASTBAR_POSITION_KEYS, focus = CASTBAR_POSITION_KEYS },
+        unitframe = { tot = UNITFRAME_POSITION_KEYS, fot = UNITFRAME_POSITION_KEYS, party = UNITFRAME_POSITION_KEYS },
+        additional = { totem = TOTEM_POSITION_KEYS, stance = STANCE_POSITION_KEYS },
+    }
+    for name, members in pairs(groups) do
+        local group = snapshot[name]
+        if group ~= nil then
+            if type(group) ~= "table" then return false end
+            for key, fields in pairs(group) do
+                if not members[key] or not ValidFields(fields, members[key]) then return false end
+            end
+        end
+    end
+    if snapshot.widgets ~= nil then
+        if type(snapshot.widgets) ~= "table" then return false end
+        local count = 0
+        for key, fields in pairs(snapshot.widgets) do
+            count = count + 1
+            if count > 256 or type(key) ~= "string" or #key > 100 or not key:match("^[%w_]+$")
+                or not ValidFields(fields, WIDGET_POSITION_KEYS) then return false end
+        end
+    end
+    for key in pairs(snapshot) do
+        if key ~= "version" and key ~= "widgets" and not sections[key] and not groups[key] then return false end
+    end
+    return true
+end
+
 function PositionPresets:Restore(snapshot)
-    if type(snapshot) ~= "table" then
+    if not self:ValidateSnapshot(snapshot) then
         return false
     end
 
@@ -755,16 +813,23 @@ function PositionPresets:Load(name)
         return false
     end
 
-    if not self:Restore(entry.data) then
+    if InCombatLockdown() or not self:ValidateSnapshot(entry.data) then return false end
+    local profile = addon.db and addon.db.profile
+    if not profile then return false end
+    local backup = CopyTable(profile)
+    local ok, applied = pcall(function()
+        return self:Restore(entry.data) and self:Apply()
+    end)
+    if not ok or not applied then
+        -- Preserve AceDB's profile table/metatable while rolling back all partial writes.
+        wipe(profile)
+        for key, value in pairs(backup) do profile[key] = value end
+        pcall(self.ApplyStoredPositions, self)
         return false
     end
-
-    local applied = self:Apply()
-    if applied then
-        self.currentName = name
-        self:RefreshPanel()
-    end
-    return applied
+    self.currentName = name
+    self:RefreshPanel()
+    return true
 end
 
 function PositionPresets:Delete(name)
@@ -835,7 +900,7 @@ function PositionPresets:ImportFromString(str)
     end
 
     local ok, data = Serializer:Deserialize(decompressed)
-    if not ok or type(data) ~= "table" or data.version ~= SNAPSHOT_VERSION then
+    if not ok or not self:ValidateSnapshot(data) then
         return nil, "deserialize"
     end
 

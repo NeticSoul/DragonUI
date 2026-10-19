@@ -1222,3 +1222,25 @@ L["Total guild XP: %s"] = true
 L["Unlocked"] = true
 L["You are not in a guild."] = true
 L["Your Contribution"] = true
+
+-- Achievement search
+L["Search"] = true
+L["Back"] = true
+L["Previous"] = true
+L["Next"] = true
+L["%d results — %d / %d"] = true
+L["Search names, rewards or types: mounts, pets, titles, tabards"] = true
+L["mount"] = true
+L["mounts"] = true
+L["pet"] = true
+L["pets"] = true
+L["title"] = true
+L["titles"] = true
+L["tabard"] = true
+L["tabards"] = true
+L["toy"] = true
+L["toys"] = true
+L["item"] = true
+L["items"] = true
+
+L["Some junk sales could not be confirmed. Check your bags and buyback."] = true

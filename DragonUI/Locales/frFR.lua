@@ -1065,3 +1065,25 @@ L["Low chance of gaining skill"] = "Faible chance de gagner en compétence"
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "Carte des trajets aériens"
+
+-- Achievement search
+L["Search"] = "Rechercher"
+L["Back"] = "Retour"
+L["Previous"] = "Précédent"
+L["Next"] = "Suivant"
+L["%d results — %d / %d"] = "%d résultats — %d / %d"
+L["Search names, rewards or types: mounts, pets, titles, tabards"] = "Chercher noms, récompenses ou types : montures, mascottes, titres"
+L["mount"] = "monture"
+L["mounts"] = "montures"
+L["pet"] = "mascotte"
+L["pets"] = "mascottes"
+L["title"] = "titre"
+L["titles"] = "titres"
+L["tabard"] = "tabard"
+L["tabards"] = "tabards"
+L["toy"] = "jouet"
+L["toys"] = "jouets"
+L["item"] = "objet"
+L["items"] = "objets"
+
+L["Some junk sales could not be confirmed. Check your bags and buyback."] = "Certaines ventes n’ont pas pu être confirmées. Vérifiez vos sacs et le rachat."
