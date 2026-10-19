@@ -1,6 +1,6 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 
--- Combo points as retail's orb bar under the player frame and/or Forever's gem arc on the target portrait.
+-- Combo points: retail's orb bar under the player frame and/or small orbs on the target frame.
 
 local addon = select(2, ...)
 local L = addon.L
@@ -8,9 +8,7 @@ local UF = addon.UF
 
 local KEY = "combopoints"
 local ART = addon._dir .. "UnitFrames\\ComboPoints\\"
-local GEM_TEXTURE = "Interface\\ComboFrame\\ComboPoint"
 local MAX_POINTS = 5
-local SHEET_W, SHEET_H = 1024, 512
 local PIP_SIZE, PIP_SPACING = 20, 4
 -- Bar centre on PlayerFrame's BOTTOM: the row DragonUI gives the DK runes.
 local BAR_X, BAR_Y = 45, 15
@@ -18,12 +16,13 @@ local BAR_X, BAR_Y = 45, 15
 local DRUID_BAR_DROP = 9
 local POWER_ENERGY = 3
 local PREVIEW_POINTS = 3
--- ComboFrame.lua's COMBOFRAME_FADE_IN, COMBOFRAME_HIGHLIGHT_FADE_IN and COMBOFRAME_SHINE_FADE_IN/OUT.
-local FADE_IN = 0.3
-local GEM_HIGHLIGHT_IN, GEM_SHINE_IN, GEM_SHINE_OUT = 0.4, 0.3, 0.4
--- Forever's 5-point arc (camelot anchor + mainline ComboPoints[2..6]) round the centre of its 58-unit portrait.
-local ARC = { { -3.5, 37 }, { 9, 36 }, { 20.5, 30.5 }, { 29.5, 22 }, { 35, 10.5 } }
-local ARC_PORTRAIT = 58
+-- ComboFrame.lua's COMBOFRAME_FADE_IN and COMBOFRAME_FADE_OUT.
+local FADE_IN, FADE_OUT = 0.3, 0.5
+-- Forever's arc over the 54-unit portrait's top right, in degrees: 2 into its ring (26.5..30).
+local ARC = { radius = 32.5, first = 92, step = -18 }
+-- Round a dragon: down the ring's right, filling upwards; above Forever's level circle when shown.
+local ARC_DRAGON = { radius = 28.5, first = -50, step = 20, circleFirst = 0 }
+local ARC_PORTRAIT = 54
 
 local floor, min = math.floor, math.min
 
@@ -60,6 +59,41 @@ local FOREVER_RECTS = {
     rogue_icon      = { 722, 0, 28, 28 },
     rogue_fx        = { 754, 0, 28, 28 },
 }
+
+-- Half-size pieces for the target's small orbs, spaced so no mip mixes them (gen_combopoints_small.py).
+local RETAIL_SMALL_RECTS = {
+    rogue_slash     = { 0, 0, 258, 129 },
+    druid_slash     = { 272, 0, 208, 123 },
+    rogue_shadow    = { 0, 144, 25, 25 },
+    rogue_bg        = { 40, 144, 20, 20 },
+    rogue_bgdis     = { 72, 144, 20, 20 },
+    rogue_frameglow = { 104, 144, 23, 23 },
+    rogue_icon      = { 136, 144, 14, 15 },
+    rogue_fx        = { 160, 144, 14, 14 },
+    druid_shadow    = { 184, 144, 25, 25 },
+    druid_bg        = { 224, 144, 20, 20 },
+    druid_bgdis     = { 256, 144, 20, 20 },
+    druid_ringglow  = { 288, 144, 23, 23 },
+    druid_icon      = { 320, 144, 14, 14 },
+    druid_deplete   = { 344, 144, 16, 15 },
+    druid_bgglow    = { 368, 144, 36, 36 },
+    druid_smoke     = { 416, 144, 22, 48 },
+}
+
+local FOREVER_SMALL_RECTS = {
+    rogue_slash     = { 0, 0, 258, 129 },
+    rogue_shadow    = { 0, 144, 25, 25 },
+    rogue_bg        = { 40, 144, 22, 22 },
+    rogue_bgdis     = { 72, 144, 22, 22 },
+    rogue_frameglow = { 104, 144, 22, 22 },
+    rogue_icon      = { 136, 144, 14, 14 },
+    rogue_fx        = { 160, 144, 14, 14 },
+}
+
+local RETAIL_ART = { file = ART .. "Retail", rects = RETAIL_RECTS, w = 1024, h = 512 }
+local RETAIL_SMALL_ART = { file = ART .. "Retail-Small", rects = RETAIL_SMALL_RECTS, w = 512, h = 256 }
+local FOREVER_ART = { file = ART .. "Forever", rects = FOREVER_RECTS, w = 1024, h = 512 }
+local FOREVER_SMALL_ART = { file = ART .. "Forever-Small", rects = FOREVER_SMALL_RECTS, w = 512, h = 256 }
 
 -- { key, piece, width, height, x, y, draw layer, on the pip's fx child }: retail's sublevels as layers and a child frame.
 local ROGUE_LAYERS = {
@@ -132,12 +166,6 @@ local DRUID_SPEND = {
     { "bgInactive", 0, 0.2, 0, 1 },
 }
 
-local GEM_GAIN = {
-    { "highlight", 0, GEM_HIGHLIGHT_IN, 0, 1 },
-    { "shine", GEM_HIGHLIGHT_IN, GEM_SHINE_IN, 0, 1 },
-    { "shine", GEM_HIGHLIGHT_IN + GEM_SHINE_IN, GEM_SHINE_OUT, 1, 0 },
-}
-
 -- Groups each track list by texture and records how long it runs.
 local function Transition(tracks, flipbook, rise)
     local byKey, duration = {}, 0
@@ -157,20 +185,18 @@ local DRUID_FLIPBOOK = { 8, 3, 20, 1 }
 
 local FAMILIES = {
     rogue = {
-        file = ART .. "Retail", rects = RETAIL_RECTS, layers = ROGUE_LAYERS, flipbook = ROGUE_FLIPBOOK,
+        art = RETAIL_ART, small = RETAIL_SMALL_ART, layers = ROGUE_LAYERS, flipbook = ROGUE_FLIPBOOK,
         gain = Transition(ROGUE_GAIN, ROGUE_FLIPBOOK), spend = Transition(ROGUE_SPEND),
     },
     druid = {
-        file = ART .. "Retail", rects = RETAIL_RECTS, layers = DRUID_LAYERS, flipbook = DRUID_FLIPBOOK,
+        art = RETAIL_ART, small = RETAIL_SMALL_ART, layers = DRUID_LAYERS, flipbook = DRUID_FLIPBOOK,
         gain = Transition(DRUID_GAIN, DRUID_FLIPBOOK), spend = Transition(DRUID_SPEND, nil, { 7, 0.56 }),
     },
     forever = {
-        file = ART .. "Forever", rects = FOREVER_RECTS, layers = FOREVER_LAYERS, flipbook = ROGUE_FLIPBOOK,
+        art = FOREVER_ART, small = FOREVER_SMALL_ART, layers = FOREVER_LAYERS, flipbook = ROGUE_FLIPBOOK,
         gain = Transition(ROGUE_GAIN, ROGUE_FLIPBOOK), spend = Transition(ROGUE_SPEND),
     },
 }
-
-local GEM_TRANSITION = Transition(GEM_GAIN)
 
 -- =============================================================================
 -- Module
@@ -184,11 +210,11 @@ local ComboPoints = {
 if addon.RegisterModule then
     addon:RegisterModule(KEY, ComboPoints,
         L["Combo Points"],
-        L["Combo points as orbs under the player frame and/or gems around the target portrait."],
+        L["Combo points as orbs under the player frame and/or on the target frame."],
         { lifecyclePrefix = "ComboPoints" })
 end
 
-local bar, arc, editorBox
+local bar, arc, column, editorBox
 local views = {}
 local parked
 local previewing = false
@@ -223,6 +249,11 @@ local function Resolve()
     return onPlayer, onTarget, style
 end
 
+-- The target's PvP emblem steps past the column only while it is up (fading out included).
+function UF.ComboOnCompactTarget()
+    return column ~= nil and column:IsShown() and true or false
+end
+
 local function CurrentUnit()
     return UnitHasVehicleUI("player") and "vehicle" or "player"
 end
@@ -248,13 +279,12 @@ local function TrackAlpha(tracks, t)
     return from + (to - from) * (t - start) / duration
 end
 
-local function SetRect(texture, rect)
-    local x, y, w, h = rect[1], rect[2], rect[3], rect[4]
-    texture:SetTexCoord(x / SHEET_W, (x + w) / SHEET_W, y / SHEET_H, (y + h) / SHEET_H)
+local function SetRect(texture, art, x, y, w, h)
+    texture:SetTexCoord(x / art.w, (x + w) / art.w, y / art.h, (y + h) / art.h)
 end
 
 -- =============================================================================
--- Player bar (pips)
+-- Pips (player bar, target arc and column)
 -- =============================================================================
 
 local function PipTexture(pip, key, onFx)
@@ -267,24 +297,26 @@ local function PipTexture(pip, key, onFx)
     return texture
 end
 
-local function SkinPip(pip, family)
+local function SkinPip(pip, family, art)
     for _, texture in pairs(pip.all) do
         texture:Hide()
     end
     pip.tex = {}
     pip.layout = {}
+    pip.art = art
     for _, layer in ipairs(family.layers) do
         local key, piece, w, h, x, y, drawLayer, onFx = unpack(layer)
+        local rect = art.rects[piece]
         local texture = PipTexture(pip, key, onFx)
         texture:SetDrawLayer(drawLayer)
-        texture:SetTexture(family.file)
-        SetRect(texture, family.rects[piece])
+        texture:SetTexture(art.file)
+        SetRect(texture, art, unpack(rect))
         texture:SetSize(w, h)
         texture:ClearAllPoints()
         texture:SetPoint("CENTER", pip, "CENTER", x, y)
         texture:Show()
         pip.tex[key] = texture
-        pip.layout[key] = { x = x, y = y, rect = family.rects[piece] }
+        pip.layout[key] = { x = x, y = y, rect = rect }
     end
 end
 
@@ -313,40 +345,54 @@ local function SetFlipbookCell(pip, flipbook, t)
     local cell = min(frames - 1, floor(t / seconds * frames))
     local rect = layout.rect
     local w, h = rect[3] / columns, rect[4] / rows
-    local x, y = rect[1] + (cell % columns) * w, rect[2] + floor(cell / columns) * h
-    slash:SetTexCoord(x / SHEET_W, (x + w) / SHEET_W, y / SHEET_H, (y + h) / SHEET_H)
+    SetRect(slash, pip.art, rect[1] + (cell % columns) * w, rect[2] + floor(cell / columns) * h, w, h)
 end
 
-local function CreateBar()
-    bar = CreateFrame("Frame", "DragonUIComboPointBar", PlayerFrame)
-    bar:SetSize(MAX_POINTS * PIP_SIZE + (MAX_POINTS - 1) * PIP_SPACING, PIP_SIZE)
-    bar:Hide()
-    bar.elements = {}
+-- The caller lays the pips out: the player's row, the target's arc or its column.
+local function CreatePips(name, parent)
+    local view = CreateFrame("Frame", name, parent)
+    view:Hide()
+    view.elements = {}
     for i = 1, MAX_POINTS do
-        local pip = CreateFrame("Frame", nil, bar)
+        local pip = CreateFrame("Frame", nil, view)
         pip:SetSize(PIP_SIZE, PIP_SIZE)
-        pip:SetPoint("LEFT", bar, "LEFT", (i - 1) * (PIP_SIZE + PIP_SPACING), 0)
         pip.fx = CreateFrame("Frame", nil, pip)
         pip.fx:SetAllPoints(pip)
         pip.all = {}
         pip.tex = {}
-        bar.elements[i] = pip
+        view.elements[i] = pip
     end
-    bar.Snap = SnapPip
-    bar.Reset = ResetPip
+    view.Snap = SnapPip
+    view.Reset = ResetPip
+    return view
 end
 
-local function SkinBar(family)
-    bar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 5)
-    for _, pip in ipairs(bar.elements) do
-        pip:SetFrameLevel(bar:GetFrameLevel() + 1)
+local function CreateBar()
+    bar = CreatePips("DragonUIComboPointBar", PlayerFrame)
+    bar:SetSize(MAX_POINTS * PIP_SIZE + (MAX_POINTS - 1) * PIP_SPACING, PIP_SIZE)
+    for i, pip in ipairs(bar.elements) do
+        pip:SetPoint("LEFT", bar, "LEFT", (i - 1) * (PIP_SIZE + PIP_SPACING), 0)
+    end
+end
+
+-- small: the target's orbs, drawn at UF.COMPACT.target.combo.scale from the half-size sheet.
+local function SkinPips(view, family, level, small)
+    local art = small and family.small or family.art
+    if view.family == family and view.art == art then return end
+    view:SetFrameLevel(level)
+    for _, pip in ipairs(view.elements) do
+        pip:SetFrameLevel(view:GetFrameLevel() + 1)
         pip.fx:SetFrameLevel(pip:GetFrameLevel() + 1)
-        SkinPip(pip, family)
+        SkinPip(pip, family, art)
+        -- Small orbs stand close: a shadow dropped under one would darken its neighbour.
+        if small then
+            pip.tex.shadow:SetPoint("CENTER", pip, "CENTER", 0, 0)
+        end
         pip.full = nil
         pip.anim = nil
     end
-    bar.family = family
-    bar.gain, bar.spend = family.gain, family.spend
+    view.family, view.art = family, art
+    view.gain, view.spend = family.gain, family.spend
 end
 
 -- =============================================================================
@@ -410,68 +456,72 @@ local function GrabBar()
 end
 
 -- =============================================================================
--- Target arc (gems)
+-- Target orbs: Forever's arc round the portrait, or a column off a portrait-off frame's end
 -- =============================================================================
 
-local function SnapGem(gem, full)
-    gem.tex.highlight:SetAlpha(full and 1 or 0)
-    gem.tex.shine:SetAlpha(0)
-end
-
-local function ResetGem(gem)
-    gem.tex.highlight:SetAlpha(0)
-    gem.tex.shine:SetAlpha(0)
-end
-
--- ComboPointTemplate: gem, highlight and additive shine strips of one 32x16 file on a 12x12 frame.
-local function CreateGem(parent)
-    local gem = CreateFrame("Frame", nil, parent)
-    gem:SetSize(12, 12)
-    local point = gem:CreateTexture(nil, "BACKGROUND")
-    point:SetTexture(GEM_TEXTURE)
-    point:SetSize(12, 16)
-    point:SetPoint("TOPLEFT")
-    point:SetTexCoord(0, 0.375, 0, 1)
-    local highlight = gem:CreateTexture(nil, "ARTWORK")
-    highlight:SetTexture(GEM_TEXTURE)
-    highlight:SetSize(8, 16)
-    highlight:SetPoint("TOPLEFT", 2, 0)
-    highlight:SetTexCoord(0.375, 0.5625, 0, 1)
-    local shine = gem:CreateTexture(nil, "OVERLAY")
-    shine:SetTexture(GEM_TEXTURE)
-    shine:SetBlendMode("ADD")
-    shine:SetSize(14, 16)
-    shine:SetPoint("TOPLEFT", 0, 4)
-    shine:SetTexCoord(0.5625, 1, 0, 1)
-    gem.tex = { point = point, highlight = highlight, shine = shine }
-    ResetGem(gem)
-    return gem
+local function SmallScale()
+    return UF.COMPACT.target.combo.scale
 end
 
 local function CreateArc()
-    arc = CreateFrame("Frame", "DragonUIComboPointArc", TargetFrame)
+    arc = CreatePips("DragonUIComboPointArc", TargetFrame)
     arc:SetSize(1, 1)
-    arc:Hide()
-    arc.elements = {}
-    for i = 1, MAX_POINTS do
-        arc.elements[i] = CreateGem(arc)
-    end
-    arc.Snap = SnapGem
-    arc.Reset = ResetGem
+    arc:SetScale(SmallScale())
+    arc:SetFrameStrata("MEDIUM")
 end
 
-local function LayoutArc()
+local function CreateColumn()
+    local step = UF.COMPACT.target.combo.pitch / SmallScale()
+    column = CreatePips("DragonUIComboPointColumn", TargetFrame)
+    column:SetScale(SmallScale())
+    column:SetSize(PIP_SIZE, PIP_SIZE + (MAX_POINTS - 1) * step)
+    -- Point 1 at the bottom: the column fills upwards.
+    for i, pip in ipairs(column.elements) do
+        pip:SetPoint("BOTTOM", column, "BOTTOM", 0, (i - 1) * step)
+    end
+    -- The target's PvP emblem steps aside while the column is up and comes back when it goes.
+    local function MoveEmblem()
+        if UF.PlaceTargetPvPIcon then UF.PlaceTargetPvPIcon() end
+    end
+    hooksecurefunc(column, "Show", MoveEmblem)
+    hooksecurefunc(column, "Hide", MoveEmblem)
+end
+
+local function LayoutColumn(family)
+    SkinPips(column, family, TargetFrame:GetFrameLevel() + 1, true)
+    -- target_style.lua moves the slot past the frame's end, its dragon or its level circle, down on the bottom rim.
+    column:ClearAllPoints()
+    column:SetPoint("BOTTOM", UF.GetComboSlot(), "CENTER", 0, 0)
+end
+
+-- Left to right over the portrait's top-right ring, or bottom up its right side round a dragon.
+local function PlaceArc()
+    local elite = _G.DragonUI_TargetElite
+    local spot = elite and elite:IsShown() and ARC_DRAGON or ARC
+    local first = spot.first
+    if spot == ARC_DRAGON and UF.GetLevelSpot("target") then
+        first = spot.circleFirst
+    end
     -- The skin, not the texture: the target module may size its portrait after this runs at boot.
     local portrait = UF.GetFrameSkin().target.portrait
-    local scale = (portrait and portrait.w or 54) / ARC_PORTRAIT
-    arc:SetFrameStrata("MEDIUM")
+    local radius = spot.radius * (portrait and portrait.w or ARC_PORTRAIT) / ARC_PORTRAIT / SmallScale()
+    for i, pip in ipairs(arc.elements) do
+        local angle = math.rad(first + (i - 1) * spot.step)
+        pip:ClearAllPoints()
+        pip:SetPoint("CENTER", arc, "CENTER", radius * math.cos(angle), radius * math.sin(angle))
+    end
+end
+
+local function LayoutArc(family)
+    SkinPips(arc, family, TargetFrame:GetFrameLevel() + 1, true)
     arc:ClearAllPoints()
     arc:SetPoint("CENTER", TargetFramePortrait, "CENTER", 0, 0)
-    for i, gem in ipairs(arc.elements) do
-        gem:ClearAllPoints()
-        gem:SetPoint("CENTER", arc, "CENTER", ARC[i][1] * scale, ARC[i][2] * scale)
-    end
-    arc.gain, arc.spend = GEM_TRANSITION, nil
+    PlaceArc()
+end
+
+-- target_style.lua calls this whenever the target's dragon shows or goes.
+function UF.OnTargetDragon()
+    if arc and arc.art then PlaceArc() end
 end
 
 -- =============================================================================
@@ -498,13 +548,6 @@ local function StepElement(view, element, now)
     return true
 end
 
-local function Animating(view)
-    for _, element in ipairs(view.elements) do
-        if element.anim then return true end
-    end
-    return false
-end
-
 local function OnDriverUpdate()
     local now = GetTime()
     local busy = false
@@ -524,9 +567,20 @@ local function OnDriverUpdate()
                 busy = true
             end
         end
-        if view.hidePending and not Animating(view) then
-            view.hidePending = nil
-            view:Hide()
+        if view.fadeOutStart then
+            local progress = (now - view.fadeOutStart) / FADE_OUT
+            if progress >= 1 then
+                view.fadeOutStart = nil
+                view:Hide()
+                -- Out of sight, the spent orbs take their empty look for the next time.
+                for _, element in ipairs(view.elements) do
+                    element.anim = nil
+                    view.Snap(element, element.full)
+                end
+            else
+                view:SetAlpha(1 - progress)
+                busy = true
+            end
         end
     end
     if not busy then
@@ -553,7 +607,9 @@ end
 
 -- animate: only UNIT_COMBO_POINTS gains or spends; a new target, vehicle, form or option just shows the new count.
 local function UpdateView(view, count, wanted, animate)
-    local visible = view:IsShown() and not view.hidePending
+    local visible = view:IsShown() and not view.fadeOutStart
+    -- Spending the last points fades the view out as it stands, without emptying each orb first.
+    local fadeOut = animate and visible and not wanted
     local colorblind = ENABLE_COLORBLIND_MODE == "1"
     for i, element in ipairs(view.elements) do
         local full = i <= count
@@ -561,27 +617,41 @@ local function UpdateView(view, count, wanted, animate)
             local had = element.full
             element.full = full
             local anim = full and view.gain or view.spend
-            if animate and visible and had ~= nil and anim then
+            if fadeOut then
+                -- Left as it stands; OnDriverUpdate empties it once hidden.
+            elseif animate and visible and had ~= nil and anim then
                 StartTransition(view, element, anim)
             else
                 element.anim = nil
                 view.Snap(element, full)
             end
         end
-        element:SetShownCompat(full or not colorblind)
+        if not fadeOut then
+            element:SetShownCompat(full or not colorblind)
+        end
     end
 
     if wanted then
-        view.hidePending = nil
-        if not view:IsShown() then
+        if view.fadeOutStart then
+            -- Points back mid-fade: the orbs show the count and fade back in from where they stand.
+            view.fadeOutStart = nil
+            for _, element in ipairs(view.elements) do
+                element.anim = nil
+                view.Snap(element, element.full)
+            end
+            view.fadeStart = GetTime() - view:GetAlpha() * FADE_IN
+            Wake()
+        elseif not view:IsShown() then
             view:SetAlpha(0)
             view:Show()
             view.fadeStart = GetTime()
             Wake()
         end
-    elseif view:IsShown() and not view.hidePending then
-        if animate and Animating(view) then
-            view.hidePending = true
+    elseif view:IsShown() and not view.fadeOutStart then
+        if fadeOut then
+            -- From wherever a fade-in left it.
+            view.fadeOutStart = GetTime() - (1 - view:GetAlpha()) * FADE_OUT
+            view.fadeStart = nil
             Wake()
         else
             view.fadeStart = nil
@@ -595,11 +665,15 @@ local function Update(animate)
     local unit = CurrentUnit()
     local count = GetComboPoints(unit, "target") or 0
     local wanted = count > 0 or (Eligible(unit) and not Cfg().hide_empty)
+    -- Points only build on what can be attacked: the target's orbs never show empty on yourself or a friend.
+    local onTarget = count > 0 or (wanted and UnitCanAttack(unit, "target") and true or false)
     for _, view in ipairs(views) do
         if view == bar and previewing then
             UpdateView(view, PREVIEW_POINTS, true, false)
+        elseif view == bar then
+            UpdateView(view, count, wanted, animate)
         else
-            UpdateView(view, count, wanted and (view ~= arc or UnitExists("target")), animate)
+            UpdateView(view, count, onTarget and UnitExists("target") and true or false, animate)
         end
     end
 end
@@ -681,6 +755,9 @@ local function OnEvent(_, event, unit)
         if unit == CurrentUnit() then Update(true) end
     elseif event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE" or event == "UNIT_DISPLAYPOWER" then
         if unit == "player" then Update(false) end
+    elseif event == "UNIT_FACTION" then
+        -- A duel or a mind control turns the target attackable or not.
+        if unit == "target" then Update(false) end
     else
         Update(false)
     end
@@ -693,25 +770,31 @@ local function ApplyNow()
         CreateEditor()
     end
     if not arc then CreateArc() end
+    if not column then CreateColumn() end
 
     local wasOn = {}
     for _, view in ipairs(views) do wasOn[view] = true end
     views = {}
     bar.onPlayer = onPlayer
+    local family = FAMILIES[style == "forever" and "forever" or (PlayerClass() == "DRUID" and "druid" or "rogue")]
     if onPlayer then
-        local family = FAMILIES[style == "forever" and "forever" or (PlayerClass() == "DRUID" and "druid" or "rogue")]
-        if bar.family ~= family then SkinBar(family) end
+        SkinPips(bar, family, PlayerFrame:GetFrameLevel() + 5)
         PlaceBar()
         table.insert(views, bar)
     end
-    if onTarget then
-        LayoutArc()
+    local onColumn = onTarget and UF.IsCompact("target")
+    if onColumn then
+        LayoutColumn(family)
+        table.insert(views, column)
+    elseif onTarget then
+        LayoutArc(family)
         table.insert(views, arc)
     end
+    local wanted = { [bar] = onPlayer, [arc] = onTarget and not onColumn, [column] = onColumn }
     -- A re-apply leaves a view that stays on untouched; hiding it here made every refresh blink and fade back in.
-    for _, view in ipairs({ bar, arc }) do
-        if not ((view == bar and onPlayer) or (view == arc and onTarget)) or not wasOn[view] then
-            view.hidePending, view.fadeStart = nil, nil
+    for _, view in ipairs({ bar, arc, column }) do
+        if not wanted[view] or not wasOn[view] then
+            view.fadeOutStart, view.fadeStart = nil, nil
             view:SetAlpha(1)
             view:Hide()
             for _, element in ipairs(view.elements) do
@@ -733,6 +816,7 @@ local function ApplyNow()
         eventFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
         eventFrame:RegisterEvent("UNIT_DISPLAYPOWER")
         eventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+        eventFrame:RegisterEvent("UNIT_FACTION")
         eventFrame:SetScript("OnEvent", OnEvent)
         Update(false)
     end
@@ -744,6 +828,7 @@ local function RestoreNow()
     driver:SetScript("OnUpdate", nil)
     if bar then bar:Hide() end
     if arc then arc:Hide() end
+    if column then column:Hide() end
     views = {}
     ParkStock(false)
 end
@@ -765,11 +850,15 @@ function addon.RefreshComboPointsSystem()
     end
 end
 
--- The bar's sheet is a 1024x512 TGA (~30 ms on first draw), which would otherwise land on the first point mid-fight.
+-- The orb sheets are TGAs (~30 ms first draw for the big one), else paid on the first point mid-fight.
 addon:RegisterTextureWarmup(function()
     local class = PlayerClass()
-    if not (ComboPoints.applied and bar and bar.onPlayer and bar.family) or (class ~= "ROGUE" and class ~= "DRUID") then
+    if not ComboPoints.applied or (class ~= "ROGUE" and class ~= "DRUID") then
         return nil
     end
-    return bar.family.file
+    local files = {}
+    for _, view in ipairs(views) do
+        if view.art then files[#files + 1] = view.art.file end
+    end
+    return files
 end)

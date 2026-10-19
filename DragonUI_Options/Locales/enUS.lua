@@ -901,6 +901,10 @@ L["Party"] = true
 L["Class Color Health"] = true
 L["Class icon instead of 3D model for players."] = true
 L["Alternative Class Icons"] = true
+L["No Portrait"] = true
+L["Hides the portrait: the frame closes where it was and the bars keep their place."] = true
+L["No Portrait (All Frames)"] = true
+L["Player, target, focus, ToT and ToF at once."] = true
 L["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."] = true
 L["Format Large Numbers"] = true
 L["Text Format"] = true
@@ -1685,14 +1689,14 @@ L["Scales only the profession tabs beside the window, on top of the window scale
 L["Professions Micro Button"] = true
 L["Show the Professions button in the micro menu. It opens the professions overview."] = true
 L["Combo Points"] = true
-L["Combo points as orbs under the player frame and/or gems around the target portrait."] = true
+L["Combo points as orbs under the player frame and/or on the target frame."] = true
 L["Location"] = true
-L["Auto follows the unit frame art: orbs under the player with the DragonUI art, gems on the target with the Forever art."] = true
+L["Auto follows the unit frame art: under the player with the DragonUI art, on the target with the Forever art."] = true
 L["Player + Target"] = true
 L["Orb Style"] = true
 L["Auto follows the unit frame art. Forever uses its bronze orbs for rogues and druids alike."] = true
 L["Hide When Empty"] = true
-L["Hide the orbs and the gems at 0 points instead of showing them empty."] = true
+L["Hide the orbs at 0 points instead of showing them empty."] = true
 
 -- Auto-Accept
 L["Auto-Accept"] = true

@@ -69,7 +69,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 ### Frames And Bars
 
 - 🎯 Action bars with configurable grid layouts, visibility rules, and button spacing.
-- 💚 Unit frames for player, target, focus, party, pet, boss, ToT, and ToF, with elite dragon decoration, class portrait icons, and fat health bar mode.
+- 💚 Unit frames for player, target, focus, party, pet, boss, ToT, and ToF, with elite dragon decoration, class portrait icons, fat health bar mode, and a portrait-off mode (beta).
 - 🩹 Unit Frame Layers: heal prediction, absorb shields, and animated health loss overlays.
 - 🔮 Castbars: custom castbars for player, target, and focus, with simple and detailed display modes, plus a built-in latency indicator on the player castbar.
 - 📊 XP & Reputation bars with Dragonflight and RetailUI styles, independently movable.
@@ -146,7 +146,7 @@ DragonUI builds on original work, adapted code and ideas from these addon author
 
 | Contributor | Name | Contribution |
 |---------|--------|-------------|
-| [PentSec](https://github.com/PentSec) | PentSec | Collaborator: Bagster rework, low HP alert and level-up modules, UI language override, version check, chat copy and pet pane fixes; original drafts of the loot skin, world map, spellbook, talents and merchant modules; the spellbook artwork |
+| [PentSec](https://github.com/PentSec) | PentSec | Collaborator: Bagster rework, low HP alert and level-up modules, UI language override, version check, chat copy and pet pane fixes; original drafts of the loot skin, world map, spellbook, talents and merchant modules and the portrait-off unit frames; the spellbook artwork |
 | [CrimsonHollow](https://github.com/CrimsonHollow) | CrimsonHollow | Fat Health Bar contribution |
 | [RovBot](https://github.com/RovxBot) | RovBot | Action bar grid/preset system |
 | [Marrow](https://github.com/MarrowB83) | Marrow (Pexie) | Micro menu, cast bar and unit frame contributions |

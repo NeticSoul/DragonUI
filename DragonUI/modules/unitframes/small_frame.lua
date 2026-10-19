@@ -15,6 +15,13 @@ local UF = addon.UF
 -- Namespace for the factory
 UF.SmallFrame = UF.SmallFrame or {}
 
+-- The portrait art's bars and name, LEFT on the portrait's RIGHT (uf_compact.lua's smallCompact replaces them).
+local PORTRAIT_BARS = {
+    health = { w = 70.5, h = 10, x = 1 + 1, y = 1 },
+    mana = { w = 74, h = 7.5, x = 1 - 2 - 1.5 + 1, y = 2 - 10 - 1 },
+    name = { x = 3, y = 13, w = 65 },
+}
+
 
 -- ============================================================================
 -- Factory function
@@ -81,6 +88,12 @@ function UF.SmallFrame.Create(opts)
 
     local function IsEnabled()
         return UF.IsEnabled(opts.configKey)
+    end
+
+    -- The bars' texture prefix: portrait off, fills closed at both ends (uf_compact.lua).
+    local function BarPrefix()
+        local compact = UF.IsCompact(opts.configKey)
+        return compact and UF.TEXTURES.compact.BAR_PREFIX or UF.TEXTURES.smallStyle.BAR_PREFIX
     end
 
     local function IsNativeVisibilityEnabled()
@@ -200,9 +213,9 @@ function UF.SmallFrame.Create(opts)
 
                 -- Class color health bar
                 if config.classcolor and UnitIsPlayer(opts.unitToken) then
-                    texturePath = UF.TEXTURES.smallStyle.BAR_PREFIX .. "Health-Status"
+                    texturePath = BarPrefix() .. "Health-Status"
                 else
-                    texturePath = UF.TEXTURES.smallStyle.BAR_PREFIX .. "Health"
+                    texturePath = BarPrefix() .. "Health"
                 end
 
                 -- Update texture
@@ -257,7 +270,7 @@ function UF.SmallFrame.Create(opts)
                 -- Update texture based on power type
                 local powerType = UnitPowerType(opts.unitToken)
                 local powerName = UF.POWER_MAP[powerType] or "Mana"
-                local texturePath = UF.TEXTURES.smallStyle.BAR_PREFIX .. powerName
+                local texturePath = BarPrefix() .. powerName
 
                 if texture:GetTexture() ~= texturePath then
                     texture:SetTexture(texturePath)
@@ -318,7 +331,7 @@ function UF.SmallFrame.Create(opts)
                     if texture then
                         local powerType = UnitPowerType(opts.unitToken)
                         local powerName = UF.POWER_MAP[powerType] or "Mana"
-                        texture:SetTexture(UF.TEXTURES.smallStyle.BAR_PREFIX .. powerName)
+                        texture:SetTexture(BarPrefix() .. powerName)
                         texture:SetDrawLayer("ARTWORK", 1)
                         texture:SetVertexColor(1, 1, 1)
                     end
@@ -382,10 +395,40 @@ function UF.SmallFrame.Create(opts)
     -- FRAME INITIALIZATION
     -- ========================================================================
 
+    -- The skin kind this frame reads: portrait off (uf_compact.lua) or the portrait art.
+    local function Kind()
+        return UF.IsCompact(opts.configKey) and "smallCompact" or "small"
+    end
+
     local function ApplySkinTextures()
-        local skin = UF.GetFrameSkin().small
+        local skin = UF.GetFrameSkin()[Kind()]
         UF.ApplySkinPiece(frameElements.background, skin.background, "LEFT", frames.portrait, "CENTER", -25 + 1, -9)
         UF.ApplySkinPiece(frameElements.border, skin.border, "LEFT", frames.portrait, "CENTER", -25 + 1, -9)
+        -- Kept as the bars' invisible anchor; uf_compact.lua's hooks keep it hidden while portrait off.
+        local compact = UF.IsCompact(opts.configKey)
+        if frames.portrait and (compact or Module.portraitHidden) then
+            UF.KeepPortraitHidden(frames.portrait, opts.configKey)
+            frames.portrait:SetAlpha(compact and 0 or 1)
+            Module.portraitHidden = compact
+        end
+    end
+
+    -- Bars and name LEFT on the portrait's RIGHT: the portrait art's spots, or wells widened across its spot.
+    local function ApplyBarsLayout()
+        local skin = UF.GetFrameSkin()[Kind()]
+        local bars = skin.bars or PORTRAIT_BARS
+        frames.healthBar:ClearAllPoints()
+        frames.healthBar:SetSize(bars.health.w, bars.health.h)
+        frames.healthBar:SetPoint("LEFT", frames.portrait, "RIGHT", bars.health.x, bars.health.y)
+        frames.manaBar:ClearAllPoints()
+        frames.manaBar:SetSize(bars.mana.w, bars.mana.h)
+        frames.manaBar:SetPoint("LEFT", frames.portrait, "RIGHT", bars.mana.x, bars.mana.y)
+        if frames.nameText then
+            local name = skin.name or PORTRAIT_BARS.name
+            frames.nameText:ClearAllPoints()
+            frames.nameText:SetPoint("LEFT", frames.portrait, "RIGHT", name.x, name.y)
+            frames.nameText:SetWidth(name.w)
+        end
     end
 
     -- Hung by its TOPLEFT, offset divided by scale: a bigger frame grows down-right, off the auras; same spot at 1.
@@ -399,8 +442,19 @@ function UF.SmallFrame.Create(opts)
         local fromLeft = point:find("RIGHT") and width or (point:find("LEFT") and 0 or width / 2)
         local fromTop = point:find("BOTTOM") and height or (point:find("TOP") and 0 or height / 2)
         frames.main.DragonUI_Attaching = true
-        frames.main:SetPoint("TOPLEFT", frames.parent, relativePoint, (x - fromLeft) / scale, (y + fromTop) / scale)
+        frames.main:SetPoint("TOPLEFT", frames.parent, relativePoint,
+            (x - fromLeft) / scale - UF.CompactShift(opts.configKey), (y + fromTop) / scale)
         frames.main.DragonUI_Attaching = nil
+    end
+
+    -- Portrait off, the frame hangs left of its parent spot or box (UF.CompactShift); its editor box fits it.
+    local function FitEditorBox()
+        local config = GetConfig()
+        local shift = UF.CompactShift(opts.configKey)
+        -- Attached, the editor links the box's centre to the frame's.
+        local ox = (config and config.override) and -shift or 0
+        UF.FitEditorBox(Module.anchorFrame, frames.main, ox, 0, shift ~= 0 and UF.COMPACT.smallBox or nil,
+            (config and config.scale) or 1)
     end
 
     -- FocusFrame_SetSmallSize re-anchors FocusFrameToT by BOTTOMRIGHT: beside our TOPLEFT it would stretch it.
@@ -457,13 +511,13 @@ function UF.SmallFrame.Create(opts)
         frames.main:ClearAllPoints()
         if config.override and Module.anchorFrame then
             -- Detached mode: follow the free anchor frame
-            frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", 0, 0)
+            frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", -UF.CompactShift(opts.configKey), 0)
         else
             -- Attached mode: anchored to parent frame (default)
             AttachToParent(config)
         end
         frames.main:SetScale(config.scale or 1.0)
-        addon.SetEditorBoxScale(Module.anchorFrame, config.scale or 1)
+        FitEditorBox()
 
         -- Hide Blizzard default textures
         local toHide = { frames.blizzTexture, frames.blizzBackground }
@@ -502,7 +556,7 @@ function UF.SmallFrame.Create(opts)
         frames.healthBar:SetParent(frames.main)
         frames.healthBar:SetFrameStrata("LOW")
         frames.healthBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", 1)
-        frames.healthBar:GetStatusBarTexture():SetTexture(UF.TEXTURES.smallStyle.BAR_PREFIX .. "Health")
+        frames.healthBar:GetStatusBarTexture():SetTexture(BarPrefix() .. "Health")
         -- Prevent Blizzard from changing our color (class-color aware)
         hooksecurefunc(frames.healthBar, "SetStatusBarColor", function(self)
             local texture = self:GetStatusBarTexture()
@@ -521,8 +575,6 @@ function UF.SmallFrame.Create(opts)
             end
         end)
         frames.healthBar:GetStatusBarTexture():SetVertexColor(1, 1, 1, 1)
-        frames.healthBar:SetSize(70.5, 10)
-        frames.healthBar:SetPoint("LEFT", frames.portrait, "RIGHT", 1 + 1, 1)
         frames.healthBar:Show()
 
         if frameElements.borderFrame then
@@ -539,23 +591,19 @@ function UF.SmallFrame.Create(opts)
         frames.manaBar:SetParent(frames.main)
         frames.manaBar:SetFrameStrata("LOW")
         frames.manaBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", 1)
-        frames.manaBar:GetStatusBarTexture():SetTexture(UF.TEXTURES.smallStyle.BAR_PREFIX .. "Mana")
+        frames.manaBar:GetStatusBarTexture():SetTexture(BarPrefix() .. "Mana")
         -- Prevent Blizzard from changing our color
         hooksecurefunc(frames.manaBar, "SetStatusBarColor", function(self)
             local texture = self:GetStatusBarTexture()
             if texture then texture:SetVertexColor(1, 1, 1, 1) end
         end)
         frames.manaBar:GetStatusBarTexture():SetVertexColor(1, 1, 1, 1)
-        frames.manaBar:SetSize(74, 7.5)
-        frames.manaBar:SetPoint("LEFT", frames.portrait, "RIGHT", 1 - 2 - 1.5 + 1, 2 - 10 - 1)
         frames.manaBar:Show()
 
         -- ----------------------------------------------------------------
         -- Configure name text
         -- ----------------------------------------------------------------
         if frames.nameText then
-            frames.nameText:ClearAllPoints()
-            frames.nameText:SetPoint("LEFT", frames.portrait, "RIGHT", 3, 13)
             frames.nameText:SetParent(frames.main)
             frames.nameText:Show()
             local font, size, flags = frames.nameText:GetFont()
@@ -564,9 +612,9 @@ function UF.SmallFrame.Create(opts)
             end
             frames.nameText:SetTextColor(1.0, 0.82, 0.0, 1.0)
             frames.nameText:SetDrawLayer("BORDER", 1)
-            frames.nameText:SetWidth(65)
             frames.nameText:SetJustifyH("LEFT")
         end
+        ApplyBarsLayout()
 
         -- Force debuff positions
         if frames.debuff1 then
@@ -865,7 +913,7 @@ function UF.SmallFrame.Create(opts)
             local config = GetConfig()
             if config and config.override and Module.anchorFrame then
                 frames.main:ClearAllPoints()
-                frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", 0, 0)
+                frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", -UF.CompactShift(opts.configKey), 0)
             end
         end
     end
@@ -896,13 +944,17 @@ function UF.SmallFrame.Create(opts)
                 if config and config.override and Module.anchorFrame then
                     Module:ApplyWidgetPosition()
                     frames.main:ClearAllPoints()
-                    frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", 0, 0)
+                    frames.main:SetPoint("CENTER", Module.anchorFrame, "CENTER", -UF.CompactShift(opts.configKey), 0)
                 else
                     frames.main:ClearAllPoints()
                     AttachToParent(config)
                 end
                 frames.main:SetScale((config and config.scale) or 1.0)
-                addon.SetEditorBoxScale(Module.anchorFrame, (config and config.scale) or 1)
+                FitEditorBox()
+                ApplyBarsLayout()
+                -- The bar hooks pick each fill's texture for the current art.
+                frames.healthBar:SetValue(frames.healthBar:GetValue())
+                frames.manaBar:SetValue(frames.manaBar:GetValue())
 
                 RequestVisibilityRefresh()
             elseif frames.main then

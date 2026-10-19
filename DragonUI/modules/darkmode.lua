@@ -476,6 +476,10 @@ local function DarkenUnitFrameBorders(tint)
         if dragonFrame.PlayerDragonDecoration then
             DarkenTexture(dragonFrame.PlayerDragonDecoration, tint)
         end
+        local playerDragonPaw = _G["DragonUI_PlayerDragonPaw"]
+        if playerDragonPaw then
+            DarkenTexture(playerDragonPaw, tint)
+        end
         -- Fat bar + decoration border overlay
         if dragonFrame.BorderOverlayTexture then
             DarkenTexture(dragonFrame.BorderOverlayTexture, tint)
@@ -503,6 +507,8 @@ local function DarkenUnitFrameBorders(tint)
     if dragonTargetBG then DarkenTexture(dragonTargetBG, tint) end
     local dragonTargetElite = _G["DragonUI_TargetElite"]
     if dragonTargetElite then DarkenTexture(dragonTargetElite, tint) end
+    local dragonTargetElitePaw = _G["DragonUI_TargetElitePaw"]
+    if dragonTargetElitePaw then DarkenTexture(dragonTargetElitePaw, tint) end
     local targetLevelCircle = _G["DragonUI_TargetLevelCircle"]
     if targetLevelCircle then DarkenTexture(targetLevelCircle, tint) end
     local targetPvPCircle = _G["DragonUI_TargetPvPCircle"]
@@ -527,6 +533,8 @@ local function DarkenUnitFrameBorders(tint)
     if dragonFocusBG then DarkenTexture(dragonFocusBG, tint) end
     local dragonFocusElite = _G["DragonUI_FocusElite"]
     if dragonFocusElite then DarkenTexture(dragonFocusElite, tint) end
+    local dragonFocusElitePaw = _G["DragonUI_FocusElitePaw"]
+    if dragonFocusElitePaw then DarkenTexture(dragonFocusElitePaw, tint) end
     local focusLevelCircle = _G["DragonUI_FocusLevelCircle"]
     if focusLevelCircle then DarkenTexture(focusLevelCircle, tint) end
     local focusPvPCircle = _G["DragonUI_FocusPvPCircle"]
