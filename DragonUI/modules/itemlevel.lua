@@ -682,6 +682,11 @@ local function UpdateRepairCostDisplay()
     end
 
     -- The panel drives the label; no reason to price 19 slots while it is closed.
+    if not CharacterFrame or not CharacterFrame:IsShown() then
+        if repairCostFrame then repairCostFrame:Hide() end
+        return
+    end
+
     local frame = EnsureRepairCostFrame()
     local tooltip = EnsureRepairTooltip()
     -- A hidden tooltip loses its owner and stops reporting costs.
