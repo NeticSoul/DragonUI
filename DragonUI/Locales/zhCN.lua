@@ -435,6 +435,8 @@ L["Bags: %d"] = "背包: %d"
 L["Bank: %d"] = "银行: %d"
 L["Equipped: %d"] = "已装备: %d"
 L["Total: %d (%s)"] = "总计: %d (%s)"
+L["Automatic Equipment Comparison"] = "自动装备对比"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat."] = "无需按住 Shift 即可将可装备物品与当前装备对比，包括从聊天中打开的物品链接。"
 -- Item Level
 L["Item Level"] = "物品等级"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "在背包、角色面板、银行等界面的装备图标上显示物品等级"

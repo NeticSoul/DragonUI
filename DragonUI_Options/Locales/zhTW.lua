@@ -269,6 +269,8 @@ L["Show quality-colored borders on items in bags, character panel, bank, merchan
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "為揹包、角色面板、銀行、商人和觀察視窗中的物品新增按品質著色的發光邊框：綠色=優秀，藍色=精良，紫色=史詩，橙色=傳說。"
 L["Character Item Counts"] = "角色物品持有數"
 L["Show Character Item Counts"] = "顯示角色物品持有數"
+L["Automatic Equipment Comparison"] = "自動裝備對比"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "無需按住 Shift 即可將可裝備物品與目前裝備對比，包括從聊天中開啟的物品連結。按住 Ctrl 可暫時關閉對比。"
 L["Shows how many of the hovered item each of your characters on this realm holds, split into bags, bank and equipped."] = "顯示本伺服器上每個角色持有的該物品數量，並區分背包、銀行與已裝備。"
 L["Minimum Quality"] = "最低品質"
 L["Poor"] = "粗糙"
