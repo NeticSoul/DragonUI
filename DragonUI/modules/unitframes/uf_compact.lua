@@ -409,23 +409,6 @@ function UF.GetComboSlot()
     return slot
 end
 
--- HD looter bag in each crown's style on a compact frame; Blizzard's 16x16 one otherwise.
-local MASTER_LOOTER = {
-    dragonui = { 120 / 256, 152 / 256, 50 / 128, 82 / 128 },
-    forever = { 154 / 256, 186 / 256, 50 / 128, 82 / 128 },
-}
-function UF.ApplyMasterLooterArt(icon, hd)
-    if hd then
-        icon:SetTexture(UF.STATUS_ICONS.file)
-        icon:SetTexCoord(unpack(MASTER_LOOTER[UF.GetStatusIconStyle()]))
-        icon.DragonUI_HDLooter = true
-    elseif icon.DragonUI_HDLooter then
-        icon:SetTexture("Interface\\GroupFrame\\UI-Group-MasterLooter")
-        icon:SetTexCoord(0, 1, 0, 1)
-        icon.DragonUI_HDLooter = nil
-    end
-end
-
 -- Mouse area insets (left, right, top, bottom); the frame is protected, so this waits for combat to end.
 function UF.SetHitRect(frame, queueKey, left, right, top, bottom)
     addon:SafeExecute("uf_compact", queueKey, function()

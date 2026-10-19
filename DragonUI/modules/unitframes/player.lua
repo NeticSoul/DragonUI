@@ -1110,7 +1110,8 @@ end
 local function UpdateMasterIconPosition()
     if PlayerMasterIcon then
         PlacePlayerIcon(PlayerMasterIcon, UF.GetPlayerIcons().master)
-        UF.ApplyMasterLooterArt(PlayerMasterIcon, UF.IsCompact("player"))
+        PlayerMasterIcon:SetTexture(UF.STATUS_ICONS.file)
+        PlayerMasterIcon:SetTexCoord(unpack(UF.STATUS_ICONS.master[UF.GetStatusIconStyle()]))
     end
 end
 

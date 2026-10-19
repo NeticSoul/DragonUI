@@ -570,6 +570,8 @@ local function ApplyPartyIcons(frame)
     local master = _G[name .. 'MasterIcon']
     if master then
         PlacePartyIcon(master, frame, UF.PARTY_ICONS.master)
+        master:SetTexture(UF.STATUS_ICONS.file)
+        master:SetTexCoord(unpack(UF.STATUS_ICONS.master[style]))
     end
     ApplyPartyRole(frame)
 end

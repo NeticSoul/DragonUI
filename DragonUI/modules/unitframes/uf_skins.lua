@@ -289,7 +289,7 @@ UF.LEVEL_ART = {
 -- Fat and vehicle art have no Forever spot: badge TOP on PlayerPortrait's LEFT, its (20,-50) at 0.8 x0.93.
 UF.PLAYER_PVP_FALLBACK = { x = -7.5, y = 8.4 }
 
--- One sheet: retail's 2x crown, guide and "Group N" tab, its 1x tiny roles, and Forever's own HD crown and roles.
+-- One sheet: retail's 2x crown, guide, "Group N" tab and 1x roles; Forever's HD crown and roles; HD looter bags.
 do
     local function cell(x, y, w, h)
         return { x / 256, (x + w) / 256, y / 128, (y + h) / 128 }
@@ -298,6 +298,7 @@ do
         file = ART .. "Icons\\StatusIcons",
         leader = { dragonui = cell(0, 0, 32, 32), forever = cell(68, 0, 38, 30) },
         guide = cell(34, 0, 32, 32),
+        master = { dragonui = cell(120, 50, 32, 32), forever = cell(154, 50, 32, 32) },
         roles = {
             dragonui = { TANK = cell(0, 50, 16, 16), HEALER = cell(18, 50, 16, 16), DAMAGER = cell(36, 50, 16, 16) },
             forever = { TANK = cell(108, 0, 46, 46), HEALER = cell(156, 0, 46, 46), DAMAGER = cell(204, 0, 46, 46) },
