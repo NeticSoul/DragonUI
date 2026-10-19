@@ -799,6 +799,20 @@ L["Latency Color"] = true
 L["Latency Alpha"] = true
 L["Opacity of the latency indicator."] = true
 
+-- Global cooldown indicator (player only)
+L["Global Cooldown"] = true
+L["Enable GCD Indicator"] = true
+L["Show a global cooldown readout above the player cast bar."] = true
+L["GCD Height"] = true
+L["Thickness of the GCD bar in pixels."] = true
+L["GCD Width"] = true
+L["Width of the GCD bar as a percentage of the cast bar."] = true
+L["GCD Color"] = true
+L["Always Show GCD Track"] = true
+L["Keep the empty GCD bar visible while no global cooldown is running."] = true
+L["Reset GCD Position"] = true
+L["GCD indicator reset to the cast bar."] = true
+
 -- ============================================================================
 -- ENHANCEMENTS TAB
 -- ============================================================================
