@@ -74,7 +74,7 @@ local function repairWithOwnGold()
     repair(cost, false)
 end
 
-local function autoRepair(cfg, incoming)
+local function autoRepair(cfg)
     if not CanMerchantRepair() then
         return
     end
@@ -85,17 +85,8 @@ local function autoRepair(cfg, incoming)
     if cfg.autoRepairGuild and CanGuildBankRepair() and guildRepairFunds() >= cost then
         -- The client's guild figures can be stale; whatever the guild leaves unpaid falls to the player.
         repair(cost, true, repairWithOwnGold)
-    elseif GetMoney() >= cost or GetMoney() + incoming < cost then
-        repairWithOwnGold()
     else
-        -- The junk just sold covers the gap, but GetMoney() only grows once the server pays out.
-        waitFor(function()
-            if GetMoney() < cost then
-                return false
-            end
-            repairWithOwnGold()
-            return true
-        end, repairWithOwnGold)
+        repairWithOwnGold()
     end
 end
 
@@ -106,12 +97,12 @@ eventFrame:SetScript("OnEvent", function(_, event)
         return
     end
     local cfg = addon:GetModuleConfig("merchant") or {}
-    local incoming = 0
-    if cfg.autoSellJunk then
-        incoming = select(2, parts.sellEveryJunkItem())
+    local thisVisit = visit
+    local function afterSales()
+        if thisVisit == visit and cfg.autoRepair then autoRepair(cfg) end
     end
-    if cfg.autoRepair then
-        autoRepair(cfg, incoming)
+    if not cfg.autoSellJunk or not parts.sellEveryJunkItem(afterSales) then
+        afterSales()
     end
 end)
 eventFrame:RegisterEvent("MERCHANT_SHOW")

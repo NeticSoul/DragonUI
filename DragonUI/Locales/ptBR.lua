@@ -1065,3 +1065,23 @@ L["Low chance of gaining skill"] = "Baixa chance de ganhar perícia"
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "Mapa de voo"
+
+-- Achievement search
+L["Search"] = "Buscar"
+L["Back"] = "Voltar"
+L["Previous"] = "Anterior"
+L["Next"] = "Próximo"
+L["%d results — %d / %d"] = "%d resultados — %d / %d"
+L["Search names, rewards or types: mounts, pets, titles, tabards"] = "Buscar nomes, recompensas ou tipos: montarias, mascotes, títulos"
+L["mount"] = "montaria"
+L["mounts"] = "montarias"
+L["pet"] = "mascote"
+L["pets"] = "mascotes"
+L["title"] = "título"
+L["titles"] = "títulos"
+L["tabard"] = "tabardo"
+L["tabards"] = "tabardos"
+L["toy"] = "brinquedo"
+L["toys"] = "brinquedos"
+L["item"] = "item"
+L["items"] = "itens"

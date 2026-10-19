@@ -25,6 +25,19 @@
 
 ## 📥 Download
 
+### Project Evermore edition
+
+This repository is Evermore's customized fork. Download the
+[Evermore main branch](https://github.com/buildthehomelab/wow-addon-DragonUI/archive/refs/heads/main.zip)
+and install both `DragonUI` and `DragonUI_Options` from that archive. Back up your
+`WTF` settings before updating. Report Evermore-specific bugs in
+[this repository's issue tracker](https://github.com/buildthehomelab/wow-addon-DragonUI/issues).
+
+The upstream downloads below are the original NeticSoul edition; they do not
+include Evermore's custom guild, professions, currency and achievement integrations.
+
+### Original upstream edition
+
 | Method | Link |
 |--------|------|
 | **Latest stable release** | [Download](https://github.com/NeticSoul/DragonUI/releases/download/v2.5/DragonUI-2.5.zip) |
@@ -114,7 +127,7 @@ Extensive customization available directly in-game through the configuration pan
 - Single-line tooltips show text overlapping the health bar.
 - Party and raid scenarios require further edge-case testing.
 - Some third-party addon setups may require manual module disabling.
-- Found a bug? [Open an issue](https://github.com/NeticSoul/DragonUI/issues).
+- Found a bug? [Open an Evermore issue](https://github.com/buildthehomelab/wow-addon-DragonUI/issues).
 
 ## 🙏 Credits And References
 

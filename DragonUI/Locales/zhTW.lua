@@ -1065,3 +1065,23 @@ L["Low chance of gaining skill"] = "提升技能的機率很低"
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "飛行地圖"
+
+-- Achievement search
+L["Search"] = "搜尋"
+L["Back"] = "返回"
+L["Previous"] = "上一頁"
+L["Next"] = "下一頁"
+L["%d results — %d / %d"] = "%d 個結果 — %d / %d"
+L["Search names, rewards or types: mounts, pets, titles, tabards"] = "搜尋名稱、獎勵或類型：坐騎、寵物、頭銜、外袍"
+L["mount"] = "坐騎"
+L["mounts"] = "坐騎"
+L["pet"] = "寵物"
+L["pets"] = "寵物"
+L["title"] = "頭銜"
+L["titles"] = "頭銜"
+L["tabard"] = "外袍"
+L["tabards"] = "外袍"
+L["toy"] = "玩具"
+L["toys"] = "玩具"
+L["item"] = "物品"
+L["items"] = "物品"

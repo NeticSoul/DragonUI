@@ -19,7 +19,6 @@ local GetInboxText = GetInboxText
 local GetSendMailItem = GetSendMailItem
 local TakeInboxMoney = TakeInboxMoney
 local TakeInboxItem = TakeInboxItem
-local GetContainerNumFreeSlots = GetContainerNumFreeSlots
 local CheckInbox = CheckInbox
 local HideUIPanel = HideUIPanel
 local StaticPopup_Hide = StaticPopup_Hide
@@ -646,17 +645,6 @@ local waitTimer = 0
 local pending
 local skipped = {}
 
-local function CountFreeBagSlots()
-    local totalFree = 0
-    for bag = 0, (_G.NUM_BAG_SLOTS or 4) do
-        local freeSlots, bagFamily = GetContainerNumFreeSlots(bag)
-        if freeSlots and (bagFamily == 0 or bagFamily == nil) then
-            totalFree = totalFree + freeSlots
-        end
-    end
-    return totalFree
-end
-
 local function HasLootableMail()
     local numItems = GetInboxNumItems() or 0
     for i = 1, numItems do
@@ -737,10 +725,7 @@ local function TakeNext()
         end
         return
     end
-    if kind == "item" and CountFreeBagSlots() == 0 then
-        StopOpenAll()
-        return
-    end
+    -- Let the server decide: a full bag can still accept a partial stack or profession item.
 
     -- An emptied letter is deleted, and one deleted unread still counts as new mail on the server,
     -- which keeps the minimap mail icon lit. GetInboxText marks it read, as opening it would.
@@ -777,8 +762,9 @@ openAllFrame:SetScript("OnEvent", function(_, event, message)
         StopOpenAll()
     elseif not pending then
         return
-    elseif message == _G.ERR_INV_FULL then
-        StopOpenAll()
+    elseif pending.kind == "item" and message == _G.ERR_INV_FULL then
+        -- Another attachment may fit a stack or specialty bag; money can still be collected.
+        SkipPending()
     elseif (pending.kind == "item" and message == _G.ERR_ITEM_MAX_COUNT)
         or (pending.kind == "money" and message == _G.ERR_TOO_MUCH_GOLD) then
         SkipPending()

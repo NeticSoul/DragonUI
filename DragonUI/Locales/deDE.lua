@@ -1134,3 +1134,23 @@ L["Low chance of gaining skill"] = "Geringe Chance auf Fertigkeitsanstieg"
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "Flugkarte"
+
+-- Achievement search
+L["Search"] = "Suchen"
+L["Back"] = "Zurück"
+L["Previous"] = "Zurück"
+L["Next"] = "Weiter"
+L["%d results — %d / %d"] = "%d Ergebnisse — %d / %d"
+L["Search names, rewards or types: mounts, pets, titles, tabards"] = "Namen, Belohnungen oder Typen suchen: Reittiere, Haustiere, Titel"
+L["mount"] = "reittier"
+L["mounts"] = "reittiere"
+L["pet"] = "haustier"
+L["pets"] = "haustiere"
+L["title"] = "titel"
+L["titles"] = "titel"
+L["tabard"] = "wappenrock"
+L["tabards"] = "wappenröcke"
+L["toy"] = "spielzeug"
+L["toys"] = "spielzeuge"
+L["item"] = "gegenstand"
+L["items"] = "gegenstände"
