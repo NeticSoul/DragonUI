@@ -694,6 +694,102 @@ local function BuildBagsTab(scroll)
     })
 
     -- ====================================================================
+    -- NEW ITEMS
+    -- ====================================================================
+    local newItemsSection = C:AddSection(scroll, LO["New Items"] or "New Items")
+    C:AddDescription(newItemsSection, LO["Track items gained since the last reset: they glow and sort to the front of the grid."]
+        or "Track items gained since the last reset: they glow and sort to the front of the grid.")
+
+    local function NewItemsOff()
+        local mc = GetBagsterConfig(false)
+        return not IsBagsterEnabled() or not (mc and mc.new_items)
+    end
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Track New Items"] or "Track New Items",
+        desc = LO["Highlight items gained since the last reset. Reset with the small 'N' button or by sorting your bags/bank."]
+            or "Highlight items gained since the last reset. Reset with the small 'N' button or by sorting your bags/bank.",
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return (mc and mc.new_items) and true or false
+        end,
+        setFunc = function(val) SetBagsterOption("new_items", val and true or false) end,
+        disabled = function() return not IsBagsterEnabled() end,
+    })
+
+    C:AddToggle(newItemsSection, {
+        label = LO["New Item Glow"] or "New Item Glow",
+        desc = LO["Show a rotating glow over new items."] or "Show a rotating glow over new items.",
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return not mc or mc.new_glow ~= false
+        end,
+        setFunc = function(val) SetBagsterOption("new_glow", val) end,
+        disabled = NewItemsOff,
+    })
+
+    C:AddSlider(newItemsSection, {
+        label = LO["Glow Scale"] or "Glow Scale",
+        desc = LO["Size of the glow around new items."] or "Size of the glow around new items.",
+        min = 0.5, max = 3, step = 0.05, isPercent = true,
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return (mc and mc.new_glow_scale) or 1.5
+        end,
+        setFunc = function(val) SetBagsterOption("new_glow_scale", val) end,
+        disabled = NewItemsOff,
+    })
+
+    C:AddColorPicker(newItemsSection, {
+        label = LO["Glow Color"] or "Glow Color",
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            local c = (mc and mc.new_glow_color) or { 0.3, 1, 0.3, 0.7 }
+            return c[1] or 0.3, c[2] or 1, c[3] or 0.3, c[4] or 0.7
+        end,
+        setFunc = function(r, g, b, a)
+            SetBagsterOption("new_glow_color", { r, g, b, a or 1 })
+        end,
+        hasAlpha = true,
+        disabled = NewItemsOff,
+    })
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Sort New Items First"] or "Sort New Items First",
+        desc = LO["Show new items at the start of the grid."]
+            or "Show new items at the start of the grid.",
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return not mc or mc.new_first ~= false
+        end,
+        setFunc = function(val) SetBagsterOption("new_first", val) end,
+        disabled = NewItemsOff,
+    })
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Reset New on Sort"] or "Reset New on Sort",
+        desc = LO["Clear new-item highlights when the bags or bank are sorted."]
+            or "Clear new-item highlights when the bags or bank are sorted.",
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return not mc or mc.new_reset_on_sort ~= false
+        end,
+        setFunc = function(val) SetBagsterOption("new_reset_on_sort", val) end,
+        disabled = NewItemsOff,
+    })
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Ignore Low Quality Items"] or "Ignore Low Quality Items",
+        desc = LO["Never highlight poor-quality items."] or "Never highlight poor-quality items.",
+        getFunc = function()
+            local mc = GetBagsterConfig(false)
+            return (mc and mc.new_ignore_junk) and true or false
+        end,
+        setFunc = function(val) SetBagsterOption("new_ignore_junk", val and true or false) end,
+        disabled = NewItemsOff,
+    })
+
+    -- ====================================================================
     -- INVENTORY CATEGORY TABS
     -- ====================================================================
     local tabSection = C:AddSection(scroll, LO["Inventory Tabs"])

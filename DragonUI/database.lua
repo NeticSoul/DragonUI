@@ -1282,6 +1282,13 @@ local defaults = {
                 glow_alpha = 1, -- Quality ring opacity
                 show_quality_filter = true, -- Rarity filter dots centered on the bottom band
                 tooltip_count = true, -- Total owned (bags + bank) line on item tooltips
+                new_items = true, -- Track newly gained items (glow, new items first)
+                new_glow = true, -- Rotating starburst glow over new items
+                new_glow_scale = 1.5, -- Glow size multiplier
+                new_glow_color = { 0.3, 1, 0.3, 0.7 }, -- Glow tint (RGBA)
+                new_first = true, -- Sort new items to the front of the grid
+                new_reset_on_sort = true, -- Sorting the bags/bank clears the highlights
+                new_ignore_junk = false, -- Never mark poor-quality items as new
             },
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin

@@ -536,6 +536,22 @@ L["Show how many of the hovered item you own in total, across your bags and bank
 L["Quality Filter Row"] = true
 L["Show the rarity filter dots at the bottom of the bag frame."] = true
 
+L["New Items"] = true
+L["Track items gained since the last reset: they glow and sort to the front of the grid."] = true
+L["Track New Items"] = true
+L["Highlight items gained since the last reset. Reset with the small 'N' button or by sorting your bags/bank."] = true
+L["New Item Glow"] = true
+L["Show a rotating glow over new items."] = true
+L["Glow Scale"] = true
+L["Size of the glow around new items."] = true
+L["Glow Color"] = true
+L["Sort New Items First"] = true
+L["Show new items at the start of the grid."] = true
+L["Reset New on Sort"] = true
+L["Clear new-item highlights when the bags or bank are sorted."] = true
+L["Ignore Low Quality Items"] = true
+L["Never highlight poor-quality items."] = true
+
 -- Advanced modules - Fallback display names
 L["Main Bars"] = true
 L["Vehicle"] = true

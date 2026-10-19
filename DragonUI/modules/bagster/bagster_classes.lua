@@ -355,10 +355,12 @@ do
     end
 
     function ItemSlot:Update()
-        if not self:IsVisible() then return end
-
         local texture, count, locked, quality, readable, _, link = self:GetItemSlotInfo()
         self:SetItem(link)
+        -- Evaluated even while hidden: the first Layout needs the new-item flag.
+        mod.UpdateNewItemGlow(self)
+        if not self:IsVisible() then return end
+
         self:SetTexture(texture)
         self:SetCount(count)
         self:SetLocked(locked)
@@ -1062,6 +1064,15 @@ do
         -- A block whose slots were all filtered out leaves a trailing break: phantom rows.
         while #breaks > 1 and breaks[#breaks] >= n do
             table.remove(breaks)
+        end
+
+        -- New items first: one block, so the bag breaks are dropped
+        if mod.NewItemsReorderItems then
+            local reordered = mod.NewItemsReorderItems(self, buttons)
+            if reordered then
+                buttons = reordered
+                breaks = { 0 }
+            end
         end
 
         local b = #breaks - 1

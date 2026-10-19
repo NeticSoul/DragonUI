@@ -242,6 +242,9 @@ local function ApplyBagsterSystem()
     SLASH_DRAGONUI_BAGSTER2 = "/bagster"
     SLASH_DRAGONUI_BAGSTER3 = "/combuctor" -- legacy alias for muscle memory
 
+    -- New-item tracking: build the "N" reset button and hook the frames up.
+    if mod.RefreshNewItems then mod.RefreshNewItems() end
+
     mod.BagsterModule.applied = true
 end
 
@@ -348,6 +351,11 @@ local function RefreshBagsterFrames()
         if mod.guildFrame.moneyFrame then
             mod.guildFrame.moneyFrame:RefreshDisplay()
         end
+    end
+
+    -- New-item glow and the "N" reset button
+    if mod.RefreshNewItems then
+        mod.RefreshNewItems()
     end
 end
 

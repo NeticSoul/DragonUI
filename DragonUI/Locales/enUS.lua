@@ -481,6 +481,9 @@ L["Bagster"] = true
 L["All-in-one bag replacement with filtering and search"] = true
 L["Alt Gold"] = true
 L["Show the gold of your other characters when hovering the money in your bags"] = true
+-- Bagster new items
+L["Reset new items"] = true
+L["Click to reset item status."] = true
 -- Character Panel
 L["Character Panel"] = true
 L["Retail-style character window with a modern frame, class portrait and stats sidebar"] = true
