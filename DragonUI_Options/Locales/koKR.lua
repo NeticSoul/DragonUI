@@ -285,6 +285,8 @@ L["Legendary"] = "전설"
 -- 전리품 창
 L["Loot Window"] = "전리품 창"
 L["Configure the DragonUI loot window."] = "DragonUI 전리품 창을 설정합니다."
+L["Auto-Hide Empty Loot"] = "빈 전리품 창 자동 숨기기"
+L["Close the loot window when there is nothing left to loot."] = "더 이상 획득할 것이 없으면 전리품 창을 닫습니다."
 L["Enable Loot Window"] = "전리품 창 사용"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Blizzard 전리품 창에 DragonUI 스킨을 적용합니다."
 L["Open at Cursor"] = "커서에서 열기"

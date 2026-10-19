@@ -276,6 +276,8 @@ L["Legendary"] = "Legendär"
 -- Beutefenster
 L["Loot Window"] = "Beutefenster"
 L["Configure the DragonUI loot window."] = "Das DragonUI-Beutefenster konfigurieren."
+L["Auto-Hide Empty Loot"] = "Leere Beute automatisch ausblenden"
+L["Close the loot window when there is nothing left to loot."] = "Schließt das Beutefenster, wenn nichts mehr zu plündern ist."
 L["Enable Loot Window"] = "Beutefenster aktivieren"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Das DragonUI-Design auf Blizzards Beutefenster anwenden."
 L["Open at Cursor"] = "Am Cursor öffnen"

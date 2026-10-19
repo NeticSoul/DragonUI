@@ -297,6 +297,8 @@ L["Legendary"] = "Legendario"
 -- Ventana de botín
 L["Loot Window"] = "Ventana de botín"
 L["Configure the DragonUI loot window."] = "Configura la ventana de botín de DragonUI."
+L["Auto-Hide Empty Loot"] = "Ocultar botín vacío automáticamente"
+L["Close the loot window when there is nothing left to loot."] = "Cierra la ventana de botín cuando no queda nada que recoger."
 L["Enable Loot Window"] = "Activar ventana de botín"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica la apariencia de DragonUI a la ventana de botín de Blizzard."
 L["Open at Cursor"] = "Abrir bajo el cursor"

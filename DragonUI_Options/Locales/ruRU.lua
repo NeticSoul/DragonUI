@@ -278,6 +278,8 @@ L["Legendary"] = "Легендарное"
 -- Окно добычи
 L["Loot Window"] = "Окно добычи"
 L["Configure the DragonUI loot window."] = "Настроить окно добычи DragonUI."
+L["Auto-Hide Empty Loot"] = "Скрывать пустое окно добычи"
+L["Close the loot window when there is nothing left to loot."] = "Закрывает окно добычи, когда больше нечего подбирать."
 L["Enable Loot Window"] = "Включить окно добычи"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Применяет оформление DragonUI к окну добычи Blizzard."
 L["Open at Cursor"] = "Открывать у курсора"

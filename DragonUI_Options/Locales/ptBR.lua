@@ -695,6 +695,8 @@ L["Ask"] = "Perguntar"
 -- Janela de saque
 L["Loot Window"] = "Janela de saque"
 L["Configure the DragonUI loot window."] = "Configure a janela de saque do DragonUI."
+L["Auto-Hide Empty Loot"] = "Ocultar saque vazio automaticamente"
+L["Close the loot window when there is nothing left to loot."] = "Fecha a janela de saque quando não há mais nada para saquear."
 L["Enable Loot Window"] = "Ativar janela de saque"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica a aparência do DragonUI à janela de saque da Blizzard."
 L["Open at Cursor"] = "Abrir no cursor"

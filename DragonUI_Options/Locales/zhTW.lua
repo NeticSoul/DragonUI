@@ -1309,6 +1309,8 @@ L["Ask"] = "詢問"
 -- 拾取視窗
 L["Loot Window"] = "拾取視窗"
 L["Configure the DragonUI loot window."] = "設定 DragonUI 拾取視窗。"
+L["Auto-Hide Empty Loot"] = "自動隱藏空拾取視窗"
+L["Close the loot window when there is nothing left to loot."] = "沒有可拾取物品時關閉拾取視窗。"
 L["Enable Loot Window"] = "啟用拾取視窗"
 L["Apply the DragonUI skin to the Blizzard loot window."] = "將 DragonUI 外觀套用至暴雪拾取視窗。"
 L["Open at Cursor"] = "在游標位置開啟"
