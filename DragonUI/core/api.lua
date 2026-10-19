@@ -329,15 +329,21 @@ addon.ShowNineslice = ShowNineslice
 addon.HideNineslice = HideNineslice
 
 -- Grows the editor box (outline + click area) about the point the real frame hangs from; the widget itself stays put.
+-- frame.DragonUI_BoxInsets { left, right, top, bottom } first fits the outline to a smaller (or larger) widget.
 function addon.SetEditorBoxScale(frame, scale, pivot)
     local slice = frame and frame.NineSlice
     if not slice or (InCombatLockdown() and frame:IsProtected()) then return end
     scale, pivot = scale or 1, pivot or "CENTER"
-    local growW, growH = frame:GetWidth() * (scale - 1), frame:GetHeight() * (scale - 1)
+    local w, h = frame:GetWidth(), frame:GetHeight()
     local fromLeft = pivot:find("LEFT") and 0 or (pivot:find("RIGHT") and 1 or 0.5)
     local fromTop = pivot:find("TOP") and 0 or (pivot:find("BOTTOM") and 1 or 0.5)
-    local left, right = growW * fromLeft, growW * (1 - fromLeft)
-    local top, bottom = growH * fromTop, growH * (1 - fromTop)
+    local insets = frame.DragonUI_BoxInsets or { 0, 0, 0, 0 }
+    local px, py = w * fromLeft, h * fromTop
+    -- How far each outline edge reaches past the box: the inset rect scaled about the pivot.
+    local left = -(px + (insets[1] - px) * scale)
+    local right = px + (w - insets[2] - px) * scale - w
+    local top = -(py + (insets[3] - py) * scale)
+    local bottom = py + (h - insets[4] - py) * scale - h
     local shift = (frame.DragonUI_BoxShiftY or 0) * scale
     slice.TopLeftCorner:SetPoint("TOPLEFT", -8 - left, 8 + top + shift)
     slice.TopRightCorner:SetPoint("TOPRIGHT", 8 + right, 8 + top + shift)

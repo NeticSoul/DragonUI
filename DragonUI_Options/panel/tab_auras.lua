@@ -328,8 +328,8 @@ local function BuildAuraStyle(scroll)
     local tooltipSection = C:AddSection(scroll, LO["Aura Tooltips"])
 
     C:AddToggle(tooltipSection, {
-        label = LO["Show Aura Spell ID"],
-        desc = LO["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."],
+        label = LO["Show Spell IDs"],
+        desc = LO["Show spell IDs on aura, spell and chat-link tooltips. Requires the Tooltip module."],
         getFunc = function()
             local tt = addon.db.profile.modules and addon.db.profile.modules.tooltip
             return tt and tt.show_aura_spell_id == true

@@ -89,6 +89,74 @@ local function HandleClassPortraitToggle(unitKey, refreshFunc, enabled)
     RefreshUnitFramesTabAfterToggle(refreshFunc)
 end
 
+local function IsPortraitOff(unitKey)
+    return C:GetDBValue("unitframe." .. unitKey .. ".portrait_off")
+end
+
+-- Every skinned frame refreshes (queued in combat): the target's combo points swap arc and column too.
+local function AddPortraitOffToggle(parent, unitKey)
+    C:AddToggle(parent, {
+        label = LO["No Portrait"],
+        desc = LO["Hides the portrait: the frame closes where it was and the bars keep their place."],
+        dbPath = "unitframe." .. unitKey .. ".portrait_off",
+        callback = function()
+            RefreshUnitFramesTabAfterToggle(addon.UF and addon.UF.RefreshSkins)
+        end,
+    })
+end
+
+-- The frames that can drop their portrait (pet and party keep theirs).
+local PORTRAIT_OFF_UNITS = { "player", "target", "focus", "tot", "fot" }
+
+-- No value of its own: checked while all five are on; a click sets all five.
+local function AddPortraitOffAllToggle(parent)
+    C:AddToggle(parent, {
+        label = LO["No Portrait (All Frames)"],
+        desc = LO["Player, target, focus, ToT and ToF at once."],
+        getFunc = function()
+            for _, unitKey in ipairs(PORTRAIT_OFF_UNITS) do
+                if not IsPortraitOff(unitKey) then
+                    return false
+                end
+            end
+            return true
+        end,
+        setFunc = function(value)
+            for _, unitKey in ipairs(PORTRAIT_OFF_UNITS) do
+                C:SetDBValue("unitframe." .. unitKey .. ".portrait_off", value and true or false)
+            end
+        end,
+        callback = function()
+            RefreshUnitFramesTabAfterToggle(addon.UF and addon.UF.RefreshSkins)
+        end,
+    })
+end
+
+-- A portrait-off frame has no portrait to put a class icon on.
+local function AddClassPortraitToggles(parent, unitKey, refreshFunc)
+    C:AddToggle(parent, {
+        label = LO["Class Portrait"],
+        desc = LO["Class icon instead of 3D model for players."],
+        dbPath = "unitframe." .. unitKey .. ".classPortrait",
+        disabled = function()
+            return IsPortraitOff(unitKey)
+        end,
+        callback = function(value)
+            HandleClassPortraitToggle(unitKey, refreshFunc, value)
+        end,
+    })
+
+    C:AddToggle(parent, {
+        label = LO["Alternative Class Icons"],
+        desc = LO["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."],
+        dbPath = "unitframe." .. unitKey .. ".alternativeClassIcons",
+        disabled = function()
+            return not C:GetDBValue("unitframe." .. unitKey .. ".classPortrait") or IsPortraitOff(unitKey)
+        end,
+        callback = refreshFunc,
+    })
+end
+
 local function ResetDetachedFrameToDatabaseDefaults(unitKey, refreshFunc)
     local defaults = addon.defaults and addon.defaults.profile
     local profile = addon.db and addon.db.profile
@@ -151,6 +219,10 @@ Panel.subTabSetters["unitframes"] = function(key) activeSubTab = key end
 local function AddCommonControls(parent, unitKey, refreshFunc, opts)
     opts = opts or {}
 
+    if opts.hasClassPortrait then
+        AddPortraitOffToggle(parent, unitKey)
+    end
+
     C:AddSlider(parent, {
         label = LO["Scale"],
         dbPath = "unitframe." .. unitKey .. ".scale",
@@ -166,24 +238,7 @@ local function AddCommonControls(parent, unitKey, refreshFunc, opts)
     })
 
     if opts.hasClassPortrait then
-        C:AddToggle(parent, {
-            label = LO["Class Portrait"],
-            desc = LO["Class icon instead of 3D model for players."],
-            dbPath = "unitframe." .. unitKey .. ".classPortrait",
-            callback = function(value)
-                HandleClassPortraitToggle(unitKey, refreshFunc, value)
-            end,
-        })
-
-        C:AddToggle(parent, {
-            label = LO["Alternative Class Icons"],
-            desc = LO["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."],
-            dbPath = "unitframe." .. unitKey .. ".alternativeClassIcons",
-            disabled = function()
-                return not C:GetDBValue("unitframe." .. unitKey .. ".classPortrait")
-            end,
-            callback = refreshFunc,
-        })
+        AddClassPortraitToggles(parent, unitKey, refreshFunc)
     end
 
     C:AddToggle(parent, {
@@ -301,10 +356,18 @@ local function BuildPlayerSection(scroll)
     -- Fat Health Bar
     C:AddHeading(s, LO["Fat Health Bar"])
 
+    -- The portrait-off art has no fat variant: with it on, the fat bar is off.
+    local noFat = function()
+        return not C:GetDBValue("unitframe.player.fat_healthbar") or IsPortraitOff("player")
+    end
+
     C:AddToggle(s, {
         label = LO["Enable"],
         desc = LO["Full-width health bar. Auto-disabled in vehicles."],
         dbPath = "unitframe.player.fat_healthbar",
+        disabled = function()
+            return IsPortraitOff("player")
+        end,
         callback = function(val)
             refreshPlayer()
             -- Rebuild tab so disabled states on mana controls update
@@ -317,7 +380,7 @@ local function BuildPlayerSection(scroll)
         desc = LO["Completely hide the mana bar when Fat Health Bar is active."],
         dbPath = "unitframe.player.fat_manabar_hidden",
         disabled = function()
-            return not C:GetDBValue("unitframe.player.fat_healthbar")
+            return noFat()
         end,
         callback = function(val)
             refreshPlayer()
@@ -331,7 +394,7 @@ local function BuildPlayerSection(scroll)
         min = 50, max = 300, step = 1,
         width = 200,
         disabled = function()
-            return not C:GetDBValue("unitframe.player.fat_healthbar")
+            return noFat()
         end,
         callback = refreshPlayer,
     })
@@ -342,7 +405,7 @@ local function BuildPlayerSection(scroll)
         min = 4, max = 30, step = 1,
         width = 200,
         disabled = function()
-            return not C:GetDBValue("unitframe.player.fat_healthbar")
+            return noFat()
         end,
         callback = refreshPlayer,
     })
@@ -360,7 +423,7 @@ local function BuildPlayerSection(scroll)
             litestep       = LO["LiteStep"],
         },
         disabled = function()
-            return not C:GetDBValue("unitframe.player.fat_healthbar")
+            return noFat()
         end,
         callback = function()
             refreshPlayer()
@@ -369,7 +432,7 @@ local function BuildPlayerSection(scroll)
     })
 
     -- Power bar color pickers (only visible when using override textures in fat mode)
-    local isFat = C:GetDBValue("unitframe.player.fat_healthbar")
+    local isFat = not noFat()
     local texSetting = C:GetDBValue("unitframe.player.manabar_texture") or "dragonui"
     local showColors = isFat and texSetting ~= "dragonui"
 
@@ -646,6 +709,8 @@ local function BuildToTSection(scroll)
     C:AddDescription(tot,
         LO["Follows the Target frame by default. Move it in Editor Mode (/dragonui edit) to detach and position freely."])
 
+    AddPortraitOffToggle(tot, "tot")
+
     C:AddSlider(tot, {
         label = LO["Scale"],
         dbPath = "unitframe.tot.scale",
@@ -660,23 +725,7 @@ local function BuildToTSection(scroll)
         callback = refreshToT,
     })
 
-    C:AddToggle(tot, {
-        label = LO["Class Portrait"],
-        dbPath = "unitframe.tot.classPortrait",
-        callback = function(value)
-            HandleClassPortraitToggle("tot", refreshToT, value)
-        end,
-    })
-
-    C:AddToggle(tot, {
-        label = LO["Alternative Class Icons"],
-        desc = LO["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."],
-        dbPath = "unitframe.tot.alternativeClassIcons",
-        disabled = function()
-            return not C:GetDBValue("unitframe.tot.classPortrait")
-        end,
-        callback = refreshToT,
-    })
+    AddClassPortraitToggles(tot, "tot", refreshToT)
 
     -- Attachment status indicator
     local totOverride = C:GetDBValue("unitframe.tot.override")
@@ -709,6 +758,8 @@ local function BuildToTSection(scroll)
     C:AddDescription(fot,
         LO["Follows the Focus frame by default. Move it in Editor Mode (/dragonui edit) to detach and position freely."])
 
+    AddPortraitOffToggle(fot, "fot")
+
     C:AddSlider(fot, {
         label = LO["Scale"],
         dbPath = "unitframe.fot.scale",
@@ -723,23 +774,7 @@ local function BuildToTSection(scroll)
         callback = refreshToF,
     })
 
-    C:AddToggle(fot, {
-        label = LO["Class Portrait"],
-        dbPath = "unitframe.fot.classPortrait",
-        callback = function(value)
-            HandleClassPortraitToggle("fot", refreshToF, value)
-        end,
-    })
-
-    C:AddToggle(fot, {
-        label = LO["Alternative Class Icons"],
-        desc = LO["Use DragonUI alternative class icons instead of Blizzard's class icon atlas."],
-        dbPath = "unitframe.fot.alternativeClassIcons",
-        disabled = function()
-            return not C:GetDBValue("unitframe.fot.classPortrait")
-        end,
-        callback = refreshToF,
-    })
+    AddClassPortraitToggles(fot, "fot", refreshToF)
 
     -- Attachment status indicator
     local fotOverride = C:GetDBValue("unitframe.fot.override")
@@ -896,7 +931,7 @@ local function BuildComboPointsSection(scroll)
     end
     C:AddToggle(combo, {
         label = LO["Combo Points"],
-        desc = LO["Combo points as orbs under the player frame and/or gems around the target portrait."],
+        desc = LO["Combo points as orbs under the player frame and/or on the target frame."],
         getFunc = function() return addon:IsModuleEnabled("combopoints") end,
         setFunc = function(val)
             C:EnsureModuleTable("combopoints")
@@ -906,7 +941,7 @@ local function BuildComboPointsSection(scroll)
     })
     C:AddDropdown(combo, {
         label = LO["Location"],
-        desc = LO["Auto follows the unit frame art: orbs under the player with the DragonUI art, gems on the target with the Forever art."],
+        desc = LO["Auto follows the unit frame art: under the player with the DragonUI art, on the target with the Forever art."],
         dbPath = "combopoints.location",
         values = comboLocationValues,
         callback = refreshCombo,
@@ -920,7 +955,7 @@ local function BuildComboPointsSection(scroll)
     })
     C:AddToggle(combo, {
         label = LO["Hide When Empty"],
-        desc = LO["Hide the orbs and the gems at 0 points instead of showing them empty."],
+        desc = LO["Hide the orbs at 0 points instead of showing them empty."],
         dbPath = "combopoints.hide_empty",
         callback = refreshCombo,
     })
@@ -975,6 +1010,7 @@ local function BuildUnitframesTab(scroll)
         values = autoStyleValues,
         callback = refreshSkins,
     })
+    AddPortraitOffAllToggle(style)
     if centerNamesListed then
         C:AddToggle(style, {
             label = LO["Center Names"],
