@@ -443,12 +443,7 @@ function UF.TargetStyle.Create(opts)
                 if textHome then
                     LevelText:SetParent(textHome)
                 end
-                -- Portrait off, the level sits low on the band, lower still under a dragon's neck.
-                local y = 3
-                if UF.IsCompact(configKey) then
-                    y = compactDragon and 2 - UF.COMPACT.dragonDrop or 2
-                end
-                LevelText:SetPoint("BOTTOMRIGHT", HealthBar, "TOPLEFT", 18, y)
+                LevelText:SetPoint("BOTTOMRIGHT", HealthBar, "TOPLEFT", 18, 3)
             end
             LevelText:SetDrawLayer("OVERLAY", 2)
             local font, size, flags = LevelText:GetFont()

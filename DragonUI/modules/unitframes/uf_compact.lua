@@ -22,8 +22,8 @@ local function Swap(piece, file)
     return copy
 end
 
--- Name strips without their slanted end: square at the health bar's right end, 253 texels of the 2x cell.
-local STRIP = { w = 126.5, right = 253 / 512 }
+-- Name strips closing like they open (mirrored): 0.5 past the health bar's right as they start 0.5 before its left.
+local STRIP = { w = 127, right = 254 / 512 }
 
 for _, style in ipairs({ "dragonui", "forever" }) do
     local skin = UF.SKINS[style]
@@ -162,7 +162,7 @@ UF.COMPACT = {
         threat = { x = -51, y = -20 },
         threatDragon = { x = -79, y = -20 },
     },
-    -- Under a decoration's neck the name and level drop 1.5 (the neck runs along the band's top 4-6 units).
+    -- Under a player decoration's neck its name drops 1.5 (the neck runs along the band's top 4-6 units).
     dragonDrop = 1.5,
     nameGap = 2,
 }
@@ -263,24 +263,23 @@ function UF.CompactPlayerName(dragon)
     return point, x, y, w, justify
 end
 
--- Name spot on the health bar's TOPLEFT for a compact target or focus with the given bar width.
+-- Compact target/focus name on the health bar's TOPLEFT: the player's height, short of a dragon's head.
 function UF.CompactTargetName(dragon, healthWidth)
     local forever = UF.GetLevelStyle() == "forever"
     local limit = dragon and (healthWidth + UF.COMPACT.plateEnd + dragon.band - UF.COMPACT.nameGap)
     if forever then
-        local y = dragon and 5 or 7.5
         local w = 100
         if limit and limit - 4 < w then
             w = limit - 4
         end
-        return "LEFT", 4, y, w, UF.GetNameSpotJustify()
+        return "LEFT", 4, 7.5, w, UF.GetNameSpotJustify()
     end
     -- Centred over the bar, clear of the level (right edge 18 in) and of a dragon's head.
     local left, w = 26, 96
     if limit and left + w > limit then
         left, w = 22, limit - 22
     end
-    return "BOTTOM", left + w / 2, dragon and 2 - UF.COMPACT.dragonDrop or 2, w, "CENTER"
+    return "BOTTOM", left + w / 2, 2, w, "CENTER"
 end
 
 local function IconAt(spot, x)
