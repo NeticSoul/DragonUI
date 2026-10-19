@@ -1732,6 +1732,13 @@ local function SetupPartyHooks()
 
     -- Additional hook for party member updates (compatible with 3.3.5a)
     hooksecurefunc("PartyMemberFrame_OnEvent", function(frame, event, eventUnit)
+        -- 3.3.5a shows the role icon only on PARTY_MEMBERS_CHANGED, which a /reload never fires.
+        if event == "PLAYER_ENTERING_WORLD" then
+            if GetPartyMember(frame:GetID()) then
+                PartyMemberFrame_UpdateAssignedRoles(frame)
+            end
+            return
+        end
         if event ~= "UNIT_HEALTH" and event ~= "UNIT_MAXHEALTH" then return end
         if not frame or (eventUnit ~= frame.unit and eventUnit ~= PARTY_UNIT_TOKENS[frame:GetID()]) then return end
         if frame:GetName() and frame:GetName():match("^PartyMemberFrame%d+$") then
