@@ -23,6 +23,7 @@ local defaults = {
         talentBuilds = {}, -- Saved talent builds per class: [CLASS] = { {name, ranks[tab][index], reqLevel}, ... }
         auraDurations = {}, -- Observed debuff durations for nameplates: [spellId] = seconds
         addonIcons = {}, -- Addon manager icons learned from loaded addons: [lowercase folder] = { icon, coords }
+        itemOwnership = { version = 1, realms = {} }, -- Per-realm, per-character item counts for the tooltip module
         optionsPanelScale = 1 -- Settings window scale on top of the UI scale
     },
     profile = {
@@ -244,8 +245,8 @@ local defaults = {
         -- Combo points (the enable flag is modules.combopoints.enabled)
         combopoints = {
             location = "auto",    -- auto | both | player | target; auto follows unitframe.frame_style
-            style = "auto",       -- auto | dragonui | forever: art of the player bar (retail or c60 orbs); auto follows unitframe.frame_style
-            hide_empty = false,   -- Hide the bar and the gems at 0 points instead of showing empty ones
+            style = "auto",       -- auto | dragonui | forever: art of the orbs (retail or c60); auto follows unitframe.frame_style
+            hide_empty = false,   -- Hide the orbs at 0 points instead of showing empty ones
             detached = false,     -- Player bar moved in the editor: follows widgets.combopoints instead of the player frame
         },
         -- Swing timers, one table per bar (the enable flag is modules.swingtimer.enabled)
@@ -735,6 +736,7 @@ local defaults = {
                 classcolor = false,
                 classPortrait = false, -- Show class icon instead of character portrait
                 alternativeClassIcons = false, -- Use DragonUI alternative class icons for class portraits
+                portrait_off = false, -- Portrait-off frame: the portrait art without its ring (uf_compact.lua)
                 textFormat = "both",
                 showHealthTextAlways = false,
                 showManaTextAlways = false,
@@ -771,6 +773,7 @@ local defaults = {
                 classcolor = false,
                 classPortrait = false, -- Show class icon instead of character portrait
                 alternativeClassIcons = false, -- Use DragonUI alternative class icons for class portraits
+                portrait_off = false, -- Portrait-off frame: the portrait art without its ring (uf_compact.lua)
                 breakUpLargeNumbers = true,
                 textFormat = 'both',
                 showHealthTextAlways = false,
@@ -791,6 +794,7 @@ local defaults = {
                 classcolor = false,
                 classPortrait = false, -- Show class icon instead of character portrait
                 alternativeClassIcons = false, -- Use DragonUI alternative class icons for class portraits
+                portrait_off = false, -- Portrait-off frame: the portrait art without its ring (uf_compact.lua)
                 breakUpLargeNumbers = true,
                 textFormat = 'both',
                 showHealthTextAlways = false,
@@ -844,6 +848,7 @@ local defaults = {
                 classcolor = false,
                 classPortrait = false, -- Show class icon instead of character portrait
                 alternativeClassIcons = false, -- Use DragonUI alternative class icons for class portraits
+                portrait_off = false, -- Portrait-off frame: the portrait art without its ring (uf_compact.lua)
                 scale = 1.0,
                 x = -35,
                 y = -30,
@@ -856,6 +861,7 @@ local defaults = {
                 classcolor = false,
                 classPortrait = false, -- Show class icon instead of character portrait
                 alternativeClassIcons = false, -- Use DragonUI alternative class icons for class portraits
+                portrait_off = false, -- Portrait-off frame: the portrait art without its ring (uf_compact.lua)
                 scale = 1.0,
                 x = -35,
                 y = -30,
@@ -1003,7 +1009,7 @@ local defaults = {
                 enabled = false, -- Small health and power bar under the character (settings in editor mode)
             },
             combopoints = {
-                enabled = true, -- Retail orb bar under the player and/or Forever gem arc on the target (Options > Unit Frames)
+                enabled = true, -- Retail orb bar under the player and/or small orbs on the target (Options > Unit Frames)
             },
             swingtimer = {
                 enabled = false, -- Main hand, off hand and ranged swing bars (settings in editor mode)
@@ -1250,6 +1256,9 @@ local defaults = {
                 mail = true,
                 auction = true,
             },
+            itemownership = {
+                enabled = false, -- Show per-character bag, bank and equipped counts in item tooltips
+            },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy
                 linkHoverTooltip = false, -- Show supported chat-link tooltips without holding Alt
@@ -1281,6 +1290,7 @@ local defaults = {
             loot_skin = {
                 enabled = true, -- Retail-style skin for the Blizzard loot window
                 animated_reflow = true, -- Compact collected loot with animated rows and panel resizing
+                auto_hide_empty = false, -- Close the loot window when there is nothing left to loot
             },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons

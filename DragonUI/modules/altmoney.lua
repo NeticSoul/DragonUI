@@ -97,8 +97,9 @@ local COPPER_SYMBOL = COPPER_AMOUNT_SYMBOL or "c"
 
 local function FormatMoney(copper)
     copper = copper or 0
-    -- GetCoinTextureString always embeds coin icons; it doesn't check colorblindMode itself.
-    if GetCoinTextureString and GetCVar("colorblindMode") ~= "1" then
+    -- GetCoinTextureString ignores colorblindMode and wraps amounts past 2^31 copper (int32).
+    if GetCoinTextureString and GetCVar("colorblindMode") ~= "1"
+        and math.abs(copper) < 2147483648 then
         return GetCoinTextureString(copper)
     end
     return format("|cffffd700%d%s|r |cffc7c7cf%d%s|r |cffeda55f%d%s|r",

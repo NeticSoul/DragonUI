@@ -169,7 +169,8 @@ local function IsFatHealthbarActive()
     if not IsFatConfigEnabled() then return false end
     -- Fat mode disabled during vehicle — show standard vehicle interface
     if IsInVehicle() then return false end
-    return true
+    -- The portrait-off art has no fat variant: the two options exclude each other (portrait off wins).
+    return not UF.IsCompact("player")
 end
 
 -- Get the correct BASE texture path (fat or normal, not vehicle — vehicle uses atlas)
@@ -466,6 +467,41 @@ end
 -- The fat skin pieces keep the normal art's contour, so only the legacy fat art loses the skin's spots.
 function PlayerArt.LegacyFat()
     return IsFatHealthbarActive() and not PlayerArt.FatSkin()
+end
+
+-- The skin kind for the frame's spots (name, level, PvP, glows); uf_compact.lua adds the portrait-off ones.
+function PlayerArt.Kind()
+    local compact = UF.IsCompact("player")
+    if IsEliteModeActive() then
+        return compact and "playerCompactDecoration" or "playerDecoration"
+    end
+    return compact and "playerCompact" or "player"
+end
+
+-- The art the bars sit in without a decoration's own: portrait off, or the normal frame.
+function PlayerArt.BaseKind()
+    return UF.IsCompact("player") and "playerCompact" or "player"
+end
+
+-- The decoration's bent dragon on a portrait-off frame, or nil.
+function PlayerArt.CompactDragon()
+    if not UF.IsCompact("player") then return nil end
+    local decoration = UF.PLAYER_DECORATIONS[GetPlayerConfig().dragon_decoration or "none"]
+    return decoration and UF.GetCompactDragon(decoration.kind, decoration.set)
+end
+
+-- Portrait off, the mouse area ends at the bars or a decoration's dragon; Blizzard's insets come back after.
+function PlayerArt.ApplyHitRect()
+    if UF.IsCompact("player") then
+        PlayerArt.hitHome = PlayerArt.hitHome or { PlayerFrame:GetHitRectInsets() }
+        local dragon = PlayerArt.CompactDragon()
+        -- Frame 98.5..226.5 by 20..66 on the 232x100 PlayerFrame; the mirrored dragon starts w - x left of 100.
+        local left = dragon and math.min(98.5, 100 - dragon.x - dragon.w) or 98.5
+        UF.SetHitRect(PlayerFrame, "player_hitrect", left, 5.5, 20, 34)
+    elseif PlayerArt.hitHome then
+        UF.SetHitRect(PlayerFrame, "player_hitrect", unpack(PlayerArt.hitHome))
+        PlayerArt.hitHome = nil
+    end
 end
 
 -- Get combat flash configuration (enabled + opacity multiplier)
@@ -921,7 +957,7 @@ end
 local function ApplyPlayerLevelVisibility()
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     local role = dragonFrame and dragonFrame.PlayerRoleIcon
-    local circle = not PlayerArt.LegacyFat() and UF.GetLevelSpot(IsEliteModeActive() and "playerDecoration" or "player")
+    local circle = not PlayerArt.LegacyFat() and UF.GetLevelSpot(PlayerArt.Kind())
     PlayerLevelText:SetAlpha((role and role:IsShown() and not circle) and 0 or 1)
 end
 
@@ -938,7 +974,7 @@ local function UpdatePlayerRoleIcon()
     local shown = role and not IsInVehicle()
 
     if shown then
-        local spot = UF.PLAYER_ICONS.role
+        local spot = UF.GetPlayerIcons().role
         if dragonFrame.EliteIconContainer then
             iconTexture:SetParent(dragonFrame.EliteIconContainer)
         end
@@ -1038,7 +1074,7 @@ local function PlacePlayerPvPBadge(badge)
         badge:SetPoint("TOP", PlayerPortrait, "LEFT", UF.PLAYER_PVP_FALLBACK.x, UF.PLAYER_PVP_FALLBACK.y)
         return nil
     end
-    local place = UF.GetFrameSkin()[IsEliteModeActive() and "playerDecoration" or "player"].pvp
+    local place = UF.GetFrameSkin()[PlayerArt.Kind()].pvp
     badge:SetPoint("TOP", art, "TOPLEFT", place.x, place.y)
     return place.scale
 end
@@ -1058,13 +1094,14 @@ end
 local function UpdateLeaderIconPosition()
     local art = UF.STATUS_ICONS
     local style = UF.GetStatusIconStyle()
+    local spots = UF.GetPlayerIcons()
     if PlayerLeaderIcon then
-        PlacePlayerIcon(PlayerLeaderIcon, UF.PLAYER_ICONS[style == "forever" and "foreverLeader" or "leader"])
+        PlacePlayerIcon(PlayerLeaderIcon, spots[style == "forever" and "foreverLeader" or "leader"])
         PlayerLeaderIcon:SetTexture(art.file)
         PlayerLeaderIcon:SetTexCoord(unpack(art.leader[style]))
     end
     if PlayerGuideIcon then
-        PlacePlayerIcon(PlayerGuideIcon, UF.PLAYER_ICONS.leader)
+        PlacePlayerIcon(PlayerGuideIcon, spots.leader)
         PlayerGuideIcon:SetTexture(art.file)
         PlayerGuideIcon:SetTexCoord(unpack(art.guide))
     end
@@ -1072,7 +1109,9 @@ end
 
 local function UpdateMasterIconPosition()
     if PlayerMasterIcon then
-        PlacePlayerIcon(PlayerMasterIcon, UF.PLAYER_ICONS.master)
+        PlacePlayerIcon(PlayerMasterIcon, UF.GetPlayerIcons().master)
+        PlayerMasterIcon:SetTexture(UF.STATUS_ICONS.file)
+        PlayerMasterIcon:SetTexCoord(unpack(UF.STATUS_ICONS.master[UF.GetStatusIconStyle()]))
     end
 end
 
@@ -1160,7 +1199,11 @@ local function UpdatePVPIconPosition()
     PlayerPVPIcon:SetParent(iconContainer)
     PlayerPVPIcon:ClearAllPoints()
 
-    if isEliteMode then
+    if UF.IsCompact("player") then
+        local x, y = UF.CompactPlayerPvPIcon(UF.GetLevelSpot(PlayerArt.Kind()), PlayerArt.CompactDragon(),
+            UF.GetPvPKind("player") or UnitFactionGroup("player"))
+        PlayerPVPIcon:SetPoint("TOPRIGHT", PlayerFrame, "TOPRIGHT", x, y)
+    elseif isEliteMode then
         -- Elite mode: specific position
         PlayerPVPIcon:SetPoint("TOPRIGHT", PlayerFrame, "TOPRIGHT", -155, -22)
     else
@@ -1210,6 +1253,11 @@ local function ApplyPVPIconVisibility()
     end
     -- Alpha, not Hide: Blizzard owns Show/Hide and replays the flag sound whenever it finds the icon hidden.
     PlayerPVPIcon:SetAlpha((shown and not onBadge) and 1 or 0)
+    if UF.IsCompact("player") then
+        -- Its spot follows the emblem's width, and a flag change (FFA) swaps the emblem.
+        UpdatePVPIconPosition()
+        PlayerArt.PlaceRestIcon()
+    end
     if not kind then
         return
     end
@@ -1298,7 +1346,7 @@ end
 -- How far a decoration bar's left and right ends moved from where its texts, the name and the level were laid out.
 function PlayerArt.Edges(key)
     local fat = IsFatHealthbarActive()
-    local edges = IsEliteModeActive() and not IsInVehicle() and not (fat and key == "mana")
+    local edges = PlayerArt.Kind() == "playerDecoration" and not IsInVehicle() and not (fat and key == "mana")
         and UF.GetFrameSkin()[fat and "playerDecorationFat" or "playerDecoration"].edges
     return unpack(edges and edges[key] or PlayerArt.noEdges)
 end
@@ -1387,7 +1435,7 @@ end
 
 -- The decoration's ring curves past the start of its lower well: the mana's, or the fat health's.
 function PlayerArt.CornerSpec()
-    if not IsEliteModeActive() or IsInVehicle() then return nil end
+    if PlayerArt.Kind() ~= "playerDecoration" or IsInVehicle() then return nil end
     local skin = UF.GetFrameSkin()
     if IsFatHealthbarActive() then
         local fat = skin.playerDecorationFat
@@ -1683,7 +1731,7 @@ local function UpdatePlayerSwords(show)
     local dragonFrame = _G["DragonUIUnitframeFrame"]
     local swords = UF.GetFrameSkin().player.swords
     local art = dragonFrame and dragonFrame.PlayerFrameBackground
-    show = show and swords and art and not IsInVehicle()
+    show = show and swords and art and not IsInVehicle() and not UF.IsCompact("player")
     if show and not playerSwords then
         local container = dragonFrame.EliteIconContainer
         if not container then return end
@@ -1706,7 +1754,8 @@ local function ApplyPlayerCornerAlpha(deco)
     local fat = PlayerArt.LegacyFat()
     local foreverSwords = UF.GetFrameSkin().player.swords and not fat and not IsEliteModeActive()
     local wanted = (playerCombatIconShown and not foreverSwords) or fat or UF.GetFrameSkin().player.corner
-    deco:SetAlpha(wanted and 1 or 0)
+    -- The wedge and the swords sit on the portrait's ring, which a portrait-off frame does not have.
+    deco:SetAlpha((wanted and not UF.IsCompact("player")) and 1 or 0)
     UpdatePlayerSwords(foreverSwords and playerCombatIconShown)
 end
 
@@ -1736,7 +1785,7 @@ local function UpdatePlayerLevelLayout()
     local container = dragonFrame and dragonFrame.EliteIconContainer
     local level
     if container and dragonFrame.PlayerFrameBackground and not IsInVehicle() and not PlayerArt.LegacyFat() then
-        level = UF.GetLevelSpot(IsEliteModeActive() and "playerDecoration" or "player")
+        level = UF.GetLevelSpot(PlayerArt.Kind())
     end
     if level and not playerLevelFrame then
         -- Forever draws the level circle over the PvP one (OVERLAY 4 over 3): one level above the badge frame.
@@ -1792,7 +1841,7 @@ local function ApplyPlayerGlowArt()
     -- Fat skin art brings glows without the health/mana line; each set reads its own mode's.
     local fatSkin = PlayerArt.FatSkin()
     local elite = IsEliteModeActive()
-    local normal = not fat and (fatSkin and not elite and fatSkin.glows or skin.player.glows)
+    local normal = not fat and (fatSkin and not elite and fatSkin.glows or skin[PlayerArt.BaseKind()].glows)
     if normal then
         PlaceGlow(dragonFrame.DragonUIStatusGlow, dragonFrame.DragonUIStatusTexture, normal.status, art)
         PlaceGlow(dragonFrame.DragonUICombatGlow, dragonFrame.DragonUICombatTexture, normal.combat, art)
@@ -1806,7 +1855,8 @@ local function ApplyPlayerGlowArt()
             texture:SetTexCoord(unpack(PLAYER_GLOW_TEX_COORDS))
         end
     end
-    local deco = not fat and (fatSkin and elite and fatSkin.glows or skin.playerDecoration.glows)
+    local decoKind = UF.IsCompact("player") and "playerCompactDecoration" or "playerDecoration"
+    local deco = not fat and (fatSkin and elite and fatSkin.glows or skin[decoKind].glows)
     if deco then
         PlaceGlow(dragonFrame.EliteStatusGlow, dragonFrame.EliteStatusTexture, deco.status, art)
         PlaceGlow(dragonFrame.EliteCombatGlow, dragonFrame.EliteCombatTexture, deco.combat, art)
@@ -1827,12 +1877,42 @@ function PlayerArt.PlaceRestIcon()
     if not PlayerRestIcon then
         return
     end
+    local iconShown = (PlayerLeaderIcon and PlayerLeaderIcon:IsShown()) or (PlayerGuideIcon and PlayerGuideIcon:IsShown())
+        or (PlayerMasterIcon and PlayerMasterIcon:IsShown())
+    if UF.IsCompact("player") then
+        local dragon = PlayerArt.CompactDragon()
+        local x, y, size = UF.CompactRestSpot(dragon)
+        local ink, spots = UF.COMPACT.restInk, UF.GetPlayerIcons()
+        local tab = _G.DragonUIPlayerGroupIndicator
+        -- The tab hangs by its BOTTOMRIGHT, growing left with its text; x on PlayerFrame to the health bar's (100 in).
+        local tabLimit = tab and tab:IsShown() and spots.tab.x - tab:GetWidth() - 1 - 100 - ink[2] * size
+        -- The crown and looter share the corner's row: the ink rises right after them, or left if the tab is there.
+        if iconShown and not (dragon and dragon.nose) then
+            local leader = (PlayerLeaderIcon and PlayerLeaderIcon:IsShown()) or (PlayerGuideIcon and PlayerGuideIcon:IsShown())
+            local last = (PlayerMasterIcon and PlayerMasterIcon:IsShown()) and spots.master or spots.leader
+            x = last.x + last.w + 1 - 100 - ink[1] * size
+            if tabLimit and x > tabLimit then
+                local right = (leader and spots.leader or spots.master).x - 1
+                local badge = _G.DragonUIPlayerPvPCircle
+                if badge and badge:IsShown() then
+                    right = math.min(right, UF.COMPACT.player.badgeLeft - 1)
+                end
+                x = right - 100 - ink[2] * size
+            end
+        end
+        if tabLimit then
+            x = math.min(x, tabLimit)
+        end
+        PlayerRestIcon:SetSize(size, size)
+        PlayerRestIcon:ClearAllPoints()
+        PlayerRestIcon:SetPoint("TOPLEFT", PlayerFrameHealthBar, "TOPLEFT", x, y)
+        return
+    end
     local config = GetPlayerConfig()
     local decoration = config and UF.PLAYER_DECORATIONS[config.dragon_decoration or "none"]
     local place = decoration and select(6, UF.GetDragon("player", decoration.kind, decoration.set))
     local rest = place and place.rest
-    local iconShown = (PlayerLeaderIcon and PlayerLeaderIcon:IsShown()) or (PlayerGuideIcon and PlayerGuideIcon:IsShown())
-        or (PlayerMasterIcon and PlayerMasterIcon:IsShown())
+    PlayerRestIcon:SetSize(28, 28)
     PlayerRestIcon:ClearAllPoints()
     if rest and not iconShown then
         PlayerRestIcon:SetPoint("TOPLEFT", PlayerPortrait, "TOPLEFT", rest.x, rest.y)
@@ -1855,6 +1935,10 @@ local function UpdatePlayerDragonDecoration()
     if dragonFrame.PlayerDragonFrame then
         dragonFrame.PlayerDragonFrame:Hide()
     end
+    -- Portrait off, the texture sits on PlayerFrame itself, out of its frame.
+    if playerDragonTexture then
+        playerDragonTexture:Hide()
+    end
     dragonFrame.PlayerDragonFrame = nil
     dragonFrame.PlayerDragonDecoration = nil
 
@@ -1864,7 +1948,8 @@ local function UpdatePlayerDragonDecoration()
     --  Change background, border AND STRETCH MANA BAR based on decoration
     local inVehicle = IsInVehicle()
 
-    if decoration and not inVehicle then
+    -- Portrait off keeps its art with or without a decoration: the dragon only wraps its end.
+    if decoration and not inVehicle and not UF.IsCompact("player") then
         -- Fat merges the two wells: the same art without the health/mana line, under one tall health bar.
         local fatMode = IsFatHealthbarActive()
         local deco = UF.GetFrameSkin()[fatMode and "playerDecorationFat" or "playerDecoration"]
@@ -1948,7 +2033,9 @@ local function UpdatePlayerDragonDecoration()
             dragonFrame.HitIndicatorFrame:SetFrameStrata("MEDIUM")
             dragonFrame.HitIndicatorFrame:SetFrameLevel(PlayerFrame:GetFrameLevel() + 11)
             dragonFrame.HitIndicatorFrame:ClearAllPoints()
-            dragonFrame.HitIndicatorFrame:SetPoint("CENTER", PlayerPortrait, "CENTER", 0, 0)
+            local hit = UF.IsCompact("player") and UF.COMPACT.player.hit
+            dragonFrame.HitIndicatorFrame:SetPoint("CENTER", PlayerPortrait, "CENTER",
+                hit and hit.x or 0, hit and hit.y or 0)
             dragonFrame.HitIndicatorFrame:Show()
             hitIndicator:SetParent(dragonFrame.HitIndicatorFrame)
             hitIndicator:ClearAllPoints()
@@ -2013,7 +2100,7 @@ local function UpdatePlayerDragonDecoration()
                     dragonFrame.PlayerFrameBorder:SetPoint('LEFT', PlayerFrameHealthBar, 'LEFT', -67, -28.5 + HP_OFFSET)
                 end
             else
-                local skin = PlayerArt.FatSkin() or UF.GetFrameSkin().player
+                local skin = PlayerArt.FatSkin() or UF.GetFrameSkin()[PlayerArt.BaseKind()]
                 if dragonFrame.PlayerFrameBackground then
                     dragonFrame.PlayerFrameBackground:Show()
                     UF.ApplySkinPiece(dragonFrame.PlayerFrameBackground, skin.background, 'LEFT', PlayerFrameHealthBar, 'LEFT', 0, 0)
@@ -2049,14 +2136,16 @@ local function UpdatePlayerDragonDecoration()
     UpdatePlayerLevelLayout()
     PlayerArt.PlaceTexts()
     PlayerArt.LayoutCorner()
+    PlayerArt.ApplyHitRect()
 
     -- Don't create dragon if decoration is disabled or currently in vehicle
     if not decoration or inVehicle then
         return
     end
 
+    local compact = PlayerArt.CompactDragon()
     local file, left, right, top, bottom, place = UF.GetDragon("player", decoration.kind, decoration.set)
-    if not file then
+    if not file and not compact then
         return
     end
 
@@ -2065,21 +2154,58 @@ local function UpdatePlayerDragonDecoration()
         playerDragonParent = CreateFrame("Frame", nil, PlayerFrame)
         playerDragonTexture = playerDragonParent:CreateTexture(nil, "OVERLAY")
         playerDragonTexture:SetAllPoints(playerDragonParent)
+        local pawFrame = CreateFrame("Frame", nil, PlayerFrame)
+        pawFrame:SetAllPoints(PlayerFrame)
+        local paw = pawFrame:CreateTexture("DragonUI_PlayerDragonPaw", "ARTWORK")
+        paw:Hide()
+        PlayerArt.paw = paw
+        -- The paw follows its dragon out (Hide) and through vehicles (SetAlpha).
+        hooksecurefunc(playerDragonTexture, "Hide", function() paw:Hide() end)
+        hooksecurefunc(playerDragonTexture, "SetAlpha", function(_, alpha) paw:SetAlpha(alpha) end)
     end
     local dragonParent, dragon = playerDragonParent, playerDragonTexture
-    dragonParent:SetFrameStrata("MEDIUM")
-    dragonParent:SetFrameLevel(1)
-    dragonParent:SetSize(place.w, place.h)
-    dragonParent:ClearAllPoints()
-    dragonParent:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", place.x, place.y)
-    dragon:SetTexture(file)
-    dragon:SetTexCoord(left, right, top, bottom)
+    if compact then
+        -- Mirrored round the frame's left end, on PlayerFrame: over the background, under the rims and bars.
+        dragon:SetParent(PlayerFrame)
+        dragon:SetDrawLayer("ARTWORK")
+        dragon:SetTexture(compact.file)
+        dragon:SetTexCoord(compact.tc[2], compact.tc[1], compact.tc[3], compact.tc[4])
+        dragon:SetSize(compact.w, compact.h)
+        dragon:ClearAllPoints()
+        dragon:SetPoint("TOPRIGHT", PlayerFrameHealthBar, "TOPLEFT", -compact.x, compact.y)
+        if compact.pawFile then
+            local paw = PlayerArt.paw
+            -- One level over the health bar, which carries the border.
+            paw:GetParent():SetFrameLevel(PlayerFrameHealthBar:GetFrameLevel() + 1)
+            paw:SetTexture(compact.pawFile)
+            paw:SetTexCoord(compact.tc[2], compact.tc[1], compact.tc[3], compact.tc[4])
+            paw:SetSize(compact.w, compact.h)
+            paw:ClearAllPoints()
+            paw:SetPoint("TOPRIGHT", PlayerFrameHealthBar, "TOPLEFT", -compact.x, compact.y)
+            paw:Show()
+        end
+    else
+        if dragon:GetParent() ~= dragonParent then
+            dragon:SetParent(dragonParent)
+            dragon:SetDrawLayer("OVERLAY")
+            dragon:ClearAllPoints()
+            dragon:SetAllPoints(dragonParent)
+        end
+        dragonParent:SetFrameStrata("MEDIUM")
+        dragonParent:SetFrameLevel(1)
+        dragonParent:SetSize(place.w, place.h)
+        dragonParent:ClearAllPoints()
+        dragonParent:SetPoint("TOPLEFT", PlayerFrame, "TOPLEFT", place.x, place.y)
+        dragon:SetTexture(file)
+        dragon:SetTexCoord(left, right, top, bottom)
+        dragonParent:Show()
+        dragonFrame.PlayerDragonFrame = dragonParent
+    end
     -- A reused texture can still carry the 0 alpha UpdateDragonVisibilityForVehicle gave it.
     dragon:SetAlpha(1)
-    dragonParent:Show()
+    dragon:Show()
 
     -- Store references
-    dragonFrame.PlayerDragonFrame = dragonParent
     dragonFrame.PlayerDragonDecoration = dragon
 
     -- If dark mode is active, re-apply tint to newly created dragon decoration
@@ -2301,6 +2427,16 @@ local function CreatePlayerFrameTextures()
         groupIndicator.text = text
         groupIndicator.backgroundTexture = bgTexture
         groupIndicator:Hide()
+        -- Portrait off, the crown, looter and Zzz share the tab's row: they make room for it while it shows.
+        local function OnTabToggled()
+            if UF.IsCompact("player") and IsPlayerModuleEnabled() then
+                UpdateLeaderIconPosition()
+                UpdateMasterIconPosition()
+                PlayerArt.PlaceRestIcon()
+            end
+        end
+        hooksecurefunc(groupIndicator, "Show", OnTabToggled)
+        hooksecurefunc(groupIndicator, "Hide", OnTabToggled)
 
         _G[PlayerFrame:GetName() .. 'GroupIndicator'] = groupIndicator
         _G[PlayerFrame:GetName() .. 'GroupIndicatorText'] = text
@@ -2456,6 +2592,9 @@ local function ChangePlayerframe()
     
     -- Apply class portrait if enabled
     UpdatePlayerClassPortrait()
+    -- Portrait off, it stays as the bars' invisible anchor whatever shows it again.
+    UF.KeepPortraitHidden(PlayerPortrait, "player")
+    PlayerPortrait:SetAlpha(1)
 
     -- Position name and level (shifted right in vehicle due to larger portrait)
     -- Ensure name/level are on OVERLAY draw layer so they render above vehicle textures
@@ -2471,7 +2610,12 @@ local function ChangePlayerframe()
         local isPlayerEliteMode = UF.PLAYER_DECORATIONS[decorationType] ~= nil
         local foreverName = not PlayerArt.LegacyFat()
             and UF.GetNameSpot(isPlayerEliteMode and "playerDecoration" or "player")
-        if foreverName then
+        if UF.IsCompact("player") then
+            local point, x, y, w, justify = UF.CompactPlayerName(PlayerArt.CompactDragon())
+            PlayerName:SetJustifyH(justify)
+            PlayerName:SetWidth(w)
+            PlayerName:SetPoint(point, PlayerFrameHealthBar, "TOPLEFT", x, y)
+        elseif foreverName then
             PlayerName:SetJustifyH(UF.GetNameSpotJustify())
             PlayerName:SetWidth(foreverName.w)
             PlayerName:SetPoint('LEFT', PlayerFrameHealthBar, 'TOPLEFT', foreverName.x, foreverName.y)
@@ -2513,7 +2657,7 @@ local function ChangePlayerframe()
         PlayerFrameHealthBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
         PlayerFrameManaBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
     else
-        local health = (PlayerArt.FatSkin() or UF.GetFrameSkin().player).bars.health
+        local health = (PlayerArt.FatSkin() or UF.GetFrameSkin()[PlayerArt.BaseKind()]).bars.health
         PlayerFrameHealthBar:SetSize(health.w, health.h)
         PlayerFrameHealthBar:SetPoint('LEFT', PlayerPortrait, 'RIGHT', health.x, health.y)
         PlayerFrameHealthBar:SetFrameLevel(PlayerFrame:GetFrameLevel() + 1)
@@ -2776,9 +2920,17 @@ local function ApplyWidgetPosition()
     -- Anchor PlayerFrame to auxiliary frame
     PlayerFrame:ClearAllPoints()
     local ofs = PLAYER_ANCHOR_OFFSETS[UnitHasVehicleUI("player") and "vehicle" or "player"]
-    PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", ofs[1], ofs[2] + slideOffset)
+    local shift = UF.CompactShift("player")
+    PlayerFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", ofs[1] - shift, ofs[2] + slideOffset)
+    UF.FitEditorBox(Module.playerFrame, PlayerFrame, ofs[1] - shift, ofs[2],
+        shift ~= 0 and UF.COMPACT.player.box or nil, GetPlayerConfig().scale)
 
     SecureGuard_Install()
+    if secureGuard then
+        -- The combat guard restores the player art (vehicle exits too), so the option decides, not the vehicle.
+        local plrShift = GetPlayerConfig().portrait_off and UF.COMPACT.player.shift or 0
+        secureGuard:SetAttribute("duiPlrX", PLAYER_ANCHOR_OFFSETS.player[1] - plrShift)
+    end
     if Ghost_Refresh then
         Ghost_Refresh()
     end
@@ -3664,6 +3816,7 @@ local function Ghost_Layout()
     return tostring(IsFatConfigEnabled()) .. "|" .. tostring((config and config.dragon_decoration) or "none")
         .. "|" .. UF.GetFrameStyle() .. "|" .. UF.GetDragonSet() .. "|" .. UF.GetLevelStyle()
         .. "|" .. UF.GetPvPIconStyle(config) .. "|" .. UF.GetNameSpotJustify()
+        .. "|" .. tostring(config and config.portrait_off or false)
 end
 
 -- Mirror the frame tree rather than flattening it: draw layers only order regions inside one
@@ -4040,7 +4193,7 @@ end
 local function Ghost_Place(offset)
     local ofs = PLAYER_ANCHOR_OFFSETS[UnitHasVehicleUI("player") and "vehicle" or "player"]
     ghostFrame:ClearAllPoints()
-    ghostFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", ofs[1], ofs[2] + offset)
+    ghostFrame:SetPoint("CENTER", Module.playerFrame, "CENTER", ofs[1] - (PlayerArt.ghostShift or 0), ofs[2] + offset)
 end
 
 local function Ghost_Stop()
@@ -4082,6 +4235,8 @@ local function Ghost_Start(reverse)
     if not Ghost_Build(state) then
         return false
     end
+    -- The player art's snapshot is portrait off whenever the option is, vehicle or not by now.
+    PlayerArt.ghostShift = (state == "player" and GetPlayerConfig().portrait_off) and UF.COMPACT.player.shift or 0
     ghostReverse = reverse
     ghostStart = GetTime()
     ghostActive = true

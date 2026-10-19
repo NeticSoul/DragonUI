@@ -463,13 +463,14 @@ end
 local AURA_ID_LABEL = _G.ID or "ID"
 local AURA_SOURCE_FALLBACK_COLOR = { r = 1, g = 1, b = 1 }
 
-local function AuraSourceAlreadyShown(tt, spellId)
-    if not spellId then
+local function SpellIdAlreadyShown(tt, spellId)
+    local name = tt:GetName()
+    if not spellId or not name then
         return false
     end
     local needle = tostring(spellId)
     for i = 1, tt:NumLines() do
-        local left = _G["GameTooltipTextLeft" .. i]
+        local left = _G[name .. "TextLeft" .. i]
         local text = left and left:GetText()
         if text and text:find(needle, 1, true) and text:find(AURA_ID_LABEL, 1, true) then
             return true
@@ -500,7 +501,7 @@ local function AddAuraSourceInfo(tt, unit, index, filter)
 
     local caster, _, _, spellId = GetAuraCasterAndSpellId(unit, index, filter)
 
-    if showSpellId and AuraSourceAlreadyShown(tt, spellId) then
+    if showSpellId and SpellIdAlreadyShown(tt, spellId) then
         showSpellId = false
     end
 
@@ -557,6 +558,46 @@ local function HookAuraTooltips()
     TooltipModule.hooks["AuraSource"] = true
 end
 
+local function AppendSpellIdLine(tt, spellId)
+    if not ShouldShowAuraSpellId() then
+        return
+    end
+    spellId = tonumber(spellId)
+    if not spellId or SpellIdAlreadyShown(tt, spellId) then
+        return
+    end
+    tt:AddLine(string.format("|cFFCA3C3C%s|r %d", AURA_ID_LABEL, spellId))
+    tt:Show()
+end
+
+local function AppendLinkSpellId(tt, link)
+    if not IsModuleEnabled() or type(link) ~= "string" or not tt:IsShown() then
+        return
+    end
+    local spellId = string.match(link, "^spell:(%d+)")
+    if spellId then
+        AppendSpellIdLine(tt, spellId)
+    end
+end
+
+local function HookSpellIdExtras()
+    if TooltipModule.hooks["SpellIdExtras"] then
+        return
+    end
+
+    GameTooltip:HookScript("OnTooltipSetSpell", function(self)
+        if not IsModuleEnabled() then return end
+        local _, _, spellId = self:GetSpell()
+        AppendSpellIdLine(self, spellId)
+    end)
+
+    hooksecurefunc(GameTooltip, "SetHyperlink", AppendLinkSpellId)
+    -- Not SetItemRef: it also runs on the Shift+click that only pastes the link into chat.
+    hooksecurefunc(ItemRefTooltip, "SetHyperlink", AppendLinkSpellId)
+
+    TooltipModule.hooks["SpellIdExtras"] = true
+end
+
 -- ============================================================================
 -- APPLY / RESTORE SYSTEM
 -- ============================================================================
@@ -568,6 +609,7 @@ local function ApplyTooltipSystem()
     EnsureTooltipWidget()
     ApplyTooltipWidgetPosition()
     HookAuraTooltips()
+    HookSpellIdExtras()
 
     -- Hook GameTooltip:SetUnit
     if not TooltipModule.hooks["SetUnit"] then

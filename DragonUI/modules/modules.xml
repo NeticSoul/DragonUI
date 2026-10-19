@@ -75,6 +75,8 @@
 
     <!-- Server-kept currencies (before the Currency tab and Bagster's token bar, which list them) -->
     <Script file="servercurrency.lua"/>
+    <!-- Per-character bag, bank and equipped counts in item tooltips -->
+    <Script file="itemownership.lua"/>
 
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>

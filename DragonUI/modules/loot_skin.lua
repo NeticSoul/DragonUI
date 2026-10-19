@@ -113,6 +113,20 @@ local function UseAnimatedReflow()
     return GetConfig().animated_reflow ~= false
 end
 
+local function UseAutoHideEmpty()
+    return GetConfig().auto_hide_empty == true
+end
+
+local function HideIfEmpty()
+    if not IsActive() or not UseAutoHideEmpty() then
+        return
+    end
+    local frame = _G.LootFrame
+    if frame and frame:IsShown() and (GetNumLootItems() or 0) == 0 then
+        HideUIPanel(frame)
+    end
+end
+
 -- ============================================================================
 -- BLIZZARD STATE
 -- ============================================================================
@@ -1194,6 +1208,10 @@ events:SetScript("OnEvent", function(_, event, arg1)
         end
         -- 3.3.5a passes autoLoot as a number, unlike retail's boolean.
         isAutoLoot = arg1 and arg1 ~= 0
+        -- Deferred: Blizzard's handler may run after ours, before LootFrame is shown.
+        if UseAutoHideEmpty() then
+            addon:After(0, HideIfEmpty)
+        end
         if EnsureRows(GetNumLootItems()) then
             SyncPanelLevel(_G.LootFrame)
             -- Hidden means Blizzard's handler runs after ours: numLootItems is unset, and its Show lays us out.

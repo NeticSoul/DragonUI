@@ -1616,7 +1616,7 @@ local function TooltipOff()
 end
 
 local function SpellIdRow()
-    return Check(T("Show Aura Spell ID"), "modules.tooltip.show_aura_spell_id", nil, {
+    return Check(T("Show Spell IDs"), "modules.tooltip.show_aura_spell_id", nil, {
         get = function() return GetDB("modules.tooltip.show_aura_spell_id") == true end,
         disabled = TooltipOff })
 end
@@ -1777,11 +1777,11 @@ E.Register("levelupenhance", { settings = {
     Check(T("Pet Level-Up Banner"), "levelupenhance.pet_levelup"),
 } })
 
--- The player's combo point orbs; their location and the target gems stay in Options > Unit Frames.
+-- The player's combo point orbs; their location and the target's orbs stay in Options > Unit Frames.
 E.Register("combopoints", { settings = {
     Drop(T("Orb Style"), "combopoints.style", STYLE_ITEMS, R.comboPoints),
     Check(T("Hide When Empty"), "combopoints.hide_empty", R.comboPoints, {
-        tooltip = T("Hide the orbs and the gems at 0 points instead of showing them empty.") }),
+        tooltip = T("Hide the orbs at 0 points instead of showing them empty.") }),
 } })
 
 -- Position only: the dialog keeps its coordinate rows and the reset that re-attaches them to the player frame.
