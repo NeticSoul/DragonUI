@@ -160,6 +160,7 @@ local function ShowHelp()
     print("  " .. L["/dragonui collections - Open the Pets & Mounts window"])
     print("  " .. L["/dragonui version - Show version info"])
     print("  " .. L["/dragonui help - Show this help"])
+    print("  " .. L["Drag a window title to move it. Use /dui windows reset to reset window positions."])
     print("  " .. L["/rl - Reload UI"])
 end
 

@@ -241,6 +241,7 @@ local function build()
     end)
 
     -- Escape closes it, the way every non-UIPanel Blizzard window is wired.
+    addon.WindowPositions:Register(frame, FRAME_NAME)
     tinsert(UISpecialFrames, FRAME_NAME)
 
     return frame
