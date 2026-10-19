@@ -300,8 +300,8 @@ function UF.GetPlayerIcons()
     for k, v in pairs(UF.PLAYER_ICONS) do icons[k] = v end
     icons.role = UF.COMPACT.player.role
     if dragon then
-        -- The health bar's LEFT is 100 in; mirrored, the art's outer edge above the band is -top from the end.
-        local right = 100 - UF.COMPACT.plateEnd - dragon.top - 1
+        -- The health bar's LEFT is 100 in; mirrored, the art's outer edge above the band is -top from the end: 3 clear.
+        local right = 100 - UF.COMPACT.plateEnd - dragon.top - 3
         icons.master = { x = right - 16, y = -3.5, w = 16, h = 16 }
         icons.leader = { x = right - 33, y = -3.5, w = 16, h = 16 }
         icons.foreverLeader = { x = right - 33, y = -5.25, w = 16, h = 12.5 }
