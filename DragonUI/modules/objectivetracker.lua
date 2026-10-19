@@ -221,6 +221,8 @@ local function collectTimers(blocks)
 end
 
 -- Other modules' blocks (tracked recipes), listed after the quests; a block may bring its own menu and click.
+-- It may also bring `buttons`: small icons packed at the right end of the title row, or of line
+-- `line` when given, each { icon, texCoord?, color?, line?, tooltip? (text or fn(GameTooltip)), onClick }.
 OT.collectors = OT.collectors or {}
 
 function OT.AddCollector(collector)
@@ -572,6 +574,89 @@ local function acquireBlock(index)
     return block
 end
 
+-- Small icon buttons a collector's block may carry (see OT.AddCollector). Right-click on one is
+-- still the block's menu; hovering one lights its block, the way the item button does.
+local BUTTON_GAP, BUTTON_IDLE = 3, 0.75
+
+local function acquireButton(block, index)
+    block.buttons = block.buttons or {}
+    local button = block.buttons[index]
+    if button then return button end
+    button = CreateFrame("Button", nil, block)
+    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    button.icon = button:CreateTexture(nil, "ARTWORK")
+    button.icon:SetAllPoints(button)
+    button:SetAlpha(BUTTON_IDLE)
+    button:SetScript("OnClick", function(self, mouse)
+        if mouse == "RightButton" then
+            onBlockClick(block, mouse)
+        elseif self.spec and self.spec.onClick then
+            self.spec.onClick(self, mouse)
+        end
+    end)
+    button:SetScript("OnEnter", function(self)
+        self:SetAlpha(1)
+        highlight(block, true)
+        local tip = self.spec and self.spec.tooltip
+        if not tip then return end
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        if type(tip) == "function" then tip(GameTooltip) else GameTooltip:SetText(tip) end
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function(self)
+        self:SetAlpha(BUTTON_IDLE)
+        highlight(block, false)
+        GameTooltip:Hide()
+    end)
+    block.buttons[index] = button
+    return button
+end
+
+-- Row 0 is the title; row n is the block's nth line. Returns each row's button count.
+local function rowButtons(data)
+    local rows = {}
+    for _, spec in ipairs(data.buttons or {}) do
+        local row = spec.line or 0
+        rows[row] = (rows[row] or 0) + 1
+    end
+    return rows
+end
+
+-- Packed against the block's right edge in list order, centred on the row's first text line.
+local function placeButtons(block, data, rowTops, size)
+    local used, packed = 0, {}
+    local buttons = data.buttons or {}
+    for index = #buttons, 1, -1 do
+        local spec = buttons[index]
+        local row = spec.line or 0
+        local top = rowTops[row]
+        if top then
+            used = used + 1
+            local button = acquireButton(block, used)
+            button.spec = spec
+            button:SetSize(size, size)
+            button.icon:SetTexture(spec.icon)
+            local coord = spec.texCoord
+            if coord then button.icon:SetTexCoord(coord[1], coord[2], coord[3], coord[4])
+            else button.icon:SetTexCoord(0, 1, 0, 1) end
+            local color = spec.color
+            if color then button.icon:SetVertexColor(color[1], color[2], color[3])
+            else button.icon:SetVertexColor(1, 1, 1) end
+            local x = packed[row] or 0
+            packed[row] = x + size + BUTTON_GAP
+            button:ClearAllPoints()
+            button:SetPoint("TOPRIGHT", block, "TOPRIGHT", -x, -top + 1)
+            -- Clickable exactly when its row is, like the borrowed item buttons.
+            button:EnableMouse(block:IsMouseEnabled())
+            button:Show()
+        end
+    end
+    for index = used + 1, #(block.buttons or {}) do
+        block.buttons[index].spec = nil
+        block.buttons[index]:Hide()
+    end
+end
+
 local function acquireLine(block, index)
     local line = block.lines[index]
     if line then return line end
@@ -609,7 +694,11 @@ local function fillBlock(block, data, width, size)
     block.title:SetFont(titlePath, size, titleFlags)
     -- WatchFrame_SetLine narrows an item quest's first two visual rows so they clear the button.
     local itemRows = data.hasItem and 0 or 2
-    block.title:SetWidth(itemRows < 2 and width - ITEM_WIDTH or width)
+    -- Each row's own buttons come off its text width, so the text never runs under them.
+    local buttonSize = size + 2
+    local rows = rowButtons(data)
+    local function reserve(row) return (rows[row] or 0) * (buttonSize + BUTTON_GAP) end
+    block.title:SetWidth((itemRows < 2 and width - ITEM_WIDTH or width) - reserve(0))
 
     -- WatchFrame chains its lines with a +FONTSPACING overlap, so a 16px row advances by 14.
     local spacing = (LINE_H - size) / 2
@@ -621,6 +710,7 @@ local function fillBlock(block, data, width, size)
     itemRows = itemRows + (titleHeight == MULTI_LINE_H and 2 or 1)
     local y = titleHeight - spacing
     local shown = 0
+    local rowTops = { [0] = 0 }
     for _, entry in ipairs(data.lines) do
         shown = shown + 1
         local line = acquireLine(block, shown)
@@ -631,7 +721,8 @@ local function fillBlock(block, data, width, size)
         line.dash:ClearAllPoints()
         -- Dash sits on the title's own left edge; only the text is pushed in by its width.
         line.dash:SetPoint("TOPLEFT", block, "TOPLEFT", 0, -y)
-        line.text:SetWidth(width - dashWidth - (itemRows < 2 and ITEM_WIDTH or 0))
+        line.text:SetWidth(width - dashWidth - (itemRows < 2 and ITEM_WIDTH or 0) - reserve(shown))
+        rowTops[shown] = y
         line.text:SetText(entry.text)
         line.text:ClearAllPoints()
         line.text:SetPoint("TOPLEFT", block, "TOPLEFT", dashWidth, -y)
@@ -647,6 +738,7 @@ local function fillBlock(block, data, width, size)
         block.lines[index].dash:Hide()
         block.lines[index].text:Hide()
     end
+    placeButtons(block, data, rowTops, buttonSize)
 
     block:SetWidth(width)
     block:SetHeight(math.max(y, BADGE_SIZE))
@@ -1018,6 +1110,7 @@ syncFadeHoverFrames = function()
         found[#found + 1] = block
         if block.badge then found[#found + 1] = block.badge end
         if block.poi then found[#found + 1] = block.poi end
+        for _, button in ipairs(block.buttons or {}) do found[#found + 1] = button end
     end
     for button in pairs(itemOwner) do found[#found + 1] = button end
     if header then found[#found + 1] = header.toggle end
