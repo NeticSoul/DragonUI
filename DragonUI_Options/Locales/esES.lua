@@ -366,8 +366,8 @@ L["Vertical offset from the cursor."] = "Desplazamiento vertical respecto al cur
 L["Show Aura Source"] = "Mostrar Origen de Aura"
 L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "Muestra el nombre del lanzador (con color de clase) en tooltips de beneficios y perjuicios."
 L["Aura Tooltips"] = "Tooltips de auras"
-L["Show Aura Spell ID"] = "Mostrar ID del hechizo"
-L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "Muestra el ID del hechizo en tooltips de beneficios y perjuicios. Requiere el módulo de Tooltip."
+L["Show Spell IDs"] = "Mostrar IDs de hechizo"
+L["Show spell IDs on aura, spell and chat-link tooltips. Requires the Tooltip module."] = "Muestra el ID del hechizo en tooltips de auras, hechizos y enlaces de chat. Requiere el módulo de Tooltip."
 
 -- Chat Mods
 L["Enable Chat Mods"] = "Activar Mods de Chat"

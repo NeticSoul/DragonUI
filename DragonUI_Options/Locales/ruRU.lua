@@ -348,8 +348,8 @@ L["Vertical offset from the cursor."] = "Вертикальное смещени
 L["Show Aura Source"] = "Показывать источник ауры"
 L["Show the caster's name (class-colored) on buff and debuff tooltips."] = "Показывать имя наложившего (цветом класса) в подсказках баффов и дебаффов."
 L["Aura Tooltips"] = "Подсказки аур"
-L["Show Aura Spell ID"] = "Показывать ID заклинания"
-L["Show the spell ID on buff and debuff tooltips. Requires the Tooltip module."] = "Показывать ID заклинания в подсказках баффов и дебаффов. Требуется модуль подсказок."
+L["Show Spell IDs"] = "Показывать ID заклинаний"
+L["Show spell IDs on aura, spell and chat-link tooltips. Requires the Tooltip module."] = "Показывать ID заклинания в подсказках аур, заклинаний и ссылок в чате. Требуется модуль подсказок."
 
 -- Chat Mods
 L["Enable Chat Mods"] = "Включить улучшения чата"
