@@ -684,6 +684,8 @@ local function UpdateRepairCostDisplay()
     -- The panel drives the label; no reason to price 19 slots while it is closed.
     local frame = EnsureRepairCostFrame()
     local tooltip = EnsureRepairTooltip()
+    -- A hidden tooltip loses its owner and stops reporting costs.
+    tooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
 
     local totalRepairCost = 0
     for _, frameName in ipairs(EQUIP_SLOT_FRAMES) do
