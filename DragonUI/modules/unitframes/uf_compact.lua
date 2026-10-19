@@ -283,7 +283,11 @@ function UF.CompactTargetName(dragon, healthWidth)
     return "BOTTOM", left + w / 2, dragon and 2 - UF.COMPACT.dragonDrop or 2, w, "CENTER"
 end
 
--- Crown and looter spots on PlayerFrame's TOPLEFT: today's, or right-aligned just left of a decoration's top.
+local function IconAt(spot, x)
+    return { x = x, y = spot.y, w = spot.w, h = spot.h }
+end
+
+-- Crown and looter spots on PlayerFrame's TOPLEFT: today's, or past a decoration's snout and Zzz.
 function UF.GetPlayerIcons()
     if not UF.IsCompact("player") then
         return UF.PLAYER_ICONS
@@ -291,22 +295,25 @@ function UF.GetPlayerIcons()
     local config = UF.GetConfig("player")
     local decoration = UF.PLAYER_DECORATIONS[config.dragon_decoration or "none"]
     local dragon = decoration and UF.GetCompactDragon(decoration.kind, decoration.set)
-    local key = dragon or false
-    local cache = UF.COMPACT.iconCache
-    if cache and cache.key == key then
-        return cache.icons
-    end
+    local spots = UF.PLAYER_ICONS
     local icons = {}
-    for k, v in pairs(UF.PLAYER_ICONS) do icons[k] = v end
+    for k, v in pairs(spots) do icons[k] = v end
     icons.role = UF.COMPACT.player.role
     if dragon then
-        -- The health bar's LEFT is 100 in; mirrored, the art's outer edge above the band is -top from the end: 3 clear.
-        local right = 100 - UF.COMPACT.plateEnd - dragon.top - 3
-        icons.master = { x = right - 16, y = -3.5, w = 16, h = 16 }
-        icons.leader = { x = right - 33, y = -3.5, w = 16, h = 16 }
-        icons.foreverLeader = { x = right - 33, y = -5.25, w = 16, h = 12.5 }
+        local step = spots.master.x - spots.leader.x
+        local span = step + spots.master.w
+        -- The health bar's LEFT is 100 in: the crown starts 2 past the Zzz rising from the snout.
+        local x, _, size = UF.CompactRestSpot(dragon)
+        local left = 100 + x + UF.COMPACT.restInk[2] * size + 2
+        local tab = _G.DragonUIPlayerGroupIndicator
+        if tab and tab:IsShown() and left + span > spots.tab.x - tab:GetWidth() - 1 then
+            -- No room before the raid tab: 3 clear of the dragon's back, whose outer edge is -top from the end.
+            left = 100 - UF.COMPACT.plateEnd - dragon.top - 3 - span
+        end
+        icons.leader = IconAt(spots.leader, left)
+        icons.foreverLeader = IconAt(spots.foreverLeader, left)
+        icons.master = IconAt(spots.master, left + step)
     end
-    UF.COMPACT.iconCache = { key = key, icons = icons }
     return icons
 end
 

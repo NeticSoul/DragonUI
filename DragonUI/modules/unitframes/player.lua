@@ -1882,21 +1882,26 @@ function PlayerArt.PlaceRestIcon()
     if UF.IsCompact("player") then
         local dragon = PlayerArt.CompactDragon()
         local x, y, size = UF.CompactRestSpot(dragon)
-        -- The crown and looter share the corner's row: the ink moves left of them and of Forever's badge.
-        if iconShown and not (dragon and dragon.nose) then
-            local right = UF.GetPlayerIcons().leader.x - 1
-            local badge = _G.DragonUIPlayerPvPCircle
-            if badge and badge:IsShown() then
-                right = math.min(right, UF.COMPACT.player.badgeLeft - 1)
-            end
-            -- PlayerFrame x to the health bar's (100 in).
-            x = right - 100 - UF.COMPACT.restInk[2] * size
-        end
+        local ink, spots = UF.COMPACT.restInk, UF.GetPlayerIcons()
         local tab = _G.DragonUIPlayerGroupIndicator
-        if tab and tab:IsShown() then
-            -- The tab hangs by its BOTTOMRIGHT, growing left with its text.
-            local tabLeft = UF.GetPlayerIcons().tab.x - tab:GetWidth()
-            x = math.min(x, tabLeft - 1 - 100 - UF.COMPACT.restInk[2] * size)
+        -- The tab hangs by its BOTTOMRIGHT, growing left with its text; x on PlayerFrame to the health bar's (100 in).
+        local tabLimit = tab and tab:IsShown() and spots.tab.x - tab:GetWidth() - 1 - 100 - ink[2] * size
+        -- The crown and looter share the corner's row: the ink rises right after them, or left if the tab is there.
+        if iconShown and not (dragon and dragon.nose) then
+            local leader = (PlayerLeaderIcon and PlayerLeaderIcon:IsShown()) or (PlayerGuideIcon and PlayerGuideIcon:IsShown())
+            local last = (PlayerMasterIcon and PlayerMasterIcon:IsShown()) and spots.master or spots.leader
+            x = last.x + last.w + 1 - 100 - ink[1] * size
+            if tabLimit and x > tabLimit then
+                local right = (leader and spots.leader or spots.master).x - 1
+                local badge = _G.DragonUIPlayerPvPCircle
+                if badge and badge:IsShown() then
+                    right = math.min(right, UF.COMPACT.player.badgeLeft - 1)
+                end
+                x = right - 100 - ink[2] * size
+            end
+        end
+        if tabLimit then
+            x = math.min(x, tabLimit)
         end
         PlayerRestIcon:SetSize(size, size)
         PlayerRestIcon:ClearAllPoints()
@@ -2422,9 +2427,11 @@ local function CreatePlayerFrameTextures()
         groupIndicator.text = text
         groupIndicator.backgroundTexture = bgTexture
         groupIndicator:Hide()
-        -- Portrait off, a decoration's Zzz rises beside the tab: it steps left of it while the tab shows.
+        -- Portrait off, the crown, looter and Zzz share the tab's row: they make room for it while it shows.
         local function OnTabToggled()
             if UF.IsCompact("player") and IsPlayerModuleEnabled() then
+                UpdateLeaderIconPosition()
+                UpdateMasterIconPosition()
                 PlayerArt.PlaceRestIcon()
             end
         end
