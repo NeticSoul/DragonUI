@@ -653,6 +653,8 @@ local function buildAchievements()
     local window = _G.AchievementFrame
     if not window or window._duiStockSkinned then return end
     window._duiStockSkinned = true
+    -- Built on ADDON_LOADED, which reaches achievement_search.lua's handler in no set order.
+    if not addon.AchievementSearch and addon.InstallAchievementSearch then addon.InstallAchievementSearch() end
 
     if window.SetBackdrop then window:SetBackdrop(nil) end
     hideNamed({
@@ -741,6 +743,10 @@ local function buildAchievements()
     placeAchievementToolbar(window)
     dressAchievementTabs(host)
     window:HookScript("OnShow", function() dressAchievementTabs(host) end)
+    -- Overachiever adds its tabs during the first show, after its own OnShow juggling (see hookWindows).
+    hooksecurefunc("PanelTemplates_SetNumTabs", function(frame)
+        if frame == window then dressAchievementTabs(host) end
+    end)
 
     -- Comparison writes its own x offsets (38 wide, 80 back) on show and hide; the bronze window
     -- keeps the left edge every other DragonUI window uses.
@@ -757,12 +763,15 @@ local BUILDERS = {
     { frame = "QuestLogFrame", build = buildQuestLog },
     { frame = "LFDParentFrame", build = buildLFD },
     { frame = "PVPParentFrame", build = buildPvP },
-    { frame = "AchievementFrame", build = buildAchievements },
+    { frame = "AchievementFrame", build = buildAchievements, atLoad = true },
     { frame = "GameMenuFrame", build = buildGameMenu },
 }
 
 -- Built on first open, like the Social window; only the panel offsets would matter before that and
 -- skinWindow sets them, so the first build also re-seats a window that is already up.
+-- `atLoad` windows are built as soon as they exist: Overachiever's first-show hook hides the
+-- Achievement window and shows it again with OnShow cleared, and the hooks after its own are skipped
+-- that once, so the first open stayed stock.
 local function hookWindows()
     for _, entry in ipairs(BUILDERS) do
         local window = _G[entry.frame]
@@ -776,7 +785,7 @@ local function hookWindows()
                 end
             end
             window:HookScript("OnShow", build)
-            if window:IsShown() then build() end
+            if entry.atLoad or window:IsShown() then build() end
         end
     end
 end
