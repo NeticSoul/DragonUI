@@ -330,11 +330,11 @@ end
 
 local function buildCloseButton(win, level)
     local close = CreateFrame("Button", "DragonUI_TalentFrameCloseButton", win, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", win, "TOPRIGHT", 1, 0)
+    addon.SeatCloseButton(close, win)
     close:SetFrameLevel(level)
     close:SetScript("OnClick", function() win:Hide() end)
     local CP = addon.CharacterPanel
-    if CP and CP.ModernizeCloseButton then CP.ModernizeCloseButton(close, win, 1, 0) end
+    if CP and CP.ModernizeCloseButton then CP.ModernizeCloseButton(close, win) end
 end
 
 local function regionTexture(win)

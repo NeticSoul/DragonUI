@@ -255,8 +255,7 @@ end
 
 local function buildClose(root)
     local close = CreateFrame("Button", "DragonUI_SpellbookFrameCloseButton", root, "SecureHandlerClickTemplate")
-    close:SetSize(24, 24)
-    close:SetPoint("TOPRIGHT", root, "TOPRIGHT", 1, 0)
+    addon.SeatCloseButton(close, root)
     close:SetFrameLevel(Book.Level("buttons"))
     close:RegisterForClicks("AnyUp")
     close:SetNormalTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
@@ -266,7 +265,7 @@ local function buildClose(root)
     SecureHandlerSetFrameRef(close, "root", root)
     close:SetAttribute("_onclick", [[self:GetFrameRef("root"):Hide()]])
     local CP = addon.CharacterPanel
-    if CP and CP.ModernizeCloseButton then CP.ModernizeCloseButton(close, root, 1, 0) end
+    if CP and CP.ModernizeCloseButton then CP.ModernizeCloseButton(close, root) end
 end
 
 local turners = {}

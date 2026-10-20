@@ -162,9 +162,8 @@ local function SkinCloseButton(button, compact)
         return
     end
 
-    button:SetSize(compact and 20 or 24, compact and 20 or 24)
-    button:ClearAllPoints()
-    button:SetPoint("TOPRIGHT", button:GetParent(), "TOPRIGHT", 1, 0)
+    -- Compact bags wear the chrome at 0.7, so the seat shrinks with it.
+    addon.SeatCloseButton(button, button:GetParent(), compact and 0.7 or 1)
 
     local normal = button:GetNormalTexture()
     if normal then

@@ -113,9 +113,11 @@ function CP.AnchorFilterDropdown(pane, btn)
         btn:SetPoint("TOPRIGHT", cf, "TOPRIGHT", FILTER_X - 6, -27)
         return
     end
+    -- From under the title band (24 down) to the list; the close button sits inside the band now,
+    -- so it no longer marks the strip's top. -5 is where its right edge used to put the filter.
     local band = CreateFrame("Frame", nil, pane)
     band:SetWidth(1)
-    band:SetPoint("TOPRIGHT", close, "BOTTOMRIGHT", FILTER_X, 0)
+    band:SetPoint("TOPRIGHT", cf, "TOPRIGHT", FILTER_X + 1, -24)
     band:SetPoint("BOTTOMRIGHT", pane, "TOPRIGHT", FILTER_X, 0)
     btn:SetPoint("RIGHT", band, "RIGHT", 0, 0)
 end

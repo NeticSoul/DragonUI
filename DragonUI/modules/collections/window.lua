@@ -59,9 +59,9 @@ local function buildChrome()
     title:SetPoint("TOP", frame, "TOP", 0, -5)
 
     local close = CreateFrame("Button", FRAME_NAME .. "CloseButton", frame, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 1, 0)
+    addon.SeatCloseButton(close, frame)
     if CP() and CP().ModernizeCloseButton then
-        CP().ModernizeCloseButton(close, frame, 1, 0)
+        CP().ModernizeCloseButton(close, frame)
     end
 end
 

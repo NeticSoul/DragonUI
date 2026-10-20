@@ -195,15 +195,25 @@ local function applyNineSlice(cf)
     cf._duiNineSlice = true
 end
 
--- Shared so any window we reskin closes with the same button.
+-- Shared so any window we reskin closes with the same button. Without x, y it takes the bronze
+-- band's seat (addon.SeatCloseButton). (1, 0) was the seat on the old steel frame and the addons
+-- that borrow this button still pass it, so it means the band seat too; any other x, y is a 24
+-- button at that offset, for chrome without the band.
 function CP.ModernizeCloseButton(cb, owner, x, y)
     if not cb or cb._duiModernized then return end
     cb._duiModernized = true
 
-    cb:SetSize(24, 24)
-    cb._duiOwner, cb._duiX, cb._duiY = owner, x or 1, y or 0
-    cb:ClearAllPoints()
-    cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", cb._duiX, cb._duiY)
+    local seat = addon.WindowSeat
+    cb._duiOwner = owner
+    if x == nil or (x == 1 and (y or 0) == 0) then
+        addon.SeatCloseButton(cb, owner)
+        cb._duiX, cb._duiY = seat.closeX, seat.closeY
+    else
+        cb:SetSize(24, 24)
+        cb._duiX, cb._duiY = x, y or 0
+        cb:ClearAllPoints()
+        cb:SetPoint("TOPRIGHT", owner, "TOPRIGHT", cb._duiX, cb._duiY)
+    end
 
     -- All four UIPanelCloseButtonNoScripts states; 41..79 on this sheet is disabled, not pushed.
     local function dress(getter, l, r, t, b, blend)

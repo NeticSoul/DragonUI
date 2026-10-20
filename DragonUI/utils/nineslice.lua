@@ -267,9 +267,35 @@ local function applyLayout(container, layout, textureKit)
 	end
 end
 
+-- Where things sit inside the bronze windows: every layout above whose top-right is the band corner
+-- at (2, 16). Measured from chrome-frame.tga, the rails' inner edges run 4.5 in from the left and
+-- bottom and 5.5 in from the right, and the band's open stone runs 2 to 20 below the top. A 16 close
+-- button at (-6.5, -3) leaves 1 unit of stone above, below and right of it; the 24 it used to be
+-- rode over the rails. Bottom-row buttons and insets keep `gap` inside the rails.
+local seat = { closeSize = 16, closeX = -6.5, closeY = -3, left = 4.5, right = -5.5, bottom = 4.5, gap = 3 }
+seat.buttonLeft = seat.left + seat.gap
+seat.buttonRight = seat.right - seat.gap
+seat.buttonBottom = seat.bottom + seat.gap
+addon.WindowSeat = seat
+
+-- Sizes and anchors a close button in `owner`'s band; `scale` shrinks it with a scaled frame (the
+-- compact bags). The art runs edge to edge, so the click area grows back out over the rails.
+function addon.SeatCloseButton(button, owner, scale)
+	if not (button and owner) then return end
+	local s = scale or 1
+	button:SetSize(seat.closeSize * s, seat.closeSize * s)
+	button:ClearAllPoints()
+	button:SetPoint("TOPRIGHT", owner, "TOPRIGHT", seat.closeX * s, seat.closeY * s)
+	if button.SetHitRectInsets then
+		button:SetHitRectInsets(-1 * s, -4 * s, -4 * s, -4 * s)
+	end
+end
+
 _G.DragonUI_NineSlice = {
 	ApplyLayout = applyLayout,
 	GetLayout = getLayout,
+	Seat = seat,
+	SeatCloseButton = addon.SeatCloseButton,
 }
 
 local function inheritedAttribute(frame, key)

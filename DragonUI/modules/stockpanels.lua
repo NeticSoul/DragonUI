@@ -289,6 +289,20 @@ local QUEST_LIST_INSET = { 14, -70, -340, 37 }
 -- Parchment, not marble: QuestInfo writes its text in the dark ink of the stock paper pane.
 local QUEST_DETAIL_INSET = { 349, -70, -8, 37, parchment = true }
 
+-- The bottom row lines up under the insets' outer edges and sits the seat's height above the rail
+-- (stock it hung 13 in from the left and 1.5 off the right rail). The control panel is 26 tall with
+-- its 21 buttons centred 1 high, so it sits 3.5 under their bottom edge.
+local QUEST_ROW_BOTTOM = 2 + addon.WindowSeat.buttonBottom
+local QUEST_PANEL_X, QUEST_PANEL_Y = QUEST_LIST_INSET[1], QUEST_ROW_BOTTOM - 3.5
+
+-- Blizzard re-anchors the panel each time the log or the detached detail window shows or hides.
+local function placeQuestControls()
+    local panel, window = _G.QuestLogControlPanel, _G.QuestLogFrame
+    if not (panel and window and window._duiStockSkinned) or panel:GetParent() ~= window then return end
+    panel:ClearAllPoints()
+    panel:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", QUEST_PANEL_X, QUEST_PANEL_Y)
+end
+
 local function buildQuestLog()
     local window = _G.QuestLogFrame
     if not window or window._duiStockSkinned then return end
@@ -302,14 +316,33 @@ local function buildQuestLog()
         insets = { QUEST_LIST_INSET, QUEST_DETAIL_INSET },
     })
     dressScrollBar("QuestLogDetailScrollFrame", 8)
+
+    local cancel = _G.QuestLogFrameCancelButton
+    if cancel then
+        cancel:ClearAllPoints()
+        cancel:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", QUEST_DETAIL_INSET[3], QUEST_ROW_BOTTOM)
+    end
+    if _G.QuestLogControlPanel_UpdatePosition then
+        hooksecurefunc("QuestLogControlPanel_UpdatePosition", placeQuestControls)
+    end
+    placeQuestControls()
 end
 
 -- ============================================================================
 -- DUNGEON FINDER (355x440; the art's frame runs 12 in from the top-left)
 -- ============================================================================
 
--- Under the random/specific panes, from just below the Type dropdown to above the bottom buttons.
-local LFD_INSET = { 16, -152, -10, 30 }
+local LFD_RECT = { 12, -12, -6, 2 }
+local LFD_BUTTON_H = 22
+
+-- Under the random/specific panes, from just below the Type dropdown to 3 above the bottom buttons,
+-- which keep the seat's gap inside the rails (nineslice.lua).
+local function lfdInsetBottom()
+    local seat = addon.WindowSeat
+    return LFD_RECT[4] + seat.buttonBottom + LFD_BUTTON_H + seat.gap
+end
+-- Random's scroll frame is 298x253 at BOTTOMRIGHT -34,30: it keeps its top and ends on the inset.
+local LFD_RANDOM_SCROLL = { right = -34, top = 283 + 30 }
 
 local function buildLFD()
     local window = _G.LFDParentFrame
@@ -318,13 +351,41 @@ local function buildLFD()
 
     -- The parchment goes too: its text is white and gold, written for the dark inset it now sits on.
     hideNamed({ "LFDQueueFrameLayout", "LFDQueueFrameBackground", "LFDParentFramePortrait" })
-    skinWindow(window, {
-        rect = { 12, -12, -6, 2 },
+    local host = skinWindow(window, {
+        rect = LFD_RECT,
         hit = { 12, 6, 12, 2 },
         title = _G.LFDQueueFrameTitleText,
         close = _G.LFDParentFrameCloseButton,
-        insets = { LFD_INSET },
     })
+    local insetBottom = lfdInsetBottom()
+    local inset = addInset(window, { 16, -152, -10, insetBottom })
+    local scroll = _G.LFDQueueFrameRandomScrollFrame
+    if scroll then
+        scroll:ClearAllPoints()
+        scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", LFD_RANDOM_SCROLL.right, insetBottom)
+        scroll:SetHeight(LFD_RANDOM_SCROLL.top - insetBottom)
+    end
+
+    -- Stock, both buttons sit on the bottom rail and Close half into the right one.
+    local seat = addon.WindowSeat
+    local find, cancel = _G.LFDQueueFrameFindGroupButton, _G.LFDQueueFrameCancelButton
+    if find then
+        find:ClearAllPoints()
+        find:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", seat.buttonLeft, seat.buttonBottom)
+    end
+    if cancel then
+        cancel:ClearAllPoints()
+        cancel:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", seat.buttonRight, seat.buttonBottom)
+    end
+    -- The cooldown and backfill covers take mouse input and ended where the buttons began; on the
+    -- inset they cover the panes without reaching the raised buttons.
+    for _, name in ipairs({ "LFDQueueFrameCooldownFrame", "LFDQueueFramePartyBackfill" }) do
+        local cover = _G[name]
+        if cover then
+            cover:ClearAllPoints()
+            cover:SetAllPoints(inset)
+        end
+    end
 end
 
 -- ============================================================================

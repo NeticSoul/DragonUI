@@ -750,9 +750,8 @@ local function SkinCloseButton()
     end
 
     Reparent(button, panel)
-    Resize(button, 24, 24)
-    button:ClearAllPoints()
-    button:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 1, 0)
+    Resize(button, addon.WindowSeat.closeSize, addon.WindowSeat.closeSize)
+    addon.SeatCloseButton(button, panel)
 
     local normal = button:GetNormalTexture()
     if normal then

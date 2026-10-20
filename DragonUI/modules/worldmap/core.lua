@@ -365,7 +365,7 @@ local function buildChrome()
     local close = WorldMapFrameCloseButton
     close:SetFrameStrata("HIGH")
     close:SetFrameLevel(BASE_LEVEL + 5)
-    CP().ModernizeCloseButton(close, border, 1, 0)
+    CP().ModernizeCloseButton(close, border)
 
     WM.maxMin = WM.BuildMaxMinButton(border, close)
     WM.sideToggle = WM.BuildSideToggle(border)
@@ -389,8 +389,9 @@ end
 
 function WM.BuildMaxMinButton(border, close)
     local button = CreateFrame("Button", "DragonUIWorldMapMaximizeButton", border)
-    button:SetSize(24, 24)
-    button:SetPoint("RIGHT", close, "LEFT", -1, 0)
+    -- The close button's size, two units clear of it.
+    button:SetSize(addon.WindowSeat.closeSize, addon.WindowSeat.closeSize)
+    button:SetPoint("RIGHT", close, "LEFT", -2, 0)
     button:SetFrameLevel(BASE_LEVEL + 5)
     button:SetNormalTexture(ROCK)
     button:SetPushedTexture(ROCK)
@@ -497,8 +498,7 @@ local function onWindowedChanged()
         retireBlizzardWidgets()
         WM.Place()
         -- Both size toggles re-anchor the close button to the chrome they just showed.
-        WorldMapFrameCloseButton:ClearAllPoints()
-        WorldMapFrameCloseButton:SetPoint("TOPRIGHT", WM.border, "TOPRIGHT", 1, 0)
+        addon.SeatCloseButton(WorldMapFrameCloseButton, WM.border)
         WM.Layout(true)
     else
         WM.border:Hide()
