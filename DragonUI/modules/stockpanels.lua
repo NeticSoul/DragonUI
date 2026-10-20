@@ -8,6 +8,7 @@ local ipairs = ipairs
 local type = type
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
+local hooksecurefunc = hooksecurefunc
 local UpdateUIPanelPositions = UpdateUIPanelPositions
 
 -- The stock windows DragonUI has no window of its own for: Quest Log, Dungeon Finder, PvP and the
@@ -335,14 +336,91 @@ end
 local LFD_RECT = { 12, -12, -6, 2 }
 local LFD_BUTTON_H = 22
 
--- Under the random/specific panes, from just below the Type dropdown to 3 above the bottom buttons,
--- which keep the seat's gap inside the rails (nineslice.lua).
-local function lfdInsetBottom()
+-- Top to bottom under the band: the role row, the Type row, then one inset holding the random and
+-- specific panes. The 48 role buttons' 80 glows run from the band's bottom edge (32 down) to the
+-- top of the Type row's art.
+local LFD_ROLE_TOP, LFD_ROLE_GAP = -48, 24
+local LFD_ROLES = { "Tank", "Healer", "DPS", "Leader" }
+local LFD_TYPE_Y = -124 -- centre of the Type row
+local LFD_INSET_TOP = -144
+local LFD_PAD = 4 -- the panes inside the inset
+-- LFDQueueFrameTypeDropDown_SetUp sizes the menu 180, so the frame is 230: its art starts 18 in from
+-- the frame's left and ends 20 short of its right (measured from an in-game screenshot).
+local LFD_TYPE_FRAME_W, LFD_TYPE_ART_LEFT, LFD_TYPE_ART_RIGHT = 230, 18, 20
+local LFD_TYPE_LABEL_GAP = 6
+-- The minimal bar (characterpanel/scrollbar.lua) is 8 wide; both panes end it LFD_PAD inside.
+local LFD_BAR_W = 8
+-- Stock rows are 315 wide, or 295 beside the list's bar: both lose what the inset's padding takes.
+local LFD_ROW_TRIM = 2
+
+-- Everything inside keeps the seat's gap off the rails (nineslice.lua), as the bottom buttons do.
+-- Returns the content's left, right and bottom offsets from the window's corners.
+local function lfdContent()
     local seat = addon.WindowSeat
-    return LFD_RECT[4] + seat.buttonBottom + LFD_BUTTON_H + seat.gap
+    return LFD_RECT[1] + seat.left + seat.gap,
+        LFD_RECT[3] + seat.right - seat.gap,
+        LFD_RECT[4] + seat.buttonBottom + LFD_BUTTON_H + seat.gap
 end
--- Random's scroll frame is 298x253 at BOTTOMRIGHT -34,30: it keeps its top and ends on the inset.
-local LFD_RANDOM_SCROLL = { right = -34, top = 283 + 30 }
+
+-- LFDParentFrame's close button is the one child the XML leaves unnamed.
+local function lfdCloseButton(window)
+    for _, child in ipairs({ window:GetChildren() }) do
+        local isButton = child:GetObjectType() == "Button"
+        if isButton and fileOf(child:GetNormalTexture()):find("ui%-panel%-minimizebutton") then
+            return child
+        end
+    end
+end
+
+-- Stock the roles start 65 in with gaps of 25, 23 and 32: centred on the content with even gaps.
+local function placeRoles(window, centre)
+    local buttons, total = {}, 0
+    for _, role in ipairs(LFD_ROLES) do
+        local button = _G["LFDQueueFrameRoleButton" .. role]
+        if button then
+            buttons[#buttons + 1] = button
+            total = total + button:GetWidth()
+        end
+    end
+    if #buttons == 0 then return end
+    total = total + LFD_ROLE_GAP * (#buttons - 1)
+    for i, button in ipairs(buttons) do
+        button:ClearAllPoints()
+        if i == 1 then
+            button:SetPoint("TOPLEFT", window, "TOPLEFT", centre - total / 2, LFD_ROLE_TOP)
+        else
+            button:SetPoint("LEFT", buttons[i - 1], "RIGHT", LFD_ROLE_GAP, 0)
+        end
+    end
+end
+
+-- Stock the label hung 115 wide off the menu's transparent left and the menu ran onto the right
+-- rail; now "Type:" and the menu's art are one row, centred.
+local function placeTypeRow(window, centre)
+    local menu, label = _G.LFDQueueFrameTypeDropDown, _G.LFDQueueFrameTypeDropDownName
+    if not menu then return end
+    local labelW = label and label:GetStringWidth() or 0
+    local artW = LFD_TYPE_FRAME_W - LFD_TYPE_ART_LEFT - LFD_TYPE_ART_RIGHT
+    local rowLeft = centre - (labelW + LFD_TYPE_LABEL_GAP + artW) / 2
+    menu:ClearAllPoints()
+    menu:SetPoint("LEFT", window, "TOPLEFT",
+        rowLeft + labelW + LFD_TYPE_LABEL_GAP - LFD_TYPE_ART_LEFT, LFD_TYPE_Y)
+    if label then
+        label:ClearAllPoints()
+        label:SetPoint("RIGHT", menu, "LEFT", LFD_TYPE_ART_LEFT - LFD_TYPE_LABEL_GAP, 2)
+    end
+end
+
+local function trimSpecificRows()
+    local scroll = _G.LFDQueueFrameSpecificListScrollFrame
+    local count = _G.NUM_LFD_CHOICE_BUTTONS or 15
+    for i = 1, count do
+        local row = _G["LFDQueueFrameSpecificListButton" .. i]
+        if row then
+            row:SetWidth((scroll and scroll:IsShown() and 295 or 315) - 2 * LFD_ROW_TRIM)
+        end
+    end
+end
 
 local function buildLFD()
     local window = _G.LFDParentFrame
@@ -355,15 +433,44 @@ local function buildLFD()
         rect = LFD_RECT,
         hit = { 12, 6, 12, 2 },
         title = _G.LFDQueueFrameTitleText,
-        close = _G.LFDParentFrameCloseButton,
+        close = lfdCloseButton(window),
     })
-    local insetBottom = lfdInsetBottom()
-    local inset = addInset(window, { 16, -152, -10, insetBottom })
+
+    local left, right, bottom = lfdContent()
+    local centre = (left + window:GetWidth() + right) / 2
+    placeRoles(window, centre)
+    placeTypeRow(window, centre)
+    local inset = addInset(window, { left, LFD_INSET_TOP, right, bottom })
+
+    -- Random: one scroll pane inside the inset, the minimal bar LFD_BAR_W right of it in place of
+    -- the stock gutter.
+    local paneTop, paneBottom = LFD_INSET_TOP - LFD_PAD, bottom + LFD_PAD
+    local barLeft = right - LFD_PAD - LFD_BAR_W -- from the window's right, like `right`
     local scroll = _G.LFDQueueFrameRandomScrollFrame
     if scroll then
         scroll:ClearAllPoints()
-        scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", LFD_RANDOM_SCROLL.right, insetBottom)
-        scroll:SetHeight(LFD_RANDOM_SCROLL.top - insetBottom)
+        scroll:SetPoint("TOPLEFT", window, "TOPLEFT", left + LFD_PAD, paneTop)
+        scroll:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", barLeft - LFD_BAR_W, paneBottom)
+        dressScrollBar("LFDQueueFrameRandomScrollFrame", LFD_BAR_W)
+    end
+
+    -- Specific: the 16-tall rows start under the inset's top; their faux scroll frame spans them 7
+    -- over and under, so the first row drops 7 more to keep that frame inside the inset too.
+    local first = _G.LFDQueueFrameSpecificListButton1
+    if first then
+        first:ClearAllPoints()
+        first:SetPoint("TOPLEFT", window, "TOPLEFT", left + LFD_PAD, paneTop - 7)
+    end
+    if _G.LFDQueueFrameSpecificList_Update then
+        hooksecurefunc("LFDQueueFrameSpecificList_Update", trimSpecificRows)
+    end
+    trimSpecificRows()
+    local list = _G.LFDQueueFrameSpecificListScrollFrame
+    if list then
+        -- The bar ends where Random's does: the frame's right is the 293 rows' plus 1.
+        local listRight = left + LFD_PAD + 295 - 2 * LFD_ROW_TRIM + 1
+        local barX = window:GetWidth() + barLeft - listRight
+        dressScrollBar("LFDQueueFrameSpecificListScrollFrame", barX)
     end
 
     -- Stock, both buttons sit on the bottom rail and Close half into the right one.
@@ -377,9 +484,10 @@ local function buildLFD()
         cancel:ClearAllPoints()
         cancel:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", seat.buttonRight, seat.buttonBottom)
     end
-    -- The cooldown and backfill covers take mouse input and ended where the buttons began; on the
-    -- inset they cover the panes without reaching the raised buttons.
-    for _, name in ipairs({ "LFDQueueFrameCooldownFrame", "LFDQueueFramePartyBackfill" }) do
+    -- The cooldown, backfill and raid-finder covers take mouse input and ended where the buttons
+    -- began; on the inset they cover the panes without reaching the raised buttons.
+    local covers = { "LFDQueueFrameCooldownFrame", "LFDQueueFramePartyBackfill", "LFDQueueFrameNoLFDWhileLFR" }
+    for _, name in ipairs(covers) do
         local cover = _G[name]
         if cover then
             cover:ClearAllPoints()

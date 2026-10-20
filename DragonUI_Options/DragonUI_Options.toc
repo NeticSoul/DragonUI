@@ -2,7 +2,7 @@
 ## Title: |cff1784d1DragonUI|r |cffffffffOptions|r
 ## Notes: |cffcaf7faConfiguration UI for DragonUI|r
 ## Author: NeticSoul
-## Version: 2.15.0
+## Version: 2.15.1
 ## LoadOnDemand: 1
 ## Dependencies: DragonUI
 ## X-License: MIT for project-authored code; Blizzard art, fonts and bundled libraries keep their own terms (see THIRD_PARTY_NOTICES)
