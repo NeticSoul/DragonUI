@@ -66,9 +66,20 @@ local QUALITY_BORDER_COLORS = {
 local WIDTH, HEIGHT = 338, 424
 -- Retail's InboxFrame/SendMailFrame stay 384x512 behind a 338x424 window; ours fill the window.
 local RETAIL_DROP, RETAIL_WIDEN = 512 - HEIGHT, 384 - WIDTH
-local INSET_INBOX = { 4, -58, -6, 4 }
-local INSET_SEND  = { 4, -80, -6, 26 }
-local INSET_OPEN  = { 4, -80, -6, 26 }
+-- Insets and bottom-row buttons keep the seat's gap inside the bronze rails (nineslice.lua); the
+-- Send and Open panes sit 3 above their 23-tall bottom row, and what used to stand on the old inset
+-- bottom (26) is lifted with it.
+local SEAT = addon.WindowSeat
+local SEAT_LEFT, SEAT_RIGHT, SEAT_BOTTOM = SEAT.buttonLeft, SEAT.buttonRight, SEAT.buttonBottom
+local ROW_BOTTOM_H = 23
+local PANE_BOTTOM = SEAT_BOTTOM + ROW_BOTTOM_H + SEAT.gap
+local PANE_LIFT = PANE_BOTTOM - 26
+local INSET_INBOX = { SEAT_LEFT, -58, SEAT_RIGHT, SEAT_BOTTOM }
+local INSET_SEND  = { SEAT_LEFT, -80, SEAT_RIGHT, PANE_BOTTOM }
+local INSET_OPEN  = { SEAT_LEFT, -80, SEAT_RIGHT, PANE_BOTTOM }
+-- The stock 296 letter panes started 8 in, on the inset's edge now; they keep their right side (the
+-- bar's arrows end 3 inside the inset) and start 4 inside it.
+local LETTER_X, LETTER_W = SEAT_LEFT + 4, 296 - (SEAT_LEFT + 4 - 8)
 local PANEL_X_NUDGE = 6
 local ATTACHMENTS_MAX = _G.ATTACHMENTS_MAX or 16
 local ATTACHMENTS_MAX_RECEIVE = _G.ATTACHMENTS_MAX_RECEIVE or 16
@@ -383,7 +394,8 @@ end
 -- and hangs the expiry 10px past the row, DoNotWant hangs a return/delete icon under the expiry.
 -- In this narrower window that lands on the border and over long subjects, so the rows are
 -- re-laid on every refresh (Postal sets its points once, on enable).
-local ROW_X, ROW_Y, ROW_WIDTH = 13, -70, 305
+-- Centred in the inset, 8.5 clear of each side.
+local ROW_X, ROW_Y, ROW_WIDTH = 16, -70, 305
 local CHECKBOX_INDENT = 22
 local SUBJECT_X = 47
 local function layoutInboxRows()
@@ -412,7 +424,7 @@ local function layoutInboxRows()
     local openAll = _G.PostalOpenAllButton
     if openAll and not openAll._duiPlaced then
         openAll._duiPlaced = true
-        place(openAll, "CENTER", inbox, "BOTTOM", -14, 26)
+        place(openAll, "CENTER", inbox, "BOTTOM", -14, 27)
     end
 end
 
@@ -831,10 +843,10 @@ local function afterSendMailUpdate()
     local gapY1, gapY2 = 5, 6
     local height = gapY2 * 2 + gapY1 * (ranks - 1) + iconY * ranks
     local indentX = 14 + gapX2
-    local indentY = 170 - RETAIL_DROP + gapY2 + iconY
+    local indentY = 170 - RETAIL_DROP + PANE_LIFT + gapY2 + iconY
     local stepX = iconX + gapX1 - 2
     local stepY = iconY + gapY1
-    local scrollHeight = 249 - height
+    local scrollHeight = 249 - PANE_LIFT - height
 
     if _G.SendMailScrollFrame then
         _G.SendMailScrollFrame:SetHeight(scrollHeight)
@@ -844,7 +856,7 @@ local function afterSendMailUpdate()
     end
     if _G.SendMailHorizontalBarLeft2 then
         _G.SendMailHorizontalBarLeft2:ClearAllPoints()
-        _G.SendMailHorizontalBarLeft2:SetPoint("TOPLEFT", sendFrame, "BOTTOMLEFT", 2, 184 - RETAIL_DROP + height)
+        _G.SendMailHorizontalBarLeft2:SetPoint("TOPLEFT", sendFrame, "BOTTOMLEFT", 2, 184 - RETAIL_DROP + PANE_LIFT + height)
     end
     if _G.SendStationeryBackgroundLeft then
         _G.SendStationeryBackgroundLeft:SetHeight(math_min(scrollHeight, 256))
@@ -918,13 +930,13 @@ local function afterOpenMailUpdate()
     local textH = attachText:GetHeight() or 12
     local height = gapY2 + textH + gapY2 + iconY * ranks + gapY1 * (ranks - 1) + gapY2
     local indentX = 14 + gapX2
-    local indentY = 28 + gapY2
+    local indentY = 28 + PANE_LIFT + gapY2
     local stepX = iconX + gapX1 + 6
     local stepY = iconY + gapY1
-    local scrollHeight = 305 - height
+    local scrollHeight = 305 - PANE_LIFT - height
     if scrollHeight > 256 then
         scrollHeight = 256
-        height = 305 - scrollHeight
+        height = 305 - PANE_LIFT - scrollHeight
     end
 
     if _G.OpenMailScrollFrame then
@@ -935,7 +947,7 @@ local function afterOpenMailUpdate()
     end
     if _G.OpenMailHorizontalBarLeft then
         _G.OpenMailHorizontalBarLeft:ClearAllPoints()
-        _G.OpenMailHorizontalBarLeft:SetPoint("TOPLEFT", openFrame, "BOTTOMLEFT", 2, 39 + height)
+        _G.OpenMailHorizontalBarLeft:SetPoint("TOPLEFT", openFrame, "BOTTOMLEFT", 2, 39 + PANE_LIFT + height)
     end
     if _G.OpenStationeryBackgroundLeft then
         _G.OpenStationeryBackgroundLeft:SetHeight(scrollHeight)
@@ -1018,7 +1030,8 @@ local function buildMailFrame()
         local bg = inbox:CreateTexture(nil, "BACKGROUND")
         bg:SetTexture(INBOX_BG)
         bg:SetSize(512, 512)
-        bg:SetPoint("TOPLEFT", inbox, "TOPLEFT", 7, -62)
+        -- The 320x356 parchment, 1 inside the inset's sides and 2 below its top.
+        bg:SetPoint("TOPLEFT", inbox, "TOPLEFT", SEAT_LEFT + 1, -60)
         inbox._duiBg = bg
 
         dressTitle(mailFrame, _G.InboxTitleText)
@@ -1027,13 +1040,14 @@ local function buildMailFrame()
             neuterTexture(_G.InboxCurrentPage)
         end
         layoutInboxRows()
-        place(_G.InboxPrevPageButton, "BOTTOMLEFT", inbox, "BOTTOMLEFT", 14, 10)
-        place(_G.InboxNextPageButton, "BOTTOMRIGHT", inbox, "BOTTOMRIGHT", -14, 10)
+        -- Inside the inset, the same 7.5 from each side and 3.5 off its bottom.
+        place(_G.InboxPrevPageButton, "BOTTOMLEFT", inbox, "BOTTOMLEFT", SEAT_LEFT + 7.5, SEAT_BOTTOM + 3.5)
+        place(_G.InboxNextPageButton, "BOTTOMRIGHT", inbox, "BOTTOMRIGHT", SEAT_RIGHT - 7.5, SEAT_BOTTOM + 3.5)
 
         if not openAllBtn then
             openAllBtn = CreateFrame("Button", "DragonUIOpenAllMailButton", inbox, "UIPanelButtonTemplate")
             skinActionButton(openAllBtn, 120, 24)
-            openAllBtn:SetPoint("CENTER", inbox, "BOTTOM", 0, 26)
+            openAllBtn:SetPoint("CENTER", inbox, "BOTTOM", 0, SEAT_BOTTOM + 3.5 + 16)
             openAllBtn:SetText(localized("Open All"))
             openAllBtn:SetScript("OnClick", StartOpenAll)
             -- Like retail's OpenAllMailMixin: leaving the inbox (tab switch, close) ends the run.
@@ -1072,11 +1086,12 @@ local function buildMailFrame()
         place(_G.SendMailCostMoneyFrame, "TOPRIGHT", sendFrame, "TOPRIGHT", RETAIL_WIDEN - 50, -34)
 
         if _G.SendMailScrollFrame then
-            place(_G.SendMailScrollFrame, "TOPLEFT", sendFrame, "TOPLEFT", 8, -83)
+            place(_G.SendMailScrollFrame, "TOPLEFT", sendFrame, "TOPLEFT", LETTER_X, -83)
+            _G.SendMailScrollFrame:SetWidth(LETTER_W)
             styleMailScrollBar(_G.SendMailScrollFrame, sendFrame, -4, 3)
         end
 
-        place(_G.SendMailMoneyButton, "BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 15, 125 - RETAIL_DROP)
+        place(_G.SendMailMoneyButton, "BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 15, 125 - RETAIL_DROP + PANE_LIFT)
         if _G.SendMailMoney then
             place(_G.SendMailSendMoneyButton, "TOPLEFT", _G.SendMailMoney, "TOPRIGHT", 20, 12)
         end
@@ -1084,8 +1099,9 @@ local function buildMailFrame()
         local moneyInset = CreateFrame("Frame", nil, sendFrame)
         moneyInset:EnableMouse(false)
         moneyInset:SetFrameLevel(level + 1)
-        moneyInset:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 4, 92 - RETAIL_DROP)
-        moneyInset:SetPoint("TOPRIGHT", sendFrame, "BOTTOMLEFT", 170, 115 - RETAIL_DROP)
+        -- On the seat beside Send / Cancel, 3 clear of them: 159 wide, the room the row leaves.
+        moneyInset:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", SEAT_LEFT, SEAT_BOTTOM)
+        moneyInset:SetPoint("TOPRIGHT", sendFrame, "BOTTOMLEFT", SEAT_LEFT + 159, SEAT_BOTTOM + ROW_BOTTOM_H)
         -- 23 tall: too short for the full trim's corners, which would cross and invert its edges.
         applySlices(moneyInset, "SmallInsetFrameTemplate")
         local moneyMarble = sendFrame:CreateTexture(nil, "BACKGROUND")
@@ -1095,8 +1111,8 @@ local function buildMailFrame()
         moneyMarble:SetAllPoints(moneyInset)
 
         local moneyBg = buildGoldEdge(sendFrame, level + 2)
-        moneyBg:SetPoint("BOTTOMLEFT", sendFrame, "BOTTOMLEFT", 7, 94 - RETAIL_DROP)
-        moneyBg:SetPoint("TOPRIGHT", sendFrame, "BOTTOMLEFT", 166, 113 - RETAIL_DROP)
+        moneyBg:SetPoint("BOTTOMLEFT", moneyInset, "BOTTOMLEFT", 3, 2)
+        moneyBg:SetPoint("TOPRIGHT", moneyInset, "TOPRIGHT", -4, -2)
 
         -- SmallMoneyFrameTemplate parks the copper coin 13px inside its right edge: 5px clear of the rim.
         if _G.SendMailMoneyFrame then
@@ -1108,7 +1124,7 @@ local function buildMailFrame()
         end
 
         if _G.SendMailCancelButton then
-            place(_G.SendMailCancelButton, "BOTTOMRIGHT", sendFrame, "BOTTOMRIGHT", RETAIL_WIDEN - 53, 92 - RETAIL_DROP)
+            place(_G.SendMailCancelButton, "BOTTOMRIGHT", sendFrame, "BOTTOMRIGHT", SEAT_RIGHT, SEAT_BOTTOM)
             skinActionButton(_G.SendMailCancelButton, 80, 22)
         end
         if _G.SendMailMailButton and _G.SendMailCancelButton then
@@ -1177,12 +1193,13 @@ local function buildMailFrame()
         end
 
         if _G.OpenMailScrollFrame then
-            place(_G.OpenMailScrollFrame, "TOPLEFT", openFrame, "TOPLEFT", 8, -84)
+            place(_G.OpenMailScrollFrame, "TOPLEFT", openFrame, "TOPLEFT", LETTER_X, -84)
+            _G.OpenMailScrollFrame:SetWidth(LETTER_W)
             styleMailScrollBar(_G.OpenMailScrollFrame, openFrame, -3, 5)
         end
 
         if _G.OpenMailCancelButton then
-            place(_G.OpenMailCancelButton, "BOTTOMRIGHT", openFrame, "BOTTOMRIGHT", -6, 4)
+            place(_G.OpenMailCancelButton, "BOTTOMRIGHT", openFrame, "BOTTOMRIGHT", SEAT_RIGHT, SEAT_BOTTOM)
             skinActionButton(_G.OpenMailCancelButton, 80, 22)
         end
         if _G.OpenMailDeleteButton and _G.OpenMailCancelButton then

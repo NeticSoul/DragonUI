@@ -41,7 +41,9 @@ local VIEW_LEFT = 4
 local VIEW_TOP = 22
 -- Clips this much lower than retail: at 22 the rows draw over the trim on their way out.
 local CLIP_TRIM = 1
-local VIEW_BOTTOM = 4
+-- Rows scrolling out stop the window seat's gap above the bottom rail (nineslice.lua); at 4 they
+-- drew onto it. Sideways nothing reaches the clip's edges: the centred rows clear both rails by 3.5+.
+local VIEW_BOTTOM = addon.WindowSeat.buttonBottom
 local VIEW_WIDTH = 214
 local LIST_PAD = 6
 local ROW_HEIGHT = 46

@@ -413,7 +413,7 @@ do
         -- Money display reused with guild funds and deposit/withdraw clicks
         f.GetPlayer = function() return mod.playerName end
         f.moneyFrame = mod.MoneyFrame:New(f)
-        f.moneyFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, 8)
+        f.moneyFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, addon.WindowSeat.buttonBottom)
         f.moneyFrame.GetMoneyValue = function() return GetGuildBankMoney() end
         f.moneyFrame.isGuildFunds = true
         f.moneyFrame:UnregisterEvent("PLAYER_MONEY")
@@ -530,7 +530,8 @@ do
         local infoSave = CreateFrame("Button", name .. "InfoSave", f, "UIPanelButtonTemplate")
         infoSave:SetSize(80, 22)
         infoSave:SetText(SAVE)
-        infoSave:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 14, 6)
+        -- On the window seat, 3 above the bronze rail (it stood 1.5 off it).
+        infoSave:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 14, addon.WindowSeat.buttonBottom)
         infoSave:SetScript("OnClick", function()
             SetGuildBankText(GetCurrentGuildBankTab() or 1, infoEdit:GetText() or "")
             infoEdit:ClearFocus()

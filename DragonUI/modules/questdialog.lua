@@ -22,18 +22,27 @@ if addon.RegisterModule then
 end
 
 local WIDTH, HEIGHT = 338, 496
--- Inside the inset's 3px bevel on every side; retail's 407px page overlaps it top and bottom.
-local PAGE_X, PAGE_Y, PAGE_W, PAGE_H = 7, -63, 299, 404
--- Takes the bar's strip when unscrollable, stopping short of the dark right bevel, lost on paper.
-local PAGE_W_FULL = 321
--- Clips 6px inside the page at both ends, so scrolled text fades out on paper, not on the torn edge.
-local SCROLL_X, SCROLL_Y, SCROLL_W, SCROLL_H = 10, -69, 296, 392
+local SEAT = addon.WindowSeat
+local BUTTON_H = 22
 -- Retail's ButtonFrameTemplate Inset; the page sits in it and the scrollbar owns its right strip.
-local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = 4, -60, -6, 26
--- Top, right and bottom insets that centre the minimal bar in the channel (see CP.ReskinScrollBar).
-local BAR_TOP, BAR_X, BAR_BOTTOM = 57, -15, 22
+-- Its sides keep the seat's gap inside the bronze rails, its bottom 3 above the button row.
+local INSET_LEFT, INSET_TOP, INSET_RIGHT = SEAT.buttonLeft, -60, SEAT.buttonRight
+local INSET_BOTTOM = SEAT.buttonBottom + BUTTON_H + SEAT.gap
+-- Inside the inset's 3px bevel on every side; retail's 407px page overlaps it top and bottom.
+local PAGE_X, PAGE_Y, PAGE_W = INSET_LEFT + 3, INSET_TOP - 3, 299
+local PAGE_H = HEIGHT + PAGE_Y - INSET_BOTTOM - 3
+-- Takes the bar's strip when unscrollable, stopping short of the dark right bevel, lost on paper.
+local PAGE_W_FULL = WIDTH + INSET_RIGHT - 4 - PAGE_X
+-- Clips 6px inside the page at both ends, so scrolled text fades out on paper, not on the torn edge.
+-- 296 wide, the stock reward rows' two 147 columns.
+local SCROLL_X, SCROLL_Y, SCROLL_W, SCROLL_H = PAGE_X + 3, PAGE_Y - 6, 296, PAGE_H - 12
+-- Top, right and bottom insets that centre the minimal bar in the channel right of the page
+-- (see CP.ReskinScrollBar).
+local BAR_TOP, BAR_BOTTOM = 57, INSET_BOTTOM - 4
+local BAR_X = ((PAGE_X + PAGE_W) + (WIDTH + INSET_RIGHT)) / 2 + 4 - WIDTH
 -- Where the stock 239/64 x 241/128 material quarters split, scaled to the page.
-local MATERIAL_SPLIT_X, MATERIAL_SPLIT_Y = 236, 264
+local MATERIAL_SPLIT_X = 236
+local MATERIAL_SPLIT_Y = math.floor(PAGE_H * 264 / 404 + 0.5)
 -- The bottom quarters end in 28 blank rows of 128, so they hang past the page to meet its edge.
 local MATERIAL_OVERHANG = math.floor((PAGE_H - MATERIAL_SPLIT_Y) * 28 / 100 + 0.5)
 local PANEL_X_NUDGE = 6
@@ -256,7 +265,8 @@ local function dressButton(name, corner, window)
         return
     end
     button:ClearAllPoints()
-    button:SetPoint(corner, window, corner, corner == "BOTTOMLEFT" and 6 or -6, 4)
+    button:SetPoint(corner, window, corner, corner == "BOTTOMLEFT" and SEAT.buttonLeft or SEAT.buttonRight,
+        SEAT.buttonBottom)
     if addon.SkinRedButton then
         addon.SkinRedButton(button)
     end

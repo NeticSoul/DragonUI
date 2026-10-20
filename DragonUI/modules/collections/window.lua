@@ -10,7 +10,10 @@ local CO = addon.Collections
 local FRAME_NAME = "DragonUICollectionsFrame"
 local FRAME_W, FRAME_H = 640, 480
 
-local SIDE_PAD = 14
+-- The panes, bands and action button keep the window seat's gap inside the bronze rails
+-- (nineslice.lua); the panes end that gap above the bottom band.
+local SEAT = addon.WindowSeat
+local PAD_LEFT, PAD_RIGHT = SEAT.buttonLeft, -SEAT.buttonRight
 local LEFT_W = 244
 local INSET_GAP = 16
 local TITLE_H = 24
@@ -18,6 +21,7 @@ local TOP_H = 34
 -- The action button's own height: retail parks it flush at the journal's bottom, so the band has no
 -- slack of its own. Anything taller just pushed the list up for nothing.
 local BOTTOM_H = 22
+local PANE_BOTTOM = SEAT.buttonBottom + BOTTOM_H + SEAT.gap
 
 -- The character panel's own band geometry, so the rock and streak strip line up with it.
 local STREAK_Y, STREAK_H = 21, 43
@@ -201,22 +205,22 @@ local function build()
     buildChrome()
 
     CO.TopBand = buildBand(FRAME_NAME .. "TopBand", 3)
-    CO.TopBand:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDE_PAD, -(TITLE_H + 6))
-    CO.TopBand:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -SIDE_PAD, -(TITLE_H + 6))
+    CO.TopBand:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, -(TITLE_H + 6))
+    CO.TopBand:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD_RIGHT, -(TITLE_H + 6))
     CO.TopBand:SetHeight(TOP_H)
 
     CO.LeftInset = buildInset(FRAME_NAME .. "LeftInset")
-    CO.LeftInset:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDE_PAD, -(TITLE_H + TOP_H + 8))
-    CO.LeftInset:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", SIDE_PAD, BOTTOM_H + 6)
+    CO.LeftInset:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, -(TITLE_H + TOP_H + 8))
+    CO.LeftInset:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", PAD_LEFT, PANE_BOTTOM)
     CO.LeftInset:SetWidth(LEFT_W)
 
     CO.RightInset = buildInset(FRAME_NAME .. "RightInset")
     CO.RightInset:SetPoint("TOPLEFT", CO.LeftInset, "TOPRIGHT", INSET_GAP, 0)
-    CO.RightInset:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -SIDE_PAD, BOTTOM_H + 6)
+    CO.RightInset:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -PAD_RIGHT, PANE_BOTTOM)
 
     CO.BottomBand = buildBand(FRAME_NAME .. "BottomBand", 3)
-    CO.BottomBand:SetPoint("TOPLEFT", CO.LeftInset, "BOTTOMLEFT", 0, -2)
-    CO.BottomBand:SetPoint("TOPRIGHT", CO.RightInset, "BOTTOMRIGHT", 0, -2)
+    CO.BottomBand:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", PAD_LEFT, SEAT.buttonBottom)
+    CO.BottomBand:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -PAD_RIGHT, SEAT.buttonBottom)
     CO.BottomBand:SetHeight(BOTTOM_H)
 
     buildTabs()

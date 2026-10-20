@@ -413,20 +413,23 @@ do
         f.bottomFilter = mod.BottomFilter:New(f)
         f.nameFilter = _G[f:GetName() .. "Search"]
 
+        -- The bottom band stands on the window seat (nineslice.lua), 3 above the bronze rail; the
+        -- quality buttons sit 1 higher than the money and token text, as before.
+        local rowBottom = addon.WindowSeat.buttonBottom
         f.qualityFilter = mod.QualityFilter:New(f)
-        f.qualityFilter:SetPoint("BOTTOM", 0, 9)
+        f.qualityFilter:SetPoint("BOTTOM", 0, rowBottom + 1)
 
         f.itemFrame = mod.ItemFrame:New(f)
         f.itemFrame:SetPoint("TOPLEFT", ITEM_FRAME_LEFT_INSET, -65)
 
         -- Bottom band: bare money bottom-right, bare currency tokens bottom-left
         f.moneyFrame = mod.MoneyFrame:New(f)
-        f.moneyFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, 8)
+        f.moneyFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -14, rowBottom)
 
         if not isBank then
             f.tokenBar = mod.TokenBar:New(f)
             f.tokenBar:SetSize(220, 19)
-            f.tokenBar:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 14, 8)
+            f.tokenBar:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 14, rowBottom)
             f.tokenBar:Refresh()
         end
 

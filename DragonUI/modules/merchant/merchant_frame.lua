@@ -32,6 +32,13 @@ local questAnswer = {}
 local scanTip
 
 local MERCHANT_ROWS = 10
+-- The window seat (nineslice.lua): the purse sits on it, 3 inside the bottom and right rails (it
+-- was on them), and the whole bottom composition (band, page arrows, repair and junk buttons, the
+-- grid's hidden bottom) rises with it. The grid's sides keep the same gap inside the side rails.
+local SEAT = addon.WindowSeat
+local BOTTOM_LIFT = SEAT.buttonBottom - 4
+local GRID_LEFT, GRID_RIGHT = SEAT.buttonLeft, SEAT.buttonRight
+parts.BOTTOM_LIFT = BOTTOM_LIFT
 local ALL_ROWS = 12
 local CONTROL_LIFT = 4
 local TAB_GLOW_ALPHA = 0.4
@@ -45,13 +52,20 @@ local REAPPEARING = {
     "BuybackFrameTopLeft", "BuybackFrameTopRight", "BuybackFrameBotLeft", "BuybackFrameBotRight",
 }
 
+-- The two 153 columns sit 9 apart (stock 12), 2 inside the grid on the left and 3 on the right.
+local ITEM_X, ITEM_GAP = GRID_LEFT + 2, 9
 local SESSION_ANCHORS = {
-    { "MerchantItem1", "TOPLEFT", "MerchantFrame", "TOPLEFT", 11, -69 },
-    { "MerchantPrevPageButton", "CENTER", "MerchantFrame", "BOTTOMLEFT", 25, 96 },
-    { "MerchantNextPageButton", "CENTER", "MerchantFrame", "BOTTOMLEFT", 310, 96 },
-    { "MerchantMoneyFrame", "BOTTOMRIGHT", "MerchantFrame", "BOTTOMRIGHT", -6, 9 },
+    { "MerchantItem1", "TOPLEFT", "MerchantFrame", "TOPLEFT", ITEM_X, -69 },
+    { "MerchantPrevPageButton", "CENTER", "MerchantFrame", "BOTTOMLEFT", 25, 96 + BOTTOM_LIFT },
+    { "MerchantNextPageButton", "CENTER", "MerchantFrame", "BOTTOMLEFT", 310, 96 + BOTTOM_LIFT },
+    { "MerchantMoneyFrame", "BOTTOMRIGHT", "MerchantFrame", "BOTTOMRIGHT", SEAT.buttonRight - 1,
+        SEAT.buttonBottom + 5 },
     { "MerchantBuyBackItem", "TOPLEFT", "MerchantItem10", "BOTTOMLEFT", 30, -53 },
 }
+for row = 2, 12, 2 do
+    SESSION_ANCHORS[#SESSION_ANCHORS + 1] =
+        { "MerchantItem" .. row, "TOPLEFT", "MerchantItem" .. (row - 1), "TOPRIGHT", ITEM_GAP, 0 }
+end
 
 local LIFTED = {
     "MerchantBuyBackItem", "MerchantPrevPageButton", "MerchantNextPageButton", "MerchantMoneyFrame",
@@ -220,7 +234,7 @@ local function housePageText(frame)
     local holder = CreateFrame("Frame", nil, frame)
     holder:EnableMouse(false)
     holder:SetSize(104, 20)
-    holder:SetPoint("BOTTOM", frame, "BOTTOM", 0, 86)
+    holder:SetPoint("BOTTOM", frame, "BOTTOM", 0, 86 + BOTTOM_LIFT)
     holder:Show()
     chrome.pageHolder = holder
 
@@ -293,7 +307,7 @@ local function buildGrid(frame, level)
     local grid = CreateFrame("Frame", nil, frame)
     grid:EnableMouse(false)
     grid:SetFrameLevel(level)
-    span(grid, frame, 4, -60, -6, 26)
+    span(grid, frame, GRID_LEFT, -60, GRID_RIGHT, 26 + BOTTOM_LIFT)
     applySlices(grid, "InsetFrameTemplate")
     marbleFloor(grid)
 
@@ -309,8 +323,8 @@ local function buildBand(frame, level)
     local band = CreateFrame("Frame", nil, frame)
     band:SetFrameLevel(level)
     band:SetHeight(61)
-    band:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 26)
-    band:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 26)
+    band:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 26 + BOTTOM_LIFT)
+    band:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 26 + BOTTOM_LIFT)
 
     local plate = band:CreateTexture(nil, "ARTWORK")
     plate:SetAtlasTexture("ui-merchant-botframe", false)
@@ -322,16 +336,16 @@ local function buildPurse(frame, level)
     local purse = CreateFrame("Frame", nil, frame)
     purse:EnableMouse(false)
     purse:SetFrameLevel(level)
-    purse:SetPoint("TOPLEFT", frame, "BOTTOMRIGHT", -171, 36)
-    purse:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -5, 4)
+    purse:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", SEAT.buttonRight, SEAT.buttonBottom)
+    purse:SetSize(166, 32)
     applySlices(purse, "InsetFrameTemplate")
     marbleFloor(purse)
 
     local rim = CreateFrame("Frame", nil, purse)
     rim:EnableMouse(false)
     rim:SetFrameLevel(purse:GetFrameLevel() + 1)
-    rim:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", -7, 25)
-    rim:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", -166, 6)
+    rim:SetPoint("TOPRIGHT", purse, "TOPRIGHT", -2, -11)
+    rim:SetPoint("BOTTOMLEFT", purse, "BOTTOMLEFT", 5, 2)
     rim:SetBackdrop(GOLD_EDGE)
     rim:SetBackdropBorderColor(1, 0.82, 0.32, 1)
 end
@@ -709,7 +723,7 @@ local function arrangeRepairCluster()
 
     if not _G.CanMerchantRepair() or not repairAll then
         if junkButton then
-            place(junkButton, "BOTTOMRIGHT", window, "BOTTOMRIGHT", -148, 33)
+            place(junkButton, "BOTTOMRIGHT", window, "BOTTOMRIGHT", -148 + SEAT.buttonRight + 5, 33 + BOTTOM_LIFT)
         end
         return
     end
@@ -717,7 +731,7 @@ local function arrangeRepairCluster()
     local guildToo = CanGuildBankRepair()
     local spots = guildToo and CLUSTER_WITH_GUILD or CLUSTER_SOLO
     repairAll:SetSize(36, 36)
-    place(repairAll, "BOTTOMRIGHT", window, "BOTTOMLEFT", spots.allX, 33)
+    place(repairAll, "BOTTOMRIGHT", window, "BOTTOMLEFT", spots.allX, 33 + BOTTOM_LIFT)
 
     local repairItem = _G.MerchantRepairItemButton
     if repairItem then

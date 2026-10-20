@@ -529,7 +529,7 @@ local function build(frame)
     adoptControlPopup()
     list = GU.BuildInset("DragonUIGuildRosterInset", pane)
     list:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, 0)
-    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", 0, GU.BOTTOM_H + 6)
+    list:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", 0, GU.BOTTOM_H + GU.PANE_GAP)
 
     for _, column in ipairs(COLUMNS) do buildHeader(column, 0) end
 
@@ -543,7 +543,8 @@ local function build(frame)
 
     showOffline = CreateFrame("CheckButton", "DragonUIGuildShowOffline", pane, "UICheckButtonTemplate")
     showOffline:SetSize(24, 24)
-    showOffline:SetPoint("BOTTOMLEFT", pane, "BOTTOMLEFT", 0, 1)
+    -- 24 tall, centred on the 22 buttons.
+    showOffline:SetPoint("BOTTOMLEFT", pane, "BOTTOMLEFT", 0, -1)
     _G[showOffline:GetName() .. "Text"]:SetText(L("Show Offline"))
     showOffline:SetScript("OnClick", function(self)
         SetGuildRosterShowOffline(self:GetChecked() and true or false)
@@ -556,7 +557,7 @@ local function build(frame)
     countText:SetPoint("LEFT", showOffline, "RIGHT", 90, 0)
 
     controlButton = GU.Button(pane, GUILDCONTROL or L("Guild Control"), 110)
-    controlButton:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", 0, 2)
+    controlButton:SetPoint("BOTTOMRIGHT", pane, "BOTTOMRIGHT", 0, 0)
     controlButton:SetScript("OnClick", function()
         local popup = _G.GuildControlPopupFrame
         if not popup then return end
