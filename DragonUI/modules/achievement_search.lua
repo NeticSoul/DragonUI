@@ -162,6 +162,8 @@ local function Install()
     -- stockpanels.lua seats both in the bronze window's toolbar and content inset.
     addon.AchievementSearch = { button = searchButton, panel = panel }
 end
+-- stockpanels.lua skins the window on the same ADDON_LOADED and may get it first.
+addon.InstallAchievementSearch = Install
 local events = CreateFrame('Frame')
 events:RegisterEvent('ADDON_LOADED')
 events:RegisterEvent('ACHIEVEMENT_EARNED')
