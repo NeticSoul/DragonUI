@@ -419,6 +419,8 @@ L["Bags: %d"] = "가방: %d"
 L["Bank: %d"] = "은행: %d"
 L["Equipped: %d"] = "착용: %d"
 L["Total: %d (%s)"] = "합계: %d (%s)"
+L["Repair Cost"] = "수리 비용"
+L["No Repairs Needed"] = "수리 불필요"
 -- Item Level
 L["Item Level"] = "아이템 레벨"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "가방, 캐릭터 창, 은행 등에서 장비 아이콘에 아이템 레벨을 표시합니다"
