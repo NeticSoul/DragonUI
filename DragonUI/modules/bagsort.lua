@@ -1403,6 +1403,9 @@ end
 -- BUTTON CREATION HELPERS
 -- ============================================================================
 
+-- Retail INV_Pet_Broom, the art behind retail's bag cleanup button; the 3.3.5a client has no broom icon.
+local SORT_ICON_TEXTURE = "Interface\\AddOns\\DragonUI\\Textures\\UI\\BagSortBroom"
+
 local function CreateActionButton(name, parent, onClick, tooltipTitle, scale, iconPath, tooltipLines)
     scale = scale or 1.0
     local size = 32 * scale
@@ -1414,7 +1417,7 @@ local function CreateActionButton(name, parent, onClick, tooltipTitle, scale, ic
     -- Icon fills the button
     local icon = btn:CreateTexture(name .. "Icon", "ARTWORK")
     icon:SetAllPoints()
-    icon:SetTexture(iconPath or "Interface\\Icons\\INV_Enchant_EssenceCosmicGreater")
+    icon:SetTexture(iconPath or SORT_ICON_TEXTURE)
     icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     btn.icon = icon
 
@@ -1484,7 +1487,7 @@ local function CreateSortButton(name, parent, onClick, tooltipText, scale)
         onClick,
         tooltipText,
         scale,
-        "Interface\\Icons\\INV_Enchant_EssenceCosmicGreater",
+        SORT_ICON_TEXTURE,
         BuildTooltipLines
     )
 end
@@ -1753,7 +1756,7 @@ local function CreateGuildBankSortButton(name, parent)
         SortGuildBankTab,
         T("Sort Guild Bank Tab", "Sort Guild Bank Tab"),
         0.61,
-        "Interface\\Icons\\INV_Enchant_EssenceCosmicGreater",
+        SORT_ICON_TEXTURE,
         BuildTooltipLines
     )
 end
