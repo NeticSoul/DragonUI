@@ -419,6 +419,8 @@ L["Bags: %d"] = "가방: %d"
 L["Bank: %d"] = "은행: %d"
 L["Equipped: %d"] = "착용: %d"
 L["Total: %d (%s)"] = "합계: %d (%s)"
+L["Automatic Equipment Comparison"] = "자동 장비 비교"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat."] = "Shift를 누르지 않아도 착용 가능한 아이템을 현재 장비와 비교하며, 채팅에서 연 링크도 포함합니다."
 -- Item Level
 L["Item Level"] = "아이템 레벨"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "가방, 캐릭터 창, 은행 등에서 장비 아이콘에 아이템 레벨을 표시합니다"

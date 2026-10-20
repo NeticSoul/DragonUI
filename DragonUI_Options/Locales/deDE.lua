@@ -267,6 +267,8 @@ L["Show quality-colored borders on items in bags, character panel, bank, merchan
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "Fügt Leuchtrahmen nach Qualität in Taschen hinzu, Charakterfenster, Bank, Händler und Inspizieren: grün = ungewöhnlich, blau = selten, lila = episch, orange = legendär."
 L["Character Item Counts"] = "Gegenstandszahlen der Charaktere"
 L["Show Character Item Counts"] = "Gegenstandszahlen der Charaktere anzeigen"
+L["Automatic Equipment Comparison"] = "Automatischer Ausrüstungsvergleich"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Vergleicht anlegbare Gegenstände ohne Shift mit der angelegten Ausrüstung, auch bei Gegenstandslinks aus dem Chat. Strg gedrückt halten, um den Vergleich zu unterdrücken."
 L["Shows how many of the hovered item each of your characters on this realm holds, split into bags, bank and equipped."] = "Zeigt, wie viele Exemplare des betrachteten Gegenstands jeder Charakter auf diesem Realm besitzt, aufgeteilt nach Taschen, Bank und angelegt."
 L["Minimum Quality"] = "Mindestqualität"
 L["Poor"] = "Schlecht"

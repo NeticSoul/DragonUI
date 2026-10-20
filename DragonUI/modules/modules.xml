@@ -76,6 +76,9 @@
     <!-- Per-character bag, bank and equipped counts in item tooltips -->
     <Script file="itemownership.lua"/>
 
+    <!-- Automatic equipped-item comparison, including chat item links -->
+    <Script file="equipmentcompare.lua"/>
+
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>
 

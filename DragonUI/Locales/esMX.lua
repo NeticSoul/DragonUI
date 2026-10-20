@@ -427,6 +427,8 @@ L["Bags: %d"] = "Bolsas: %d"
 L["Bank: %d"] = "Banco: %d"
 L["Equipped: %d"] = "Equipado: %d"
 L["Total: %d (%s)"] = "Total: %d (%s)"
+L["Automatic Equipment Comparison"] = "Comparación automática de equipo"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat."] = "Compara los objetos equipables con tu equipo sin mantener Shift, incluidos los enlaces abiertos desde el chat."
 -- Item Level
 L["Item Level"] = "Nivel de Objeto"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "Mostrar el nivel de objeto en los iconos del equipo en bolsas, panel de personaje, banco y más"

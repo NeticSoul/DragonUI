@@ -1259,6 +1259,9 @@ local defaults = {
             itemownership = {
                 enabled = false, -- Show per-character bag, bank and equipped counts in item tooltips
             },
+            equipmentcompare = {
+                enabled = false, -- Compare equippable items without holding Shift; Ctrl suppresses it
+            },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy
                 linkHoverTooltip = false, -- Show supported chat-link tooltips without holding Alt

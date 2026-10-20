@@ -276,6 +276,8 @@ L["Show quality-colored borders on items in bags, character panel, bank, merchan
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = "가방, 캐릭터 창, 은행, 상인, 살펴보기 창의 아이템에 품질별 빛나는 테두리를 표시합니다: 녹색 = 고급, 파란색 = 희귀, 보라색 = 영웅, 주황색 = 전설."
 L["Character Item Counts"] = "캐릭터별 아이템 수"
 L["Show Character Item Counts"] = "캐릭터별 아이템 수 표시"
+L["Automatic Equipment Comparison"] = "자동 장비 비교"
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = "Shift를 누르지 않아도 착용 가능한 아이템을 현재 장비와 비교하며, 채팅에서 연 링크도 포함합니다. Ctrl을 누르면 비교를 끕니다."
 L["Shows how many of the hovered item each of your characters on this realm holds, split into bags, bank and equipped."] = "이 서버의 각 캐릭터가 해당 아이템을 몇 개 보유했는지 가방, 은행, 착용으로 나누어 표시합니다."
 L["Minimum Quality"] = "최소 품질"
 L["Poor"] = "저급"

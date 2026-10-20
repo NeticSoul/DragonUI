@@ -323,6 +323,8 @@ L["Show quality-colored borders on items in bags, character panel, bank, merchan
 L["Adds quality-colored glow borders to items in your bags, character panel, bank, merchant, and inspect frames: green = uncommon, blue = rare, purple = epic, orange = legendary."] = true
 L["Character Item Counts"] = true
 L["Show Character Item Counts"] = true
+L["Automatic Equipment Comparison"] = true
+L["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."] = true
 L["Shows how many of the hovered item each of your characters on this realm holds, split into bags, bank and equipped."] = true
 L["Minimum Quality"] = true
 L["Poor"] = true
