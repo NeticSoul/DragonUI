@@ -719,7 +719,7 @@ local function BuildBagsTab(scroll)
 
     C:AddToggle(newItemsSection, {
         label = LO["New Item Glow"] or "New Item Glow",
-        desc = LO["Show a rotating glow over new items."] or "Show a rotating glow over new items.",
+        desc = LO["Show a glow on new items."] or "Show a glow on new items.",
         getFunc = function()
             local mc = GetBagsterConfig(false)
             return not mc or mc.new_glow ~= false
@@ -728,15 +728,19 @@ local function BuildBagsTab(scroll)
         disabled = NewItemsOff,
     })
 
-    C:AddSlider(newItemsSection, {
-        label = LO["Glow Scale"] or "Glow Scale",
-        desc = LO["Size of the glow around new items."] or "Size of the glow around new items.",
-        min = 0.5, max = 3, step = 0.05, isPercent = true,
+    C:AddDropdown(newItemsSection, {
+        label = LO["Glow Style"] or "Glow Style",
+        desc = LO["Pick the new-item highlight: a glowing border around the slot, or a rotating burst."]
+            or "Pick the new-item highlight: a glowing border around the slot, or a rotating burst.",
+        values = {
+            border = LO["Glowing Border"] or "Glowing Border",
+            starburst = LO["Rotating Burst"] or "Rotating Burst",
+        },
         getFunc = function()
             local mc = GetBagsterConfig(false)
-            return (mc and mc.new_glow_scale) or 1.5
+            return (mc and mc.new_glow_style) or "border"
         end,
-        setFunc = function(val) SetBagsterOption("new_glow_scale", val) end,
+        setFunc = function(value) SetBagsterOption("new_glow_style", value) end,
         disabled = NewItemsOff,
     })
 
@@ -744,11 +748,13 @@ local function BuildBagsTab(scroll)
         label = LO["Glow Color"] or "Glow Color",
         getFunc = function()
             local mc = GetBagsterConfig(false)
-            local c = (mc and mc.new_glow_color) or { 0.3, 1, 0.3, 0.7 }
-            return c[1] or 0.3, c[2] or 1, c[3] or 0.3, c[4] or 0.7
+            local c = (mc and mc.new_glow_color) or { 1, 1, 1, 1 }
+            return c[1] or 1, c[2] or 1, c[3] or 1, c[4] or 1
         end,
         setFunc = function(r, g, b, a)
-            SetBagsterOption("new_glow_color", { r, g, b, a or 1 })
+            -- The picker can hand back a missing channel; always store a full
+            -- colour so the glow never inherits a hole.
+            SetBagsterOption("new_glow_color", { r or 1, g or 1, b or 1, a or 1 })
         end,
         hasAlpha = true,
         disabled = NewItemsOff,

@@ -541,9 +541,11 @@ L["Track items gained since the last reset: they glow and sort to the front of t
 L["Track New Items"] = true
 L["Highlight items gained since the last reset. Reset with the small 'N' button or by sorting your bags/bank."] = true
 L["New Item Glow"] = true
-L["Show a rotating glow over new items."] = true
-L["Glow Scale"] = true
-L["Size of the glow around new items."] = true
+L["Show a glow on new items."] = true
+L["Glow Style"] = true
+L["Pick the new-item highlight: a glowing border around the slot, or a rotating burst."] = true
+L["Glowing Border"] = true
+L["Rotating Burst"] = true
 L["Glow Color"] = true
 L["Sort New Items First"] = true
 L["Show new items at the start of the grid."] = true

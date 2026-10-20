@@ -88,6 +88,7 @@ local CT = {
     bagslot           = BagsterAssets .. 'Bags\\bagslots2x',
     bag_border        = BagsterAssets .. 'Bags\\bagborder2',
     slot_border       = BagsterAssets .. 'UI\\ui-quickslot2',
+    slot_glow         = BagsterAssets .. 'UI\\ui-quickslot2-glow.tga',
     tabs              = BagsterAssets .. 'UI\\uiframetabs',
     sidetab           = BagsterAssets .. 'UI\\sidetab',
     coinGold          = BagsterAssets .. 'Coins\\coingold',

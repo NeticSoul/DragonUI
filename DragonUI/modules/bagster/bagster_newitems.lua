@@ -1,8 +1,9 @@
 -- Copyright (c) 2026 NeticSoul. Licensed under the MIT License; see LICENSE.
 -- New-item tracking adapted from AdiBags (see THIRD_PARTY_NOTICES).
 
--- Marks items gained since the last reset with a rotating glow and sorts them
--- to the front of the grid. The "N" button on each frame resets the marks.
+-- Marks items gained since the last reset with a glow (a glowing slot
+-- border, or a rotating burst) and sorts them to the front of the grid. The
+-- "N" button on each frame resets the marks.
 local addon = select(2, ...)
 local mod = addon.BagsterModule
 
@@ -29,9 +30,25 @@ local NUM_BANKBAGSLOTS = _G.NUM_BANKBAGSLOTS
 
 local NewItems = mod:NewModule("NewItems")
 
-local DEFAULT_SCALE = 1.5
-local DEFAULT_COLOR = { 0.3, 1, 0.3, 0.7 }
-local GLOW_TEXTURE = [[Interface\Cooldown\starburst]]
+local DEFAULT_COLOR = { 1, 1, 1, 1 }
+
+-- The retail client marks a new item by lighting up the border of its slot.
+-- The border art is the same one the bagster draws around every slot, so the
+-- glow follows the slot exactly; it is a soft white copy of that border,
+-- added over it (see Textures/UI/ui-quickslot2-glow.tga).
+--
+-- The glow breathes: it fades from full to FADE_MIN and back again, once per
+-- second, and it never stops until the item is no longer new. These are the
+-- timings of the retail "new item" animation (see ContainerFrame.xml,
+-- newitemglowAnim).
+local FADE_PERIOD = 1.0
+local FADE_MIN = 0.2
+local FADE_SMOOTHING = "NONE"
+
+-- The old effect is still offered: a rotating burst over the item.
+local GLOW_STYLE_BORDER = "border"
+local GLOW_STYLE_STARBURST = "starburst"
+local STARBURST_TEXTURE = [[Interface\Cooldown\starburst]]
 
 local SCAN_DELAY = 0.2
 local RETRY_DELAY = 0.5
@@ -269,27 +286,62 @@ end
 -- ITEM GLOW
 -- ============================================================================
 
-function NewItems:CreateGlow(button)
+-- Both glows are drawn square on the slot: the border glow lands on the slot
+-- border the bagster already draws, the burst sits over the item.
+local GLOW_SIZE = 64
+
+local function SetupBorderGlow(glow, group, button)
+    -- The retail effect: the border of the slot lights up and breathes.
+    glow.Texture:SetTexture(mod.CT.slot_glow)
+    glow:SetPoint("CENTER", button, "CENTER", 0, -1)
+
+    local fadeOut = group:CreateAnimation("Alpha")
+    fadeOut:SetOrder(1)
+    fadeOut:SetDuration(FADE_PERIOD / 2)
+    fadeOut:SetChange(FADE_MIN - 1)
+    fadeOut:SetSmoothing(FADE_SMOOTHING)
+    local fadeIn = group:CreateAnimation("Alpha")
+    fadeIn:SetOrder(2)
+    fadeIn:SetDuration(FADE_PERIOD / 2)
+    fadeIn:SetChange(1 - FADE_MIN)
+    fadeIn:SetSmoothing(FADE_SMOOTHING)
+end
+
+local function SetupStarburstGlow(glow, group, button)
+    -- The old effect: a rotating burst over the item.
+    glow.Texture:SetTexture(STARBURST_TEXTURE)
+    glow:SetPoint("CENTER", button, "CENTER")
+
+    local anim = group:CreateAnimation("Rotation")
+    anim:SetOrder(1)
+    anim:SetDuration(10)
+    anim:SetDegrees(360)
+    anim:SetOrigin("CENTER", 0, 0)
+end
+
+function NewItems:CreateGlow(button, style)
     local glow = CreateFrame("Frame", nil, button)
     glow:SetFrameLevel(button:GetFrameLevel() + 15)
-    glow:SetPoint("CENTER")
-    glow:SetSize(37, 37)
+    glow:SetSize(GLOW_SIZE, GLOW_SIZE)
 
     local texture = glow:CreateTexture(nil, "OVERLAY")
-    texture:SetTexture(GLOW_TEXTURE)
     texture:SetBlendMode("ADD")
     texture:SetAllPoints(glow)
     glow.Texture = texture
 
     local group = glow:CreateAnimationGroup()
     group:SetLooping("REPEAT")
-    local anim = group:CreateAnimation("Rotation")
-    anim:SetOrder(1)
-    anim:SetDuration(10)
-    anim:SetDegrees(360)
-    anim:SetOrigin("CENTER", 0, 0)
+    glow.Animation = group
+
+    if style == GLOW_STYLE_STARBURST then
+        SetupStarburstGlow(glow, group, button)
+    else
+        SetupBorderGlow(glow, group, button)
+    end
+
     group:Play()
 
+    glow.Style = style
     button._BagsterNewGlow = glow
     return glow
 end
@@ -305,16 +357,35 @@ function mod.UpdateNewItemGlow(slot)
     slot._BagsterNewItem = isNew or nil
 
     if not (isNew and enabled and cfg.new_glow ~= false) then
-        if glow and glow:IsShown() then glow:Hide() end
+        if glow and glow:IsShown() then
+            glow:Hide()
+            -- Nothing to animate while the item is no longer new.
+            glow.Animation:Stop()
+        end
         return
     end
 
-    if not glow then glow = NewItems:CreateGlow(slot) end
-    local scale = cfg.new_glow_scale or DEFAULT_SCALE
-    if glow:GetScale() ~= scale then glow:SetScale(scale) end
+    local style = cfg.new_glow_style
+    if style ~= GLOW_STYLE_STARBURST then style = GLOW_STYLE_BORDER end
+
+    -- A style change needs a new glow: the two use different art and motion.
+    if glow and glow.Style ~= style then
+        glow.Animation:Stop()
+        glow:Hide()
+        glow:SetParent(nil)
+        slot._BagsterNewGlow = nil
+        glow = nil
+    end
+
+    if not glow then glow = NewItems:CreateGlow(slot, style) end
     local c = cfg.new_glow_color or DEFAULT_COLOR
-    glow.Texture:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
+    -- A colour can reach us with missing channels (the colour picker writes
+    -- whatever the client hands it), and one nil channel would throw and take
+    -- the whole glow with it, so fall back per channel.
+    glow.Texture:SetVertexColor(c[1] or DEFAULT_COLOR[1], c[2] or DEFAULT_COLOR[2],
+        c[3] or DEFAULT_COLOR[3], c[4] or DEFAULT_COLOR[4])
     glow:Show()
+    if not glow.Animation:IsPlaying() then glow.Animation:Play() end
 end
 
 -- Layout hook: the button list with new items first, or nil when nothing moves.
