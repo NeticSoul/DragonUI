@@ -3,7 +3,7 @@
 local addon = select(2, ...)
 local L = addon.L
 
--- GameTooltip compares on its own via the alwaysCompareItems CVar; ItemRefTooltip needs filling.
+-- Some clients still load the 3.0 GameTooltip files, which ignore alwaysCompareItems; fill directly.
 
 local EquipmentCompareModule = {
     initialized = false,
@@ -20,8 +20,13 @@ if addon.RegisterModule then
     })
 end
 
-local CVAR = "alwaysCompareItems"
-local ITEMREF_SLOTS = { "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2", "ItemRefShoppingTooltip3" }
+local PAIRS = {
+    { tooltip = "GameTooltip", shopping = { "ShoppingTooltip1", "ShoppingTooltip2", "ShoppingTooltip3" }, ownShift = true },
+    { tooltip = "ItemRefTooltip", shopping = { "ItemRefShoppingTooltip1", "ItemRefShoppingTooltip2", "ItemRefShoppingTooltip3" }, refillOnLeave = true },
+}
+
+-- Blizzard's order: the third comparison sits next to the item, then the first, then the second.
+local COMPARE_ORDER = { 3, 1, 2 }
 
 local function IsModuleEnabled()
     return addon:IsModuleEnabled("equipmentcompare")
@@ -33,66 +38,36 @@ local function IsSuppressed()
 end
 
 -- ============================================================================
--- GameTooltip: the CVar does the work
+-- COMPARISON TOOLTIPS
 -- ============================================================================
 
--- Remembered so turning the module off restores what the player had.
-local previousCvar
-
-local function ApplyCvar()
-    if not GetCVar or not SetCVar then
-        return
-    end
-    local current = GetCVar(CVAR)
-    if current == "1" then
-        return
-    end
-    if previousCvar == nil then
-        previousCvar = current
-    end
-    SetCVar(CVAR, "1")
-end
-
-local function RestoreCvar()
-    if previousCvar == nil or not SetCVar then
-        return
-    end
-    SetCVar(CVAR, previousCvar)
-    previousCvar = nil
-end
-
--- ============================================================================
--- ItemRefTooltip: fill Blizzard's own comparison tooltips
--- ============================================================================
-
-local function HideComparison()
-    for index = 1, #ITEMREF_SLOTS do
-        local tooltip = _G[ITEMREF_SLOTS[index]]
+local function HideComparison(pair)
+    for index = 1, #pair.shopping do
+        local tooltip = _G[pair.shopping[index]]
         if tooltip then
             tooltip:Hide()
         end
     end
 end
 
-local function ShowComparison()
-    local frame = _G.ItemRefTooltip
-    if not frame or not frame:IsShown() then
+local function ShowComparison(pair)
+    local frame = _G[pair.tooltip]
+    if not frame or not frame:IsShown() or not IsModuleEnabled() then
         return
     end
-    if not IsModuleEnabled() or IsSuppressed() then
-        HideComparison()
+    local shift = IsModifiedClick("COMPAREITEMS")
+    -- Shift on GameTooltip is Blizzard's compare path on every client; filling too would fight it.
+    if shift and pair.ownShift then
         return
     end
-
-    -- Same self-comparison check the client uses on GameTooltip.
-    if frame:IsEquippedItem() then
-        HideComparison()
+    if not shift and (IsSuppressed() or frame:IsEquippedItem()) then
+        HideComparison(pair)
         return
     end
 
     local _, link = frame:GetItem()
     if not link then
-        HideComparison()
+        HideComparison(pair)
         return
     end
 
@@ -101,21 +76,35 @@ local function ShowComparison()
     local placeOnLeft = left > ((GetScreenWidth() or 0) - right)
     local point = placeOnLeft and "TOPRIGHT" or "TOPLEFT"
     local relativePoint = placeOnLeft and "TOPLEFT" or "TOPRIGHT"
-    local anchor = frame
+    local anchor, offsetY = frame, -10
 
-    for index = 1, #ITEMREF_SLOTS do
-        local tooltip = _G[ITEMREF_SLOTS[index]]
+    for _, index in ipairs(COMPARE_ORDER) do
+        local tooltip = _G[pair.shopping[index]]
         if tooltip then
-            tooltip:SetOwner(frame, "ANCHOR_NONE")
-            if tooltip:SetHyperlinkCompareItem(link, index, 1) then
+            tooltip:SetOwner(anchor, "ANCHOR_NONE")
+            if tooltip:SetHyperlinkCompareItem(link, index, 1, frame) then
+                -- Blizzard only clamps ShoppingTooltip1-3; ItemRef's ran off the bottom edge.
+                tooltip:SetClampedToScreen(true)
                 tooltip:ClearAllPoints()
-                tooltip:SetPoint(point, anchor, relativePoint, 0, 0)
+                tooltip:SetPoint(point, anchor, relativePoint, 0, offsetY)
                 tooltip:Show()
-                anchor = tooltip
+                anchor, offsetY = tooltip, 0
             else
                 tooltip:Hide()
             end
         end
+    end
+end
+
+local function ForEachPair(fn)
+    for _, pair in ipairs(PAIRS) do
+        fn(pair)
+    end
+end
+
+local function HideOwnComparison(pair)
+    if not (pair.ownShift and IsModifiedClick("COMPAREITEMS")) then
+        HideComparison(pair)
     end
 end
 
@@ -133,54 +122,55 @@ watcher:SetScript("OnEvent", function(_, _, key, down)
     if not IsModuleEnabled() then
         return
     end
-    if down then
-        HideComparison()
-    else
-        ShowComparison()
-    end
+    -- down is 1 or 0, and 0 is truthy in Lua.
+    ForEachPair(down == 1 and HideOwnComparison or ShowComparison)
 end)
 
 -- ============================================================================
 -- LIFECYCLE
 -- ============================================================================
 
-local function InstallItemRefHooks()
-    local frame = _G.ItemRefTooltip
+local function InstallHooks(pair)
+    local frame = _G[pair.tooltip]
     if not frame or EquipmentCompareModule.hooks[frame] then
         return
     end
     EquipmentCompareModule.hooks[frame] = true
 
-    -- Runs after Blizzard's Shift-only handler and fills the tooltips either way.
-    frame:HookScript("OnTooltipSetItem", function(self)
-        if not IsModuleEnabled() then
-            return
-        end
-        if IsSuppressed() then
-            HideComparison()
-            return
-        end
-        ShowComparison()
+    frame:HookScript("OnTooltipSetItem", function()
+        ShowComparison(pair)
     end)
-
-    frame:HookScript("OnHide", HideComparison)
-    frame:HookScript("OnTooltipCleared", HideComparison)
+    frame:HookScript("OnTooltipCleared", function()
+        if IsModuleEnabled() then
+            HideOwnComparison(pair)
+        end
+    end)
+    -- The 3.0 GameTooltip_OnHide doesn't hide shoppingTooltips, and these are parented to UIParent.
+    frame:HookScript("OnHide", function()
+        if IsModuleEnabled() then
+            HideComparison(pair)
+        end
+    end)
+    if pair.refillOnLeave then
+        -- Blizzard's OnLeave hides these (Shift-while-hovering model); ours stay up with the window.
+        frame:HookScript("OnLeave", function()
+            ShowComparison(pair)
+        end)
+    end
 end
 
 local function ApplyEquipmentCompareSystem()
     if not IsModuleEnabled() then
         return
     end
-    ApplyCvar()
-    InstallItemRefHooks()
+    ForEachPair(InstallHooks)
 
     EquipmentCompareModule.applied = true
     EquipmentCompareModule.initialized = true
 end
 
 local function RestoreEquipmentCompareSystem()
-    RestoreCvar()
-    HideComparison()
+    ForEachPair(HideComparison)
     EquipmentCompareModule.applied = false
 end
 
