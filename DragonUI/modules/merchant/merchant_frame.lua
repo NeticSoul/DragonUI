@@ -354,8 +354,7 @@ local function styleCloseButton(frame)
         return
     end
     frame.CloseButton = button
-    button:SetSize(24, 24)
-    place(button, "TOPRIGHT", frame, "TOPRIGHT", 1, 0)
+    addon.SeatCloseButton(button, frame)
     button:SetFrameLevel(frame:GetFrameLevel() + 20)
 
     local sheet = art("UI\\redbutton2x")

@@ -118,7 +118,7 @@ local function BagsterAddNineSlice(frame)
 
     local closeBtn = frame.ClosePanelButton or _G[frame:GetName() .. 'CloseButton']
     if closeBtn then
-        closeBtn:SetSize(24, 24)
+        addon.SeatCloseButton(closeBtn, frame)
         local nt = closeBtn:GetNormalTexture()
         if nt then
             nt:SetTexture(CT.close_btn)

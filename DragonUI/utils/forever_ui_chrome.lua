@@ -248,7 +248,12 @@ local function AddClose(frame, opts, x, y)
             end
         end,
     })
-    frame.CloseButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", x, y)
+    -- Without an offset it sits in the metal window's title band, like every bronze window's.
+    if x then
+        frame.CloseButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", x, y)
+    else
+        addon.SeatCloseButton(frame.CloseButton, frame)
+    end
     frame.CloseButton:SetFrameLevel(frame:GetFrameLevel() + 10)
 end
 
@@ -294,7 +299,7 @@ function ForeverUI.SkinWindow(frame, opts)
     frame.BorderPieces = ForeverUI.ApplyNineSlice(back, "metalframe", "BORDER")
 
     Chrome(frame, back, opts, Fonts.Normal, M.titleY, M.titleSide)
-    AddClose(frame, opts, M.closeX, M.closeY)
+    AddClose(frame, opts)
 
     local level = frame:GetFrameLevel() + 1
     if opts.inset then

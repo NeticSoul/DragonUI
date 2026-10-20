@@ -45,7 +45,6 @@ local function skinCloseButton(button)
     local hl = atlas["redbutton-highlight"]
     button:SetHighlightTexture(hl[1], "ADD")
     button:GetHighlightTexture():SetTexCoord(hl[4], hl[5], hl[6], hl[7])
-    button:SetSize(24, 24)
 end
 
 -- Parks a stock widget we no longer show; Blizzard keeps driving it (state, events, scripts) out of sight.
@@ -154,8 +153,7 @@ function Frame.Build()
 
     -- Its click hides the parent panel, so it stays TradeSkillFrame's child and only moves above the chrome.
     local close = TradeSkillFrameCloseButton
-    close:ClearAllPoints()
-    close:SetPoint("TOPRIGHT", win, "TOPRIGHT", -2, 1)
+    addon.SeatCloseButton(close, win)
     skinCloseButton(close)
     close:SetFrameLevel(level + TOP_LEVEL)
 

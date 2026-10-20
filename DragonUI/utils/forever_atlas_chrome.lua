@@ -127,7 +127,7 @@ ForeverUI.ChromeLayouts = {
 }
 
 ForeverUI.ChromeMetrics = {
-    window = { bgLeft = 7, bgTop = -18, bgRight = -3, bgBottom = 3, titleY = 0, titleSide = 60, closeX = -2, closeY = 1, closeSize = 24, insetLeft = 17, insetTop = -64, insetRight = -17, insetBottom = 42, plainLeft = 12, plainTop = -32, plainRight = -12, plainBottom = 12, titleBarHeight = 18 },
+    window = { bgLeft = 7, bgTop = -18, bgRight = -3, bgBottom = 3, titleY = 0, titleSide = 60, closeSize = 24, insetLeft = 17, insetTop = -64, insetRight = -17, insetBottom = 42, plainLeft = 12, plainTop = -32, plainRight = -12, plainBottom = 12, titleBarHeight = 18 },
     dialog = { bgInset = 7, titleY = -21, closeX = 0, closeY = 0, railInset = 0, contentLeft = 24, contentTop = -48, contentRight = -24, contentBottom = 24 },
     optionsbox = { railInsetX = 14, railInsetY = 13, railThickness = 1, fillInset = 1, defaultLeft = -16, defaultTop = 15, defaultRight = 16, defaultBottom = -15 },
     button = { sliceHeight = 128, pushedX = -2, pushedY = -1, defaultWidth = 96, defaultHeight = 22 },

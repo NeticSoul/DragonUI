@@ -312,9 +312,9 @@ local function buildDetail()
     detail:Hide()
 
     local close = CreateFrame("Button", nil, detail, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", detail, "TOPRIGHT", 1, 0)
+    addon.SeatCloseButton(close, detail)
     if addon.CharacterPanel and addon.CharacterPanel.ModernizeCloseButton then
-        addon.CharacterPanel.ModernizeCloseButton(close, detail, 1, 0)
+        addon.CharacterPanel.ModernizeCloseButton(close, detail)
     end
     close:SetScript("OnClick", function() GU.SelectMember(nil) end)
 

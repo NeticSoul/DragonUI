@@ -928,12 +928,8 @@ local function BagsterSkinFrame(frame)
         search:SetPoint('TOPLEFT', frame, 'TOPLEFT', 16, -31)
     end
 
-    -- CloseButton: reposition
-    local close = _G[frame:GetName() .. 'CloseButton']
-    if close then
-        close:ClearAllPoints()
-        close:SetPoint('TOPRIGHT', frame, 'TOPRIGHT', 0, 0)
-    end
+    -- CloseButton: into the title band
+    addon.SeatCloseButton(_G[frame:GetName() .. 'CloseButton'], frame)
 
     -- Title keeps the dynamic "<player>'s Inventory" text; just sit it on the header band
     local title = _G[frame:GetName() .. 'Title']
