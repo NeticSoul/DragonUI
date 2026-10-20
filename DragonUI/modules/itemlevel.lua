@@ -663,7 +663,7 @@ local function EnsureRepairCostFrame()
     local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     label:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 12)
     label:SetJustifyH("LEFT")
-    label:SetText(L["Repair Cost"])
+    label:SetText(addon.L["Repair Cost"])
     frame.label = label
 
     local amount = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -707,7 +707,7 @@ local function UpdateRepairCostDisplay()
     if totalRepairCost > 0 and GetCoinTextureString then
         frame.amount:SetText(GetCoinTextureString(totalRepairCost))
     else
-        frame.amount:SetText(L["No Repairs Needed"])
+        frame.amount:SetText(addon.L["No Repairs Needed"])
     end
     frame:Show()
 end

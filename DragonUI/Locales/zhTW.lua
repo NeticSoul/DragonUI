@@ -147,6 +147,8 @@ L["Reload"] = "重新載入"
 L["Item Level"] = "物品等級"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "在背包、角色面板、銀行等介面的裝備圖示上顯示物品等級"
 L["Item Level: %d"] = "物品等級：%d"
+L["Repair Cost"] = "修理費用"
+L["No Repairs Needed"] = "無需修理"
 
 
 -- Alt Gold
@@ -362,8 +364,6 @@ L["Bags: %d"] = "背包: %d"
 L["Bank: %d"] = "銀行: %d"
 L["Equipped: %d"] = "已裝備: %d"
 L["Total: %d (%s)"] = "總計: %d (%s)"
-L["Repair Cost"] = "修理費用"
-L["No Repairs Needed"] = "無需修理"
 L["Key Binding"] = "按鍵綁定"
 L["LibKeyBound integration for intuitive keybinding"] = "整合 LibKeyBound 以提供直覺的按鍵綁定"
 L["Buff Frame"] = "增益效果框體"

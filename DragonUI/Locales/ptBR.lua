@@ -151,6 +151,8 @@ L["Reload"] = "Recarregar"
 L["Item Level"] = "Nível de Item"
 L["Show item level on gear icons in bags, character panel, bank, and more"] = "Mostrar o nível de item nos ícones de equipamento em bolsas, painel do personagem, banco e mais"
 L["Item Level: %d"] = "Nível de item: %d"
+L["Repair Cost"] = "Custo de reparo"
+L["No Repairs Needed"] = "Nenhum reparo necessário"
 
 
 -- Alt Gold
@@ -358,8 +360,6 @@ L["Bags: %d"] = "Bolsas: %d"
 L["Bank: %d"] = "Banco: %d"
 L["Equipped: %d"] = "Equipado: %d"
 L["Total: %d (%s)"] = "Total: %d (%s)"
-L["Repair Cost"] = "Custo de reparo"
-L["No Repairs Needed"] = "Nenhum reparo necessário"
 L["Key Binding"] = "Atalhos de teclado"
 L["LibKeyBound integration for intuitive keybinding"] = "Integração com o LibKeyBound para atalhos intuitivos"
 L["Buff Frame"] = "Quadro de buffs"
