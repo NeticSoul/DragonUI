@@ -123,12 +123,14 @@ local function Install()
     close:SetScript('OnClick', function() panel:Hide() end)
     for i = 1, PAGE_SIZE do
         local b = CreateFrame('Button', nil, panel)
-        b:SetSize(520, 35)
+        -- Anchored to both edges: the bronze skin (stockpanels.lua) narrows the panel to its inset.
+        b:SetHeight(35)
         b:SetPoint('TOPLEFT', 16, -65 - (i - 1) * 35)
+        b:SetPoint('TOPRIGHT', -16, -65 - (i - 1) * 35)
         b:SetHighlightTexture('Interface\\QuestFrame\\UI-QuestTitleHighlight')
         b.icon = b:CreateTexture(nil, 'ARTWORK'); b.icon:SetSize(28, 28); b.icon:SetPoint('LEFT')
-        b.name = b:CreateFontString(nil, 'OVERLAY', 'GameFontNormal'); b.name:SetPoint('TOPLEFT', 35, -1); b.name:SetWidth(480); b.name:SetJustifyH('LEFT')
-        b.reward = b:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall'); b.reward:SetPoint('TOPLEFT', 35, -18); b.reward:SetWidth(480); b.reward:SetJustifyH('LEFT')
+        b.name = b:CreateFontString(nil, 'OVERLAY', 'GameFontNormal'); b.name:SetPoint('TOPLEFT', 35, -1); b.name:SetPoint('TOPRIGHT', -5, -1); b.name:SetJustifyH('LEFT')
+        b.reward = b:CreateFontString(nil, 'OVERLAY', 'GameFontHighlightSmall'); b.reward:SetPoint('TOPLEFT', 35, -18); b.reward:SetPoint('TOPRIGHT', -5, -18); b.reward:SetJustifyH('LEFT')
         b:SetScript('OnClick', function(self)
             if not self.entry then return end
             panel:Hide()
@@ -157,6 +159,8 @@ local function Install()
         if panel:IsShown() then panel:Hide() else panel:Show(); edit:SetFocus() end
     end)
     panel:Hide()
+    -- stockpanels.lua seats both in the bronze window's toolbar and content inset.
+    addon.AchievementSearch = { button = searchButton, panel = panel }
 end
 local events = CreateFrame('Frame')
 events:RegisterEvent('ADDON_LOADED')
