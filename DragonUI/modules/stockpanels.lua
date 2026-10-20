@@ -10,8 +10,8 @@ local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local UpdateUIPanelPositions = UpdateUIPanelPositions
 
--- The stock windows DragonUI has no window of its own for: Quest Log, Dungeon Finder, PvP and the
--- Game Menu. Like social_skin.lua this is a reskin, not a rebuild: each keeps its stock size and
+-- The stock windows DragonUI has no window of its own for: Quest Log, Dungeon Finder, PvP,
+-- Achievements and the Game Menu. Like social_skin.lua this is a reskin, not a rebuild: each keeps its stock size and
 -- every Blizzard anchor, and the bronze window is drawn over the rect its old art showed.
 local StockPanels = { initialized = false, applied = false }
 
@@ -27,7 +27,7 @@ end
 if addon.RegisterModule then
     addon:RegisterModule("stockpanels", StockPanels,
         localized("Stock Windows"),
-        localized("Retail-style quest log, dungeon finder, PvP and game menu chrome"),
+        localized("Retail-style quest log, dungeon finder, PvP, achievements and game menu chrome"),
         { lifecyclePrefix = "StockPanels", loadOnce = true })
 end
 
@@ -175,11 +175,13 @@ end
 -- Ground on BORDER and the filigree on ARTWORK, both the window's own regions so every subframe
 -- draws above them (on BACKGROUND the ground ties with the rock and the rock wins). The ground is
 -- marble, or the quest parchment for a pane whose text was written for paper.
+-- `bounds` are offsets from the window's corners, or from `bounds.topLeft` / `bounds.bottomRight`
+-- when the inset follows a pane Blizzard resizes.
 local function addInset(window, bounds, parchment)
     local inset = CreateFrame("Frame", nil, window)
     inset:EnableMouse(false)
-    inset:SetPoint("TOPLEFT", window, "TOPLEFT", bounds[1], bounds[2])
-    inset:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", bounds[3], bounds[4])
+    inset:SetPoint("TOPLEFT", bounds.topLeft or window, "TOPLEFT", bounds[1], bounds[2])
+    inset:SetPoint("BOTTOMRIGHT", bounds.bottomRight or window, "BOTTOMRIGHT", bounds[3], bounds[4])
 
     local ground = window:CreateTexture(nil, "BORDER")
     if parchment and ground.SetAtlasTexture then
@@ -432,10 +434,195 @@ local function buildGameMenu()
     dressTitle(host, title)
 end
 
+-- ============================================================================
+-- ACHIEVEMENTS (768x500 load-on-demand; wood border, metal rails and a header hung above the top)
+-- ============================================================================
+
+-- The bronze title band takes the room the stock header used above the frame, so the window grows
+-- by one toolbar strip under the band for the Filter dropdown and DragonUI's Search button.
+local ACH_RECT = { 10, 7, -16, 8 }
+local ACH_TOOLBAR_H = 26
+local ACH_CATEGORIES_TOP = -19 - ACH_TOOLBAR_H
+-- Content inset: the panes' left edge (the category scroll bar sits in the gap before it), out to
+-- the achievement list's scroll bar, then the seat's gap inside the right and bottom rails.
+local ACH_CONTENT_RIGHT, ACH_CONTENT_BOTTOM = -26, 17
+local ACH_PAD = 3
+-- A pane's own scroll bar hangs 1 right of it; the summary has none and spans that column too.
+local ACH_BAR_COLUMN = 17
+local ACH_TOOLBAR_Y = -17
+
+local function stripPane(pane, keepNamed)
+    if not pane then return end
+    for _, region in ipairs({ pane:GetRegions() }) do
+        if region:GetObjectType() == "Texture" and not (keepNamed and keepNamed[region:GetName() or ""]) then
+            neuterTexture(region)
+        end
+    end
+    -- The tooltip-border boxes are unnamed setAllPoints children.
+    for _, child in ipairs({ pane:GetChildren() }) do
+        if not child:GetName() and child.SetBackdrop then
+            child:SetBackdrop(nil)
+        end
+    end
+end
+
+-- Blizzard re-anchors a tab's label on click (0,-5 selected / 0,-3 other) after SelectTab, so the
+-- label is re-synced afterwards. Addons such as Overachiever add more tabs on the same template.
+local function achievementTabCount()
+    local count = 2
+    while _G["AchievementFrameTab" .. (count + 1)] do count = count + 1 end
+    return count
+end
+
+local function dressAchievementTabs(host)
+    local CP = addon.CharacterPanel
+    local count = achievementTabCount()
+    for i = 1, count do
+        local tab = _G["AchievementFrameTab" .. i]
+        if tab and not tab._duiAchievementTab then
+            tab._duiAchievementTab = true
+            local name = tab:GetName()
+            hideNamed({ name .. "LeftHighlight", name .. "MiddleHighlight", name .. "RightHighlight" })
+            tab:HookScript("OnClick", function()
+                for j = 1, achievementTabCount() do
+                    local other = _G["AchievementFrameTab" .. j]
+                    if other and other._duiReskinned and CP and CP.ReskinTab then CP.ReskinTab(other) end
+                end
+            end)
+        end
+    end
+    dressTabs(host, "AchievementFrameTab", count)
+end
+
+-- Toolbar: Search button at the content inset's right edge, the Filter dropdown (label + arrow, no
+-- box of its own) to its left.
+local function placeAchievementToolbar(window)
+    local search = addon.AchievementSearch
+    local button = search and search.button
+    if button then
+        button:ClearAllPoints()
+        button:SetPoint("TOPRIGHT", window, "TOPRIGHT", ACH_CONTENT_RIGHT, ACH_TOOLBAR_Y)
+    end
+    local filter = _G.AchievementFrameFilterDropDown
+    if filter then
+        filter:ClearAllPoints()
+        if button then
+            filter:SetPoint("TOPRIGHT", button, "TOPLEFT", -8, 1)
+        else
+            filter:SetPoint("TOPRIGHT", window, "TOPRIGHT", ACH_CONTENT_RIGHT, ACH_TOOLBAR_Y + 1)
+        end
+    end
+end
+
+local function buildAchievements()
+    local window = _G.AchievementFrame
+    if not window or window._duiStockSkinned then return end
+    window._duiStockSkinned = true
+
+    if window.SetBackdrop then window:SetBackdrop(nil) end
+    hideNamed({
+        "AchievementFrameBackground", "AchievementFrameCategoriesBG", "AchievementFrameWaterMark",
+        "AchievementFrameMetalBorderLeft", "AchievementFrameMetalBorderRight",
+        "AchievementFrameMetalBorderTop", "AchievementFrameMetalBorderBottom",
+        "AchievementFrameMetalBorderTopLeft", "AchievementFrameMetalBorderTopRight",
+        "AchievementFrameMetalBorderBottomLeft", "AchievementFrameMetalBorderBottomRight",
+        "AchievementFrameWoodBorderTopLeft", "AchievementFrameWoodBorderTopRight",
+        "AchievementFrameWoodBorderBottomLeft", "AchievementFrameWoodBorderBottomRight",
+        "AchievementFrameHeaderLeft", "AchievementFrameHeaderRight",
+        "AchievementFrameHeaderPointBorder", "AchievementFrameHeaderRightDDLInset",
+    })
+    -- The header frame hangs 67 above the window and would swallow clicks on the title band.
+    local header = _G.AchievementFrameHeader
+    if header then header:EnableMouse(false) end
+
+    window:SetHeight(window:GetHeight() + ACH_TOOLBAR_H)
+    local categories = _G.AchievementFrameCategories
+    if categories then
+        categories:ClearAllPoints()
+        categories:SetPoint("TOPLEFT", window, "TOPLEFT", 21, ACH_CATEGORIES_TOP)
+        categories:SetPoint("BOTTOMLEFT", window, "BOTTOMLEFT", 21, 20)
+        categories:SetBackdrop(nil)
+    end
+
+    local title = _G.AchievementFrameHeaderTitle
+    if title then title:SetText(_G.ACHIEVEMENTS or title:GetText()) end
+    local host = skinWindow(window, {
+        rect = ACH_RECT,
+        hit = { ACH_RECT[1], -ACH_RECT[3], 0, ACH_RECT[4] },
+        title = title,
+        close = _G.AchievementFrameCloseButton,
+    })
+
+    -- Points and shield at the right of the band, clear of the close button.
+    local shield, points = _G.AchievementFrameHeaderShield, _G.AchievementFrameHeaderPoints
+    if shield and points then
+        shield:ClearAllPoints()
+        shield:SetPoint("RIGHT", host, "TOPRIGHT", -28, -11)
+        points:ClearAllPoints()
+        points:SetPoint("RIGHT", shield, "LEFT", -2, 1)
+    end
+
+    -- Every pane draws on the insets' grounds instead of its own paper and tooltip border.
+    local list = _G.AchievementFrameAchievements
+    stripPane(list)
+    stripPane(_G.AchievementFrameSummary)
+    stripPane(_G.AchievementFrameStats)
+    hideNamed({ "AchievementFrameStatsBG" })
+    local comparison = _G.AchievementFrameComparison
+    stripPane(comparison, { AchievementFrameComparisonWatermark = true })
+
+    -- The summary was 529 wide off the category list's edge and ran into the right rail; it now
+    -- spans the achievement list plus that list's scroll-bar column.
+    local summary = _G.AchievementFrameSummary
+    if summary and list then
+        summary:ClearAllPoints()
+        summary:SetPoint("TOPLEFT", list, "TOPLEFT", 0, 0)
+        summary:SetPoint("BOTTOMRIGHT", list, "BOTTOMRIGHT", ACH_BAR_COLUMN, 0)
+    end
+
+    if categories then
+        addInset(window, { -ACH_PAD, ACH_PAD, ACH_PAD, -ACH_PAD, topLeft = categories, bottomRight = categories })
+    end
+    if list then
+        addInset(window, { -ACH_PAD, ACH_PAD, ACH_CONTENT_RIGHT, ACH_CONTENT_BOTTOM, topLeft = list })
+    end
+
+    for _, scroll in ipairs({
+        "AchievementFrameCategoriesContainer", "AchievementFrameAchievementsContainer",
+        "AchievementFrameStatsContainer", "AchievementFrameComparisonContainer",
+        "AchievementFrameComparisonStatsContainer",
+    }) do
+        dressScrollBar(scroll, 1)
+    end
+
+    -- DragonUI's search panel covered the old content rect; it now covers the content inset.
+    local search = addon.AchievementSearch
+    if search and search.panel and list then
+        search.panel:ClearAllPoints()
+        search.panel:SetPoint("TOPLEFT", list, "TOPLEFT", 0, 0)
+        search.panel:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT",
+            ACH_CONTENT_RIGHT - ACH_PAD, ACH_CONTENT_BOTTOM + ACH_PAD)
+    end
+    placeAchievementToolbar(window)
+    dressAchievementTabs(host)
+    window:HookScript("OnShow", function() dressAchievementTabs(host) end)
+
+    -- Comparison writes its own x offsets (38 wide, 80 back) on show and hide; the bronze window
+    -- keeps the left edge every other DragonUI window uses.
+    if comparison then
+        local function reseat()
+            nudgePanel(window, 6 - ACH_RECT[1], -ACH_RECT[2])
+        end
+        comparison:HookScript("OnShow", reseat)
+        comparison:HookScript("OnHide", reseat)
+    end
+end
+
 local BUILDERS = {
     { frame = "QuestLogFrame", build = buildQuestLog },
     { frame = "LFDParentFrame", build = buildLFD },
     { frame = "PVPParentFrame", build = buildPvP },
+    { frame = "AchievementFrame", build = buildAchievements },
     { frame = "GameMenuFrame", build = buildGameMenu },
 }
 
@@ -482,9 +669,16 @@ function addon.RefreshStockPanelsSystem()
     end
 end
 
+-- The Achievement window is load-on-demand: hooked when Blizzard_AchievementUI loads.
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
-boot:SetScript("OnEvent", function(self)
-    self:UnregisterEvent("PLAYER_LOGIN")
-    addon.ApplyStockPanelsSystem()
+boot:RegisterEvent("ADDON_LOADED")
+boot:SetScript("OnEvent", function(self, event, name)
+    if event == "PLAYER_LOGIN" then
+        self:UnregisterEvent("PLAYER_LOGIN")
+        addon.ApplyStockPanelsSystem()
+    elseif name == "Blizzard_AchievementUI" then
+        self:UnregisterEvent("ADDON_LOADED")
+        if StockPanels.initialized then addon.ApplyStockPanelsSystem() end
+    end
 end)
