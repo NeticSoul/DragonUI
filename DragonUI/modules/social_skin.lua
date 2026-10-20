@@ -5,6 +5,7 @@ if not addon then return end
 
 local _G = _G
 local ipairs = ipairs
+local pairs = pairs
 local type = type
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
@@ -47,17 +48,57 @@ local HIT_LEFT, HIT_RIGHT, HIT_TOP, HIT_BOTTOM = 12, 34, 12, 76
 -- the drawn window onto the spot retail windows use (CharacterFrame and MailFrame nudge to x = 6).
 local PANEL_X_OFFSET, PANEL_Y_OFFSET = 6 - CHROME_X, -CHROME_Y
 
+-- The window seat (nineslice.lua) in FriendsFrame space: bottom-row buttons and inset sides keep
+-- its gap inside the bronze rails of the window drawn at CHROME_X / CHROME_Y.
+local SEAT = addon.WindowSeat
+local ROW_LEFT = CHROME_X + SEAT.buttonLeft
+local ROW_RIGHT = CHROME_X + WIDTH - 384 + SEAT.buttonRight
+local ROW_BOTTOM = 512 + CHROME_Y - HEIGHT + SEAT.buttonBottom
+
 -- Inset rects in FriendsFrame space: TOPLEFT x, y from its top-left; BOTTOMRIGHT x, y from its
--- bottom-right. Each is cut from the stock anchors in FriendsFrame.xml so rows sit inside the trim.
--- Friends / ignore / pending lists start at y -99..-102 and end above the buttons at bottom 81 + 21.
-local INSET_LIST = { 16, -96, -40, 104 }
+-- bottom-right. Each is cut from the stock anchors in FriendsFrame.xml so rows sit inside the trim,
+-- and ends 3 above its tab's 21 or 22 tall bottom row.
+-- Friends / ignore / pending lists start at y -99 (see LIST_NUDGES).
+local INSET_LIST = { ROW_LEFT, -96, ROW_RIGHT, ROW_BOTTOM + 21 + SEAT.gap }
 -- Who: column headers at y -70, 17 rows of 16 from -95, WhoFrameTotals under them at bottom 127.
-local INSET_WHO = { 16, -66, -40, 142 }
--- Retail wraps the who search box in its own inset; the box is centred on bottom 100 + 16.
-local INSET_WHO_EDIT = { 16, -386, -40, 106 }
+local INSET_WHO = { ROW_LEFT, -66, ROW_RIGHT, 142 }
+-- Retail wraps the who search box in its own 20 tall inset; the box is centred on it.
+local WHO_EDIT_BOTTOM = ROW_BOTTOM + 22 + SEAT.gap
+local INSET_WHO_EDIT = { ROW_LEFT, WHO_EDIT_BOTTOM + 20 - 512, ROW_RIGHT, WHO_EDIT_BOTTOM }
 -- Chat and raid have no list geometry this file re-reads, so they get the whole body above the
 -- bottom buttons; the guild one only shows if the retail guild window is off.
-local INSET_BODY = { 16, -66, -40, 104 }
+local INSET_BODY = { ROW_LEFT, -66, ROW_RIGHT, ROW_BOTTOM + 22 + SEAT.gap }
+
+-- The stock bottom rows, re-seated: the left button of each on ROW_LEFT, the right on ROW_RIGHT
+-- (the rest of each row hangs off them).
+local SEATED_BUTTONS = {
+    { "FriendsFrameAddFriendButton", "BOTTOMLEFT" }, { "FriendsFrameSendMessageButton", "BOTTOMRIGHT" },
+    { "FriendsFrameIgnorePlayerButton", "BOTTOMLEFT" }, { "FriendsFrameUnsquelchButton", "BOTTOMRIGHT" },
+    { "WhoFrameGroupInviteButton", "BOTTOMRIGHT" }, { "ChannelFrameNewButton", "BOTTOMRIGHT" },
+    { "GuildFrameControlButton", "BOTTOMRIGHT" },
+}
+-- Rows wider than the 322 between the seats: Who / Add Friend / Invite was 325, the stock guild
+-- row 329 (its 2 gaps included).
+local NARROWED_BUTTONS = {
+    WhoFrameWhoButton = 82,
+    GuildFrameGuildInformationButton = 120,
+    GuildFrameAddMemberButton = 94,
+}
+-- List contents moved by { dx, dy } off their stock anchors, and the scroll frames' new heights:
+-- each list starts 3 inside its inset and its bar's steppers end 2.5 inside the other side.
+local LIST_TOP = 99
+local LIST_NUDGES = {
+    { name = "FriendsFrameFriendsScrollFrame", dx = 1.5, dy = 0, height = 512 - 100 - INSET_LIST[4] - 1 },
+    { name = "FriendsFrameIgnoreScrollFrame", dx = 1.5, dy = 0, height = 512 - LIST_TOP - INSET_LIST[4] },
+    { name = "FriendsFramePendingScrollFrame", dx = 1.5, dy = 0, height = 512 - LIST_TOP - INSET_LIST[4] },
+    -- 19 rows of 16 from -102 ran 1.5 past the raised inset; from -99 they end 1 inside it.
+    { name = "FriendsFrameIgnoreButton1", dx = 1.5, dy = 102 - LIST_TOP },
+    { name = "WhoFrameButton1", dx = 7.5, dy = 0 },
+    { name = "WhoFrameColumnHeader1", dx = 7.5, dy = 0 },
+    { name = "WhoListScrollFrame", dx = 7.5, dy = 0 },
+    { name = "WhoFrameEditBox", dx = 0.5, dy = WHO_EDIT_BOTTOM - 106 },
+    { name = "ChannelListScrollFrame", dx = 2.5, dy = 0 },
+}
 
 local SUBFRAME_INSETS = {
     FriendsListFrame = INSET_LIST,
@@ -80,9 +121,9 @@ local HEADER_SUBFRAMES = {
 -- frame (2px past its 302px scroll frame). `bottom` lifts a bar whose frame runs past its rows.
 local SCROLL_BARS = {
     { name = "FriendsFrameFriendsScrollFrame", x = 2 },
-    { name = "FriendsFrameIgnoreScrollFrame", x = 10 },
-    { name = "FriendsFramePendingScrollFrame", x = 10 },
-    { name = "WhoListScrollFrame", x = 10, bottom = 16 },
+    { name = "FriendsFrameIgnoreScrollFrame", x = 6 },
+    { name = "FriendsFramePendingScrollFrame", x = 6 },
+    { name = "WhoListScrollFrame", x = 2, bottom = 16 },
     { name = "ChannelListScrollFrame", x = 10 },
     { name = "ChannelRosterScrollFrame", x = 10 },
 }
@@ -453,6 +494,38 @@ local function liftHeaderRow()
     end
 end
 
+-- Once per frame: the stock anchors are set in XML and nothing re-applies them.
+local function nudgeOnce(frame, dx, dy)
+    if not frame or frame._duiSeatNudged or frame:GetNumPoints() ~= 1 then return end
+    local point, relativeTo, relativePoint, x, y = frame:GetPoint(1)
+    frame._duiSeatNudged = true
+    frame:ClearAllPoints()
+    frame:SetPoint(point, relativeTo, relativePoint, (x or 0) + dx, (y or 0) + dy)
+end
+
+-- Some of these live in Blizzard_RaidUI / the guild pane, so it runs again on every view sync.
+local function seatBottomRows()
+    local window = _G.FriendsFrame
+    for _, entry in ipairs(SEATED_BUTTONS) do
+        local button = _G[entry[1]]
+        if button and not button._duiSeated then
+            button._duiSeated = true
+            button:ClearAllPoints()
+            button:SetPoint(entry[2], window, entry[2], entry[2] == "BOTTOMLEFT" and ROW_LEFT or ROW_RIGHT,
+                ROW_BOTTOM)
+        end
+    end
+    for name, width in pairs(NARROWED_BUTTONS) do
+        local button = _G[name]
+        if button then button:SetWidth(width) end
+    end
+    for _, spec in ipairs(LIST_NUDGES) do
+        local frame = _G[spec.name]
+        nudgeOnce(frame, spec.dx, spec.dy)
+        if frame and spec.height then frame:SetHeight(spec.height) end
+    end
+end
+
 local function activeSubFrame()
     local names = _G.FRIENDSFRAME_SUBFRAMES
     if type(names) ~= "table" then return end
@@ -486,6 +559,7 @@ local function syncView(frameName)
         relayoutHeaderTabs()
     end
     skinActionButtons()
+    seatBottomRows()
     styleScrollBars()
     relayoutBottomTabs()
 end

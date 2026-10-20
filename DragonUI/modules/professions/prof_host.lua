@@ -140,7 +140,9 @@ local function apply()
         for _, name in ipairs(CONTROLS) do park(_G[name]) end
         controls:ClearAllPoints()
         controls:SetPoint("TOPLEFT", Details.card, "BOTTOMLEFT", 0, -4)
-        controls:SetPoint("BOTTOMRIGHT", P.Frame.win, "BOTTOMRIGHT", -9, 4)
+        -- Ends the window seat's gap inside the bronze rails, where the create row stands.
+        controls:SetPoint("BOTTOMRIGHT", P.Frame.win, "BOTTOMRIGHT", addon.WindowSeat.buttonRight,
+            addon.WindowSeat.buttonBottom)
         controls:Show()
         Host.regions.controls = controls
     end

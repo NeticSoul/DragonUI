@@ -230,20 +230,25 @@ local function layoutForm(craft, win)
     buildFavorite(child)
 end
 
+-- The create row stands on the window seat (nineslice.lua), 3 inside the bronze rails; the 22 tall
+-- stepper shares the buttons' bottom edge.
 local function layoutCreateControls(craft, win)
     local F = P.Frame
-    local createAll = F.Adopt(TradeSkillCreateAllButton, craft, "BOTTOMLEFT", win, "BOTTOMRIGHT", -362, 7)
+    local seat = addon.WindowSeat
+    local createAll = F.Adopt(TradeSkillCreateAllButton, craft, "BOTTOMLEFT", win, "BOTTOMRIGHT", -362,
+        seat.buttonBottom)
     createAll:SetSize(80, 22)
     addon.ForeverUI.SkinButton(createAll)
 
-    F.Adopt(TradeSkillDecrementButton, craft, "BOTTOMLEFT", win, "BOTTOMRIGHT", -185, 8)
+    F.Adopt(TradeSkillDecrementButton, craft, "BOTTOMLEFT", win, "BOTTOMRIGHT", -185, seat.buttonBottom)
     TradeSkillInputBox:SetParent(craft)
     TradeSkillInputBox:SetWidth(32)
     addon.ForeverUI.SkinEditBox(TradeSkillInputBox, { height = 20 })
     TradeSkillInputBox:SetJustifyH("CENTER")
     F.Adopt(TradeSkillIncrementButton, craft, "LEFT", TradeSkillInputBox, "RIGHT", 2, 0)
 
-    local create = F.Adopt(TradeSkillCreateButton, craft, "BOTTOMRIGHT", win, "BOTTOMRIGHT", -9, 7)
+    local create = F.Adopt(TradeSkillCreateButton, craft, "BOTTOMRIGHT", win, "BOTTOMRIGHT", seat.buttonRight,
+        seat.buttonBottom)
     create:SetSize(80, 22)
     addon.ForeverUI.SkinButton(create)
 end

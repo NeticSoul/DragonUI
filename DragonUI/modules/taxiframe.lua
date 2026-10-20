@@ -58,9 +58,11 @@ local MOUSE_SIZE = 16
 local GLOW_ALPHA = 0.25
 local ROUTE_ALPHA = 0.85
 
--- The maps are square art (retail draws them 580x580); 330 keeps the window at the PR's 338 width.
-local MAP_SIZE = 330
-local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = 4, -60, -4, 4
+-- The maps are square art (retail draws them 580x580). The map is the inset, which keeps the window
+-- seat's gap inside the bronze rails (nineslice.lua); 322 keeps the window at the PR's 338 width.
+local SEAT = addon.WindowSeat
+local MAP_SIZE = 322
+local INSET_LEFT, INSET_TOP, INSET_RIGHT, INSET_BOTTOM = SEAT.buttonLeft, -60, SEAT.buttonRight, SEAT.buttonBottom
 local WIDTH, HEIGHT = INSET_LEFT + MAP_SIZE - INSET_RIGHT, MAP_SIZE - INSET_TOP + INSET_BOTTOM
 local PANEL_X_NUDGE = 6
 

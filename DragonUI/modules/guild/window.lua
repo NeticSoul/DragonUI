@@ -11,12 +11,15 @@ local L = GU.L
 local FRAME_NAME = "DragonUIGuildFrame"
 local FRAME_W, FRAME_H = 800, 520
 
-local SIDE_PAD = 14
+-- The card, the panes and their bottom rows keep the window seat's gap inside the bronze rails
+-- (nineslice.lua); a pane's own list ends that gap above its button row.
+local SEAT = addon.WindowSeat
+local PAD_LEFT, PAD_RIGHT = SEAT.buttonLeft, -SEAT.buttonRight
 local LEFT_W = 212
 local INSET_GAP = 12
 local TITLE_H = 24
 local TOP_H = 40
-local BOTTOM_H = 26
+local BOTTOM_H = 22
 
 -- The character panel's band geometry, so the rock and streak strip line up with it.
 local STREAK_Y, STREAK_H = 21, 43
@@ -133,8 +136,8 @@ local band = {}
 local function buildTopBand()
     local top = CreateFrame("Frame", FRAME_NAME .. "TopBand", frame)
     top:SetFrameLevel(frame:GetFrameLevel() + 3)
-    top:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDE_PAD, -(TITLE_H + 4))
-    top:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -SIDE_PAD, -(TITLE_H + 4))
+    top:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, -(TITLE_H + 4))
+    top:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD_RIGHT, -(TITLE_H + 4))
     top:SetHeight(TOP_H)
     band.frame = top
 
@@ -396,18 +399,19 @@ local function build()
 
     local top = -(TITLE_H + TOP_H + 8)
     local left = GU.BuildInset(FRAME_NAME .. "LeftInset")
-    left:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDE_PAD, top)
-    left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", SIDE_PAD, 10)
+    left:SetPoint("TOPLEFT", frame, "TOPLEFT", PAD_LEFT, top)
+    left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", PAD_LEFT, SEAT.buttonBottom)
     left:SetWidth(LEFT_W)
     buildCard(left)
 
     local right = CreateFrame("Frame", FRAME_NAME .. "Right", frame)
     right:SetFrameLevel(frame:GetFrameLevel() + 2)
     right:SetPoint("TOPLEFT", left, "TOPRIGHT", INSET_GAP, 0)
-    right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -SIDE_PAD, 10)
+    right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -PAD_RIGHT, SEAT.buttonBottom)
     GU.Right = right
-    -- Panes leave this much room under them for their own buttons.
+    -- Panes leave this much room under them for their own buttons, which stand on the pane's bottom.
     GU.BOTTOM_H = BOTTOM_H
+    GU.PANE_GAP = SEAT.gap
 
     -- Not in a guild: retail's empty state.
     local empty = right:CreateFontString(nil, "OVERLAY", "GameFontDisableLarge")

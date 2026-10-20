@@ -286,16 +286,20 @@ end
 -- QUEST LOG (682x447 double-wide; the dual-pane art fills it below a 12px lip)
 -- ============================================================================
 
--- List: QuestLogScrollFrame at 19,-75 (305x335) plus its hybrid bar's 16px on the right.
-local QUEST_LIST_INSET = { 14, -70, -340, 37 }
+-- The bottom row sits the seat's height above the rail (stock it hung 13 in from the left and 1.5
+-- off the right rail), and the insets' outer sides and bottoms keep the seat's gap to the rails and
+-- the row. The control panel is 26 tall with its 21 buttons centred 1 high, so it sits 3.5 under
+-- their bottom edge.
+local QUEST_ROW_BOTTOM = 2 + addon.WindowSeat.buttonBottom
+local QUEST_INSET_BOTTOM = QUEST_ROW_BOTTOM + 21 + addon.WindowSeat.gap
+-- List: QuestLogScrollFrame (305x335) plus its hybrid bar's 16px on the right, moved 5 left of its
+-- stock 19,-75 so it sits 6.5 / 7 inside the inset.
+local QUEST_LIST_SCROLL_X = 14
+local QUEST_LIST_INSET = { addon.WindowSeat.buttonLeft, -70, -340, QUEST_INSET_BOTTOM }
 -- Details: QuestLogDetailScrollFrame hangs TOPRIGHT -32,-77 (298x333), its bar 8 right of that.
 -- Parchment, not marble: QuestInfo writes its text in the dark ink of the stock paper pane.
-local QUEST_DETAIL_INSET = { 349, -70, -8, 37, parchment = true }
+local QUEST_DETAIL_INSET = { 349, -70, addon.WindowSeat.buttonRight, QUEST_INSET_BOTTOM, parchment = true }
 
--- The bottom row lines up under the insets' outer edges and sits the seat's height above the rail
--- (stock it hung 13 in from the left and 1.5 off the right rail). The control panel is 26 tall with
--- its 21 buttons centred 1 high, so it sits 3.5 under their bottom edge.
-local QUEST_ROW_BOTTOM = 2 + addon.WindowSeat.buttonBottom
 local QUEST_PANEL_X, QUEST_PANEL_Y = QUEST_LIST_INSET[1], QUEST_ROW_BOTTOM - 3.5
 
 -- Blizzard re-anchors the panel each time the log or the detached detail window shows or hides.
@@ -319,6 +323,12 @@ local function buildQuestLog()
         insets = { QUEST_LIST_INSET, QUEST_DETAIL_INSET },
     })
     dressScrollBar("QuestLogDetailScrollFrame", 8)
+    local list = _G.QuestLogScrollFrame
+    if list and list:GetNumPoints() == 1 then
+        local point, relativeTo, relativePoint, _, y = list:GetPoint(1)
+        list:ClearAllPoints()
+        list:SetPoint(point, relativeTo, relativePoint, QUEST_LIST_SCROLL_X, y)
+    end
 
     local cancel = _G.QuestLogFrameCancelButton
     if cancel then
@@ -503,6 +513,8 @@ end
 -- ============================================================================
 
 local PVP_RECT = { 14, -13, -32, 75 }
+-- Group Join / Join / Cancel ran 136 + 109 + 2 + 83 = 330, past the 322 between the seats.
+local PVP_GROUP_JOIN_W = 128
 
 local function buildPvP()
     local window = _G.PVPParentFrame
@@ -523,6 +535,21 @@ local function buildPvP()
     dressTitle(host, fontStringByText(_G.PVPFrame, _G.PLAYER_V_PLAYER))
     dressTitle(host, _G.PVPBattlegroundFrameFrameLabel)
     dressTabs(host, "PVPParentFrameTab", 2)
+
+    -- Stock, the queue row hung 2 past the right rail and the team toggle sat on the bottom one; both
+    -- take the seat (the rest of the row hangs off Cancel).
+    local seat = addon.WindowSeat
+    local cancel, groupJoin = _G.PVPBattlegroundFrameCancelButton, _G.PVPBattlegroundFrameGroupJoinButton
+    if cancel then
+        cancel:ClearAllPoints()
+        cancel:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", seat.buttonRight, seat.buttonBottom)
+    end
+    if groupJoin then groupJoin:SetWidth(PVP_GROUP_JOIN_W) end
+    local toggle = _G.PVPFrameToggleButton
+    if toggle then
+        toggle:ClearAllPoints()
+        toggle:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", seat.buttonRight, seat.buttonBottom)
+    end
 end
 
 -- ============================================================================

@@ -33,8 +33,9 @@ local SHADE_BY_RACE = {
 }
 local SHADE_DEFAULT = 0.7
 
--- Retail's viewport sits at (52, -66) of the frame and the Inset starts at (4, -60).
-local FROM_INSET_X, FROM_INSET_Y = 48, -6
+-- Retail's viewport sits at (52, -66) of the frame; the Inset starts at (7.5, -60) (insets.lua), so
+-- the model keeps that spot and sits 4 / 5 clear of the slot columns in the 322 wide Inset.
+local FROM_INSET_X, FROM_INSET_Y = 45, -6
 
 local function resizeViewport()
     local viewport, owner = _G.CharacterModelFrame, _G.CharacterFrame

@@ -178,7 +178,7 @@ function parts.buildSellButton()
 
     local button = CreateFrame("Button", BUTTON_NAME, window)
     button:SetSize(36, 36)
-    button:SetPoint("BOTTOMRIGHT", window, "BOTTOMLEFT", 160, 33)
+    button:SetPoint("BOTTOMRIGHT", window, "BOTTOMLEFT", 160, 33 + (parts.BOTTOM_LIFT or 0))
 
     local icon = button:CreateTexture(nil, "BORDER")
     icon:SetAtlasTexture("spellicon-256x256-selljunk", false)

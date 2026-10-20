@@ -3,17 +3,19 @@
 local addon = select(2, ...)
 local CP = addon.CharacterPanel
 
--- Retail SharedUIPanelTemplates PANEL_INSET_* constants.
-local INSET_LEFT = 4
-local INSET_RIGHT = -6
-local INSET_BOTTOM = 4
+-- Retail SharedUIPanelTemplates PANEL_INSET_* places, moved to the window seat (nineslice.lua):
+-- retail's 4 / -6 / 4 put the filigree on the bronze rails, which run 4.5 / 5.5 / 4.5 deep, so
+-- every side now keeps the seat's 3 of stone between them. The slots and list panes ride the Inset.
+local SEAT = addon.WindowSeat
+local INSET_LEFT = SEAT.buttonLeft
+local INSET_RIGHT = SEAT.buttonRight
+local INSET_BOTTOM = SEAT.buttonBottom
 local INSET_ATTIC = -60
 
--- The stats pane meets the window's own right and bottom edges, where the bronze rail runs about
--- 6.5 deep on the right and 5.5 on the bottom. Its filigree (pushed 2.5 out, paneborder.lua) has
--- to clear that or it is drawn over the rail and the window looks unframed on that side.
-local STATS_RIGHT = -10
-local STATS_BOTTOM = 10
+-- The stats pane meets the window's own right and bottom edges; its filigree (pushed 2.5 out,
+-- paneborder.lua) keeps the same gap to the rails there.
+local STATS_RIGHT = SEAT.buttonRight
+local STATS_BOTTOM = SEAT.buttonBottom
 
 -- Sized from the Inset, not self-queried: right after Show(), this texture's own GetSize() lags.
 local function paintPanelGround(inset)
