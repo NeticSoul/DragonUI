@@ -50,6 +50,57 @@ local function HideComparison(pair)
     end
 end
 
+-- ============================================================================
+-- ITEM CACHE GUARD
+-- ============================================================================
+
+-- The 3.3.5a client crashes (#132 at 0x00620727) comparing against an item whose record
+-- isn't in its cache yet, common right after the cache is wiped. Missing items are asked
+-- for through a hidden tooltip; the comparison retries once they have arrived.
+local scanTip
+local asked = {}
+
+local function AskClient(item)
+    local key = type(item) == "number" and ("item:" .. item) or item:match("item:[%-%d:]+")
+    if not key or asked[key] then
+        return
+    end
+    asked[key] = true
+    if not scanTip then
+        scanTip = CreateFrame("GameTooltip", "DragonUIEquipmentCompareScanTip", nil, "GameTooltipTemplate")
+    end
+    scanTip:SetOwner(WorldFrame, "ANCHOR_NONE")
+    scanTip:SetHyperlink(key)
+end
+
+local function IsCompareReady(link)
+    local ready = GetItemInfo(link) ~= nil
+    if not ready then
+        AskClient(link)
+    end
+    for slot = 1, 19 do
+        local worn = GetInventoryItemID("player", slot)
+        if worn and not GetItemInfo(worn) then
+            AskClient(worn)
+            ready = false
+        end
+    end
+    return ready
+end
+
+local RETRY_INTERVAL, RETRY_LIMIT = 0.2, 25
+local retry = CreateFrame("Frame")
+retry:Hide()
+retry.pending = {}
+
+local function WaitForCache(pair)
+    retry.pending[pair] = true
+    if not retry:IsShown() then
+        retry.elapsed, retry.tries = 0, 0
+        retry:Show()
+    end
+end
+
 local function ShowComparison(pair)
     local frame = _G[pair.tooltip]
     if not frame or not frame:IsShown() or not IsModuleEnabled() then
@@ -68,6 +119,11 @@ local function ShowComparison(pair)
     local _, link = frame:GetItem()
     if not link then
         HideComparison(pair)
+        return
+    end
+    if not IsCompareReady(link) then
+        HideComparison(pair)
+        WaitForCache(pair)
         return
     end
 
@@ -95,6 +151,25 @@ local function ShowComparison(pair)
         end
     end
 end
+
+-- ShowComparison re-queues a pair whose items still haven't arrived.
+retry:SetScript("OnUpdate", function(self, elapsed)
+    self.elapsed = self.elapsed + elapsed
+    if self.elapsed < RETRY_INTERVAL then
+        return
+    end
+    self.elapsed = 0
+    self.tries = self.tries + 1
+    local pending = self.pending
+    self.pending = {}
+    for pair in pairs(pending) do
+        ShowComparison(pair)
+    end
+    if not next(self.pending) or self.tries >= RETRY_LIMIT then
+        wipe(self.pending)
+        self:Hide()
+    end
+end)
 
 local function ForEachPair(fn)
     for _, pair in ipairs(PAIRS) do
