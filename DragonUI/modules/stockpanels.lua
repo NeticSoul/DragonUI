@@ -12,8 +12,9 @@ local hooksecurefunc = hooksecurefunc
 local UpdateUIPanelPositions = UpdateUIPanelPositions
 
 -- The stock windows DragonUI has no window of its own for: Quest Log, Dungeon Finder, PvP,
--- Achievements and the Game Menu. Like social_skin.lua this is a reskin, not a rebuild: each keeps its stock size and
--- every Blizzard anchor, and the bronze window is drawn over the rect its old art showed.
+-- Achievements, the Game Menu and the popups. Like social_skin.lua this is a reskin, not a rebuild:
+-- each keeps its stock size and every Blizzard anchor, and the bronze window is drawn over the rect
+-- its old art showed.
 local StockPanels = { initialized = false, applied = false }
 
 local function localized(key)
@@ -28,7 +29,7 @@ end
 if addon.RegisterModule then
     addon:RegisterModule("stockpanels", StockPanels,
         localized("Stock Windows"),
-        localized("Retail-style quest log, dungeon finder, PvP, achievements and game menu chrome"),
+        localized("Retail-style quest log, dungeon finder, PvP, achievements, game menu and popup chrome"),
         { lifecyclePrefix = "StockPanels", loadOnce = true })
 end
 
@@ -759,6 +760,82 @@ local function buildAchievements()
     end
 end
 
+-- ============================================================================
+-- POPUPS (StaticPopup1..4: the dialog box every confirm, timer and prompt shows in)
+-- ============================================================================
+
+-- The Dialog rail's inner edge sits 7 in (DIALOG_INSET), so the ground starts there. The popup has
+-- no title band, so the close button gets a 16 square 1 unit inside the rail's corner.
+local POPUP_INSET = 7
+local POPUP_CLOSE_SIZE, POPUP_CLOSE_X = 16, -(POPUP_INSET + 1)
+
+-- StaticPopup_Show sets the close button's art again on every show that has one.
+local function dressPopupClose(popup)
+    local cb = _G[popup:GetName() .. "CloseButton"]
+    local CP = addon.CharacterPanel
+    if not (cb and CP and CP.ModernizeCloseButton) then return end
+    local info = popup.which and _G.StaticPopupDialogs[popup.which]
+    if info and info.closeButtonIsHide then return end
+    cb._duiModernized = nil
+    CP.ModernizeCloseButton(cb, popup, POPUP_CLOSE_X, POPUP_CLOSE_X)
+    cb:SetSize(POPUP_CLOSE_SIZE, POPUP_CLOSE_SIZE)
+end
+
+local function buildStaticPopup(index)
+    local popup = _G["StaticPopup" .. index]
+    if not popup or popup._duiStockSkinned then return end
+    popup._duiStockSkinned = true
+
+    if popup.SetBackdrop then popup:SetBackdrop(nil) end
+    local ground = popup:CreateTexture(nil, "BACKGROUND")
+    ground:SetTexture(ROCK, "REPEAT", "REPEAT")
+    ground:SetHorizTile(true)
+    ground:SetVertTile(true)
+    ground:SetPoint("TOPLEFT", popup, "TOPLEFT", POPUP_INSET, -POPUP_INSET)
+    ground:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", -POPUP_INSET, POPUP_INSET)
+    -- Shaded with the other dialogs by the dark background setting.
+    local CP = addon.CharacterPanel
+    if CP then
+        CP.DialogGrounds = CP.DialogGrounds or {}
+        CP.DialogGrounds[#CP.DialogGrounds + 1] = ground
+        if CP.ApplyBodyBackground then CP.ApplyBodyBackground() end
+    end
+
+    local host = CreateFrame("Frame", nil, popup)
+    host:EnableMouse(false)
+    host:SetAllPoints(popup)
+    applySlicesOn(popup, host, "Dialog")
+
+    if addon.SkinRedButton then
+        for i = 1, 3 do
+            addon.SkinRedButton(_G[popup:GetName() .. "Button" .. i])
+        end
+    end
+    -- The edit box's chat-input border is unnamed, so it goes by file before the DragonUI box.
+    local editBox = _G[popup:GetName() .. "EditBox"]
+    local ForeverUI = addon.ForeverUI
+    if editBox and ForeverUI and ForeverUI.SkinEditBox then
+        hideArtByFile(editBox, { "ui%-chatinputborder" })
+        ForeverUI.SkinEditBox(editBox, { font = _G.ChatFontNormal, height = 20 })
+    end
+    dressPopupClose(popup)
+end
+
+local popupShowHooked = false
+local function hookPopupShow()
+    if popupShowHooked or not _G.StaticPopup_Show then return end
+    popupShowHooked = true
+    hooksecurefunc("StaticPopup_Show", function()
+        if not IsModuleEnabled() then return end
+        for i = 1, _G.STATICPOPUP_NUMDIALOGS or 4 do
+            local popup = _G["StaticPopup" .. i]
+            if popup and popup._duiStockSkinned and popup:IsShown() then
+                dressPopupClose(popup)
+            end
+        end
+    end)
+end
+
 local BUILDERS = {
     { frame = "QuestLogFrame", build = buildQuestLog },
     { frame = "LFDParentFrame", build = buildLFD },
@@ -766,6 +843,9 @@ local BUILDERS = {
     { frame = "AchievementFrame", build = buildAchievements, atLoad = true },
     { frame = "GameMenuFrame", build = buildGameMenu },
 }
+for i = 1, _G.STATICPOPUP_NUMDIALOGS or 4 do
+    BUILDERS[#BUILDERS + 1] = { frame = "StaticPopup" .. i, build = function() buildStaticPopup(i) end, atLoad = true }
+end
 
 -- Built on first open, like the Social window; only the panel offsets would matter before that and
 -- skinWindow sets them, so the first build also re-seats a window that is already up.
@@ -773,6 +853,7 @@ local BUILDERS = {
 -- Achievement window and shows it again with OnShow cleared, and the hooks after its own are skipped
 -- that once, so the first open stayed stock.
 local function hookWindows()
+    hookPopupShow()
     for _, entry in ipairs(BUILDERS) do
         local window = _G[entry.frame]
         if window and not window._duiStockShowHooked then

@@ -1379,7 +1379,7 @@ local defaults = {
                 enabled = true, -- Retail-style friends, who, chat and raid window
             },
             stockpanels = {
-                enabled = true, -- Retail-style quest log, dungeon finder, PvP, achievements and game menu chrome
+                enabled = true, -- Retail-style quest log, dungeon finder, PvP, achievements, game menu and popup chrome
             },
         },
 
