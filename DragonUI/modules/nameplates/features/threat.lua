@@ -45,19 +45,6 @@ function NP.threat.IsThreatSuppressedContext()
     return NP.module.inArena == true
 end
 
--- Hostile NPC engaged with the player; drives the only-target plate gate in combat.
-function NP.threat.IsCombatAggroPlate(plateData)
-    if not plateData then
-        return false
-    end
-    local reaction, unitType = NP.native_style.GetPlateReaction(plateData)
-    if reaction == "FRIENDLY" or unitType == "PLAYER" then
-        return false
-    end
-    -- _lastThreatStatus is resolved per bucket in ProcessThreatTransitions; don't re-resolve here.
-    return (plateData._lastThreatStatus or 0) > 0
-end
-
 -- With unit token: UnitDetailedThreatSituation; else native glow color buckets.
 -- Memoize per tick; threat tint/glow/scan share unit resolution.
 function NP.threat.ResolveAggroStatus(plateData)
