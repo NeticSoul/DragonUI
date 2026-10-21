@@ -89,33 +89,61 @@ function XR.Steps()
     return steps
 end
 
-local function send(msg)
-    SendAddonMessage(PREFIX, msg, "WHISPER", UnitName("player"))
-end
+-- Messages go out one at a time, GAP apart: the server doesn't make a change that comes within
+-- 0.1 s of the last one (it only answers with R, which puts the setting back), and server lag
+-- can bunch messages up.
+local GAP = 0.3
+local queue = {}
+local lastSent = -GAP
 
 local driver = CreateFrame("Frame")
 driver:Hide()
 driver:SetScript("OnUpdate", function(self)
-    if pending and GetTime() >= pendingAt then
-        send(pending)
+    local now = GetTime()
+    if pending and now >= pendingAt then
+        queue[#queue + 1] = pending
         pending = nil
     end
-    if not pending then self:Hide() end
+    if queue[1] and now - lastSent >= GAP then
+        SendAddonMessage(PREFIX, table.remove(queue, 1), "WHISPER", UnitName("player"))
+        lastSent = now
+    end
+    if not pending and not queue[1] then self:Hide() end
 end)
+
+local function send(msg)
+    queue[#queue + 1] = msg
+    driver:Show()
+end
+
+-- Sends a choice still settling right away, ahead of whatever is sent next.
+local function flush()
+    if pending then
+        queue[#queue + 1] = pending
+        pending = nil
+    end
+end
 
 local function sendSoon(msg)
     pending, pendingAt = msg, GetTime() + SETTLE
     driver:Show()
 end
 
+-- The rate of the latest SET not yet sent, if any.
+local function unsentRate()
+    local msg = pending
+    for i = #queue, 1, -1 do
+        if msg then break end
+        if queue[i]:match("^SET:") then msg = queue[i] end
+    end
+    return msg and tonumber(msg:match("^SET:(.+)$"))
+end
+
 -- The setting follows at once; the server's R puts it back if it turns the rate down.
 function XR.Set(rate)
     if not state or state.off then return end
     rate = math.max(state.min, math.min(state.max, rate))
-    if math.abs(rate - state.rate) < 0.001 then
-        pending = nil
-        return
-    end
+    if math.abs(rate - state.rate) < 0.001 then return end
     state.rate = rate
     sendSoon(format("SET:%.2f", rate))
     changed()
@@ -124,15 +152,21 @@ end
 function XR.UseDefault()
     if not state or state.off then return end
     pending = nil
+    for i = #queue, 1, -1 do
+        if queue[i]:match("^SET:") then table.remove(queue, i) end
+    end
     send("DEFAULT")
 end
 
 function XR.SetGain(on)
     if not state then return end
+    flush() -- the server ignores SET while XP gain is off
     state.off = not on
     send(on and "ON" or "OFF")
     changed()
 end
+
+local wasRamping = false
 
 local function onMessage(msg)
     local rate, max, min, rampStart, rampLevel, off =
@@ -142,10 +176,9 @@ local function onMessage(msg)
         rate = tonumber(rate), max = tonumber(max), min = tonumber(min),
         rampStart = tonumber(rampStart), rampLevel = tonumber(rampLevel), off = off == "1",
     }
-    -- A choice still settling wins over an answer to an older one.
-    if pending then
-        state.rate = tonumber(pending:match("^SET:(.+)$")) or state.rate
-    end
+    -- A choice not sent yet wins over an answer to an older one.
+    state.rate = unsentRate() or state.rate
+    wasRamping = XR.IsRamping()
     changed()
 end
 
@@ -154,6 +187,7 @@ events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("CHAT_MSG_ADDON")
 events:RegisterEvent("PLAYER_XP_UPDATE")
 events:RegisterEvent("PLAYER_LEVEL_UP")
+events:RegisterEvent("UNIT_LEVEL")
 events:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
     if event == "PLAYER_ENTERING_WORLD" then
         -- At login the server sends R once the stored rate has loaded; after a /reload it has to
@@ -164,8 +198,15 @@ events:SetScript("OnEvent", function(_, event, prefix, msg, channel, sender)
         if prefix == PREFIX and channel == "WHISPER" and sender == UnitName("player") then
             onMessage(msg)
         end
-    elseif XR.IsRamping() then
-        changed()
+    elseif event == "UNIT_LEVEL" and prefix ~= "player" then
+        return
+    elseif state then
+        -- While ramping the rate grows with every bit of XP; reaching the ramp's level ends it.
+        local ramping = XR.IsRamping()
+        if ramping or ramping ~= wasRamping then
+            wasRamping = ramping
+            changed()
+        end
     end
 end)
 
@@ -214,10 +255,11 @@ local function buildMenu()
     menu[#menu + 1] = {
         text = L["More settings..."], notCheckable = true,
         func = function()
-            if addon.ToggleOptionsUI and not (addon.OptionsPanel and addon.OptionsPanel:IsOpen()) then
-                addon:ToggleOptionsUI()
+            if addon.OptionsPanel and addon.OptionsPanel:IsOpen() then
+                addon.OptionsPanel:SelectTab("xprepbars")
+            elseif addon.ToggleOptionsUI then
+                addon:ToggleOptionsUI("xprepbars")
             end
-            if addon.OptionsPanel then addon.OptionsPanel:SelectTab("xprepbars") end
         end,
     }
     return menu

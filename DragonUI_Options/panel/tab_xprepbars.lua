@@ -71,6 +71,8 @@ local function BuildRateSection(scroll)
     })
 
     if not Panel.indexing then
+        -- Search results and tab switches release these widgets for reuse elsewhere.
+        status:SetCallback("OnRelease", function() rateShown = nil end)
         rateShown = {
             status = status, slider = slider,
             available = st ~= nil, off = st and st.off, max = st and st.max,
