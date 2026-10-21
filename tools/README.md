@@ -7,6 +7,7 @@ lua5.1 tools/achievement_search_test.lua
 lua5.1 tools/review_regression_test.lua
 lua5.1 tools/window_positions_test.lua
 python3 tools/recolour_grounds.py --check
+python3 tools/link_icon_bubble.py --check
 ```
 
 The achievement test covers reward matching, translated type aliases, tier chains,
