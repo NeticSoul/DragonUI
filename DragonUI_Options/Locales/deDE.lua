@@ -470,7 +470,7 @@ L["Item Quality"] = "Gegenstandsqualität"
 L["Custom"] = "Benutzerdefiniert"
 L["Custom Glow Color"] = "Benutzerdefinierte Leuchtfarbe"
 L["Clear When Bags Close"] = "Beim Schließen der Taschen entfernen"
-L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = "Das Schließen des Inventars entfernt das Leuchten aller neuen Gegenstände. Wenn aus, verschwindet ein Leuchten erst, wenn du mit der Maus über den Gegenstand fährst."
+L["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."] = "Das Schließen einer Tasche entfernt das Leuchten ihrer neuen Gegenstände. Wenn aus, verschwindet ein Leuchten erst, wenn du mit der Maus über den Gegenstand fährst."
 L["Ignore Poor Quality Items"] = "Gegenstände schlechter Qualität ignorieren"
 L["Never mark gray (poor quality) items as new."] = "Graue Gegenstände (schlechte Qualität) nie als neu markieren."
 

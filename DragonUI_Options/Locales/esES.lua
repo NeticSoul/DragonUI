@@ -505,7 +505,7 @@ L["Item Quality"] = "Calidad del objeto"
 L["Custom"] = "Personalizado"
 L["Custom Glow Color"] = "Color de brillo personalizado"
 L["Clear When Bags Close"] = "Quitar al cerrar las bolsas"
-L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = "Al cerrar el inventario se quitan todos los brillos de objetos nuevos. Si está desactivado, un brillo solo desaparece al pasar el ratón por el objeto."
+L["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."] = "Al cerrar una bolsa se quitan los brillos de sus objetos nuevos. Si está desactivado, un brillo solo desaparece al pasar el ratón por el objeto."
 L["Ignore Poor Quality Items"] = "Ignorar objetos de calidad pobre"
 L["Never mark gray (poor quality) items as new."] = "No marcar nunca como nuevos los objetos grises (calidad pobre)."
 

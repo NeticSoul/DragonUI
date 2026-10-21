@@ -72,6 +72,17 @@ local function IsActive()
     return BagSkinModule.applied and addon:IsModuleEnabled("bags_skin")
 end
 
+local NewItems = addon.NewItems
+NewItems:AttachContainers(IsActive)
+
+local function OnItemEnter(self)
+    NewItems:OnSlotEnter(self)
+end
+
+local function OnContainerHide(self)
+    NewItems:OnContainerHide(self)
+end
+
 local function IsBankBag(bagID)
     return type(bagID) == "number"
         and bagID >= NUM_BAG_SLOTS + 1
@@ -431,7 +442,11 @@ local function PrepareContainerFrame(frame)
     SkinCloseButton(_G[frame:GetName() .. "CloseButton"], false)
 
     for i = 1, MAX_CONTAINER_ITEMS do
-        SkinItemButton(_G[frame:GetName() .. "Item" .. i], false)
+        local button = _G[frame:GetName() .. "Item" .. i]
+        SkinItemButton(button, false)
+        if button then
+            button:HookScript("OnEnter", OnItemEnter)
+        end
     end
 
     frame:HookScript("OnShow", function(self)
@@ -439,6 +454,7 @@ local function PrepareContainerFrame(frame)
             BagSkinModule:RefreshContainerFrame(self)
         end
     end)
+    frame:HookScript("OnHide", OnContainerHide)
 end
 
 local BOTTOM_PILL_HEIGHT = 17
@@ -690,6 +706,7 @@ local function InstallHooks()
         if IsActive() then
             BagSkinModule:RefreshContainerFrame(frame)
         end
+        NewItems:UpdateContainer(frame)
     end)
 
     hooksecurefunc("updateContainerFrameAnchors", ApplyContainerSpacing)
@@ -718,8 +735,14 @@ function BagSkinModule:Apply()
     ApplyContainerSpacing()
 end
 
+function BagSkinModule:Refresh()
+    self:Apply()
+    NewItems:Refresh()
+end
+
 function BagSkinModule:Restore()
     self.applied = false
+    NewItems:Refresh()
 end
 
 -- Unusable tint is independent of bag skin chrome (works with stock bags too).

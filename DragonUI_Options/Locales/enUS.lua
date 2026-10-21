@@ -550,7 +550,7 @@ L["Item Quality"] = true
 L["Custom"] = true
 L["Custom Glow Color"] = true
 L["Clear When Bags Close"] = true
-L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = true
+L["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."] = true
 L["Ignore Poor Quality Items"] = true
 L["Never mark gray (poor quality) items as new."] = true
 

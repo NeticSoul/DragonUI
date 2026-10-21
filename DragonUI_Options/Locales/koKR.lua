@@ -482,7 +482,7 @@ L["Item Quality"] = "아이템 품질"
 L["Custom"] = "사용자 지정"
 L["Custom Glow Color"] = "사용자 지정 빛 효과 색상"
 L["Clear When Bags Close"] = "가방을 닫으면 지우기"
-L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = "가방을 닫으면 모든 새 아이템의 빛 효과가 사라집니다. 끄면 아이템에 마우스를 올려야만 빛 효과가 사라집니다."
+L["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."] = "가방을 닫으면 그 가방의 새 아이템 빛 효과가 사라집니다. 끄면 아이템에 마우스를 올려야만 빛 효과가 사라집니다."
 L["Ignore Poor Quality Items"] = "하급 품질 아이템 무시"
 L["Never mark gray (poor quality) items as new."] = "회색(하급 품질) 아이템은 새 아이템으로 표시하지 않습니다."
 

@@ -105,6 +105,9 @@
     <!-- Bag item usability tint (shared by bagster and bags_skin; must load before both) -->
     <Script file="bags_usability.lua"/>
 
+    <!-- Retail new-item glow (shared by bagster and bags_skin; must load before both) -->
+    <Script file="bags_newitems.lua"/>
+
     <!-- Bagster bag replacement module -->
     <Include file="bagster\bagster.xml"/>
 

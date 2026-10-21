@@ -465,6 +465,12 @@ local defaults = {
             x_position = 1,
             y_position = 41,
             tint_unusable = true, -- Red icon tint for gear/Use items the player cannot use
+            new_items = true, -- Glow on items the character just gained (inventory bags; Bagster or bags_skin)
+            new_glow_style = "border", -- "border" (soft pulsing ring) or "starburst" (rotating star)
+            new_glow_color_mode = "quality", -- "quality" (item rarity colour) or "user" (new_glow_color)
+            new_glow_color = { 1, 1, 1, 1 }, -- Glow colour when new_glow_color_mode is "user"
+            new_clear_on_close = true, -- Closing a bag clears its glows (Bagster: closing the inventory clears all)
+            new_ignore_junk = false, -- Never mark poor-quality items as new
         },
 
         xprepbar = {
@@ -1302,12 +1308,6 @@ local defaults = {
                 glow_alpha = 1, -- Quality ring opacity
                 show_quality_filter = true, -- Rarity filter dots centered on the bottom band
                 tooltip_count = true, -- Total owned (bags + bank) line on item tooltips
-                new_items = true, -- Glow on items the character just gained (inventory bags only)
-                new_glow_style = "border", -- "border" (soft pulsing ring) or "starburst" (rotating star)
-                new_glow_color_mode = "quality", -- "quality" (item rarity colour) or "user" (new_glow_color)
-                new_glow_color = { 1, 1, 1, 1 }, -- Glow colour when new_glow_color_mode is "user"
-                new_clear_on_close = true, -- Closing the inventory clears every new-item glow
-                new_ignore_junk = false, -- Never mark poor-quality items as new
             },
             bags_skin = {
                 enabled = true -- Experimental retail-style bag window skin

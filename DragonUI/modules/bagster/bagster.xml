@@ -7,7 +7,6 @@
     <Script file="bagster_classes.lua"/>
     <Script file="bagster_frame.lua"/>
     <Script file="bagster_guild.lua"/>
-    <Script file="bagster_newitems.lua"/>
     <Script file="bagster_system.lua"/>
 
 </Ui>

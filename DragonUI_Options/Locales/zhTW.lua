@@ -420,7 +420,7 @@ L["Item Quality"] = "物品品質"
 L["Custom"] = "自定義"
 L["Custom Glow Color"] = "自定義光效顏色"
 L["Clear When Bags Close"] = "關閉背包時清除"
-L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = "關閉背包會清除所有新物品光效。關閉此選項後，只有將滑鼠移到物品上光效才會消失。"
+L["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."] = "關閉背包會清除其中新物品的光效。關閉此選項後，只有將滑鼠移到物品上光效才會消失。"
 L["Ignore Poor Quality Items"] = "忽略粗糙品質物品"
 L["Never mark gray (poor quality) items as new."] = "絕不將灰色（粗糙品質）物品標記為新物品。"
 

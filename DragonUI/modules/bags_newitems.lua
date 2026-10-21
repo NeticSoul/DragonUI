@@ -2,12 +2,11 @@
 
 -- Retail-style new-item marks per bag slot: losses leave short-lived credit, uncovered bag gains mark.
 local addon = select(2, ...)
-local mod = addon.BagsterModule
 
 local NewItems = {}
-mod.NewItems = NewItems
+addon.NewItems = NewItems
 
-local pairs, next, select, type, wipe, GetTime = pairs, next, select, type, wipe, GetTime
+local _G, pairs, next, select, type, wipe, GetTime = _G, pairs, next, select, type, wipe, GetTime
 local GetContainerItemID, GetContainerItemInfo = GetContainerItemID, GetContainerItemInfo
 local GetInventoryItemID, BankButtonIDToInvSlotID = GetInventoryItemID, BankButtonIDToInvSlotID
 
@@ -17,6 +16,8 @@ local KEYRING, BANK, EQUIP, BANK_BAG_SLOTS = KEYRING_CONTAINER, BANK_CONTAINER, 
 local LAST_EQUIP_SLOT = ContainerIDToInventoryID(NUM_BAGS)
 local CREDIT_TTL, SETTLE_MIN, SETTLE_QUIET, SETTLE_MAX = 2, 2, 1, 10
 local CELL_PITCH, CELL_W, CELL_H = 48 / 512, 39 / 512, 39 / 64
+local GLOW_TEXTURE = addon._dir .. "UI\\bagster-newitem-glow"
+local FLASH_TEXTURE = addon._dir .. "UI\\bagster-newitem-flash"
 
 local INVENTORY_KEYS = { BACKPACK_CONTAINER, 1, 2, 3, 4, KEYRING }
 local BANK_KEYS = { BANK, BANK_BAG_SLOTS }
@@ -32,12 +33,24 @@ for _, keys in pairs({ INVENTORY_KEYS, BANK_KEYS, { EQUIP } }) do
     for _, key in pairs(keys) do snapID[key], snapCount[key] = {}, {} end
 end
 
-local active, settling, loading, worldSettled, settleFull, checkPending = false, false, false, false, false, false
-local settleStart, lastActivity, bankOpen, cursorHeld, cursorFreeAt, marksChanged = 0, 0, false, false, 0, false
-local snapSize, dirty, silentOnce, scanned, glowing = {}, {}, {}, {}, {}
+local active, entered, settling, loading, worldSettled, settleFull = false, false, false, false, false, false
+local checkPending, settleStart, lastActivity, bankOpen, cursorHeld, cursorFreeAt = false, 0, 0, false, false, 0
+local marksChanged, snapSize, dirty, silentOnce, scanned, glowing = false, {}, {}, {}, {}, {}
 local decAmt, decMarked, bagNeed, credit, creditMarked, creditAt = {}, {}, {}, {}, {}, {}
 local transient = { snapSize, dirty, silentOnce, scanned, decAmt, decMarked, bagNeed, credit, creditMarked, creditAt }
 local incKey, incSlot, incID, incCount, incQuality, incN = {}, {}, {}, {}, {}, 0
+
+local function Config() return addon.db.profile.bags end
+
+local BAGSTER, CONTAINER = {}, { On = function() return false end }
+
+function BAGSTER.On()
+    local b = addon.BagsterModule
+    return b and b.BagsterModule.applied and b.IsModuleEnabled()
+end
+
+function BAGSTER.Bag(slot) return not slot:IsCached() and slot:GetBag() end
+function CONTAINER.Bag(button) return button:GetParent():GetID() end
 
 local function SlotCount(key)
     if key == EQUIP then return LAST_EQUIP_SLOT end
@@ -50,6 +63,13 @@ local function SlotCount(key)
     return GetContainerNumSlots(key)
 end
 
+-- 3.3.5a reports quality -1 for some items (recipes among them); the link still carries the real one.
+local function ContainerQuality(bag, slot)
+    local _, count, _, quality, _, _, link = GetContainerItemInfo(bag, slot)
+    if link and (not quality or quality < 0) then quality = select(3, GetItemInfo(link)) end
+    return quality, count
+end
+
 local function Read(key, slot)
     if type(key) == "string" then
         local id = GetInventoryItemID("player", key == EQUIP and slot or BankButtonIDToInvSlotID(NUM_BAGS + slot, 1))
@@ -57,7 +77,7 @@ local function Read(key, slot)
     end
     local id = GetContainerItemID(key, slot)
     if id then
-        local _, count, _, quality = GetContainerItemInfo(key, slot)
+        local quality, count = ContainerQuality(key, slot)
         return id, count or 1, quality
     end
 end
@@ -153,7 +173,7 @@ end
 local function CreateGlow(slot)
     local glow = CreateFrame("Frame", nil, slot)
     glow:SetAllPoints(slot)
-    glow.ring, glow.pulse = AddTexture(glow, "OVERLAY", mod.CT.newitem_glow, 39)
+    glow.ring, glow.pulse = AddTexture(glow, "OVERLAY", GLOW_TEXTURE, 39)
     AddAlpha(glow.pulse, 1, -0.8, 0.5, "NONE")
     AddAlpha(glow.pulse, 2, 0.8, 0.5, "NONE")
     glow.pulse:SetLooping("REPEAT")
@@ -163,7 +183,7 @@ local function CreateGlow(slot)
     turn:SetDegrees(-360); turn:SetDuration(10); turn:SetOrigin("CENTER", 0, 0); turn:SetSmoothing("NONE")
     glow.spin:SetLooping("REPEAT")
 
-    glow.flash, glow.flashAnim = AddTexture(glow, "OVERLAY", mod.CT.newitem_flash, 90)
+    glow.flash, glow.flashAnim = AddTexture(glow, "OVERLAY", FLASH_TEXTURE, 90)
     glow.flash:SetTexCoord(0, 0.703125, 0, 0.703125)
     AddAlpha(glow.flashAnim, 1, -1, 0.6, "OUT")
     -- A finished group drops its alpha change, so hide or the flash snaps back to full.
@@ -173,7 +193,7 @@ local function CreateGlow(slot)
     return glow
 end
 
-local function ShowGlow(slot, quality, cfg)
+local function ShowGlow(slot, quality, cfg, display)
     local glow = slot._duiNewGlow or CreateGlow(slot)
     local user = cfg.new_glow_color_mode == "user"
     local cell = not user and quality and quality >= 2 and quality <= 7 and quality - 1 or 0
@@ -196,7 +216,7 @@ local function ShowGlow(slot, quality, cfg)
         if not glow.pulse:IsPlaying() then glow.pulse:Play() end
     end
     if not glowing[slot] then glow.flash:Show(); glow.flashAnim:Play() end
-    glowing[slot] = true
+    glowing[slot] = display
 end
 
 local function HideGlow(slot)
@@ -205,15 +225,40 @@ local function HideGlow(slot)
     glow.pulse:Stop(); glow.spin:Stop(); glow.flashAnim:Stop(); glow:Hide()
 end
 
-function NewItems:UpdateSlot(slot, quality)
-    local bag, id = slot:GetBag(), slot:GetID()
+local function Paint(slot, display, quality)
+    local bag, id = display.Bag(slot), slot:GetID()
     local m = active and marks[bag]
-    if m and m[id] and not slot:IsCached() then
-        local cfg = mod.GetModuleConfig()
-        if quality == nil then quality = select(4, GetContainerItemInfo(bag, id)) end
-        if not (cfg.new_ignore_junk and quality == 0) then return ShowGlow(slot, quality, cfg) end
+    if m and m[id] and display.On() then
+        local cfg = Config()
+        if not quality or quality < 0 then quality = ContainerQuality(bag, id) end
+        if not (cfg.new_ignore_junk and quality == 0) then return ShowGlow(slot, quality, cfg, display) end
     end
     if glowing[slot] then HideGlow(slot) end
+end
+
+function NewItems:UpdateSlot(slot, quality) Paint(slot, BAGSTER, quality) end
+
+function NewItems:UpdateContainer(frame)
+    local name = frame:GetName()
+    for i = 1, frame.size do Paint(_G[name .. "Item" .. i], CONTAINER) end
+end
+
+local function RepaintVisible()
+    if BAGSTER.On() then
+        for _, f in pairs(addon.BagsterModule.frames) do
+            if not f.isBank and f:IsVisible() then
+                for _, item in pairs(f.itemFrame.items) do
+                    if item:IsVisible() then Paint(item, BAGSTER) end
+                end
+            end
+        end
+    end
+    if CONTAINER.On() then
+        for i = 1, NUM_CONTAINER_FRAMES do
+            local f = _G["ContainerFrame" .. i]
+            if f:IsShown() then NewItems:UpdateContainer(f) end
+        end
+    end
 end
 
 local function ClearAll()
@@ -263,7 +308,7 @@ local function RunBatch()
     end
 
     -- Non-bag gains spend first, so whatever stays uncovered lands on the bag slots.
-    local ignoreJunk = mod.GetModuleConfig().new_ignore_junk
+    local ignoreJunk = Config().new_ignore_junk
     for pass = 1, 2 do
         for i = 1, incN do
             local m = marks[incKey[i]]
@@ -281,13 +326,7 @@ local function RunBatch()
 
     if marksChanged then
         marksChanged = false
-        for _, f in pairs(mod.frames) do
-            if not f.isBank and f:IsVisible() then
-                for _, item in pairs(f.itemFrame.items) do
-                    if item:IsVisible() then NewItems:UpdateSlot(item) end
-                end
-            end
-        end
+        RepaintVisible()
     end
 end
 
@@ -349,22 +388,30 @@ frame:SetScript("OnEvent", function(_, event, arg1)
     elseif event == "PLAYER_LEAVING_WORLD" then
         loading = true
         frame:Hide()
-    elseif event == "PLAYER_ENTERING_WORLD" and loading then
-        loading = false
-        BeginSettle(false)
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        -- Displays apply before the world is up; scanning that early would mark the login bag fill.
+        if not entered then
+            entered = true
+            NewItems:Refresh()
+        elseif loading then
+            loading = false
+            BeginSettle(false)
+        end
     end
 end)
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 local EVENTS = { "BAG_UPDATE", "UNIT_INVENTORY_CHANGED", "PLAYER_EQUIPMENT_CHANGED", "PLAYERBANKSLOTS_CHANGED",
     "BANKFRAME_OPENED", "BANKFRAME_CLOSED", "CURSOR_UPDATE", "ITEM_LOCK_CHANGED", "PLAYER_LEAVING_WORLD",
     "PLAYER_ENTERING_WORLD" }
 
 function NewItems:Refresh()
-    local wanted = mod.BagsterModule.applied and mod.IsModuleEnabled() and mod.GetModuleConfig().new_items
+    local wanted = entered and Config().new_items and (BAGSTER.On() or CONTAINER.On())
     if wanted and not active then
         active = true
         for _, event in pairs(EVENTS) do frame:RegisterEvent(event) end
-        bankOpen = mod("InventoryEvents"):AtBank() and true or false
+        local atBank = BAGSTER.On() and addon.BagsterModule("InventoryEvents"):AtBank()
+        bankOpen = (atBank or BankFrame:IsShown()) and true or false
         cursorHeld = GetCursorInfo() == "item"
         if worldSettled then
             Reset(); ScanAll(true)
@@ -376,16 +423,26 @@ function NewItems:Refresh()
         frame:UnregisterAllEvents(); frame:Hide()
         ClearAll(); Reset()
     end
-    for slot in pairs(glowing) do self:UpdateSlot(slot) end
+    for slot, display in pairs(glowing) do Paint(slot, display) end
+    RepaintVisible()
 end
 
+function NewItems:AttachContainers(isActive) CONTAINER.On = isActive end
+
 function NewItems:OnSlotEnter(slot)
-    local m = glowing[slot] and marks[slot:GetBag()]
+    local display = glowing[slot]
+    local m = display and marks[display.Bag(slot)]
     if m then m[slot:GetID()] = nil; HideGlow(slot) end
 end
 
 function NewItems:OnFrameHide(f)
-    if active and not f.isBank and mod.GetModuleConfig().new_clear_on_close then ClearAll() end
+    if active and not f.isBank and Config().new_clear_on_close then ClearAll() end
+end
+
+-- Retail clears per bag: closing one ContainerFrame forgets only that bag's marks.
+function NewItems:OnContainerHide(f)
+    local m = active and Config().new_clear_on_close and marks[f:GetID()]
+    if m and next(m) then wipe(m); self:UpdateContainer(f) end
 end
 
 function NewItems:GetState()

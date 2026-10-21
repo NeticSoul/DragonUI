@@ -472,7 +472,7 @@ L["Item Quality"] = "Качество предмета"
 L["Custom"] = "Свой"
 L["Custom Glow Color"] = "Свой цвет свечения"
 L["Clear When Bags Close"] = "Сбрасывать при закрытии сумок"
-L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = "Закрытие сумок убирает всё свечение новых предметов. Если выключено, свечение пропадает только при наведении курсора на предмет."
+L["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."] = "Закрытие сумки убирает свечение её новых предметов. Если выключено, свечение пропадает только при наведении курсора на предмет."
 L["Ignore Poor Quality Items"] = "Игнорировать предметы низкого качества"
 L["Never mark gray (poor quality) items as new."] = "Никогда не отмечать серые предметы (низкого качества) как новые."
 

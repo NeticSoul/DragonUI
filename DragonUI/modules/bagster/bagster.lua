@@ -88,8 +88,6 @@ local CT = {
     bagslot           = BagsterAssets .. 'Bags\\bagslots2x',
     bag_border        = BagsterAssets .. 'Bags\\bagborder2',
     slot_border       = BagsterAssets .. 'UI\\ui-quickslot2',
-    newitem_glow      = BagsterAssets .. 'UI\\bagster-newitem-glow',
-    newitem_flash     = BagsterAssets .. 'UI\\bagster-newitem-flash',
     tabs              = BagsterAssets .. 'UI\\uiframetabs',
     sidetab           = BagsterAssets .. 'UI\\sidetab',
     coinGold          = BagsterAssets .. 'Coins\\coingold',
@@ -568,5 +566,6 @@ mod.BagsterRetailItemSlot = BagsterRetailItemSlot
 mod.GetSetDisplayName = GetSetDisplayName
 mod.TEXTURE_ITEM_QUEST_BORDER = TEXTURE_ITEM_QUEST_BORDER
 mod.TEXTURE_ITEM_QUEST_BANG = TEXTURE_ITEM_QUEST_BANG
+mod.NewItems = addon.NewItems
 
 
