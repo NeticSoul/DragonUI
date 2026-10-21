@@ -539,6 +539,20 @@ L["Item Count in Tooltip"] = true
 L["Show how many of the hovered item you own in total, across your bags and bank."] = true
 L["Quality Filter Row"] = true
 L["Show the rarity filter dots at the bottom of the bag frame."] = true
+L["New Items"] = true
+L["Highlight New Items"] = true
+L["Make items you just looted, bought, crafted or received glow in the inventory until you hover them."] = true
+L["Glow Style"] = true
+L["Border"] = true
+L["Starburst"] = true
+L["Glow Color"] = true
+L["Item Quality"] = true
+L["Custom"] = true
+L["Custom Glow Color"] = true
+L["Clear When Bags Close"] = true
+L["Closing the inventory removes every new-item glow. When off, a glow only goes away when you hover the item."] = true
+L["Ignore Poor Quality Items"] = true
+L["Never mark gray (poor quality) items as new."] = true
 
 -- Advanced modules - Fallback display names
 L["Main Bars"] = true

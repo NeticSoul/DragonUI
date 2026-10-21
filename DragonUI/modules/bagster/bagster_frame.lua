@@ -853,6 +853,7 @@ do
     function InventoryFrame:OnHide()
         PlaySound("igBackPackClose")
         FrameEvents:Unregister(self)
+        if mod.NewItems then mod.NewItems:OnFrameHide(self) end
         if self:IsBank() and self:AtBank() then
             CloseBankFrame()
         end
