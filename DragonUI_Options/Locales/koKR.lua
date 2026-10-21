@@ -686,6 +686,20 @@ L["Latency Color"] = "지연 표시기 색상"
 L["Latency Alpha"] = "지연 표시기 투명도"
 L["Opacity of the latency indicator."] = "지연 시간 표시기의 투명도입니다."
 
+-- Global cooldown indicator (player only)
+L["Global Cooldown"] = "전역 재사용 대기시간"
+L["Enable GCD Indicator"] = "GCD 표시기 활성화"
+L["Show a global cooldown readout above the player cast bar."] = "플레이어 시전바 위에 전역 재사용 대기시간을 표시합니다."
+L["GCD Height"] = "GCD 높이"
+L["Thickness of the GCD bar in pixels."] = "GCD 막대의 두께(픽셀)입니다."
+L["GCD Width"] = "GCD 너비"
+L["Width of the GCD bar as a percentage of the cast bar."] = "시전바 대비 GCD 막대의 너비 비율입니다."
+L["GCD Color"] = "GCD 색상"
+L["Always Show GCD Track"] = "GCD 트랙 항상 표시"
+L["Keep the empty GCD bar visible while no global cooldown is running."] = "전역 재사용 대기시간이 없을 때도 빈 GCD 막대를 표시합니다."
+L["Reset GCD Position"] = "GCD 위치 초기화"
+L["GCD indicator reset to the cast bar."] = "GCD 표시기를 시전바 위치로 되돌렸습니다."
+
 -- ============================================================================
 -- ENHANCEMENTS TAB
 -- ============================================================================

@@ -679,6 +679,20 @@ L["Latency Color"] = "Latenzfarbe"
 L["Latency Alpha"] = "Latenz-Deckkraft"
 L["Opacity of the latency indicator."] = "Deckkraft des Latenzindikators."
 
+-- Global cooldown indicator (player only)
+L["Global Cooldown"] = "Globale Abklingzeit"
+L["Enable GCD Indicator"] = "GCD-Anzeige aktivieren"
+L["Show a global cooldown readout above the player cast bar."] = "Zeigt die globale Abklingzeit über der Spieler-Channelbar an."
+L["GCD Height"] = "GCD-Höhe"
+L["Thickness of the GCD bar in pixels."] = "Dicke des GCD-Balkens in Pixeln."
+L["GCD Width"] = "GCD-Breite"
+L["Width of the GCD bar as a percentage of the cast bar."] = "Breite des GCD-Balkens in Prozent der Channelbar."
+L["GCD Color"] = "GCD-Farbe"
+L["Always Show GCD Track"] = "GCD-Leiste immer anzeigen"
+L["Keep the empty GCD bar visible while no global cooldown is running."] = "Die leere GCD-Leiste anzeigen, wenn keine globale Abklingzeit läuft."
+L["Reset GCD Position"] = "GCD-Position zurücksetzen"
+L["GCD indicator reset to the cast bar."] = "GCD-Anzeige auf die Channelbar zurückgesetzt."
+
 -- ============================================================================
 -- ENHANCEMENTS TAB
 -- ============================================================================

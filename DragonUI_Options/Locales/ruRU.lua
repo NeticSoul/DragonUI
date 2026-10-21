@@ -678,6 +678,20 @@ L["Latency Color"] = "Цвет задержки"
 L["Latency Alpha"] = "Прозрачность задержки"
 L["Opacity of the latency indicator."] = "Прозрачность индикатора задержки."
 
+-- Global cooldown indicator (player only)
+L["Global Cooldown"] = "Глобальная задержка"
+L["Enable GCD Indicator"] = "Включить индикатор глобальной задержки"
+L["Show a global cooldown readout above the player cast bar."] = "Показывает глобальную задержку над панелью применения заклинаний игрока."
+L["GCD Height"] = "Высота GCD"
+L["Thickness of the GCD bar in pixels."] = "Толщина полосы GCD в пикселях."
+L["GCD Width"] = "Ширина GCD"
+L["Width of the GCD bar as a percentage of the cast bar."] = "Ширина полосы GCD в процентах от панели заклинаний."
+L["GCD Color"] = "Цвет GCD"
+L["Always Show GCD Track"] = "Всегда показывать полосу GCD"
+L["Keep the empty GCD bar visible while no global cooldown is running."] = "Оставляет пустую полосу GCD видимой, когда глобальная задержка не активна."
+L["Reset GCD Position"] = "Сбросить положение GCD"
+L["GCD indicator reset to the cast bar."] = "Индикатор GCD возвращён к панели заклинаний."
+
 -- ============================================================================
 -- ENHANCEMENTS TAB
 -- ============================================================================

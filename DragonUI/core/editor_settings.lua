@@ -1196,6 +1196,52 @@ E.Register("TargetCastbar", CastbarSettings("castbar.target", R.castbarTarget, 5
 E.Register("FocusCastbar", CastbarSettings("castbar.focus", R.castbarFocus, 50, 400, 5, 50))
 
 -- ============================================================================
+-- DEFINITIONS: GLOBAL COOLDOWN INDICATOR
+-- ============================================================================
+
+R.gcd = function()
+    if addon.RefreshGCD then addon.RefreshGCD() end
+    RefreshCastbarPreview("GCDIndicator")
+end
+
+local function GCDSettings()
+    local refresh = R.gcd
+    local function GCDOff() return not GetDB("castbar.gcd.enabled") end
+
+    return { settings = Join({
+        Section(T("Global Cooldown"), false),
+        Check(T("Enable GCD Indicator"), "castbar.gcd.enabled", refresh, {
+            after = function() E.Rebuild() end }),
+        Slider(T("GCD Height"), "castbar.gcd.height", 1, 12, 1, refresh, {
+            resize = true, disabled = GCDOff }),
+        -- The width is stored as a fraction of the cast bar, the slider works in percent.
+        Slider(T("GCD Width"), "castbar.gcd.width", 10, 100, 5, refresh, {
+            resize = true, disabled = GCDOff, format = "%.0f%%",
+            get = function() return (GetNumber("castbar.gcd.width", 1) or 1) * 100 end,
+            set = function(value)
+                SetDB("castbar.gcd.width", value / 100)
+                Deferred(refresh)
+            end,
+        }),
+        ColorRow(T("GCD Color"), {
+            disabled = GCDOff,
+            get = function()
+                local color = GetDB("castbar.gcd.color")
+                if type(color) ~= "table" then return { 1, 0.7, 0, 1 } end
+                return { color.r or 1, color.g or 0.7, color.b or 0, color.a or 1 }
+            end,
+            set = function(r, g, b, a)
+                SetDB("castbar.gcd.color", { r = r, g = g, b = b, a = a or 1 })
+                Deferred(refresh)
+            end,
+        }),
+        Check(T("Always Show GCD Track"), "castbar.gcd.alwaysShow", refresh, { disabled = GCDOff }),
+    }) }
+end
+
+E.Register("GCDIndicator", GCDSettings())
+
+-- ============================================================================
 -- DEFINITIONS: ACTION BARS, XP/REP, MICRO MENU, BAGS
 -- ============================================================================
 

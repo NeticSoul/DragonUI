@@ -276,6 +276,20 @@ L["Latency Color"] = "Cor da Lat\195\170ncia"
 L["Latency Alpha"] = "Opacidade da Lat\195\170ncia"
 L["Opacity of the latency indicator."] = "Opacidade do indicador de lat\195\170ncia."
 
+-- Global cooldown indicator (player only)
+L["Global Cooldown"] = "Recarga global"
+L["Enable GCD Indicator"] = "Ativar indicador de GCD"
+L["Show a global cooldown readout above the player cast bar."] = "Mostra a recarga global acima da barra de conjuração do jogador."
+L["GCD Height"] = "Altura do GCD"
+L["Thickness of the GCD bar in pixels."] = "Espessura da barra de GCD em pixels."
+L["GCD Width"] = "Largura do GCD"
+L["Width of the GCD bar as a percentage of the cast bar."] = "Largura da barra de GCD em porcentagem da barra de conjuração."
+L["GCD Color"] = "Cor do GCD"
+L["Always Show GCD Track"] = "Sempre mostrar o trilho do GCD"
+L["Keep the empty GCD bar visible while no global cooldown is running."] = "Mantém a barra de GCD vazia visível quando não há recarga global."
+L["Reset GCD Position"] = "Redefinir posição do GCD"
+L["GCD indicator reset to the cast bar."] = "Indicador de GCD redefinido para a barra de conjuração."
+
 -- Combat Flash (player frame)
 L["Show Combat Flash"] = "Mostrar Flash de Combate"
 L["Pulsing glow effect when entering combat. Works with all frame modes."] = "Efeito de brilho pulsante ao entrar em combate. Funciona com todos os modos de quadro."
