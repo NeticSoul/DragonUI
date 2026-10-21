@@ -203,6 +203,9 @@ local awaitedDrop
 local tickAccumulator = 0
 -- A move the server rejects (e.g. in combat) never lands, so a sort with no progress for this long gives up.
 local SORT_STALL_TIMEOUT = 3
+-- While slots are still locked the server has not answered yet; a laggy server gets this long instead.
+local SORT_SERVER_TIMEOUT = 30
+-- Last move issued or awaited drop landed.
 local lastProgressTime = 0
 -- Sort requested in combat (or interrupted by it); runs again once combat ends.
 local pendingCombatSort
@@ -970,13 +973,15 @@ local function BagSlotCount(bag)
 end
 
 -- Sort locks are read here only; a lock toggled mid-sort applies to the next sort.
+-- Items the game has locked (in a trade, mail or auction slot) stay put too: their moves would never land.
 local function CaptureBags(bags)
     wipe(slotGrid)
     wipe(itemFacts)
     for _, bag in ipairs(bags) do
         local column = {}
         for slot = 1, BagSlotCount(bag) do
-            local cell = { bag = bag, slot = slot, pinned = IsSlotLocked(bag, slot) }
+            local _, _, gameLocked = BagGetItemInfo(bag, slot)
+            local cell = { bag = bag, slot = slot, pinned = IsSlotLocked(bag, slot) or gameLocked and true or false }
             local itemID = ItemIDFromLink(BagGetItemLink(bag, slot))
             if itemID then
                 local _, count = BagGetItemInfo(bag, slot)
@@ -1201,6 +1206,15 @@ local function IsSlotBusy(bag, slot)
     return busy
 end
 
+-- True while the server still owes an answer: the awaited drop or the next move's slots are locked.
+local function MoveInFlight()
+    if awaitedDrop and IsSlotBusy(awaitedDrop.bag, awaitedDrop.slot) then
+        return true
+    end
+    local move = plannedMoves[nextMoveIndex]
+    return move ~= nil and (IsSlotBusy(move.fromBag, move.fromSlot) or IsSlotBusy(move.toBag, move.toSlot))
+end
+
 local function IssueNextMoves()
     if CursorHasItem() then
         local _, _, cursorLink = GetCursorInfo()
@@ -1209,7 +1223,8 @@ local function IssueNextMoves()
             return
         end
     end
-    if GetTime() - lastProgressTime > SORT_STALL_TIMEOUT then
+    local idle = GetTime() - lastProgressTime
+    if idle > SORT_STALL_TIMEOUT and (idle > SORT_SERVER_TIMEOUT or not MoveInFlight()) then
         -- Hand a stuck item back to its slot instead of leaving it on the cursor.
         if CursorHasItem() then ClearCursor() end
         StopSorting("DragonUI: Sort stalled, stopping. Press sort again.")
