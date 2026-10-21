@@ -278,9 +278,6 @@ do
 
     local function ShowContainerTooltip(self)
         ContainerFrameItemButton_OnEnter(self)
-        if self:AddItemCount() then
-            GameTooltip:Show()
-        end
     end
 
     function ItemSlot:OnEnter()
@@ -298,7 +295,6 @@ do
                 if self:GetItem() then
                     self:AnchorTooltip()
                     GameTooltip:SetInventoryItem("player", BankButtonIDToInvSlotID(self:GetID()))
-                    self:AddItemCount()
                     GameTooltip:Show()
                     CursorUpdate(self)
                     if IsModifiedClick("COMPAREITEMS") then
@@ -558,25 +554,6 @@ do
         end
     end
 
-    -- Returns true when it added a line, so the caller re-Shows the tooltip to fit it.
-    function ItemSlot:AddItemCount()
-        local link = self:GetItem()
-        if not link then return end
-        local cfg = mod.GetModuleConfig()
-        if cfg and cfg.tooltip_count == false then return end
-
-        local bags = GetItemCount(link)
-        local bank = max(GetItemCount(link, true) - bags, 0)
-        if bags + bank <= 1 then return end
-
-        local L = addon.L
-        local text = format("%s: |cffffffff%d|r", L["Total"], bags + bank)
-        if bags > 0 and bank > 0 then
-            text = format("%s  (%s: |cffffffff%d|r, %s: |cffffffff%d|r)", text, L["Bags"], bags, L["Bank"], bank)
-        end
-        GameTooltip:AddLine(text, NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
-        return true
-    end
 
     function ItemSlot:Highlight(enable)
         if enable then
@@ -673,7 +650,6 @@ do
             if parent:IsCached() and parent:GetItem() then
                 ItemSlot.AnchorTooltip(self)
                 GameTooltip:SetHyperlink(parent:GetItem())
-                parent:AddItemCount()
                 GameTooltip:Show()
             end
         end
@@ -700,6 +676,78 @@ do
         slot:SetScript("OnHide", Slot_OnHide)
 
         return slot
+    end
+end
+
+-- ============================================================================
+-- ITEM COUNT TOOLTIP LINE
+-- ============================================================================
+
+-- Hooked on the tooltips themselves (not the bag slots) so loot, roll, chat
+-- link and character-sheet tooltips say whether you already own one.
+do
+    local function GetItemID(link)
+        return tonumber(link and link:match("item:(%-?%d+)"))
+    end
+
+    local function CountInBags(itemID)
+        local count = 0
+        for bag = BACKPACK_CONTAINER or 0, NUM_BAG_SLOTS or 4 do
+            for slot = 1, GetContainerNumSlots(bag) do
+                if GetContainerItemID(bag, slot) == itemID then
+                    count = count + (select(2, GetContainerItemInfo(bag, slot)) or 1)
+                end
+            end
+        end
+        return count
+    end
+
+    local function CountEquipped(itemID)
+        local count = 0
+        -- Slot 0 is skipped: the ammo it reports is the stack in the bags
+        for slot = 1, 19 do
+            if GetItemID(GetInventoryItemLink("player", slot)) == itemID then
+                count = count + 1
+            end
+        end
+        return count
+    end
+
+    local function AddItemCount(tooltip)
+        if tooltip.__BagsterCountAdded then return end
+        if not mod.IsModuleEnabled() then return end
+        local cfg = mod.GetModuleConfig()
+        if cfg and cfg.tooltip_count == false then return end
+        -- Character Item Counts already lists this character's bags, bank and equipped
+        if addon:IsModuleEnabled("itemownership") then return end
+
+        local _, link = tooltip:GetItem()
+        local itemID = GetItemID(link)
+        if not itemID then return end
+
+        local bags = CountInBags(itemID)
+        local bank = max(GetItemCount(itemID, true) - GetItemCount(itemID), 0)
+        local equipped = CountEquipped(itemID)
+        local total = bags + bank + equipped
+        if total == 0 then return end
+
+        local L = addon.L
+        local parts = {}
+        if bags > 0 then parts[#parts + 1] = format("%s: |cffffffff%d|r", L["Bags"], bags) end
+        if bank > 0 then parts[#parts + 1] = format("%s: |cffffffff%d|r", L["Bank"], bank) end
+        if equipped > 0 then parts[#parts + 1] = format("%s: |cffffffff%d|r", L["Equipped"], equipped) end
+
+        tooltip.__BagsterCountAdded = true
+        tooltip:AddLine(format("%s: |cffffffff%d|r  (%s)", L["Total"], total, table.concat(parts, ", ")),
+            NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+        tooltip:Show()
+    end
+
+    for _, tooltip in ipairs({ GameTooltip, ItemRefTooltip }) do
+        tooltip:HookScript("OnTooltipSetItem", AddItemCount)
+        tooltip:HookScript("OnTooltipCleared", function(self)
+            self.__BagsterCountAdded = nil
+        end)
     end
 end
 
