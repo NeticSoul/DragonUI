@@ -1752,3 +1752,16 @@ L["Accept Invites from Friends"] = true
 L["Automatically accept party invites from players on your friends list."] = true
 L["Accept Invites from Guild Members"] = true
 L["Automatically accept party invites from members of your guild."] = true
+
+-- Experience Rate (XP & Rep Bars tab)
+L["Experience Rate"] = true
+L["XP Rate"] = true
+L["How fast this character levels, from the realm's personal XP rate. The realm keeps it per character. You can also right-click the XP bar."] = true
+L["Gain experience"] = true
+L["Turn off to stop this character from leveling."] = true
+L["Use Realm Default"] = true
+L["Go back to the rate the realm gives every character."] = true
+L["This realm doesn't keep a personal XP rate, or hasn't answered yet."] = true
+L["XP gain is off: this character doesn't level."] = true
+L["Your rate is %s. It grows with your level until level %d, so the first levels don't fly by: %s right now."] = true
+L["Your rate is %s."] = true

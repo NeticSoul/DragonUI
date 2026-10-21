@@ -1269,3 +1269,14 @@ L["Some junk sales could not be confirmed. Check your bags and buyback."] = true
 L["Drag to move. Alt-right-click to reset this window."] = true
 L["Window positions reset."] = true
 L["Drag a window title to move it. Use /dui windows reset to reset window positions."] = true
+
+-- Personal XP rate (modules/xprate.lua)
+L["XP rate: "] = true
+L["XP gain is off"] = true
+L["(%s now)"] = true
+L["Grows with your level until level %d."] = true
+L["Right-click to change your XP rate."] = true
+L["XP Rate"] = true
+L["Realm default"] = true
+L["Gain experience"] = true
+L["More settings..."] = true
