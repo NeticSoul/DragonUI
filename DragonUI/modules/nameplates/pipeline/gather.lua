@@ -280,6 +280,18 @@ function NP.gather.IsGroupMemberPlate(plateData)
     return NP.gather.GetGroupUnitForPlate(plateData) ~= nil
 end
 
+function NP.gather.IsOnlyTargetPlateAllowed(plateData, isTarget)
+    if isTarget then
+        return true
+    end
+    local reaction, unitType = NP.native_style.GetPlateReaction(plateData)
+    if reaction == "FRIENDLY" then
+        return true
+    end
+    -- Threat status 2+ = the NPC is attacking the player; ProcessThreatTransitions refreshes it per bucket.
+    return NP.module.playerInCombat and unitType ~= "PLAYER" and (plateData._lastThreatStatus or 0) >= 2 or false
+end
+
 -- Headline mode for party/raid: name only; reaction checked before group lookup.
 function NP.gather.IsFriendlyNameOnlyActive(plateData)
     if not plateData then

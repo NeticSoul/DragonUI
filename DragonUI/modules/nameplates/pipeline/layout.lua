@@ -435,6 +435,26 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
     end
 end
 
+-- Size and hit rect are locked in combat, so a hidden plate only shrinks (unclickable, no stacking room) outside it.
+function NP.layout.SetPlateShrunk(plateData, shrink)
+    local plate = plateData and plateData.plate
+    if not (plate and plate.SetSize and plate.SetHitRectInsets) or InCombatLockdown() then
+        return
+    end
+    if (plate._duiOnlyTargetShrunk or false) == shrink then
+        return
+    end
+    if shrink then
+        NP.clickbox.CaptureBaseSize(plateData)
+        plate._duiOnlyTargetShrunk = true
+        plate:SetSize(1, 1)
+        plate:SetHitRectInsets(1, 0, 1, 0)
+    else
+        plate._duiOnlyTargetShrunk = nil
+        NP.clickbox.ApplyPlateClickbox(plateData)
+    end
+end
+
 function NP.layout.HideMinaStack(plateData)
     if not plateData then return end
     local hideTargets = {
@@ -668,8 +688,8 @@ local function UpdateRetailStacking()
         local plate = plateData and plateData.plate
         local reaction = NP.native_style.GetPlateReaction(plateData)
         local isFriendly = reaction == "FRIENDLY"
-        -- Non-friendly plates only.
-        if plate and plate.IsShown and plate:IsShown() and not isFriendly then
+        -- Non-friendly plates only; plates hidden by only-target must not push visible ones around.
+        if plate and plate.IsShown and plate:IsShown() and not isFriendly and not plateData._onlyTargetHidden then
             stackable[#stackable + 1] = plateData
             activeStackable[plateData] = true
             local state = EnsureRetailStackState(plateData)

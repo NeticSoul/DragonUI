@@ -334,6 +334,7 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityValue = cfg.opacityNonTarget or 0.5
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
     NP.module._opacityFullParty = (cfg.opacityFullParty == true)
+    NP.module._onlyTargetPlates = (cfg.onlyTargetPlates == true)
     NP.module._retailBehavior = NP.config.IsRetailBehavior()
     NP.module._healthTextFormat = NP.config.GetHealthTextFormat()
     NP.module._healthTextPlacement = NP.config.GetHealthTextPlacement()
@@ -499,18 +500,28 @@ local function EngineOnUpdate(_, elapsed)
     NP.layout.UpdateDepthOrdering(elapsed)
 
     -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
-    if NP.module._opacityEnabled then
+    local onlyTarget = NP.module._onlyTargetPlates
+    local canResize = not InCombatLockdown()
+    if NP.module._opacityEnabled or onlyTarget then
+        local opacityEnabled = NP.module._opacityEnabled
         local fullParty = NP.module._opacityFullParty
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
             if pl and pl.IsShown and pl:IsShown() then
                 local isTarget = NP.identity.IsTargetPlateVisual(pd, hasTarget)
                 SyncTargetVisual(pd, isTarget)
-                local visualAlpha = NP.module._opacityValue
-                if isTarget
+                local hidden = onlyTarget and not NP.gather.IsOnlyTargetPlateAllowed(pd, isTarget) or false
+                pd._onlyTargetHidden = hidden or nil
+                if canResize then
+                    NP.layout.SetPlateShrunk(pd, hidden)
+                end
+                local visualAlpha = 1.0
+                if hidden then
+                    visualAlpha = 0
+                elseif opacityEnabled and not (isTarget
                     or ((not hasTarget) and NP.module._opacityFullNoTarget)
-                    or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
-                    visualAlpha = 1.0
+                    or (fullParty and NP.gather.IsGroupMemberPlate(pd))) then
+                    visualAlpha = NP.module._opacityValue
                 end
                 NP.layout.SetPlateVisualAlpha(pd, visualAlpha)
             end
@@ -521,6 +532,10 @@ local function EngineOnUpdate(_, elapsed)
             if pl and pl.IsShown and pl:IsShown() then
                 SyncTargetVisual(pd, NP.identity.IsTargetPlateVisual(pd, hasTarget))
                 NP.layout.SetPlateVisualAlpha(pd, 1.0)
+                pd._onlyTargetHidden = nil
+                if canResize and pl._duiOnlyTargetShrunk then
+                    NP.layout.SetPlateShrunk(pd, false)
+                end
             end
         end
     end
@@ -712,6 +727,12 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "PLAYER_REGEN_DISABLED" then
         NP.module.playerInCombat = true
+        -- Last moment before the lockdown: shrunk plates need their size back to be clickable in combat.
+        for _, pd in pairs(NP.module.plates) do
+            if pd.plate and pd.plate._duiOnlyTargetShrunk then
+                NP.layout.SetPlateShrunk(pd, false)
+            end
+        end
         if NP.clickbox and NP.clickbox.OnCombatStart then
             NP.clickbox.OnCombatStart()
         end

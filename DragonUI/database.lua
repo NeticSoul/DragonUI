@@ -90,6 +90,9 @@ local defaults = {
                 posX = 0,
                 posY = 200
             },
+            gcd = {
+                custom_position = false -- sits on the player cast bar until dragged off
+            },
             targetCastbar = {
                 anchor = "CENTER",
                 posX = 0,
@@ -464,6 +467,12 @@ local defaults = {
             x_position = 1,
             y_position = 41,
             tint_unusable = true, -- Red icon tint for gear/Use items the player cannot use
+            new_items = true, -- Glow on items the character just gained (inventory bags; Bagster or bags_skin)
+            new_glow_style = "border", -- "border" (soft pulsing ring) or "starburst" (rotating star)
+            new_glow_color_mode = "quality", -- "quality" (item rarity colour) or "user" (new_glow_color)
+            new_glow_color = { 1, 1, 1, 1 }, -- Glow colour when new_glow_color_mode is "user"
+            new_clear_on_close = true, -- Closing a bag clears its glows (Bagster: closing the inventory clears all)
+            new_ignore_junk = false, -- Never mark poor-quality items as new
         },
 
         xprepbar = {
@@ -674,6 +683,18 @@ local defaults = {
                 enabled = false,
                 color = { r = 0.9, g = 0.5, b = 0.2 },
                 alpha = 0.45,
+            },
+
+            -- GLOBAL COOLDOWN INDICATOR (PLAYER ONLY)
+            gcd = {
+                enabled = false,
+                height = 4,           -- bar thickness in pixels
+                width = 1,            -- width as a fraction of the cast bar (0.1 - 1)
+                alwaysShow = false,   -- keep the empty track visible while the GCD is idle
+                style = "castbar",    -- fill: "castbar", "classic", "flat" or "smooth"
+                background = "castbar", -- track: "castbar", "dark", "framed" or "none"
+                spark = false,        -- spark on the moving edge of the fill
+                color = { r = 1, g = 0.7, b = 0 },
             },
 
             -- TARGET CASTBAR SETTINGS
@@ -1168,6 +1189,7 @@ local defaults = {
                 opacityNonTarget = 0.5, -- default non-target opacity
                 opacityFullNoTarget = true, -- when no target exists, use full target opacity
                 opacityFullParty = false, -- always show party/raid member nameplates at full opacity
+                onlyTargetPlates = false, -- hide hostile plates except the target and, in combat, NPCs attacking you
                 offsetX = 0, -- horizontal offset from the center of the screen
                 offsetY = 0, -- vertical offset from the center of the screen
                 clickboxWidthFactor = 1, -- width factor for the clickbox
@@ -1243,6 +1265,7 @@ local defaults = {
                 position = "BOTTOM", -- BOTTOM|CENTER|TOP vertical placement on the icon
                 show_average = true, -- Average item level on the character/inspect panel
                 show_durability = false, -- Durability % on the character panel slots
+                show_repair_cost = false, -- Total repair cost of the equipped set in the character window
                 tooltip_cvar = false, -- Also set Blizzard's showItemLevel CVar (tooltip line)
                 -- Per-context toggles
                 bags = true,
@@ -1259,6 +1282,9 @@ local defaults = {
             },
             itemownership = {
                 enabled = false, -- Show per-character bag, bank and equipped counts in item tooltips
+            },
+            equipmentcompare = {
+                enabled = false, -- Compare equippable items without holding Shift; Ctrl suppresses it
             },
             chatmods = {
                 enabled = true, -- Chat enhancements: hide buttons, editbox position, URL copy, chat copy

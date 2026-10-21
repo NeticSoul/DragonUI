@@ -34,7 +34,7 @@ local PORTRAIT_BARS = {
 --   unitTargetFilters : table   {"target", "player"} or {"focus"}
 --   namePrefix        : string  "DragonUI_ToT" or "DragonUI_FoT"
 --   frames            : table   { main, healthBar, manaBar, portrait, nameText,
---                                 blizzTexture, blizzBackground, debuff1, parent }
+--                                 deadText, blizzTexture, blizzBackground, debuff1, parent }
 --   defaultAnchor       : string  (default "BOTTOMRIGHT")
 --   defaultAnchorParent : string  (default "BOTTOMRIGHT")
 --   defaultX            : number  default X offset for positioning
@@ -428,6 +428,11 @@ function UF.SmallFrame.Create(opts)
             frames.nameText:ClearAllPoints()
             frames.nameText:SetPoint("LEFT", frames.portrait, "RIGHT", name.x, name.y)
             frames.nameText:SetWidth(name.w)
+        end
+        -- Blizzard centres it on the whole frame: long DEAD strings (ruRU) spill onto the portrait.
+        if frames.deadText then
+            frames.deadText:ClearAllPoints()
+            frames.deadText:SetPoint("CENTER", frames.healthBar, "CENTER", 0, 0)
         end
     end
 

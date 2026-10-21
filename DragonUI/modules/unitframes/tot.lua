@@ -24,6 +24,7 @@ local ToTModule = UF.SmallFrame.Create({
         manaBar         = TargetFrameToTManaBar,
         portrait        = TargetFrameToTPortrait,
         nameText        = TargetFrameToTTextureFrameName,
+        deadText        = TargetFrameToTTextureFrameDeadText,
         blizzTexture    = TargetFrameToTTextureFrameTexture,
         blizzBackground = TargetFrameToTBackground,
         debuff1         = TargetFrameToTDebuff1,

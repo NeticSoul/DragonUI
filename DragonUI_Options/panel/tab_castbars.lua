@@ -249,6 +249,115 @@ local function BuildPlayerCastbar(scroll)
         end,
         callback = refresh,
     })
+
+    -- ================================================================
+    -- GLOBAL COOLDOWN INDICATOR SECTION
+    -- ================================================================
+    local gcd = C:AddSection(scroll, LO["Global Cooldown"])
+
+    local function gcdRefresh()
+        if addon.RefreshGCD then addon.RefreshGCD() end
+    end
+
+    C:AddToggle(gcd, {
+        label = LO["Enable GCD Indicator"],
+        desc  = LO["Show a global cooldown readout above the player cast bar."],
+        dbPath = "castbar.gcd.enabled",
+        callback = function()
+            gcdRefresh()
+            -- Rebuild so the dependent controls pick up the new enabled state.
+            Panel:SelectTab("castbars")
+        end,
+    })
+
+    local function gcdDisabled()
+        return not C:GetDBValue("castbar.gcd.enabled")
+    end
+
+    C:AddSlider(gcd, {
+        label = LO["GCD Height"],
+        desc  = LO["Thickness of the GCD bar in pixels."],
+        dbPath = "castbar.gcd.height",
+        min = 1, max = 12, step = 1,
+        width = 200,
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddSlider(gcd, {
+        label = LO["GCD Width"],
+        desc  = LO["Width of the GCD bar as a percentage of the cast bar."],
+        dbPath = "castbar.gcd.width",
+        min = 0.1, max = 1, step = 0.05,
+        width = 200,
+        isPercent = true,
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddColorPicker(gcd, {
+        label = LO["GCD Color"],
+        dbPath = "castbar.gcd.color",
+        hasAlpha = true,
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddToggle(gcd, {
+        label = LO["Always Show GCD Track"],
+        desc  = LO["Keep the empty GCD bar visible while no global cooldown is running."],
+        dbPath = "castbar.gcd.alwaysShow",
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddDropdown(gcd, {
+        label = LO["GCD Style"],
+        desc  = LO["Fill texture of the GCD bar."],
+        dbPath = "castbar.gcd.style",
+        values = {
+            castbar = LO["Cast Bar"],
+            classic = LO["Classic"],
+            flat = LO["Flat"],
+            smooth = LO["Smooth"],
+        },
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddDropdown(gcd, {
+        label = LO["GCD Background"],
+        desc  = LO["What is drawn behind the GCD bar."],
+        dbPath = "castbar.gcd.background",
+        values = {
+            castbar = LO["Cast Bar"],
+            dark = LO["Dark"],
+            framed = LO["Framed"],
+            none = LO["None"],
+        },
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddToggle(gcd, {
+        label = LO["Show GCD Spark"],
+        desc  = LO["Show a spark on the moving edge of the GCD bar."],
+        dbPath = "castbar.gcd.spark",
+        disabled = gcdDisabled,
+        callback = gcdRefresh,
+    })
+
+    C:AddButton(gcd, {
+        label = LO["Reset GCD Position"],
+        width = 200,
+        disabled = gcdDisabled,
+        callback = function()
+            if addon.ResetGCDPosition then
+                addon.ResetGCDPosition()
+            end
+            addon:Print(LO["GCD indicator reset to the cast bar."])
+        end,
+    })
 end
 
 local function BuildTargetCastbar(scroll)

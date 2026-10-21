@@ -504,5 +504,6 @@ mod.BagsterRetailItemSlot = BagsterRetailItemSlot
 mod.GetSetDisplayName = GetSetDisplayName
 mod.TEXTURE_ITEM_QUEST_BORDER = TEXTURE_ITEM_QUEST_BORDER
 mod.TEXTURE_ITEM_QUEST_BANG = TEXTURE_ITEM_QUEST_BANG
+mod.NewItems = addon.NewItems
 
 
