@@ -352,6 +352,18 @@ local function BuildEnhancementsTab(scroll)
     })
 
     C:AddToggle(ilvlSection, {
+        label = LO["Show Repair Cost"],
+        desc = LO["Show the total repair cost of your equipped items in the character window."],
+        getFunc = function() return GetModuleField("itemlevel", "show_repair_cost") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("itemlevel").show_repair_cost = val
+            if addon.RefreshItemLevel then addon:RefreshItemLevel() end
+        end,
+        disabled = function() return not IsItemLevelEnabled() end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(ilvlSection, {
         label = LO["Show in Tooltip"] or "Show in Tooltip",
         desc = LO["Also enable Blizzard's own item level line in item tooltips."]
             or "Also enable Blizzard's own item level line in item tooltips.",
@@ -862,6 +874,21 @@ local function BuildEnhancementsTab(scroll)
             EnsureModuleTable("tooltip").show_aura_source = val
         end,
         disabled = function() return not IsEnabled("tooltip") end,
+        requiresReload = false,
+    })
+
+    C:AddToggle(ttSection, {
+        label = LO["Automatic Equipment Comparison"],
+        desc = LO["Compare equippable items with your equipped gear without holding Shift, including item links opened from chat. Hold Ctrl to suppress it."],
+        getFunc = function() return IsEnabled("equipmentcompare") end,
+        setFunc = function(val)
+            EnsureModuleTable("equipmentcompare").enabled = val
+        end,
+        callback = function()
+            if addon.RefreshEquipmentCompareSystem then
+                addon.RefreshEquipmentCompareSystem()
+            end
+        end,
         requiresReload = false,
     })
 

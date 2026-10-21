@@ -1890,6 +1890,9 @@ function CastbarModule:RefreshCastbar(unitType)
     else
         ShowBlizzardCastbar(unitType)
         self:HideCastbar(unitType)
+        if unitType == "player" and addon.RelayoutGCD then
+            addon.RelayoutGCD()
+        end
         return
     end
     
@@ -2195,6 +2198,10 @@ function CastbarModule:RefreshCastbar(unitType)
     
     if cfg.text_mode then
         SetTextMode(unitType, cfg.text_mode)
+    end
+
+    if unitType == "player" and addon.RelayoutGCD then
+        addon.RelayoutGCD()
     end
 end
 
@@ -3063,6 +3070,11 @@ end
 -- Public API
 function addon.RefreshCastbar()
     CastbarModule:RefreshCastbar("player")
+end
+
+function addon.IsPlayerCastbarAtDefault()
+    local widget = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.playerCastbar
+    return widget and IsPlayerCastbarAtDefault(widget) or false
 end
 
 function addon.RefreshTargetCastbar()

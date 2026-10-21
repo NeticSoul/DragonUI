@@ -107,6 +107,13 @@ local function BuildModulesTab(scroll)
         callback = function() if addon.RefreshFocusCastbar then addon.RefreshFocusCastbar() end end,
     })
 
+    C:AddToggle(castSection, {
+        label = LO["Global Cooldown"],
+        desc = LO["Show a global cooldown readout above the player cast bar."],
+        dbPath = "castbar.gcd.enabled",
+        callback = function() if addon.RefreshGCD then addon.RefreshGCD() end end,
+    })
+
     -- ====================================================================
     -- ACTION BARS SYSTEM (unified toggle)
     -- ====================================================================

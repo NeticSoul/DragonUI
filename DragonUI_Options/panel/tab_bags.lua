@@ -358,6 +358,115 @@ local function BuildBagsTab(scroll)
     })
 
     -- ====================================================================
+    -- NEW ITEMS (stock bags + Bagster)
+    -- ====================================================================
+    local function GetBagsConfig(create)
+        if create and not addon.db.profile.bags then addon.db.profile.bags = {} end
+        return addon.db.profile.bags
+    end
+
+    local function SetNewItemsOption(key, val)
+        GetBagsConfig(true)[key] = val
+        if addon.NewItems then addon.NewItems:Refresh() end
+    end
+
+    local function NewItemsOff()
+        local bags = GetBagsConfig(false)
+        return (bags and bags.new_items == false) or false
+    end
+
+    -- Disabled states are read once at build time, so dependent toggles need the tab redrawn.
+    local function RedrawTab()
+        if Panel.currentTab then Panel:SelectTab(Panel.currentTab) end
+    end
+
+    local newItemsSection = C:AddSection(scroll, LO["New Items"])
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Highlight New Items"],
+        desc = LO["Make items you just looted, bought, crafted or received glow in the inventory until you hover them."],
+        getFunc = function()
+            local bags = GetBagsConfig(false)
+            return not bags or bags.new_items ~= false
+        end,
+        setFunc = function(val)
+            SetNewItemsOption("new_items", val)
+            RedrawTab()
+        end,
+    })
+
+    C:AddDropdown(newItemsSection, {
+        label = LO["Glow Style"],
+        values = {
+            border = LO["Border"],
+            starburst = LO["Starburst"],
+        },
+        getFunc = function()
+            local bags = GetBagsConfig(false)
+            return (bags and bags.new_glow_style) or "border"
+        end,
+        setFunc = function(val) SetNewItemsOption("new_glow_style", val) end,
+        disabled = NewItemsOff,
+        width = 180,
+    })
+
+    C:AddDropdown(newItemsSection, {
+        label = LO["Glow Color"],
+        values = {
+            quality = LO["Item Quality"],
+            user = LO["Custom"],
+        },
+        getFunc = function()
+            local bags = GetBagsConfig(false)
+            return (bags and bags.new_glow_color_mode) or "quality"
+        end,
+        setFunc = function(val)
+            SetNewItemsOption("new_glow_color_mode", val)
+            RedrawTab()
+        end,
+        disabled = NewItemsOff,
+        width = 180,
+    })
+
+    C:AddColorPicker(newItemsSection, {
+        label = LO["Custom Glow Color"],
+        hasAlpha = true,
+        getFunc = function()
+            local bags = GetBagsConfig(false)
+            local c = bags and bags.new_glow_color
+            if type(c) ~= "table" then return 1, 1, 1, 1 end
+            return c[1] or 1, c[2] or 1, c[3] or 1, c[4] or 1
+        end,
+        setFunc = function(r, g, b, a) SetNewItemsOption("new_glow_color", { r, g, b, a or 1 }) end,
+        disabled = function()
+            local bags = GetBagsConfig(false)
+            return NewItemsOff() or not (bags and bags.new_glow_color_mode == "user")
+        end,
+    })
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Clear When Bags Close"],
+        desc = LO["Closing a bag removes its new-item glows. When off, a glow only goes away when you hover the item."],
+        getFunc = function()
+            local bags = GetBagsConfig(false)
+            return not bags or bags.new_clear_on_close ~= false
+        end,
+        setFunc = function(val) SetNewItemsOption("new_clear_on_close", val) end,
+        disabled = NewItemsOff,
+    })
+
+    C:AddToggle(newItemsSection, {
+        label = LO["Ignore Poor Quality Items"],
+        desc = LO["Never mark gray (poor quality) items as new."],
+        getFunc = function()
+            local bags = GetBagsConfig(false)
+            return bags and bags.new_ignore_junk
+        end,
+        setFunc = function(val) SetNewItemsOption("new_ignore_junk", val) end,
+        disabled = NewItemsOff,
+    })
+
+    -- ====================================================================
     -- BAG SORT
     -- ====================================================================
     local sortSection = C:AddSection(scroll, LO["Bag Sort"] or "Bag Sort")

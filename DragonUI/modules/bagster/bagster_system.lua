@@ -243,6 +243,7 @@ local function ApplyBagsterSystem()
     SLASH_DRAGONUI_BAGSTER3 = "/combuctor" -- legacy alias for muscle memory
 
     mod.BagsterModule.applied = true
+    if mod.NewItems then mod.NewItems:Refresh() end
 end
 
 local function RestoreBagsterSystem()
@@ -297,9 +298,11 @@ local function RestoreBagsterSystem()
 
     mod.BagsterModule.originalStates = {}
     mod.BagsterModule.applied = false
+    if mod.NewItems then mod.NewItems:Refresh() end
 end
 
 local function RefreshBagsterFrames()
+    if mod.NewItems then mod.NewItems:Refresh() end
     if not mod.frames then return end
 
     for _, frame in pairs(mod.frames) do
@@ -379,6 +382,7 @@ local function OnProfileChanged()
                     end
                 end
             end
+            if mod.NewItems then mod.NewItems:Refresh() end
         end
     else
         if addon:ShouldDeferModuleDisable("bagster", mod.BagsterModule) then

@@ -324,6 +324,12 @@ function NP.clickbox.ApplyPlateClickbox(plateData)
     NP.clickbox.CaptureBaseSize(plateData)
     NP.clickbox.UpdateSecureAttributes()
 
+    -- The only-target gate owns a shrunk plate's size until it lets the plate back.
+    if plate._duiOnlyTargetShrunk then
+        plateData._clickAreaPending = nil
+        return true
+    end
+
     if plate.SetSize then
         local w, h = NP.clickbox.GetClickboxSize(plateData)
         plate:SetSize(w, h)
@@ -384,6 +390,7 @@ function NP.clickbox.RestorePlate(plateData)
     if not plate or InCombatLockdown() then
         return false
     end
+    plate._duiOnlyTargetShrunk = nil
     local width = NP.module._clickboxNativeW or plate._dragonUIClickboxNativeW or plateData._clickboxBaseW
     local height = NP.module._clickboxNativeH or plate._dragonUIClickboxNativeH or plateData._clickboxBaseH
     if width and height and plate.SetSize then

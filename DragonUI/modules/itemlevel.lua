@@ -621,6 +621,97 @@ local function ScheduleAverageUpdate(which)
     end)
 end
 
+-- ============================================================================
+-- TOTAL REPAIR COST
+-- ============================================================================
+-- SetInventoryItem reports the repair cost of one equipped item, so summing the
+-- slots gives the same total the merchant would charge for the whole set.
+
+local repairTooltip
+local repairCostFrame
+
+local function IsRepairCostEnabled()
+    local config = GetModuleConfig()
+    return config and config.show_repair_cost == true
+end
+
+local function EnsureRepairTooltip()
+    if repairTooltip then
+        return repairTooltip
+    end
+
+    repairTooltip = CreateFrame("GameTooltip", "DragonUIRepairTooltip", UIParent, "GameTooltipTemplate")
+    repairTooltip:SetAlpha(0)
+    return repairTooltip
+end
+
+local function EnsureRepairCostFrame()
+    if repairCostFrame then
+        return repairCostFrame
+    end
+
+    local parent = _G.PaperDollFrame or _G.CharacterFrame or UIParent
+    local frame = CreateFrame("Frame", "DragonUICharacterRepairFrame", parent)
+    frame:SetSize(160, 24)
+    -- The character panel sits on DIALOG; a plain MEDIUM frame would be drawn under it.
+    frame:SetFrameStrata((parent.GetFrameStrata and parent:GetFrameStrata()) or "MEDIUM")
+    frame:SetFrameLevel((parent.GetFrameLevel and parent:GetFrameLevel() or 0) + 20)
+    -- Below the model frame, clear of the weapon slots hanging off its bottom edge.
+    local model = _G.CharacterModelFrame2 or _G.CharacterModelFrame or parent
+    frame:SetPoint("BOTTOMLEFT", model, "BOTTOMLEFT", 10, 45)
+
+    local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 12)
+    label:SetJustifyH("LEFT")
+    label:SetText(addon.L["Repair Cost"])
+    frame.label = label
+
+    local amount = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    amount:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -1)
+    amount:SetJustifyH("LEFT")
+    frame.amount = amount
+
+    repairCostFrame = frame
+    return frame
+end
+
+local function UpdateRepairCostDisplay()
+    if not IsModuleEnabled() or not IsRepairCostEnabled() then
+        if repairCostFrame then repairCostFrame:Hide() end
+        return
+    end
+
+    -- The panel drives the label; no reason to price 19 slots while it is closed.
+    if not CharacterFrame or not CharacterFrame:IsShown() then
+        if repairCostFrame then repairCostFrame:Hide() end
+        return
+    end
+
+    local frame = EnsureRepairCostFrame()
+    local tooltip = EnsureRepairTooltip()
+    -- A hidden tooltip loses its owner and stops reporting costs.
+    tooltip:SetOwner(WorldFrame, "ANCHOR_NONE")
+
+    local totalRepairCost = 0
+    for _, frameName in ipairs(EQUIP_SLOT_FRAMES) do
+        local button = _G[frameName]
+        local slotID = button and button:GetID()
+        if slotID and slotID >= 0 then
+            local hasItem, _, repairCost = tooltip:SetInventoryItem("player", slotID)
+            if hasItem and repairCost and repairCost > 0 then
+                totalRepairCost = totalRepairCost + repairCost
+            end
+        end
+    end
+
+    if totalRepairCost > 0 and GetCoinTextureString then
+        frame.amount:SetText(GetCoinTextureString(totalRepairCost))
+    else
+        frame.amount:SetText(addon.L["No Repairs Needed"])
+    end
+    frame:Show()
+end
+
 local function UpdateAllCharacterSlots()
     if not IsModuleEnabled() then return end
     for _, frameName in ipairs(EQUIP_SLOT_FRAMES) do
@@ -628,6 +719,7 @@ local function UpdateAllCharacterSlots()
         if button then UpdateCharacterSlot(button) end
     end
     UpdateCharacterAverage()
+    UpdateRepairCostDisplay()
 end
 
 local function UpdateAllInspectSlots()
@@ -936,6 +1028,9 @@ local function ApplyItemLevelSystem()
     if not ItemLevelModule.hooks["PaperDollShow"] and PaperDollFrame then
         PaperDollFrame:HookScript("OnShow", function()
             addon:After(0.05, UpdateAllCharacterSlots)
+        end)
+        PaperDollFrame:HookScript("OnHide", function()
+            if repairCostFrame then repairCostFrame:Hide() end
         end)
         ItemLevelModule.hooks["PaperDollShow"] = true
     end
