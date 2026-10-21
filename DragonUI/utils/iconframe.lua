@@ -3,7 +3,8 @@
 -- ============================================================================
 -- DragonUI - Icon Frame Utility
 -- Shared action-bar icon chrome (buttons.lua) for icons that are plain Textures
--- rather than Buttons: castbars, nameplate castbars.
+-- rather than Buttons: castbars, nameplate castbars, guild perk rows. Also the
+-- Collections journal's ornate gold frame, for a single feature icon.
 -- ============================================================================
 
 local addon = select(2, ...)
@@ -42,6 +43,25 @@ function addon.SetIconFrameTextureTinted(tex, tinted)
     if not tex or tex._duiTinted == tinted then return end
     tex._duiTinted = tinted
     tex:SetTexture(tinted and FRAME_TEXTURE_WHITE or FRAME_TEXTURE)
+end
+
+-- The ornate gold frame's opening is measured where the ring turns solid: its fully transparent
+-- core is far smaller than the gold bars actually enclose, and its centre sits high and left of the
+-- art. Flourishes run past the bars on the left and below, so the frame is about twice the icon.
+addon.GOLD_ICON_FRAME = {
+    texture = addon._dir .. "Collections\\IconFrameGold",
+    open = 0.4922, cx = 0.4727, cy = 0.4336,
+}
+
+-- Sizes the ornate frame so its opening fits a size-px icon and centres that opening on it.
+function addon.LayoutGoldIconFrame(tex, icon, size)
+    if not tex or not icon then return end
+    local g = addon.GOLD_ICON_FRAME
+    local frameSize = size / g.open
+    tex:SetTexture(g.texture)
+    tex:SetSize(frameSize, frameSize)
+    tex:ClearAllPoints()
+    tex:SetPoint("CENTER", icon, "CENTER", (0.5 - g.cx) * frameSize, (g.cy - 0.5) * frameSize)
 end
 
 function addon.LayoutIconFrameTexture(tex, icon, size)
