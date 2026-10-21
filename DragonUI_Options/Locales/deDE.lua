@@ -706,6 +706,14 @@ L["Always Show GCD Track"] = "GCD-Leiste immer anzeigen"
 L["Keep the empty GCD bar visible while no global cooldown is running."] = "Die leere GCD-Leiste anzeigen, wenn keine globale Abklingzeit läuft."
 L["Reset GCD Position"] = "GCD-Position zurücksetzen"
 L["GCD indicator reset to the cast bar."] = "GCD-Anzeige auf die Channelbar zurückgesetzt."
+L["GCD Style"] = "GCD-Stil"
+L["Fill texture of the GCD bar."] = "Füllungstextur der GCD-Leiste."
+L["GCD Background"] = "GCD-Hintergrund"
+L["What is drawn behind the GCD bar."] = "Was hinter der GCD-Leiste gezeichnet wird."
+L["Show GCD Spark"] = "GCD-Funken anzeigen"
+L["Show a spark on the moving edge of the GCD bar."] = "Zeigt einen Funken an der wandernden Kante der GCD-Leiste."
+L["Flat"] = "Flach"
+L["Framed"] = "Gerahmt"
 
 -- ============================================================================
 -- ENHANCEMENTS TAB

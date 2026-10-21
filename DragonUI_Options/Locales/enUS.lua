@@ -830,6 +830,14 @@ L["Always Show GCD Track"] = true
 L["Keep the empty GCD bar visible while no global cooldown is running."] = true
 L["Reset GCD Position"] = true
 L["GCD indicator reset to the cast bar."] = true
+L["GCD Style"] = true
+L["Fill texture of the GCD bar."] = true
+L["GCD Background"] = true
+L["What is drawn behind the GCD bar."] = true
+L["Show GCD Spark"] = true
+L["Show a spark on the moving edge of the GCD bar."] = true
+L["Flat"] = true
+L["Framed"] = true
 
 -- ============================================================================
 -- ENHANCEMENTS TAB

@@ -651,6 +651,14 @@ L["Always Show GCD Track"] = "始終顯示全域冷卻軌道"
 L["Keep the empty GCD bar visible while no global cooldown is running."] = "沒有全域冷卻時也保持顯示空的冷卻條。"
 L["Reset GCD Position"] = "重置全域冷卻位置"
 L["GCD indicator reset to the cast bar."] = "全域冷卻指示器已重置到施法條位置。"
+L["GCD Style"] = "全域冷卻樣式"
+L["Fill texture of the GCD bar."] = "全域冷卻條的填充材質。"
+L["GCD Background"] = "全域冷卻背景"
+L["What is drawn behind the GCD bar."] = "全域冷卻條後面繪製的背景。"
+L["Show GCD Spark"] = "顯示全域冷卻火花"
+L["Show a spark on the moving edge of the GCD bar."] = "在全域冷卻條移動的邊緣顯示火花。"
+L["Flat"] = "純色"
+L["Framed"] = "帶邊框"
 
 -- ============================================================================
 -- 增強功能標籤頁

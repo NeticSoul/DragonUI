@@ -705,6 +705,14 @@ L["Always Show GCD Track"] = "Всегда показывать полосу GCD
 L["Keep the empty GCD bar visible while no global cooldown is running."] = "Оставляет пустую полосу GCD видимой, когда глобальная задержка не активна."
 L["Reset GCD Position"] = "Сбросить положение GCD"
 L["GCD indicator reset to the cast bar."] = "Индикатор GCD возвращён к панели заклинаний."
+L["GCD Style"] = "Стиль GCD"
+L["Fill texture of the GCD bar."] = "Текстура заполнения полосы GCD."
+L["GCD Background"] = "Фон GCD"
+L["What is drawn behind the GCD bar."] = "Что рисуется за полосой GCD."
+L["Show GCD Spark"] = "Показывать искру GCD"
+L["Show a spark on the moving edge of the GCD bar."] = "Показывает искру на движущемся краю полосы GCD."
+L["Flat"] = "Плоский"
+L["Framed"] = "С рамкой"
 
 -- ============================================================================
 -- ENHANCEMENTS TAB

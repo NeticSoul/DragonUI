@@ -1204,6 +1204,20 @@ R.gcd = function()
     RefreshCastbarPreview("GCDIndicator")
 end
 
+local GCD_STYLE_ITEMS = {
+    { "castbar", T("Cast Bar") },
+    { "smooth", T("Smooth") },
+    { "classic", T("Classic") },
+    { "flat", T("Flat") },
+}
+
+local GCD_BACKGROUND_ITEMS = {
+    { "castbar", T("Cast Bar") },
+    { "dark", T("Dark") },
+    { "framed", T("Framed") },
+    { "none", T("None") },
+}
+
 local function GCDSettings()
     local refresh = R.gcd
     local function GCDOff() return not GetDB("castbar.gcd.enabled") end
@@ -1211,7 +1225,7 @@ local function GCDSettings()
     return { settings = Join({
         Section(T("Global Cooldown"), false),
         Check(T("Enable GCD Indicator"), "castbar.gcd.enabled", refresh, {
-            after = function() E.Rebuild() end }),
+            after = function() E.SyncFrames(); E.Rebuild() end }),
         Slider(T("GCD Height"), "castbar.gcd.height", 1, 12, 1, refresh, {
             resize = true, disabled = GCDOff }),
         -- The width is stored as a fraction of the cast bar, the slider works in percent.
@@ -1236,6 +1250,9 @@ local function GCDSettings()
             end,
         }),
         Check(T("Always Show GCD Track"), "castbar.gcd.alwaysShow", refresh, { disabled = GCDOff }),
+        Drop(T("GCD Style"), "castbar.gcd.style", GCD_STYLE_ITEMS, refresh, { disabled = GCDOff }),
+        Drop(T("GCD Background"), "castbar.gcd.background", GCD_BACKGROUND_ITEMS, refresh, { disabled = GCDOff }),
+        Check(T("Show GCD Spark"), "castbar.gcd.spark", refresh, { disabled = GCDOff }),
     }) }
 end
 
@@ -1978,6 +1995,9 @@ E.Register("__manager", { settings = {
         after = function() E.SyncFrames(); E.Rebuild() end }),
     Check(T("Swing Timer"), "modules.swingtimer.enabled", R.swingTimerToggle, {
         tooltip = T("Show a bar with the time left until each weapon's next swing."),
+        after = function() E.SyncFrames(); E.Rebuild() end }),
+    Check(T("GCDAnchor"), "castbar.gcd.enabled", R.gcd, {
+        tooltip = T("Show a bar above the player cast bar that fills while the global cooldown runs."),
         after = function() E.SyncFrames(); E.Rebuild() end }),
 
     Section(T("Action Bars"), true),

@@ -54,7 +54,11 @@ local function UpdateAnchorPosition()
     local anchor = LootRollModule.anchorFrame
     if not anchor then return end
     local x, y, point = GetLootRollConfig()
-    local lift = IsAtDefaultPosition(x, y, point) and addon.GetPetbarStackLift and addon.GetPetbarStackLift() or 0
+    local lift = 0
+    if IsAtDefaultPosition(x, y, point) then
+        lift = (addon.GetPetbarStackLift and addon.GetPetbarStackLift() or 0)
+            + (addon.GetGCDStackLift and addon.GetGCDStackLift() or 0)
+    end
     -- Position presets read this frame back; they subtract the lift so it is never saved as a move.
     anchor.DragonUI_LayoutOffset = lift > 0 and { 0, lift } or nil
     anchor:ClearAllPoints()

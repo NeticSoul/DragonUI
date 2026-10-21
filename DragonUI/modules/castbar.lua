@@ -1393,7 +1393,16 @@ end
 -- ============================================================================
 
 -- Spell 61304 is the client's own GCD timer: haste, 1 s GCDs and cast-time starts come for free.
-local GCD = { SPELL_ID = 61304, GAP = 4 }
+local GCD = { SPELL_ID = 61304, GAP = 4, MOVER_MIN_HEIGHT = 16, lift = 0 }
+local GCD_SOLID = "Interface\\Buttons\\WHITE8X8"
+-- crop = the square, fully opaque core {l, r, t, b}; those fills also vary along x, so they need it per frame.
+local GCD_FILLS = {
+    castbar = { file = TEXTURES.standard, crop = { 10 / 512, 502 / 512, 4 / 32, 28 / 32 } },
+    classic = { file = "Interface\\TargetingFrame\\UI-StatusBar" },
+    flat = { file = GCD_SOLID },
+    smooth = { file = "Interface\\AddOns\\DragonUI\\Textures\\Nameplates\\bar-fill", crop = { 12 / 512, 502 / 512, 2 / 32, 30 / 32 } },
+}
+local GCD_CASTBAR_BG = { 8 / 1024, 416 / 1024, 188 / 512, 214 / 512 }
 
 local function GetGCDConfig()
     local cfg = GetConfig("player")
@@ -1414,9 +1423,19 @@ local function IsGCDCustomPlaced()
     return widget and widget.custom_position and widget.posX ~= nil and widget.posY ~= nil or false
 end
 
+-- 3.3.5a stretches a StatusBar fill across the filled width; cropping keeps the art at its real proportions.
+local function SetGCDProgress(progress)
+    GCD.bar:SetValue(progress)
+    local crop, fill = GCD.crop, GCD.bar:GetStatusBarTexture()
+    if crop and fill then
+        fill:SetTexCoord(crop[1], crop[1] + (crop[2] - crop[1]) * max(progress, 0.001), crop[3], crop[4])
+    end
+end
+
 local function ShowGCDIdle()
     local gcfg = GetGCDConfig()
-    GCD.bar:SetValue(0)
+    SetGCDProgress(0)
+    GCD.spark:Hide()
     if gcfg and gcfg.alwaysShow then
         GCD.bar:Show()
     else
@@ -1431,7 +1450,7 @@ function GCD.OnUpdate(bar)
         bar:SetScript("OnUpdate", nil)
         ShowGCDIdle()
     else
-        bar:SetValue(elapsed / GCD.duration)
+        SetGCDProgress(elapsed / GCD.duration)
     end
 end
 
@@ -1444,12 +1463,49 @@ function GCD.Read()
         GCD.start, GCD.duration = start, duration
         GCD.bar:SetScript("OnUpdate", GCD.OnUpdate)
         GCD.bar:Show()
+        if GCD.sparkOn then GCD.spark:Show() end
         GCD.OnUpdate(GCD.bar)
     elseif GCD.start then
         GCD.start = nil
         GCD.bar:SetScript("OnUpdate", nil)
         ShowGCDIdle()
     end
+end
+
+local function ApplyGCDLook(gcfg)
+    local bar, bg = GCD.bar, GCD.bg
+    local fill = GCD_FILLS[gcfg.style] or GCD_FILLS.castbar
+    if GCD.fill ~= fill then
+        GCD.fill, GCD.crop = fill, fill.crop
+        bar:SetStatusBarTexture(fill.file)
+        if not fill.crop then
+            bar:GetStatusBarTexture():SetTexCoord(0, 1, 0, 1)
+        end
+        SetGCDProgress(bar:GetValue())
+        GCD.spark:ClearAllPoints()
+        GCD.spark:SetPoint("CENTER", bar:GetStatusBarTexture(), "RIGHT", 0, 0)
+    end
+
+    local background = gcfg.background or "castbar"
+    if GCD.background ~= background then
+        GCD.background = background
+        if background == "castbar" then
+            bg:SetTexture(TEXTURES.atlas)
+            bg:SetTexCoord(unpack(GCD_CASTBAR_BG))
+            bg:SetVertexColor(1, 1, 1, 1)
+        else
+            bg:SetTexture(GCD_SOLID)
+            bg:SetTexCoord(0, 1, 0, 1)
+            bg:SetVertexColor(0, 0, 0, 0.6)
+        end
+        if background == "none" then bg:Hide() else bg:Show() end
+        if background == "framed" then GCD.border:Show() else GCD.border:Hide() end
+    end
+
+    GCD.sparkOn = gcfg.spark == true
+    if not GCD.sparkOn then GCD.spark:Hide() end
+    local color = gcfg.color or {}
+    bar:SetStatusBarColor(color.r or 1, color.g or 0.7, color.b or 0, color.a or 1)
 end
 
 function GCD.Layout(gcfg)
@@ -1462,8 +1518,7 @@ function GCD.Layout(gcfg)
     local widget = GetGCDWidget()
     local x, y = custom and widget.posX, custom and widget.posY
 
-    local color = gcfg.color or {}
-    GCD.bar:SetStatusBarColor(color.r or 1, color.g or 0.7, color.b or 0, color.a or 1)
+    ApplyGCDLook(gcfg)
 
     -- RefreshCastbar runs on every player cast start; skip the re-anchor when nothing moved.
     if GCD.scale == scale and GCD.width == width and GCD.height == height
@@ -1474,14 +1529,28 @@ function GCD.Layout(gcfg)
 
     GCD.bar:SetScale(scale)
     GCD.bar:SetSize(width, height)
-    GCD.mover:SetSize(width * scale, height * scale)
+    GCD.spark:SetSize(max(6, height * 2), max(12, height * 3.5))
+    -- The editor's 16px corners overlap on anything shorter, so the box grows and the bar stays centred in it.
+    local moverHeight = max(height * scale, GCD.MOVER_MIN_HEIGHT)
+    GCD.mover:SetSize(width * scale, moverHeight)
     GCD.mover:ClearAllPoints()
     if custom then
         GCD.mover:SetPoint("CENTER", UIParent, "CENTER", x, y)
     elseif container then
-        GCD.mover:SetPoint("BOTTOM", container, "TOP", 0, GCD.GAP * scale)
+        GCD.mover:SetPoint("BOTTOM", container, "TOP", 0, GCD.GAP * scale - (moverHeight - height * scale) / 2)
     else
         GCD.mover:SetPoint("CENTER", UIParent, "CENTER", 0, -120)
+    end
+end
+
+-- Only an initialised loot roll is refreshed; RefreshLootRoll would otherwise build the module.
+local function SyncGCDLift()
+    local lift = addon.GetGCDStackLift and addon.GetGCDStackLift() or 0
+    if lift ~= GCD.lift then
+        GCD.lift = lift
+        if addon.LootRollModule and addon.LootRollModule.initialized and addon.RefreshLootRoll then
+            addon.RefreshLootRoll()
+        end
     end
 end
 
@@ -1491,6 +1560,7 @@ local function RelayoutGCD()
     if gcfg and GCD.bar then
         GCD.Layout(gcfg)
     end
+    SyncGCDLift()
 end
 
 -- No configPath on purpose: GetPoint offsets read back skewed, so the on-screen centre is stored instead.
@@ -1508,7 +1578,7 @@ end
 function GCD.ResetPosition()
     local widget = GetGCDWidget()
     if widget then
-        widget.custom_position, widget.anchor, widget.posX, widget.posY = nil, nil, nil, nil
+        widget.custom_position, widget.anchor, widget.posX, widget.posY = false, nil, nil, nil
     end
     RelayoutGCD()
 end
@@ -1523,14 +1593,21 @@ function GCD.Create()
     bar:SetFrameLevel(12)
     bar:SetMinMaxValues(0, 1)
     bar:SetValue(0)
-    bar:SetStatusBarTexture(TEXTURES.standard)
     bar:Hide()
     local bg = bar:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture(TEXTURES.atlas)
-    bg:SetTexCoord(unpack(UV_COORDS.background))
     bg:SetAllPoints(bar)
+    local border = CreateFrame("Frame", nil, bar)
+    border:SetPoint("TOPLEFT", bar, "TOPLEFT", -1, 1)
+    border:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 1, -1)
+    border:SetBackdrop({ edgeFile = GCD_SOLID, edgeSize = 1 })
+    border:SetBackdropBorderColor(0, 0, 0, 1)
+    border:Hide()
+    local spark = bar:CreateTexture(nil, "OVERLAY")
+    spark:SetTexture(TEXTURES.spark)
+    spark:SetBlendMode("ADD")
+    spark:Hide()
     bar:SetScript("OnEvent", GCD.Read)
-    GCD.bar = bar
+    GCD.bar, GCD.bg, GCD.border, GCD.spark = bar, bg, border, spark
 
     local mover = addon.CreateUIFrame(200, 4, "GCDAnchor")
     mover:HookScript("OnDragStop", GCD.SaveMoved)
@@ -1545,8 +1622,9 @@ function GCD.Create()
         showTest = function()
             GCD.start = nil
             bar:SetScript("OnUpdate", nil)
-            bar:SetValue(0.5)
+            SetGCDProgress(0.5)
             bar:Show()
+            if GCD.sparkOn then spark:Show() end
         end,
         hideTest = ShowGCDIdle,
         onNudge = GCD.SaveMoved,
@@ -1565,12 +1643,14 @@ function GCD.Refresh()
             GCD.bar:Hide()
             GCD.start = nil
         end
+        SyncGCDLift()
         return
     end
 
     GCD.Create()
     GCD.bar:RegisterEvent("SPELL_UPDATE_COOLDOWN")
     GCD.Layout(gcfg)
+    SyncGCDLift()
     if addon.EditorMode and addon.EditorMode:IsActive() then
         return
     end
@@ -3266,6 +3346,16 @@ end
 
 addon.RefreshGCD = GCD.Refresh
 addon.ResetGCDPosition = GCD.ResetPosition
+
+-- Room the loot rolls leave for a GCD bar sitting on a cast bar at its default spot.
+function addon.GetGCDStackLift()
+    local gcfg = GetGCDConfig()
+    local widget = addon.db and addon.db.profile.widgets and addon.db.profile.widgets.playerCastbar
+    if not gcfg or IsGCDCustomPlaced() or not (widget and IsPlayerCastbarAtDefault(widget)) then
+        return 0
+    end
+    return (GCD.GAP + max(1, gcfg.height or 4)) * (GetConfig("player").scale or 1)
+end
 
 function addon.RefreshTargetCastbar()
     CastbarModule:RefreshCastbar("target")

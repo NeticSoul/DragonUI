@@ -307,6 +307,42 @@ local function BuildPlayerCastbar(scroll)
         callback = refresh,
     })
 
+    C:AddDropdown(gcd, {
+        label = LO["GCD Style"],
+        desc  = LO["Fill texture of the GCD bar."],
+        dbPath = "castbar.gcd.style",
+        values = {
+            castbar = LO["Cast Bar"],
+            classic = LO["Classic"],
+            flat = LO["Flat"],
+            smooth = LO["Smooth"],
+        },
+        disabled = gcdDisabled,
+        callback = refresh,
+    })
+
+    C:AddDropdown(gcd, {
+        label = LO["GCD Background"],
+        desc  = LO["What is drawn behind the GCD bar."],
+        dbPath = "castbar.gcd.background",
+        values = {
+            castbar = LO["Cast Bar"],
+            dark = LO["Dark"],
+            framed = LO["Framed"],
+            none = LO["None"],
+        },
+        disabled = gcdDisabled,
+        callback = refresh,
+    })
+
+    C:AddToggle(gcd, {
+        label = LO["Show GCD Spark"],
+        desc  = LO["Show a spark on the moving edge of the GCD bar."],
+        dbPath = "castbar.gcd.spark",
+        disabled = gcdDisabled,
+        callback = refresh,
+    })
+
     C:AddButton(gcd, {
         label = LO["Reset GCD Position"],
         width = 200,

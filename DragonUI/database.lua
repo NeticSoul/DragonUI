@@ -88,6 +88,9 @@ local defaults = {
                 posX = 0,
                 posY = 200
             },
+            gcd = {
+                custom_position = false -- sits on the player cast bar until dragged off
+            },
             targetCastbar = {
                 anchor = "CENTER",
                 posX = 0,
@@ -680,6 +683,9 @@ local defaults = {
                 height = 4,           -- bar thickness in pixels
                 width = 1,            -- width as a fraction of the cast bar (0.1 - 1)
                 alwaysShow = false,   -- keep the empty track visible while the GCD is idle
+                style = "castbar",    -- fill: "castbar", "classic", "flat" or "smooth"
+                background = "castbar", -- track: "castbar", "dark", "framed" or "none"
+                spark = false,        -- spark on the moving edge of the fill
                 color = { r = 1, g = 0.7, b = 0 },
             },
 

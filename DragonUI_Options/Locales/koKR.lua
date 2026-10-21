@@ -713,6 +713,14 @@ L["Always Show GCD Track"] = "GCD 트랙 항상 표시"
 L["Keep the empty GCD bar visible while no global cooldown is running."] = "전역 재사용 대기시간이 없을 때도 빈 GCD 막대를 표시합니다."
 L["Reset GCD Position"] = "GCD 위치 초기화"
 L["GCD indicator reset to the cast bar."] = "GCD 표시기를 시전바 위치로 되돌렸습니다."
+L["GCD Style"] = "GCD 스타일"
+L["Fill texture of the GCD bar."] = "GCD 바의 채우기 텍스처입니다."
+L["GCD Background"] = "GCD 배경"
+L["What is drawn behind the GCD bar."] = "GCD 바 뒤에 그려지는 배경입니다."
+L["Show GCD Spark"] = "GCD 불꽃 표시"
+L["Show a spark on the moving edge of the GCD bar."] = "GCD 바의 움직이는 끝에 불꽃을 표시합니다."
+L["Flat"] = "단색"
+L["Framed"] = "테두리 있음"
 
 -- ============================================================================
 -- ENHANCEMENTS TAB
