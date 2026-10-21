@@ -117,6 +117,7 @@ local SUBTEXT = {
     dungeon = L["New Dungeon!"],
     raid = L["New Raid!"],
     heroic = L["Heroic Dungeons!"],
+    perk = L["New Guild Perk!"],
 }
 local BADGE = { spell = BADGE_BOOK, rank = BADGE_BOOK, talent = BADGE_ARROW }
 local PLACE = { battleground = true, dungeon = true, raid = true, heroic = true }
@@ -461,6 +462,8 @@ local animState, stateTimer, revealDelay = "IDLE", 0, 0
 local cascade
 local cardIndex = 0
 local queuedPet
+-- Guild level-ups that other addons hand over (addon.ShowGuildLevelUp), shown after the player's own.
+local guildQueue = {}
 -- Player banners waiting their turn: { level, talents, unlocks } or, past the limit, { from, level, talents }.
 local playerQueue = {}
 local runLength = 0
@@ -692,7 +695,7 @@ end
 local function HoldTime()
     local hold = HOLD_COLLAPSED
     if expanded then hold = min(HOLD_LIST + HOLD_PER_ROW * #(entries.display or entries), HOLD_LIST_MAX) end
-    if playerQueue[1] or queuedPet then hold = min(hold, HOLD_QUEUED) end
+    if playerQueue[1] or guildQueue[1] or queuedPet then hold = min(hold, HOLD_QUEUED) end
     return hold
 end
 
@@ -973,6 +976,15 @@ local function PetRequest(level, name)
     }
 end
 
+-- perk: { name, icon, description } of the perk the level brought, or nil.
+local function GuildRequest(level, perk)
+    local unlocks = {}
+    if perk and Setting("show_unlocks") then
+        unlocks[1] = { kind = "perk", text = perk.name, icon = perk.icon or ICON_UNKNOWN, hint = perk.description }
+    end
+    return { kind = "guild", level = level, header = L["Your Guild Has Reached"], unlocks = unlocks }
+end
+
 ShowNext = function(fresh)
     if loading or IsEditorActive() then return end
     local nextPlayer = table.remove(playerQueue, 1)
@@ -981,6 +993,11 @@ ShowNext = function(fresh)
         return
     end
     runLength = 0
+    local nextGuild = table.remove(guildQueue, 1)
+    if nextGuild then
+        Present(nextGuild)
+        return
+    end
     if queuedPet then
         local request = queuedPet
         queuedPet = nil
@@ -993,6 +1010,8 @@ local function Requeue(request)
     if request.kind == "player" then
         table.insert(playerQueue, 1, { from = request.from, level = request.level, talents = request.talents or 0,
             unlocks = request.unlocks })
+    elseif request.kind == "guild" then
+        table.insert(guildQueue, 1, request)
     else
         queuedPet = request
     end
@@ -1011,7 +1030,7 @@ local function QueuePlayerLevel(level, talents, unlocks)
 end
 
 local function OnPlayerLevelUp(level, talents, unlocks)
-    if current and current.kind == "pet" then
+    if current and current.kind ~= "player" then
         Requeue(current)
         Finish()
     end
@@ -1048,7 +1067,7 @@ local function OnPetLevel()
     if Setting("show_unlocks") and Setting("chat_unlocks") then
         PrintToChat(format(L["%s has reached level %d!"], name, level), request.unlocks)
     end
-    if loading or IsEditorActive() or playerQueue[1] or (current and current.kind == "player") then
+    if loading or IsEditorActive() or playerQueue[1] or guildQueue[1] or (current and current.kind ~= "pet") then
         queuedPet = request
     else
         Present(request, true)
@@ -1098,6 +1117,17 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1, _, _, arg4)
     end
 end)
 LevelUpEnhance.eventFrame = eventFrame
+
+-- The guild's banner, for an addon that hears of the level (GuildLevels). Returns true when it will
+-- show, false when the module is off and the caller should show its own.
+function addon.ShowGuildLevelUp(level, perkName, perkIcon, perkDescription)
+    level = tonumber(level)
+    if not LevelUpEnhance.applied or not level then return false end
+    local perk = perkName and perkName ~= "" and { name = perkName, icon = perkIcon, description = perkDescription }
+    guildQueue[#guildQueue + 1] = GuildRequest(level, perk)
+    if not current then ShowNext() end
+    return true
+end
 
 -- =============================================================================
 -- POSITION AND EDITOR
@@ -1174,7 +1204,7 @@ end
 
 function addon.RestoreLevelUpEnhanceSystem()
     eventFrame:UnregisterAllEvents()
-    playerQueue, runLength, queuedPet, loading = {}, 0, nil, false
+    playerQueue, guildQueue, runLength, queuedPet, loading = {}, {}, 0, nil, false
     if banner then Finish() end
     LevelUpEnhance.applied = false
 end
@@ -1219,5 +1249,13 @@ end
 SLASH_DRAGONUI_TESTLEVEL1 = "/testlevel"
 SLASH_DRAGONUI_TESTLEVEL2 = "/lvltest"
 SlashCmdList["DRAGONUI_TESTLEVEL"] = function(msg)
-    addon.TestLevelUpEnhance(strtrim(msg or ""))
+    msg = strtrim(msg or "")
+    -- "/testlevel guild" plays a sample guild banner; real ones come from GuildLevels.
+    if msg:lower() == "guild" then
+        if not addon.ShowGuildLevelUp(2, "Fast Track", "Interface\\Icons\\INV_Misc_TabardPVP_02") then
+            addon:Print(L["Module disabled."])
+        end
+        return
+    end
+    addon.TestLevelUpEnhance(msg)
 end
