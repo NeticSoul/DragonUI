@@ -106,6 +106,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 
 - 💬 Chat enhancements: style skins, fade sync, movable textbox with adjustable opacity, URL detection, chat copy, vanilla chat buttons with hover visibility, and `/tt` whisper command.
 - 💎 Item quality borders, enhanced tooltips with class-colored borders, and range indicator.
+- 🎒 Character Item Counts (off by default): item tooltips list how many of an item each of your characters has in bags, bank and equipped. It may duplicate lines if another addon also adds ownership counts to tooltips, and it does not count server-held currencies or the reagent bank.
 - ⌨️ Easy-to-use keybinding mode on supported buttons.
 
 Extensive customization available directly in-game through the configuration panel.

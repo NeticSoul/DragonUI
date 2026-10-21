@@ -20,7 +20,9 @@ prove server behavior in a real client.
 
 Not yet checked in a game client: position presets and window dragging across the panels, grey-item
 auto-sell and auto-repair, Open All with full bags, achievement search, and the unit-frame styles
-and combo-point modes after the last upstream merge.
+and combo-point modes after the last upstream merge. Also not checked: portrait-off unit frames
+(beta) with their decorations and icons, /reload in an LFG party, tooltip sharing with other
+addons, empty-loot auto-hide, large alt-gold totals, and Mind Sear / Volley ticks.
 
 After merging upstream, `python3 tools/recolour_grounds.py --check` says whether `ui-background-rock`
 and `ui-background-marble` need their warm brown recolour regenerated.
