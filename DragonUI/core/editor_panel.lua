@@ -255,13 +255,6 @@ local function GetDetachedResetActionForSelection()
                 addon.MinimapModule:ResetDurabilityPosition()
             end, frameData
         end
-    elseif frameName == "GCDIndicator" then
-        local cfg = addon.db.profile.castbar and addon.db.profile.castbar.gcd
-        if cfg and cfg.detached and addon.ResetGCDPosition then
-            return function()
-                addon.ResetGCDPosition()
-            end, frameData
-        end
     end
 
     return nil, frameData
@@ -270,7 +263,7 @@ end
 -- Frames with their own reset above; when they are not detached there is nothing to reset.
 local DETACHED_RESET = {
     TargetCastbar = true, FocusCastbar = true, tot = true, fot = true, PetFrame = true,
-    Debuffs = true, buffs = true, durability = true, GCDIndicator = true,
+    Debuffs = true, buffs = true, durability = true,
 }
 -- The rest of a widgets entry (e.g. lfgframe.tooltip_position) is a setting, not part of the position.
 local POSITION_FIELDS = { "anchor", "relativePoint", "posX", "posY", "custom_position" }

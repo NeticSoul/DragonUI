@@ -1389,359 +1389,195 @@ local function ShowLatencyIndicator(castDuration)
 end
 
 -- ============================================================================
--- GLOBAL COOLDOWN (GCD) INDICATOR
--- ============================================================================
--- A bar above the player cast bar that fills up while the GCD runs.
+-- GLOBAL COOLDOWN INDICATOR (player only)
 -- ============================================================================
 
-local GCD_SPELL_ID = 61304
-local GCD_FALLBACK_DURATION = 1.5   -- standard GCD length in 3.3.5a
-local GCD_PROBE_CASTS = 3           -- casts before the client is given up on
-local GCD_POLL_INTERVAL = 0.03      -- ~33 updates per second
-local GCD_SOLID_TEXTURE = "Interface\\Buttons\\WHITE8x8"
-
-local gcdState = {
-    dummyWorks = nil,        -- nil = unknown, true = client answers, false = it does not
-    castsSinceProbe = 0,      -- casts seen while the dummy stayed silent
-    fallbackStart = 0,
-    fallbackEnd = 0,
-}
-
-local gcdPoller = CreateFrame("Frame", "DragonUIGCDPoller")
-gcdPoller.elapsed = 0
+-- Spell 61304 is the client's own GCD timer: haste, 1 s GCDs and cast-time starts come for free.
+local GCD = { SPELL_ID = 61304, GAP = 4 }
 
 local function GetGCDConfig()
     local cfg = GetConfig("player")
-    return cfg and cfg.gcd
+    local gcfg = cfg and cfg.enabled and cfg.gcd
+    return gcfg and gcfg.enabled and gcfg or nil
 end
 
--- Classic reports the start in milliseconds, modern clients in seconds.
-local function NormalizeCooldownStart(start)
-    local now = GetTime()
-    if abs(start - now) > abs(start * 0.001 - now) then
-        return start * 0.001
+local function GetGCDWidget(create)
+    local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
+    if widgets and create and not widgets.gcd then
+        widgets.gcd = {}
     end
-    return start
+    return widgets and widgets.gcd
 end
 
--- The GCD start in seconds and its duration, or nil when none runs.
-local function GetGCDInfo()
-    if gcdState.dummyWorks ~= false and type(GetSpellCooldown) == "function" then
-        local ok, start, duration = pcall(GetSpellCooldown, GCD_SPELL_ID)
-        if not ok then
-            gcdState.dummyWorks = false
-            addon:Debug("GCD", "client does not know the GCD dummy spell, using the cast fallback")
-        elseif duration and duration > 0 and start and start > 0 then
-            local normalized = NormalizeCooldownStart(start)
-            if normalized + duration > GetTime() then
-                if gcdState.dummyWorks ~= true then
-                    gcdState.dummyWorks = true
-                    addon:Debug("GCD", "reading the global cooldown from the client")
-                end
-                return normalized, duration
-            end
-        end
-    end
-
-    if gcdState.dummyWorks == false and gcdState.fallbackEnd > GetTime() then
-        return gcdState.fallbackStart, GCD_FALLBACK_DURATION
-    end
-
-    return nil
+local function IsGCDCustomPlaced()
+    local widget = GetGCDWidget()
+    return widget and widget.custom_position and widget.posX ~= nil and widget.posY ~= nil or false
 end
 
-local function OnPlayerCastSucceeded()
-    -- The GCD starts when a cast completes; this feeds the fallback only.
-    local now = GetTime()
-    gcdState.fallbackStart = now
-    gcdState.fallbackEnd = now + GCD_FALLBACK_DURATION
-
-    if gcdState.dummyWorks == nil then
-        gcdState.castsSinceProbe = gcdState.castsSinceProbe + 1
-        if gcdState.castsSinceProbe >= GCD_PROBE_CASTS then
-            -- The dummy stayed silent, so this client does not expose the GCD.
-            gcdState.dummyWorks = false
-            addon:Debug("GCD", "client stayed silent, using the cast fallback")
-        end
-    end
-end
-
-local function CreateGCDIndicator()
-    local frames = CastbarModule.frames.player
-    if frames.gcd then
-        return frames.gcd
-    end
-
-    -- The anchor is the editor widget and carries the scale and the size.
-    local anchor = addon.CreateUIFrame(200, 4, "GCDAnchor")
-    anchor:SetFrameStrata("MEDIUM")
-    anchor:SetFrameLevel(10)
-    anchor:SetSize(200, 4)
-    frames.gcdAnchor = anchor
-
-    local gcd = CreateFrame("Frame", "DragonUIGCDIndicator", anchor)
-    gcd:SetFrameStrata("MEDIUM")
-    gcd:SetFrameLevel(11)
-    gcd:SetSize(200, 4)
-    gcd:Hide()
-    frames.gcd = gcd
-
-    local track = gcd:CreateTexture(nil, "BACKGROUND")
-    track:SetTexture(GCD_SOLID_TEXTURE)
-    track:SetVertexColor(0, 0, 0, 0.5)
-    track:SetAllPoints()
-    frames.gcdTrack = track
-
-    local bar = CreateFrame("StatusBar", "DragonUIGCDBar", gcd)
-    bar:SetFrameLevel(1)
-    -- The fill is drawn on the status bar's own size.
-    bar:SetAllPoints(gcd)
-    bar:SetMinMaxValues(0, 1)
-    bar:SetValue(0)
-    bar:SetStatusBarTexture(GCD_SOLID_TEXTURE)
-    frames.gcdBar = bar
-
-    return gcd
-end
-
-local function UpdateGCDLayout()
-    local frames = CastbarModule.frames.player
-    local gcd = frames.gcd
-    local anchor = frames.gcdAnchor
-    if not gcd or not anchor then return end
-
-    local cfg = GetConfig("player")
+local function ShowGCDIdle()
     local gcfg = GetGCDConfig()
-    if not cfg or not gcfg then return end
-
-    local scale = cfg.scale or 1
-    local sizeX = cfg.sizeX or 200
-    local height = max(1, gcfg.height or 4)
-    local widthPct = min(max(gcfg.width or 1, 0.1), 1)
-
-    -- The anchor carries the scale and the size.
-    anchor:SetScale(scale)
-    anchor:SetSize(sizeX * widthPct, height)
-    gcd:SetScale(1)
-    gcd:SetAllPoints(anchor)
-
-    anchor:ClearAllPoints()
-    if gcfg.detached then
-        -- Dragged in editor mode: it keeps the spot it was dropped on.
-        local widgetConfig = addon.db and addon.db.profile and addon.db.profile.widgets
-            and addon.db.profile.widgets.gcd
-        if widgetConfig and widgetConfig.posX ~= nil then
-            local anchorPoint = widgetConfig.anchor or "CENTER"
-            anchor:SetPoint(anchorPoint, UIParent, anchorPoint, widgetConfig.posX, widgetConfig.posY)
-        else
-            anchor:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-        end
+    GCD.bar:SetValue(0)
+    if gcfg and gcfg.alwaysShow then
+        GCD.bar:Show()
     else
-        -- Above the cast bar.
-        anchor:SetPoint("BOTTOM", frames.container, "TOP", 0, 4)
-    end
-
-    local color = gcfg.color or { r = 1, g = 0.7, b = 0 }
-    local barTexture = frames.gcdBar and frames.gcdBar:GetStatusBarTexture()
-    if barTexture then
-        barTexture:SetVertexColor(color.r or 1, color.g or 0.7, color.b or 0, 1)
+        GCD.bar:Hide()
     end
 end
 
--- The bar's current spot.
-local function SyncGCDAnchorToBar()
-    local frames = CastbarModule.frames.player
-    local anchor, gcd = frames.gcdAnchor, frames.gcd
-    if not anchor or not gcd then return end
-
-    local cx, cy = gcd:GetCenter()
-    local ux, uy = UIParent:GetCenter()
-    if cx and cy and ux and uy then
-        anchor:ClearAllPoints()
-        anchor:SetPoint("CENTER", UIParent, "CENTER", cx - ux, cy - uy)
+function GCD.OnUpdate(bar)
+    local elapsed = GetTime() - GCD.start
+    if elapsed >= GCD.duration then
+        GCD.start = nil
+        bar:SetScript("OnUpdate", nil)
+        ShowGCDIdle()
+    else
+        bar:SetValue(elapsed / GCD.duration)
     end
 end
 
-local function PersistGCDAnchorPosition()
-    local frames = CastbarModule.frames.player
-    local anchor = frames.gcdAnchor
-    if not anchor or not addon.db or not addon.db.profile then return end
-
-    local cx, cy = anchor:GetCenter()
-    local ux, uy = UIParent:GetCenter()
-    if not (cx and cy and ux and uy) then return end
-
-    addon.db.profile.widgets = addon.db.profile.widgets or {}
-    addon.db.profile.widgets.gcd = {
-        anchor = "CENTER",
-        posX = floor((cx - ux) + 0.5),
-        posY = floor((cy - uy) + 0.5),
-    }
-end
-
--- Dragging the bar takes it off the cast bar.
-local function DetachGCDIndicator()
-    local cfg = GetConfig("player")
-    if not cfg or not cfg.gcd then return end
-
-    cfg.gcd.detached = true
-    PersistGCDAnchorPosition()
-    UpdateGCDLayout()
-end
-
-local function AttachGCDIndicator()
-    local cfg = GetConfig("player")
-    if not cfg or not cfg.gcd then return end
-
-    cfg.gcd.detached = false
-    if addon.db and addon.db.profile and addon.db.profile.widgets then
-        addon.db.profile.widgets.gcd = nil
-    end
-    UpdateGCDLayout()
-end
-
-local function UpdateGCDIndicator()
-    local frames = CastbarModule.frames.player
-    local gcd = frames.gcd
-    if not gcd then return end
-
-    local cfg = GetConfig("player")
-    local gcfg = GetGCDConfig()
-    if not cfg or not cfg.enabled or not gcfg or not gcfg.enabled then
-        if gcd:IsShown() then gcd:Hide() end
-        return
-    end
-
-    -- Editor mode shows a test bar; leave it alone.
+function GCD.Read()
     if addon.EditorMode and addon.EditorMode:IsActive() then
         return
     end
-
-    local start, duration = GetGCDInfo()
-    local now = GetTime()
-    local active = start and duration and duration > 0 and now < start + duration
-
-    if not active then
-        if frames.gcdBar then frames.gcdBar:SetValue(0) end
-        if gcfg.alwaysShow then
-            if not gcd:IsShown() then gcd:Show() end
-        elseif gcd:IsShown() then
-            gcd:Hide()
-        end
-        return
-    end
-
-    local progress = (now - start) / duration
-    if progress < 0 then
-        progress = 0
-    elseif progress > 1 then
-        progress = 1
-    end
-
-    if not gcd:IsShown() then gcd:Show() end
-
-    if frames.gcdBar then
-        frames.gcdBar:SetValue(progress)
+    local start, duration = GetSpellCooldown(GCD.SPELL_ID)
+    if start and duration and duration > 0 and start + duration > GetTime() then
+        GCD.start, GCD.duration = start, duration
+        GCD.bar:SetScript("OnUpdate", GCD.OnUpdate)
+        GCD.bar:Show()
+        GCD.OnUpdate(GCD.bar)
+    elseif GCD.start then
+        GCD.start = nil
+        GCD.bar:SetScript("OnUpdate", nil)
+        ShowGCDIdle()
     end
 end
 
-local function OnGCDPollerUpdate(self, elapsed)
-    self.elapsed = self.elapsed + elapsed
-    if self.elapsed < GCD_POLL_INTERVAL then
+function GCD.Layout(gcfg)
+    local cfg = GetConfig("player")
+    local container = CastbarModule.frames.player.container
+    local scale = cfg.scale or 1
+    local width = (cfg.sizeX or 200) * min(max(gcfg.width or 1, 0.1), 1)
+    local height = max(1, gcfg.height or 4)
+    local custom = IsGCDCustomPlaced()
+    local widget = GetGCDWidget()
+    local x, y = custom and widget.posX, custom and widget.posY
+
+    local color = gcfg.color or {}
+    GCD.bar:SetStatusBarColor(color.r or 1, color.g or 0.7, color.b or 0, color.a or 1)
+
+    -- RefreshCastbar runs on every player cast start; skip the re-anchor when nothing moved.
+    if GCD.scale == scale and GCD.width == width and GCD.height == height
+        and GCD.x == x and GCD.y == y and GCD.container == container then
         return
     end
-    self.elapsed = 0
-    UpdateGCDIndicator()
-end
+    GCD.scale, GCD.width, GCD.height, GCD.x, GCD.y, GCD.container = scale, width, height, x, y, container
 
-local function SetGCDPollerEnabled(enabled)
-    if enabled then
-        if not gcdPoller.active then
-            gcdPoller.active = true
-            gcdPoller:SetScript("OnUpdate", OnGCDPollerUpdate)
-        end
+    GCD.bar:SetScale(scale)
+    GCD.bar:SetSize(width, height)
+    GCD.mover:SetSize(width * scale, height * scale)
+    GCD.mover:ClearAllPoints()
+    if custom then
+        GCD.mover:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    elseif container then
+        GCD.mover:SetPoint("BOTTOM", container, "TOP", 0, GCD.GAP * scale)
     else
-        gcdPoller.active = nil
-        gcdPoller:SetScript("OnUpdate", nil)
+        GCD.mover:SetPoint("CENTER", UIParent, "CENTER", 0, -120)
     end
 end
 
--- The anchor is the frame editor mode drags. It has no config path: the drag
--- writes the position.
-local function RegisterGCDIndicator()
-    local frames = CastbarModule.frames.player
-    local anchor = frames.gcdAnchor
-    if not anchor or anchor.DragonUI_GCDRegistered then return end
-    anchor.DragonUI_GCDRegistered = true
-
-    local originalDragStart = anchor:GetScript("OnDragStart")
-    local originalDragStop = anchor:GetScript("OnDragStop")
-
-    anchor:SetScript("OnDragStart", function(self, button)
-        -- Start from where the bar is now, not from the spot it was left on.
-        SyncGCDAnchorToBar()
-        if originalDragStart then originalDragStart(self, button) end
-    end)
-
-    anchor:SetScript("OnDragStop", function(self, button)
-        if originalDragStop then originalDragStop(self, button) end
-        DetachGCDIndicator()
-    end)
-
-    local function IsGCDEnabled()
-        local cfg = GetConfig("player")
-        return cfg and cfg.enabled and cfg.gcd and cfg.gcd.enabled and true or false
+local function RelayoutGCD()
+    GCD.scale = nil
+    local gcfg = GetGCDConfig()
+    if gcfg and GCD.bar then
+        GCD.Layout(gcfg)
     end
+end
+
+-- No configPath on purpose: GetPoint offsets read back skewed, so the on-screen centre is stored instead.
+function GCD.SaveMoved()
+    local x, y = addon.GetAnchorOffset(GCD.mover, "CENTER")
+    local widget = GetGCDWidget(true)
+    if not (x and widget) then
+        return
+    end
+    widget.anchor, widget.posX, widget.posY = "CENTER", floor(x + 0.5), floor(y + 0.5)
+    widget.custom_position = true
+    RelayoutGCD()
+end
+
+function GCD.ResetPosition()
+    local widget = GetGCDWidget()
+    if widget then
+        widget.custom_position, widget.anchor, widget.posX, widget.posY = nil, nil, nil, nil
+    end
+    RelayoutGCD()
+end
+
+function GCD.Create()
+    if GCD.bar then
+        return
+    end
+
+    local bar = CreateFrame("StatusBar", "DragonUIGCDBar", UIParent)
+    bar:SetFrameStrata("MEDIUM")
+    bar:SetFrameLevel(12)
+    bar:SetMinMaxValues(0, 1)
+    bar:SetValue(0)
+    bar:SetStatusBarTexture(TEXTURES.standard)
+    bar:Hide()
+    local bg = bar:CreateTexture(nil, "BACKGROUND")
+    bg:SetTexture(TEXTURES.atlas)
+    bg:SetTexCoord(unpack(UV_COORDS.background))
+    bg:SetAllPoints(bar)
+    bar:SetScript("OnEvent", GCD.Read)
+    GCD.bar = bar
+
+    local mover = addon.CreateUIFrame(200, 4, "GCDAnchor")
+    mover:HookScript("OnDragStop", GCD.SaveMoved)
+    bar:SetPoint("CENTER", mover, "CENTER", 0, 0)
+    GCD.mover = mover
 
     addon:RegisterEditableFrame({
         name = "GCDIndicator",
-        frame = anchor,
-        hasTarget = IsGCDEnabled,
-        editorVisible = IsGCDEnabled,
+        frame = mover,
+        hasTarget = function() return GetGCDConfig() ~= nil end,
+        editorVisible = function() return GetGCDConfig() ~= nil end,
         showTest = function()
-            local gcdFrames = CastbarModule.frames.player
-            if not gcdFrames.gcd then return end
-            -- Half filled, so there is something to aim with.
-            if gcdFrames.gcdBar then gcdFrames.gcdBar:SetValue(0.5) end
-            gcdFrames.gcd:Show()
+            GCD.start = nil
+            bar:SetScript("OnUpdate", nil)
+            bar:SetValue(0.5)
+            bar:Show()
         end,
-        hideTest = function()
-            local gcdFrames = CastbarModule.frames.player
-            if gcdFrames.gcd then gcdFrames.gcd:Hide() end
-        end,
-        onNudge = function()
-            DetachGCDIndicator()
-        end,
-        onHide = function()
-            -- Back to the cast bar unless it was dragged somewhere else.
-            local cfg = GetConfig("player")
-            if cfg and cfg.gcd and not cfg.gcd.detached then
-                UpdateGCDLayout()
-            end
-        end,
+        hideTest = ShowGCDIdle,
+        onNudge = GCD.SaveMoved,
+        resetPosition = GCD.ResetPosition,
+        isDefaultPosition = function() return not IsGCDCustomPlaced() end,
+        module = CastbarModule,
     })
 end
 
--- Layout + visibility for the indicator; called whenever the cast bar moves.
-local function RefreshGCDIndicator()
-    local cfg = GetConfig("player")
+function GCD.Refresh()
     local gcfg = GetGCDConfig()
-    local enabled = cfg and cfg.enabled and gcfg and gcfg.enabled
-
-    if not enabled then
-        SetGCDPollerEnabled(false)
-        local frames = CastbarModule.frames.player
-        if frames.gcd and frames.gcd:IsShown() then
-            frames.gcd:Hide()
+    if not gcfg then
+        if GCD.bar then
+            GCD.bar:UnregisterEvent("SPELL_UPDATE_COOLDOWN")
+            GCD.bar:SetScript("OnUpdate", nil)
+            GCD.bar:Hide()
+            GCD.start = nil
         end
         return
     end
 
-    CreateGCDIndicator()
-    RegisterGCDIndicator()
-    UpdateGCDLayout()
-    SetGCDPollerEnabled(true)
-    UpdateGCDIndicator()
+    GCD.Create()
+    GCD.bar:RegisterEvent("SPELL_UPDATE_COOLDOWN")
+    GCD.Layout(gcfg)
+    if addon.EditorMode and addon.EditorMode:IsActive() then
+        return
+    end
+    GCD.Read()
+    if not GCD.start then
+        ShowGCDIdle()
+    end
 end
 
 -- ============================================================================
@@ -2247,7 +2083,7 @@ function CastbarModule:RefreshCastbar(unitType)
         ShowBlizzardCastbar(unitType)
         self:HideCastbar(unitType)
         if unitType == "player" then
-            RefreshGCDIndicator()
+            GCD.Refresh()
         end
         return
     end
@@ -2556,9 +2392,8 @@ function CastbarModule:RefreshCastbar(unitType)
         SetTextMode(unitType, cfg.text_mode)
     end
 
-    -- The GCD indicator follows the player cast bar, so it needs the new geometry.
     if unitType == "player" then
-        RefreshGCDIndicator()
+        GCD.Refresh()
     end
 end
 
@@ -2965,17 +2800,6 @@ function CastbarModule:LoadDefaultSettings()
 
     if addon.db.profile.castbar.focus and addon.db.profile.castbar.focus.override == nil then
         addon.db.profile.castbar.focus.override = false
-    end
-
-    -- Profiles saved before the GCD indicator existed have no gcd table.
-    local gcdDefaults = addon.defaults and addon.defaults.profile
-        and addon.defaults.profile.castbar and addon.defaults.profile.castbar.gcd
-    if gcdDefaults and not addon.db.profile.castbar.gcd then
-        if addon.DeepCopy then
-            addon.db.profile.castbar.gcd = addon.DeepCopy(gcdDefaults, {})
-        else
-            addon.db.profile.castbar.gcd = gcdDefaults
-        end
     end
 end
 
@@ -3422,11 +3246,6 @@ local function OnEvent(self, event, unit, ...)
         if unit == "player" then
             latencyState.sentTime = GetTime()
         end
-    elseif event == 'UNIT_SPELLCAST_SUCCEEDED' then
-        -- Feeds the GCD fallback for clients that do not expose the dummy spell.
-        if unit == "player" then
-            OnPlayerCastSucceeded()
-        end
     else
         CastbarModule:HandleCastingEvent(event, unit, ...)
     end
@@ -3445,15 +3264,8 @@ function addon.RefreshCastbar()
     CastbarModule:RefreshCastbar("player")
 end
 
--- Re-layouts the GCD indicator (options changed, cast bar resized or moved).
-function addon.RefreshGCD()
-    RefreshGCDIndicator()
-end
-
--- Puts the GCD indicator back under the cast bar after it was dragged away.
-function addon.ResetGCDPosition()
-    AttachGCDIndicator()
-end
+addon.RefreshGCD = GCD.Refresh
+addon.ResetGCDPosition = GCD.ResetPosition
 
 function addon.RefreshTargetCastbar()
     CastbarModule:RefreshCastbar("target")
@@ -3536,7 +3348,6 @@ local eventFrame = CreateFrame('Frame', 'DragonUICastbarEventHandler')
 local events = {
     'PLAYER_ENTERING_WORLD',
     'UNIT_SPELLCAST_SENT',
-    'UNIT_SPELLCAST_SUCCEEDED',
     'UNIT_SPELLCAST_START',
     'UNIT_SPELLCAST_DELAYED',
     'UNIT_SPELLCAST_STOP',

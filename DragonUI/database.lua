@@ -676,11 +676,10 @@ local defaults = {
 
             -- GLOBAL COOLDOWN INDICATOR (PLAYER ONLY)
             gcd = {
-                enabled = true,
+                enabled = false,
                 height = 4,           -- bar thickness in pixels
                 width = 1,            -- width as a fraction of the cast bar (0.1 - 1)
                 alwaysShow = false,   -- keep the empty track visible while the GCD is idle
-                detached = false,     -- true once the bar was dragged off the cast bar
                 color = { r = 1, g = 0.7, b = 0 },
             },
 

@@ -294,7 +294,7 @@ local function BuildPlayerCastbar(scroll)
     C:AddColorPicker(gcd, {
         label = LO["GCD Color"],
         dbPath = "castbar.gcd.color",
-        hasAlpha = false,
+        hasAlpha = true,
         disabled = gcdDisabled,
         callback = refresh,
     })
