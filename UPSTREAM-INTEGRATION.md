@@ -29,7 +29,7 @@ Both addon TOCs identify this integration as Evermore version 2.12.2.
 
 Run Lua 5.1 syntax checks (accepting UTF-8 BOMs as in WoW), the existing
 `tools/achievement_search_test.lua`, XML/TOC reference checks, and
-`python3 tools/recolour_grounds.py --check`. Record results in the integration PR.
+`python3 tools/recolour_grounds.py --check` and `python3 tools/link_icon_bubble.py --check`. Record results in the integration PR.
 
 Client validation remains required: login/reload in an LFG party, combat and edit mode,
 all unit-frame styles and combo-point modes, tooltip sharing with other addons,
