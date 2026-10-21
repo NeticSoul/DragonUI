@@ -247,13 +247,13 @@ local function buildCard(inset)
     emblem:SetTexture(TABARD_ICON)
     emblem:SetTexCoord(0.07, 0.93, 0.07, 0.93)
     card.emblem = emblem
+    -- The Collections journal's gold frame, opening on the tabard; its flourishes hang about 27px
+    -- below the emblem, so the name starts under them.
     local ring = inset:CreateTexture(nil, "OVERLAY")
-    ring:SetPoint("TOPLEFT", emblem, "TOPLEFT", -4, 4)
-    ring:SetPoint("BOTTOMRIGHT", emblem, "BOTTOMRIGHT", 4, -4)
-    ring:SetTexture(GU.DIR .. "Collections\\IconFrameGold")
+    addon.LayoutGoldIconFrame(ring, emblem, 64)
 
     card.name = inset:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    card.name:SetPoint("TOP", emblem, "BOTTOM", 0, -10)
+    card.name:SetPoint("TOP", emblem, "BOTTOM", 0, -30)
     card.name:SetWidth(LEFT_W - 20)
 
     card.levelText = inset:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -263,7 +263,7 @@ local function buildCard(inset)
     card.rank:SetPoint("TOP", card.levelText, "BOTTOM", 0, -4)
 
     local stats = GU.Heading(inset, L("Guild"))
-    stats:SetPoint("TOPLEFT", inset, "TOPLEFT", 12, -166)
+    stats:SetPoint("TOPLEFT", inset, "TOPLEFT", 12, -186)
     card.members = cardLine(inset, stats, 10)
     card.online = cardLine(inset, card.members)
 

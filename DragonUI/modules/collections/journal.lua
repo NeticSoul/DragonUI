@@ -12,10 +12,10 @@ local ICON_SIZE = 38
 local SEARCH_H = 20
 local INFO_ICON = 40
 
--- The opening is measured where the ring turns solid: its fully transparent core is far smaller
--- than the gold bars actually enclose, and its centre sits high and left of the art.
-local INFO_FRAME_TEX = addon._dir .. "Collections\\IconFrameGold"
-local INFO_FRAME_OPEN, INFO_FRAME_CX, INFO_FRAME_CY = 0.4922, 0.4727, 0.4336
+-- The ring's opening geometry lives with the shared icon frames (utils/iconframe.lua).
+local GOLD = addon.GOLD_ICON_FRAME
+local INFO_FRAME_TEX = GOLD.texture
+local INFO_FRAME_OPEN, INFO_FRAME_CX, INFO_FRAME_CY = GOLD.open, GOLD.cx, GOLD.cy
 local INFO_FRAME_SIZE = INFO_ICON / INFO_FRAME_OPEN
 local INFO_FRAME_X = (0.5 - INFO_FRAME_CX) * INFO_FRAME_SIZE
 local INFO_FRAME_Y = (INFO_FRAME_CY - 0.5) * INFO_FRAME_SIZE
