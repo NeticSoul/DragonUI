@@ -1286,6 +1286,8 @@ L["Class Colors on Enemy Names"] = true
 
 L["Show Target Highlight"] = true
 L["Show Target Arrows"] = true
+L["Only Show Target Nameplate"] = true
+L["Show only your target's hostile nameplate. In combat, also show hostile NPCs attacking you, all of them fully opaque. Friendly plates are never hidden by this."] = true
 L["Left/right arrows on the targeted nameplate."] = true
 L["Opacity"] = true
 L["Disable Non-Target Fade"] = true

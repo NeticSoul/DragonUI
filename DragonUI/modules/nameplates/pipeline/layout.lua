@@ -386,9 +386,9 @@ local VISUAL_ALPHA_FIELDS = {
     "minaThreatTex",
 }
 
-local function KeepNameRowChildOpaque(fs)
+local function KeepNameRowChildOpaque(fs, forcedAlpha)
     if fs and fs.SetAlpha then
-        fs:SetAlpha(1)
+        fs:SetAlpha(forcedAlpha or 1)
     end
 end
 
@@ -412,10 +412,12 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
                 obj:SetAlpha(compensatedAlpha)
             end
         end
-        KeepNameRowChildOpaque(plateData.minaName)
-        KeepNameRowChildOpaque(plateData.minaHpPct)
-        KeepNameRowChildOpaque(plateData.minaSubTitle)
-        KeepNameRowChildOpaque(plateData.minaBossSkull)
+        -- An alpha-0 plate (onlyTargetPlates) must not leave name text floating.
+        local forcedAlpha = compensatedAlpha == 0 and 0 or nil
+        KeepNameRowChildOpaque(plateData.minaName, forcedAlpha)
+        KeepNameRowChildOpaque(plateData.minaHpPct, forcedAlpha)
+        KeepNameRowChildOpaque(plateData.minaSubTitle, forcedAlpha)
+        KeepNameRowChildOpaque(plateData.minaBossSkull, forcedAlpha)
     end
 
     -- Cast sync may reset bar alpha; re-apply after engine step 7.
@@ -431,6 +433,58 @@ function NP.layout.SetPlateVisualAlpha(plateData, alpha)
         local partyAlpha = partyCast:GetAlpha() or 1
         if math.abs(partyAlpha - compensatedAlpha) >= 0.005 then
             partyCast:SetAlpha(compensatedAlpha)
+        end
+    end
+end
+
+function NP.layout.SetPlateClickable(plateData, clickable)
+    if not plateData or not plateData.plate or not plateData.plate.SetHitRectInsets then return end
+    local plate = plateData.plate
+    if plateData._clickboxBaseW == nil and plate.GetSize then
+        local w, h = plate:GetSize()
+        if w and w > 1 and h and h > 1 then
+            plateData._clickboxBaseW, plateData._clickboxBaseH = w, h
+        end
+    end
+    local wantInset = not clickable
+    if plateData._hitRectInset ~= (wantInset or nil) then
+        plateData._hitRectInset = wantInset or nil
+    end
+    if InCombatLockdown() then
+        NP.module._gatedLayoutPending = true
+        return
+    end
+    NP.module._gatedLayoutPending = nil
+    if plateData._hitRectApplied ~= wantInset then
+        plateData._hitRectApplied = wantInset
+        if wantInset then
+            plate:SetHitRectInsets(1, 0, 1, 0)
+        else
+            plate:SetHitRectInsets(0, 0, 0, 0)
+        end
+    end
+    if plate._dragonUIHiddenSize ~= (wantInset or nil) then
+        plate._dragonUIHiddenSize = wantInset or nil
+    end
+    if plate.SetAttribute then
+        local current = plate:GetAttribute("dragonUIHiddenSize")
+        if current ~= (wantInset or nil) then
+            plate:SetAttribute("dragonUIHiddenSize", wantInset or nil)
+        end
+    end
+    if wantInset then
+        if not plateData._gatedSizeApplied then
+            plateData._gatedSizeApplied = true
+            plate:SetSize(1, 1)
+        end
+    elseif plateData._gatedSizeApplied then
+        plateData._gatedSizeApplied = nil
+        local w, h = plateData._clickboxBaseW, plateData._clickboxBaseH
+        if w and h then
+            plate:SetSize(w, h)
+            if NP.clickbox and NP.clickbox.ApplyPlateClickbox then
+                NP.clickbox.ApplyPlateClickbox(plateData)
+            end
         end
     end
 end
@@ -668,8 +722,8 @@ local function UpdateRetailStacking()
         local plate = plateData and plateData.plate
         local reaction = NP.native_style.GetPlateReaction(plateData)
         local isFriendly = reaction == "FRIENDLY"
-        -- Non-friendly plates only.
-        if plate and plate.IsShown and plate:IsShown() and not isFriendly then
+        -- Non-friendly plates only; gated-out (alpha 0) plates must not push visible ones around.
+        if plate and plate.IsShown and plate:IsShown() and not isFriendly and not plateData._hitRectInset then
             stackable[#stackable + 1] = plateData
             activeStackable[plateData] = true
             local state = EnsureRetailStackState(plateData)
@@ -1374,6 +1428,15 @@ function NP.layout.FlushPendingPlateLayout()
         NP.clickbox.FlushPending()
     end
 
+    -- A plate gated in combat keeps its size until combat ends; the gate re-applies after.
+    if NP.module._gatedLayoutPending then
+        NP.module._gatedLayoutPending = nil
+        for _, plateData in pairs(NP.module.plates) do
+            if plateData._hitRectInset then
+                NP.layout.SetPlateClickable(plateData, false)
+            end
+        end
+    end
     for _, plateData in pairs(NP.module.plates) do
         if plateData._pendingRetailScale ~= nil then
             NP.layout.SetRetailPlateScale(plateData, plateData._pendingRetailScale)

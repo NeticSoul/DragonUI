@@ -1173,6 +1173,13 @@ local function BuildTargetSubTab(scroll)
     })
 
     C:AddToggle(targetThreat, {
+        label = LO["Only Show Target Nameplate"],
+        desc = LO["Show only your target's hostile nameplate. In combat, also show hostile NPCs attacking you, all of them fully opaque. Friendly plates are never hidden by this."],
+        dbPath = DB .. ".onlyTargetPlates",
+        callback = RefreshNameplates,
+    })
+
+    C:AddToggle(targetThreat, {
         label = LO["Show Threat Glow"],
         desc = UsesRetailThreatColors()
             and LO["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."]

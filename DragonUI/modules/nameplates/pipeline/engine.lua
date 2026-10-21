@@ -257,16 +257,17 @@ function E.SyncEnemyClassColorCVar()
     end
 end
 
--- Force off a native plate-stacking engine (some servers have one) while DragonUI clamps/stacks itself; no-op on stock 3.3.5a.
+-- Force off native plate-stacking while DragonUI clamps/stacks; gated-out plates must not reserve space.
 function E.SyncRetailStackingCVars()
     local cfg = NP.config.GetCfg()
     if not GetCVar or not SetCVar then return end
+    local onlyTarget = NP.module._onlyTargetPlates == true
 
     -- Only SetCVar if the name already resolves (unrecognized names error unlike GetCVar).
     local currentSmoothStacking = GetCVar("nameplateSmoothStacking")
     if currentSmoothStacking ~= nil then
         local wantExclusive = NP.module._clampTargetEnabled or NP.module._clampBossEnabled
-            or NP.layout.ShouldRunRetailStacking()
+            or NP.layout.ShouldRunRetailStacking() or onlyTarget
         if wantExclusive then
             if NP.module.savedNameplateSmoothStacking == nil then
                 NP.module.savedNameplateSmoothStacking = currentSmoothStacking
@@ -325,6 +326,7 @@ end
 -- skipStackingCVar: true from the periodic scan tick, since only config-apply and zone-load need to re-run it.
 function E.SyncConfigSnapshot(skipStackingCVar)
     local cfg = NP.config.GetCfg()
+    local prevOnlyTargetPlates = NP.module._onlyTargetPlates
     NP.castbar.SyncOffTargetMonitorFromConfig(cfg)
     -- Snapshot CLEU flags; avoid per-event cfg resolution.
     NP.module._cleuCastbarEnabled = (cfg.showCastBar ~= false)
@@ -334,6 +336,11 @@ function E.SyncConfigSnapshot(skipStackingCVar)
     NP.module._opacityValue = cfg.opacityNonTarget or 0.5
     NP.module._opacityFullNoTarget = (cfg.opacityFullNoTarget ~= false)
     NP.module._opacityFullParty = (cfg.opacityFullParty == true)
+    NP.module._onlyTargetPlates = cfg.onlyTargetPlates == true
+    -- The CVar pair is snapshot-skipped sometimes; flipping the option must still reach the client.
+    if skipStackingCVar and NP.module._onlyTargetPlates ~= prevOnlyTargetPlates then
+        skipStackingCVar = false
+    end
     NP.module._retailBehavior = NP.config.IsRetailBehavior()
     NP.module._healthTextFormat = NP.config.GetHealthTextFormat()
     NP.module._healthTextPlacement = NP.config.GetHealthTextPlacement()
@@ -499,18 +506,33 @@ local function EngineOnUpdate(_, elapsed)
     NP.layout.UpdateDepthOrdering(elapsed)
 
     -- 7. Visual alpha on shown plates only; hidden re-apply on first tick after show.
-    if NP.module._opacityEnabled then
+    local onlyTarget = NP.module._onlyTargetPlates
+    if NP.module._opacityEnabled or onlyTarget then
         local fullParty = NP.module._opacityFullParty
+        local baseAlpha = NP.module._opacityEnabled and NP.module._opacityValue or 1.0
         for _, pd in pairs(NP.module.plates) do
             local pl = pd.plate
             if pl and pl.IsShown and pl:IsShown() then
                 local isTarget = NP.identity.IsTargetPlateVisual(pd, hasTarget)
                 SyncTargetVisual(pd, isTarget)
-                local visualAlpha = NP.module._opacityValue
-                if isTarget
-                    or ((not hasTarget) and NP.module._opacityFullNoTarget)
-                    or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
-                    visualAlpha = 1.0
+                local visualAlpha = baseAlpha
+                if onlyTarget then
+                    -- Overrides the opacity options: a plate that passes the gate is drawn fully.
+                    local allowed = NP.gather.IsOnlyTargetPlateAllowed(pd)
+                    visualAlpha = allowed and 1.0 or 0.0
+                    -- Size and hit rect cannot change in combat; gate alpha only there.
+                    if not InCombatLockdown() then
+                        NP.layout.SetPlateClickable(pd, allowed)
+                    end
+                else
+                    if (not InCombatLockdown()) and pd._hitRectInset then
+                        NP.layout.SetPlateClickable(pd, true)
+                    end
+                    if isTarget
+                        or ((not hasTarget) and NP.module._opacityFullNoTarget)
+                        or (fullParty and NP.gather.IsGroupMemberPlate(pd)) then
+                        visualAlpha = 1.0
+                    end
                 end
                 NP.layout.SetPlateVisualAlpha(pd, visualAlpha)
             end
@@ -521,6 +543,9 @@ local function EngineOnUpdate(_, elapsed)
             if pl and pl.IsShown and pl:IsShown() then
                 SyncTargetVisual(pd, NP.identity.IsTargetPlateVisual(pd, hasTarget))
                 NP.layout.SetPlateVisualAlpha(pd, 1.0)
+                if (not InCombatLockdown()) and pd._hitRectInset then
+                    NP.layout.SetPlateClickable(pd, true)
+                end
             end
         end
     end
@@ -712,6 +737,12 @@ local function EngineOnEvent(_, event, unit, ...)
     end
     if event == "PLAYER_REGEN_DISABLED" then
         NP.module.playerInCombat = true
+        -- Restore plate sizes before the lockdown so gated ones stay clickable.
+        for _, pd in pairs(NP.module.plates) do
+            if pd and pd.plate then
+                NP.layout.SetPlateClickable(pd, true)
+            end
+        end
         if NP.clickbox and NP.clickbox.OnCombatStart then
             NP.clickbox.OnCombatStart()
         end
@@ -727,6 +758,14 @@ local function EngineOnEvent(_, event, unit, ...)
         NP.auras.PruneCaches()
         if NP.tap then
             NP.tap.PruneCache()
+        end
+        if NP.module._onlyTargetPlates then
+            for _, pd in pairs(NP.module.plates) do
+                if pd and pd.plate and pd.plate.IsShown and pd.plate:IsShown() then
+                    local allowed = NP.gather.IsOnlyTargetPlateAllowed(pd)
+                    NP.layout.SetPlateClickable(pd, allowed)
+                end
+            end
         end
         NP.layout.FlushPendingPlateLayout()
         if NP.config.IsOffTargetCastMonitorActive(NP.config.GetCfg())
@@ -1048,6 +1087,9 @@ local function RunNameplatesRestore()
         NP.lifecycle.InvalidatePlateVisuals(plateData, true)
         NP.layout.HideMinaStack(plateData)
         NP.layout.SetPlateVisualAlpha(plateData, 1.0)
+        if plateData._hitRectInset then
+            NP.layout.SetPlateClickable(plateData, true)
+        end
         NP.discovery.RestoreNativeChrome(plateData)
 
         local plate = plateData.plate
