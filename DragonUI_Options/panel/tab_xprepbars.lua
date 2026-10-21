@@ -15,9 +15,95 @@ local function RefreshBars()
     if addon.RefreshXpRepBars then addon.RefreshXpRepBars() end
 end
 
+-- ============================================================================
+-- EXPERIENCE RATE (server-kept, see DragonUI/modules/xprate.lua)
+-- ============================================================================
+
+local XR = addon.XpRate
+
+-- The rate widgets on screen, and what they were built for; nil while another tab shows.
+local rateShown
+
+local function RateStatusText()
+    local st = XR and XR.State()
+    if not st then
+        return LO["This realm doesn't keep a personal XP rate, or hasn't answered yet."]
+    elseif st.off then
+        return LO["XP gain is off: this character doesn't level."]
+    elseif XR.IsRamping() then
+        return format(LO["Your rate is %s. It grows with your level until level %d, so the first levels don't fly by: %s right now."],
+            XR.Format(st.rate), st.rampLevel, XR.Format(XR.Effective()))
+    end
+    return format(LO["Your rate is %s."], XR.Format(st.rate))
+end
+
+local function BuildRateSection(scroll)
+    local st = XR and XR.State()
+    local section = C:AddSection(scroll, LO["Experience Rate"])
+
+    local status = C:AddDescription(section, RateStatusText())
+
+    local slider = C:AddSlider(section, {
+        label = LO["XP Rate"],
+        desc = LO["How fast this character levels, from the realm's personal XP rate. The realm keeps it per character. You can also right-click the XP bar."],
+        min = st and math.max(0.5, st.min) or 0.5,
+        max = st and st.max or 5,
+        step = 0.5,
+        width = 200,
+        getFunc = function() return st and st.rate or 1 end,
+        setFunc = function(value) XR.Set(value) end,
+        disabled = not st or st.off,
+    })
+
+    C:AddToggle(section, {
+        label = LO["Gain experience"],
+        desc = LO["Turn off to stop this character from leveling."],
+        getFunc = function() return st and not st.off end,
+        setFunc = function(value) XR.SetGain(value) end,
+        disabled = not st,
+    })
+
+    C:AddButton(section, {
+        label = LO["Use Realm Default"],
+        desc = LO["Go back to the rate the realm gives every character."],
+        disabled = not st or st.off,
+        callback = function() XR.UseDefault() end,
+    })
+
+    if not Panel.indexing then
+        -- Search results and tab switches release these widgets for reuse elsewhere.
+        status:SetCallback("OnRelease", function() rateShown = nil end)
+        rateShown = {
+            status = status, slider = slider,
+            available = st ~= nil, off = st and st.off, max = st and st.max,
+        }
+    end
+end
+
+if XR then
+    XR.OnChange(function()
+        if not rateShown or not Panel:IsOpen() or Panel.currentTab ~= "xprepbars" then
+            rateShown = nil
+            return
+        end
+        local st = XR.State()
+        if (st ~= nil) ~= rateShown.available or (st and (st.off ~= rateShown.off or st.max ~= rateShown.max)) then
+            -- What can be used changed: rebuild the tab (it keeps the scroll position).
+            Panel:SelectTab("xprepbars")
+            return
+        end
+        rateShown.status:SetText(RateStatusText())
+        if st and math.abs((rateShown.slider:GetValue() or 0) - st.rate) > 0.001 then
+            rateShown.slider:SetValue(st.rate)
+        end
+    end)
+end
+
 local function BuildXpRepTab(scroll)
     local isDFUI = (C:GetDBValue("xprepbar.style") or "dragonflightui") == "dragonflightui"
     local isRetail = not isDFUI
+
+    BuildRateSection(scroll)
 
     -- ====================================================================
     -- STYLE SELECTOR

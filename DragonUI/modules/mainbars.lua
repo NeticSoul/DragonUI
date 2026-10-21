@@ -1046,6 +1046,7 @@ local function ShowXpBarTooltip(owner)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine(format(EXHAUST_TOOLTIP1, stateName, multiplier * 100))
     end
+    if addon.XpRate then addon.XpRate.AddTooltipLines(GameTooltip) end
     GameTooltip:Show()
 end
 
@@ -1139,10 +1140,12 @@ local function CreateDragonflightUIXPBar()
     f.TextPercent:SetTextColor(1, 1, 1, 1)
     f.TextPercent:SetPoint("LEFT", f.Text, "RIGHT", 0, 0)
 
-    -- Compatibility: forward right-click to Blizzard XP bar handler
-    -- so server-side XP rate dropdowns still work when using custom DFUI bar.
+    -- Right-click opens the XP rate menu when the realm keeps a personal rate (xprate.lua).
+    -- Otherwise it goes on to Blizzard's XP bar handler, so another addon's menu there still works.
     f.Bar:SetScript("OnMouseDown", function(self, button)
-        if button ~= "RightButton" or not MainMenuExpBar then return end
+        if button ~= "RightButton" then return end
+        if addon.XpRate and addon.XpRate.ShowMenu() then return end
+        if not MainMenuExpBar then return end
         local handler = MainMenuExpBar:GetScript("OnMouseDown")
         if handler then
             handler(MainMenuExpBar, button)
@@ -2367,6 +2370,12 @@ local function ApplyMainbarsSystem()
             if ExhaustionTick then ExhaustionTick.timer = nil end
             GameTooltip.canAddRestStateLine = nil
             ShowXpBarTooltip(self)
+        end)
+        -- RetailUI style shows Blizzard's own bar: the rate menu goes on it (see the DFUI bar).
+        MainMenuExpBar:HookScript("OnMouseUp", function(self, button)
+            if button == "RightButton" and IsModuleEnabled() and addon.XpRate then
+                addon.XpRate.ShowMenu()
+            end
         end)
     end
 
