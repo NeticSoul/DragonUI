@@ -25,16 +25,16 @@
 
 ## 📥 Download
 
-### Project Evermore edition
+### This fork
 
-This repository is Evermore's customized fork. Download the
-[Evermore main branch](https://github.com/buildthehomelab/wow-addon-DragonUI/archive/refs/heads/main.zip)
+This repository is buildthehomelab's customized fork. Download the
+[main branch](https://github.com/buildthehomelab/wow-addon-DragonUI/archive/refs/heads/main.zip)
 and install both `DragonUI` and `DragonUI_Options` from that archive. Back up your
-`WTF` settings before updating. Report Evermore-specific bugs in
+`WTF` settings before updating. Report fork-specific bugs in
 [this repository's issue tracker](https://github.com/buildthehomelab/wow-addon-DragonUI/issues).
 
 The upstream downloads below are the original NeticSoul edition; they do not
-include Evermore's custom guild, professions, currency and achievement integrations.
+include this fork's custom guild, professions, currency and achievement integrations.
 
 ### Original upstream edition
 
@@ -93,7 +93,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 - 🖼️ HD textures for player frame (normal mode), target and focus name backgrounds. More HD assets coming in future updates.
 - 🌙 Dark Mode with three intensity presets and custom color picker.
 - ✨ Glow effects with separate combat and rest status controls and opacity slider.
-- 🟫 One window style everywhere, the professions window's: bronze frame, gold-cornered insets and warm brown grounds, on every DragonUI window, the bags and any addon that borrows DragonUI's layouts. `ui-background-rock` and `ui-background-marble` are recoloured in place, so after merging upstream run `python3 tools/recolour_grounds.py --check` (it says how to regenerate them).
+- 🟫 One window style everywhere, the professions window's: bronze frame, gold-cornered insets and warm brown grounds, on every DragonUI window, the bags and any addon that borrows DragonUI's layouts.
 
 ### Inventory And Navigation
 
@@ -106,9 +106,28 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 
 - 💬 Chat enhancements: style skins, fade sync, movable textbox with adjustable opacity, URL detection, chat copy, vanilla chat buttons with hover visibility, and `/tt` whisper command.
 - 💎 Item quality borders, enhanced tooltips with class-colored borders, and range indicator.
+- 🎒 Character Item Counts (off by default): item tooltips list how many of an item each of your characters has in bags, bank and equipped. It may duplicate lines if another addon also adds ownership counts to tooltips, and it does not count server-held currencies or the reagent bank.
 - ⌨️ Easy-to-use keybinding mode on supported buttons.
 
 Extensive customization available directly in-game through the configuration panel.
+
+### Achievement reward search
+
+Open the main Achievements window and click **Search**. Search by achievement name,
+description or reward name, or use a reward type: `mount` / `mounts`, `pet` / `pets`,
+`title` / `titles`, `tabard` / `tabards`, `toy` / `toys`, or `item` / `items`.
+Combine words to narrow results, for example `mount proto`. All words must match;
+reward types match the reward, not words in the achievement's description.
+Click a result to open its achievement. Blizzard's normal prerequisite navigation
+applies to locked tiers in a progressive achievement chain.
+
+Types come from `DragonUI/modules/achievement_rewards.lua`: the Wrath AzerothCore
+achievement reward table and the realm's retail achievement mount rewards.
+Names, descriptions and completion status come from the client's achievement APIs.
+Custom achievements require the matching client patches. New or changed realm rewards
+need a corresponding reward-type data update; unclassified rewards remain searchable
+by name. This does not query or change server rewards. Not yet tried in a game client:
+the search panel's layout and interaction.
 
 ## 🔧 Commands
 
@@ -129,7 +148,7 @@ Extensive customization available directly in-game through the configuration pan
 - Single-line tooltips show text overlapping the health bar.
 - Party and raid scenarios require further edge-case testing.
 - Some third-party addon setups may require manual module disabling.
-- Found a bug? [Open an Evermore issue](https://github.com/buildthehomelab/wow-addon-DragonUI/issues).
+- Found a bug? [Open an issue](https://github.com/buildthehomelab/wow-addon-DragonUI/issues).
 
 ## 🙏 Credits And References
 
@@ -203,31 +222,3 @@ DragonUI is a free, fan-made addon. No content is sold and no in-game advantages
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/neticsoul)
 
 🪙 Bitcoin: `bc1q8yavz8857lzdfttas584892gf82y0u3wdfjz0a`
-
-
-### Achievement reward search (Evermore)
-
-Open the main Achievements window and click **Search**. Search by achievement name,
-description or reward name, or use a reward type: `mount` / `mounts`, `pet` / `pets`,
-`title` / `titles`, `tabard` / `tabards`, `toy` / `toys`, or `item` / `items`.
-Combine words to narrow results, for example `mount proto`. All words must match;
-reward types match the reward, not words in the achievement's description.
-Click a result to open its achievement. Blizzard's normal prerequisite navigation
-applies to locked tiers in a progressive achievement chain.
-
-Types come from `DragonUI/modules/achievement_rewards.lua`: the Wrath AzerothCore
-achievement reward table and Evermore's current retail achievement mount rewards.
-Names, descriptions and completion status come from the client's achievement APIs.
-Custom achievements require the matching Evermore client patches. New or changed
-realm rewards need a corresponding reward-type data update; unclassified rewards
-remain searchable by name. This does not query or change server rewards.
-
-Ship the updated `DragonUI` addon folder through the usual addon distribution, then
-restart the client or reload the UI. This addon-only change needs no server module
-pin, database migration or server restart. In-game layout and interaction still
-need verification on the 3.3.5a client.
-
-Developer check: from this repository's root, run
-`lua tools/achievement_search_test.lua` with Lua 5.1. It checks reward filtering,
-progressive achievement enumeration and the search panel's event handlers using
-mock client APIs.

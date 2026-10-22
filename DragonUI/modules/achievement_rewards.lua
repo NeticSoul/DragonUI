@@ -1,6 +1,6 @@
 -- Reward types for the Wrath achievement window. IDs, never title/description guesses.
 -- Stock: AzerothCore data/sql/base/db_world/achievement_reward.sql (2026-10-19).
--- Evermore: wow-mod-retail-achievements/data/achievements.tsv (4fde784855dc),
+-- Retail mount rewards: generated from wow-mod-retail-achievements data/achievements.tsv (4fde784855dc).
 local addon = select(2, ...)
 addon.achievementRewardTypes = {
     [13] = "item",
