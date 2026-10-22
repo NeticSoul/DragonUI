@@ -1182,6 +1182,9 @@ function identity.ProcessContextTransitions()
                 NP.engine.QueuePlate(newFocus, NP.engine.Callbacks.OnUpdateHealth)
             end
         end
+        if NP.forever and NP.forever.OnFocusChanged then
+            NP.forever.OnFocusChanged(oldFocus, newFocus)
+        end
     end
 
     -- Target plate direct hover (level-on-hover).

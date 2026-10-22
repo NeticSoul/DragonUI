@@ -382,6 +382,17 @@ local function PrepareCastFillTexture(tex)
     if tex.SetVertexColor then tex:SetVertexColor(1, 1, 1, 1) end
 end
 
+-- The Forever fill files carry their own colour; tinting them again turns the gold
+-- art orange. Retail fills are white and need the tint.
+local function ApplyCastFillColor(bar, channeling)
+    if NP.config.IsForeverSkin() then
+        bar:SetStatusBarColor(1, 1, 1, 1)
+        return
+    end
+    local color = channeling and C.CAST_COLOR_CHANNEL or C.CAST_COLOR_STANDARD
+    bar:SetStatusBarColor(color[1], color[2], color[3], 1)
+end
+
 local function ForceCastBarTextureLayer(bar)
     local tex = bar and bar.GetStatusBarTexture and bar:GetStatusBarTexture()
     if tex and tex.SetDrawLayer then
@@ -408,7 +419,9 @@ local function ApplyInterruptedHoldVisual(bar)
     end
 
     if bar._intBg then
-        bar._intBg:SetTexture(C.MINA_TEX .. "bar-bar")
+        bar._intBg:SetTexture(NP.config.IsForeverSkin()
+            and NP.config.GetCastFillTexture(false, false, true) or C.MINA_TEX .. "bar-bar")
+        bar._intBg:SetTexCoord(0, 1, 0, 1)
         if bar._intBg.SetVertexColor then
             bar._intBg:SetVertexColor(1, 1, 1, 1)
         end
@@ -555,6 +568,22 @@ end
 -- collapses into a stub -- so both styles keep DragonUI's own spark, which reads correctly.
 function NP.castbar.SizeCastSpark(spark, castH)
     if not spark then return end
+    local forever = NP.config.IsForeverSkin()
+    if spark._foreverSpark ~= forever then
+        spark._foreverSpark = forever
+        if spark.tex then
+            if forever then
+                NP.atlas.Apply(spark.tex, "castSpark")
+            else
+                spark.tex:SetTexture(C.CAST_TEX_SPARK)
+                spark.tex:SetTexCoord(0, 1, 0, 1)
+            end
+        end
+    end
+    if forever then
+        spark:SetSize(4, castH + 8)
+        return
+    end
     spark:SetSize(max(castH, 14), max(castH * 2, 14))
 end
 
@@ -573,6 +602,7 @@ function NP.castbar.CreateCastIconShield(parentBar)
     local shield = CreateFrame("Frame", nil, parentBar)
     shield:SetFrameLevel(parentBar:GetFrameLevel() - 1)
     local tex = shield:CreateTexture(nil, "ARTWORK", nil, 3)
+    shield.tex = tex
     tex:SetAllPoints(shield)
     ApplyCastShieldTexture(tex)
     shield:Hide()
@@ -585,8 +615,18 @@ function NP.castbar.LayoutCastIconShield(shield, iconRef, iconSize, parentBar)
     shield:ClearAllPoints()
     local retail = NP.config.IsRetailSkin()
     if retail then
+        -- Re-apply only when the art style changed: the shield outlives a style switch.
+        local artStyle = NP.config.GetCfg().plateStyle
+        if shield._artStyle ~= artStyle then
+            shield._artStyle = artStyle
+            ApplyCastShieldTexture(shield.tex or shield)
+        end
         -- Retail's 10x12 shield takes the 12x12 icon's slot; the icon itself is hidden meanwhile.
-        shield:SetSize(max(5, math.floor(size * 10 / 12 + 0.5)), size)
+        if NP.config.IsForeverSkin() then
+            shield:SetSize(size, size * 16 / 14)
+        else
+            shield:SetSize(max(5, math.floor(size * 10 / 12 + 0.5)), size)
+        end
         shield:SetPoint("RIGHT", iconRef, "RIGHT", 0, 0)
     else
         shield:SetSize(size * C.CAST_SHIELD_SIZE_W, size * C.CAST_SHIELD_SIZE_H)
@@ -601,6 +641,9 @@ end
 
 function NP.castbar.GetCastSpellIconSize(notInterruptible)
     local castH = select(1, NP.config.GetCastBarMetrics())
+    if NP.config.IsForeverSkin() then
+        return max(6, math.floor(castH * 10 / 6 + 0.5))
+    end
     -- Retail sizes the icon at 12*sv against a 10*sv bar, i.e. 1.2x the cast bar height.
     if NP.config.IsRetailSkin() then
         return max(6, math.floor(castH * 1.2 + 0.5))
@@ -682,7 +725,7 @@ function NP.castbar.LayoutCastSpellIcon(icon, bar, notInterruptible)
         if NP.config.GetCfg().castBarModernIconLeft then
             icon:SetPoint("RIGHT", bar, "LEFT", -3, 0)
         else
-            icon:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, -3)
+            icon:SetPoint("TOPLEFT", bar, "BOTTOMLEFT", 0, NP.config.IsForeverSkin() and 0 or -3)
         end
     else
         icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -771,6 +814,7 @@ local function CreateCastSpark(bar)
     spark:SetSize(16, 16)
     spark:Hide()
     local sparkTex = spark:CreateTexture(nil, "OVERLAY")
+    spark.tex = sparkTex
     sparkTex:SetTexture(C.CAST_TEX_SPARK)
     sparkTex:SetAllPoints(spark)
     if sparkTex.SetBlendMode then
@@ -829,6 +873,7 @@ function NP.castbar.CreatePartyCastBar(parent, plateData)
     bar:SetValue(0)
     bar:Hide()
     local bg = bar:CreateTexture(nil, "BACKGROUND")
+    bar.minaBg = bg
     bg:SetAllPoints(bar)
     bg:SetTexture(C.MINA_TEX .. "bar-bg")
     NP.discovery.AttachBarBorder(bar)
@@ -1020,6 +1065,9 @@ function NP.castbar.LayoutPartyCastBar(plateData)
     bar:SetSize(visW, castH)
     bar:SetPoint("TOP", anchor, "BOTTOM", 0, -stackGap)
 
+    NP.forever.SyncCastFillStyle(bar)
+    NP.forever.StylePartyCast(bar, visW, castH)
+
     if bar.minaIcon then
         NP.castbar.LayoutCastSpellIcon(bar.minaIcon, bar, bar._notInterruptible)
     end
@@ -1112,12 +1160,12 @@ function PartyRaidCastTracker:StartCast(unit, isChannel)
     end
     if isChannel then
         bar:SetStatusBarTexture(NP.config.GetCastFillTexture(true, bar._notInterruptible))
-        bar:SetStatusBarColor(C.CAST_COLOR_CHANNEL[1], C.CAST_COLOR_CHANNEL[2], C.CAST_COLOR_CHANNEL[3], 1)
+        ApplyCastFillColor(bar, true)
         bar.channelingEx = true
         bar.castingEx = false
     else
         bar:SetStatusBarTexture(NP.config.GetCastFillTexture(false, bar._notInterruptible))
-        bar:SetStatusBarColor(C.CAST_COLOR_STANDARD[1], C.CAST_COLOR_STANDARD[2], C.CAST_COLOR_STANDARD[3], 1)
+        ApplyCastFillColor(bar, false)
         bar.castingEx = true
         bar.channelingEx = false
     end
@@ -3652,7 +3700,7 @@ function NP.castbar.ApplyPlateCastTextures(bar, channeling, plateData)
         end
         bar._cachedCastH = nil
         bar:SetStatusBarTexture(NP.config.GetCastFillTexture(true, bar._notInterruptible))
-        bar:SetStatusBarColor(C.CAST_COLOR_CHANNEL[1], C.CAST_COLOR_CHANNEL[2], C.CAST_COLOR_CHANNEL[3], 1)
+        ApplyCastFillColor(bar, true)
         bar.channelingEx = true
         bar.castingEx = false
     else
@@ -3661,7 +3709,7 @@ function NP.castbar.ApplyPlateCastTextures(bar, channeling, plateData)
         end
         bar._cachedCastH = nil
         bar:SetStatusBarTexture(NP.config.GetCastFillTexture(false, bar._notInterruptible))
-        bar:SetStatusBarColor(C.CAST_COLOR_STANDARD[1], C.CAST_COLOR_STANDARD[2], C.CAST_COLOR_STANDARD[3], 1)
+        ApplyCastFillColor(bar, false)
         bar.castingEx = true
         bar.channelingEx = false
     end

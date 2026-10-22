@@ -70,10 +70,86 @@ function NP.config.IsRetailBehavior()
     return cfg.retailStackingEnabled == true
 end
 
--- "legacy" (and the earlier "classic" spelling) opt out; anything else is the modern skin.
+-- "legacy" (and the earlier "classic" spelling) opt out; anything else is a retail-style skin (Modern or Forever).
 function NP.config.IsRetailSkin()
     local style = NP.config.GetCfg().plateStyle
     return style ~= "legacy" and style ~= "classic"
+end
+
+function NP.config.IsForeverSkin()
+    return NP.config.GetCfg().plateStyle == "forever"
+end
+
+-- A skin switch may seed its layout, but must not destroy a tuned previous
+-- style. All fields changed by a preset are saved/restored together.
+local STYLE_FIELDS = {
+    "barWidth", "barHeight", "castBarHeight", "fontSize", "castBarSpellNameFontSize",
+    "debuffCooldownFontSize", "nameFont", "showCastBarSpellName", "threatGlow",
+    "castBarGap", "centerNameOnly", "nameOverlayHealthBar", "retailTextOutlineAbove",
+    "healthTextPosition", "showLevelAlways", "showLevelInName", "showLevelOnHover",
+    "levelPosition", "levelTextFormat", "showEliteIcon", "castBarModernIconLeft",
+    "castBarModernIconBorder", "showTargetArrows", "showCastBar", "showPowerBar",
+    "retailSelectionBorder", "retailDeselectedOverlay", "retailMouseoverHighlight", "showTargetHighlight",
+}
+
+function NP.config.ApplyPlateStyle(previousStyle)
+    local cfg = NP.config.GetCfg()
+    local style = cfg.plateStyle or "legacy"
+    previousStyle = previousStyle or "legacy"
+    if style == previousStyle then return end
+    cfg.plateStyleSettings = cfg.plateStyleSettings or {}
+    local profiles = cfg.plateStyleSettings
+    local previous = {}
+    for _, key in ipairs(STYLE_FIELDS) do
+        previous[key] = cfg[key]
+    end
+    profiles[previousStyle] = previous
+    local saved = profiles[style]
+    if saved then
+        for _, key in ipairs(STYLE_FIELDS) do
+            cfg[key] = saved[key]
+        end
+        return
+    end
+
+    -- Keep unrelated behavior choices from the previous style. Only Forever
+    -- introduces a different text/level arrangement; leaving it for a style
+    -- never selected before starts from the pre-Forever arrangement.
+    if previousStyle == "forever" and profiles._beforeForever then
+        for _, key in ipairs(STYLE_FIELDS) do
+            cfg[key] = profiles._beforeForever[key]
+        end
+    elseif style == "forever" then
+        profiles._beforeForever = previous
+    end
+    local modern = style == "modern"
+    cfg.barWidth = modern and 148 or 150
+    cfg.barHeight = modern and 16 or 9
+    cfg.castBarHeight = modern and 8 or 9
+    cfg.fontSize = 2
+    cfg.castBarSpellNameFontSize = modern and 8 or 9
+    local iconSize = cfg.debuffIconSize or 24
+    cfg.debuffCooldownFontSize = modern and math.min(16, math.max(8, math.floor(iconSize * 0.55 + 0.5))) or 10
+    cfg.threatGlow = not modern
+    if modern then
+        cfg.nameFont = "primary"
+        cfg.showCastBarSpellName = true
+    elseif style == "forever" then
+        cfg.barWidth, cfg.barHeight, cfg.castBarHeight = 166, 13, 6
+        cfg.fontSize, cfg.castBarSpellNameFontSize = 5, 10
+        cfg.castBarGap = 2
+        cfg.centerNameOnly, cfg.nameOverlayHealthBar = true, false
+        cfg.retailTextOutlineAbove = true
+        cfg.healthTextPosition = "barRight"
+        cfg.showLevelAlways, cfg.showLevelInName, cfg.showLevelOnHover = true, true, true
+        cfg.levelPosition, cfg.levelTextFormat = "name", "plain"
+        cfg.nameFont = "primary"
+        cfg.showCastBar, cfg.showCastBarSpellName = true, true
+        cfg.retailSelectionBorder, cfg.retailDeselectedOverlay = true, true
+        cfg.retailMouseoverHighlight, cfg.showTargetHighlight = true, true
+        cfg.castBarModernIconLeft, cfg.castBarModernIconBorder = false, false
+        cfg.showEliteIcon, cfg.threatGlow, cfg.showTargetArrows, cfg.showPowerBar = false, false, false, false
+    end
 end
 
 function NP.config.IsBattleGroundHealersLoaded()
@@ -140,7 +216,7 @@ end
 -- Retail swaps the whole fill per cast type; the legacy skin only ever had two.
 function NP.config.GetCastFillTexture(isChannel, notInterruptible, interrupted)
     if NP.config.IsRetailSkin() then
-        local fills = NP.atlas.CAST_FILL
+        local fills = NP.config.IsForeverSkin() and NP.atlas.FOREVER_CAST_FILL or NP.atlas.CAST_FILL
         if interrupted then
             return fills.interrupted
         elseif notInterruptible then

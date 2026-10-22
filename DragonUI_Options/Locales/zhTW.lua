@@ -16,6 +16,11 @@ DragonUI_Options - 繁體中文本地化檔案
 local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "zhTW")
 if not L then return end
 
+L["Forever (Thin)"] = "Forever（纖細）"
+L["Highlight target and focus with the original Forever borders."] = "用原版 Forever 邊框突顯目標與專注目標。"
+L["Heritage uses DragonUI art. Modern uses retail chrome. Forever uses original WoW Forever borders, cast bars and a separate level badge. Each style remembers its layout."] = "Heritage 使用 DragonUI 的美術。Modern 使用現行遊戲的邊框。Forever 使用原版 WoW Forever 邊框、施法條與獨立的等級牌。每種樣式都會記住自己的版面。"
+L["Forever displays levels in the original badge on the right. Unknown levels remain hidden until the client can identify the unit."] = "Forever 在右側的原版等級牌中顯示等級。未知等級在客戶端辨識單位前保持隱藏。"
+
 L["Minimap Buttons Collector"] = "小地圖按鈕收集器"
 L["Circle"] = "圓形"
 L["Arrow"] = "箭頭"
