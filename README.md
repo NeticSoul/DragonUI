@@ -108,6 +108,7 @@ WTF/Account/<YourAccount>/SavedVariables/DragonUI*
 - 💎 Item quality borders, enhanced tooltips with class-colored borders, and range indicator.
 - 🎒 Character Item Counts (off by default): item tooltips list how many of an item each of your characters has in bags, bank and equipped. It may duplicate lines if another addon also adds ownership counts to tooltips, and it does not count server-held currencies or the reagent bank.
 - ⌨️ Easy-to-use keybinding mode on supported buttons.
+- 🔍 Search box in the Key Bindings window (the bar above its buttons): filters the list by command name or bound key, for example `strafe` or `shift-f`.
 
 Extensive customization available directly in-game through the configuration panel.
 
