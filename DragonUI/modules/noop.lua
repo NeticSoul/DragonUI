@@ -16,9 +16,44 @@ local RETIRED_BAR_PARTS = {
 }
 
 local UNMANAGED_POSITION_KEYS = {
-    "MultiBarLeft", "MultiBarRight", "MultiBarBottomLeft", "MultiBarBottomRight",
-    "ShapeshiftBarFrame", "PETACTIONBAR_YPOS", "MultiCastActionBarFrame", "MULTICASTACTIONBAR_YPOS",
+    "MultiBarLeft", "MultiBarRight", "MultiBarBottomLeft", "MultiBarBottomRight", "ShapeshiftBarFrame",
+    "PossessBarFrame", "PETACTIONBAR_YPOS", "MultiCastActionBarFrame", "MULTICASTACTIONBAR_YPOS",
 }
+
+-- PossessBarFrame is a child of the faded MainMenuBar; Blizzard still shows and hides it, we only move it.
+local function RehomePossessBar()
+    local additional = addon.db.profile.additional
+    local size, gap = additional.size or 31, additional.spacing or 6
+    -- Left edge from the action bars, height from the pet row: one anchor can't take an axis from each.
+    local corner = CreateFrame("Frame", nil, UIParent)
+    corner:SetPoint("BOTTOMLEFT", ActionButton1, "BOTTOMLEFT")
+    corner:SetPoint("TOPRIGHT", PetActionButton1, "TOPRIGHT")
+    local holder = CreateFrame("Frame", "DragonUI_PossessBar", UIParent, "SecureHandlerStateTemplate")
+    holder:SetSize(NUM_POSSESS_SLOTS * (size + gap) - gap, size)
+    holder:SetPoint("TOPLEFT", corner, "TOPLEFT")
+    -- It covers the first pet slots, which an Eye of Kilrogg leaves empty but still clickable.
+    holder:SetFrameLevel(10)
+    RegisterStateDriver(holder, "visibility", "[vehicleui][@vehicle,exists] hide; show")
+    PossessBarFrame:SetParent(holder)
+    PossessBarFrame:ClearAllPoints()
+    PossessBarFrame:SetAllPoints(holder)
+    PossessBarFrame:EnableMouse(false)
+    for index = 1, NUM_POSSESS_SLOTS do
+        local button = _G["PossessButton" .. index]
+        button:ClearAllPoints()
+        button:SetSize(size, size)
+        button:SetFrameLevel(PossessBarFrame:GetFrameLevel() + 1)
+        button:SetPoint("BOTTOMLEFT", holder, "BOTTOMLEFT", (index - 1) * (size + gap), 0)
+        _G["PossessBackground" .. index]:SetAlpha(0)
+    end
+end
+
+-- Skinned at login like the pet and stance rows: buttons.lua reads its colours after our ADDON_LOADED.
+local function SkinPossessButtons()
+    if _G.DragonUI_PossessBar and addon.StylePossessButtons then
+        addon:SafeExecute("noop", "skin_possess", addon.StylePossessButtons)
+    end
+end
 
 local function MuteTalentSpecSwap()
     local talentFrame = _G.PlayerTalentFrame
@@ -63,6 +98,10 @@ local function ApplyNoopChangesImpl()
     -- PossessBar_OnEvent re-Shows the event-less bonus bar on page change; keybinds then land on it.
     if PossessBarFrame then
         PossessBarFrame:UnregisterEvent("ACTIONBAR_PAGE_CHANGED")
+        RehomePossessBar()
+        if IsLoggedIn() then
+            SkinPossessButtons()
+        end
     end
     
     -- Kill ExhaustionTick OnUpdate to prevent Blizzard nil crashes
@@ -169,6 +208,7 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     elseif event == "PLAYER_LOGIN" then
         -- Backup check in case config wasn't ready before
         InitializeNoop()
+        SkinPossessButtons()
         self:UnregisterEvent("PLAYER_LOGIN")
     end
 end)
