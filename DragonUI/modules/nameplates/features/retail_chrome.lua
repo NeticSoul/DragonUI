@@ -409,7 +409,8 @@ local function LayoutChrome(plateData)
     end
     local w, h = NP.config.GetBarRefSize()
     local castH = select(1, NP.config.GetCastBarMetrics())
-    local sig = w .. ":" .. h .. ":" .. castH
+    local forever = NP.config.IsForeverSkin()
+    local sig = tostring(NP.config.GetCfg().plateStyle) .. ":" .. w .. ":" .. h .. ":" .. castH
     if plateData._retailChromeSig == sig then
         return true
     end
@@ -424,10 +425,16 @@ local function LayoutChrome(plateData)
     local padL, padR = BG_L_UNITS * m, BG_R_UNITS * m
     local padT, padB = BG_T_UNITS * m, BG_B_UNITS * m
     A.LayoutSlice(plateData._retailBg, "barBg", hp, w, h, padL, padT, padR, padB)
-    local sel = SEL_UNITS * m
-    A.LayoutSlice(plateData._retailSelected, "selected", hp, w, h, sel, sel, sel, sel)
+    if forever then
+        -- Original wowf selection anchors are relative to the background, not the fill.
+        A.LayoutSlice(plateData._retailSelected, "selected", hp, w, h, 5 * m, 5 * m, 6 * m, 4 * m)
+    else
+        local sel = SEL_UNITS * m
+        A.LayoutSlice(plateData._retailSelected, "selected", hp, w, h, sel, sel, sel, sel)
+    end
     local des = DESEL_UNITS * m
-    A.LayoutSlice(plateData._retailDeselected, "deselected", hp, w, h, des, des, des, des)
+    A.LayoutSlice(plateData._retailDeselected, "deselected", hp, w, h,
+        forever and 0 or des, des, forever and 0 or des, des)
 
     local flare = plateData._retailFlare
     if flare then
@@ -490,6 +497,7 @@ local function HideChrome(plateData, restoreLegacy)
     if not plateData then
         return
     end
+    if restoreLegacy then NP.forever.HideLevel(plateData) end
     A.HideSlice(plateData._retailBg)
     A.HideSlice(plateData._retailSelected)
     A.HideSlice(plateData._retailDeselected)
@@ -548,7 +556,7 @@ local function SyncFlareInternal(plateData, cfg)
     if not flare then
         return
     end
-    if cfg.threatGlow == false then
+    if cfg.threatGlow == false or NP.config.IsForeverSkin() then
         SetFlareShown(plateData, false)
         plateData._hadAggro = nil
         return
@@ -680,13 +688,15 @@ local function SyncChrome(plateData, isTarget)
         isTarget = NP.identity.IsTargetPlateVisual(plateData)
     end
 
-    if isTarget and cfg.retailSelectionBorder ~= false and cfg.showTargetHighlight ~= false then
+    local focus = NP.config.IsForeverSkin() and NP.identity.IsFocusPlate(plateData)
+    if (isTarget or focus) and cfg.retailSelectionBorder ~= false and cfg.showTargetHighlight ~= false then
+        A.SetSliceVertexColor(plateData._retailSelected, 1, isTarget and 1 or 0.49, isTarget and 1 or 0.039, 1)
         A.ShowSlice(plateData._retailSelected)
     else
         A.HideSlice(plateData._retailSelected)
     end
 
-    if not isTarget and cfg.retailDeselectedOverlay ~= false then
+    if not isTarget and not focus and cfg.retailDeselectedOverlay ~= false then
         A.ShowSlice(plateData._retailDeselected)
     else
         A.HideSlice(plateData._retailDeselected)

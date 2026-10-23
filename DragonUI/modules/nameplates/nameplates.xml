@@ -2,6 +2,7 @@
     <Script file="core\init.lua"/>
     <Script file="core\constants.lua"/>
     <Script file="core\atlas.lua"/>
+    <Script file="core\forever_atlas.lua"/>
     <Script file="core\config.lua"/>
     <Script file="core\state.lua"/>
     <Script file="core\unitcache.lua"/>
@@ -19,6 +20,7 @@
     <Script file="features\raid_marker.lua"/>
     <Script file="features\combo.lua"/>
     <Script file="features\elite.lua"/>
+    <Script file="features\forever.lua"/>
     <Script file="features\retail_chrome.lua"/>
     <Script file="features\quest.lua"/>
     <Script file="features\quest_providers.lua"/>

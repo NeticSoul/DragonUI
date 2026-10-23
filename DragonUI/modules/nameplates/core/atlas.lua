@@ -77,7 +77,15 @@ local function ResolveBake(key, rectW, rectH)
 end
 
 -- Whole region onto one texture.
+local function ResolveStyleKey(key)
+    if A.FOREVER_KEYS and NP.config.IsForeverSkin() then
+        return A.FOREVER_KEYS[key] or key
+    end
+    return key
+end
+
 function A.Apply(tex, key, sizeToNative)
+    key = ResolveStyleKey(key)
     local k = A.KEYS[key]
     if not tex or not k then
         return false
@@ -138,6 +146,7 @@ local rowY, rowH, rowT, rowB = {}, {}, {}, {}
 -- Lays nine pieces over anchor's rect grown by the four pads. Margins scale with the
 -- art's render ratio, so the rails keep their proportion at any bar height.
 function A.LayoutSlice(slice, key, anchor, w, h, padL, padT, padR, padB)
+    key = ResolveStyleKey(key)
     if not slice or not A.KEYS[key] or not anchor then
         return false
     end

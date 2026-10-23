@@ -11,6 +11,7 @@ NP.lifecycle = NP.lifecycle or {}
 
 function NP.lifecycle.InvalidatePlateVisuals(plateData, clearGuid)
     if not plateData then return end
+    NP.forever.HideLevel(plateData)
     plateData._lastThreatStatus = nil
     plateData._lastThreatCombat = nil
     if clearGuid then
