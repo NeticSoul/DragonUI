@@ -25,6 +25,8 @@
     
     <!-- KeyBinding module -->
     <Script file="keybinding.lua"/>
+    <!-- Search box in the Key Bindings window (filters by command name or key) -->
+    <Script file="keybinding_search.lua"/>
 
     <!-- Key Press module (fire actions on key down instead of key release) -->
     <Script file="keypress.lua"/>
