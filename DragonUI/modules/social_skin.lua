@@ -94,7 +94,8 @@ local LIST_NUDGES = {
     -- 19 rows of 16 from -102 ran 1.5 past the raised inset; from -99 they end 1 inside it.
     { name = "FriendsFrameIgnoreButton1", dx = 1.5, dy = 102 - LIST_TOP },
     { name = "WhoFrameButton1", dx = 7.5, dy = 0 },
-    { name = "WhoFrameColumnHeader1", dx = 7.5, dy = 0 },
+    -- Stock headers start at x 20, 5 right of the rows' 15: line them up with the rows instead.
+    { name = "WhoFrameColumnHeader1", dx = 2.5, dy = 0 },
     { name = "WhoListScrollFrame", dx = 7.5, dy = 0 },
     { name = "WhoFrameEditBox", dx = 0.5, dy = WHO_EDIT_BOTTOM - 106 },
     { name = "ChannelListScrollFrame", dx = 2.5, dy = 0 },
@@ -526,6 +527,18 @@ local function seatBottomRows()
     end
 end
 
+-- With no scrollbar WhoList_Update widens the zone column to 120, a 321 wide header row that ran
+-- past the 322 wide inset; 5 off it leaves the row 3 inside on both sides, like the rows below.
+local WHO_WIDE_COLUMN = 120
+local WHO_COLUMN_TRIM = 5
+
+local function fitWhoHeader()
+    local header = _G.WhoFrameColumnHeader2
+    if not (IsModuleEnabled() and header and header:GetWidth() == WHO_WIDE_COLUMN) then return end
+    _G.WhoFrameColumn_SetWidth(header, WHO_WIDE_COLUMN - WHO_COLUMN_TRIM)
+    _G.UIDropDownMenu_SetWidth(_G.WhoFrameDropDown, 95 - WHO_COLUMN_TRIM)
+end
+
 local function activeSubFrame()
     local names = _G.FRIENDSFRAME_SUBFRAMES
     if type(names) ~= "table" then return end
@@ -596,6 +609,11 @@ local function buildSocialFrame()
     if _G.FriendsFrame_ShowSubFrame and not window._duiSubFrameHooked then
         window._duiSubFrameHooked = true
         hooksecurefunc("FriendsFrame_ShowSubFrame", syncView)
+    end
+    if _G.WhoList_Update and not window._duiWhoHeaderHooked then
+        window._duiWhoHeaderHooked = true
+        hooksecurefunc("WhoList_Update", fitWhoHeader)
+        fitWhoHeader()
     end
 
     -- First open: Blizzard's OnShow already picked the subframe before the hook above existed.
