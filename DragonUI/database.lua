@@ -491,6 +491,8 @@ local defaults = {
             -- Text display
             always_show_text = false,
             show_xp_percent = false,
+            -- No XP bar even while levelling; the rep bar takes its slot as at max level
+            hide_xp = false,
             -- Hover/combat visibility (shared by both bars, see core/visibility_fade.lua)
             show_on_hover = false,
             show_in_combat = false,
@@ -665,6 +667,7 @@ local defaults = {
         -- CASTBAR SETTINGS
         castbar = {
             enabled = true,
+            hide = false, -- no player cast bar at all, DragonUI's or Blizzard's
             scale = 1,
             text_mode = "simple",
             precision_time = 1,
@@ -701,6 +704,7 @@ local defaults = {
             -- TARGET CASTBAR SETTINGS
             target = {
                 enabled = true,
+                hide = false,
                 override = false,
                 scale = 1,
                 x_position = 0,
@@ -724,6 +728,7 @@ local defaults = {
             -- FOCUS CASTBAR SETTINGS
             focus = {
                 enabled = true,
+                hide = false,
                 override = false,
                 scale = 1,
                 x_position = 0,

@@ -983,6 +983,8 @@ end
 
 -- No level-cap test: custom servers show 53/1 at the cap, and noop kills MainMenuExpBar's events.
 local function IsXpBarVisible()
+    local cfg = GetXpRepConfig()
+    if cfg and cfg.hide_xp then return false end
     local maxXP = UnitXPMax("player")
     if not maxXP or maxXP <= 0 then return false end
     local currXP = UnitXP("player") or 0
@@ -2459,6 +2461,11 @@ local function ExportBarApi()
     addon.ResolveWidgetDefaultY = ResolveDefaultBarY
     addon.GetFramedStackDrop = GetFramedStackDrop
     addon.RefreshXpRepBars = RefreshXpRepBars
+    -- Showing or hiding the XP bar moves the rep bar and the action bars above it too.
+    addon.RelayoutXpRepBars = function()
+        RefreshXpRepBars()
+        NotifyDualBarOffsetChanged()
+    end
     addon.UpdateExhaustionTick = RefreshXpRepBars
     addon.ApplyActionBarPositions = ApplyActionBarPositions
     addon.PositionActionBarsToContainers = PositionActionBarsToContainers

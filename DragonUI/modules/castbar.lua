@@ -138,7 +138,7 @@ end
 
 local function IsEnabled(unitType)
     local cfg = GetConfig(unitType)
-    return cfg and cfg.enabled
+    return cfg and cfg.enabled and not cfg.hide
 end
 
 local function UsesModernIconBorder(cfg)
@@ -1885,6 +1885,16 @@ function CastbarModule:RefreshCastbar(unitType)
         return
     end
     
+    -- Hidden: neither our bar nor Blizzard's shows.
+    if cfg.hide then
+        HideBlizzardCastbar(unitType)
+        self:HideCastbar(unitType)
+        if unitType == "player" and addon.RelayoutGCD then
+            addon.RelayoutGCD()
+        end
+        return
+    end
+
     if cfg.enabled then
         HideBlizzardCastbar(unitType)
     else
@@ -2624,8 +2634,7 @@ function CastbarModule:UpdateWidgets()
 end
 
 local function ShouldPlayerCastbarBeVisible()
-    local cfg = GetConfig("player")
-    return cfg and cfg.enabled
+    return IsEnabled("player")
 end
 
 local function ShowPlayerCastbarTest()

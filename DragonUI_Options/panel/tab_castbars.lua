@@ -52,6 +52,13 @@ local function AddCastbarControls(parent, dbPrefix, refreshFunc, opts)
     local sizeYMin = opts.sizeYMin or 10
     local sizeYMax = opts.sizeYMax or 64
 
+    C:AddToggle(parent, {
+        label = LO["Hide Cast Bar"],
+        desc = LO["Show no cast bar here at all, neither DragonUI's nor Blizzard's."],
+        dbPath = dbPrefix .. ".hide",
+        callback = refreshFunc,
+    })
+
     C:AddSlider(parent, {
         label = LO["Width"],
         dbPath = dbPrefix .. ".sizeX",

@@ -803,6 +803,8 @@ L["Shake on Interrupt"] = true
 L["Shake the cast bar briefly when it gets interrupted."] = true
 L["Show Interrupter"] = true
 L["Show the name of whoever interrupted the cast."] = true
+L["Hide Cast Bar"] = true
+L["Show no cast bar here at all, neither DragonUI's nor Blizzard's."] = true
 L["Reset Position"] = true
 L["Player castbar position reset."] = true
 L["Castbar detached - positioned freely via Editor Mode"] = true
@@ -1115,6 +1117,8 @@ L["Always Show Text"] = true
 L["Always display XP/Rep text instead of only on hover."] = true
 L["Show XP Percentage"] = true
 L["Display XP percentage alongside the value text."] = true
+L["Hide Experience Bar"] = true
+L["Hide the XP bar while you level. The reputation bar moves into its place, as at max level."] = true
 
 -- ============================================================================
 -- PROFILES TAB
