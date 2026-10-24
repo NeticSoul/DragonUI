@@ -247,24 +247,15 @@ local function BuildMinimapTab(scroll)
         callback = function()
             local val = C:GetDBValue("minimap.border_alpha") or 1
             if MinimapBorderTop then MinimapBorderTop:SetAlpha(val) end
+            -- The top bar's On Hover fades in to this alpha.
+            RefreshMinimap()
         end,
     })
-
-    local fadeToggle  -- forward reference for disabled-state refresh
 
     C:AddToggle(basic, {
         label = LO["Addon Button Skin"],
         desc = LO["Apply DragonUI border styling to addon icons."],
         dbPath = "minimap.addon_button_skin",
-        callback = function()
-            if addon.RefreshMinimap then addon:RefreshMinimap() end
-        end,
-    })
-
-    fadeToggle = C:AddToggle(basic, {
-        label = LO["Addon Button Fade"],
-        desc = LO["Addon icons fade out when not hovered."],
-        dbPath = "minimap.addon_button_fade",
         callback = function()
             if addon.RefreshMinimap then addon:RefreshMinimap() end
         end,
@@ -314,23 +305,6 @@ local function BuildMinimapTab(scroll)
     -- ====================================================================
     local time = C:AddSection(scroll, LO["Time & Calendar"])
 
-    C:AddToggle(time, {
-        label = LO["Show Clock"],
-        dbPath = "minimap.clock",
-        callback = RefreshMinimap,
-    })
-
-    C:AddToggle(time, {
-        label = LO["Show Calendar"],
-        dbPath = "minimap.calendar",
-        callback = function()
-            local val = C:GetDBValue("minimap.calendar")
-            if GameTimeFrame then
-                if val then GameTimeFrame:Show() else GameTimeFrame:Hide() end
-            end
-        end,
-    })
-
     C:AddSlider(time, {
         label = LO["Clock Font Size"],
         dbPath = "minimap.clock_font_size",
@@ -351,13 +325,6 @@ local function BuildMinimapTab(scroll)
         callback = function()
             if addon.MinimapModule then addon.MinimapModule:UpdateTrackingIcon() end
         end,
-    })
-
-    C:AddToggle(display, {
-        label = LO["Zoom Buttons"],
-        desc = LO["Show zoom buttons (+/-)."],
-        dbPath = "minimap.zoom_buttons",
-        callback = RefreshMinimap,
     })
 
     -- ====================================================================
@@ -456,6 +423,67 @@ local function BuildMinimapTab(scroll)
         hasAlpha = true,
         callback = RefreshMinimap,
     })
+
+    -- ====================================================================
+    -- MINIMAP BUTTONS
+    -- ====================================================================
+    local buttons = C:AddSection(scroll, LO["Minimap Buttons"])
+    C:AddDescription(buttons, LO["On Hover shows a button while the mouse is over the minimap. Never hides it, and takes an addon button out of the collector."])
+
+    local visibilityValues = {
+        always = LO["Always"],
+        hover = LO["On Hover"],
+        never = LO["Never"],
+    }
+
+    local buttonRow
+    for index, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+        if index % 2 == 1 then buttonRow = C:AddRow(buttons) end
+        C:AddDropdown(buttonRow, {
+            label = LO[entry.label],
+            dbPath = "minimap.button_visibility." .. entry.key,
+            values = visibilityValues,
+            width = 220,
+            callback = RefreshMinimap,
+        })
+    end
+
+    C:AddHeading(buttons, LO["Addon Buttons"])
+    C:AddDropdown(buttons, {
+        label = LO["All Addon Buttons"],
+        dbPath = "minimap.addon_button_default",
+        values = visibilityValues,
+        width = 220,
+        callback = RefreshMinimap,
+    })
+
+    -- "_default" sorts first in the dropdown; picking it clears the button's own entry.
+    local addonValues = { _default = LO["Use Default"] }
+    for key, label in pairs(visibilityValues) do addonValues[key] = label end
+
+    local module = addon.MinimapModule
+    local addonButtons = module and module.GetAddonButtonList and module.GetAddonButtonList() or {}
+    if #addonButtons == 0 then
+        C:AddDescription(buttons, LO["No addon buttons found on the minimap."])
+    end
+    local addonRow
+    for index, entry in ipairs(addonButtons) do
+        if index % 2 == 1 then addonRow = C:AddRow(buttons) end
+        C:AddDropdown(addonRow, {
+            label = entry.label,
+            values = addonValues,
+            width = 220,
+            getFunc = function()
+                local own = C:GetDBValue("minimap.addon_button_visibility")
+                return own and own[entry.name] or "_default"
+            end,
+            setFunc = function(value)
+                local own = C:GetDBValue("minimap.addon_button_visibility")
+                if own then own[entry.name] = value ~= "_default" and value or nil end
+            end,
+            callback = RefreshMinimap,
+        })
+    end
 
     -- ====================================================================
     -- ANIMATED BORDER DECORATIONS

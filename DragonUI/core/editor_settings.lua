@@ -1554,6 +1554,22 @@ local function CollectorOff()
     return GetDB("minimap.collector_enabled") == false
 end
 
+-- One Always / On Hover / Never row per minimap button (addon.MINIMAP_VISIBILITY_BUTTONS, from
+-- database.lua), then the default for addon buttons. Each addon button's own row is in the Options tab.
+local function MinimapButtonRows()
+    local modes = {
+        { "always", T("Always") },
+        { "hover", T("On Hover") },
+        { "never", T("Never") },
+    }
+    local rows = {}
+    for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+        rows[#rows + 1] = Drop(T(entry.label), "minimap.button_visibility." .. entry.key, modes, R.minimap)
+    end
+    rows[#rows + 1] = Drop(T("All Addon Buttons"), "minimap.addon_button_default", modes, R.minimap)
+    return rows
+end
+
 -- Zone text colors are stored as { r, g, b, a }; fallback is the default { r, g, b, a } list.
 local function MinimapColorRow(labelKey, path, fallback, hasAlpha, o)
     o = o or {}
@@ -1572,7 +1588,7 @@ local function MinimapColorRow(labelKey, path, fallback, hasAlpha, o)
     })
 end
 
-E.Register("minimap", { settings = {
+E.Register("minimap", { settings = Join({
     Section(T("General"), false),
     Slider(T("Scale"), "minimap.scale", 0.5, 2.0, 0.01, R.minimap),
     Drop(T("Style"), "minimap.style", {
@@ -1603,25 +1619,18 @@ E.Register("minimap", { settings = {
         get = function() return ForeverMinimap() and "dragonui" or (GetDB("minimap.collector_style") or "dragonui") end,
         disabled = function() return CollectorOff() or ForeverMinimap() end }),
     Check(T("Addon Button Skin"), "minimap.addon_button_skin", R.minimap),
-    Check(T("Addon Button Fade"), "minimap.addon_button_fade", R.minimap),
     Section(T("Basic Settings"), true),
     Slider(T("Border Alpha"), "minimap.border_alpha", 0, 1, 0.1, nil, {
         set = function(value)
             SetDB("minimap.border_alpha", value)
             if MinimapBorderTop then MinimapBorderTop:SetAlpha(value) end
+            -- The top bar's On Hover fades in to this alpha.
+            Deferred(R.minimap)
         end }),
     Check(T("New Blip Style"), "minimap.blip_skin", R.minimap),
     Slider(T("Player Arrow Size"), "minimap.player_arrow_size", 8, 50, 1, R.minimap),
     Section(T("Time & Calendar"), true),
-    Check(T("Show Clock"), "minimap.clock", R.minimap),
     Slider(T("Clock Font Size"), "minimap.clock_font_size", 8, 20, 1, R.minimap),
-    Check(T("Show Calendar"), "minimap.calendar", nil, {
-        set = function(value)
-            SetDB("minimap.calendar", value)
-            if GameTimeFrame then
-                if value then GameTimeFrame:Show() else GameTimeFrame:Hide() end
-            end
-        end }),
     Section(T("Display Settings"), true),
     Check(T("Tracking Icons"), "minimap.tracking_icons", nil, {
         set = function(value)
@@ -1629,7 +1638,8 @@ E.Register("minimap", { settings = {
             local module = addon.MinimapModule
             if module and module.UpdateTrackingIcon then module:UpdateTrackingIcon() end
         end }),
-    Check(T("Zoom Buttons"), "minimap.zoom_buttons", R.minimap),
+    Section(T("Minimap Buttons"), true),
+    MinimapButtonRows(),
     Section(T("Zone Text"), true),
     Drop(T("Visibility"), "minimap.zonetext_show", {
         { "always", T("Always") },
@@ -1692,7 +1702,7 @@ E.Register("minimap", { settings = {
         end }),
     Slider(T("Opacity"), "minimap.animated_border_opacity", 0, 1, 0.05, R.minimapDecor, {
         hidden = NoDecorations, disabled = DecorationsOff }),
-} })
+}) })
 
 local function SeparateWeaponEnchantsRow()
     return Check(T("Separate Weapon Enchants"), "buffs.separate_weapon_enchants", nil, {

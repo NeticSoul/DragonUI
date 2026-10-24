@@ -609,9 +609,6 @@ local defaults = {
             blip_skin = true, -- true = new/modern style, false = old/classic Blizzard style
             ping_sender = true, -- Name of whoever pinged the minimap, in their class color
             tracking_icons = true,
-            zoom_buttons = false,
-            calendar = true,
-            clock = true,
             clock_font_size = 12,
             player_arrow_size = 40,
             zonetext_font_size = 12,
@@ -637,7 +634,21 @@ local defaults = {
             animated_border_opacity = 1,
             animated_border_hide_dragonui_border = false,
             addon_button_skin = true,
-            addon_button_fade = false,
+            -- Always / On Hover / Never per minimap button; keys and order in addon.MINIMAP_VISIBILITY_BUTTONS.
+            button_visibility = {
+                top_bar = "always",
+                clock = "always",
+                calendar = "always",
+                tracking = "always",
+                mail = "always",
+                difficulty = "always",
+                lfg = "always",
+                battleground = "always",
+                zoom = "never",
+                settings = "always",
+            },
+            addon_button_default = "always", -- Addon buttons without an entry of their own
+            addon_button_visibility = {}, -- [button name] = "always", "hover" or "never"
             show_on_hover = false,
             show_in_combat = false,
             hide_in_combat = false,
@@ -1445,6 +1456,21 @@ end
 
 -- Export defaults for use in core.lua
 addon.defaults = defaults;
+
+-- The minimap buttons the visibility list covers, in list order. Here so both the editor (core)
+-- and the minimap module can read it; label is the locale key, names are the frames it covers.
+addon.MINIMAP_VISIBILITY_BUTTONS = {
+    { key = "top_bar", label = "Top Bar", names = { "MinimapBorderTop" } },
+    { key = "clock", label = "Clock", names = { "TimeManagerClockButton" } },
+    { key = "calendar", label = "Calendar", names = { "GameTimeFrame" } },
+    { key = "tracking", label = "Tracking", names = { "MiniMapTracking" } },
+    { key = "mail", label = "New Mail Indicator", names = { "MiniMapMailFrame" } },
+    { key = "difficulty", label = "Dungeon Difficulty", names = { "MiniMapInstanceDifficulty" } },
+    { key = "lfg", label = "Dungeon Finder Eye", names = { "MiniMapLFGFrame" } },
+    { key = "battleground", label = "Battleground Queue", names = { "MiniMapBattlefieldFrame" } },
+    { key = "zoom", label = "Zoom Buttons", names = { "MinimapZoomIn", "MinimapZoomOut" } },
+    { key = "settings", label = "Collector & Settings Button", names = { "DragonUI_MinimapSettingsButton" } },
+}
 
 -- Database accessors
 function addon:GetConfigValue(section, key, subkey)

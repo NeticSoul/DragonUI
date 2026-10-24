@@ -1637,37 +1637,7 @@ local function CreateMinimapBorderFrame(width, height)
     return minimapBorderFrame
 end
 
--- Helper: is addon button fade currently enabled?
-local function IsFadeEnabled()
-    return addon.db and addon.db.profile and addon.db.profile.minimap
-        and addon.db.profile.minimap.addon_button_fade or false
-end
-
--- Collector buttons should stay fully visible inside the collector box.
-local function IsInsideCollector(button)
-    local collector = MinimapModule.frames and MinimapModule.frames.iconCollector
-    return collector and button and button:GetParent() == collector
-end
-
--- Blizzard's fade helpers share one global table of fading frames; securecall keeps it untainted.
-local function FadeAddonButton(frame, helperName, targetAlpha)
-    if IsInsideCollector(frame) then
-        frame:SetAlpha(1)
-    elseif IsFadeEnabled() then
-        securecall(helperName, frame, 0.2, frame:GetAlpha(), targetAlpha)
-    end
-end
-
-local function fadein(frame)
-    FadeAddonButton(frame, "UIFrameFadeIn", 1)
-end
-
-local function fadeout(frame)
-    FadeAddonButton(frame, "UIFrameFadeOut", 0.2)
-end
-
 local ADDON_ICON_RING = "Interface\\AddOns\\DragonUI\\Textures\\Minimap\\border_buttons.tga"
-local ADDON_ICON_FADE_SCRIPTS = { OnEnter = fadein, OnLeave = fadeout }
 
 -- Returns the size factor the current style draws button rings at; sizes the ring too when given one.
 local function DressButtonRing(ring, side)
@@ -1767,13 +1737,6 @@ local function BuildAddonIconLayout(button)
     ring:SetWidth(23)
     ring:SetHeight(23)
     button.circle = ring
-
-    if not button.DragonUI_FadeHooked then
-        button.DragonUI_FadeHooked = true
-        for scriptName, handler in pairs(ADDON_ICON_FADE_SCRIPTS) do
-            button:HookScript(scriptName, handler)
-        end
-    end
 end
 
 local function ShowAddonIconLayout(button)
@@ -1813,8 +1776,6 @@ local function ShowAddonIconLayout(button)
         DressButtonRing(ring, stateful and 26 or 23)
         ring:Show()
     end
-
-    button:SetAlpha(IsFadeEnabled() and 0.2 or 1)
 end
 
 local function ApplyAddonIconSkin(button)
@@ -2046,9 +2007,10 @@ local function GetConfiguredMinimapCollector()
         IsQuestMinimapPin = IsQuestMinimapPin,
         ApplyAddonIconSkin = ApplyAddonIconSkin,
         UnskinAddonButton = UnskinAddonButton,
-        IsFadeEnabled = IsFadeEnabled,
-        fadein = fadein,
-        fadeout = fadeout,
+        -- Set to Never in the minimap buttons list: kept out of the collector. Defined further down.
+        IsVisibilityNever = function(button)
+            return MinimapModule.IsVisibilityNever and MinimapModule.IsVisibilityNever(button) or false
+        end,
         IsForeverActive = IsForeverActive,
         GetForeverOrbitRadius = GetForeverOrbitRadius,
         IsDragonUISquareFrame = IsDragonUISquareFrame,
@@ -2111,22 +2073,6 @@ local function ApplySkinsToAllMinimapButtons()
     end
 end
 
--- Update fade alpha on all addon buttons (works with or without skin)
-local function UpdateAddonButtonFade()
-    local fadeEnabled = IsFadeEnabled()
-    local buttons = GetAllMinimapButtons()
-    for _, child in ipairs(buttons) do
-        if not IsQuestMinimapPin(child) then
-            -- Hook fade scripts once if not already hooked
-            if not child.DragonUI_FadeHooked then
-                child.DragonUI_FadeHooked = true
-                child:HookScript('OnEnter', fadein)
-                child:HookScript('OnLeave', fadeout)
-            end
-            child:SetAlpha(fadeEnabled and 0.2 or 1)
-        end
-    end
-end
 
 -- Expose for options to trigger
 MinimapModule.ApplySkinsToAllMinimapButtons = ApplySkinsToAllMinimapButtons
@@ -2180,7 +2126,7 @@ minimapButtonSkinFrame:SetScript("OnEvent", function(self, event, addonName)
             ApplySkinsToAllMinimapButtons()
         end
         UpdateCalendarDate()
-        RefreshIntegratedMinimapCollector()
+        MinimapModule.ApplyButtonVisibility() -- rescans the collector too
         local elapsed = 0
         local checkInterval = 0
         self:SetScript("OnUpdate", function(self, dt)
@@ -2196,7 +2142,7 @@ minimapButtonSkinFrame:SetScript("OnEvent", function(self, event, addonName)
                     ApplySkinsToAllMinimapButtons()
                 end
                 UpdateCalendarDate()
-                RefreshIntegratedMinimapCollector()
+                MinimapModule.ApplyButtonVisibility() -- rescans the collector too
             end
         end)
         return
@@ -2219,7 +2165,7 @@ minimapButtonSkinFrame:SetScript("OnEvent", function(self, event, addonName)
             if skinEnabled then
                 ApplySkinsToAllMinimapButtons()
             end
-            RefreshIntegratedMinimapCollector()
+            MinimapModule.ApplyButtonVisibility() -- rescans the collector too
             self:SetScript("OnUpdate", nil)
         end
     end)
@@ -2743,6 +2689,8 @@ function MinimapModule:RestoreMinimapSystem()
         self.ApplyElementVisibility(MinimapZoneTextButton, "always")
         MinimapZoneTextButton:SetBackdrop(nil)
     end
+    -- Minimap buttons: back from Never and On Hover.
+    self.ApplyButtonVisibility(true)
 
     SetCollectorSyncEnabled(false)
 
@@ -3281,17 +3229,19 @@ end
 local HoverOnly = {
     FADE_TIME = 0.2,
     POLL_INTERVAL = 0.1,
-    frames = {},
+    frames = {}, -- frame -> the alpha it fades in to
 }
 
 -- Measured by hand: IsMouseOver tested the wrong area for Minimap, which runs at its own SetScale,
--- so only its top-right corner counted. GetLeft and friends come back in the frame's scaled units.
+-- so only its top-right corner counted. GetLeft and friends come back in the frame's scaled units;
+-- a texture (the top bar) has its parent's.
 function HoverOnly.IsCursorOver(frame)
     if not (frame and frame:IsVisible()) then return false end
     local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
     if not (left and right and top and bottom) then return false end
     local x, y = GetCursorPosition()
-    local scale = frame:GetEffectiveScale()
+    local scaled = frame.GetEffectiveScale and frame or frame:GetParent()
+    local scale = scaled:GetEffectiveScale()
     x, y = x / scale, y / scale
     return x >= left and x <= right and y >= bottom and y <= top
 end
@@ -3300,37 +3250,37 @@ function HoverOnly.IsHovered(frame)
     return HoverOnly.IsCursorOver(Minimap) or HoverOnly.IsCursorOver(frame)
 end
 
--- Blizzard's fade helpers share one global table of fading frames; securecall keeps it untainted.
-function HoverOnly.Fade(frame, shown)
-    if frame.DragonUI_HoverShown == shown then return end
-    frame.DragonUI_HoverShown = shown
-    if shown then
-        securecall("UIFrameFadeIn", frame, HoverOnly.FADE_TIME, frame:GetAlpha(), 1)
-    else
-        securecall("UIFrameFadeOut", frame, HoverOnly.FADE_TIME, frame:GetAlpha(), 0)
-    end
-end
-
+-- Our own alpha steps, not UIFrameFadeIn: that calls Show(), which would bring up the mail or
+-- queue icons while Blizzard has them hidden. Stepping toward the target every frame also pulls
+-- back an alpha a skin pass or an addon reset.
 function HoverOnly.OnUpdate(self, elapsed)
     self.elapsed = self.elapsed + elapsed
-    if self.elapsed < HoverOnly.POLL_INTERVAL then return end
-    self.elapsed = 0
-    for frame in pairs(HoverOnly.frames) do
-        HoverOnly.Fade(frame, HoverOnly.IsHovered(frame))
+    local poll = self.elapsed >= HoverOnly.POLL_INTERVAL
+    if poll then self.elapsed = 0 end
+    local step = elapsed / HoverOnly.FADE_TIME
+    for frame, fullAlpha in pairs(HoverOnly.frames) do
+        if poll then frame.DragonUI_HoverShown = HoverOnly.IsHovered(frame) end
+        local target = frame.DragonUI_HoverShown and fullAlpha or 0
+        local alpha = frame:GetAlpha()
+        if alpha < target then
+            frame:SetAlpha(math.min(target, alpha + step))
+        elseif alpha > target then
+            frame:SetAlpha(math.max(target, alpha - step))
+        end
     end
 end
 
--- Alpha only, so a hidden element still answers IsMouseOver and fades back in under the cursor.
-function HoverOnly.Set(frame, hoverOnly)
-    if hoverOnly and not HoverOnly.frames[frame] then
-        HoverOnly.frames[frame] = true
-        frame.DragonUI_HoverShown = nil
-        HoverOnly.Fade(frame, HoverOnly.IsHovered(frame))
-    elseif not hoverOnly and HoverOnly.frames[frame] then
+-- Alpha only, so a hidden element still counts as hovered and fades back in under the cursor.
+-- fullAlpha (default 1) is what it fades in to, and what it keeps once hover-only ends.
+function HoverOnly.Set(frame, hoverOnly, fullAlpha)
+    fullAlpha = fullAlpha or 1
+    if hoverOnly then
+        HoverOnly.frames[frame] = fullAlpha
+        frame.DragonUI_HoverShown = HoverOnly.IsHovered(frame)
+    elseif HoverOnly.frames[frame] then
         HoverOnly.frames[frame] = nil
         frame.DragonUI_HoverShown = nil
-        securecall("UIFrameFadeRemoveFrame", frame)
-        frame:SetAlpha(1)
+        frame:SetAlpha(fullAlpha)
     end
 
     if not HoverOnly.pollFrame then
@@ -3558,6 +3508,164 @@ function MinimapModule:ApplyFarmMode()
     ParkFarmModeFrames()
 end
 
+-- ============================================================================
+-- MINIMAP BUTTON VISIBILITY
+-- Always / On Hover / Never per button (addon.MINIMAP_VISIBILITY_BUTTONS, plus each addon button).
+-- Never parks the button on a hidden holder, as farm mode does, so Blizzard can keep showing and
+-- hiding the mail, queue and difficulty icons underneath; switching back shows whatever is current.
+-- ============================================================================
+
+local ButtonVisibility = {
+    parents = {}, -- parked region -> its parent before parking
+    layers = {},
+    addonButtons = {}, -- every addon button seen, so parked ones stay in the list
+}
+
+function ButtonVisibility.GetMode(key)
+    local settings = GetMinimapSettings()
+    local modes = settings and settings.button_visibility
+    return modes and modes[key] or "always"
+end
+
+function ButtonVisibility.GetAddonMode(name)
+    local settings = GetMinimapSettings()
+    if not settings then return "always" end
+    local own = settings.addon_button_visibility and settings.addon_button_visibility[name]
+    return own or settings.addon_button_default or "always"
+end
+
+function ButtonVisibility.IsActive()
+    return IsDragonUIMinimapControlling() and not IsHybridMinimapModeActive()
+end
+
+function ButtonVisibility.GetHolder()
+    if not ButtonVisibility.holder then
+        ButtonVisibility.holder = CreateFrame("Frame", nil, UIParent)
+        ButtonVisibility.holder:Hide()
+    end
+    return ButtonVisibility.holder
+end
+
+-- Farm mode parks some of the same frames: whichever parked last hands the saved parent along.
+function ButtonVisibility.Park(region)
+    if ButtonVisibility.parents[region] then return end
+    local farmParents = MinimapModule.farmMode.parents
+    local holder = ButtonVisibility.GetHolder()
+    if farmParents[region] then
+        ButtonVisibility.parents[region] = farmParents[region]
+        farmParents[region] = holder
+        return
+    end
+    ButtonVisibility.parents[region] = region:GetParent()
+    SaveFrameLayers(region, ButtonVisibility.layers)
+    region:SetParent(holder)
+end
+
+function ButtonVisibility.Unpark(region)
+    local parent = ButtonVisibility.parents[region]
+    if not parent then return end
+    ButtonVisibility.parents[region] = nil
+    local farmParents = MinimapModule.farmMode.parents
+    if farmParents[region] then
+        farmParents[region] = parent -- farm mode gives it back when it ends
+        return
+    end
+    region:SetParent(parent)
+    -- SetParent resets strata and level (the gear sits at Minimap + 20).
+    RestoreFrameLayers(region, ButtonVisibility.layers)
+end
+
+-- Addon buttons on the map, inside the collector, and parked by Never; named ones only, as the
+-- setting is saved by name.
+function ButtonVisibility.GetAddonButtons()
+    local list, seen = {}, {}
+    local function add(button)
+        if button and not seen[button] and button:GetName() and not IsQuestMinimapPin(button) then
+            seen[button] = true
+            ButtonVisibility.addonButtons[button] = true
+            list[#list + 1] = button
+        end
+    end
+    for _, button in ipairs(GetAllMinimapButtons()) do add(button) end
+    local collector = MinimapModule.frames and MinimapModule.frames.iconCollector
+    if collector then
+        for _, child in ipairs({ collector:GetChildren() }) do
+            if child.DragonUI_CollectorManaged then add(child) end
+        end
+    end
+    for button in pairs(ButtonVisibility.addonButtons) do add(button) end
+    return list
+end
+
+-- "LibDBIcon10_Bagnon" -> "Bagnon", "AtlasLootMinimapButton" -> "AtlasLoot".
+function ButtonVisibility.GetAddonLabel(name)
+    local label = name:gsub("^LibDBIcon10_", "")
+    label = label:gsub("[_%s]*[Mm]ini[Mm]ap[_%s]*[Bb]utton[_%s]*$", "")
+    label = label:gsub("[_%s]*[Bb]utton$", ""):gsub("_", " ")
+    return label ~= "" and label or name
+end
+
+-- Sorted { name, label } pairs for the settings lists.
+function MinimapModule.GetAddonButtonList()
+    local entries = {}
+    for _, button in ipairs(ButtonVisibility.GetAddonButtons()) do
+        local name = button:GetName()
+        entries[#entries + 1] = { name = name, label = ButtonVisibility.GetAddonLabel(name) }
+    end
+    table.sort(entries, function(a, b) return a.label:lower() < b.label:lower() end)
+    return entries
+end
+
+-- The collector asks this before taking a button in.
+function MinimapModule.IsVisibilityNever(button)
+    local name = button and button.GetName and button:GetName()
+    return name ~= nil and ButtonVisibility.IsActive() and ButtonVisibility.GetAddonMode(name) == "never"
+end
+
+-- forceOff (module restore) unparks everything and drops the hover fades.
+function MinimapModule.ApplyButtonVisibility(forceOff)
+    local settings = GetMinimapSettings()
+    if not settings then return end
+
+    -- region -> { mode, full alpha }
+    local wanted = {}
+    if not forceOff and ButtonVisibility.IsActive() then
+        for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS) do
+            local mode = ButtonVisibility.GetMode(entry.key)
+            -- The top bar fades in to Border Alpha, not all the way.
+            local fullAlpha = entry.key == "top_bar" and (settings.border_alpha or 1) or 1
+            for _, name in ipairs(entry.names) do
+                if _G[name] then wanted[_G[name]] = { mode, fullAlpha } end
+            end
+        end
+        local collector = MinimapModule.frames and MinimapModule.frames.iconCollector
+        for _, button in ipairs(ButtonVisibility.GetAddonButtons()) do
+            local mode = ButtonVisibility.GetAddonMode(button:GetName())
+            -- Inside the collector a button only shows when the collector is opened.
+            if mode == "hover" and collector and button:GetParent() == collector then mode = "always" end
+            wanted[button] = { mode, 1 }
+        end
+    end
+
+    -- Back from Never first, so the collector can take returning buttons in; it drops new Never
+    -- ones back on the map, and they get parked from there.
+    for region in pairs(ButtonVisibility.parents) do
+        if not (wanted[region] and wanted[region][1] == "never") then
+            ButtonVisibility.Unpark(region)
+        end
+    end
+    RefreshIntegratedMinimapCollector()
+
+    for region, want in pairs(wanted) do
+        HoverOnly.Set(region, want[1] == "hover", want[2])
+        if want[1] == "never" then ButtonVisibility.Park(region) end
+    end
+    -- Off DragonUI (hybrid mode, module restore): drop the hover fade too. Zone text has its own.
+    for region in pairs(HoverOnly.frames) do
+        if not wanted[region] and region ~= MinimapZoneTextButton then HoverOnly.Set(region, false) end
+    end
+end
+
 -- Apply all minimap settings from the database
 function MinimapModule:ApplyAllSettings()
     if not addon.db or not addon.db.profile or not addon.db.profile.minimap then
@@ -3580,34 +3688,29 @@ function MinimapModule:ApplyAllSettings()
             MinimapBorderTop:SetAlpha(settings.border_alpha)
         end
 
-        --  APPLY CALENDAR VISIBILITY
-        if settings.calendar ~= nil then
-            if GameTimeFrame then
-                if settings.calendar then
-                    GameTimeFrame:Show()
-                else
-                    GameTimeFrame:Hide()
-                end
+        --  APPLY CALENDAR VISIBILITY (On Hover and Never: MinimapModule.ApplyButtonVisibility)
+        if GameTimeFrame then
+            if ButtonVisibility.GetMode("calendar") ~= "never" then
+                GameTimeFrame:Show()
+            else
+                GameTimeFrame:Hide()
             end
         end
 
         --  APPLY CLOCK VISIBILITY AND ADJUST ZONE TEXT
-        if settings.clock ~= nil then
-            SetShowClockCVar(settings.clock)
-            ApplyClockAndZoneLayout(settings.clock)
-        end
+        local showClock = ButtonVisibility.GetMode("clock") ~= "never"
+        SetShowClockCVar(showClock)
+        ApplyClockAndZoneLayout(showClock)
     end -- not isHybridMode (border, calendar, clock, zone text)
 
     --  APPLY ZOOM BUTTONS VISIBILITY (applies in all modes)
-    if settings.zoom_buttons ~= nil then
-        if MinimapZoomIn and MinimapZoomOut then
-            if settings.zoom_buttons then
-                MinimapZoomIn:Show()
-                MinimapZoomOut:Show()
-            else
-                MinimapZoomIn:Hide()
-                MinimapZoomOut:Hide()
-            end
+    if MinimapZoomIn and MinimapZoomOut then
+        if ButtonVisibility.GetMode("zoom") ~= "never" then
+            MinimapZoomIn:Show()
+            MinimapZoomOut:Show()
+        else
+            MinimapZoomIn:Hide()
+            MinimapZoomOut:Hide()
         end
     end
 
@@ -3642,6 +3745,7 @@ function MinimapModule:ApplyAllSettings()
     end
 
     UpdateCornerIconsPosition()
+    MinimapModule.ApplyButtonVisibility()
 end
 -- Editor mode interface
 function MinimapModule:LoadDefaultSettings()
@@ -3697,9 +3801,9 @@ function addon:RefreshMinimap()
             UnskinAllMinimapButtons()
         end
 
-        -- Instant toggle for addon button fade
-        UpdateAddonButtonFade()
         UpdateDragonUISettingsButton()
+        -- Always / On Hover / Never per button; after the gear and collector exist.
+        MinimapModule.ApplyButtonVisibility()
 
         if addon.MinimapDecorations and addon.MinimapDecorations.Refresh then
             addon.MinimapDecorations:Refresh()
