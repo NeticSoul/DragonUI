@@ -88,19 +88,23 @@ end
 -- Actual implementation of noop changes (called when not in combat)
 local function ApplyNoopChangesImpl()
     if InCombatLockdown() then return end
-    for _, bar in pairs({ MainMenuBar, PetActionBarFrame, ShapeshiftBarFrame, BonusActionBarFrame }) do
-        bar:EnableMouse(false)
-    end
-    local bonusBar = BonusActionBarFrame
-    if bonusBar then
-        bonusBar:SetScale(0.001)
-    end
-    -- PossessBar_OnEvent re-Shows the event-less bonus bar on page change; keybinds then land on it.
-    if PossessBarFrame then
-        PossessBarFrame:UnregisterEvent("ACTIONBAR_PAGE_CHANGED")
-        RehomePossessBar()
-        if IsLoggedIn() then
-            SkinPossessButtons()
+    -- Bartender4 already hides the Blizzard bars and runs its own; only the XP bar clean-up below is ours.
+    local bartender = addon.compatibility and addon.compatibility.bartenderActive
+    if not bartender then
+        for _, bar in pairs({ MainMenuBar, PetActionBarFrame, ShapeshiftBarFrame, BonusActionBarFrame }) do
+            bar:EnableMouse(false)
+        end
+        local bonusBar = BonusActionBarFrame
+        if bonusBar then
+            bonusBar:SetScale(0.001)
+        end
+        -- PossessBar_OnEvent re-Shows the event-less bonus bar on page change; keybinds then land on it.
+        if PossessBarFrame then
+            PossessBarFrame:UnregisterEvent("ACTIONBAR_PAGE_CHANGED")
+            RehomePossessBar()
+            if IsLoggedIn() then
+                SkinPossessButtons()
+            end
         end
     end
     
@@ -123,39 +127,41 @@ local function ApplyNoopChangesImpl()
         end
     end
 
-    for _, partName in ipairs(RETIRED_BAR_PARTS) do
-        local part = _G[partName]
-        if part then
-            if part:GetObjectType() == "Frame" then
-                part:UnregisterAllEvents()
-                -- Its OnEvent is what switches on the Currency tab once a token is earned.
-                if partName == "MainMenuBarArtFrame" then
-                    part:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+    if not bartender then
+        for _, partName in ipairs(RETIRED_BAR_PARTS) do
+            local part = _G[partName]
+            if part then
+                if part:GetObjectType() == "Frame" then
+                    part:UnregisterAllEvents()
+                    -- Its OnEvent is what switches on the Currency tab once a token is earned.
+                    if partName == "MainMenuBarArtFrame" then
+                        part:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+                    end
                 end
+                if partName ~= "MainMenuBar" then
+                    part:Hide()
+                end
+                part:SetAlpha(0)
             end
-            if partName ~= "MainMenuBar" then
-                part:Hide()
-            end
-            part:SetAlpha(0)
         end
-    end
 
-    -- Its own events refresh the health/power bars DragonUI adopts, and MainMenuBar_ToVehicleArt re-Shows it.
-    local vehicleModuleEnabled = addon.db and addon.db.profile
-        and addon.db.profile.modules and addon.db.profile.modules.vehicle
-        and addon.db.profile.modules.vehicle.enabled
-    if vehicleModuleEnabled then
-        VehicleMenuBar:UnregisterAllEvents()
-        VehicleMenuBar:Hide()
-        VehicleMenuBar:SetAlpha(0)
-        VehicleMenuBar:EnableMouse(false)
-    end
+        -- Its own events refresh the health/power bars DragonUI adopts, and MainMenuBar_ToVehicleArt re-Shows it.
+        local vehicleModuleEnabled = addon.db and addon.db.profile
+            and addon.db.profile.modules and addon.db.profile.modules.vehicle
+            and addon.db.profile.modules.vehicle.enabled
+        if vehicleModuleEnabled then
+            VehicleMenuBar:UnregisterAllEvents()
+            VehicleMenuBar:Hide()
+            VehicleMenuBar:SetAlpha(0)
+            VehicleMenuBar:EnableMouse(false)
+        end
     
-    -- Left in the table, UIParent_ManageFramePositions would drag these bars back to Blizzard's layout.
-    local managed = UIPARENT_MANAGED_FRAME_POSITIONS
-    if managed then
-        for index = 1, #UNMANAGED_POSITION_KEYS do
-            managed[UNMANAGED_POSITION_KEYS[index]] = nil
+        -- Left in the table, UIParent_ManageFramePositions would drag these bars back to Blizzard's layout.
+        local managed = UIPARENT_MANAGED_FRAME_POSITIONS
+        if managed then
+            for index = 1, #UNMANAGED_POSITION_KEYS do
+                managed[UNMANAGED_POSITION_KEYS[index]] = nil
+            end
         end
     end
 

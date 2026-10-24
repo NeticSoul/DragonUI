@@ -298,6 +298,11 @@ local function IsModuleEnabled()
     return addon:IsModuleEnabled("mainbars")
 end
 
+-- Fixed at load: switching it later takes a reload, and the Blizzard bars then belong to Bartender4.
+local function BartenderHasBars()
+    return addon.compatibility and addon.compatibility.bartenderActive or false
+end
+
 -- Clause order is priority: vehicle/possess (11) beats manual paging, which beats forms.
 local PAGE_CLAUSES_SHARED = "[bonusbar:5] 11; [bar:2] 2; [bar:3] 3; [bar:4] 4; [bar:5] 5; [bar:6] 6;"
 
@@ -343,7 +348,7 @@ end
 
 -- Update pet bar visibility and positioning
 function addon.UpdatePetBarVisibility()
-    if InCombatLockdown() then
+    if InCombatLockdown() or BartenderHasBars() then
         return
     end
 
@@ -829,7 +834,7 @@ local function StabilizeSecondaryBarLayering()
 end
 
 function addon.PositionActionBars()
-    if InCombatLockdown() then
+    if InCombatLockdown() or BartenderHasBars() then
         return
     end
 
@@ -1918,6 +1923,12 @@ function MainMenuBarMixin:initialize()
     end
 end
 
+local function CreateXpRepFrames(width)
+    local barH = GetXpBarHeight()
+    addon.ActionBarFrames.xpbar = addon.CreateUIFrame(width, barH, "XPBar")
+    addon.ActionBarFrames.repbar = addon.CreateUIFrame(width, barH, "RepBar")
+end
+
 local function CreateActionBarFrames()
     local db = addon.db and addon.db.profile and addon.db.profile.mainbars
 
@@ -1949,11 +1960,7 @@ local function CreateActionBarFrames()
     addon.ActionBarFrames.bottombarright = addon.CreateUIFrame(brW * brScale, brH * brScale, "BottomBarRight")
 
     -- Separate XP and Rep bar editor frames (allows independent movement)
-    local xpRepWidth = addon.ActionBarFrames.mainbar:GetWidth()
-    local cfg = GetXpRepConfig() or {}
-    local barH = GetXpBarHeight()
-    addon.ActionBarFrames.xpbar = addon.CreateUIFrame(xpRepWidth, barH, "XPBar")
-    addon.ActionBarFrames.repbar = addon.CreateUIFrame(xpRepWidth, barH, "RepBar")
+    CreateXpRepFrames(addon.ActionBarFrames.mainbar:GetWidth())
 end
 
 local function PositionActionBarsToContainers_Initial()
@@ -2235,35 +2242,7 @@ local function EnsureGryphonsOnTop()
     end
 end
 
-local function ApplyMainbarsSystem()
-    if MainbarsModule.applied then
-        return
-    end
-
-    -- CRITICAL: Disable MainMenuBarMaxLevelBar IMMEDIATELY
-    if MainMenuBarMaxLevelBar then
-        MainMenuBarMaxLevelBar:Hide()
-        MainMenuBarMaxLevelBar:EnableMouse(false)
-        MainMenuBarMaxLevelBar:SetAlpha(0)
-        MainMenuBarMaxLevelBar:SetFrameLevel(0)
-    end
-
-    MainMenuBarMixin:initialize()
-    addon.MainBar = mainBarFrame
-    SetupMainBarPageDriver(mainBarFrame)
-    EnsureBonusButtonsClickThrough()
-
-    CreateActionBarFrames()
-    ApplyActionBarPositions()
-    RegisterActionBarFrames()
-
-    -- Kept invisible until the first PLAYER_ENTERING_WORLD positions them, or they flash on reload.
-    local barsToStabilize = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
-    for _, bar in ipairs(barsToStabilize) do
-        if bar then bar:SetAlpha(0) end
-    end
-
-    -- Set up XP/Rep bar system
+local function SetupXpRepBars()
     ConnectBarsToEditor()
 
     -- Force Blizzard bar updates so values/textures are properly initialized
@@ -2399,6 +2378,38 @@ local function ApplyMainbarsSystem()
         end
         UpdateBarPositions()
     end)
+end
+
+local function ApplyMainbarsSystem()
+    if MainbarsModule.applied then
+        return
+    end
+
+    -- CRITICAL: Disable MainMenuBarMaxLevelBar IMMEDIATELY
+    if MainMenuBarMaxLevelBar then
+        MainMenuBarMaxLevelBar:Hide()
+        MainMenuBarMaxLevelBar:EnableMouse(false)
+        MainMenuBarMaxLevelBar:SetAlpha(0)
+        MainMenuBarMaxLevelBar:SetFrameLevel(0)
+    end
+
+    MainMenuBarMixin:initialize()
+    addon.MainBar = mainBarFrame
+    SetupMainBarPageDriver(mainBarFrame)
+    EnsureBonusButtonsClickThrough()
+
+    CreateActionBarFrames()
+    ApplyActionBarPositions()
+    RegisterActionBarFrames()
+
+    -- Kept invisible until the first PLAYER_ENTERING_WORLD positions them, or they flash on reload.
+    local barsToStabilize = {MultiBarBottomLeft, MultiBarBottomRight, MultiBarRight, MultiBarLeft}
+    for _, bar in ipairs(barsToStabilize) do
+        if bar then bar:SetAlpha(0) end
+    end
+
+    -- Set up XP/Rep bar system
+    SetupXpRepBars()
 
     -- Position action bars immediately
     PositionActionBarsToContainers_Initial()
@@ -2424,35 +2435,7 @@ local function ApplyMainbarsSystem()
     MainbarsModule.applied = true
 end
 
-local function InitializeMainbars()
-    if not IsModuleEnabled() or MainbarsModule.initialized then
-        return
-    end
-
-    addon.MainMenuBarMixin = MainMenuBarMixin
-    mainBarFrame = CreateFrame('Frame', 'DragonUI_MainActionBar', UIParent, 'DragonUIMainBarTemplate');
-    addon.MainBar = mainBarFrame
-
-    mainBarArt = CreateFrame('Frame', 'DragonUI_MainActionBarArt', mainBarFrame);
-
-    -- Mainbars owns the page driver so bonus/stance paging survives with the vehicle module disabled.
-    addon.SetupMainBarPageDriver = SetupMainBarPageDriver
-
-    mainBarFrame:SetScale(config.mainbars.scale_actionbar)
-    mainBarArt:EnableMouse(false)
-    mainBarArt:SetAllPoints(mainBarFrame)
-    -- HIGH would draw the gryphons over the windows the panel manager raises to the top of MEDIUM.
-    mainBarArt:SetFrameStrata("MEDIUM")
-    mainBarArt:SetFrameLevel(mainBarFrame:GetFrameLevel() + 4)
-
-    UpdateGryphonStyle = addon.UpdateGryphonStyle
-
-    local function OnActionPageEvent()
-        MainMenuBarPageNumber:SetText(GetActionBarPage())
-        EnsureBonusButtonsClickThrough()
-    end
-    event:Subscribe(OnActionPageEvent, "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR", "UPDATE_SHAPESHIFT_FORM")
-
+local function ExportBarApi()
     -- Also accepts a Y saved with the dual-bar offset baked in, so an editor save doesn't break detection.
     IsWidgetAtDefaultPosition = function(widgetName)
         local known = defaultBottomPositions[widgetName]
@@ -2479,9 +2462,9 @@ local function InitializeMainbars()
     addon.UpdateExhaustionTick = RefreshXpRepBars
     addon.ApplyActionBarPositions = ApplyActionBarPositions
     addon.PositionActionBarsToContainers = PositionActionBarsToContainers
+end
 
-    ApplyMainbarsSystem()
-
+local function StartXpRepEvents()
     local blizzardBarArtRemoved = false
     xpRepEventFrame = CreateFrame("Frame")
     xpRepEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -2552,6 +2535,64 @@ local function InitializeMainbars()
             NotifyDualBarOffsetChanged()
         end
     end)
+end
+
+-- Bartender4 runs the action bars: only the XP and reputation bars stay DragonUI's.
+local function InitializeXpRepOnly()
+    if not IsModuleEnabled() or MainbarsModule.initialized then
+        return
+    end
+
+    ExportBarApi()
+    DisableMaxLevelBar()
+    if MainMenuBarExpText then MainMenuBarExpText:Hide() end
+    if ReputationWatchBarText then ReputationWatchBarText:Hide() end
+
+    local cfg = GetXpRepConfig() or {}
+    CreateXpRepFrames(cfg.bar_width or 466)
+    ApplyActionBarPositions()
+    RegisterActionBarFrames()
+    SetupXpRepBars()
+    StartXpRepEvents()
+
+    MainbarsModule.initialized = true
+    MainbarsModule.applied = true
+end
+
+local function InitializeMainbars()
+    if not IsModuleEnabled() or MainbarsModule.initialized then
+        return
+    end
+
+    addon.MainMenuBarMixin = MainMenuBarMixin
+    mainBarFrame = CreateFrame('Frame', 'DragonUI_MainActionBar', UIParent, 'DragonUIMainBarTemplate');
+    addon.MainBar = mainBarFrame
+
+    mainBarArt = CreateFrame('Frame', 'DragonUI_MainActionBarArt', mainBarFrame);
+
+    -- Mainbars owns the page driver so bonus/stance paging survives with the vehicle module disabled.
+    addon.SetupMainBarPageDriver = SetupMainBarPageDriver
+
+    mainBarFrame:SetScale(config.mainbars.scale_actionbar)
+    mainBarArt:EnableMouse(false)
+    mainBarArt:SetAllPoints(mainBarFrame)
+    -- HIGH would draw the gryphons over the windows the panel manager raises to the top of MEDIUM.
+    mainBarArt:SetFrameStrata("MEDIUM")
+    mainBarArt:SetFrameLevel(mainBarFrame:GetFrameLevel() + 4)
+
+    UpdateGryphonStyle = addon.UpdateGryphonStyle
+
+    local function OnActionPageEvent()
+        MainMenuBarPageNumber:SetText(GetActionBarPage())
+        EnsureBonusButtonsClickThrough()
+    end
+    event:Subscribe(OnActionPageEvent, "ACTIONBAR_PAGE_CHANGED", "UPDATE_BONUS_ACTIONBAR", "UPDATE_SHAPESHIFT_FORM")
+
+    ExportBarApi()
+
+    ApplyMainbarsSystem()
+
+    StartXpRepEvents()
 
     mainbarsEventFrame = CreateFrame("Frame")
     mainbarsEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -2793,7 +2834,7 @@ end
 
 -- Push DragonUI profile → Blizzard (persistent via SetActionBarToggles)
 function addon.SyncBarCVarsFromProfile()
-    if syncingBars then return end
+    if syncingBars or BartenderHasBars() then return end
     syncingBars = true
     local config = addon.db and addon.db.profile and addon.db.profile.actionbars
     if config then
@@ -3235,7 +3276,7 @@ end
 
 -- Refresh all bars (called from options or after profile change)
 function addon.RefreshActionBarVisibility()
-    if InCombatLockdown() then return end
+    if InCombatLockdown() or BartenderHasBars() then return end
     -- Skip during vehicle — vehicle module handles bar visibility
     if UnitHasVehicleUI and UnitHasVehicleUI("player") then return end
 
@@ -3292,21 +3333,33 @@ initFrame:RegisterEvent("PLAYER_LOGIN")
 initFrame:SetScript("OnEvent", function(self, event, addonName)
     if event == "ADDON_LOADED" and addonName == "DragonUI" then
         -- Only initialize if enabled
-        InitializeMainbars()
+        if BartenderHasBars() then
+            InitializeXpRepOnly()
+        else
+            InitializeMainbars()
+        end
         self:UnregisterEvent("ADDON_LOADED")
     elseif event == "PLAYER_LOGIN" then
         -- Backup check
-        InitializeMainbars()
-        -- Initialize visibility system after all bars are created
-        InitializeActionBarVisibility()
-        InitializeMigratedActionBarVisibility()
+        if BartenderHasBars() then
+            InitializeXpRepOnly()
+            -- Registers the hover/combat fade; the registry's refresh ran before the export.
+            if addon.RefreshXpRepBars then
+                addon.RefreshXpRepBars()
+            end
+        else
+            InitializeMainbars()
+            -- Initialize visibility system after all bars are created
+            InitializeActionBarVisibility()
+            InitializeMigratedActionBarVisibility()
+        end
         self:UnregisterEvent("PLAYER_LOGIN")
     end
 end)
 
 -- Global UpdateGryphonStyle function (accessible from RefreshMainbarsSystem)
 function addon.UpdateGryphonStyle()
-    if not MainMenuBarLeftEndCap or not MainMenuBarRightEndCap then
+    if not MainMenuBarLeftEndCap or not MainMenuBarRightEndCap or BartenderHasBars() then
         return
     end
 
@@ -3385,7 +3438,7 @@ end
 
 -- Apply all bar button counts from database
 function addon.ApplyAllBarButtonCounts()
-    if InCombatLockdown() then return end
+    if InCombatLockdown() or BartenderHasBars() then return end
 
     local db = addon.db and addon.db.profile and addon.db.profile.mainbars
     if not db then return end
@@ -3470,6 +3523,17 @@ end
 function addon.RefreshMainbarsSystem()
     if not IsModuleEnabled() then
         addon:ShouldDeferModuleDisable("mainbars", MainbarsModule)
+        return
+    end
+
+    -- The registry can refresh before InitializeXpRepOnly has exported these.
+    if BartenderHasBars() then
+        if addon.ApplyActionBarPositions then
+            addon.ApplyActionBarPositions()
+        end
+        if addon.RefreshXpRepBars then
+            addon.RefreshXpRepBars()
+        end
         return
     end
 
