@@ -2978,6 +2978,47 @@ local function SyncMinimapVisibility()
 end
 MinimapModule.SyncMinimapVisibility = SyncMinimapVisibility
 
+-- Clamps the editor mover to what the player sees (the map and its top border) instead of the
+-- 230x230 box, which reaches well past the map and kept it from getting near the screen edges.
+-- Always on while editing: the client's minimap renderer breaks once the map is partly off screen.
+function MinimapModule:ApplyEditorClamp()
+    local mover = self.minimapFrame
+    if not mover then return end
+    if not self.editorActive then
+        mover:SetClampRectInsets(0, 0, 0, 0)
+        mover:SetClampedToScreen(false)
+        return
+    end
+
+    local moverLeft, moverRight = mover:GetLeft(), mover:GetRight()
+    local moverTop, moverBottom = mover:GetTop(), mover:GetBottom()
+    if not (moverLeft and moverRight and moverTop and moverBottom) then return end
+    local moverScale = mover:GetEffectiveScale()
+    local left, right, top, bottom
+    -- A top border faded out by Border Alpha 0 doesn't count; the zone text still can.
+    for _, frame in ipairs({ Minimap, MinimapBorderTop, MinimapZoneTextButton }) do
+        local shown = frame and frame:IsVisible() and frame:GetAlpha() > 0
+        local frameLeft, frameRight = shown and frame:GetLeft(), shown and frame:GetRight()
+        local frameTop, frameBottom = shown and frame:GetTop(), shown and frame:GetBottom()
+        if frameLeft and frameRight and frameTop and frameBottom then
+            -- Edges come back in each frame's own scaled units; a texture (the top border) has its parent's.
+            local scaled = frame.GetEffectiveScale and frame or frame:GetParent()
+            local ratio = scaled:GetEffectiveScale() / moverScale
+            frameLeft, frameRight = frameLeft * ratio, frameRight * ratio
+            frameTop, frameBottom = frameTop * ratio, frameBottom * ratio
+            left = left and math.min(left, frameLeft) or frameLeft
+            right = right and math.max(right, frameRight) or frameRight
+            top = top and math.max(top, frameTop) or frameTop
+            bottom = bottom and math.min(bottom, frameBottom) or frameBottom
+        end
+    end
+    if not left then return end
+
+    -- Positive left/bottom and negative right/top shrink the clamp rect toward the visible map.
+    mover:SetClampRectInsets(left - moverLeft, right - moverRight, top - moverTop, bottom - moverBottom)
+    mover:SetClampedToScreen(true)
+end
+
 function MinimapModule:InitializeMinimapSystem()
     -- Load TimeManager addon if not loaded
     if not IsAddOnLoaded('Blizzard_TimeManager') then
@@ -3005,16 +3046,15 @@ function MinimapModule:InitializeMinimapSystem()
         configPath = {"widgets", "minimap"},
         onShow = function()
             -- Match quest tracker behavior: clamp while editing.
-            -- Allow a small overflow so users can fine-tune near edges.
-            self.minimapFrame:SetClampedToScreen(true)
-            self.minimapFrame:SetClampRectInsets(20, -20, -20, -5)
+            self.editorActive = true
+            self:ApplyEditorClamp()
             -- Force full opacity while dragging so the user can actually see what they're moving.
             if addon.VisibilityFade then addon.VisibilityFade.Reset("minimap", 1) end
         end,
         onHide = function()
             -- Remove custom clamp settings after editor mode.
-            self.minimapFrame:SetClampRectInsets(0, 0, 0, 0)
-            self.minimapFrame:SetClampedToScreen(false)
+            self.editorActive = false
+            self:ApplyEditorClamp()
             self:UpdateWidgets() -- Apply new configuration on editor exit
             addon:RefreshMinimap()
         end,
@@ -3520,6 +3560,9 @@ function addon:RefreshMinimap()
 
         -- Parks chrome this pass just created, e.g. the gear when the collector gets enabled.
         MinimapModule:ApplyFarmMode()
+
+        -- Scale, style and farm mode move the map inside its mover; refit the editor clamp to it.
+        if MinimapModule.editorActive then MinimapModule:ApplyEditorClamp() end
     end
 end
 
