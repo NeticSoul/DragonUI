@@ -79,7 +79,7 @@ local EXIT_FADE_DURATION = 0.2
 -- 3.3.5a clears every slot in one packet, so retail's server-paced cascade is faked here.
 local EXIT_STAGGER = 0.07
 -- Auto loot empties the window the frame it opens; collected rows wait this long before flying out.
-local DEFAULT_AUTO_LOOT_HOLD = 1
+local DEFAULT_AUTO_LOOT_HOLD = 0
 -- Shape of retail's ScrollingFlatPanel HideAnim, minus the translation.
 local CLOSE_FADE_DURATION = 0.1
 local ROW_MOVE_DURATION = 0.16
@@ -1320,7 +1320,9 @@ local function InstallHooks(frame)
         if flying > 0 then
             closePending = true
             -- Rows still holding must not eat the click on the next corpse; its LOOT_OPENED resets them.
-            panel:EnableMouse(false)
+            if AutoLootHold() > 0 then
+                panel:EnableMouse(false)
+            end
         else
             HidePanel()
         end

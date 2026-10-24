@@ -1993,12 +1993,9 @@ end
 
 -- ============================================================================
 -- ADDON BUTTON DISTANCE
--- minimap.addon_button_distance moves LibDBIcon buttons out from (or in toward) the map's edge,
--- in map units. Newer LibDBIcon takes it through SetButtonRadius below; the 3.3.5a build (r15) has
--- no radius setting and places at a fixed LIBDBICON_ORBIT, so its buttons' SetPoint is hooked.
--- One table, not separate locals: this file sits near Lua 5.1's 200-local limit for a main chunk.
 -- ============================================================================
 
+-- LibDBIcon r15, still shipped by most 3.3.5a addons, has no SetButtonRadius, so its SetPoint is hooked.
 local AddonButtonDistance = { hooked = {} }
 
 function AddonButtonDistance.Get()
@@ -2017,35 +2014,41 @@ function AddonButtonDistance.GetOldLibrary()
     end
 end
 
--- r15 offsets are in the button's own units, which the launcher scale (GetLauncherScale) multiplies:
--- its orbit is LIBDBICON_ORBIT * scale map units out. Scaling the offsets keeps square maps square.
+-- Offsets are in the button's launcher scale; scaling both keeps r15's square-map clamp square.
 function AddonButtonDistance.OnSetPoint(button, point, relativeTo, relativePoint, x, y)
     if AddonButtonDistance.busy or point ~= "CENTER" or relativeTo ~= Minimap or type(x) ~= "number" then return end
     if button:GetParent() ~= Minimap then return end -- collected
+    -- The collector puts back the point it saved on the way in, which is already pushed out.
+    local placed = button.DragonUI_DistancePoint
+    if placed and math.abs(x - placed[1]) < 0.05 and math.abs(y - placed[2]) < 0.05 then return end
     local distance = AddonButtonDistance.Get()
-    if distance == 0 then return end
+    button.DragonUI_Distance = distance
+    if distance == 0 then
+        button.DragonUI_DistancePoint = nil
+        return
+    end
     local orbit = LIBDBICON_ORBIT * button:GetScale()
     local outward = (orbit + distance) / orbit
+    x, y = x * outward, y * outward
+    placed = placed or {}
+    placed[1], placed[2] = x, y
+    button.DragonUI_DistancePoint = placed
     AddonButtonDistance.busy = true
-    button:SetPoint(point, relativeTo, relativePoint, x * outward, y * outward)
+    button:SetPoint(point, relativeTo, relativePoint, x, y)
     AddonButtonDistance.busy = nil
 end
 
--- Hooks r15 buttons once; when the distance changes, the library places them again so it applies.
--- Buttons in the collector are the collector's to place, so they are left alone.
+-- Collected buttons are the collector's to place; the library re-places the rest when their distance is stale.
 function AddonButtonDistance.ApplyToOldLibrary()
     local libDBIcon = AddonButtonDistance.GetOldLibrary()
     if not libDBIcon then return end
     local distance = AddonButtonDistance.Get()
-    local changed = distance ~= (AddonButtonDistance.lastDistance or 0)
-    AddonButtonDistance.lastDistance = distance
     for name, button in pairs(libDBIcon.objects) do
-        local fresh = not AddonButtonDistance.hooked[button]
-        if fresh then
+        if not AddonButtonDistance.hooked[button] then
             AddonButtonDistance.hooked[button] = true
             hooksecurefunc(button, "SetPoint", AddonButtonDistance.OnSetPoint)
         end
-        if (changed or (fresh and distance ~= 0)) and button:GetParent() == Minimap and libDBIcon.Refresh then
+        if (button.DragonUI_Distance or 0) ~= distance and button:GetParent() == Minimap and libDBIcon.Refresh then
             -- With its saved db, so a button its addon hides stays hidden (Refresh shows it otherwise).
             libDBIcon:Refresh(name, button.db)
         end
@@ -2055,7 +2058,6 @@ end
 -- Compatibility: some addons ship LibDBIcon with a larger default radius,
 -- which pushes minimap addon buttons farther from the map edge.
 -- Keep this defensive and minimal: only clamp excessive defaults while DragonUI minimap is active.
--- Addon Button Distance then moves the clamped radius; a radius an addon set to 5 or less is left alone.
 local function NormalizeLibDBIconRadius()
     AddonButtonDistance.ApplyToOldLibrary()
 
@@ -2067,12 +2069,15 @@ local function NormalizeLibDBIconRadius()
     if MinimapModule.originalStates.LibDBIconRadius == nil then
         if currentRadius <= 5 then return end
         MinimapModule.originalStates.LibDBIconRadius = currentRadius
+    elseif currentRadius <= 5 and currentRadius ~= AddonButtonDistance.radius then
+        return -- an addon picked its own small radius after ours
     end
 
     local radius = -5 + AddonButtonDistance.Get()
     if currentRadius ~= radius then
         libDBIcon:SetButtonRadius(radius)
     end
+    AddonButtonDistance.radius = radius
 end
 
 local function RestoreLibDBIconRadius()
@@ -3050,8 +3055,6 @@ local function SyncMinimapVisibility()
 end
 MinimapModule.SyncMinimapVisibility = SyncMinimapVisibility
 
--- Clamps the editor mover to what the player sees (the map and its top border) instead of the
--- 230x230 box, which reaches well past the map and kept it from getting near the screen edges.
 -- Always on while editing: the client's minimap renderer breaks once the map is partly off screen.
 function MinimapModule:ApplyEditorClamp()
     local mover = self.minimapFrame

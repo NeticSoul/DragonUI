@@ -616,6 +616,15 @@ local function BuildLayoutTab(scroll)
         end,
     })
 
+    C:AddToggle(mainSection, {
+        label = LO["Page by Form (Classless Servers)"],
+        desc = LO["The main bar changes page with your stance or form, whatever your class. Only for classless servers."],
+        dbPath = "mainbars.page_by_form",
+        callback = function()
+            if addon.RefreshMainBarPaging then addon.RefreshMainBarPaging() end
+        end,
+    })
+
     -- ---- Bottom Left Bar ----
     local blSection = C:AddSection(scroll, LO["Bottom Left Bar Layout"])
 

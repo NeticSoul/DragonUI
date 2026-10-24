@@ -566,12 +566,12 @@ local function BuildLootSubTab(scroll)
         label = LO["Auto Loot Hold"],
         desc = LO["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."],
         getFunc = function()
-            return GetModuleField("loot_skin", "auto_loot_hold") or 1
+            return GetModuleField("loot_skin", "auto_loot_hold") or 0
         end,
         setFunc = function(val)
             EnsureModuleTable("loot_skin").auto_loot_hold = val
         end,
-        min = 0, max = 10, step = 0.5,
+        min = 0, max = 5, step = 0.5,
         width = 200,
         disabled = function() return not IsEnabled("loot_skin") end,
     })

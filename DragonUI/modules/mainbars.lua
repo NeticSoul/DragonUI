@@ -308,11 +308,49 @@ local FORM_PAGE_CLAUSES = {
     ROGUE = "[bonusbar:1] 7; [bonusbar:2] 8;",
 }
 
+-- The same pages keyed by form spell for "Page by Form": classless heroes' forms leave GetBonusBarOffset at 0.
+local FORM_SPELL_PAGES = {
+    [2457] = 7, [71] = 8, [2458] = 9, -- Battle, Defensive, Berserker Stance
+    [768] = 7, [33891] = 8, [5487] = 9, [9634] = 9, [24858] = 10, -- Cat, Tree of Life, Bear, Dire Bear, Moonkin
+    [1784] = 7, [51713] = 8, -- Stealth, Shadow Dance
+    [15473] = 7, -- Shadowform
+}
+
+local function IsPageByForm()
+    local db = addon.db and addon.db.profile and addon.db.profile.mainbars
+    return db and db.page_by_form == true
+end
+
+-- Matched by name, as a stance slot's index shifts with the forms known and auras share the bar.
+local function GetFormPageClauses()
+    local pageByName = {}
+    for spellID, page in pairs(FORM_SPELL_PAGES) do
+        local name = GetSpellInfo(spellID)
+        if name then pageByName[name] = page end
+    end
+    local parts = {}
+    for index = 1, GetNumShapeshiftForms() do
+        local _, name = GetShapeshiftFormInfo(index)
+        local page = name and pageByName[name]
+        if page then parts[#parts + 1] = "[stance:" .. index .. "] " .. page .. ";" end
+    end
+    return table.concat(parts, " ")
+end
+
 local function GetMainBarPageCondition()
     local parts = { PAGE_CLAUSES_SHARED }
-    parts[#parts + 1] = FORM_PAGE_CLAUSES[class]
+    if IsPageByForm() then
+        parts[#parts + 1] = GetFormPageClauses()
+    else
+        parts[#parts + 1] = FORM_PAGE_CLAUSES[class]
+    end
     parts[#parts + 1] = "1"
     return table.concat(parts, " ")
+end
+
+local function RegisterMainBarPageDriver(mainBar)
+    MainbarsModule.pageCondition = GetMainBarPageCondition()
+    RegisterStateDriver(mainBar, "page", MainbarsModule.pageCondition)
 end
 
 -- Main bar pages are driven through ActionButton actionpage attributes.
@@ -530,7 +568,7 @@ local function SetupMainBarPageDriver(mainBar)
             handle:SetAttribute("actionpage", page)
         end
     ]])
-    RegisterStateDriver(mainBar, "page", GetMainBarPageCondition())
+    RegisterMainBarPageDriver(mainBar)
     MainbarsModule.stateDrivers.page = { frame = mainBar, state = 'page' }
     MainbarsModule.pageDriverInstalled = true
     MainbarsModule.pageDriverFrame = mainBar
@@ -549,8 +587,20 @@ local function RefreshMainBarPageState()
     local mainBar = MainbarsModule.pageDriverFrame
     if not mainBar then return end
 
-    RegisterStateDriver(mainBar, 'page', GetMainBarPageCondition())
+    RegisterMainBarPageDriver(mainBar)
 end
+
+-- Re-registers only when the condition text changed: the form list, the profile or "Page by Form".
+local function SyncMainBarPageCondition()
+    local mainBar = MainbarsModule.pageDriverFrame
+    if not mainBar or GetMainBarPageCondition() == MainbarsModule.pageCondition then return end
+    if InCombatLockdown() then
+        addon.CombatQueue:Add("mainbars_page_condition", SyncMainBarPageCondition)
+        return
+    end
+    RegisterMainBarPageDriver(mainBar)
+end
+addon.RefreshMainBarPaging = SyncMainBarPageCondition
 
 local DIVIDER_PIECES = { top = "dividerTop", mid = "dividerMid", bottom = "dividerBottom" }
 
@@ -2553,6 +2603,7 @@ local function InitializeMainbars()
     mainbarsEventFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
     mainbarsEventFrame:RegisterEvent("UNIT_ENTERED_VEHICLE")
     mainbarsEventFrame:RegisterEvent("PLAYER_LOGIN")
+    mainbarsEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
     mainbarsEventFrame:SetScript("OnEvent", function(self, event, unitOrAddon)
         if event == "PLAYER_ENTERING_WORLD" then
             RefreshMainBarPageState()
@@ -2627,6 +2678,11 @@ local function InitializeMainbars()
             -- Handle vehicle events that affect pet bar - Execute immediately
             if IsModuleEnabled() and unitOrAddon == "player" then
                 addon.UpdatePetBarVisibility()
+            end
+
+        elseif event == "UPDATE_SHAPESHIFT_FORMS" then
+            if IsPageByForm() then
+                SyncMainBarPageCondition()
             end
         end
     end)
@@ -3524,6 +3580,8 @@ function addon.RefreshMainbarsSystem()
     if addon.RefreshXpRepBars then
         addon.RefreshXpRepBars()
     end
+
+    SyncMainBarPageCondition()
 end
 
 -- Alias for compatibility
