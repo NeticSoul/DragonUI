@@ -1012,6 +1012,7 @@ L["Basic Settings"] = true
 L["Border Alpha"] = true
 L["New Blip Style"] = true
 L["Player Arrow Size"] = true
+L["Addon Button Distance"] = true
 L["Time & Calendar"] = true
 L["Show Clock"] = true
 L["Clock Font Size"] = true
