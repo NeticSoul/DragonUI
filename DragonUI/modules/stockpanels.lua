@@ -514,6 +514,7 @@ end
 -- ============================================================================
 
 local PVP_RECT = { 14, -13, -32, 75 }
+local PVP_HIT = { 14, 32, 13, 75 }
 -- Group Join / Join / Cancel ran 136 + 109 + 2 + 83 = 330, past the 322 between the seats.
 local PVP_GROUP_JOIN_W = 128
 
@@ -529,9 +530,16 @@ local function buildPvP()
 
     local host = skinWindow(window, {
         rect = PVP_RECT,
-        hit = { 14, 32, 13, 75 },
+        hit = PVP_HIT,
         close = _G.PVPParentFrameCloseButton,
     })
+    -- PVPFrame takes the mouse over the parent's whole 384x512, tab strip included, and the reskin
+    -- puts an unselected tab on its level: from the PvP page the Battlegrounds tab lost that tie and
+    -- never got the click. PVPBattlegroundFrame already stops 75 short of the bottom in the XML.
+    local pvpFrame = _G.PVPFrame
+    if pvpFrame and pvpFrame.SetHitRectInsets then
+        pvpFrame:SetHitRectInsets(PVP_HIT[1], PVP_HIT[2], PVP_HIT[3], PVP_HIT[4])
+    end
     -- Each tab's own title, both re-seated in the one title band.
     dressTitle(host, fontStringByText(_G.PVPFrame, _G.PLAYER_V_PLAYER))
     dressTitle(host, _G.PVPBattlegroundFrameFrameLabel)
