@@ -3706,20 +3706,27 @@ end
 -- The gear's radius keeps centres just inside the edge; these sit RING_OUTSET map pixels further out,
 -- measured as the collector does: distance on a round map, the larger offset on a square one.
 -- The calendar looked further in than the others at the same outset (checked in game), so it goes out more.
+-- Forever's orbit already sits on its band, where the calendar and difficulty flag looked too far out.
 RingPlacement.RING_OUTSET = { calendar = 10, tracking = 6, difficulty = 6 }
+RingPlacement.FOREVER_RING_OUTSET = { calendar = 0, tracking = 6, difficulty = 0 }
 
 function RingPlacement.Place(mover, angle, key)
     addon.MinimapCollector:PlaceOnRing(mover, angle)
     local parent = ButtonVisibility.parents[mover] or MinimapModule.farmMode.parents[mover] or mover:GetParent()
     local point, relativeTo, relativePoint, x, y = mover:GetPoint(1)
     if not (parent and point and Minimap) then return end
+    local forever = GetForeverOrbitRadius() ~= nil
+    if forever then
+        -- The collector divides Forever's orbit by the button's scale itself; the ratio below does that.
+        x, y = x * mover:GetScale(), y * mover:GetScale()
+    end
     local radius
     if GetMinimapShape and GetMinimapShape() == "SQUARE" then
         radius = math.max(math.abs(x), math.abs(y))
     else
         radius = math.sqrt(x * x + y * y)
     end
-    local outset = RingPlacement.RING_OUTSET[key] or 6
+    local outset = (forever and RingPlacement.FOREVER_RING_OUTSET or RingPlacement.RING_OUTSET)[key] or 6
     local outward = radius > 0 and (radius + outset) / radius or 1
     local ratio = Minimap:GetEffectiveScale() / (parent:GetEffectiveScale() * mover:GetScale())
     mover:ClearAllPoints()
