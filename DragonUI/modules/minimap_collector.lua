@@ -112,10 +112,6 @@ local function IsSkinEnabled()
     return (c and c.addon_button_skin) and true or false
 end
 
-local function IsSettingsButtonFadeEnabled()
-    return GetStyle() ~= STYLE_CLASSIC and (deps.IsFadeEnabled and deps.IsFadeEnabled())
-end
-
 local function GetStoredAngle()
     local c = GetCfg()
     return c and NormalizeAngle(c.settings_button_angle) or DEFAULT_ANGLE
@@ -606,6 +602,7 @@ local function CollectEntries()
         local childName = child.GetName and child:GetName()
         if childName and EXCLUDED_BUTTONS[childName] then return end
         if isQuest and isQuest(child) then return end
+        if deps.IsVisibilityNever and deps.IsVisibilityNever(child) then return end
 
         if not child.DragonUI_CollectorManaged then
             local g = child.GetScript
@@ -1047,7 +1044,6 @@ end
 local function RefreshAddonButtonsAfterDisable()
     if not deps.GetAllMinimapButtons then return end
     local skin = IsSkinEnabled()
-    local fade = (deps.IsFadeEnabled and deps.IsFadeEnabled()) or false
     local isQuest = deps.IsQuestMinimapPin
 
     for _, child in ipairs(deps.GetAllMinimapButtons()) do
@@ -1057,13 +1053,6 @@ local function RefreshAddonButtonsAfterDisable()
             elseif child.DragonUI_Skinned and deps.UnskinAddonButton then
                 deps.UnskinAddonButton(child)
             end
-
-            if not child.DragonUI_FadeHooked then
-                child.DragonUI_FadeHooked = true
-                if deps.fadein  then child:HookScript("OnEnter", deps.fadein) end
-                if deps.fadeout then child:HookScript("OnLeave", deps.fadeout) end
-            end
-            child:SetAlpha(fade and 0.2 or 1)
         end
     end
 end
@@ -1188,11 +1177,6 @@ local function OnSettingsMouseUp(self)
 end
 
 function OnSettingsEnter(self)
-    if IsSettingsButtonFadeEnabled() and deps.fadein then
-        deps.fadein(self)
-    else
-        self:SetAlpha(1)
-    end
     UpdateHighlightStyle(self)
 
     if not GameTooltip then return end
@@ -1230,11 +1214,6 @@ end
 local function OnSettingsLeave(self)
     self.DragonUI_PressZoom = nil
     LayoutSettingsIcon(self, false)
-    if IsSettingsButtonFadeEnabled() and deps.fadeout then
-        deps.fadeout(self)
-    else
-        self:SetAlpha(1)
-    end
     UpdateHighlightStyle(self)
     if GameTooltip then GameTooltip:Hide() end
 end
@@ -1411,10 +1390,8 @@ local function UpdateSettingsButton()
     ApplySettingsStyle(btn)
     PositionCollector()
 
-    local managedByCompatibility = ApplyCollectorToggleVisibilityCompatibility(btn)
-    if not managedByCompatibility then
-        btn:SetAlpha(IsSettingsButtonFadeEnabled() and 0.2 or 1)
-    end
+    -- Alpha belongs to the minimap buttons visibility list (or SexyMap in hybrid mode).
+    ApplyCollectorToggleVisibilityCompatibility(btn)
 
     btn:Show()
     RefreshCollector()

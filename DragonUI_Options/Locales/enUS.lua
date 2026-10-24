@@ -883,8 +883,6 @@ L["Border Alpha"] = true
 L["Top border alpha (0 to hide)."] = true
 L["Addon Button Skin"] = true
 L["Apply DragonUI border styling to addon icons."] = true
-L["Addon Button Fade"] = true
-L["Addon icons fade out when not hovered."] = true
 L["Player Arrow Size"] = true
 L["New Blip Style"] = true
 L["Use newer-style minimap blip icons."] = true
@@ -900,8 +898,21 @@ L["Hide DragonUI Border"] = true
 
 -- Time & Calendar
 L["Time & Calendar"] = true
-L["Show Clock"] = true
-L["Show Calendar"] = true
+L["Minimap Buttons"] = true
+L["On Hover shows a button while the mouse is over the minimap. Never hides it, and takes an addon button out of the collector."] = true
+L["Top Bar"] = true
+L["Clock"] = true
+L["Calendar"] = true
+L["Tracking"] = true
+L["New Mail Indicator"] = true
+L["Dungeon Difficulty"] = true
+L["Dungeon Finder Eye"] = true
+L["Battleground Queue"] = true
+L["Collector & Settings Button"] = true
+L["Addon Buttons"] = true
+L["All Addon Buttons"] = true
+L["Use Default"] = true
+L["No addon buttons found on the minimap."] = true
 L["Clock Font Size"] = true
 
 -- Display Settings
@@ -909,8 +920,14 @@ L["Display Settings"] = true
 L["Tracking Icons"] = true
 L["Show current tracking icons (old style)."] = true
 L["Zoom Buttons"] = true
-L["Show zoom buttons (+/-)."] = true
-L["Zone Text Font Size"] = true
+L["Zone Text"] = true
+L["On Hover"] = true
+L["Text Color"] = true
+L["Background Color"] = true
+L["Use one color instead of the PvP zone colors."] = true
+L["Moves the top bar with the zone text and the buttons around it."] = true
+L["Width of the top bar. 0 keeps the default."] = true
+L["Raise the alpha to draw a box behind the zone text."] = true
 L["Font size of the zone text above the minimap."] = true
 
 -- Position

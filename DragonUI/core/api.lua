@@ -1598,6 +1598,26 @@ function addon:ApplyDatabaseMigrations()
         extrabar1.slots = nil
     end
 
+    -- Minimap: the clock, calendar and zoom toggles became visibility modes, and addon button fade
+    -- became the addon buttons' default On Hover.
+    local minimap = rawget(profile, "minimap")
+    if minimap then
+        local oldToggles = { clock = "clock", calendar = "calendar", zoom_buttons = "zoom" }
+        for oldKey, buttonKey in pairs(oldToggles) do
+            local shown = rawget(minimap, oldKey)
+            if shown ~= nil then
+                minimap.button_visibility[buttonKey] = shown and "always" or "never"
+                minimap[oldKey] = nil
+            end
+        end
+        if rawget(minimap, "addon_button_fade") ~= nil then
+            if minimap.addon_button_fade == true then
+                minimap.addon_button_default = "hover"
+            end
+            minimap.addon_button_fade = nil
+        end
+    end
+
     -- Auto-accept: the one friends-and-guild toggle became one toggle each.
     local autoaccept = rawget(profile, "autoaccept")
     if autoaccept and rawget(autoaccept, "party") ~= nil then
