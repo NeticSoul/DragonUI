@@ -620,6 +620,7 @@ local defaults = {
             farm_mode_scale = 1.5, -- Extra scale on top of minimap.scale (clamped to 1-2)
             collector_enabled = true,
             collector_style = "dragonui",
+            addon_button_distance = 0, -- Map units LibDBIcon addon buttons move out (+) or in (-) from their usual orbit
             animated_border_enabled = false,
             animated_border_scale = 0.9,
             animated_border_preset = "drg_preset_01",
