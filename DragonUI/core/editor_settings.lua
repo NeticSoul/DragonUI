@@ -1554,6 +1554,24 @@ local function CollectorOff()
     return GetDB("minimap.collector_enabled") == false
 end
 
+-- Zone text colors are stored as { r, g, b, a }; fallback is the default { r, g, b, a } list.
+local function MinimapColorRow(labelKey, path, fallback, hasAlpha, o)
+    o = o or {}
+    return ColorRow(labelKey, {
+        hasAlpha = hasAlpha,
+        disabled = o.disabled,
+        get = function()
+            local color = GetDB(path)
+            if type(color) ~= "table" then return fallback end
+            return { color.r or fallback[1], color.g or fallback[2], color.b or fallback[3], color.a or fallback[4] }
+        end,
+        set = function(r, g, b, a)
+            SetDB(path, { r = r, g = g, b = b, a = hasAlpha and a or 1 })
+            Deferred(R.minimap)
+        end,
+    })
+end
+
 E.Register("minimap", { settings = {
     Section(T("General"), false),
     Slider(T("Scale"), "minimap.scale", 0.5, 2.0, 0.01, R.minimap),
@@ -1612,7 +1630,31 @@ E.Register("minimap", { settings = {
             if module and module.UpdateTrackingIcon then module:UpdateTrackingIcon() end
         end }),
     Check(T("Zoom Buttons"), "minimap.zoom_buttons", R.minimap),
-    Slider(T("Zone Text Font Size"), "minimap.zonetext_font_size", 8, 20, 1, R.minimap),
+    Section(T("Zone Text"), true),
+    Drop(T("Visibility"), "minimap.zonetext_show", {
+        { "always", T("Always") },
+        { "hover", T("On Hover") },
+        { "never", T("Never") },
+    }, R.minimap),
+    Drop(T("Font"), "minimap.zonetext_font", {
+        { "primary", "Friz Quadrata" },
+        { "actionbar", "Expressway" },
+        { "narrow", "PT Sans Narrow" },
+        { "arial", "Arial Narrow" },
+        { "skurri", "Skurri" },
+        { "morpheus", "Morpheus" },
+    }, R.minimap),
+    Slider(T("Font Size"), "minimap.zonetext_font_size", 8, 20, 1, R.minimap),
+    Check(T("Custom Color"), "minimap.zonetext_custom_color", R.minimap, {
+        tooltip = T("Use one color instead of the PvP zone colors."),
+        after = function() E.Rebuild() end }),
+    MinimapColorRow(T("Text Color"), "minimap.zonetext_color", { 1, 0.82, 0, 1 }, false, {
+        disabled = function() return not GetDB("minimap.zonetext_custom_color") end }),
+    Slider(T("X Position"), "minimap.zonetext_offset_x", -200, 200, 1, R.minimap),
+    Slider(T("Y Position"), "minimap.zonetext_offset_y", -250, 100, 1, R.minimap),
+    Slider(T("Width"), "minimap.zonetext_width", 0, 300, 1, R.minimap),
+    MinimapColorRow(T("Background Color"), "minimap.zonetext_bg_color", { 0, 0, 0, 0 }, true),
+    MinimapColorRow(T("Border Color"), "minimap.zonetext_border_color", { 0, 0, 0, 0 }, true),
     Section(T("Minimap Decorations"), true, NoDecorations),
     Check(T("Enable Minimap Decorations"), "minimap.animated_border_enabled", R.minimapDecor, {
         hidden = NoDecorations,

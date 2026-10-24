@@ -360,12 +360,100 @@ local function BuildMinimapTab(scroll)
         callback = RefreshMinimap,
     })
 
-    C:AddSlider(display, {
-        label = LO["Zone Text Font Size"],
+    -- ====================================================================
+    -- ZONE TEXT
+    -- ====================================================================
+    local zoneText = C:AddSection(scroll, LO["Zone Text"])
+
+    C:AddDropdown(zoneText, {
+        label = LO["Visibility"],
+        dbPath = "minimap.zonetext_show",
+        values = {
+            always = LO["Always"],
+            hover = LO["On Hover"],
+            never = LO["Never"],
+        },
+        callback = RefreshMinimap,
+    })
+
+    local zoneFontRow = C:AddRow(zoneText)
+    C:AddDropdown(zoneFontRow, {
+        label = LO["Font"],
+        dbPath = "minimap.zonetext_font",
+        values = {
+            primary = "Friz Quadrata",
+            actionbar = "Expressway",
+            narrow = "PT Sans Narrow",
+            arial = "Arial Narrow",
+            skurri = "Skurri",
+            morpheus = "Morpheus",
+        },
+        callback = RefreshMinimap,
+    })
+    C:AddSlider(zoneFontRow, {
+        label = LO["Font Size"],
         desc = LO["Font size of the zone text above the minimap."],
         dbPath = "minimap.zonetext_font_size",
         min = 8, max = 20, step = 1,
         width = 200,
+        callback = RefreshMinimap,
+    })
+
+    local zoneColorPicker
+    C:AddToggle(zoneText, {
+        label = LO["Custom Color"],
+        desc = LO["Use one color instead of the PvP zone colors."],
+        dbPath = "minimap.zonetext_custom_color",
+        callback = function(value)
+            if zoneColorPicker and zoneColorPicker.SetDisabled then zoneColorPicker:SetDisabled(not value) end
+            RefreshMinimap()
+        end,
+    })
+    zoneColorPicker = C:AddColorPicker(zoneText, {
+        label = LO["Text Color"],
+        dbPath = "minimap.zonetext_color",
+        disabled = function() return not C:GetDBValue("minimap.zonetext_custom_color") end,
+        callback = RefreshMinimap,
+    })
+
+    local zonePositionRow = C:AddRow(zoneText)
+    C:AddSlider(zonePositionRow, {
+        label = LO["X Position"],
+        desc = LO["Moves the top bar with the zone text and the buttons around it."],
+        dbPath = "minimap.zonetext_offset_x",
+        min = -200, max = 200, step = 1,
+        width = 200,
+        callback = RefreshMinimap,
+    })
+    C:AddSlider(zonePositionRow, {
+        label = LO["Y Position"],
+        desc = LO["Moves the top bar with the zone text and the buttons around it."],
+        dbPath = "minimap.zonetext_offset_y",
+        min = -250, max = 100, step = 1,
+        width = 200,
+        callback = RefreshMinimap,
+    })
+    C:AddSlider(zoneText, {
+        label = LO["Width"],
+        desc = LO["Width of the top bar. 0 keeps the default."],
+        dbPath = "minimap.zonetext_width",
+        min = 0, max = 300, step = 1,
+        width = 200,
+        callback = RefreshMinimap,
+    })
+
+    C:AddDescription(zoneText, LO["Raise the alpha to draw a box behind the zone text."])
+    local zoneBoxRow = C:AddRow(zoneText)
+    C:AddColorPicker(zoneBoxRow, {
+        label = LO["Background Color"],
+        dbPath = "minimap.zonetext_bg_color",
+        hasAlpha = true,
+        callback = RefreshMinimap,
+    })
+    C:AddColorPicker(zoneBoxRow, {
+        label = LO["Border Color"],
+        dbPath = "minimap.zonetext_border_color",
+        hasAlpha = true,
         callback = RefreshMinimap,
     })
 

@@ -615,6 +615,15 @@ local defaults = {
             clock_font_size = 12,
             player_arrow_size = 40,
             zonetext_font_size = 12,
+            zonetext_show = "always", -- "always", "hover" (while the mouse is over the map) or "never"
+            zonetext_font = "primary", -- "primary" (Friz Quadrata), "actionbar", "narrow", "arial", "skurri" or "morpheus"
+            zonetext_offset_x = 0, -- Nudge from the spot on the top border
+            zonetext_offset_y = 0,
+            zonetext_width = 0, -- 0 = fit the top border (108 beside the clock, 150 without)
+            zonetext_custom_color = false, -- false = Blizzard's PvP zone colors
+            zonetext_color = { r = 1, g = 0.82, b = 0 },
+            zonetext_bg_color = { r = 0, g = 0, b = 0, a = 0 }, -- Box behind the text; alpha 0 on both = no box
+            zonetext_border_color = { r = 0, g = 0, b = 0, a = 0 },
             settings_button_angle = 203,
             farm_mode_enabled = false, -- Bigger map, chrome hidden; toggled by /dui farm or the panel
             farm_mode_scale = 1.5, -- Extra scale on top of minimap.scale (clamped to 1-2)

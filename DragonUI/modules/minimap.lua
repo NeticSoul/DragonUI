@@ -58,6 +58,11 @@ local function GetMinimapSettings()
     return addon.db and addon.db.profile and addon.db.profile.minimap
 end
 
+-- The top bar's default spot on MinimapCluster; the zone text options move and stretch it, and the
+-- zone text, clock, calendar, tracking and difficulty flag hang from it.
+-- One table, not separate locals: this file sits near Lua 5.1's 200-local limit for a main chunk.
+local TopBar = { WIDTH = 156, HEIGHT = 20, OFFSET_Y = 5 }
+
 -- The player's minimap scale, times the farm bonus while farm mode is on.
 local function GetEffectiveMinimapScale()
     local settings = GetMinimapSettings()
@@ -1056,9 +1061,9 @@ local function ReplaceBlizzardFrame(frame)
         -- DragonUI border top styling (skipped in hybrid mode)
         local minimapBorderTop = MinimapBorderTop
         minimapBorderTop:ClearAllPoints()
-        minimapBorderTop:SetPoint("TOP", 0, 5)
+        minimapBorderTop:SetPoint("TOP", 0, TopBar.OFFSET_Y)
         minimapBorderTop:SetAtlasTexture('Minimap-Border-Top', true)
-        minimapBorderTop:SetSize(156, 20)
+        minimapBorderTop:SetSize(TopBar.WIDTH, TopBar.HEIGHT)
 
         local minimapZoneButton = MinimapZoneTextButton
         minimapZoneButton:ClearAllPoints()
@@ -2733,6 +2738,12 @@ function MinimapModule:RestoreMinimapSystem()
 
     self:RestoreFarmMode()
 
+    -- Zone text: no box or hover fade without DragonUI; the visibility helper is defined further down.
+    if MinimapZoneTextButton then
+        self.ApplyElementVisibility(MinimapZoneTextButton, "always")
+        MinimapZoneTextButton:SetBackdrop(nil)
+    end
+
     SetCollectorSyncEnabled(false)
 
     -- Hide DragonUI frames
@@ -3230,15 +3241,26 @@ local function ApplyClockAndZoneLayout(showClock)
     end
 
     if MinimapZoneTextButton and MinimapBorderTop then
+        -- The zone text options move and stretch the whole bar; everything on and around it follows.
+        local settings = GetMinimapSettings()
+        local offsetX = settings and settings.zonetext_offset_x or 0
+        local offsetY = settings and settings.zonetext_offset_y or 0
+        local width = settings and settings.zonetext_width or 0
+        -- Keeps room for the text beside the clock.
+        local barWidth = width > 0 and math.max(width, 60) or TopBar.WIDTH
+        MinimapBorderTop:ClearAllPoints()
+        MinimapBorderTop:SetPoint("TOP", MinimapCluster, "TOP", offsetX, TopBar.OFFSET_Y + offsetY)
+        MinimapBorderTop:SetWidth(barWidth)
+
         MinimapZoneTextButton:ClearAllPoints()
         if showClock then
             -- Restore default DragonUI position when clock is visible.
             MinimapZoneTextButton:SetPoint("LEFT", MinimapBorderTop, "LEFT", 7, 1)
-            MinimapZoneTextButton:SetWidth(108)
+            MinimapZoneTextButton:SetWidth(barWidth - 48)
         else
             -- Center the zone text when clock is hidden.
             MinimapZoneTextButton:SetPoint("CENTER", MinimapBorderTop, "CENTER", 0, 1)
-            MinimapZoneTextButton:SetWidth(150)
+            MinimapZoneTextButton:SetWidth(barWidth - 6)
         end
     end
 
@@ -3248,6 +3270,172 @@ local function ApplyClockAndZoneLayout(showClock)
             MinimapZoneText:SetAllPoints(MinimapZoneTextButton)
         end
     end
+end
+
+-- ============================================================================
+-- HOVER-ONLY ELEMENTS
+-- Frames set to "On Hover" fade in while the mouse is over the map or the frame itself.
+-- Kept in one table: this file sits near Lua 5.1's 200-local limit for a main chunk.
+-- ============================================================================
+
+local HoverOnly = {
+    FADE_TIME = 0.2,
+    POLL_INTERVAL = 0.1,
+    frames = {},
+}
+
+-- Measured by hand: IsMouseOver tested the wrong area for Minimap, which runs at its own SetScale,
+-- so only its top-right corner counted. GetLeft and friends come back in the frame's scaled units.
+function HoverOnly.IsCursorOver(frame)
+    if not (frame and frame:IsVisible()) then return false end
+    local left, right, top, bottom = frame:GetLeft(), frame:GetRight(), frame:GetTop(), frame:GetBottom()
+    if not (left and right and top and bottom) then return false end
+    local x, y = GetCursorPosition()
+    local scale = frame:GetEffectiveScale()
+    x, y = x / scale, y / scale
+    return x >= left and x <= right and y >= bottom and y <= top
+end
+
+function HoverOnly.IsHovered(frame)
+    return HoverOnly.IsCursorOver(Minimap) or HoverOnly.IsCursorOver(frame)
+end
+
+-- Blizzard's fade helpers share one global table of fading frames; securecall keeps it untainted.
+function HoverOnly.Fade(frame, shown)
+    if frame.DragonUI_HoverShown == shown then return end
+    frame.DragonUI_HoverShown = shown
+    if shown then
+        securecall("UIFrameFadeIn", frame, HoverOnly.FADE_TIME, frame:GetAlpha(), 1)
+    else
+        securecall("UIFrameFadeOut", frame, HoverOnly.FADE_TIME, frame:GetAlpha(), 0)
+    end
+end
+
+function HoverOnly.OnUpdate(self, elapsed)
+    self.elapsed = self.elapsed + elapsed
+    if self.elapsed < HoverOnly.POLL_INTERVAL then return end
+    self.elapsed = 0
+    for frame in pairs(HoverOnly.frames) do
+        HoverOnly.Fade(frame, HoverOnly.IsHovered(frame))
+    end
+end
+
+-- Alpha only, so a hidden element still answers IsMouseOver and fades back in under the cursor.
+function HoverOnly.Set(frame, hoverOnly)
+    if hoverOnly and not HoverOnly.frames[frame] then
+        HoverOnly.frames[frame] = true
+        frame.DragonUI_HoverShown = nil
+        HoverOnly.Fade(frame, HoverOnly.IsHovered(frame))
+    elseif not hoverOnly and HoverOnly.frames[frame] then
+        HoverOnly.frames[frame] = nil
+        frame.DragonUI_HoverShown = nil
+        securecall("UIFrameFadeRemoveFrame", frame)
+        frame:SetAlpha(1)
+    end
+
+    if not HoverOnly.pollFrame then
+        HoverOnly.pollFrame = CreateFrame("Frame")
+        HoverOnly.pollFrame.elapsed = 0
+    end
+    HoverOnly.pollFrame:SetScript("OnUpdate", next(HoverOnly.frames) and HoverOnly.OnUpdate or nil)
+end
+
+-- mode: "always", "hover" or "never".
+function MinimapModule.ApplyElementVisibility(frame, mode)
+    if not frame then return end
+    HoverOnly.Set(frame, mode == "hover")
+    if mode == "never" then
+        frame:Hide()
+    else
+        frame:Show()
+    end
+end
+
+-- ============================================================================
+-- ZONE TEXT STYLE
+-- ============================================================================
+
+local ZoneText = {
+    BACKDROP = {
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+    },
+    -- Room the box leaves around the text.
+    BOX_PADDING_X = 4,
+    BOX_PADDING_Y = 4,
+    DEFAULT_HEIGHT = 12,
+}
+
+-- Same choices as the item level font; routed through addon.Fonts so CJK/Cyrillic clients keep their glyphs.
+function ZoneText.ResolveFont(choice)
+    local fonts = addon.Fonts
+    if choice == "actionbar" then
+        return fonts and fonts.ACTIONBAR
+    elseif choice == "narrow" then
+        return fonts and fonts.NARROW
+    elseif choice == "arial" then
+        return fonts and fonts.ARIALN
+    elseif choice == "skurri" then
+        return (fonts and fonts.needsSystemFont) and fonts.PRIMARY or "Fonts\\SKURRI.TTF"
+    elseif choice == "morpheus" then
+        return (fonts and fonts.needsSystemFont) and fonts.PRIMARY or "Fonts\\MORPHEUS.TTF"
+    end
+    return fonts and fonts.PRIMARY -- "primary": GameFontNormal's Friz Quadrata
+end
+
+-- Blizzard's Minimap_Update recolors the text by zone PvP type on every zone change.
+function ZoneText.ApplyColor()
+    local settings = GetMinimapSettings()
+    if not (MinimapZoneText and settings and settings.zonetext_custom_color) then return end
+    if not IsDragonUIMinimapControlling() or IsHybridMinimapModeActive() then return end
+    local color = settings.zonetext_color
+    if type(color) == "table" then
+        MinimapZoneText:SetTextColor(color.r or 1, color.g or 0.82, color.b or 0)
+    end
+end
+
+function ZoneText.Apply()
+    local settings = GetMinimapSettings()
+    local button, text = MinimapZoneTextButton, MinimapZoneText
+    if not (settings and button and text) then return end
+
+    if not MinimapModule.hooks.Minimap_Update and Minimap_Update then
+        MinimapModule.hooks.Minimap_Update = ZoneText.ApplyColor
+        hooksecurefunc("Minimap_Update", MinimapModule.hooks.Minimap_Update)
+    end
+
+    local _, _, flags = text:GetFont()
+    local fontSize = settings.zonetext_font_size or 12
+    text:SetFont(ZoneText.ResolveFont(settings.zonetext_font), fontSize, flags)
+
+    if settings.zonetext_custom_color then
+        ZoneText.ApplyColor()
+    elseif Minimap_Update then
+        Minimap_Update() -- back to the PvP zone colors
+    end
+
+    -- Alpha 0 on both colors means no box, which keeps the plain text on the top border.
+    local bg, edge = settings.zonetext_bg_color, settings.zonetext_border_color
+    local bgAlpha = type(bg) == "table" and bg.a or 0
+    local edgeAlpha = type(edge) == "table" and edge.a or 0
+    if bgAlpha > 0 or edgeAlpha > 0 then
+        button:SetBackdrop(ZoneText.BACKDROP)
+        button:SetBackdropColor(bg.r or 0, bg.g or 0, bg.b or 0, bgAlpha)
+        button:SetBackdropBorderColor(edge.r or 0, edge.g or 0, edge.b or 0, edgeAlpha)
+        button:SetHeight(fontSize + ZoneText.BOX_PADDING_Y * 2)
+        text:ClearAllPoints()
+        text:SetPoint("TOPLEFT", button, "TOPLEFT", ZoneText.BOX_PADDING_X, 0)
+        text:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -ZoneText.BOX_PADDING_X, 0)
+    else
+        button:SetBackdrop(nil)
+        button:SetHeight(ZoneText.DEFAULT_HEIGHT)
+        text:ClearAllPoints()
+        text:SetAllPoints(button)
+    end
+
+    -- The text only; the bar behind it keeps Border Alpha.
+    MinimapModule.ApplyElementVisibility(button, settings.zonetext_show or "always")
 end
 
 -- ============================================================================
@@ -3435,10 +3623,9 @@ function MinimapModule:ApplyAllSettings()
         end
     end
 
-    --  APPLY ZONE TEXT FONT SIZE -skip in hybrid mode
-    if not isHybridMode and settings.zonetext_font_size and MinimapZoneText then
-        local font, _, flags = MinimapZoneText:GetFont()
-        MinimapZoneText:SetFont(font, settings.zonetext_font_size, flags)
+    --  APPLY ZONE TEXT FONT, COLOR, BOX AND VISIBILITY -skip in hybrid mode
+    if not isHybridMode then
+        ZoneText.Apply()
     end
 
     --  APPLY BLIP TEXTURE (NEW VS OLD STYLE)
