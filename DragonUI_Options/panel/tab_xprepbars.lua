@@ -232,6 +232,14 @@ local function BuildXpRepTab(scroll)
     -- VISIBILITY
     -- ====================================================================
     local visSection = C:AddSection(scroll, LO["Visibility"])
+    C:AddToggle(visSection, {
+        label = LO["Hide Experience Bar"],
+        desc = LO["Hide the XP bar while you level. The reputation bar moves into its place, as at max level."],
+        dbPath = "xprepbar.hide_xp",
+        callback = function()
+            if addon.RelayoutXpRepBars then addon.RelayoutXpRepBars() end
+        end,
+    })
     C:AddVisibilityFadeToggles(visSection, {
         dbPrefix = "xprepbar",
         hoverDesc = LO["Fade the XP and Reputation bars until you hover over them."],
