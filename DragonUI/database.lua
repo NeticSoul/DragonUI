@@ -609,12 +609,18 @@ local defaults = {
             blip_skin = true, -- true = new/modern style, false = old/classic Blizzard style
             ping_sender = true, -- Name of whoever pinged the minimap, in their class color
             tracking_icons = true,
-            zoom_buttons = false,
-            calendar = true,
-            clock = true,
             clock_font_size = 12,
             player_arrow_size = 40,
             zonetext_font_size = 12,
+            zonetext_show = "always", -- "always", "hover" (while the mouse is over the map) or "never"
+            zonetext_font = "primary", -- "primary" (Friz Quadrata), "actionbar", "narrow", "arial", "skurri" or "morpheus"
+            zonetext_offset_x = 0, -- Nudge from the spot on the top border
+            zonetext_offset_y = 0,
+            zonetext_width = 0, -- 0 = fit the top border (108 beside the clock, 150 without)
+            zonetext_custom_color = false, -- false = Blizzard's PvP zone colors
+            zonetext_color = { r = 1, g = 0.82, b = 0 },
+            zonetext_bg_color = { r = 0, g = 0, b = 0, a = 0 }, -- Box behind the text; alpha 0 on both = no box
+            zonetext_border_color = { r = 0, g = 0, b = 0, a = 0 },
             settings_button_angle = 203,
             farm_mode_enabled = false, -- Bigger map, chrome hidden; toggled by /dui farm or the panel
             farm_mode_scale = 1.5, -- Extra scale on top of minimap.scale (clamped to 1-2)
@@ -628,7 +634,33 @@ local defaults = {
             animated_border_opacity = 1,
             animated_border_hide_dragonui_border = false,
             addon_button_skin = true,
-            addon_button_fade = false,
+            -- Always / On Hover / Never per minimap button; keys and order in addon.MINIMAP_VISIBILITY_BUTTONS.
+            button_visibility = {
+                top_bar = "always",
+                clock = "always",
+                calendar = "always",
+                tracking = "always",
+                mail = "always",
+                difficulty = "always",
+                lfg = "always",
+                battleground = "always",
+                zoom = "never",
+                settings = "always",
+            },
+            addon_button_default = "always", -- Addon buttons without an entry of their own
+            addon_button_visibility = {}, -- [button name] = "always", "hover" or "never"
+            -- Buttons with a ring entry in addon.MINIMAP_VISIBILITY_BUTTONS: "bar" (their spot by the top bar)
+            -- or "ring" (on the map's edge at button_angle, dragged around it like the settings gear).
+            button_position = {
+                calendar = "bar",
+                tracking = "bar",
+                difficulty = "bar",
+            },
+            button_angle = { -- degrees: 0 = right, counterclockwise
+                calendar = 40,
+                tracking = 140,
+                difficulty = 65,
+            },
             show_on_hover = false,
             show_in_combat = false,
             hide_in_combat = false,
@@ -1436,6 +1468,25 @@ end
 
 -- Export defaults for use in core.lua
 addon.defaults = defaults;
+
+-- The minimap buttons the visibility list covers, in list order. Here so both the editor (core)
+-- and the minimap module can read it; label is the locale key, names are the frames it covers.
+-- ring: the frame that moves onto the map's edge and the one that takes the drag.
+addon.MINIMAP_VISIBILITY_BUTTONS = {
+    { key = "top_bar", label = "Top Bar", names = { "MinimapBorderTop" } },
+    { key = "clock", label = "Clock", names = { "TimeManagerClockButton" } },
+    { key = "calendar", label = "Calendar", names = { "GameTimeFrame" },
+        ring = { mover = "GameTimeFrame", handle = "GameTimeFrame" } },
+    { key = "tracking", label = "Tracking", names = { "MiniMapTracking" },
+        ring = { mover = "MiniMapTracking", handle = "MiniMapTrackingButton" } },
+    { key = "mail", label = "New Mail Indicator", names = { "MiniMapMailFrame" } },
+    { key = "difficulty", label = "Dungeon Difficulty", names = { "MiniMapInstanceDifficulty" },
+        ring = { mover = "MiniMapInstanceDifficulty", handle = "MiniMapInstanceDifficulty" } },
+    { key = "lfg", label = "Dungeon Finder Eye", names = { "MiniMapLFGFrame" } },
+    { key = "battleground", label = "Battleground Queue", names = { "MiniMapBattlefieldFrame" } },
+    { key = "zoom", label = "Zoom Buttons", names = { "MinimapZoomIn", "MinimapZoomOut" } },
+    { key = "settings", label = "Collector & Settings Button", names = { "DragonUI_MinimapSettingsButton" } },
+}
 
 -- Database accessors
 function addon:GetConfigValue(section, key, subkey)

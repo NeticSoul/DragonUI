@@ -1554,7 +1554,56 @@ local function CollectorOff()
     return GetDB("minimap.collector_enabled") == false
 end
 
-E.Register("minimap", { settings = {
+-- One Always / On Hover / Never row per minimap button (addon.MINIMAP_VISIBILITY_BUTTONS, from
+-- database.lua), then the default for addon buttons. Each addon button's own row is in the Options tab.
+local function MinimapButtonRows()
+    local modes = {
+        { "always", T("Always") },
+        { "hover", T("On Hover") },
+        { "never", T("Never") },
+    }
+    local rows = {}
+    for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+        rows[#rows + 1] = Drop(T(entry.label), "minimap.button_visibility." .. entry.key, modes, R.minimap)
+    end
+    rows[#rows + 1] = Drop(T("All Addon Buttons"), "minimap.addon_button_default", modes, R.minimap)
+    return rows
+end
+
+-- Top Bar or On the Ring for the buttons that can sit on the map's edge.
+local function MinimapPositionRows()
+    local positions = {
+        { "bar", T("Top Bar") },
+        { "ring", T("On the Ring") },
+    }
+    local rows = {}
+    for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+        if entry.ring then
+            rows[#rows + 1] = Drop(T(entry.label), "minimap.button_position." .. entry.key, positions, R.minimap)
+        end
+    end
+    return rows
+end
+
+-- Zone text colors are stored as { r, g, b, a }; fallback is the default { r, g, b, a } list.
+local function MinimapColorRow(labelKey, path, fallback, hasAlpha, o)
+    o = o or {}
+    return ColorRow(labelKey, {
+        hasAlpha = hasAlpha,
+        disabled = o.disabled,
+        get = function()
+            local color = GetDB(path)
+            if type(color) ~= "table" then return fallback end
+            return { color.r or fallback[1], color.g or fallback[2], color.b or fallback[3], color.a or fallback[4] }
+        end,
+        set = function(r, g, b, a)
+            SetDB(path, { r = r, g = g, b = b, a = hasAlpha and a or 1 })
+            Deferred(R.minimap)
+        end,
+    })
+end
+
+E.Register("minimap", { settings = Join({
     Section(T("General"), false),
     Slider(T("Scale"), "minimap.scale", 0.5, 2.0, 0.01, R.minimap),
     Drop(T("Style"), "minimap.style", {
@@ -1585,25 +1634,18 @@ E.Register("minimap", { settings = {
         get = function() return ForeverMinimap() and "dragonui" or (GetDB("minimap.collector_style") or "dragonui") end,
         disabled = function() return CollectorOff() or ForeverMinimap() end }),
     Check(T("Addon Button Skin"), "minimap.addon_button_skin", R.minimap),
-    Check(T("Addon Button Fade"), "minimap.addon_button_fade", R.minimap),
     Section(T("Basic Settings"), true),
     Slider(T("Border Alpha"), "minimap.border_alpha", 0, 1, 0.1, nil, {
         set = function(value)
             SetDB("minimap.border_alpha", value)
             if MinimapBorderTop then MinimapBorderTop:SetAlpha(value) end
+            -- The top bar's On Hover fades in to this alpha.
+            Deferred(R.minimap)
         end }),
     Check(T("New Blip Style"), "minimap.blip_skin", R.minimap),
     Slider(T("Player Arrow Size"), "minimap.player_arrow_size", 8, 50, 1, R.minimap),
     Section(T("Time & Calendar"), true),
-    Check(T("Show Clock"), "minimap.clock", R.minimap),
     Slider(T("Clock Font Size"), "minimap.clock_font_size", 8, 20, 1, R.minimap),
-    Check(T("Show Calendar"), "minimap.calendar", nil, {
-        set = function(value)
-            SetDB("minimap.calendar", value)
-            if GameTimeFrame then
-                if value then GameTimeFrame:Show() else GameTimeFrame:Hide() end
-            end
-        end }),
     Section(T("Display Settings"), true),
     Check(T("Tracking Icons"), "minimap.tracking_icons", nil, {
         set = function(value)
@@ -1611,8 +1653,35 @@ E.Register("minimap", { settings = {
             local module = addon.MinimapModule
             if module and module.UpdateTrackingIcon then module:UpdateTrackingIcon() end
         end }),
-    Check(T("Zoom Buttons"), "minimap.zoom_buttons", R.minimap),
-    Slider(T("Zone Text Font Size"), "minimap.zonetext_font_size", 8, 20, 1, R.minimap),
+    Section(T("Minimap Buttons"), true),
+    MinimapButtonRows(),
+    Section(T("Button Positions"), true),
+    MinimapPositionRows(),
+    Section(T("Zone Text"), true),
+    Drop(T("Visibility"), "minimap.zonetext_show", {
+        { "always", T("Always") },
+        { "hover", T("On Hover") },
+        { "never", T("Never") },
+    }, R.minimap),
+    Drop(T("Font"), "minimap.zonetext_font", {
+        { "primary", "Friz Quadrata" },
+        { "actionbar", "Expressway" },
+        { "narrow", "PT Sans Narrow" },
+        { "arial", "Arial Narrow" },
+        { "skurri", "Skurri" },
+        { "morpheus", "Morpheus" },
+    }, R.minimap),
+    Slider(T("Font Size"), "minimap.zonetext_font_size", 8, 20, 1, R.minimap),
+    Check(T("Custom Color"), "minimap.zonetext_custom_color", R.minimap, {
+        tooltip = T("Use one color instead of the PvP zone colors."),
+        after = function() E.Rebuild() end }),
+    MinimapColorRow(T("Text Color"), "minimap.zonetext_color", { 1, 0.82, 0, 1 }, false, {
+        disabled = function() return not GetDB("minimap.zonetext_custom_color") end }),
+    Slider(T("X Position"), "minimap.zonetext_offset_x", -200, 200, 1, R.minimap),
+    Slider(T("Y Position"), "minimap.zonetext_offset_y", -250, 100, 1, R.minimap),
+    Slider(T("Width"), "minimap.zonetext_width", 0, 300, 1, R.minimap),
+    MinimapColorRow(T("Background Color"), "minimap.zonetext_bg_color", { 0, 0, 0, 0 }, true),
+    MinimapColorRow(T("Border Color"), "minimap.zonetext_border_color", { 0, 0, 0, 0 }, true),
     Section(T("Minimap Decorations"), true, NoDecorations),
     Check(T("Enable Minimap Decorations"), "minimap.animated_border_enabled", R.minimapDecor, {
         hidden = NoDecorations,
@@ -1650,7 +1719,7 @@ E.Register("minimap", { settings = {
         end }),
     Slider(T("Opacity"), "minimap.animated_border_opacity", 0, 1, 0.05, R.minimapDecor, {
         hidden = NoDecorations, disabled = DecorationsOff }),
-} })
+}) })
 
 local function SeparateWeaponEnchantsRow()
     return Check(T("Separate Weapon Enchants"), "buffs.separate_weapon_enchants", nil, {
