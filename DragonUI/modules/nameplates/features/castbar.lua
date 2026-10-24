@@ -1121,6 +1121,7 @@ function PartyRaidCastTracker:StartCast(unit, isChannel)
         bar.castingEx = true
         bar.channelingEx = false
     end
+    bar._fillNotInt = bar._notInterruptible and true or false
     PrepareCastFillTexture(bar:GetStatusBarTexture())
     ForceCastBarTextureLayer(bar)
 
@@ -3102,9 +3103,27 @@ function NP.castbar.GetPlateCastInfo(plateData)
     return nil
 end
 
+-- The shield can land after the fill was set (late native shield, UNIT_SPELLCAST_NOT_INTERRUPTIBLE).
+local function SyncCastFillToShield(bar, isNotInt)
+    if bar._fillNotInt == nil or bar._fillNotInt == isNotInt or not NP.config.IsRetailSkin() then
+        return
+    end
+    if not (bar.castingEx or bar.channelingEx) or bar._interrupted or bar._intHideAt or bar._successHoldUntil then
+        return
+    end
+    if bar.InvalidateTextureCache then
+        bar:InvalidateTextureCache()
+    end
+    bar:SetStatusBarTexture(NP.config.GetCastFillTexture(bar.channelingEx, isNotInt))
+    PrepareCastFillTexture(bar:GetStatusBarTexture())
+    ForceCastBarTextureLayer(bar)
+    bar._fillNotInt = isNotInt
+end
+
 function NP.castbar.UpdateCastInterruptibleVisuals(bar, plateData, isPartyBar)
     if not bar then return end
     local isNotInt = bar._notInterruptible and true or false
+    SyncCastFillToShield(bar, isNotInt)
     local sbTex = bar:GetStatusBarTexture()
     if sbTex and sbTex.SetDesaturated then
         -- Modern swaps in ui-castingbar-uninterruptable, which is already the grey art;
@@ -3667,6 +3686,7 @@ function NP.castbar.ApplyPlateCastTextures(bar, channeling, plateData)
     end
     PrepareCastFillTexture(bar:GetStatusBarTexture())
     ForceCastBarTextureLayer(bar)
+    bar._fillNotInt = bar._notInterruptible and true or false
     if plateData then
         NP.castbar.UpdateCastInterruptibleVisuals(bar, plateData, false)
     end
