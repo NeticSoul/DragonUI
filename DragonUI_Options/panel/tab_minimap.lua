@@ -291,6 +291,15 @@ local function BuildMinimapTab(scroll)
         callback = RefreshMinimap,
     })
 
+    C:AddSlider(basic, {
+        label = LO["Addon Button Distance"],
+        desc = LO["Moves LibDBIcon addon buttons out from the minimap's edge, or in with a negative value."],
+        dbPath = "minimap.addon_button_distance",
+        min = -10, max = 20, step = 1,
+        width = 200,
+        callback = RefreshMinimap,
+    })
+
     local farm = C:AddSection(scroll, LO["Farm Mode"])
     C:AddDescription(farm, LO["Bigger minimap with the surrounding clutter hidden."])
 
