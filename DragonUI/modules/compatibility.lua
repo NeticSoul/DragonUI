@@ -993,6 +993,83 @@ local function GetCompatibilityConfig()
     return addon.db.profile.compatibility
 end
 
+-- ============================================================================
+-- BARTENDER4 HAND-OFF
+-- ============================================================================
+
+-- Bartender4 has its own of each. The main bars module stays on for the XP and reputation bars, noop for
+-- their art, and the micro menu and bags stay DragonUI's.
+local BARTENDER_MODULES = { "vehicle", "stance", "petbar", "multicast", "buttons" }
+compatibility.BARTENDER_MODULES = BARTENDER_MODULES
+
+-- Bartender4 modules that would take buttons or bars from the DragonUI module that keeps them.
+local BARTENDER_YIELDING = { MicroMenu = "micromenu", BagBar = "micromenu", XPBar = "mainbars", RepBar = "mainbars" }
+
+function compatibility:BartenderOwnsBars()
+    local cfg = GetCompatibilityConfig()
+    return IsAddOnLoaded("Bartender4") and cfg ~= nil and cfg.bartender_bars ~= false
+end
+
+-- They read SetEnabledState at PLAYER_LOGIN and are not built yet. Nothing is saved: with the DragonUI
+-- module off, or DragonUI gone, they come back as Bartender4's own settings say.
+local function KeepBartenderOffDragonUIBars()
+    local bartender = _G.Bartender4
+    if not (bartender and bartender.GetModule) then return end
+    for name, keeper in pairs(BARTENDER_YIELDING) do
+        local module = addon:IsModuleEnabled(keeper) and bartender:GetModule(name, true)
+        if module then
+            module:SetEnabledState(false)
+            if module:IsEnabled() then
+                module:Disable()
+            end
+            -- Its profile switch and options checkbox call this; a stored "on" must not take the buttons.
+            module.ToggleModule = function(self, info, value)
+                if value ~= nil then
+                    self.db.profile.enabled = value
+                end
+            end
+        end
+    end
+end
+
+-- Runs from RefreshConfig, before any bar module applies. Only modules switched off here come back,
+-- so a bar the player had turned off themselves stays off once Bartender4 is gone.
+function compatibility:ApplyBartenderHandoff()
+    local cfg = GetCompatibilityConfig()
+    local modules = cfg and addon.db.profile.modules
+    if not modules then return end
+
+    local owns = self:BartenderOwnsBars()
+    -- The first run is the load; the modules that read this build once, so it holds until a reload.
+    if self.bartenderActive == nil then
+        self.bartenderActive = owns
+        if owns then
+            KeepBartenderOffDragonUIBars()
+        end
+    end
+
+    if owns then
+        local handed = cfg.bartender_handed or {}
+        for _, name in ipairs(BARTENDER_MODULES) do
+            local moduleCfg = modules[name]
+            if moduleCfg and moduleCfg.enabled then
+                moduleCfg.enabled = false
+                handed[name] = true
+                self.bartenderJustHanded = true
+            end
+        end
+        cfg.bartender_handed = next(handed) and handed or nil
+    elseif cfg.bartender_handed and not self.bartenderActive then
+        -- Not while Bartender4 runs this session's bars: the modules would build over them. The next load restores.
+        for name in pairs(cfg.bartender_handed) do
+            if modules[name] then
+                modules[name].enabled = true
+            end
+        end
+        cfg.bartender_handed = nil
+    end
+end
+
 local function HasSeenD3D9ExWarning()
     local cfg = GetCompatibilityConfig()
     return cfg and cfg.d3d9ex_warning_seen == true
@@ -1286,6 +1363,10 @@ local function InitializeEvents()
             end
 
             DelayedCall(ShowD3D9ExWarning, CONFIG.d3d9ExWarningDelay)
+
+            if compatibility.bartenderActive and compatibility.bartenderJustHanded then
+                print("|cFF00CCFFDragonUI:|r " .. L["Bartender4 now runs your action bars. DragonUI keeps the micro menu, bags and XP bars. Switch this in DragonUI options > Modules."])
+            end
 
         elseif event == "CVAR_UPDATE" then
             local cvarName = loadedAddonName

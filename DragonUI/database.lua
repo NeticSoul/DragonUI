@@ -509,6 +509,7 @@ local defaults = {
 
         compatibility = {
             d3d9ex_warning_seen = false,
+            bartender_bars = true, -- Bartender4 runs the action bars when it is loaded; DragonUI keeps micro menu, bags, XP bars
         },
 
         buttons = {

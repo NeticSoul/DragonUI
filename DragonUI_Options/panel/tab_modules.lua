@@ -23,9 +23,32 @@ local function ModuleToggle(parent, opts)
     -- opts: { label, desc, moduleName (single string or table of names), callback }
     local moduleNames = opts.moduleNames or { opts.moduleName }
 
+    -- While Bartender4 runs the bars, the hand-off would switch these off again on the next reload,
+    -- so a group toggle keeps only the rest and a toggle of handed modules alone is locked.
+    local compat = addon.compatibility
+    local handedOff = false
+    if compat and compat:BartenderOwnsBars() then
+        local kept = {}
+        for _, name in ipairs(moduleNames) do
+            if not tContains(compat.BARTENDER_MODULES, name) then
+                kept[#kept + 1] = name
+            end
+        end
+        if #kept == 0 then
+            handedOff = true
+        else
+            moduleNames = kept
+        end
+    end
+    local desc = opts.desc
+    if handedOff then
+        desc = LO["Bartender4 is running these bars. Turn off Use Bartender4 to change them."]
+    end
+
     C:AddToggle(parent, {
         label = opts.label,
-        desc  = opts.desc,
+        desc  = desc,
+        disabled = handedOff,
         getFunc = function()
             local modules = addon.db.profile.modules
             if not modules then return false end
@@ -126,6 +149,15 @@ local function BuildModulesTab(scroll)
         desc = LO["Master toggle for the complete action bars system."],
         moduleNames = { "mainbars", "vehicle", "stance", "petbar", "multicast", "buttons", "noop", "micromenu" },
     })
+
+    if IsAddOnLoaded("Bartender4") then
+        C:AddToggle(abSection, {
+            label = LO["Use Bartender4"],
+            desc = LO["Let Bartender4 run the action bars. DragonUI keeps the micro menu, bags and XP bars. Turn off to use DragonUI's bars alongside Bartender4."],
+            dbPath = "compatibility.bartender_bars",
+            requiresReload = true,
+        })
+    end
 
     -- ====================================================================
     -- UI SYSTEMS

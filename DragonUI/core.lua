@@ -157,6 +157,11 @@ function addon:RefreshConfig()
     -- Also runs on profile switch: the newly-activated profile may be older than the current schema.
     addon:ApplyDatabaseMigrations()
 
+    -- Before RefreshRegisteredSystems and before the bar modules' own ADDON_LOADED handlers read their flags.
+    if addon.compatibility then
+        addon.compatibility:ApplyBartenderHandoff()
+    end
+
     -- Initialize cooldown system if it hasn't been already
     if addon.InitializeCooldowns then
         addon.InitializeCooldowns()
