@@ -288,8 +288,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "Das DragonUI-Design
 L["Open at Cursor"] = "Am Cursor öffnen"
 L["Open the loot window at the cursor instead of its saved position."] = "Das Beutefenster am Cursor statt an seiner gespeicherten Position öffnen."
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "Am Cursor öffnen deaktivieren und dann das Beutefenster ziehen, um seine Position zu speichern."
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "Wenn automatisches Plündern aktiv ist, halte beim Plündern deine Taste für automatisches Plündern (standardmäßig Umschalt) gedrückt und ziehe dann das Fenster, um seine Position zu speichern."
 L["Animate Loot Reflow"] = "Beute-Neuanordnung animieren"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "Lücken sanft schließen und das Beutefenster beim Aufheben von Gegenständen anpassen."
+L["Auto Loot Hold"] = "Haltezeit bei automatischem Plündern"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "Sekunden, die automatisch geplünderte Gegenstände im Beutefenster bleiben, bevor sie herausgleiten. Klicks gehen währenddessen hindurch. 0 lässt sie sofort herausgleiten."
 L["Reset Loot Window Position"] = "Position des Beutefensters zurücksetzen"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Die gespeicherte Position löschen. Beim nächsten Öffnen des Beutefensters wird Blizzards Standardposition verwendet."
 

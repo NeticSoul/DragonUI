@@ -740,8 +740,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica a aparência
 L["Open at Cursor"] = "Abrir no cursor"
 L["Open the loot window at the cursor instead of its saved position."] = "Abre a janela de saque no cursor em vez da posição salva."
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "Desative Abrir no cursor e arraste a janela de saque para salvar sua posição."
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "Se o saque automático estiver ativado, segure sua tecla de saque automático (Shift por padrão) ao saquear e arraste a janela para salvar sua posição."
 L["Animate Loot Reflow"] = "Animar reorganização do saque"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "Fecha os espaços suavemente e redimensiona a janela de saque ao coletar itens."
+L["Auto Loot Hold"] = "Retenção do saque automático"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "Segundos que os itens saqueados automaticamente permanecem na janela de saque antes de deslizarem para fora. Os cliques passam através deles enquanto esperam. 0 os desliza para fora na hora."
 L["Reset Loot Window Position"] = "Redefinir posição da janela de saque"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Limpa a posição salva. A posição padrão da Blizzard será usada na próxima vez que abrir a janela de saque."
 

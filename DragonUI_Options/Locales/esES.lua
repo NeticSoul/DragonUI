@@ -309,8 +309,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "Aplica la aparienci
 L["Open at Cursor"] = "Abrir bajo el cursor"
 L["Open the loot window at the cursor instead of its saved position."] = "Abre la ventana de botín bajo el cursor en lugar de en su posición guardada."
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "Desactiva Abrir bajo el cursor y arrastra la ventana de botín para guardar su posición."
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "Si el despojo automático está activado, mantén pulsada tu tecla de despojo automático (Mayús por defecto) al despojar y arrastra la ventana para guardar su posición."
 L["Animate Loot Reflow"] = "Animar reordenación del botín"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "Elimina suavemente los huecos y redimensiona la ventana de botín al recoger objetos."
+L["Auto Loot Hold"] = "Retención del despojo automático"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "Segundos que los objetos despojados automáticamente permanecen en la ventana de botín antes de deslizarse fuera. Los clics la atraviesan mientras esperan. 0 los desliza fuera al instante."
 L["Reset Loot Window Position"] = "Restablecer posición de la ventana de botín"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Borra la posición guardada. La próxima vez que abras la ventana de botín se usará la posición predeterminada de Blizzard."
 

@@ -744,8 +744,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "Applique l'apparenc
 L["Open at Cursor"] = "Ouvrir au curseur"
 L["Open the loot window at the cursor instead of its saved position."] = "Ouvre la fenêtre de butin au curseur plutôt qu'à sa position enregistrée."
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "Désactivez Ouvrir au curseur, puis faites glisser la fenêtre de butin pour enregistrer sa position."
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "Si la fouille automatique est activée, maintenez votre touche de fouille automatique (Maj par défaut) en ramassant, puis faites glisser la fenêtre pour enregistrer sa position."
 L["Animate Loot Reflow"] = "Animer le réagencement du butin"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "Comble les espaces et redimensionne la fenêtre de butin en douceur après avoir récupéré des objets."
+L["Auto Loot Hold"] = "Délai de fouille automatique"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "Secondes pendant lesquelles les objets ramassés automatiquement restent dans la fenêtre de butin avant d'en sortir en glissant. Les clics passent au travers pendant l'attente. 0 les fait sortir immédiatement."
 L["Reset Loot Window Position"] = "Réinitialiser la position de la fenêtre de butin"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Efface la position enregistrée. La position par défaut de Blizzard sera utilisée à la prochaine ouverture de la fenêtre de butin."
 

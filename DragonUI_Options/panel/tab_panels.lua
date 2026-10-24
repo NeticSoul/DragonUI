@@ -533,6 +533,7 @@ local function BuildLootSubTab(scroll)
     })
 
     C:AddDescription(lootSection, LO["Disable Open at Cursor, then drag the loot window to save its position."])
+    C:AddDescription(lootSection, LO["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."])
 
     C:AddToggle(lootSection, {
         label = LO["Animate Loot Reflow"],
@@ -560,6 +561,22 @@ local function BuildLootSubTab(scroll)
         disabled = function() return not IsEnabled("loot_skin") end,
         requiresReload = false,
     })
+
+    C:AddSlider(lootSection, {
+        label = LO["Auto Loot Hold"],
+        desc = LO["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."],
+        getFunc = function()
+            return GetModuleField("loot_skin", "auto_loot_hold") or 1
+        end,
+        setFunc = function(val)
+            EnsureModuleTable("loot_skin").auto_loot_hold = val
+        end,
+        min = 0, max = 10, step = 0.5,
+        width = 200,
+        disabled = function() return not IsEnabled("loot_skin") end,
+    })
+
+    C:AddSpacer(lootSection)
 
     C:AddButton(lootSection, {
         label = LO["Reset Loot Window Position"],

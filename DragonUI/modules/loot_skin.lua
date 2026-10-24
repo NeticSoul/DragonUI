@@ -78,6 +78,8 @@ local EXIT_FADE_DELAY = 0.1
 local EXIT_FADE_DURATION = 0.2
 -- 3.3.5a clears every slot in one packet, so retail's server-paced cascade is faked here.
 local EXIT_STAGGER = 0.07
+-- Auto loot empties the window the frame it opens; collected rows wait this long before flying out.
+local DEFAULT_AUTO_LOOT_HOLD = 1
 -- Shape of retail's ScrollingFlatPanel HideAnim, minus the translation.
 local CLOSE_FADE_DURATION = 0.1
 local ROW_MOVE_DURATION = 0.16
@@ -125,6 +127,11 @@ local function HideIfEmpty()
     if frame and frame:IsShown() and (GetNumLootItems() or 0) == 0 then
         HideUIPanel(frame)
     end
+end
+
+local function AutoLootHold()
+    local hold = tonumber(GetConfig().auto_loot_hold)
+    return hold and max(0, hold) or DEFAULT_AUTO_LOOT_HOLD
 end
 
 -- ============================================================================
@@ -667,6 +674,7 @@ end
 local function HidePanel()
     panel:Hide()
     panel:SetAlpha(1)
+    panel:EnableMouse(true)
     closePending = false
 end
 
@@ -683,9 +691,16 @@ local function ResetAnimations()
         card._dragonuiDisplayIndex = nil
         card._dragonuiLayoutSerial = (card._dragonuiLayoutSerial or 0) + 1
     end
+    for index = 1, rowCount do
+        local button = RowButton(index)
+        if button then
+            button:EnableMouse(true)
+        end
+    end
     flying = 0
     closePending = false
     panel:SetAlpha(1)
+    panel:EnableMouse(true)
 end
 
 local function OnExitFinished(card, button)
@@ -694,6 +709,7 @@ local function OnExitFinished(card, button)
     card._dragonuiExiting = nil
     card._dragonuiDisplayIndex = nil
     if button then
+        button:EnableMouse(true)
         button:Hide()
     end
     flying = flying - 1
@@ -728,7 +744,13 @@ local function PlayExit(index)
     end
     flying = flying + 1
 
-    Tween((index - 1) * EXIT_STAGGER, EXIT_DURATION, function(progress)
+    -- A held row is a picture of loot already taken, so clicks go through it.
+    local hold = AutoLootHold()
+    if hold > 0 and button then
+        button:EnableMouse(false)
+    end
+
+    Tween(hold + (index - 1) * EXIT_STAGGER, EXIT_DURATION, function(progress)
         card:SetPoint("TOPLEFT", canvas, "TOPLEFT", CANVAS_INSET + EXIT_DISTANCE * progress * progress, top)
         local fade = (progress * EXIT_DURATION - EXIT_FADE_DELAY) / EXIT_FADE_DURATION
         card:SetAlpha(fade > 0 and 1 - fade * fade or 1)
@@ -1297,6 +1319,8 @@ local function InstallHooks(frame)
         end
         if flying > 0 then
             closePending = true
+            -- Rows still holding must not eat the click on the next corpse; its LOOT_OPENED resets them.
+            panel:EnableMouse(false)
         else
             HidePanel()
         end

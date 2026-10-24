@@ -344,8 +344,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = true
 L["Open at Cursor"] = true
 L["Open the loot window at the cursor instead of its saved position."] = true
 L["Disable Open at Cursor, then drag the loot window to save its position."] = true
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = true
 L["Animate Loot Reflow"] = true
 L["Smoothly close gaps and resize the loot window after collecting items."] = true
+L["Auto Loot Hold"] = true
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = true
 L["Reset Loot Window Position"] = true
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = true
 
