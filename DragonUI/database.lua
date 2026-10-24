@@ -1316,6 +1316,7 @@ local defaults = {
                 enabled = true, -- Retail-style skin for the Blizzard loot window
                 animated_reflow = true, -- Compact collected loot with animated rows and panel resizing
                 auto_hide_empty = false, -- Close the loot window when there is nothing left to loot
+                auto_loot_hold = 1, -- Seconds auto-looted rows stay before flying out (0 = at once)
             },
             bagsort = {
                 enabled = true, -- Sort bags and bank items with buttons
