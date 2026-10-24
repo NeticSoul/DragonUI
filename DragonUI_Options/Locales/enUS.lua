@@ -910,7 +910,14 @@ L["Tracking Icons"] = true
 L["Show current tracking icons (old style)."] = true
 L["Zoom Buttons"] = true
 L["Show zoom buttons (+/-)."] = true
-L["Zone Text Font Size"] = true
+L["Zone Text"] = true
+L["On Hover"] = true
+L["Text Color"] = true
+L["Background Color"] = true
+L["Use one color instead of the PvP zone colors."] = true
+L["Moves the top bar with the zone text and the buttons around it."] = true
+L["Width of the top bar. 0 keeps the default."] = true
+L["Raise the alpha to draw a box behind the zone text."] = true
 L["Font size of the zone text above the minimap."] = true
 
 -- Position
