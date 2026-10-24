@@ -1411,3 +1411,7 @@ function Collector:Hide()                       HideCollectorImmediate() end
 function Collector:Restore()                    RestoreCollectedToOrigin() end
 function Collector:HideIntegratedAddonButtons() RefreshCollector() end
 function Collector:UpdateSettingsButton()       UpdateSettingsButton() end
+
+-- The gear's ring geometry, for other buttons placed on the map's edge.
+function Collector:PlaceOnRing(btn, angle)      PositionByAngle(btn, angle) end
+function Collector:GetCursorAngle()             return GetCursorAngle() end

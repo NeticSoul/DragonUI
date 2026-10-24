@@ -649,6 +649,18 @@ local defaults = {
             },
             addon_button_default = "always", -- Addon buttons without an entry of their own
             addon_button_visibility = {}, -- [button name] = "always", "hover" or "never"
+            -- Buttons with a ring entry in addon.MINIMAP_VISIBILITY_BUTTONS: "bar" (their spot by the top bar)
+            -- or "ring" (on the map's edge at button_angle, dragged around it like the settings gear).
+            button_position = {
+                calendar = "bar",
+                tracking = "bar",
+                difficulty = "bar",
+            },
+            button_angle = { -- degrees: 0 = right, counterclockwise
+                calendar = 40,
+                tracking = 140,
+                difficulty = 65,
+            },
             show_on_hover = false,
             show_in_combat = false,
             hide_in_combat = false,
@@ -1459,13 +1471,17 @@ addon.defaults = defaults;
 
 -- The minimap buttons the visibility list covers, in list order. Here so both the editor (core)
 -- and the minimap module can read it; label is the locale key, names are the frames it covers.
+-- ring: the frame that moves onto the map's edge and the one that takes the drag.
 addon.MINIMAP_VISIBILITY_BUTTONS = {
     { key = "top_bar", label = "Top Bar", names = { "MinimapBorderTop" } },
     { key = "clock", label = "Clock", names = { "TimeManagerClockButton" } },
-    { key = "calendar", label = "Calendar", names = { "GameTimeFrame" } },
-    { key = "tracking", label = "Tracking", names = { "MiniMapTracking" } },
+    { key = "calendar", label = "Calendar", names = { "GameTimeFrame" },
+        ring = { mover = "GameTimeFrame", handle = "GameTimeFrame" } },
+    { key = "tracking", label = "Tracking", names = { "MiniMapTracking" },
+        ring = { mover = "MiniMapTracking", handle = "MiniMapTrackingButton" } },
     { key = "mail", label = "New Mail Indicator", names = { "MiniMapMailFrame" } },
-    { key = "difficulty", label = "Dungeon Difficulty", names = { "MiniMapInstanceDifficulty" } },
+    { key = "difficulty", label = "Dungeon Difficulty", names = { "MiniMapInstanceDifficulty" },
+        ring = { mover = "MiniMapInstanceDifficulty", handle = "MiniMapInstanceDifficulty" } },
     { key = "lfg", label = "Dungeon Finder Eye", names = { "MiniMapLFGFrame" } },
     { key = "battleground", label = "Battleground Queue", names = { "MiniMapBattlefieldFrame" } },
     { key = "zoom", label = "Zoom Buttons", names = { "MinimapZoomIn", "MinimapZoomOut" } },

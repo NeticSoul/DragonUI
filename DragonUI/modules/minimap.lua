@@ -729,6 +729,9 @@ local function UpdateCornerIconsPosition()
             pvpButton:SetPoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 0, 18)
         end
     end
+
+    -- Buttons set to the ring leave these spots; defined further down.
+    if MinimapModule.ApplyRingPlacement then MinimapModule.ApplyRingPlacement() end
 end
 
 local function UpdateForeverStyle()
@@ -3663,6 +3666,124 @@ function MinimapModule.ApplyButtonVisibility(forceOff)
     -- Off DragonUI (hybrid mode, module restore): drop the hover fade too. Zone text has its own.
     for region in pairs(HoverOnly.frames) do
         if not wanted[region] and region ~= MinimapZoneTextButton then HoverOnly.Set(region, false) end
+    end
+end
+
+-- ============================================================================
+-- RING PLACEMENT
+-- Calendar, tracking and the difficulty flag can leave the top bar for the map's edge, at an angle
+-- the player drags them to. Uses the settings gear's ring geometry from the collector.
+-- ============================================================================
+
+local RingPlacement = {
+    entries = {}, -- key -> its addon.MINIMAP_VISIBILITY_BUTTONS entry
+    -- The bar spots ReplaceBlizzardFrame gives them; UpdateCornerIconsPosition re-anchors the difficulty flag.
+    BAR_ANCHORS = {
+        calendar = function(frame) frame:SetPoint("LEFT", MinimapBorderTop, "RIGHT", 3, -1) end,
+        tracking = function(frame) frame:SetPoint("RIGHT", MinimapBorderTop, "LEFT", -3 + 3 * 26 / 21, -1) end,
+    },
+}
+for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+    if entry.ring then RingPlacement.entries[entry.key] = entry end
+end
+
+function RingPlacement.IsOnRing(key)
+    local settings = GetMinimapSettings()
+    local positions = settings and settings.button_position
+    return ButtonVisibility.IsActive() and positions ~= nil and positions[key] == "ring"
+end
+
+function RingPlacement.GetAngle(key)
+    local settings = GetMinimapSettings()
+    local angles = settings and settings.button_angle
+    return angles and tonumber(angles[key]) or 0
+end
+
+-- The collector works in the map's units, right for the gear (a Minimap child). These hang from
+-- MinimapCluster and MinimapBackdrop, which lack the map's own scale, so the offsets are converted
+-- into the button's own units: its parent's, times its SetScale (the difficulty flag runs at 0.85).
+-- A parked (Never or farm mode) button is measured by the parent it returns to.
+-- The gear's radius keeps centres just inside the edge; these sit RING_OUTSET map pixels further out,
+-- measured as the collector does: distance on a round map, the larger offset on a square one.
+-- The calendar looked further in than the others at the same outset (checked in game), so it goes out more.
+RingPlacement.RING_OUTSET = { calendar = 10, tracking = 6, difficulty = 6 }
+
+function RingPlacement.Place(mover, angle, key)
+    addon.MinimapCollector:PlaceOnRing(mover, angle)
+    local parent = ButtonVisibility.parents[mover] or MinimapModule.farmMode.parents[mover] or mover:GetParent()
+    local point, relativeTo, relativePoint, x, y = mover:GetPoint(1)
+    if not (parent and point and Minimap) then return end
+    local radius
+    if GetMinimapShape and GetMinimapShape() == "SQUARE" then
+        radius = math.max(math.abs(x), math.abs(y))
+    else
+        radius = math.sqrt(x * x + y * y)
+    end
+    local outset = RingPlacement.RING_OUTSET[key] or 6
+    local outward = radius > 0 and (radius + outset) / radius or 1
+    local ratio = Minimap:GetEffectiveScale() / (parent:GetEffectiveScale() * mover:GetScale())
+    mover:ClearAllPoints()
+    mover:SetPoint(point, relativeTo, relativePoint, x * outward * ratio, y * outward * ratio)
+end
+
+function RingPlacement.OnDragUpdate()
+    local entry = RingPlacement.entries[RingPlacement.dragging]
+    local collector = addon.MinimapCollector
+    local angle = collector and collector.GetCursorAngle and collector:GetCursorAngle()
+    local settings = GetMinimapSettings()
+    if not (entry and angle and settings) then return end
+    RingPlacement.Place(_G[entry.ring.mover], angle, RingPlacement.dragging)
+    settings.button_angle[RingPlacement.dragging] = angle
+end
+
+-- Hooked once; the drag only does something while the button is on the ring.
+function RingPlacement.HookDrag(key, handle)
+    if handle.DragonUI_RingDragHooked then return end
+    handle.DragonUI_RingDragHooked = true
+    handle:RegisterForDrag("LeftButton")
+    handle:HookScript("OnDragStart", function()
+        if not RingPlacement.IsOnRing(key) then return end
+        CloseDropDownMenus() -- the tracking menu, if a press opened it
+        RingPlacement.dragging = key
+        if not RingPlacement.driver then RingPlacement.driver = CreateFrame("Frame") end
+        RingPlacement.driver:SetScript("OnUpdate", RingPlacement.OnDragUpdate)
+    end)
+    handle:HookScript("OnDragStop", function()
+        if RingPlacement.dragging ~= key then return end
+        RingPlacement.dragging = nil
+        RingPlacement.driver:SetScript("OnUpdate", nil)
+    end)
+end
+
+-- Runs after UpdateCornerIconsPosition has put everything in its bar spot.
+function MinimapModule.ApplyRingPlacement()
+    local collector = addon.MinimapCollector
+    if not (collector and collector.PlaceOnRing) then return end
+    for key, entry in pairs(RingPlacement.entries) do
+        local mover, handle = _G[entry.ring.mover], _G[entry.ring.handle]
+        if mover and handle then
+            if RingPlacement.IsOnRing(key) then
+                RingPlacement.Place(mover, RingPlacement.GetAngle(key), key)
+                mover.DragonUI_OnRing = true
+                RingPlacement.HookDrag(key, handle)
+                -- The difficulty flag takes no mouse input on the bar; on the ring it needs it to be dragged.
+                if not handle:IsMouseEnabled() then
+                    handle:EnableMouse(true)
+                    handle.DragonUI_RingMouse = true
+                end
+            elseif mover.DragonUI_OnRing then
+                mover.DragonUI_OnRing = nil
+                local barAnchor = RingPlacement.BAR_ANCHORS[key]
+                if barAnchor then
+                    mover:ClearAllPoints()
+                    barAnchor(mover)
+                end
+                if handle.DragonUI_RingMouse then
+                    handle:EnableMouse(false)
+                    handle.DragonUI_RingMouse = nil
+                end
+            end
+        end
     end
 end
 

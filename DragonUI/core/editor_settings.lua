@@ -1570,6 +1570,21 @@ local function MinimapButtonRows()
     return rows
 end
 
+-- Top Bar or On the Ring for the buttons that can sit on the map's edge.
+local function MinimapPositionRows()
+    local positions = {
+        { "bar", T("Top Bar") },
+        { "ring", T("On the Ring") },
+    }
+    local rows = {}
+    for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+        if entry.ring then
+            rows[#rows + 1] = Drop(T(entry.label), "minimap.button_position." .. entry.key, positions, R.minimap)
+        end
+    end
+    return rows
+end
+
 -- Zone text colors are stored as { r, g, b, a }; fallback is the default { r, g, b, a } list.
 local function MinimapColorRow(labelKey, path, fallback, hasAlpha, o)
     o = o or {}
@@ -1640,6 +1655,8 @@ E.Register("minimap", { settings = Join({
         end }),
     Section(T("Minimap Buttons"), true),
     MinimapButtonRows(),
+    Section(T("Button Positions"), true),
+    MinimapPositionRows(),
     Section(T("Zone Text"), true),
     Drop(T("Visibility"), "minimap.zonetext_show", {
         { "always", T("Always") },

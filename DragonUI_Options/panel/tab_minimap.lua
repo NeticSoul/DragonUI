@@ -448,6 +448,27 @@ local function BuildMinimapTab(scroll)
         })
     end
 
+    C:AddHeading(buttons, LO["Button Positions"])
+    C:AddDescription(buttons, LO["On the Ring puts a button on the minimap's edge. Drag it to move it around."])
+    local positionValues = {
+        bar = LO["Top Bar"],
+        ring = LO["On the Ring"],
+    }
+    local positionRow, positionCount = nil, 0
+    for _, entry in ipairs(addon.MINIMAP_VISIBILITY_BUTTONS or {}) do
+        if entry.ring then
+            positionCount = positionCount + 1
+            if positionCount % 2 == 1 then positionRow = C:AddRow(buttons) end
+            C:AddDropdown(positionRow, {
+                label = LO[entry.label],
+                dbPath = "minimap.button_position." .. entry.key,
+                values = positionValues,
+                width = 220,
+                callback = RefreshMinimap,
+            })
+        end
+    end
+
     C:AddHeading(buttons, LO["Addon Buttons"])
     C:AddDropdown(buttons, {
         label = LO["All Addon Buttons"],
