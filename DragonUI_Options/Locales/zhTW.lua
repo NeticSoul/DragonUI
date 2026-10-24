@@ -1359,8 +1359,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "將 DragonUI 外觀
 L["Open at Cursor"] = "在游標位置開啟"
 L["Open the loot window at the cursor instead of its saved position."] = "在游標位置而非儲存的位置開啟拾取視窗。"
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "停用在游標位置開啟，然後拖曳拾取視窗以儲存其位置。"
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "如果開啟了自動拾取，拾取時按住自動拾取鍵（預設為Shift），然後拖曳視窗以儲存其位置。"
 L["Animate Loot Reflow"] = "播放拾取重排動畫"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "拾取物品後平滑填補空隙並調整拾取視窗大小。"
+L["Auto Loot Hold"] = "自動拾取停留時間"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "自動拾取的物品在滑出前停留在拾取視窗中的秒數。等待期間點擊會穿透。設為0則立即滑出。"
 L["Reset Loot Window Position"] = "重設拾取視窗位置"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "清除儲存的位置。下次開啟拾取視窗時將使用暴雪預設位置。"
 

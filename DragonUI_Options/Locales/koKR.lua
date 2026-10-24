@@ -297,8 +297,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "Blizzard 전리품 
 L["Open at Cursor"] = "커서에서 열기"
 L["Open the loot window at the cursor instead of its saved position."] = "저장된 위치 대신 커서 위치에 전리품 창을 엽니다."
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "커서에서 열기를 끈 후 전리품 창을 끌어 위치를 저장합니다."
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "자동 획득이 켜져 있으면 획득하는 동안 자동 획득 키(기본값 Shift)를 누른 채 창을 끌어 위치를 저장합니다."
 L["Animate Loot Reflow"] = "전리품 재정렬 애니메이션"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "아이템을 획득한 후 빈 공간을 부드럽게 메우고 전리품 창 크기를 조절합니다."
+L["Auto Loot Hold"] = "자동 획득 유지 시간"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "자동 획득한 아이템이 밀려나기 전에 전리품 창에 남아 있는 시간(초)입니다. 대기 중에는 클릭이 통과합니다. 0이면 즉시 밀려납니다."
 L["Reset Loot Window Position"] = "전리품 창 위치 초기화"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "저장된 위치를 지웁니다. 다음에 전리품 창을 열면 Blizzard 기본 위치가 사용됩니다."
 

@@ -290,8 +290,11 @@ L["Apply the DragonUI skin to the Blizzard loot window."] = "Применяет 
 L["Open at Cursor"] = "Открывать у курсора"
 L["Open the loot window at the cursor instead of its saved position."] = "Открывает окно добычи у курсора вместо сохранённой позиции."
 L["Disable Open at Cursor, then drag the loot window to save its position."] = "Отключите Открывать у курсора, затем перетащите окно добычи, чтобы сохранить его позицию."
+L["If auto loot is on, hold your auto loot key (Shift by default) while looting, then drag the window to save its position."] = "Если включен автоматический сбор добычи, удерживайте клавишу автосбора (по умолчанию Shift) при сборе добычи, затем перетащите окно, чтобы сохранить его позицию."
 L["Animate Loot Reflow"] = "Анимировать перераспределение добычи"
 L["Smoothly close gaps and resize the loot window after collecting items."] = "Плавно заполняет пробелы и изменяет размер окна добычи после получения предметов."
+L["Auto Loot Hold"] = "Задержка автосбора добычи"
+L["Seconds auto-looted items stay in the loot window before sliding out. Clicks pass through while they wait. 0 slides them out at once."] = "Сколько секунд автоматически собранные предметы остаются в окне добычи, прежде чем уехать. Пока они ждут, щелчки проходят сквозь них. 0 — сразу."
 L["Reset Loot Window Position"] = "Сбросить положение окна добычи"
 L["Clear the saved position. The Blizzard default will be used next time you open the loot window."] = "Удаляет сохранённую позицию. При следующем открытии окна добычи будет использована позиция Blizzard по умолчанию."
 
