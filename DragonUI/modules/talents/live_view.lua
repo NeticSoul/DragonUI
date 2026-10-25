@@ -44,7 +44,7 @@ end
 local function liveState(open, met, shown, maxRank, available)
     if not open and shown == 0 then return "locked" end
     if not met or not open or (available <= 0 and shown == 0) then return "gray" end
-    if shown < maxRank then return "green" end
+    if available > 0 and shown < maxRank then return "green" end
     return "yellow"
 end
 

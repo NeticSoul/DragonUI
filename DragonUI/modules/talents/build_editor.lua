@@ -160,7 +160,8 @@ ns.DefinePopup("DUI_TALENT_UNSAVED_LEFT", L["You have unsaved changes in '%s'. S
 
 local function editorState(build, data, tab, talent, rank, canAdd)
     if rank >= talent.maxRank then return "yellow" end
-    if rank > 0 or canAdd then return "green" end
+    if canAdd then return "green" end
+    if rank > 0 then return "yellow" end
     if ns.TierOpen(build, data, tab, talent.tier) then return "gray" end
     return "locked"
 end
