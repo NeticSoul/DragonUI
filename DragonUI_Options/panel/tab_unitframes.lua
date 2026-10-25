@@ -216,6 +216,33 @@ Panel.subTabSetters["unitframes"] = function(key) activeSubTab = key end
 -- COMMON CONTROLS BUILDER
 -- ============================================================================
 
+local function AddTextControls(parent, unitKey, refreshFunc)
+    C:AddToggle(parent, {
+        label = LO["Format Large Numbers"],
+        dbPath = "unitframe." .. unitKey .. ".breakUpLargeNumbers",
+        callback = refreshFunc,
+    })
+
+    C:AddDropdown(parent, {
+        label = LO["Text Format"],
+        dbPath = "unitframe." .. unitKey .. ".textFormat",
+        values = textFormatValues,
+        callback = refreshFunc,
+    })
+
+    C:AddToggle(parent, {
+        label = LO["Always Show Health Text"],
+        dbPath = "unitframe." .. unitKey .. ".showHealthTextAlways",
+        callback = refreshFunc,
+    })
+
+    C:AddToggle(parent, {
+        label = LO["Always Show Mana Text"],
+        dbPath = "unitframe." .. unitKey .. ".showManaTextAlways",
+        callback = refreshFunc,
+    })
+end
+
 local function AddCommonControls(parent, unitKey, refreshFunc, opts)
     opts = opts or {}
 
@@ -241,30 +268,7 @@ local function AddCommonControls(parent, unitKey, refreshFunc, opts)
         AddClassPortraitToggles(parent, unitKey, refreshFunc)
     end
 
-    C:AddToggle(parent, {
-        label = LO["Format Large Numbers"],
-        dbPath = "unitframe." .. unitKey .. ".breakUpLargeNumbers",
-        callback = refreshFunc,
-    })
-
-    C:AddDropdown(parent, {
-        label = LO["Text Format"],
-        dbPath = "unitframe." .. unitKey .. ".textFormat",
-        values = textFormatValues,
-        callback = refreshFunc,
-    })
-
-    C:AddToggle(parent, {
-        label = LO["Always Show Health Text"],
-        dbPath = "unitframe." .. unitKey .. ".showHealthTextAlways",
-        callback = refreshFunc,
-    })
-
-    C:AddToggle(parent, {
-        label = LO["Always Show Mana Text"],
-        dbPath = "unitframe." .. unitKey .. ".showManaTextAlways",
-        callback = refreshFunc,
-    })
+    AddTextControls(parent, unitKey, refreshFunc)
 end
 
 -- ============================================================================
@@ -897,6 +901,9 @@ local function BuildBossSection(scroll)
         width = 200,
         callback = refreshBoss,
     })
+
+    C:AddHeading(s, LO["Text Display"])
+    AddTextControls(s, "boss", refreshBoss)
 
     C:AddHeading(s, LO["Visibility"])
     C:AddVisibilityFadeToggles(s, {

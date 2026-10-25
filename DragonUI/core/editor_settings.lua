@@ -1146,9 +1146,11 @@ E.Register("party", { settings = Join({
     TextRows("party", R.partyText),
 }) })
 
-E.Register("boss", { settings = {
+E.Register("boss", { settings = Join({
     Slider(T("Scale"), "unitframe.boss.scale", 0.5, 2.0, 0.01, R.boss, { resize = true }),
-} })
+    Section(T("Text Display"), true, nil, PreviewTexts("boss")),
+    TextRows("boss", R.boss),
+}) })
 
 -- ============================================================================
 -- DEFINITIONS: CAST BARS

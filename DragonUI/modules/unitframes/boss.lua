@@ -878,6 +878,37 @@ end
 -- INITIALIZATION
 -- ============================================================================
 
+BossModule.textSystems = {}
+
+local function UpdateBossTexts()
+    for _, texts in pairs(BossModule.textSystems) do
+        texts.update()
+    end
+end
+
+-- Our own strings over the bars; Blizzard's TextString is only faded, never written to or force-shown.
+local function SetupBossTexts(bossFrame, bossIndex)
+    local system = addon.TextSystem
+    if not system or BossModule.textSystems[bossIndex] then return end
+    local fn = bossFrame:GetName()
+    local healthBar, manaBar = _G[fn .. "HealthBar"], _G[fn .. "ManaBar"]
+    for _, suffix in ipairs({ "TextureFrameHealthBarText", "TextureFrameManaBarText" }) do
+        local blizzardText = _G[fn .. suffix]
+        if blizzardText then blizzardText:SetAlpha(0) end
+    end
+    BossModule.textSystems[bossIndex] = system.SetupFrameTextSystem("boss", "boss" .. bossIndex, bossFrame,
+        healthBar, manaBar, fn)
+
+    -- Same bar geometry as the target's: its right end runs under the portrait ring.
+    local manaCenter, manaRight = bossFrame[fn .. "ManaText"], bossFrame[fn .. "ManaTextRight"]
+    if manaBar and manaCenter and manaRight then
+        manaCenter:ClearAllPoints()
+        manaCenter:SetPoint("CENTER", manaBar, "CENTER", -2, 0)
+        manaRight:ClearAllPoints()
+        manaRight:SetPoint("RIGHT", manaBar, "RIGHT", -13, 0)
+    end
+end
+
 local function InitializeBossFrames()
     if BossModule.configured then return end
     if InCombatLockdown() then return end
@@ -918,6 +949,7 @@ local function InitializeBossFrames()
 
             -- Reskin the Blizzard boss frame
             ReskinBossFrame(wrapper, bossFrame, i)
+            SetupBossTexts(bossFrame, i)
 
             -- Hook OnShow to refresh visuals when boss appears
             if not bossFrame.__DragonUI_OnShowHooked then
@@ -959,6 +991,11 @@ local function InitializeBossFrames()
                 bossFrame.__DragonUI_OnShowHooked = true
             end
         end
+    end
+
+    -- One updater per frame type, so it repaints all four (each setup registered only its own).
+    if addon.TextSystem then
+        addon.TextSystem.RegisterPreviewUpdater("boss", UpdateBossTexts)
     end
 
     HookClassification()
@@ -1232,6 +1269,7 @@ function addon.RefreshBossFrames()
     end
 
     PositionBossFrames()
+    UpdateBossTexts()
 end
 
 -- Store reference on addon for profile callbacks
