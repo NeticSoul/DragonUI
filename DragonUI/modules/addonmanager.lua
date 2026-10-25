@@ -886,24 +886,17 @@ end
 -- SETUP
 -- ============================================================================
 
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("ADDON_LOADED")
-initFrame:RegisterEvent("PLAYER_LOGIN")
-initFrame:SetScript("OnEvent", function(self, event)
-    WatchBrokers()
-    if brokerWatcher.on then self:UnregisterEvent("ADDON_LOADED") end
-    if event ~= "PLAYER_LOGIN" then return end
-    self:UnregisterEvent("PLAYER_LOGIN")
+local menuBtn
 
-    if not addon:IsModuleEnabled("addonmanager") then
-        self:UnregisterAllEvents()
-        local ldb = brokerWatcher.on and LibStub("LibDataBroker-1.1", true)
-        if ldb then ldb.UnregisterCallback(brokerWatcher, "LibDataBroker_DataObjectCreated") end
-        return
-    end
-    if _G.GameMenuButtonAddons then return end
+-- ACP's button is GameMenuButtonAddOns; ours on top of it read as a restyled ACP button plus a spare row.
+local function HasOtherAddonsButton()
+    return _G.GameMenuButtonAddons or _G.GameMenuButtonAddOns or IsAddOnLoaded("ACP")
+end
 
-    local menuBtn = CreateFrame("Button", "GameMenuButtonDragonUIAddons", GameMenuFrame, "GameMenuButtonTemplate")
+local function AddMenuButton()
+    if menuBtn or HasOtherAddonsButton() then return end
+
+    menuBtn = CreateFrame("Button", "GameMenuButtonDragonUIAddons", GameMenuFrame, "GameMenuButtonTemplate")
     -- 140 like gamemenu.lua: at the template's 144 the Forever skin looks wider than the stock buttons.
     menuBtn:SetWidth(140)
     menuBtn:SetText(ADDONS)
@@ -941,6 +934,25 @@ initFrame:SetScript("OnEvent", function(self, event)
 
         AddonListFrame:Show()
     end)
+end
+
+local initFrame = CreateFrame("Frame")
+initFrame:RegisterEvent("ADDON_LOADED")
+initFrame:RegisterEvent("PLAYER_LOGIN")
+initFrame:SetScript("OnEvent", function(self, event)
+    WatchBrokers()
+    if brokerWatcher.on then self:UnregisterEvent("ADDON_LOADED") end
+    if event ~= "PLAYER_LOGIN" then return end
+    self:UnregisterEvent("PLAYER_LOGIN")
+
+    if not addon:IsModuleEnabled("addonmanager") then
+        self:UnregisterAllEvents()
+        local ldb = brokerWatcher.on and LibStub("LibDataBroker-1.1", true)
+        if ldb then ldb.UnregisterCallback(brokerWatcher, "LibDataBroker_DataObjectCreated") end
+        return
+    end
+    -- Other addons may add their AddOns button from their own PLAYER_LOGIN, after this one.
+    GameMenuFrame:HookScript("OnShow", AddMenuButton)
 end)
 WatchBrokers()
 
