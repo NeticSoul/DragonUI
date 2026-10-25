@@ -152,39 +152,17 @@ local function UpdateBossFrameBorder(bossFrame)
         "TOPLEFT", bossFrame.DragonUI_FrameBG, "TOPLEFT", 0, 0)
 end
 
--- Re-apply custom flash styling on our mirror texture (on BorderFrame)
-local function EnforceFlashStyle(flashTex, parentFrame)
-    if not flashTex then return end
-    -- Hide the Blizzard flash — we use our own mirror
-    flashTex:SetAlpha(0)
-
-    local bossFrame = parentFrame
-
-    -- Create mirror flash on bossFrame itself (once).
-    -- bossFrame is level N, borderFrame is level N+2, so the flash
-    -- naturally renders BELOW the border — correct "glow behind border" look.
-    if not bossFrame.DragonUI_Flash then
-        local mirror = bossFrame:CreateTexture(nil, "OVERLAY")
-        mirror:SetDrawLayer("OVERLAY", 7)
-        bossFrame.DragonUI_Flash = mirror
-        -- Sync: when Blizzard shows/hides the original flash, mirror it
-        hooksecurefunc(flashTex, "Show", function() mirror:Show() end)
-        hooksecurefunc(flashTex, "Hide", function() mirror:Hide() end)
-        mirror:Hide()
-    end
-
-    local mirror = bossFrame.DragonUI_Flash
-    mirror:SetTexture(TEXTURES.THREAT)
-    mirror:SetTexCoord(0, 376/512, 0, 134/256)
-    mirror:SetVertexColor(1, 0, 0, 1)
-    mirror:SetBlendMode("ADD")
-    mirror:SetAlpha(0.7)
-    mirror:SetDrawLayer("OVERLAY", 7)
-    mirror:ClearAllPoints()
-    mirror:SetPoint("BOTTOMLEFT", bossFrame, "BOTTOMLEFT", 3, 25)
-    mirror:SetSize(188, 67)
-    -- Match current visibility
-    if flashTex:IsShown() then mirror:Show() else mirror:Hide() end
+-- Blizzard's own threat flash, placed like target_style's; colour and Show/Hide stay with UnitFrame_UpdateThreatIndicator.
+local function EnforceFlashStyle(flashTex, bossFrame)
+    if not flashTex or not bossFrame.DragonUI_DecoFrame then return end
+    -- On the elite dragon's frame like target and focus (retail): over the border, under the dragon.
+    flashTex:SetParent(bossFrame.DragonUI_DecoFrame)
+    flashTex:SetDrawLayer("BACKGROUND")
+    flashTex:SetTexture(TEXTURES.THREAT)
+    flashTex:SetTexCoord(0, 376/512, 0, 134/256)
+    flashTex:ClearAllPoints()
+    flashTex:SetPoint("BOTTOMLEFT", bossFrame, "BOTTOMLEFT", 1, 24)
+    flashTex:SetSize(188, 67)
 end
 
 -- ============================================================================
@@ -523,19 +501,8 @@ local function ReskinBossFrame(wrapperFrame, bossFrame, bossIndex)
         end
     end
 
-    -- Flash texture (threat / combat glow)
-    -- Same pattern as target.lua: custom THREAT texture with proper sizing.
-    local flashTex = _G[frameName .. "Flash"]
-    if flashTex then
-        EnforceFlashStyle(flashTex, bossFrame)
-    end
-
-    -- Threat indicator
-    if bossFrame.threatIndicator then
-        bossFrame.threatIndicator:ClearAllPoints()
-        bossFrame.threatIndicator:SetPoint("BOTTOMLEFT", 0, 0)
-        bossFrame.threatIndicator:SetAtlasTexture("TargetFrame-Status", true)
-    end
+    -- Threat flash (bossFrame.threatIndicator is this same texture)
+    EnforceFlashStyle(_G[frameName .. "Flash"], bossFrame)
 
     -- Apply classification-based atlas border
     UpdateBossFrameBorder(bossFrame)
