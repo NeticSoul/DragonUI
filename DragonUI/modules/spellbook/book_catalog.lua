@@ -86,20 +86,28 @@ function Book.ReadSlot(index, book)
     return entry
 end
 
+-- "Rank 4" in any locale carries a digit; "Pig" or a server's custom subtext never does.
+local function isRankText(sub)
+    return sub ~= nil and sub:find("%d") ~= nil
+end
+
 -- Lower ranks sit right before the top one in the full list, so the walk stops at another name.
 local function lowerRanks(entry, firstSlot)
+    if not isRankText(entry.sub) then return end
     local ranks = {}
     for slot = entry.index - 1, firstSlot, -1 do
         local name, rank = GetSpellName(slot, "spell")
         if name ~= entry.name then break end
-        ranks[#ranks + 1] = {
-            book = "spell",
-            index = slot,
-            name = name,
-            sub = rank or "",
-            icon = GetSpellTexture(slot, "spell"),
-            spellID = Book.LinkSpellID(GetSpellLink(slot, "spell")),
-        }
+        if isRankText(rank) then
+            ranks[#ranks + 1] = {
+                book = "spell",
+                index = slot,
+                name = name,
+                sub = rank,
+                icon = GetSpellTexture(slot, "spell"),
+                spellID = Book.LinkSpellID(GetSpellLink(slot, "spell")),
+            }
+        end
     end
     if #ranks > 0 then return ranks end
 end
@@ -253,6 +261,22 @@ trainerWatch:RegisterEvent("TRAINER_SHOW")
 trainerWatch:RegisterEvent("TRAINER_UPDATE")
 trainerWatch:SetScript("OnEvent", Book.ReadTrainer)
 
+-- Learned mounts (Felsteed, Warhorse...) move to the companion list, where IsSpellKnown can't see them.
+local function knownCompanion(spellID, filters)
+    local owned = filters.companions
+    if not owned then
+        owned = {}
+        for _, kind in ipairs({ "MOUNT", "CRITTER" }) do
+            for i = 1, GetNumCompanions(kind) or 0 do
+                local _, _, companionSpell = GetCompanionInfo(kind, i)
+                if companionSpell then owned[companionSpell] = true end
+            end
+        end
+        filters.companions = owned
+    end
+    return owned[spellID] == true
+end
+
 -- Learning a rank can drop the lower ones from the book, so any higher known rank counts too.
 local function knownInChain(spellID, filters)
     local memo = filters.memo
@@ -262,7 +286,7 @@ local function knownInChain(spellID, filters)
     end
     local answer = memo[spellID]
     if answer ~= nil then return answer end
-    answer = IsSpellKnown(spellID) and true or false
+    answer = (IsSpellKnown(spellID) or knownCompanion(spellID, filters)) and true or false
     local successors = filters.trainer.after[spellID]
     if not answer and successors then
         for _, record in ipairs(successors) do

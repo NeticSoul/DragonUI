@@ -253,6 +253,7 @@ end
 
 local function listenToGame()
     Book.On("SPELLS_CHANGED", contentChanged)
+    Book.On("COMPANION_LEARNED", contentChanged)
     Book.On("LEARNED_SPELL_IN_TAB", function(tab)
         Book.FlagTab(tab)
         contentChanged()
