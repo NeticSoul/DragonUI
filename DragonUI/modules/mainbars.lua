@@ -316,22 +316,53 @@ local FORM_SPELL_PAGES = {
     [15473] = 7, -- Shadowform
 }
 
+-- Paladin auras and death knight presences: not shapeshifts, so on a classless hero they stay up beside a stance.
+local AURA_FORM_SPELLS = { 465, 7294, 19746, 19876, 19888, 19891, 32223, 48266, 48263, 48265 }
+
 local function IsPageByForm()
     local db = addon.db and addon.db.profile and addon.db.profile.mainbars
     return db and db.page_by_form == true
 end
 
 -- Matched by name, as a stance slot's index shifts with the forms known and auras share the bar.
-local function GetFormPageClauses()
-    local pageByName = {}
+local function ReadFormSlots()
+    local pageByName, auraByName = {}, {}
     for spellID, page in pairs(FORM_SPELL_PAGES) do
         local name = GetSpellInfo(spellID)
         if name then pageByName[name] = page end
     end
-    local parts = {}
+    for _, spellID in ipairs(AURA_FORM_SPELLS) do
+        local name = GetSpellInfo(spellID)
+        if name then auraByName[name] = true end
+    end
+    local pages, auras = {}, {}
     for index = 1, GetNumShapeshiftForms() do
         local _, name = GetShapeshiftFormInfo(index)
-        local page = name and pageByName[name]
+        pages[index] = name and pageByName[name] or false
+        auras[index] = name and auraByName[name] or false
+    end
+    return pages, auras
+end
+
+-- The one page every paging form below this slot shares, or nil when they differ or there are none.
+local function PageBelow(pages, slot)
+    local shared
+    for below = 1, slot - 1 do
+        local page = pages[below]
+        if page then
+            if shared and shared ~= page then return nil end
+            shared = page
+        end
+    end
+    return shared
+end
+
+local function GetFormPageClauses()
+    local pages, auras = ReadFormSlots()
+    local parts = {}
+    for index, page in ipairs(pages) do
+        -- [stance:N] reports the highest active slot, so an aura above the stance answers in its place.
+        if not page and auras[index] then page = PageBelow(pages, index) end
         if page then parts[#parts + 1] = "[stance:" .. index .. "] " .. page .. ";" end
     end
     return table.concat(parts, " ")
@@ -601,6 +632,32 @@ local function SyncMainBarPageCondition()
     RegisterMainBarPageDriver(mainBar)
 end
 addon.RefreshMainBarPaging = SyncMainBarPageCondition
+
+-- Out of combat every slot is readable, so page by the form actually up once the driver has had its pass.
+local function CorrectFormPage()
+    local mainBar = MainbarsModule.pageDriverFrame
+    if not mainBar or not IsPageByForm() or InCombatLockdown() then return end
+    local state = tonumber(mainBar:GetAttribute("state-page"))
+    -- Bar, possess and vehicle pages are exact; only the form clauses and the default can be fooled by an aura.
+    if state ~= 1 and not (state and state >= 7 and state <= 10) then return end
+    local page = 1
+    for index, formPage in ipairs((ReadFormSlots())) do
+        if formPage and select(3, GetShapeshiftFormInfo(index)) then page = formPage end
+    end
+    if ActionButton1:GetAttribute("actionpage") == page then return end
+    mainBar:SetAttribute("form-page", page)
+    mainBar:Execute([[
+        local page = self:GetAttribute("form-page")
+        for _, handle in ipairs(mainPageButtons) do
+            handle:SetAttribute("actionpage", page)
+        end
+    ]])
+end
+
+-- The state driver re-reads conditions on the frame after UPDATE_SHAPESHIFT_FORM, so wait past it.
+local function QueueFormPageCheck()
+    if IsPageByForm() then addon:After(0.1, CorrectFormPage) end
+end
 
 local DIVIDER_PIECES = { top = "dividerTop", mid = "dividerMid", bottom = "dividerBottom" }
 
@@ -2604,6 +2661,7 @@ local function InitializeMainbars()
     mainbarsEventFrame:RegisterEvent("UNIT_ENTERED_VEHICLE")
     mainbarsEventFrame:RegisterEvent("PLAYER_LOGIN")
     mainbarsEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
+    mainbarsEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
     mainbarsEventFrame:SetScript("OnEvent", function(self, event, unitOrAddon)
         if event == "PLAYER_ENTERING_WORLD" then
             RefreshMainBarPageState()
@@ -2658,6 +2716,7 @@ local function InitializeMainbars()
             self:UnregisterEvent("PLAYER_LOGIN")
 
         elseif event == "PLAYER_REGEN_ENABLED" then
+            QueueFormPageCheck()
             -- Reposition when combat ends - Execute immediately
             if IsModuleEnabled() then
                 ApplyActionBarPositions()
@@ -2683,7 +2742,11 @@ local function InitializeMainbars()
         elseif event == "UPDATE_SHAPESHIFT_FORMS" then
             if IsPageByForm() then
                 SyncMainBarPageCondition()
+                QueueFormPageCheck()
             end
+
+        elseif event == "UPDATE_SHAPESHIFT_FORM" then
+            QueueFormPageCheck()
         end
     end)
 
