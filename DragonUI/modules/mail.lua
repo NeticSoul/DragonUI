@@ -969,10 +969,36 @@ local function hideMailChromePieces()
     end
 end
 
+-- Our raised SendMailFrame takes the mouse (drop-to-attach), so addon buttons left on MailFrame went dead.
+local function liftForeignChildren(mailFrame)
+    local inbox, send = _G.InboxFrame, _G.SendMailFrame
+    local top = math.max(inbox and inbox:GetFrameLevel() or 0, send and send:GetFrameLevel() or 0)
+    for _, child in ipairs({ mailFrame:GetChildren() }) do
+        if child ~= inbox and child ~= send and child ~= mailFrame._duiInset
+            and child ~= _G.MailFrameTab1 and child ~= _G.MailFrameTab2 and child:GetFrameLevel() <= top then
+            child:SetFrameLevel(top + 2)
+            liftChildren(child)
+        end
+    end
+end
+
+-- Postal anchors these for Blizzard's 384x512 frame; on ours they sat over the parchment edge.
+local function fitPostal()
+    if _G.InboxCloseButton then
+        place(_G.Postal_ModuleMenuButton, "RIGHT", _G.InboxCloseButton, "LEFT", 0, 0)
+    end
+    local inbox = _G.InboxFrame
+    local headerY = (INSET_INBOX[2] - 21) / 2
+    place(_G.PostalSelectOpenButton, "RIGHT", inbox, "TOP", 5, headerY)
+    place(_G.PostalSelectReturnButton, "LEFT", inbox, "TOP", 10, headerY)
+end
+
 local function syncMailTabView()
     local mailFrame = _G.MailFrame
     if not mailFrame or not mailFrame._duiInset then return end
     hideMailChromePieces()
+    liftForeignChildren(mailFrame)
+    fitPostal()
     local selected = (PanelTemplates_GetSelectedTab and PanelTemplates_GetSelectedTab(mailFrame))
         or mailFrame.selectedTab or 1
     placeInset(mailFrame._duiInset, mailFrame, selected == 2 and INSET_SEND or INSET_INBOX)
