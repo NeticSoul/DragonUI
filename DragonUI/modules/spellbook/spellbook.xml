@@ -11,4 +11,5 @@
     <Script file="book_flyout.lua"/>
     <Script file="book_controls.lua"/>
     <Script file="book_access.lua"/>
+    <Script file="book_clique.lua"/>
 </Ui>

@@ -149,18 +149,6 @@ function Book.HideActionGrids()
     addon.CombatQueue:Add("spellbook_grids", lowerGrids)
 end
 
--- Click-casting addon's side tab ------------------------------------------------------------------
-
-function Book.AdoptSideTab()
-    local borrowed = IsAddOnLoaded("Clique") and _G.CliqueSpellTab
-    if not borrowed then return end
-    borrowed:SetParent(Book.root)
-    borrowed:ClearAllPoints()
-    borrowed:SetPoint("TOPLEFT", Book.root, "TOPRIGHT", 4, -65)
-    borrowed:SetFrameLevel(Book.Level("catcher"))
-    borrowed:Show()
-end
-
 -- Installation ------------------------------------------------------------------------------------
 
 function Book.InstallAccess()

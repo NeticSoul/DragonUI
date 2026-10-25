@@ -298,6 +298,7 @@ local function apply()
     Book.BuildControls()
     Book.BuildSecure()
     Book.InstallAccess()
+    Book.InstallClique()
     listenToGame()
     Book.initialized, Book.applied = true, true
     Book.MarkAllDirty()
