@@ -175,6 +175,40 @@ end
 
 local CD_BASE = 20
 
+local fitQueue = {}
+local fitDriver = CreateFrame("Frame")
+fitDriver:Hide()
+
+-- Re-anchoring or rescaling the Cooldown restarts its sweep model, so unchanged fits are skipped.
+local function ApplyCooldownFit(button, cd, size)
+    local level = button:GetFrameLevel() + 1
+    if cd._duiFitSize == size and cd._duiFitLevel == level then return end
+    cd._duiFitSize, cd._duiFitLevel = size, level
+
+    cd:ClearAllPoints()
+    cd:SetPoint("CENTER", button, "CENTER", 0, 0)
+    cd:SetWidth(CD_BASE)
+    cd:SetHeight(CD_BASE)
+    cd:SetScale(size / CD_BASE)
+    cd:SetFrameLevel(level)
+end
+
+fitDriver:SetScript("OnUpdate", function(self)
+    self:Hide()
+    for button in pairs(fitQueue) do
+        fitQueue[button] = nil
+        if button.duiCdFitted then
+            local name = button.GetName and button:GetName()
+            local cd = name and _G[name .. "Cooldown"]
+            if cd then
+                local size = button:GetWidth()
+                if not size or size < 1 then size = BAR_REF end
+                ApplyCooldownFit(button, cd, size)
+            end
+        end
+    end
+end)
+
 -- Aura cooldown model stops stretching past ~26px (CENTER-only template anchor); fixed rect + SetScale scales the swirl itself.
 local function FitCooldown(button, size)
     local name = button.GetName and button:GetName()
@@ -184,13 +218,14 @@ local function FitCooldown(button, size)
     -- Full button size, no inset — action bars run SetAllPoints(button) and the sweep edge hides under the frame.
     if not size or size < 1 then size = BAR_REF end
 
-    cd:ClearAllPoints()
-    cd:SetPoint("CENTER", button, "CENTER", 0, 0)
-    cd:SetWidth(CD_BASE)
-    cd:SetHeight(CD_BASE)
-    cd:SetScale(size / CD_BASE)
-    cd:SetFrameLevel(button:GetFrameLevel() + 1)
-    button.duiCdFitted = true
+    -- Blizzard writes 17/21 before target.lua's real size each update; refit next frame on the final one.
+    if button.duiCdFitted and cd._duiFitSize ~= nil then
+        fitQueue[button] = true
+        fitDriver:Show()
+    else
+        ApplyCooldownFit(button, cd, size)
+        button.duiCdFitted = true
+    end
     return cd
 end
 
@@ -439,7 +474,9 @@ local function RestoreButton(button)
             cd:SetScale(1)
             cd:ClearAllPoints()
             cd:SetPoint("CENTER", button, "CENTER", 0, -1)
+            cd._duiFitSize, cd._duiFitLevel = nil, nil
         end
+        fitQueue[button] = nil
         button.duiCdFitted = nil
     end
     if button.duiDurMoved then
