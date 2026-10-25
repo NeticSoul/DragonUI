@@ -67,6 +67,8 @@ end
 -- True only during an active guild bank sort; doesn't affect bag/bank sorting.
 local guildBankSortActive = false
 local GUILDBANK_MOVE_THROTTLE = 0.4
+-- A whole round of disjoint moves in one frame trips server packet-flood kicks on big bank sorts.
+local MAX_MOVES_PER_TICK = 3
 
 local function GetSortMoveInterval()
     local cfg = GetModuleConfig()
@@ -1131,7 +1133,7 @@ local function ReverseStackEnabled()
     return cfg and cfg.reverse_stack
 end
 
--- Moves planned in one round touch disjoint slots, so the executor can issue them in a single tick.
+-- Moves planned in one round touch disjoint slots, so the executor can issue several per tick.
 local function ArrangePool(bags)
     local order = UnlockedCells(bags)
     local total = #order
@@ -1208,8 +1210,10 @@ local function IssueNextMoves()
         awaitedDrop = nil
     end
 
+    local issued = 0
     while nextMoveIndex <= #plannedMoves do
-        if CursorHasItem() then return end
+        if CursorHasItem() or issued >= MAX_MOVES_PER_TICK then return end
+        issued = issued + 1
         local move = plannedMoves[nextMoveIndex]
         local fromBag, fromSlot, toBag, toSlot = move.fromBag, move.fromSlot, move.toBag, move.toSlot
         if IsSlotBusy(fromBag, fromSlot) or IsSlotBusy(toBag, toSlot) then return end
