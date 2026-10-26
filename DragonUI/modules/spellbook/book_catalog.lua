@@ -277,6 +277,22 @@ local function knownCompanion(spellID, filters)
     return owned[spellID] == true
 end
 
+-- Kept for the session: a collapsed skill header hides its lines, and a proficiency is never unlearned.
+local skillNames = {}
+
+-- Armor proficiencies (Plate Mail, Mail) never enter the book either; the skill list names them.
+local function knownSkill(spellID, filters)
+    if not filters.skillsRead then
+        filters.skillsRead = true
+        for line = 1, GetNumSkillLines() do
+            local name, isHeader = GetSkillLineInfo(line)
+            if name and not isHeader then skillNames[name] = true end
+        end
+    end
+    local name = GetSpellInfo(spellID)
+    return name ~= nil and skillNames[name] == true
+end
+
 -- Learning a rank can drop the lower ones from the book, so any higher known rank counts too.
 local function knownInChain(spellID, filters)
     local memo = filters.memo
@@ -286,7 +302,8 @@ local function knownInChain(spellID, filters)
     end
     local answer = memo[spellID]
     if answer ~= nil then return answer end
-    answer = (IsSpellKnown(spellID) or knownCompanion(spellID, filters)) and true or false
+    answer = (IsSpellKnown(spellID) or knownCompanion(spellID, filters) or knownSkill(spellID, filters))
+        and true or false
     local successors = filters.trainer.after[spellID]
     if not answer and successors then
         for _, record in ipairs(successors) do
