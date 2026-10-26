@@ -18,8 +18,7 @@ local L = addon.L
 
 local CONFIG = {
     warningDelay = 0.5,
-    scanDelay = 0.1,
-    d3d9ExWarningDelay = 1.0
+    scanDelay = 0.1
 }
 
 local ADDON_REGISTRY
@@ -974,172 +973,8 @@ ADDON_REGISTRY = {
 local state = {
     processedAddons = {},
     activeAddons = {},
-    initialized = false,
-    d3d9ExWarningShown = false,
-    d3d9ExWarningFrame = nil
+    initialized = false
 }
-
-local function IsD3D9ExActive()
-    local gxApi = GetCVar("gxApi")
-    return gxApi and string.lower(gxApi) == "d3d9ex"
-end
-
-local function GetCompatibilityConfig()
-    if not addon.db or not addon.db.profile then
-        return nil
-    end
-
-    addon.db.profile.compatibility = addon.db.profile.compatibility or {}
-    return addon.db.profile.compatibility
-end
-
-local function HasSeenD3D9ExWarning()
-    local cfg = GetCompatibilityConfig()
-    return cfg and cfg.d3d9ex_warning_seen == true
-end
-
-local function MarkD3D9ExWarningSeen()
-    local cfg = GetCompatibilityConfig()
-    if cfg then
-        cfg.d3d9ex_warning_seen = true
-    end
-end
-
-local function HideD3D9ExGryphons()
-    if addon.db and addon.db.profile then
-        addon.db.profile.style = addon.db.profile.style or {}
-        addon.db.profile.style.gryphons = "none"
-    end
-
-    if addon.RefreshMainbars then
-        addon.RefreshMainbars()
-    elseif addon.UpdateGryphonStyle then
-        addon.UpdateGryphonStyle()
-    end
-
-    if state.d3d9ExWarningFrame then
-        state.d3d9ExWarningFrame:Hide()
-    end
-end
-
-local function CreateD3D9ExWarningFrame()
-    local frame = CreateFrame("Frame", "DragonUI_D3D9ExWarning", UIParent)
-    frame:SetSize(580, 232)
-    frame:SetPoint("TOP", UIParent, "TOP", 0, -120)
-    frame:SetFrameStrata("DIALOG")
-    frame:SetToplevel(true)
-    frame:EnableMouse(true)
-    frame:Hide()
-
-    frame:SetBackdrop({
-        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true,
-        tileSize = 16,
-        edgeSize = 16,
-        insets = {
-            left = 4,
-            right = 4,
-            top = 4,
-            bottom = 4
-        }
-    })
-    frame:SetBackdropColor(0.08, 0.06, 0.02, 0.96)
-    frame:SetBackdropBorderColor(1, 0.82, 0.12, 1)
-
-    local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
-
-    local icon = frame:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(28, 28)
-    icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -16)
-    icon:SetTexture("Interface\\DialogFrame\\UI-Dialog-Icon-AlertNew")
-
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", frame, "TOPLEFT", 54, -18)
-    title:SetPoint("RIGHT", frame, "RIGHT", -40, 0)
-    title:SetJustifyH("LEFT")
-    title:SetTextColor(1, 0.82, 0.12)
-    title:SetText(L["DragonUI - D3D9Ex Warning"])
-
-    local message = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    message:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -52)
-    message:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    message:SetJustifyH("LEFT")
-    message:SetJustifyV("TOP")
-    message:SetText(
-        L["DragonUI detected that your client is using D3D9Ex."] .. "\n" ..
-        L["DragonUI's action bar system is not compatible with D3D9Ex."] .. "\n" ..
-        L["Some DragonUI action bar textures will be missing while this mode is active."]
-    )
-
-    local configHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    configHeader:SetPoint("TOPLEFT", message, "BOTTOMLEFT", 0, -14)
-    configHeader:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    configHeader:SetJustifyH("LEFT")
-    configHeader:SetText(L["If you want to disable this mode, open WTF\\Config.wtf."])
-
-    local oldHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    oldHeader:SetPoint("TOPLEFT", configHeader, "BOTTOMLEFT", 0, -8)
-    oldHeader:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    oldHeader:SetJustifyH("LEFT")
-    oldHeader:SetText(L["Delete this line:"])
-
-    local oldLine = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    oldLine:SetPoint("TOPLEFT", oldHeader, "BOTTOMLEFT", 0, -4)
-    oldLine:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    oldLine:SetJustifyH("LEFT")
-    oldLine:SetText('|cFFFF6666SET gxApi "d3d9ex"|r')
-
-    local newHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    newHeader:SetPoint("TOPLEFT", oldLine, "BOTTOMLEFT", 0, -8)
-    newHeader:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    newHeader:SetJustifyH("LEFT")
-    newHeader:SetText(L["Or replace it with:"])
-
-    local newLine = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    newLine:SetPoint("TOPLEFT", newHeader, "BOTTOMLEFT", 0, -4)
-    newLine:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
-    newLine:SetJustifyH("LEFT")
-    newLine:SetText('|cFF66FF99SET gxApi "d3d9"|r')
-
-    local hideGryphonsButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    hideGryphonsButton:SetWidth(170)
-    hideGryphonsButton:SetHeight(22)
-    hideGryphonsButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 118, 16)
-    hideGryphonsButton:SetText(L["Hide Gryphons"])
-    hideGryphonsButton:SetScript("OnClick", HideD3D9ExGryphons)
-
-    local acknowledgeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    acknowledgeButton:SetWidth(120)
-    acknowledgeButton:SetHeight(22)
-    acknowledgeButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -118, 16)
-    acknowledgeButton:SetText(L["Understood"])
-    acknowledgeButton:SetScript("OnClick", function()
-        frame:Hide()
-    end)
-
-    closeButton:SetScript("OnClick", function()
-        frame:Hide()
-    end)
-
-    return frame
-end
-
-local function ShowD3D9ExWarning()
-    if state.d3d9ExWarningShown or not IsD3D9ExActive() or HasSeenD3D9ExWarning() then
-        return
-    end
-
-    state.d3d9ExWarningShown = true
-    MarkD3D9ExWarningSeen()
-
-    if not state.d3d9ExWarningFrame then
-        state.d3d9ExWarningFrame = CreateD3D9ExWarningFrame()
-    end
-
-    state.d3d9ExWarningFrame:Show()
-end
 
 -- ============================================================================
 -- EVENT SYSTEM (ADDON SPECIFIC)
@@ -1284,8 +1119,6 @@ local function InitializeEvents()
                 InterfaceSettingsFixer.initialized = true
                 ScheduleInterfaceSettingsScan(0.5)
             end
-
-            DelayedCall(ShowD3D9ExWarning, CONFIG.d3d9ExWarningDelay)
 
         elseif event == "CVAR_UPDATE" then
             local cvarName = loadedAddonName

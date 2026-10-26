@@ -13,9 +13,6 @@ local kitPieces = {}
 
 local function addRule(name, rule)
 	rule.name = name
-	-- A mirrored layout flips right-hand art left-to-right and bottom art top-to-bottom.
-	rule.flipX = name:find("Right", 1, true) ~= nil
-	rule.flipY = name:find("Bottom", 1, true) ~= nil
 	pieceRules[#pieceRules + 1] = rule
 end
 
@@ -196,30 +193,8 @@ local function anchorPiece(container, tex, rule, spec, mode)
 	tex:SetPoint(far[1], anchorTarget(container, far[2]), far[3], spec.x1, spec.y1)
 end
 
-local function dressPiece(tex, rule, spec, layout, textureKit)
-	local mirrored = spec.mirrorLayout
-	if mirrored == nil then
-		mirrored = layout.mirrorLayout
-	end
-	local left, right, top, bottom = 0, 1, 0, 1
-	if mirrored then
-		if rule.flipX then
-			left, right = 1, 0
-		end
-		if rule.flipY then
-			top, bottom = 1, 0
-		end
-	end
-	-- SetAtlasTexture replaces these texcoords; they only survive while the D3D9Ex bypass skips it.
-	tex:SetSubTexCoord(left, right, top, bottom)
-
-	local atlasName = atlasShim.GetFinalNameFromTextureKit(spec.atlas, textureKit)
-	local info = atlasShim.GetAtlasInfo(atlasName)
-	local across, down = info.tilesHorizontally, info.tilesVertically
-	-- Set here as well because the D3D9Ex bypass turns SetAtlasTexture into a no-op for action-bar art.
-	tex:SetHorizTile(across or false)
-	tex:SetVertTile(down or false)
-	tex:SetAtlasTexture(atlasName, true)
+local function dressPiece(tex, spec, textureKit)
+	tex:SetAtlasTexture(atlasShim.GetFinalNameFromTextureKit(spec.atlas, textureKit), true)
 end
 
 local function applyLayout(container, layout, textureKit)
@@ -235,7 +210,7 @@ local function applyLayout(container, layout, textureKit)
 				piece:SetDrawLayer(spec.layer or "BORDER", spec.subLevel)
 			end
 			anchorPiece(container, piece, rule, spec, mode)
-			dressPiece(piece, rule, spec, layout, textureKit)
+			dressPiece(piece, spec, textureKit)
 		end
 	end
 end

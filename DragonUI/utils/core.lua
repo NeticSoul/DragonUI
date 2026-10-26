@@ -36,26 +36,6 @@ _G.DragonUI_Mixin = function(target, ...)
 	return target
 end
 
-local legacyActionBarAtlasBypassed = nil
-
-local function ShouldBypassLegacyActionBarAtlas(atlas)
-	if type(atlas) ~= 'string' then
-		return false
-	end
-
-	if legacyActionBarAtlasBypassed == nil then
-		legacyActionBarAtlasBypassed = GetCVar and GetCVar('gxApi') == 'd3d9ex'
-	end
-
-	if not legacyActionBarAtlasBypassed then
-		return false
-	end
-
-	return atlas:find('ui%-hud%-actionbar') ~= nil
-		or atlas:find('_ui%-hud%-actionbar') ~= nil
-		or atlas:find('!ui%-hud%-actionbar') ~= nil
-end
-
 local function requireAtlas(name)
 	local entry = addon.atlasinfo[name]
 	if not entry then
@@ -86,9 +66,6 @@ end
 local function setAtlas(texture, name, useAtlasSize)
 	if not name then
 		texture:SetTexture(nil)
-		return
-	end
-	if ShouldBypassLegacyActionBarAtlas(name) then
 		return
 	end
 
