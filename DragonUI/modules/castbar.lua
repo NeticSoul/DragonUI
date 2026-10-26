@@ -102,11 +102,14 @@ addon.CastbarModule = CastbarModule
 
 if addon.RegisterModule then
     local L = addon.L
+    -- Each bar follows its own enabled flag, so one pass both applies and restores a profile.
+    local function RefreshAllCastbars()
+        if IsLoggedIn() then CastbarModule:UpdateWidgets() end
+    end
     addon:RegisterModule("castbar", CastbarModule,
         L["Cast Bar"],
         L["Custom player, target, and focus cast bars"], {
-        refresh = "RefreshCastbar",
-        loadOnce = true,
+        lifecycle = { refresh = RefreshAllCastbars, restore = RefreshAllCastbars },
         isEnabled = function()
             local cfg = addon.db and addon.db.profile and addon.db.profile.castbar
             return cfg and cfg.enabled
@@ -544,8 +547,13 @@ local function ShowBlizzardCastbar(unitType)
     end
     
     -- Phase 2: Restore original parent for player castbar only
-    if unitType == "player" and not InCombatLockdown() and blizzardCastbarOriginalParents[unitType] then
-        frame:SetParent(blizzardCastbarOriginalParents[unitType])
+    local originalParent = unitType == "player" and blizzardCastbarOriginalParents[unitType]
+    if originalParent and InCombatLockdown() then
+        addon.CombatQueue:Add("castbar_restore_player_parent", function()
+            if not CastbarModule.blizzardHidden.player then frame:SetParent(originalParent) end
+        end)
+    elseif originalParent then
+        frame:SetParent(originalParent)
     end
     
     frame:SetAlpha(1)
@@ -2359,8 +2367,9 @@ end
 function CastbarModule:HandleTargetChanged()
     local frames = self.frames.target
     local statusBar = frames.castbar
-    
-    if not statusBar then
+
+    -- Turned off this session: Blizzard's bar is back and must not be hidden again below.
+    if not statusBar or not IsEnabled("target") then
         return
     end
     
@@ -2392,8 +2401,8 @@ end
 function CastbarModule:HandleFocusChanged()
     local frames = self.frames.focus
     local statusBar = frames.castbar
-    
-    if not statusBar then
+
+    if not statusBar or not IsEnabled("focus") then
         return
     end
     
