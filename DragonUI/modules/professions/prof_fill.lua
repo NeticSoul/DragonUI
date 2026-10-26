@@ -41,8 +41,13 @@ local function draw(fx, ratio, frame)
     fx.base:Show()
     local anim = frame and P.FillAnim[fx.key]
     if anim then
-        local add, mod, x0, y0, fw, fh, pitchX, pitchY, _, sw, sh = unpack(anim)
-        local l, t = (x0 + (frame % 2) * pitchX) / sw, (y0 + math.floor(frame / 2) * pitchY) / sh
+        local add, mod, x0, y0, fw, fh, pitchX, pitchY, _, sw, sh, lowerRow = unpack(anim)
+        local column, row = frame % 2, math.floor(frame / 2)
+        local left, top, suffix = x0 + column * pitchX, y0 + row * pitchY, ""
+        if lowerRow and row >= lowerRow then top, suffix = top - P.FX_CUT, "2" end
+        if column == 1 then left, suffix = left - P.FX_CUT, suffix .. "_r" end
+        add, mod = add .. suffix, mod .. suffix
+        local l, t = left / sw, top / sh
         local r, b = l + fw / sw, t + fh / sh
         crop(fx.mod, mod, l, r, t, b, width)
         crop(fx.add, add, l, r, t, b, width)

@@ -51,10 +51,13 @@ local function buildPaper(stage)
     Book.corner = sheet(fold, "ARTWORK", "spellbook-corner-flipbook-evergreen")
     Book.corner:SetSize(150, 155)
 
-    art.wood = paper:CreateTexture(nil, "ARTWORK")
+    -- The wide strip is two halves: past texel column 1024 the d3d9ex client draws nothing.
+    art.wood = sheet(paper, "ARTWORK", "spellbook-header-left-half")
     art.wood:SetHeight(58)
-    art.wood:SetPoint("TOPLEFT", stage, "TOPLEFT", 8, -26)
-    art.wood:SetPoint("TOPRIGHT", stage, "TOPRIGHT", -8, -26)
+    art.woodRight = sheet(paper, "ARTWORK", "spellbook-header-right-half")
+    art.woodRight:SetHeight(58)
+    art.woodRight:SetPoint("TOPLEFT", stage, "TOP", 0, -26)
+    art.woodRight:SetPoint("TOPRIGHT", stage, "TOPRIGHT", -8, -26)
 end
 
 -- Metal frame, portrait and title -----------------------------------------------------------------
@@ -95,7 +98,10 @@ function Book.LayoutMode()
         art.right:SetPoint("TOPLEFT", stage, "TOPLEFT", 2, -82)
         art.right:SetPoint("BOTTOMRIGHT", stage, "BOTTOMRIGHT", 0, 2)
     end
-    art.wood:SetAtlasTexture(wide and "spellbook-background-evergreen-header" or "spellbook-header-left-half")
+    art.wood:ClearAllPoints()
+    art.wood:SetPoint("TOPLEFT", stage, "TOPLEFT", 8, -26)
+    art.wood:SetPoint("TOPRIGHT", stage, wide and "TOP" or "TOPRIGHT", wide and 0 or -8, -26)
+    art.woodRight:SetShownCompat(wide)
     Book.PaintModeButton()
 end
 

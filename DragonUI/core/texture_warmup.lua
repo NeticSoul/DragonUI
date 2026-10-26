@@ -13,12 +13,14 @@ local WINDOWS = {
         "UI\\uiframemetalvertical2x", "UI\\uiframetabs", "WorldMap\\questlog",
     },
     spellbook = {
-        "Collections\\UI-Searchbox-Icon", "Spellbook\\spellbook-background", "Spellbook\\spellbook-ribbon",
+        "Collections\\UI-Searchbox-Icon", "Spellbook\\spellbook-background", "Spellbook\\spellbook-background_r",
+        "Spellbook\\spellbook-ribbon",
         "Spellbook\\spellbookelements", "UI\\redbutton2x", "UI\\uiframemetal2x", "UI\\uiframemetalhorizontal2x",
         "UI\\uiframemetalvertical2x", "UI\\uiframetabs", "WorldMap\\questlog",
     },
     talents = {
-        "Talents\\talentframeatlas", "Talents\\talents-animations-clouds", "Talents\\talents-animations-particles",
+        "Talents\\talentframeatlas", "Talents\\talents-animations-clouds", "Talents\\talents-animations-clouds_r",
+        "Talents\\talents-animations-particles", "Talents\\talents-animations-particles_r",
         "Talents\\talents-arrows", "Talents\\talents-edge", "Talents\\talents-edge-coarse", "Talents\\talents-line",
         "Talents\\talents-sheet", "Talents\\talents-sheen-apex", "Talents\\talents-sheen-capstonesquare",
         "Talents\\talents-sheen-small", "Talents\\glyph-globe-health", "Talents\\glyph-globe-mana",
@@ -70,7 +72,10 @@ addon:RegisterTextureWarmup(function()
     if class and addon:IsModuleEnabled("talents") and addon.atlasinfo then
         local prefix = "talents-background-" .. class:lower() .. "-"
         for name, entry in pairs(addon.atlasinfo) do
-            if name:sub(1, #prefix) == prefix then files[#files + 1] = entry[1] end
+            if name:sub(1, #prefix) == prefix then
+                files[#files + 1] = entry[1]
+                files[#files + 1] = entry[1] .. "_r"
+            end
         end
     end
     return files

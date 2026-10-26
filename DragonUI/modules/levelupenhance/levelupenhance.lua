@@ -57,7 +57,7 @@ local TITLE_SIZE, TITLE_MIN, SUB_SIZE, SUB_MIN = 16, 11, 12, 9
 
 -- Icons come with or without a baked bevel: crop it and frame them all with the aura borders' ring.
 local RING_TEXTURE = addon._dir .. "ActionBars\\uiactionbar2x_new"
-local RING_COORDS = { 359 / 512, 451 / 512, 649 / 2048, 739 / 2048 }
+local RING_COORDS = { 359 / 512, 451 / 512, 649 / 1024, 739 / 1024 }
 -- The ring's rounded corners can't cover a square's: the icon sits 1 px inside a darkened copy of itself.
 local RING_SCALE = ICON_SIZE / 45 * 1.1375
 local RING_X, RING_Y = -1.8, 1.8

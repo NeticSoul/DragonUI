@@ -34,6 +34,66 @@ local function artHeight()
     return ns.win:GetHeight() - (ns.ART_TOP + ns.FOOTER_H)
 end
 
+-- The 2048-wide art ships as NAME and NAME_r halves: under d3d9ex the client draws nothing past column 1024.
+local SEAM = 0.5
+
+-- Sheet range [l, r] at the seam: the share left of it, then each half's own texcoords.
+local function halves(l, r)
+    local share = min(1, max(0, (SEAM - l) / (r - l)))
+    return share, l / SEAM, min(r, SEAM) / SEAM, (max(l, SEAM) - SEAM) / (1 - SEAM), (r - SEAM) / (1 - SEAM)
+end
+
+-- Two textures standing in for one: the halves either side of the seam.
+local Pair = {}
+Pair.__index = Pair
+
+local function newPair(parent, layer)
+    return setmetatable({ parent:CreateTexture(nil, layer), parent:CreateTexture(nil, layer), used = {}, shown = true }, Pair)
+end
+
+function Pair:Refresh()
+    for index = 1, 2 do
+        if self.shown and self.used[index] then self[index]:Show() else self[index]:Hide() end
+    end
+end
+
+function Pair:Show()
+    self.shown = true
+    self:Refresh()
+end
+
+function Pair:Hide()
+    self.shown = false
+    self:Refresh()
+end
+
+function Pair:IsShown()
+    return self.shown
+end
+
+function Pair:SetDesaturated(desaturate)
+    self[1]:SetDesaturated(desaturate)
+    self[2]:SetDesaturated(desaturate)
+end
+
+function Pair:SetAlpha(alpha)
+    self[1]:SetAlpha(alpha)
+    self[2]:SetAlpha(alpha)
+end
+
+-- Paints sheet range [l, r] across a region `width` wide; the halves hug its left and right edges.
+function Pair:Paint(file, l, r, t, b, width)
+    local share, l1, r1, l2, r2 = halves(l, r)
+    self[1]:SetTexture(file)
+    self[1]:SetTexCoord(l1, r1, t, b)
+    self[1]:SetWidth(max(1, width * share))
+    self[2]:SetTexture(file .. "_r")
+    self[2]:SetTexCoord(l2, r2, t, b)
+    self[2]:SetWidth(max(1, width * (1 - share)))
+    self.used[1], self.used[2] = share > 0, share < 1
+    self:Refresh()
+end
+
 -- Cover-crop without distortion; the art's subject sits top-right, so that corner survives.
 function ns.SetClassArt(classToken, tree, desaturate)
     local art = ns.classArt
@@ -47,8 +107,7 @@ function ns.SetClassArt(classToken, tree, desaturate)
     else
         left = right - (right - left) * (regionW * height) / (regionH * width)
     end
-    art:SetTexture(entry[1])
-    art:SetTexCoord(left, right, top, bottom)
+    art:Paint(entry[1], left, right, top, bottom, regionW)
     art:SetDesaturated(desaturate and true or false)
     art:Show()
     ns.petArt:Hide()
@@ -57,8 +116,7 @@ end
 function ns.SetPetArt(background)
     local kind = type(background) == "string" and background:match("^HunterPet(%a+)$")
     if kind == "Ferocity" or kind == "Tenacity" or kind == "Cunning" then
-        ns.petArt:SetTexture(addon._dir .. "Talents\\Pet_" .. kind)
-        ns.petArt:SetTexCoord(0, 1, 0, 1)
+        ns.petArt:Paint(addon._dir .. "Talents\\Pet_" .. kind, 0, 1, 0, 1, ns.WIDTH)
     end
     ns.petArt:Show()
     ns.classArt:Hide()
@@ -114,14 +172,13 @@ local DUST = {
 local CLOUD_PERIOD = 80
 
 -- Crop a layer to the art region through its texcoords; a ScrollFrame clip froze window drags.
-local function clipLayer(tex, x0, y0, w, h, regionW, regionH, coords, flip)
+local function clipLayer(tex, x0, y0, w, h, regionW, regionH, l, r, t, b, flip)
     local ax, ay = max(x0, 0), max(y0, 0)
     local bx, by = min(x0 + w, regionW), min(y0 + h, regionH)
     if bx - ax < 1 or by - ay < 1 then
         tex:Hide()
         return
     end
-    local l, r, t, b = coords[4], coords[5], coords[6], coords[7]
     local fromX, toX = (ax - x0) / w, (bx - x0) / w
     local fromY, toY = (ay - y0) / h, (by - y0) / h
     if flip then
@@ -136,6 +193,14 @@ local function clipLayer(tex, x0, y0, w, h, regionW, regionH, coords, flip)
     tex:Show()
 end
 
+-- Mirrored, the sheet's right half comes first on screen.
+local function clipPair(pair, x0, y0, w, h, regionW, regionH, coords, flip)
+    local share, l1, r1, l2, r2 = halves(coords[4], coords[5])
+    local t, b, leftW = coords[6], coords[7], w * share
+    clipLayer(pair[1], flip and x0 + w - leftW or x0, y0, leftW, h, regionW, regionH, l1, r1, t, b, flip)
+    clipLayer(pair[2], flip and x0 or x0 + leftW, y0, w - leftW, h, regionW, regionH, l2, r2, t, b, flip)
+end
+
 local function dustAlpha(spec, t)
     if t < spec.rise then return spec.peak * t / spec.rise end
     if t < spec.fade then return spec.peak end
@@ -147,15 +212,15 @@ local function stepAmbient(fx, elapsed)
     local regionW, regionH = ns.WIDTH, artHeight()
     local shift = (fx.clock % CLOUD_PERIOD) / CLOUD_PERIOD * regionW
     local clouds = addon.atlasinfo["talents-animations-clouds"]
-    clipLayer(fx.clouds[1], -shift, 0, regionW, regionH, regionW, regionH, clouds)
-    clipLayer(fx.clouds[2], regionW - shift, 0, regionW, regionH, regionW, regionH, clouds)
+    clipPair(fx.clouds[1], -shift, 0, regionW, regionH, regionW, regionH, clouds)
+    clipPair(fx.clouds[2], regionW - shift, 0, regionW, regionH, regionW, regionH, clouds)
 
     local dust = addon.atlasinfo["talents-animations-particles"]
     for index, spec in ipairs(DUST) do
         local t = fx.clock % spec.period
         local centreX = regionW / 2 + spec.lead - spec.drift * t / spec.period
         local layer = fx.dust[index]
-        clipLayer(layer, centreX - spec.w / 2, (regionH - spec.h) / 2, spec.w, spec.h,
+        clipPair(layer, centreX - spec.w / 2, (regionH - spec.h) / 2, spec.w, spec.h,
             regionW, regionH, dust, spec.flip)
         layer:SetAlpha(dustAlpha(spec, t))
     end
@@ -171,14 +236,16 @@ local function buildAmbient(win, level)
     local cloudFile = addon.atlasinfo["talents-animations-clouds"][1]
     local dustFile = addon.atlasinfo["talents-animations-particles"][1]
     for index = 1, 2 do
-        local cloud = fx:CreateTexture(nil, "BORDER", nil, 1)
-        cloud:SetTexture(cloudFile)
-        cloud:SetBlendMode("ADD")
+        local cloud = newPair(fx, "BORDER")
+        local mote = newPair(fx, "BORDER")
+        for half, suffix in ipairs({ "", "_r" }) do
+            cloud[half]:SetTexture(cloudFile .. suffix)
+            cloud[half]:SetBlendMode("ADD")
+            mote[half]:SetTexture(dustFile .. suffix)
+            mote[half]:SetBlendMode("ADD")
+        end
         cloud:SetAlpha(0.05)
         fx.clouds[index] = cloud
-        local mote = fx:CreateTexture(nil, "BORDER", nil, 2)
-        mote:SetTexture(dustFile)
-        mote:SetBlendMode("ADD")
         fx.dust[index] = mote
     end
     fx:SetScript("OnUpdate", stepAmbient)
@@ -354,11 +421,13 @@ local function buildCloseButton(win, level)
     if CP and CP.ModernizeCloseButton then CP.ModernizeCloseButton(close, win, 1, 0) end
 end
 
-local function regionTexture(win)
-    local tex = win:CreateTexture(nil, "BORDER")
-    tex:SetPoint("TOPLEFT", win, "TOPLEFT", 0, -ns.ART_TOP)
-    tex:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", 0, ns.FOOTER_H)
-    return tex
+local function regionPair(win)
+    local pair = newPair(win, "BORDER")
+    pair[1]:SetPoint("TOPLEFT", win, "TOPLEFT", 0, -ns.ART_TOP)
+    pair[1]:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 0, ns.FOOTER_H)
+    pair[2]:SetPoint("TOPRIGHT", win, "TOPRIGHT", 0, -ns.ART_TOP)
+    pair[2]:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", 0, ns.FOOTER_H)
+    return pair
 end
 
 function ns.BuildWindow()
@@ -389,10 +458,10 @@ function ns.BuildWindow()
     fill:SetPoint("TOPLEFT", win, "TOPLEFT", 2, -21)
     fill:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -2, 2)
 
-    ns.classArt = regionTexture(win)
-    ns.petArt = regionTexture(win)
+    ns.classArt = regionPair(win)
+    ns.petArt = regionPair(win)
     ns.petArt:Hide()
-    ns.glyphArt = regionTexture(win)
+    ns.glyphArt = regionPair(win)
     ns.glyphArt:Hide()
 
     buildAmbient(win, base + 1)

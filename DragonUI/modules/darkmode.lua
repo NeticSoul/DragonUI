@@ -281,11 +281,11 @@ local function DarkenXPRepBorders(tint)
     -- Use addon table references first (set by mainbars), fall back to _G
     local dfXpBar = addon.DfuiXpBar or _G["DragonUI_XPBar"]
     local dfRepBar = addon.DfuiRepBar or _G["DragonUI_RepBar"]
-    if dfXpBar and dfXpBar.Border then
-        DarkenTexture(dfXpBar.Border, tint)
-    end
-    if dfRepBar and dfRepBar.Border then
-        DarkenTexture(dfRepBar.Border, tint)
+    for _, bar in ipairs({ dfXpBar, dfRepBar }) do
+        if bar and bar.Border then
+            DarkenTexture(bar.Border, tint)
+            DarkenTexture(bar.Border.right, tint)
+        end
     end
 
     -- Exhaustion tick (rested marker) — darken its child textures

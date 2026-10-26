@@ -122,11 +122,6 @@ local function RefreshCooldowns()
     if addon.RefreshCooldowns then addon.RefreshCooldowns() end
 end
 
-local function IsD3D9ExActive()
-    local gxApi = GetCVar and GetCVar("gxApi")
-    return gxApi and string.lower(gxApi) == "d3d9ex"
-end
-
 -- ============================================================================
 -- GENERAL SUB-TAB (existing action bar settings)
 -- ============================================================================
@@ -434,57 +429,53 @@ local function BuildGeneralTab(scroll)
         end,
     })
 
-    if IsD3D9ExActive() then
-        C:AddDescription(gryphons, LO["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."])
+    -- Texture previews row
+    local previewRow = C:AddRow(gryphons)
+    local assets = addon._dir or "Interface\\AddOns\\DragonUI\\Textures\\"
+    local faction = UnitFactionGroup and UnitFactionGroup("player") or "Alliance"
+
+    -- Classic gryphon preview
+    C:AddTexturePreview(previewRow, {
+        label = LO["Classic"],
+        texture = assets .. "ActionBars\\uiactionbar2x_",
+        texCoord = { 1/512, 357/512, 209/1024, 543/1024 },
+        width = 80,
+        height = 80,
+    })
+
+    -- Dragonflight gryphon preview (faction-aware: gryphon=Alliance, wyvern=Horde)
+    local dfTexture, dfTexCoord
+    if faction == "Horde" then
+        dfTexture, dfTexCoord = "ActionBars\\uiactionbar2x_new2", { 1/512, 357/512, 1/1024, 335/1024 } -- wyvern-thick-left
     else
-        -- Texture previews row
-        local previewRow = C:AddRow(gryphons)
-        local assets = addon._dir or "Interface\\AddOns\\DragonUI\\Textures\\"
-        local faction = UnitFactionGroup and UnitFactionGroup("player") or "Alliance"
-
-        -- Classic gryphon preview
-        C:AddTexturePreview(previewRow, {
-            label = LO["Classic"],
-            texture = assets .. "ActionBars\\uiactionbar2x_",
-            texCoord = { 1/512, 357/512, 209/2048, 543/2048 },
-            width = 80,
-            height = 80,
-        })
-
-        -- Dragonflight gryphon preview (faction-aware: gryphon=Alliance, wyvern=Horde)
-        local dfTexCoord
-        if faction == "Horde" then
-            dfTexCoord = { 1/512, 357/512, 881/2048, 1215/2048 } -- wyvern-thick-left
-        else
-            dfTexCoord = { 1/512, 357/512, 209/2048, 543/2048 }  -- gryphon-thick-left
-        end
-        C:AddTexturePreview(previewRow, {
-            label = faction == "Horde" and LO["Dragonflight (Wyvern)"] or LO["Dragonflight (Gryphon)"],
-            texture = assets .. "ActionBars\\uiactionbar2x_new",
-            texCoord = dfTexCoord,
-            width = 80,
-            height = 80,
-        })
-
-        -- Flying gryphon preview
-        C:AddTexturePreview(previewRow, {
-            label = LO["Flying"],
-            texture = assets .. "ActionBars\\uiactionbar2x_flying",
-            texCoord = { 1/256, 158/256, 149/2048, 342/2048 },
-            width = 70,
-            height = 90,
-        })
-
-        -- WoW Forever preview (faction-aware like Dragonflight: gryphon=Alliance, wyvern=Horde)
-        C:AddTexturePreview(previewRow, {
-            label = LO["Forever"],
-            texture = assets .. "ActionBars\\uiactionbar2x_forever",
-            texCoord = faction == "Horde" and { 1/1024, 481/1024, 283/1024, 563/1024 }
-                or { 1/1024, 481/1024, 1/1024, 281/1024 },
-            width = 96,
-            height = 56,
-        })
+        dfTexture, dfTexCoord = "ActionBars\\uiactionbar2x_new", { 1/512, 357/512, 209/1024, 543/1024 } -- gryphon-thick-left
     end
+    C:AddTexturePreview(previewRow, {
+        label = faction == "Horde" and LO["Dragonflight (Wyvern)"] or LO["Dragonflight (Gryphon)"],
+        texture = assets .. dfTexture,
+        texCoord = dfTexCoord,
+        width = 80,
+        height = 80,
+    })
+
+    -- Flying gryphon preview
+    C:AddTexturePreview(previewRow, {
+        label = LO["Flying"],
+        texture = assets .. "ActionBars\\uiactionbar2x_flying",
+        texCoord = { 1/256, 158/256, 149/1024, 342/1024 },
+        width = 70,
+        height = 90,
+    })
+
+    -- WoW Forever preview (faction-aware like Dragonflight: gryphon=Alliance, wyvern=Horde)
+    C:AddTexturePreview(previewRow, {
+        label = LO["Forever"],
+        texture = assets .. "ActionBars\\uiactionbar2x_forever",
+        texCoord = faction == "Horde" and { 1/1024, 481/1024, 283/1024, 563/1024 }
+            or { 1/1024, 481/1024, 1/1024, 281/1024 },
+        width = 96,
+        height = 56,
+    })
 end
 
 -- ============================================================================

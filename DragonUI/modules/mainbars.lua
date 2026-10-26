@@ -1178,6 +1178,26 @@ local function GetExhaustionTickLevel(fill)
     return level
 end
 
+-- The 1137-texel strips ship as NAME (texels 0-1023) and NAME_r: past column 1024 d3d9ex draws nothing.
+local function CreateXpStrip(bar, parent, layer, file, inset)
+    local left = parent:CreateTexture(nil, layer)
+    left:SetTexture(addon._dir .. file)
+    left:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, inset)
+    left:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 0, -inset)
+    local right = parent:CreateTexture(nil, layer)
+    right:SetTexture(addon._dir .. file .. "_r")
+    right:SetTexCoord(0, 113 / 128, 0, 1)
+    right:SetPoint("TOPLEFT", left, "TOPRIGHT", 0, 0)
+    right:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 0, -inset)
+    left.right = right
+    local function fit()
+        left:SetWidth(math.max(1, bar:GetWidth() * 1024 / 1137))
+    end
+    bar:HookScript("OnSizeChanged", fit)
+    fit()
+    return left
+end
+
 local function CreateDragonflightUIXPBar()
     if dfXpBar then return dfXpBar end
 
@@ -1190,10 +1210,7 @@ local function CreateDragonflightUIXPBar()
     f:SetFrameLevel(2)
 
     -- Background layer
-    f.Background = f:CreateTexture(nil, "BACKGROUND")
-    f.Background:SetAllPoints()
-    f.Background:SetTexture(addon._dir .. "XP\\Background")
-    f.Background:SetTexCoord(0, 0.55517578, 0, 1)
+    f.Background = CreateXpStrip(f, f, "BACKGROUND", "XP\\Background", 0)
 
     -- Rested XP background bar (shows the TOTAL rested range behind main fill)
     f.RestedBar = CreateFrame("StatusBar", nil, f)
@@ -1214,7 +1231,7 @@ local function CreateDragonflightUIXPBar()
     f.RestedBarMark:SetSize(markSizeX, markSizeY)
     f.RestedBarMark.Texture = f.RestedBarMark:CreateTexture(nil, "OVERLAY")
     f.RestedBarMark.Texture:SetTexture(addon._dir .. "XP\\uiexperiencebar")
-    f.RestedBarMark.Texture:SetTexCoord(1170 / 2048, 1192 / 2048, 201 / 256, 231 / 256)
+    f.RestedBarMark.Texture:SetTexCoord(596 / 1024, 618 / 1024, 457 / 1024, 487 / 1024)
     f.RestedBarMark.Texture:SetAllPoints()
 
     -- Main XP progress bar
@@ -1231,11 +1248,7 @@ local function CreateDragonflightUIXPBar()
     hooksecurefunc(f.Bar, "SetValue", CropStatusBarFill)
 
     -- Border overlay
-    f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
-    f.Border:SetTexture(addon._dir .. "XP\\Overlay")
-    f.Border:SetTexCoord(0, 0.55517578, 0, 1)
-    f.Border:SetPoint("TOPLEFT", 0, 1)
-    f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
+    f.Border = CreateXpStrip(f, f.Bar, "OVERLAY", "XP\\Overlay", 1)
 
     -- Text (shown on hover via HIGHLIGHT, or always via OVERLAY)
     f.Text = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
@@ -1275,10 +1288,7 @@ local function CreateDragonflightUIRepBar()
     f:SetFrameLevel(2)
 
     -- Background
-    f.Background = f:CreateTexture(nil, "BACKGROUND")
-    f.Background:SetAllPoints()
-    f.Background:SetTexture(addon._dir .. "XP\\Background")
-    f.Background:SetTexCoord(0, 0.55517578, 0, 1)
+    f.Background = CreateXpStrip(f, f, "BACKGROUND", "XP\\Background", 0)
 
     -- Main rep progress bar
     f.Bar = CreateFrame("StatusBar", nil, f)
@@ -1293,11 +1303,7 @@ local function CreateDragonflightUIRepBar()
     hooksecurefunc(f.Bar, "SetValue", CropStatusBarFill)
 
     -- Border overlay
-    f.Border = f.Bar:CreateTexture(nil, "OVERLAY")
-    f.Border:SetTexture(addon._dir .. "XP\\Overlay")
-    f.Border:SetTexCoord(0, 0.55517578, 0, 1)
-    f.Border:SetPoint("TOPLEFT", 0, 1)
-    f.Border:SetPoint("BOTTOMRIGHT", 0, -1)
+    f.Border = CreateXpStrip(f, f.Bar, "OVERLAY", "XP\\Overlay", 1)
 
     -- Text (hover by default)
     f.Text = f.Bar:CreateFontString(nil, "HIGHLIGHT", "SystemFont_Outline_Small")
@@ -1538,7 +1544,7 @@ local function ApplyRetailUIExpRepBarStyling()
                     region:SetPoint("TOPLEFT", MainMenuExpBar, "TOPLEFT", -1, 0)
                     region:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 2, 0)
                     region:SetTexture(ExperienceBarAsset)
-                    region:SetTexCoord(0.00088878125 / 2048, 570 / 2048, 20 / 64, 29 / 64)
+                    region:SetTexCoord(0.00088878125 / 1024, 570 / 1024, 20 / 256, 29 / 256)
                     region:SetAlpha(1) -- RemoveBlizzardFrames sets alpha 0, must restore
                     region:Show()
                     bgFound = true
@@ -1568,7 +1574,7 @@ local function ApplyRetailUIExpRepBarStyling()
             borderTex:SetPoint("BOTTOMRIGHT", MainMenuExpBar, "BOTTOMRIGHT", 3, -6)
             borderTex:SetDrawLayer("OVERLAY", 1)
             borderTex:SetTexture(ExperienceBarAsset)
-            borderTex:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
+            borderTex:SetTexCoord(1 / 1024, 572 / 1024, 1 / 256, 18 / 256)
             borderTex:Show()
         end
 
@@ -1693,7 +1699,7 @@ local function ApplyRetailUIExpRepBarStyling()
             repBgTex:SetPoint("TOPLEFT", ReputationWatchStatusBar, "TOPLEFT", -1, 0)
             repBgTex:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 2, 0)
             repBgTex:SetTexture(ExperienceBarAsset)
-            repBgTex:SetTexCoord(0.00088878125 / 2048, 570 / 2048, 20 / 64, 29 / 64)
+            repBgTex:SetTexCoord(0.00088878125 / 1024, 570 / 1024, 20 / 256, 29 / 256)
             repBgTex:SetAlpha(1) -- RemoveBlizzardFrames may set alpha 0, must restore
         end
 
@@ -1705,7 +1711,7 @@ local function ApplyRetailUIExpRepBarStyling()
             repBorder:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
             repBorder:SetDrawLayer("OVERLAY", 1)
             repBorder:SetTexture(ExperienceBarAsset)
-            repBorder:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
+            repBorder:SetTexCoord(1 / 1024, 572 / 1024, 1 / 256, 18 / 256)
             repBorder:Show()
         end
 
@@ -1716,7 +1722,7 @@ local function ApplyRetailUIExpRepBarStyling()
             repBorder2:SetPoint("BOTTOMRIGHT", ReputationWatchStatusBar, "BOTTOMRIGHT", 3, -7)
             repBorder2:SetDrawLayer("OVERLAY", 1)
             repBorder2:SetTexture(ExperienceBarAsset)
-            repBorder2:SetTexCoord(1 / 2048, 572 / 2048, 1 / 64, 18 / 64)
+            repBorder2:SetTexCoord(1 / 1024, 572 / 1024, 1 / 256, 18 / 256)
             repBorder2:Show()
         end
 
@@ -1882,15 +1888,15 @@ local function UpdateBarPositions()
         -- Resize root; fixed UV so chrome stretches with SetSize (no UV∝width).
         if dfXpBar then
             dfXpBar:SetSize(barW, barH)
-            dfXpBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
-            dfXpBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
+            dfXpBar.Background:SetTexCoord(0, 1, 0, 1)
+            dfXpBar.Border:SetTexCoord(0, 1, 0, 1)
             dfXpBar:ClearAllPoints()
             dfXpBar:SetPoint("CENTER", addon.ActionBarFrames.xpbar, "CENTER", 0, 0)
         end
         if dfRepBar then
             dfRepBar:SetSize(barW, barH)
-            dfRepBar.Background:SetTexCoord(0, 0.55517578, 0, 1)
-            dfRepBar.Border:SetTexCoord(0, 0.55517578, 0, 1)
+            dfRepBar.Background:SetTexCoord(0, 1, 0, 1)
+            dfRepBar.Border:SetTexCoord(0, 1, 0, 1)
             dfRepBar:ClearAllPoints()
             dfRepBar:SetPoint("CENTER", addon.ActionBarFrames.repbar, "CENTER", 0, 0)
         end

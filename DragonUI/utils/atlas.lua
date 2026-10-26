@@ -16,6 +16,7 @@ local collapse = assets..'Micromenu\\uicollapsebutton';
 local bagmain2x = assets..'Bags\\bagslots2x';
 local uiactionbar2x_ = assets..'ActionBars\\uiactionbar2x_';
 local uiactionbar2x_new = assets..'ActionBars\\uiactionbar2x_new';
+local uiactionbar2x_new2 = assets..'ActionBars\\uiactionbar2x_new2';
 local uiactionbar2x_flying = assets..'ActionBars\\uiactionbar2x_flying';
 local uiactionbar2x_forever = assets..'ActionBars\\uiactionbar2x_forever';
 local uiactionbarvertical = assets..'ActionBars\\uiactionbarvertical';
@@ -81,29 +82,40 @@ local rui_MapPins = assets..'WorldMap\\mappins';
 local rui_TaxiAssets = assets..'Taxi\\taxiassets';
 local rui_TalentsPack = assets..'Talents\\talents-sheet';
 local rui_TalentsBgWarrior = assets..'Talents\\talents-bg-warrior';
+local rui_TalentsBgWarriorFury = assets..'Talents\\talents-bg-warrior-fury';
 local rui_TalentsBgWarriorProtection = assets..'Talents\\talents-bg-warrior-protection';
 local rui_TalentsBgPaladin = assets..'Talents\\talents-bg-paladin';
+local rui_TalentsBgPaladinProtection = assets..'Talents\\talents-bg-paladin-protection';
 local rui_TalentsBgPaladinRetribution = assets..'Talents\\talents-bg-paladin-retribution';
 local rui_TalentsBgHunter = assets..'Talents\\talents-bg-hunter';
+local rui_TalentsBgHunterMarksmanship = assets..'Talents\\talents-bg-hunter-marksmanship';
 local rui_TalentsBgHunterSurvival = assets..'Talents\\talents-bg-hunter-survival';
 local rui_TalentsBgRogue = assets..'Talents\\talents-bg-rogue';
+local rui_TalentsBgRogueOutlaw = assets..'Talents\\talents-bg-rogue-outlaw';
 local rui_TalentsBgRogueSubtlety = assets..'Talents\\talents-bg-rogue-subtlety';
 local rui_TalentsBgPriest = assets..'Talents\\talents-bg-priest';
+local rui_TalentsBgPriestHoly = assets..'Talents\\talents-bg-priest-holy';
 local rui_TalentsBgPriestShadow = assets..'Talents\\talents-bg-priest-shadow';
 local rui_TalentsBgShaman = assets..'Talents\\talents-bg-shaman';
+local rui_TalentsBgShamanEnhancement = assets..'Talents\\talents-bg-shaman-enhancement';
 local rui_TalentsBgShamanRestoration = assets..'Talents\\talents-bg-shaman-restoration';
 local rui_TalentsBgMage = assets..'Talents\\talents-bg-mage';
+local rui_TalentsBgMageFire = assets..'Talents\\talents-bg-mage-fire';
 local rui_TalentsBgMageFrost = assets..'Talents\\talents-bg-mage-frost';
 local rui_TalentsBgWarlock = assets..'Talents\\talents-bg-warlock';
+local rui_TalentsBgWarlockDemonology = assets..'Talents\\talents-bg-warlock-demonology';
 local rui_TalentsBgWarlockDestruction = assets..'Talents\\talents-bg-warlock-destruction';
 local rui_TalentsBgDruid = assets..'Talents\\talents-bg-druid';
+local rui_TalentsBgDruidFeral = assets..'Talents\\talents-bg-druid-feral';
 local rui_TalentsBgDruidRestoration = assets..'Talents\\talents-bg-druid-restoration';
 local rui_TalentsBgDeathKnight = assets..'Talents\\talents-bg-deathknight';
+local rui_TalentsBgDeathKnightFrost = assets..'Talents\\talents-bg-deathknight-frost';
 local rui_TalentsBgDeathKnightUnholy = assets..'Talents\\talents-bg-deathknight-unholy';
 local rui_TalentsWarmodeAtlas = assets..'Talents\\talentframeatlas';
 local rui_TalentsClouds = assets..'Talents\\talents-animations-clouds';
 local rui_TalentsParticles = assets..'Talents\\talents-animations-particles';
 local rui_SpellbookBg = assets..'Spellbook\\spellbook-background';
+local rui_SpellbookBgRight = assets..'Spellbook\\spellbook-background_r';
 local rui_SpellbookElements = assets..'Spellbook\\spellbookelements';
 local rui_SpellbookRibbon = assets..'Spellbook\\spellbook-ribbon';
 
@@ -118,7 +130,7 @@ local function literal(value)
 end
 
 local retailHudSheets = {
-	sheet(uiactionbar2x_, 512, 2048, {
+	sheet(uiactionbar2x_, 512, 1024, {
 		{ "_ui-hud-actionbar-divider-top", 10, 10, 421, 445, 833, 861 },
 		{ "_ui-hud-actionbar-divider-bottom", 10, 10, 395, 419, 833, 863 },
 		{ "_ui-hud-actionbar-divider-center", 8, 20, 0, 32, 179, 207, false, true },
@@ -142,7 +154,7 @@ local retailHudSheets = {
 		{ "ui-hud-actionbar-frame-divider-threeslice-edgebottom", 14, 12, 395, 419, 833, 863 },
 		{ "ui-hud-actionbar-frame-divider-threeslice-edgetop", 14, 12, 421, 445, 833, 861 },
 	}),
-	sheet(uiactionbar2x_flying, 256, 2048, {
+	sheet(uiactionbar2x_flying, 256, 1024, {
 		{ "ui-hud-actionbar-gryphon-flying-left", 80, 103, 1, 158, 149, 342 },
 		{ "ui-hud-actionbar-gryphon-flying-right", 80, 103, 1, 157, 539, 732 },
 	}),
@@ -153,40 +165,44 @@ local retailHudSheets = {
 		{ "ui-hud-actionbar-wyvern-forever-left", 123.2, 76, 1, 481, 283, 563 },
 		{ "ui-hud-actionbar-wyvern-forever-right", 123.2, 76, 483, 963, 283, 563 },
 	}),
-	sheet(uiactionbar2x_new, 512, 2048, {
+	sheet(uiactionbar2x_new, 512, 1024, {
 		-- Retail draws these at 104.5x98 (MainActionBar.xml EndCaps), true to the 356x334 cells.
 		{ "ui-hud-actionbar-gryphon-thick-left", 104.5, 98, 1, 357, 209, 543 },
 		{ "ui-hud-actionbar-gryphon-thick-right", 104.5, 98, 1, 357, 545, 879 },
-		{ "ui-hud-actionbar-wyvern-thick-left", 104.5, 98, 1, 357, 881, 1215 },
-		{ "ui-hud-actionbar-wyvern-thick-right", 104.5, 98, 1, 357, 1217, 1551 },
 		{ "ui-hud-actionbar-iconframe", 64, 64, 359, 451, 649, 739 },
 		{ "_ui-hud-actionbar-iconborder-checked", 64, 64, 359, 451, 881, 971 },
 		{ "_ui-hud-actionbar-iconborder-pushed", 64, 64, 359, 451, 881, 971 },
-		{ "_ui-hud-actionbar-iconborder-highlight", 64, 64, 359, 451, 1065, 1155 },
 		{ "ui-hud-actionbar-iconframe-flyoutbordershadow", 52, 52, 359, 463, 335, 439 },
 		{ "ui-hud-actionbar-flyout-2x", 18, 7, 453, 489, 899, 913 },
 		{ "ui-hud-actionbar-flyout-mouseover-2x", 18, 7, 453, 489, 915, 929 },
 		{ "ui-hud-actionbar-flyout-down-2x", 19, 8, 453, 491, 881, 897 },
-		{ "ui-hud-actionbar-iconframe-flyoutbutton-2x", 47, 29, 359, 453, 1157, 1215 },
-		{ "ui-hud-actionbar-iconframe-flyoutbottom-2x", 47, 5, 359, 453, 1217, 1227 },
 		{ "_ui-hud-actionbar-iconframe-flyoutmidleft-2x", 32, 47, 0, 64, 1, 95 },
-		{ "ui-hud-actionbar-iconframe-flash", 64, 64, 359, 451, 973, 1063 },
 		{ "ui-hud-actionbar-iconframe-slot", 64, 64, 359, 487, 209, 333 },
+	}),
+	-- uiactionbar2x_new from its row 880 down: a texture 2048 tall crashes the client under d3d9ex.
+	sheet(uiactionbar2x_new2, 512, 1024, {
+		{ "ui-hud-actionbar-wyvern-thick-left", 104.5, 98, 1, 357, 1, 335 },
+		{ "ui-hud-actionbar-wyvern-thick-right", 104.5, 98, 1, 357, 337, 671 },
+		{ "_ui-hud-actionbar-iconborder-highlight", 64, 64, 359, 451, 185, 275 },
+		{ "ui-hud-actionbar-iconframe-flyoutbutton-2x", 47, 29, 359, 453, 277, 335 },
+		{ "ui-hud-actionbar-iconframe-flyoutbottom-2x", 47, 5, 359, 453, 337, 347 },
+		{ "ui-hud-actionbar-iconframe-flash", 64, 64, 359, 451, 93, 183 },
 	}),
 	-- No pixel grid on record for this sheet, so every texcoord is a literal.
 	sheet(assets .. "ActionBars\\mainmenubar", nil, nil, {
 		{ "ui-hud-experiencebar", 537, 14,
 			literal(0.1123046875), literal(0.646484375), literal(0.18798828125), literal(0.24951171875) },
 	}),
-	sheet(uiexperiencebar, 2048, 64, {
+	-- Three 64-row bands holding columns 0, 574 and 1024 onward of the retail 2048x64 sheet.
+	sheet(uiexperiencebar, 1024, 256, {
 		{ "ui-hud-experiencebar-round", 537, 18, 1, 572, 1, 18 },
-		{ "ui-hud-experiencebar-background", 530, 10, literal(0.00088878125), 570, 20, 29 },
+		{ "ui-hud-experiencebar-background", 530, 10, literal(0.0017775625), 570, 20, 29 },
 		{ "ui-hud-experiencebar-frame-pip", 10, 14, 588, 598, 45, 59 },
 		{ "ui-hud-experiencebar-frame-pip-mouseover", 10, 14, 574, 586, 45, 59 },
 		{ "ui-hud-experiencebar-fill", nil, nil, 1, 564, 31, 40 },
-		{ "ui-hud-experiencebar-fill-rested", nil, nil, 574, 1136, 34, 43 },
-		{ "ui-hud-experiencebar-fill-prediction", nil, nil, 574, 1136, 1, 10 },
-		{ "ui-hud-experiencebar-fill-reputation-faction-yellow", nil, nil, 1139, 1700, 23, 32 },
+		{ "ui-hud-experiencebar-fill-rested", nil, nil, 0, 562, 98, 107 },
+		{ "ui-hud-experiencebar-fill-prediction", nil, nil, 0, 562, 65, 74 },
+		{ "ui-hud-experiencebar-fill-reputation-faction-yellow", nil, nil, 115, 676, 151, 160 },
 	}),
 	sheet(uimicromenu2x, 256, 512, {
 		{ "ui-hud-micromenu-achievement-disabled-2x", nil, nil, 201, 239, 109, 161 },
@@ -439,23 +455,23 @@ local atlasinfo = {
 	['Minimap-Calendar-31-Normal'] = { rui_Calendar, 21, 19, 9/1024, 93/1024, 931/1024, 1007/1024 },
 	['Minimap-Calendar-31-Highlight'] = { rui_Calendar, 21, 19, 111/1024, 195/1024, 931/1024, 1007/1024 },
 	['Minimap-Calendar-31-Pushed'] = { rui_Calendar, 21, 19, 213/1024, 297/1024, 931/1024, 1007/1024 },
-	['ActionBar-LeftCap-Alliance'] = { rui_ActionBarHorizontal, 356, 334, 1/512, 357/512, 209/2048, 543/2048 },
-	['ActionBar-RightCap-Alliance'] = { rui_ActionBarHorizontal, 356, 334, 1/512, 357/512, 545/2048, 879/2048 },
-	['ActionBar-LeftCap-Horde'] = { rui_ActionBarHorizontal, 356, 334, 1/512, 357/512, 881/2048, 1215/2048 },
-	['ActionBar-RightCap-Horde'] = { rui_ActionBarHorizontal, 356, 334, 1/512, 357/512, 1217/2048, 1551/2048 },
-	['ActionBar-ButtonUp-Normal'] = { rui_ActionBarHorizontal, 34, 28, 359/512, 393/512, 833/2048, 861/2048 },
-	['ActionBar-ButtonUp-Highlight'] = { rui_ActionBarHorizontal, 34, 28, 453/512, 487/512, 709/2048, 737/2048 },
-	['ActionBar-ButtonUp-Pushed'] = { rui_ActionBarHorizontal, 34, 28, 453/512, 487/512, 679/2048, 707/2048 },
-	['ActionBar-ButtonDown-Normal'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 605/2048, 633/2048 },
-	['ActionBar-ButtonDown-Highlight'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 575/2048, 603/2048 },
-	['ActionBar-ButtonDown-Pushed'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 545/2048, 573/2048 },
-	['ActionBar-ActionButton-Highlight'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 1065/2048, 1155/2048 },
-	['ActionBar-ActionButton-Pushed'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 881/2048, 971/2048 },
-	['ActionBar-ActionButton-Flash'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 973/2048, 1063/2048 },
-	['ActionBar-ActionButton-Border'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 649/2048, 739/2048 },
-	['ActionBar-ActionButton-Background'] = { rui_ActionBarHorizontal, 128, 124, 359/512, 487/512, 209/2048, 333/2048 },
-	['ExperienceBar-Background'] = { rui_ExperienceBar, 569.99911121875, 9, 0.00088878125/2048, 570/2048, 20/64, 29/64 },
-	['ExperienceBar-Border'] = { rui_ExperienceBar, 571, 17, 1/2048, 572/2048, 1/64, 18/64 },
+	['ActionBar-LeftCap-Alliance'] = { rui_ActionBarHorizontal, 356, 334, 1/512, 357/512, 209/1024, 543/1024 },
+	['ActionBar-RightCap-Alliance'] = { rui_ActionBarHorizontal, 356, 334, 1/512, 357/512, 545/1024, 879/1024 },
+	['ActionBar-LeftCap-Horde'] = { uiactionbar2x_new2, 356, 334, 1/512, 357/512, 1/1024, 335/1024 },
+	['ActionBar-RightCap-Horde'] = { uiactionbar2x_new2, 356, 334, 1/512, 357/512, 337/1024, 671/1024 },
+	['ActionBar-ButtonUp-Normal'] = { rui_ActionBarHorizontal, 34, 28, 359/512, 393/512, 833/1024, 861/1024 },
+	['ActionBar-ButtonUp-Highlight'] = { rui_ActionBarHorizontal, 34, 28, 453/512, 487/512, 709/1024, 737/1024 },
+	['ActionBar-ButtonUp-Pushed'] = { rui_ActionBarHorizontal, 34, 28, 453/512, 487/512, 679/1024, 707/1024 },
+	['ActionBar-ButtonDown-Normal'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 605/1024, 633/1024 },
+	['ActionBar-ButtonDown-Highlight'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 575/1024, 603/1024 },
+	['ActionBar-ButtonDown-Pushed'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 545/1024, 573/1024 },
+	['ActionBar-ActionButton-Highlight'] = { uiactionbar2x_new2, 92, 90, 359/512, 451/512, 185/1024, 275/1024 },
+	['ActionBar-ActionButton-Pushed'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 881/1024, 971/1024 },
+	['ActionBar-ActionButton-Flash'] = { uiactionbar2x_new2, 92, 90, 359/512, 451/512, 93/1024, 183/1024 },
+	['ActionBar-ActionButton-Border'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 649/1024, 739/1024 },
+	['ActionBar-ActionButton-Background'] = { rui_ActionBarHorizontal, 128, 124, 359/512, 487/512, 209/1024, 333/1024 },
+	['ExperienceBar-Background'] = { rui_ExperienceBar, 569.99911121875, 9, 0.00088878125/1024, 570/1024, 20/256, 29/256 },
+	['ExperienceBar-Border'] = { rui_ExperienceBar, 571, 17, 1/1024, 572/1024, 1/256, 18/256 },
 	['BagsBar-SlotButton-Highlight'] = { rui_BagSlots, 61, 61, 358/512, 419/512, 1/128, 62/128 },
 	['BagsBar-SlotButton-Border'] = { rui_BagSlots, 61, 61, 295/512, 356/512, 1/128, 62/128 },
 	['BagsBar-KeySlot-Normal'] = { rui_BagSlotsKey, 60, 61, 3/128, 63/128, 64/128, 125/128 },
@@ -490,16 +506,16 @@ local atlasinfo = {
 	['MicroMenu-QuestLog-Pushed'] = { rui_MicroMenu, 51, 70, 58/512, 109/512, 4/512, 74/512 },
 	['MicroMenu-QuestLog-Disabled'] = { rui_MicroMenu, 51, 70, 4/512, 55/512, 4/512, 74/512 },
 	['MicroMenu-Empty'] = { rui_MicroMenu, 51, 69, 384/512, 435/512, 82/512, 151/512 },
-	['ActionMainBar-TopLeft'] = { rui_ActionBarHorizontal, 36, 33, 464/512, 500/512, 475/2048, 508/2048 },
-	['ActionMainBar-TopRight'] = { rui_ActionBarHorizontal, 36, 31, 461/512, 497/512, 442/2048, 473/2048 },
-	['ActionMainBar-BottomLeft'] = { rui_ActionBarHorizontal, 36, 32, 466/512, 502/512, 388/2048, 420/2048 },
-	['ActionMainBar-BottomRight'] = { rui_ActionBarHorizontal, 35, 33, 464/512, 499/512, 339/2048, 372/2048 },
-	['ActionMainBar-Top'] = { rui_ActionBarHorizontal, 20, 9, 445/512, 465/512, 145/2048, 154/2048 },
-	['ActionMainBar-Bottom'] = { rui_ActionBarHorizontal, 20, 7, 445/512, 465/512, 145/2048, 152/2048 },
+	['ActionMainBar-TopLeft'] = { rui_ActionBarHorizontal, 36, 33, 464/512, 500/512, 475/1024, 508/1024 },
+	['ActionMainBar-TopRight'] = { rui_ActionBarHorizontal, 36, 31, 461/512, 497/512, 442/1024, 473/1024 },
+	['ActionMainBar-BottomLeft'] = { rui_ActionBarHorizontal, 36, 32, 466/512, 502/512, 388/1024, 420/1024 },
+	['ActionMainBar-BottomRight'] = { rui_ActionBarHorizontal, 35, 33, 464/512, 499/512, 339/1024, 372/1024 },
+	['ActionMainBar-Top'] = { rui_ActionBarHorizontal, 20, 9, 445/512, 465/512, 145/1024, 154/1024 },
+	['ActionMainBar-Bottom'] = { rui_ActionBarHorizontal, 20, 7, 445/512, 465/512, 145/1024, 152/1024 },
 	['ActionMainBar-Left'] = { rui_ActionBarVertical, 7, 12, 144/256, 151/256, 22/64, 34/64 },
 	['ActionMainBar-Right'] = { rui_ActionBarVertical, 6, 12, 144/256, 150/256, 22/64, 34/64 },
-	['ActionMainBar-GapDown'] = { rui_ActionBarHorizontal, 19, 33, 396/512, 415/512, 831/2048, 864/2048 },
-	['ActionMainBar-GapUp'] = { rui_ActionBarHorizontal, 19, 30, 422/512, 441/512, 831/2048, 861/2048 },
+	['ActionMainBar-GapDown'] = { rui_ActionBarHorizontal, 19, 33, 396/512, 415/512, 831/1024, 864/1024 },
+	['ActionMainBar-GapUp'] = { rui_ActionBarHorizontal, 19, 30, 422/512, 441/512, 831/1024, 861/1024 },
 	['ActionMainBar-GapCenter'] = { rui_ActionBarVertical, 9, 12, 143/256, 152/256, 22/64, 34/64 },
 	['Minimap-PVP-alliance-Normal'] = { rui_Battlefield, 54, 53, 72/256, 126/256, 5/64, 58/64 },
 	['Minimap-PVP-alliance-Pushed'] = { rui_Battlefield, 54, 53, 17/256, 71/256, 5/64, 58/64 },
@@ -762,51 +778,52 @@ local atlasinfo = {
 	['pvptalents-warmode-orb'] = { rui_TalentsWarmodeAtlas, 80, 84, 0.324219, 0.636719, 0.371094, 0.453125 },
 	['pvptalents-warmode-swords'] = { rui_TalentsWarmodeAtlas, 46, 43, 0.753906, 0.933594, 0.101563, 0.143555 },
 	['pvptalents-warmode-swords-disabled'] = { rui_TalentsWarmodeAtlas, 46, 43, 0.792969, 0.972656, 0.302734, 0.344727 },
-	['talents-animations-clouds'] = { rui_TalentsClouds, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-animations-particles'] = { rui_TalentsParticles, 1308, 774, 0.000488, 0.639160, 0.379395, 0.757324 },
+	-- These and the spec backgrounds span a 2048-wide sheet shipped as NAME and NAME_r halves; the talent window splits them.
+	['talents-animations-clouds'] = { rui_TalentsClouds, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-animations-particles'] = { rui_TalentsParticles, 1308, 774, 0.000488, 0.639160, 0.008789, 0.764648 },
 
-	-- Spec backgrounds: two specs per sheet, downscaled to 1024.
-	['talents-background-warrior-arms'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-warrior-fury'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-warrior-arms'] = { rui_TalentsBgWarrior, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-warrior-fury'] = { rui_TalentsBgWarriorFury, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-warrior-protection'] = { rui_TalentsBgWarriorProtection, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-paladin-holy'] = { rui_TalentsBgPaladin, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-paladin-protection'] = { rui_TalentsBgPaladin, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-paladin-holy'] = { rui_TalentsBgPaladin, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-paladin-protection'] = { rui_TalentsBgPaladinProtection, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-paladin-retribution'] = { rui_TalentsBgPaladinRetribution, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-hunter-beastmastery'] = { rui_TalentsBgHunter, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-hunter-marksmanship'] = { rui_TalentsBgHunter, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-hunter-beastmastery'] = { rui_TalentsBgHunter, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-hunter-marksmanship'] = { rui_TalentsBgHunterMarksmanship, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-hunter-survival'] = { rui_TalentsBgHunterSurvival, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-rogue-assassination'] = { rui_TalentsBgRogue, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-rogue-outlaw'] = { rui_TalentsBgRogue, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-rogue-assassination'] = { rui_TalentsBgRogue, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-rogue-outlaw'] = { rui_TalentsBgRogueOutlaw, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-rogue-subtlety'] = { rui_TalentsBgRogueSubtlety, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-priest-discipline'] = { rui_TalentsBgPriest, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-priest-holy'] = { rui_TalentsBgPriest, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-priest-discipline'] = { rui_TalentsBgPriest, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-priest-holy'] = { rui_TalentsBgPriestHoly, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-priest-shadow'] = { rui_TalentsBgPriestShadow, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-shaman-elemental'] = { rui_TalentsBgShaman, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-shaman-enhancement'] = { rui_TalentsBgShaman, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-shaman-elemental'] = { rui_TalentsBgShaman, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-shaman-enhancement'] = { rui_TalentsBgShamanEnhancement, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-shaman-restoration'] = { rui_TalentsBgShamanRestoration, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-mage-arcane'] = { rui_TalentsBgMage, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-mage-fire'] = { rui_TalentsBgMage, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-mage-arcane'] = { rui_TalentsBgMage, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-mage-fire'] = { rui_TalentsBgMageFire, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-mage-frost'] = { rui_TalentsBgMageFrost, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-warlock-affliction'] = { rui_TalentsBgWarlock, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-warlock-demonology'] = { rui_TalentsBgWarlock, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-warlock-affliction'] = { rui_TalentsBgWarlock, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-warlock-demonology'] = { rui_TalentsBgWarlockDemonology, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-warlock-destruction'] = { rui_TalentsBgWarlockDestruction, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
-	['talents-background-druid-balance'] = { rui_TalentsBgDruid, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-druid-feral'] = { rui_TalentsBgDruid, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
-	['talents-background-druid-restoration'] = { rui_TalentsBgDruidRestoration, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
-	['talents-background-deathknight-blood'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.000488, 0.378418 },
-	['talents-background-deathknight-frost'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.379395, 0.757324 },
+	['talents-background-druid-balance'] = { rui_TalentsBgDruid, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-druid-feral'] = { rui_TalentsBgDruidFeral, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
+	['talents-background-druid-restoration'] = { rui_TalentsBgDruidRestoration, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
+	['talents-background-deathknight-blood'] = { rui_TalentsBgDeathKnight, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
+	['talents-background-deathknight-frost'] = { rui_TalentsBgDeathKnightFrost, 1612, 774, 0.000488, 0.787598, 0.008789, 0.764648 },
 	['talents-background-deathknight-unholy'] = { rui_TalentsBgDeathKnightUnholy, 1612, 774, 0.000488, 0.787598, 0.000977, 0.756836 },
 
 	-- Spellbook (Textures/Spellbook/): Blizzard's retail spellbook art, cut down to the pieces the book draws.
-	['spellbook-background-evergreen-header'] = { rui_SpellbookBg, 1614, 58, 4/2048, 1618/2048, 4/1024, 62/1024 },
-	['spellbook-header-left-half'] = { rui_SpellbookBg, 807, 58, 4/2048, 811/2048, 4/1024, 62/1024 },
-	['spellbook-background-evergreen-right'] = { rui_SpellbookBg, 807, 805, 4/2048, 811/2048, 68/1024, 873/1024 },
+	-- The 2048-wide sheet is cut into columns 0-1023 and 768-1791 (_r); the wide header is drawn as its two halves.
+	['spellbook-header-left-half'] = { rui_SpellbookBg, 807, 58, 4/1024, 811/1024, 4/1024, 62/1024 },
+	['spellbook-header-right-half'] = { rui_SpellbookBgRight, 807, 58, 43/1024, 850/1024, 4/1024, 62/1024 },
+	['spellbook-background-evergreen-right'] = { rui_SpellbookBg, 807, 805, 4/1024, 811/1024, 68/1024, 873/1024 },
 	-- Uncompressed on its own: block compression smeared the ribbon's gold edges and tail.
 	['spellbook-background-evergreen-ribbon'] = { rui_SpellbookRibbon, 102, 557, 0/128, 102/128, 0/1024, 557/1024 },
-	['spellbook-background-evergreen-left'] = { rui_SpellbookBg, 806, 805, 924/2048, 1730/2048, 68/1024, 873/1024 },
-	['spellbook-divider'] = { rui_SpellbookBg, 657, 11, 8/2048, 665/2048, 880/1024, 891/1024 },
-	['spellbook-list-backplate'] = { rui_SpellbookBg, 316, 106, 672/2048, 988/2048, 880/1024, 986/1024 },
-	['spellbook-item-backplate'] = { rui_SpellbookBg, 256, 64, 992/2048, 1248/2048, 880/1024, 944/1024 },
+	['spellbook-background-evergreen-left'] = { rui_SpellbookBgRight, 806, 805, 156/1024, 962/1024, 68/1024, 873/1024 },
+	['spellbook-divider'] = { rui_SpellbookBg, 657, 11, 8/1024, 665/1024, 880/1024, 891/1024 },
+	['spellbook-list-backplate'] = { rui_SpellbookBg, 316, 106, 672/1024, 988/1024, 880/1024, 986/1024 },
+	['spellbook-item-backplate'] = { rui_SpellbookBgRight, 256, 64, 224/1024, 480/1024, 880/1024, 944/1024 },
 	['spellbook-corner-flipbook-evergreen'] = { rui_SpellbookElements, 600, 310, 4/1024, 604/1024, 4/512, 314/512 },
 	['spellbook-item-needtrainer-shadow'] = { rui_SpellbookElements, 270, 270, 608/1024, 878/1024, 4/512, 274/512 },
 	['spellbook-item-iconframe'] = { rui_SpellbookElements, 138, 131, 884/1024, 1022/1024, 4/512, 135/512 },

@@ -29,7 +29,7 @@ local BORDER_TEXTURE = "Interface\\Buttons\\WHITE8X8"
 local FRAME_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe_white.tga"
 
 local DETAILED_BUFF_TEXTURE = addon._dir .. "ActionBars\\uiactionbar2x_new"
-local DETAILED_BUFF_COORDS = { 359 / 512, 451 / 512, 649 / 2048, 739 / 2048 }
+local DETAILED_BUFF_COORDS = { 359 / 512, 451 / 512, 649 / 1024, 739 / 1024 }
 local DETAILED_DEBUFF_TEXTURE = addon._dir .. "ActionBars\\uiactionbariconframe2x_white"
 local DETAILED_DEBUFF_COORDS = { 0, 92 / 128, 0, 90 / 128 }
 

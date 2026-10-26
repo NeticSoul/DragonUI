@@ -133,20 +133,23 @@ addon.Professions.ArtLayout = {
     bannerSplit = 332,
 }
 
--- Skill bar flipbooks: ADD and MOD overlay sheets, first frame x/y, frame w/h, pitch x/y, rows (2 columns), sheet w/h.
+-- d3d9ex draws only 1024x1024 of a texture, so each sheet is cut at texel 768 into NAME, NAME_r, NAME2, NAME2_r.
+addon.Professions.FX_CUT = 768
+
+-- Skill bar flipbooks: ADD and MOD sheets, first frame x/y, frame w/h, pitch x/y, rows (2 columns), cut w/h, lower row.
 addon.Professions.FillAnim = {
-    ["Alchemy"] = { DIR .. "FxAddAlchemy", DIR .. "FxModAlchemy", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Blacksmithing"] = { DIR .. "FxAddBlacksmithing", DIR .. "FxModBlacksmithing", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Cooking"] = { DIR .. "FxAddCooking", DIR .. "FxModCooking", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Enchanting"] = { DIR .. "FxAddEnchanting", DIR .. "FxModEnchanting", 1, 1, 856, 34, 856, 34, 37, 2048, 2048 },
-    ["Engineering"] = { DIR .. "FxAddEngineering", DIR .. "FxModEngineering", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["FirstAid"] = { DIR .. "FxAddFirstAid", DIR .. "FxModFirstAid", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Fishing"] = { DIR .. "FxAddFishing", DIR .. "FxModFishing", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Herbalism"] = { DIR .. "FxAddHerbalism", DIR .. "FxModHerbalism", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Inscription"] = { DIR .. "FxAddInscription", DIR .. "FxModInscription", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Jewelcrafting"] = { DIR .. "FxAddJewelcrafting", DIR .. "FxModJewelcrafting", 1, 1, 856, 34, 856, 34, 22, 2048, 1024 },
-    ["Leatherworking"] = { DIR .. "FxAddLeatherworking", DIR .. "FxModLeatherworking", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Mining"] = { DIR .. "FxAddMining", DIR .. "FxModMining", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Skinning"] = { DIR .. "FxAddSkinning", DIR .. "FxModSkinning", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
-    ["Tailoring"] = { DIR .. "FxAddTailoring", DIR .. "FxModTailoring", 1, 1, 856, 34, 856, 34, 30, 2048, 1024 },
+    ["Alchemy"] = { DIR .. "FxAddAlchemy", DIR .. "FxModAlchemy", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Blacksmithing"] = { DIR .. "FxAddBlacksmithing", DIR .. "FxModBlacksmithing", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Cooking"] = { DIR .. "FxAddCooking", DIR .. "FxModCooking", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Enchanting"] = { DIR .. "FxAddEnchanting", DIR .. "FxModEnchanting", 1, 1, 856, 34, 856, 34, 37, 1024, 1024, 30 },
+    ["Engineering"] = { DIR .. "FxAddEngineering", DIR .. "FxModEngineering", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["FirstAid"] = { DIR .. "FxAddFirstAid", DIR .. "FxModFirstAid", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Fishing"] = { DIR .. "FxAddFishing", DIR .. "FxModFishing", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Herbalism"] = { DIR .. "FxAddHerbalism", DIR .. "FxModHerbalism", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Inscription"] = { DIR .. "FxAddInscription", DIR .. "FxModInscription", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Jewelcrafting"] = { DIR .. "FxAddJewelcrafting", DIR .. "FxModJewelcrafting", 1, 1, 856, 34, 856, 34, 22, 1024, 1024 },
+    ["Leatherworking"] = { DIR .. "FxAddLeatherworking", DIR .. "FxModLeatherworking", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Mining"] = { DIR .. "FxAddMining", DIR .. "FxModMining", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Skinning"] = { DIR .. "FxAddSkinning", DIR .. "FxModSkinning", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
+    ["Tailoring"] = { DIR .. "FxAddTailoring", DIR .. "FxModTailoring", 1, 1, 856, 34, 856, 34, 30, 1024, 1024 },
 }
