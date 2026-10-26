@@ -487,7 +487,7 @@ DragonUI_HiddenCastbarParent:Hide()
 -- Store original parents for restore
 local blizzardCastbarOriginalParents = {}
 
-local function HideBlizzardCastbar(unitType)
+local function HideBlizzardCastbar(unitType, keepParent)
     -- Skip if already hidden
     if CastbarModule.blizzardHidden[unitType] then
         return
@@ -512,7 +512,7 @@ local function HideBlizzardCastbar(unitType)
     
     -- Keep target/focus under Blizzard's parent so vanilla position logic still runs.
     -- Player castbar can still be reparented to avoid interference with the custom bar.
-    if unitType == "player" and not InCombatLockdown() then
+    if unitType == "player" and not keepParent and not InCombatLockdown() then
         frame:SetParent(DragonUI_HiddenCastbarParent)
     end
     
@@ -550,7 +550,7 @@ local function ShowBlizzardCastbar(unitType)
     local originalParent = unitType == "player" and blizzardCastbarOriginalParents[unitType]
     if originalParent and InCombatLockdown() then
         addon.CombatQueue:Add("castbar_restore_player_parent", function()
-            if not CastbarModule.blizzardHidden.player then frame:SetParent(originalParent) end
+            if not IsEnabled("player") then frame:SetParent(originalParent) end
         end)
     elseif originalParent then
         frame:SetParent(originalParent)
@@ -1897,6 +1897,8 @@ function CastbarModule:RefreshCastbar(unitType)
         HideBlizzardCastbar(unitType)
     else
         ShowBlizzardCastbar(unitType)
+        -- Kept under its parent: the GCD bar anchors to Blizzard's player bar while ours is off.
+        if cfg.hideBlizzard then HideBlizzardCastbar(unitType, true) end
         self:HideCastbar(unitType)
         if unitType == "player" and addon.RelayoutGCD then
             addon.RelayoutGCD()

@@ -76,12 +76,28 @@ local function BuildModulesTab(scroll)
     -- ====================================================================
     local castSection = C:AddSection(scroll, LO["Cast Bars"])
 
+    -- Listed only while that DragonUI bar is off; its own toggle rebuilds the tab.
+    local function HideBlizzardToggle(cfgPath, refresh)
+        if C:GetDBValue(cfgPath .. "enabled") ~= false then return end
+        C:AddToggle(castSection, {
+            label = LO["Hide Blizzard's Castbar"],
+            desc = LO["With this cast bar off, hide Blizzard's too, so none is shown."],
+            dbPath = cfgPath .. "hideBlizzard",
+            indent = 18,
+            callback = function() if refresh then refresh() end end,
+        })
+    end
+
     C:AddToggle(castSection, {
         label = LO["Player Castbar"],
         desc = LO["Enable DragonUI player castbar styling."],
         dbPath = "castbar.enabled",
-        callback = function() if addon.RefreshCastbar then addon.RefreshCastbar() end end,
+        callback = function()
+            if addon.RefreshCastbar then addon.RefreshCastbar() end
+            Panel:SelectTab("modules")
+        end,
     })
+    HideBlizzardToggle("castbar.", addon.RefreshCastbar)
 
     C:AddToggle(castSection, {
         label = LO["Target Castbar"],
@@ -97,15 +113,23 @@ local function BuildModulesTab(scroll)
             end
             addon.db.profile.castbar.target.enabled = val
         end,
-        callback = function() if addon.RefreshTargetCastbar then addon.RefreshTargetCastbar() end end,
+        callback = function()
+            if addon.RefreshTargetCastbar then addon.RefreshTargetCastbar() end
+            Panel:SelectTab("modules")
+        end,
     })
+    HideBlizzardToggle("castbar.target.", addon.RefreshTargetCastbar)
 
     C:AddToggle(castSection, {
         label = LO["Focus Castbar"],
         desc = LO["Enable DragonUI focus castbar styling."],
         dbPath = "castbar.focus.enabled",
-        callback = function() if addon.RefreshFocusCastbar then addon.RefreshFocusCastbar() end end,
+        callback = function()
+            if addon.RefreshFocusCastbar then addon.RefreshFocusCastbar() end
+            Panel:SelectTab("modules")
+        end,
     })
+    HideBlizzardToggle("castbar.focus.", addon.RefreshFocusCastbar)
 
     C:AddToggle(castSection, {
         label = LO["Global Cooldown"],

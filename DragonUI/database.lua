@@ -665,6 +665,7 @@ local defaults = {
         -- CASTBAR SETTINGS
         castbar = {
             enabled = true,
+            hideBlizzard = false, -- with the DragonUI bar off, hide Blizzard's too
             scale = 1,
             text_mode = "simple",
             precision_time = 1,
@@ -701,6 +702,7 @@ local defaults = {
             -- TARGET CASTBAR SETTINGS
             target = {
                 enabled = true,
+                hideBlizzard = false,
                 override = false,
                 scale = 1,
                 x_position = 0,
@@ -724,6 +726,7 @@ local defaults = {
             -- FOCUS CASTBAR SETTINGS
             focus = {
                 enabled = true,
+                hideBlizzard = false,
                 override = false,
                 scale = 1,
                 x_position = 0,
