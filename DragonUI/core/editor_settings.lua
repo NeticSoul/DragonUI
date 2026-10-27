@@ -257,6 +257,9 @@ end
 R.micromenu = function()
     if addon.RefreshMicromenu then addon.RefreshMicromenu() end
 end
+R.microButtons = function()
+    if addon.RefreshMicromenuButtons then addon.RefreshMicromenuButtons() end
+end
 R.bags = function()
     if addon.RefreshBagsPosition then addon.RefreshBagsPosition() end
 end
@@ -793,122 +796,54 @@ function E.Get(first, second)
 end
 
 -- ============================================================================
--- RELOAD-REQUIRED SETTINGS (Options may not be loaded, so the popup lives here)
+-- RELOAD-ONLY SETTINGS (staged in addon.Reload, saved only by its "Reload Now")
 -- ============================================================================
 
-local RELOAD_POPUP = "DRAGONUI_EDITOR_SETTING_RELOAD"
-local RELOAD_DEBOUNCE = 0.5
-local lastReloadPrompt
-local sessionValues = {}
-local pendingRevert = {}
-
--- Raw saved values taken at login; a setting is "pending" while it differs from what this session loaded.
-local RELOAD_PATHS = {
-    "micromenu.grayscale_icons",
-    "micromenu.show_latency_indicator",
-    "xprepbar.style",
-    "style.xpbar",
-    "buttons.hide_main_bar_background",
-    "modules.bagster.enabled",
-}
-
-local function RevertPending()
-    for path in pairs(pendingRevert) do
-        local loaded = sessionValues[path]
-        if loaded ~= nil then SetDB(path, loaded) end
-        pendingRevert[path] = nil
-    end
-    E.Rebuild()
-end
-
-local function BuildReloadPopup()
-    return {
-        text = Label("Changing this setting requires a UI reload to apply correctly."),
-        button1 = Label("Reload Now"),
-        button2 = Label("Later"),
-        OnAccept = function() ReloadUI() end,
-        OnCancel = function() RevertPending() end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-        preferredIndex = 3,
-    }
-end
-
-if StaticPopupDialogs then
-    StaticPopupDialogs[RELOAD_POPUP] = BuildReloadPopup()
-end
-
--- `revertPaths` are restored if the user answers "Later" (what Options does for the XP bar style).
-function E.PromptReload(revertPaths)
-    if type(revertPaths) == "table" then
-        for i = 1, #revertPaths do pendingRevert[revertPaths[i]] = true end
-    end
-    if not (StaticPopup_Show and StaticPopupDialogs and StaticPopupDialogs[RELOAD_POPUP]) then return end
-    if StaticPopup_Visible and StaticPopup_Visible(RELOAD_POPUP) then return end
-
-    local now = GetTime and GetTime() or 0
-    if lastReloadPrompt and now - lastReloadPrompt < RELOAD_DEBOUNCE then return end
-    lastReloadPrompt = now
-    StaticPopup_Show(RELOAD_POPUP)
-end
-
-local function DismissReloadPrompt()
-    for path in pairs(pendingRevert) do pendingRevert[path] = nil end
-    if StaticPopup_Hide then StaticPopup_Hide(RELOAD_POPUP) end
-end
-
-local function CaptureSessionValue(path)
-    local value = GetDB(path)
-    if value == nil then value = false end
-    sessionValues[path] = value
-end
-
--- True while the saved value differs from the one this session was loaded with.
+-- True while a change to this setting waits for a reload; its dependent rows stay frozen until then.
 function E.IsReloadPending(path)
-    local loaded = sessionValues[path]
-    if loaded == nil then return false end
-    local current = GetDB(path)
-    if current == nil then current = false end
-    return current ~= loaded
+    return addon.Reload.IsStaged(path)
 end
 
-local function AnyReloadPending()
-    for path in pairs(sessionValues) do
-        if E.IsReloadPending(path) then return true end
-    end
-    return false
-end
-
+-- `extraPaths` mirror the value and are staged only while the main one is.
 local function ReloadSet(path, o)
     return function(value)
-        SetDB(path, value)
-        local paths = { path }
+        addon.Reload.Stage(path, value)
         if o.extraPaths then
+            local staged = addon.Reload.IsStaged(path)
             for i = 1, #o.extraPaths do
-                SetDB(o.extraPaths[i], value)
-                paths[#paths + 1] = o.extraPaths[i]
+                local extra = o.extraPaths[i]
+                addon.Reload.Stage(extra, staged and value or GetDB(extra))
             end
-        end
-        if E.IsReloadPending(path) then
-            E.PromptReload(o.revert and paths or nil)
-        elseif not AnyReloadPending() then
-            DismissReloadPrompt()
         end
         E.Rebuild()
     end
 end
 
--- Same as Options: the value is saved now, applied after a reload, and the dependent rows stay frozen until then.
 local function ReloadCheck(labelKey, path, o)
     o = o or {}
     return Check(labelKey, path, nil, { set = ReloadSet(path, o), hidden = o.hidden, disabled = o.disabled,
-        tooltip = o.tooltip })
+        tooltip = o.tooltip, get = function() return addon.Reload.Get(path) and true or false end })
 end
 
 local function ReloadDrop(labelKey, path, list, o)
     o = o or {}
-    return Drop(labelKey, path, list, nil, { set = ReloadSet(path, o), hidden = o.hidden, disabled = o.disabled })
+    return Drop(labelKey, path, list, nil, { set = ReloadSet(path, o), hidden = o.hidden, disabled = o.disabled,
+        get = function() return addon.Reload.Get(path) end })
+end
+
+-- Same rule as the Options toggle: live when the module can switch now, staged for a reload otherwise.
+local function ModuleCheck(labelKey, name, o)
+    o = o or {}
+    return Check(labelKey, "modules." .. name .. ".enabled", nil, {
+        hidden = o.hidden,
+        disabled = o.disabled,
+        tooltip = o.tooltip,
+        get = function() return addon.Reload.ModuleState(name) end,
+        set = function(value)
+            E.Flush()
+            if addon:SetModuleEnabled(name, value) and o.onLive then o.onLive(value) end
+            E.Rebuild()
+        end })
 end
 
 local function Append(frameName, ...)
@@ -1370,7 +1305,7 @@ local function XpRepSettings(scaleLabel, scalePath, isExperience)
         ReloadDrop(T("XP / Rep Bar Style"), "xprepbar.style", {
             { "dragonflightui", T("DragonflightUI") },
             { "retailui", T("RetailUI") },
-        }, { extraPaths = { "style.xpbar" }, revert = true }),
+        }, { extraPaths = { "style.xpbar" } }),
     }) }
 end
 
@@ -1422,12 +1357,12 @@ E.Register("micromenu", { settings = {
         end }),
     Check(T("Hide on Vehicle"), "micromenu.hide_on_vehicle", R.microVehicle),
     Section(T("Latency Indicator"), true),
-    ReloadCheck(T("Show Latency Indicator"), "micromenu.show_latency_indicator"),
+    Check(T("Show Latency Indicator"), "micromenu.show_latency_indicator", R.microButtons),
 } })
 
 E.Register("bagsbar", { compact = true, settings = {
     Slider(T("Scale"), "bags.scale", 0.5, 2.0, 0.01, R.bags),
-    ReloadCheck(T("Enable Bagster"), "modules.bagster.enabled", {
+    ModuleCheck(T("Enable Bagster"), "bagster", {
         tooltip = T("All-in-one bag replacement with filtering and search") }),
 } })
 
@@ -1952,21 +1887,11 @@ end
 
 E.Register("__manager", { settings = {
     Section(T("Dark Mode"), true, NoDarkMode),
-    Check(T("Enable Dark Mode"), "modules.darkmode.enabled", nil, {
+    ModuleCheck(T("Enable Dark Mode"), "darkmode", {
         hidden = NoDarkMode,
-        get = function() return ModuleField("darkmode", "enabled") == true end,
-        set = function(value)
-            E.Flush()
-            SetDB("modules.darkmode.enabled", value)
-            RunNow(function()
-                if value then
-                    if addon.ApplyDarkMode then addon.ApplyDarkMode(true) end
-                elseif addon.RestoreDarkMode then
-                    addon.RestoreDarkMode(true)
-                end
-            end, "darkmode_toggle")
-            E.PromptReload()
-            E.Rebuild()
+        -- Turning it on pushes the tint onto aura borders too, as the Options toggle does.
+        onLive = function(value)
+            if value and addon.ApplyDarkMode then addon.ApplyDarkMode(true) end
         end }),
     Drop(T("Intensity"), "modules.darkmode.intensity_preset", {
         { 1, T("Light (subtle)") },
@@ -2106,10 +2031,6 @@ function E.RefreshLabels()
             end
         end
     end
-
-    if StaticPopupDialogs and StaticPopupDialogs[RELOAD_POPUP] then
-        StaticPopupDialogs[RELOAD_POPUP] = BuildReloadPopup()
-    end
 end
 
 -- ============================================================================
@@ -2135,7 +2056,8 @@ lifecycle:SetScript("OnEvent", function(_, event)
     end
 
     E.RefreshLabels()
-    for i = 1, #RELOAD_PATHS do CaptureSessionValue(RELOAD_PATHS[i]) end
+    -- A dropped reload-only change unfreezes the rows it froze and shows its saved value again.
+    addon.Reload.OnDiscard(E.Rebuild)
 
     if type(addon.HideAllEditableFrames) == "function" then
         hooksecurefunc(addon, "HideAllEditableFrames", function() E.OnEditorClose() end)

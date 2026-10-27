@@ -293,13 +293,19 @@ local function apply()
         addon.CombatQueue:Add("spellbook_apply", apply)
         return
     end
-    Book.BuildWindow()
-    Book.BuildCards()
-    Book.BuildControls()
-    Book.BuildSecure()
-    Book.InstallAccess()
-    Book.InstallClique()
-    listenToGame()
+    if not Book.initialized then
+        Book.BuildWindow()
+        Book.BuildCards()
+        Book.BuildControls()
+        Book.BuildSecure()
+        Book.InstallAccess()
+        Book.InstallClique()
+        listenToGame()
+    else
+        -- Built in an earlier enable: its hooks only check the flag, so taking the keys and catcher back is enough.
+        Book.QueueBindings()
+        Book.PlaceMicroCatcher()
+    end
     Book.initialized, Book.applied = true, true
     Book.MarkAllDirty()
 end
@@ -318,8 +324,17 @@ function addon.RefreshSpellbookSystem()
     end)
 end
 
--- Load-once: the registry looks this up but never calls it while applied; disabling needs a reload.
+-- Every hook the book installs checks the flag, so closed, with its keys, catcher and Clique released, it is inert.
 function addon.RestoreSpellbookSystem()
+    if not Book.applied then return end
+    addon:SafeExecute("spellbook", "restore", function()
+        Book.CloseBook()
+        Book.HideActionGrids()
+        Book.QueueBindings()
+        Book.PlaceMicroCatcher()
+        Book.ReleaseClique()
+        Book.applied = false
+    end)
 end
 
 function addon.RefreshSpellbookScale(value)

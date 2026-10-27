@@ -414,15 +414,13 @@ local function BuildGeneralTab(scroll)
         desc  = LO["Choose the language used by the DragonUI interface."],
         values = localeValues,
         getFunc = function()
-            return (addon.db and addon.db.global and addon.db.global.locale) or "auto"
+            return addon.Reload.Get("locale", "global") or "auto"
         end,
+        -- Strings are resolved when files load, so a language change is staged for a reload.
         setFunc = function(value)
-            if addon.db and addon.db.global then
-                addon.db.global.locale = value
-            end
-        end,
-        callback = function()
-            StaticPopup_Show("DRAGONUI_RELOAD_UI")
+            local saved = addon.db.global.locale
+            if value == (saved or "auto") then value = saved end
+            addon.Reload.Stage("locale", value, "global")
         end,
         width = 200,
     })

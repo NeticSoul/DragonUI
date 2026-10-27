@@ -28,6 +28,7 @@ L["Interface"] = "Interfaz"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "Usa las pestañas de la izquierda para configurar módulos, barras de acción, marcos de unidad, minimapa y más."
 L["Editor Mode"] = "Modo Editor"
 L["Cannot open options during combat."] = "No se pueden abrir las opciones durante el combate."
+L["Options closed for combat."] = "Opciones cerradas por el combate."
 L["Open DragonUI Settings"] = "Abrir Configuración de DragonUI"
 L["Open the DragonUI configuration panel."] = "Abrir el panel de configuración de DragonUI."
 L["Use /dragonui to open the full settings panel."] = "Usa /dragonui para abrir el panel completo de configuración."
@@ -774,7 +775,7 @@ L["Reverse the order of micromenu buttons in the grid."] = "Invierte el orden de
 L["Hide on Vehicle"] = "Ocultar en Vehículo"
 L["Hide micromenu and bags while in a vehicle."] = "Ocultar el micro menú y bolsas mientras estás en un vehículo."
 L["Show Latency Indicator"] = "Mostrar Indicador de Latencia"
-L["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."] = "Mostrar una barra de color debajo del botón de Ayuda indicando la calidad de conexión (verde/amarillo/rojo). Requiere recargar la IU."
+L["Show a colored bar below the Help button indicating connection quality (green/yellow/red)."] = "Mostrar una barra de color debajo del botón de Ayuda indicando la calidad de conexión (verde/amarillo/rojo)."
 
 -- Bags
 L["Bags"] = "Bolsas"

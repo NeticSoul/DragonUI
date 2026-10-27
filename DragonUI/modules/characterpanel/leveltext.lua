@@ -91,7 +91,14 @@ local function build()
     end
 end
 
-CP.RefreshLevelText = rewriteLevelLine
+-- Turning the colour off needs Blizzard's plain line back; its SetLevel hook then re-places it.
+function CP.RefreshLevelText()
+    if hookedSetLevel and CP:Enabled() and not CP:Config().class_level_text then
+        PaperDollFrame_SetLevel()
+    else
+        rewriteLevelLine()
+    end
+end
 
 local levelEvents = CreateFrame("Frame")
 for _, event in ipairs({ "PLAYER_GUILD_UPDATE", "PLAYER_ENTERING_WORLD",

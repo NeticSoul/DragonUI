@@ -48,23 +48,16 @@ local function BuildEnhancementsTab(scroll)
 
     C:AddDescription(darkSection, LO["Darkens UI borders and chrome only: action bar borders, unit frame borders, minimap border, bag slot borders, micro menu, castbar borders, and decorative elements. Icons, portraits, and abilities are never affected."])
 
-    C:AddToggle(darkSection, {
+    C:AddModuleToggle(darkSection, {
         label = LO["Enable Dark Mode"],
         desc = LO["Apply darker tinted textures to all UI elements."],
-        getFunc = function() return IsEnabled("darkmode") end,
-        setFunc = function(val)
-            EnsureModuleTable("darkmode").enabled = val
-            if val then
-                -- Force-push aura border tint on enable (clears Auras user override).
-                if addon.ApplyDarkMode then addon.ApplyDarkMode(true) end
-            else
-                -- Texture restore + reset aura buff border to default gray.
-                if addon.RestoreDarkMode then addon.RestoreDarkMode(true) end
-            end
-            -- Rebuild tab so the intensity dropdown updates its disabled state
-            Panel:SelectTab("enhancements")
+        moduleName = "darkmode",
+        -- Turning it on pushes the tint onto aura borders too, over a colour picked in Auras.
+        callback = function(val)
+            if val and addon.ApplyDarkMode then addon.ApplyDarkMode(true) end
         end,
-        requiresReload = true,
+        -- Rebuild tab so the intensity dropdown updates its disabled state
+        after = function() Panel:SelectTab("enhancements") end,
     })
 
     C:AddDropdown(darkSection, {
@@ -436,33 +429,17 @@ local function BuildEnhancementsTab(scroll)
 
     C:AddDescription(uflSection, LO["Heal prediction bars, absorb shields, and animated health loss overlays on unit frames."])
 
-    C:AddToggle(uflSection, {
+    C:AddModuleToggle(uflSection, {
         label = LO["Enable Unit Frame Layers"],
         desc = LO["Show heal prediction, absorb shields, and animated health loss on all unit frames."],
-        getFunc = function() return IsEnabled("unitframe_layers") end,
-        setFunc = function(val)
-            EnsureModuleTable("unitframe_layers").enabled = val
-        end,
-        callback = function()
-            Panel:SelectTab("enhancements")
-        end,
-        requiresReload = true,
+        moduleName = "unitframe_layers",
+        after = function() Panel:SelectTab("enhancements") end,
     })
 
     C:AddToggle(uflSection, {
         label = LO["Animated Health Loss"],
         desc = LO["Show animated red health loss bar on player frame when taking damage."],
-        getFunc = function()
-            local m = addon.db.profile.modules and addon.db.profile.modules.unitframe_layers
-            if not m then return true end
-            return m.animated_loss ~= false
-        end,
-        setFunc = function(val)
-            if not addon.db.profile.modules.unitframe_layers then
-                addon.db.profile.modules.unitframe_layers = {}
-            end
-            addon.db.profile.modules.unitframe_layers.animated_loss = val
-        end,
+        dbPath = "modules.unitframe_layers.animated_loss",
         disabled = function() return not IsEnabled("unitframe_layers") end,
         requiresReload = true,
     })
@@ -752,16 +729,12 @@ local function BuildEnhancementsTab(scroll)
 
     C:AddDescription(ttSection, LO["Improves GameTooltip with class-colored borders, class-colored names, target-of-target info, and styled health bars."])
 
-    C:AddToggle(ttSection, {
+    C:AddModuleToggle(ttSection, {
         label = LO["Enable Enhanced Tooltips"],
         desc = LO["Activate all tooltip improvements. Sub-options below control individual features."],
-        getFunc = function() return IsEnabled("tooltip") end,
-        setFunc = function(val)
-            EnsureModuleTable("tooltip").enabled = val
-            -- Rebuild tab so sub-toggles update their disabled state
-            Panel:SelectTab("enhancements")
-        end,
-            requiresReload = true,
+        moduleName = "tooltip",
+        -- Rebuild tab so sub-toggles update their disabled state
+        after = function() Panel:SelectTab("enhancements") end,
     })
 
     C:AddToggle(ttSection, {

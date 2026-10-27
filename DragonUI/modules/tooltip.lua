@@ -72,6 +72,15 @@ local function StyleHealthBar()
     local bar = GameTooltipStatusBar
     if not bar then return end
 
+    -- Taken before the first restyle, so turning the module off can put Blizzard's bar back.
+    if not TooltipModule.barOriginal then
+        local points = {}
+        for i = 1, bar:GetNumPoints() do points[i] = { bar:GetPoint(i) } end
+        local texture = bar:GetStatusBarTexture()
+        TooltipModule.barOriginal = { height = bar:GetHeight(), points = points,
+            texture = texture and texture:GetTexture() }
+    end
+
     -- Restyle: slimmer, better texture
     bar:SetHeight(HEALTHBAR_HEIGHT)
     bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
@@ -89,8 +98,21 @@ local function StyleHealthBar()
         bg:SetVertexColor(0.15, 0.15, 0.15, 0.8)
         bar.__DragonUI_bg = bg
     end
+    bar.__DragonUI_bg:Show()
 
     TooltipModule.healthBarStyled = true
+end
+
+local function UnstyleHealthBar()
+    local bar = GameTooltipStatusBar
+    local original = TooltipModule.barOriginal
+    if not (bar and original and TooltipModule.healthBarStyled) then return end
+    bar:SetHeight(original.height)
+    if original.texture then bar:SetStatusBarTexture(original.texture) end
+    bar:ClearAllPoints()
+    for _, point in ipairs(original.points) do bar:SetPoint(unpack(point)) end
+    if bar.__DragonUI_bg then bar.__DragonUI_bg:Hide() end
+    TooltipModule.healthBarStyled = false
 end
 
 -- Same trick Blizzard's own GameTooltip_ShowStatusBar uses: a real blank AddLine, so native auto-height covers it.
@@ -686,10 +708,15 @@ end
 
 local function RestoreTooltipSystem()
     -- Hooks can't be removed, but they check IsModuleEnabled()
-    -- Reset health bar color
+    UnstyleHealthBar()
+    currentTooltipBarColor = nil
+    -- The bar's XML BarColor; HealthBar_OnValueChanged recolours it by health from the next value on.
     if GameTooltipStatusBar then
-        GameTooltipStatusBar:SetStatusBarColor(0.2, 0.8, 0.2)
+        GameTooltipStatusBar:SetStatusBarColor(0, 1, 0)
     end
+    -- Only the gated OnTooltipCleared hook reset the class-coloured border, so it would stay on every tooltip.
+    local default = TOOLTIP_DEFAULT_COLOR
+    if default then GameTooltip:SetBackdropBorderColor(default.r, default.g, default.b) end
     TooltipModule.applied = false
 end
 

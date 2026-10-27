@@ -927,6 +927,7 @@ end
 
 -- Forward declaration so ApplyDarkMode can reference RestoreDarkMode
 local RestoreDarkMode
+local InstallDarkModeRuntime
 
 -- White aura mask reads lighter than action-bar chrome at the same vertex color; crush toward black.
 local function GetAuraBorderTintValues()
@@ -951,9 +952,9 @@ local function SyncAuraBorderColorFromDarkMode(tint, force)
             ab.buff_color = { r = tint[1], g = tint[2], b = tint[3] }
             ab.buff_color_user_override = false
         end
-    else
+    elseif not ab.buff_color_user_override then
+        -- A colour picked in Auras is the user's, not the tint; the registry restores here at every login.
         ab.buff_color = { r = 0.2, g = 0.2, b = 0.2 }
-        ab.buff_color_user_override = false
     end
     if addon.RefreshAuraBordersSystem then
         addon.RefreshAuraBordersSystem()
@@ -962,6 +963,9 @@ end
 
 -- forceAuraSync: when true, push dark-mode tint onto aura buff borders (and clear user override).
 local function ApplyDarkMode(forceAuraSync)
+    -- Turned on mid-session: without its hooks Blizzard's next texture reset would undo the tint.
+    if IsLoggedIn() then InstallDarkModeRuntime() end
+
     if DarkModeModule.applied then
         -- Texture refresh only — do not reset aura border color mid-reapply.
         RestoreDarkMode(false)
@@ -1187,6 +1191,111 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
+-- Every hook checks `applied`, so installing them for a session that turns dark mode off again is harmless.
+InstallDarkModeRuntime = function()
+    -- Setup hooks ONCE (before ApplyDarkMode so they catch future updates)
+    SetupBarRefreshHooks()
+    InstallVertexColorGuards()
+
+    -- Hook player frame refresh so dark mode re-applies after decoration/fat bar changes
+    if not DarkModeModule.hooks.playerFrameHooked then
+        if addon.PlayerFrame and addon.PlayerFrame.RefreshPlayerFrame then
+            local origRefresh = addon.PlayerFrame.RefreshPlayerFrame
+            addon.PlayerFrame.RefreshPlayerFrame = function(...)
+                origRefresh(...)
+                -- Re-darken UF borders after player frame rebuilds its textures
+                if DarkModeModule.applied then
+                    addon:After(0.05, function()
+                        if not DarkModeModule.applied then return end
+                        local ufTint = GetUFTintValues()
+                        DarkenUnitFrameBorders(ufTint)
+                    end)
+                end
+            end
+            -- Also update the .Refresh alias
+            addon.PlayerFrame.Refresh = addon.PlayerFrame.RefreshPlayerFrame
+        end
+
+        -- Hook PlayerFrame_UpdateArt — Blizzard calls this during reload/vehicle transitions
+        -- which triggers ChangePlayerframe() and recreates decoration textures, losing dark tints
+        if PlayerFrame_UpdateArt then
+            hooksecurefunc("PlayerFrame_UpdateArt", function()
+                if DarkModeModule.applied then
+                    addon:After(0.1, function()
+                        if not DarkModeModule.applied then return end
+                        local ufTint = GetUFTintValues()
+                        DarkenUnitFrameBorders(ufTint)
+                    end)
+                end
+            end)
+        end
+
+        DarkModeModule.hooks.playerFrameHooked = true
+    end
+
+    -- Hook TargetFrame_Update / FocusFrame_Update so dark mode re-applies
+    -- to custom DragonUI border/background textures after Blizzard refreshes.
+    -- Throttled to avoid excessive re-darkening on rapid fire events.
+    if not DarkModeModule.hooks.targetFocusHooked then
+        local lastUFRefresh = 0
+        local function ThrottledUFRedarken()
+            if not DarkModeModule.applied then return end
+            local now = GetTime()
+            if now - lastUFRefresh < 0.15 then return end
+            lastUFRefresh = now
+
+            -- Apply immediately to avoid one-frame flashes when target/focus
+            -- backgrounds are refreshed to their default colors.
+            local ufTint = GetUFTintValues()
+            DarkenUnitFrameBorders(ufTint)
+
+            -- Keep a short safety pass for delayed Blizzard refreshes.
+            addon:After(0.03, function()
+                if not DarkModeModule.applied then return end
+                local delayedTint = GetUFTintValues()
+                DarkenUnitFrameBorders(delayedTint)
+            end)
+
+            -- Extra pass for first target/focus creation right after reload.
+            addon:After(0.10, function()
+                if not DarkModeModule.applied then return end
+                local delayedTint = GetUFTintValues()
+                DarkenUnitFrameBorders(delayedTint)
+            end)
+        end
+
+        if TargetFrame_Update then
+            hooksecurefunc("TargetFrame_Update", ThrottledUFRedarken)
+        end
+        if FocusFrame_Update then
+            hooksecurefunc("FocusFrame_Update", ThrottledUFRedarken)
+        end
+
+        DarkModeModule.hooks.targetFocusHooked = true
+    end
+
+    -- Register bar-change events for full re-darken of all buttons
+    if not DarkModeModule.hooks.barEventsRegistered then
+        eventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+        eventFrame:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
+        eventFrame:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
+        eventFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+        eventFrame:RegisterEvent("SPELL_UPDATE_USABLE")
+        eventFrame:RegisterEvent("ACTIONBAR_UPDATE_STATE")
+        eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+        eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+        eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+        eventFrame:RegisterEvent("UNIT_ENTERED_VEHICLE")
+        eventFrame:RegisterEvent("UNIT_EXITED_VEHICLE")
+        eventFrame:RegisterEvent("PET_BAR_UPDATE")
+        eventFrame:RegisterEvent("PLAYER_ALIVE")
+        eventFrame:RegisterEvent("PLAYER_UNGHOST")
+        eventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
+        DarkModeModule.hooks.barEventsRegistered = true
+    end
+end
+
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == "DragonUI" then
         if not IsModuleEnabled() then return end
@@ -1209,107 +1318,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
     elseif event == "PLAYER_ENTERING_WORLD" then
         if not IsModuleEnabled() then return end
 
-        -- Setup hooks ONCE (before ApplyDarkMode so they catch future updates)
-        SetupBarRefreshHooks()
-        InstallVertexColorGuards()
-
-        -- Hook player frame refresh so dark mode re-applies after decoration/fat bar changes
-        if not DarkModeModule.hooks.playerFrameHooked then
-            if addon.PlayerFrame and addon.PlayerFrame.RefreshPlayerFrame then
-                local origRefresh = addon.PlayerFrame.RefreshPlayerFrame
-                addon.PlayerFrame.RefreshPlayerFrame = function(...)
-                    origRefresh(...)
-                    -- Re-darken UF borders after player frame rebuilds its textures
-                    if DarkModeModule.applied then
-                        addon:After(0.05, function()
-                            if not DarkModeModule.applied then return end
-                            local ufTint = GetUFTintValues()
-                            DarkenUnitFrameBorders(ufTint)
-                        end)
-                    end
-                end
-                -- Also update the .Refresh alias
-                addon.PlayerFrame.Refresh = addon.PlayerFrame.RefreshPlayerFrame
-            end
-
-            -- Hook PlayerFrame_UpdateArt — Blizzard calls this during reload/vehicle transitions
-            -- which triggers ChangePlayerframe() and recreates decoration textures, losing dark tints
-            if PlayerFrame_UpdateArt then
-                hooksecurefunc("PlayerFrame_UpdateArt", function()
-                    if DarkModeModule.applied then
-                        addon:After(0.1, function()
-                            if not DarkModeModule.applied then return end
-                            local ufTint = GetUFTintValues()
-                            DarkenUnitFrameBorders(ufTint)
-                        end)
-                    end
-                end)
-            end
-
-            DarkModeModule.hooks.playerFrameHooked = true
-        end
-
-        -- Hook TargetFrame_Update / FocusFrame_Update so dark mode re-applies
-        -- to custom DragonUI border/background textures after Blizzard refreshes.
-        -- Throttled to avoid excessive re-darkening on rapid fire events.
-        if not DarkModeModule.hooks.targetFocusHooked then
-            local lastUFRefresh = 0
-            local function ThrottledUFRedarken()
-                if not DarkModeModule.applied then return end
-                local now = GetTime()
-                if now - lastUFRefresh < 0.15 then return end
-                lastUFRefresh = now
-
-                -- Apply immediately to avoid one-frame flashes when target/focus
-                -- backgrounds are refreshed to their default colors.
-                local ufTint = GetUFTintValues()
-                DarkenUnitFrameBorders(ufTint)
-
-                -- Keep a short safety pass for delayed Blizzard refreshes.
-                addon:After(0.03, function()
-                    if not DarkModeModule.applied then return end
-                    local delayedTint = GetUFTintValues()
-                    DarkenUnitFrameBorders(delayedTint)
-                end)
-
-                -- Extra pass for first target/focus creation right after reload.
-                addon:After(0.10, function()
-                    if not DarkModeModule.applied then return end
-                    local delayedTint = GetUFTintValues()
-                    DarkenUnitFrameBorders(delayedTint)
-                end)
-            end
-
-            if TargetFrame_Update then
-                hooksecurefunc("TargetFrame_Update", ThrottledUFRedarken)
-            end
-            if FocusFrame_Update then
-                hooksecurefunc("FocusFrame_Update", ThrottledUFRedarken)
-            end
-
-            DarkModeModule.hooks.targetFocusHooked = true
-        end
-
-        -- Register bar-change events for full re-darken of all buttons
-        if not DarkModeModule.hooks.barEventsRegistered then
-            self:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-            self:RegisterEvent("UPDATE_BONUS_ACTIONBAR")
-            self:RegisterEvent("ACTIONBAR_PAGE_CHANGED")
-            self:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-            self:RegisterEvent("SPELL_UPDATE_USABLE")
-            self:RegisterEvent("ACTIONBAR_UPDATE_STATE")
-            self:RegisterEvent("PLAYER_REGEN_DISABLED")
-            self:RegisterEvent("PLAYER_REGEN_ENABLED")
-            self:RegisterEvent("PLAYER_TARGET_CHANGED")
-            self:RegisterEvent("PLAYER_FOCUS_CHANGED")
-            self:RegisterEvent("UNIT_ENTERED_VEHICLE")
-            self:RegisterEvent("UNIT_EXITED_VEHICLE")
-            self:RegisterEvent("PET_BAR_UPDATE")
-            self:RegisterEvent("PLAYER_ALIVE")
-            self:RegisterEvent("PLAYER_UNGHOST")
-            self:RegisterEvent("UPDATE_SHAPESHIFT_FORMS")
-            DarkModeModule.hooks.barEventsRegistered = true
-        end
+        InstallDarkModeRuntime()
 
         -- Apply immediately so the first target/focus after /reload is already dark.
         ApplyDarkMode()

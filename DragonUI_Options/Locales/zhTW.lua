@@ -31,6 +31,7 @@ L["Interface"] = "介面"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "使用左側標籤頁配置模組、動作條、單位框架、小地圖等。"
 L["Editor Mode"] = "編輯模式"
 L["Cannot open options during combat."] = "戰鬥中無法開啟選項。"
+L["Options closed for combat."] = "進入戰鬥，設定已關閉。"
 L["Open DragonUI Settings"] = "開啟DragonUI設定"
 L["Open the DragonUI configuration panel."] = "開啟DragonUI配置面板。"
 L["Use /dragonui to open the full settings panel."] = "輸入 /dragonui 以開啟完整設定面板。"
@@ -688,7 +689,7 @@ L["Reverse the order of micromenu buttons in the grid."] = "反轉網格中微�
 L["Hide on Vehicle"] = "在載具上時隱藏"
 L["Hide micromenu and bags while in a vehicle."] = "在載具上時隱藏微型選單和揹包。"
 L["Show Latency Indicator"] = "顯示延遲指示器"
-L["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."] = "在幫助按鈕下方顯示指示連線質量的彩色條（綠色/黃色/紅色）。需要重新載入介面。"
+L["Show a colored bar below the Help button indicating connection quality (green/yellow/red)."] = "在幫助按鈕下方顯示指示連線質量的彩色條（綠色/黃色/紅色）。"
 
 -- 揹包
 L["Bags"] = "揹包"

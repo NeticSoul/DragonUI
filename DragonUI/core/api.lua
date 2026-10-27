@@ -725,6 +725,7 @@ local MODULE_LIFECYCLE_OVERRIDES = {
         isEnabled = function()
             return addon.db and addon.db.profile and addon.db.profile.buffs and addon.db.profile.buffs.enabled
         end,
+        enabledPaths = { "buffs.enabled", "modules.buffs.enabled" },
     },
     buttons = { refresh = "RefreshButtons", loadOnce = true },
     chatmods = {
@@ -737,7 +738,7 @@ local MODULE_LIFECYCLE_OVERRIDES = {
         restore = "RestoreBagsterSystem",
         loadOnce = true,
     },
-    cooldowns = { refresh = "RefreshCooldowns", loadOnce = true },
+    cooldowns = { refresh = "RefreshCooldowns", restore = "RefreshCooldowns", loadOnce = true },
     darkmode = { apply = "ApplyDarkMode", restore = "RestoreDarkMode", loadOnce = true },
     itemquality = {
         apply = "ApplyItemQualitySystem",
@@ -767,15 +768,31 @@ local MODULE_LIFECYCLE_OVERRIDES = {
             return addon.UF and addon.UF.IsEnabled and addon.UF.IsEnabled("player")
         end,
     },
-    questtracker = { refresh = "RefreshQuestTracker", loadOnce = true },
+    questtracker = { refresh = "RefreshQuestTracker", restore = "RefreshQuestTracker", loadOnce = true },
     stance = { refresh = "RefreshStanceSystem", loadOnce = true },
     tooltip = {
         apply = "ApplyTooltipSystem",
         restore = "RestoreTooltipSystem",
         loadOnce = true,
     },
-    unitframe_layers = { refresh = "RefreshUnitFrameLayers", loadOnce = true },
+    unitframe_layers = { refresh = "RefreshUnitFrameLayers", restore = "RefreshUnitFrameLayers", loadOnce = true },
     vehicle = { refresh = "RefreshVehicleSystem", loadOnce = true },
+}
+
+-- "both" = applies and fully undoes mid-session, "enable" = only turning on is live; unlisted = live unless loadOnce.
+local MODULE_LIVE_TOGGLE = {
+    cooldowns = "both",
+    darkmode = "both",
+    itemownership = "both",
+    itemquality = "both",
+    loot_skin = "both",
+    spellbook = "both",
+    tooltip = "both",
+    unitframe_layers = "both",
+    -- Blizzard's tracker gets its item buttons back only on its next update.
+    questtracker = "enable",
+    keybinding = "none",
+    bagsort = "none",
 }
 
 local DEFAULT_LEGACY_REFRESH_TARGETS = {
@@ -867,7 +884,10 @@ function MR:Register(name, moduleTable, displayName, description, orderOrOptions
     self.orderCounter = self.orderCounter + 1
     local assignedOrder = options.order or self.orderCounter
     local lifecycle = options.lifecycle or MODULE_LIFECYCLE_OVERRIDES[name] or {}
-    
+    local loadOnce = options.loadOnce or lifecycle.loadOnce or false
+    local liveMode = MODULE_LIVE_TOGGLE[name]
+    local live = liveMode == "both" or (liveMode == nil and not loadOnce)
+
     -- Store module info
     self.modules[name] = {
         module = moduleTable,
@@ -876,8 +896,11 @@ function MR:Register(name, moduleTable, displayName, description, orderOrOptions
         order = assignedOrder,
         lifecyclePrefix = options.lifecyclePrefix or lifecycle.lifecyclePrefix or UpperCamelCase(name),
         lifecycle = lifecycle,
-        loadOnce = options.loadOnce or lifecycle.loadOnce or false,
+        loadOnce = loadOnce,
+        liveEnable = live or liveMode == "enable",
+        liveDisable = live,
         isEnabled = options.isEnabled or lifecycle.isEnabled,
+        enabledPaths = options.enabledPaths or lifecycle.enabledPaths,
     }
     
     -- Add to load order
@@ -963,6 +986,50 @@ function addon:IsModuleLoadOnce(name)
     return MR:IsLoadOnce(name)
 end
 
+-- Live only when the module is allowed to and the registry finds the function that does it.
+function MR:CanToggleLive(name, enable)
+    local info = self.modules[name]
+    if not info then return false end
+    if enable then
+        return info.liveEnable
+            and (ResolveRegistryFunction(info, "refresh") or ResolveRegistryFunction(info, "apply")) and true or false
+    end
+    return info.liveDisable and ResolveRegistryFunction(info, "restore") and true or false
+end
+
+function MR:GetEnabledPaths(name)
+    local info = self.modules[name]
+    return info and info.enabledPaths or { "modules." .. name .. ".enabled" }
+end
+
+local function WriteProfilePath(path, value)
+    local node = addon.db and addon.db.profile
+    if not node then return end
+    local keys = { strsplit(".", path) }
+    for i = 1, #keys - 1 do
+        if type(node[keys[i]]) ~= "table" then node[keys[i]] = {} end
+        node = node[keys[i]]
+    end
+    node[keys[#keys]] = value
+end
+
+-- Module toggles: a live-capable direction runs now (true) or after combat (false); any other is staged.
+function addon:SetModuleEnabled(name, enable)
+    enable = enable and true or false
+    local running = MR:IsEnabled(name) and true or false
+    if enable == running or not MR:CanToggleLive(name, enable) then
+        -- Toggling back during combat must not leave the first click queued.
+        self.CombatQueue:Remove(name .. "_toggle")
+        self.Reload.StageModule(name, enable)
+        return false
+    end
+    -- Flag and refresh land together, so hooks gated on the flag never see it ahead of the module.
+    return self:SafeExecute(name, "toggle", function()
+        for _, path in ipairs(MR:GetEnabledPaths(name)) do WriteProfilePath(path, enable) end
+        MR:Refresh(name)
+    end)
+end
+
 addon._pendingReloadModules = addon._pendingReloadModules or {}
 
 function addon:ShouldDeferModuleDisable(name, moduleState)
@@ -997,7 +1064,7 @@ function MR:Refresh(name)
     -- Modules that install secure hooks cannot be cleanly unhooked during a live
     -- WoW session. Treat them as load-once: honor future config on reload, but do
     -- not run unsafe in-session teardown paths.
-    if not enabled and info.loadOnce and info.module and (info.module.initialized or info.module.applied) then
+    if not enabled and not info.liveDisable and info.module and (info.module.initialized or info.module.applied) then
         return true
     end
 
@@ -1103,7 +1170,7 @@ function MR:Disable(name)
     
     -- hooksecurefunc / HookScript registrations are permanent for the session.
     -- Keep load-once modules active until reload instead of pretending we can fully disable them.
-    if info.loadOnce and info.module and (info.module.initialized or info.module.applied) then
+    if not info.liveDisable and info.module and (info.module.initialized or info.module.applied) then
         return true
     end
 

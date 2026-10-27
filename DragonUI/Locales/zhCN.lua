@@ -21,6 +21,7 @@ if not L then return end
 -- ============================================================================
 
 L["Cannot toggle editor mode during combat!"] = "战斗中无法切换编辑模式！"
+L["Editor mode closed for combat."] = "进入战斗，编辑模式已关闭。"
 L["Cannot reset positions during combat!"] = "战斗中无法重置位置！"
 L["Cannot toggle keybind mode during combat!"] = "战斗中无法切换按键绑定模式！"
 L["Cannot move frames during combat!"] = "战斗中无法移动框体！"

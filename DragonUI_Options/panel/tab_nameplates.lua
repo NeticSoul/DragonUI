@@ -123,19 +123,6 @@ local function RefreshQuestNameResolution()
     RefreshNameplates()
 end
 
-local function OnModuleToggle(val)
-    if not addon.db.profile.modules then
-        addon.db.profile.modules = {}
-    end
-    if not addon.db.profile.modules.nameplates then
-        addon.db.profile.modules.nameplates = {}
-    end
-    addon.db.profile.modules.nameplates.enabled = val
-    if val then
-        RefreshNameplates()
-    end
-end
-
 local function IsBattleGroundHealersLoaded()
     return IsAddOnLoaded and IsAddOnLoaded("BattleGroundHealers") or false
 end
@@ -261,15 +248,10 @@ local function BuildGeneralSubTab(scroll)
 
     local general = C:AddSection(scroll, LO["General"])
 
-    C:AddToggle(general, {
+    C:AddModuleToggle(general, {
         label = LO["Enable Nameplates Module"],
         desc = LO["Apply DragonUI nameplate styling."],
-        requiresReload = true,
-        getFunc = function()
-            local m = addon.db.profile.modules and addon.db.profile.modules.nameplates
-            return m and m.enabled ~= false
-        end,
-        setFunc = OnModuleToggle,
+        moduleName = "nameplates",
     })
 
     C:AddToggle(general, {
@@ -474,7 +456,7 @@ local function BuildGeneralSubTab(scroll)
         label = LO["Nameplate Health Bar Compatibility"],
         desc = LO["Hides the native health bar by fading its individual textures instead of the whole bar, for addons that attach widgets directly to it."],
         dbPath = DB .. ".nameplateBarAlphaCompat",
-        requiresReload = true,
+        callback = RefreshNameplates,
     })
 
 end

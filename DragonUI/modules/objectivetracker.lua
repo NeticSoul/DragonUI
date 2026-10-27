@@ -946,6 +946,7 @@ end
 local function silenceBlizzardTracker()
     if not WatchFrame or OT.silenced then return end
     OT.silenced = true
+    OT.watchMouse = WatchFrame:IsMouseEnabled()
     WatchFrame:SetAlpha(0)
     WatchFrame:EnableMouse(false)
     -- Rows a re-enable inherits would otherwise take clicks until Blizzard's next pass mutes them.
@@ -966,7 +967,7 @@ local function restoreBlizzardTracker()
     end
     unmuteRows()
     WatchFrame:SetAlpha(1)
-    WatchFrame:EnableMouse(true)
+    WatchFrame:EnableMouse(OT.watchMouse and true or false)
 end
 
 -- The old module's own maths, kept so a position saved by either lands in the same place: measured

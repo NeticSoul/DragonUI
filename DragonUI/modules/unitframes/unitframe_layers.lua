@@ -664,6 +664,28 @@ local function installHooks()
     end
 end
 
+local function showPowerWidgets(st, shown)
+    local mana = st.manaBar
+    if not mana then return end
+    local feedback, fullPower = feedbackOf[mana], fullPowerOf[mana]
+    if feedback then
+        if shown then feedback.frame:Show() else feedback.frame:Hide() end
+    end
+    if fullPower then
+        if shown then fullPower.frame:Show() else fullPower.frame:Hide() end
+    end
+end
+
+-- attach() returns a cached frame as is, so a frame restored earlier needs its live parts back.
+local function reattach(st)
+    if not st.restored then return end
+    st.restored = nil
+    subscribeLibraries(st)
+    takeOverUpdates(st)
+    showPowerWidgets(st, true)
+    paint(st)
+end
+
 local function applyLayers()
     if LayersModule.applied then return end
     kit.ResolveLibraries()
@@ -674,6 +696,10 @@ local function applyLayers()
             attach(frame)
         end
     end
+    for _, frame in pairs(trackedNames) do
+        local st = layered[frame]
+        if st then reattach(st) end
+    end
     LayersModule.applied = true
     LayersModule.initialized = true
 end
@@ -682,7 +708,7 @@ local ELEMENT_KEYS = {
     "myHeal", "otherHeal", "absorbFill", "overAbsorbGlow", "manaCost",
 }
 
--- Leaves UNIT_* registrations, the power widgets and the attached state alone.
+-- Leaves the UNIT_* registrations (inert extra traffic) and the attached state alone.
 local function restoreFrame(st)
     for i = 1, #ELEMENT_KEYS do
         st[ELEMENT_KEYS[i]]:Hide()
@@ -694,6 +720,7 @@ local function restoreFrame(st)
     if st.lossBar then
         kit.LossCancel(st.lossBar)
     end
+    showPowerWidgets(st, false)
     unsubscribeLibraries(st)
     if st.savedUpdates then
         st.healthBar:SetScript("OnUpdate", st.oldHealthUpdate)
@@ -701,6 +728,7 @@ local function restoreFrame(st)
             st.manaBar:SetScript("OnUpdate", st.oldManaUpdate)
         end
     end
+    st.restored = true
 end
 
 local function restoreLayers()

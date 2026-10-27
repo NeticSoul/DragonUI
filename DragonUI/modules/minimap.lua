@@ -999,6 +999,23 @@ local function SnapDurabilityMoverToFigure()
     end
 end
 
+-- The snapshot goes stale when the minimap moves or rescales in the editor while the figure is attached.
+local durabilityFollower = CreateFrame("Frame")
+durabilityFollower:Hide()
+durabilityFollower:SetScript("OnUpdate", function(self)
+    if not (addon.EditorMode and addon.EditorMode:IsActive()) then
+        self:Hide()
+        return
+    end
+    if IsDurabilityCustomPlaced() then return end
+    local cx, cy = DurabilityFrame:GetCenter()
+    local scale = DurabilityFrame:GetEffectiveScale()
+    if cx == self.cx and cy == self.cy and scale == self.scale then return end
+    self.cx, self.cy, self.scale = cx, cy, scale
+    SyncDurabilityMover()
+    SnapDurabilityMoverToFigure()
+end)
+
 local function DetachDurabilityFrame()
     local widgets = addon.db and addon.db.profile and addon.db.profile.widgets
     if not widgets then return end
@@ -2683,7 +2700,6 @@ function MinimapModule:RegisterLFGEditorFrame()
     -- Keep track of original Show/Hide so we can force-show in editor mode
     local origLFGShow = MiniMapLFGFrame.Show
     local origLFGHide = MiniMapLFGFrame.Hide
-    local lfgWasVisible = false  -- tracks state before editor opened
 
     -- Register wrapper in editor so it becomes a moveable mover
     addon:RegisterEditableFrame({
@@ -2692,14 +2708,15 @@ function MinimapModule:RegisterLFGEditorFrame()
         configPath = {"widgets", "lfgframe"},
         showTest = function()
             -- Hide the real eye so the wrapper can receive mouse/drag events
-            lfgWasVisible = MiniMapLFGFrame:IsShown()
             origLFGHide(MiniMapLFGFrame)
             lfgWrapper:Show()
         end,
         hideTest = function()
-            -- Restore eye visibility after editor closes
-            if lfgWasVisible then
+            -- Same test as MiniMapLFG_UpdateIsShown: the queue may have changed while editing.
+            if GetLFGMode() then
                 origLFGShow(MiniMapLFGFrame)
+            else
+                origLFGHide(MiniMapLFGFrame)
             end
         end,
         module  = self
@@ -2727,9 +2744,12 @@ function MinimapModule:RegisterDurabilityEditorFrame()
                 SnapDurabilityMoverToFigure()
             end
             durabilityMover:Show()
+            durabilityFollower.cx, durabilityFollower.cy, durabilityFollower.scale = nil, nil, nil
+            durabilityFollower:Show()
         end,
         onNudge = DetachDurabilityFrame,
         onHide = function()
+            durabilityFollower:Hide()
             durabilityMover.DragonUI_WasDragged = nil
             durabilityMover.DragonUI_WasAdjustedByEditor = nil
             ApplyDurabilityPosition()

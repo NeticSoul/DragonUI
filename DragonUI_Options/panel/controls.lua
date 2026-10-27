@@ -693,8 +693,12 @@ function Controls:AddToggle(parent, opts)
         end)
     end
 
+    -- A reload-only value is staged, not saved; the toggle shows the staged choice until it is reloaded or dropped.
+    local stagedPath = opts.requiresReload and not opts.setFunc and opts.dbPath
     if opts.getFunc then
         cb:SetValue(opts.getFunc() and true or false)
+    elseif stagedPath then
+        cb:SetValue(addon.Reload.Get(stagedPath) and true or false)
     elseif opts.dbPath then
         cb:SetValue(self:GetDBValue(opts.dbPath) and true or false)
     end
@@ -711,19 +715,37 @@ function Controls:AddToggle(parent, opts)
     cb._dragonCheckIndent = opts.indent
 
     cb:SetCallback("OnValueChanged", function(_, _, value)
+        if stagedPath then
+            addon.Reload.Stage(stagedPath, value)
+            return
+        end
         if opts.setFunc then
             opts.setFunc(value)
         elseif opts.dbPath then
             self:SetDBValue(opts.dbPath, value)
         end
         if opts.callback then opts.callback(value) end
-        if opts.requiresReload then StaticPopup_Show("DRAGONUI_RELOAD_UI") end
     end)
 
     SkinCheckBox(cb)
     TagSearchId(cb, opts)
     parent:AddChild(cb)
     return cb
+end
+
+-- A module's enable toggle; `callback` runs only when the change applied live, `after` runs either way.
+function Controls:AddModuleToggle(parent, opts)
+    local name = opts.moduleName
+    local toggle = {}
+    for key, value in pairs(opts) do toggle[key] = value end
+    toggle.callback = nil
+    toggle.requiresReload = nil
+    toggle.getFunc = function() return addon.Reload.ModuleState(name) end
+    toggle.setFunc = function(val)
+        if addon:SetModuleEnabled(name, val) and opts.callback then opts.callback(val) end
+        if opts.after then opts.after(val) end
+    end
+    return self:AddToggle(parent, toggle)
 end
 
 -- ============================================================================

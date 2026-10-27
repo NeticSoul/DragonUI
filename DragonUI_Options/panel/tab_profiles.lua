@@ -66,14 +66,19 @@ local function BuildProfilesTab(scroll)
         return profiles
     end
 
+    -- No module refresh is proven to re-read every key it uses, so a profile only switches on a reload.
+    local function StageProfile(name)
+        if name == db:GetCurrentProfile() then
+            addon.Reload.UnstageAction("profile")
+        else
+            addon.Reload.StageAction("profile", function() db:SetProfile(name) end)
+        end
+    end
+
     C:AddDropdown(selectSection, {
         label = LO["Select Profile"],
         getFunc = function() return db:GetCurrentProfile() end,
-        setFunc = function(val)
-            db:SetProfile(val)
-            Panel:SelectTab("profiles")
-            StaticPopup_Show("DRAGONUI_RELOAD_UI")
-        end,
+        setFunc = StageProfile,
         values = GetProfileList(),
     })
 
@@ -83,10 +88,8 @@ local function BuildProfilesTab(scroll)
     newName:SetWidth(250)
     newName:SetCallback("OnEnterPressed", function(widget, event, text)
         if text and text ~= "" then
-            db:SetProfile(text)
             widget:SetText("")
-            Panel:SelectTab("profiles")
-            StaticPopup_Show("DRAGONUI_RELOAD_UI")
+            StageProfile(text)
         end
     end)
     C.SkinEditBox(newName)
@@ -144,10 +147,10 @@ local function BuildProfilesTab(scroll)
         getFunc = function() return nil end,
         setFunc = function(val)
             if val and val ~= db:GetCurrentProfile() then
-                db:CopyProfile(val)
-                addon:Print(LO["Copied profile: "] .. val)
-                Panel:SelectTab("profiles")
-                StaticPopup_Show("DRAGONUI_RELOAD_UI")
+                addon.Reload.StageAction("copyprofile", function()
+                    db:CopyProfile(val)
+                    addon:Print(LO["Copied profile: "] .. val)
+                end)
             end
         end,
         values = GetOtherProfiles(),

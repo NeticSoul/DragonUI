@@ -28,6 +28,7 @@ L["Interface"] = true
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = true
 L["Editor Mode"] = true
 L["Cannot open options during combat."] = true
+L["Options closed for combat."] = true
 L["Open DragonUI Settings"] = true
 L["Open the DragonUI configuration panel."] = true
 L["Use /dragonui to open the full settings panel."] = true
@@ -870,7 +871,7 @@ L["Reverse the order of micromenu buttons in the grid."] = true
 L["Hide on Vehicle"] = true
 L["Hide micromenu and bags while in a vehicle."] = true
 L["Show Latency Indicator"] = true
-L["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."] = true
+L["Show a colored bar below the Help button indicating connection quality (green/yellow/red)."] = true
 
 -- Bags
 L["Bags"] = true

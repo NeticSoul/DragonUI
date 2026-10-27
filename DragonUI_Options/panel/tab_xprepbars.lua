@@ -27,36 +27,17 @@ local function BuildXpRepTab(scroll)
     C:AddDropdown(styleSection, {
         label = LO["XP / Rep Bar Style"],
         desc = LO["DragonflightUI: fully custom bars with rested XP background.\nRetailUI: atlas-based reskin of Blizzard bars.\n\nChanging style requires a UI reload."],
-        dbPath = "xprepbar.style",
         values = {
             dragonflightui = LO["DragonflightUI"],
             retailui = LO["RetailUI"],
         },
         width = 200,
-        callback = function()
-            -- Sync style.xpbar for legacy compat
-            local newStyle = C:GetDBValue("xprepbar.style")
-            C:SetDBValue("style.xpbar", newStyle)
-            -- Prompt reload — style is saved to DB but NOT applied live.
-            -- On reload, the new style initializes cleanly from scratch.
-            StaticPopupDialogs["DRAGONUI_RELOAD_XPSTYLE"] = {
-                text = LO["XP bar style changed to "] .. (newStyle == "retailui" and LO["RetailUI"] or LO["DragonflightUI"]) .. ".\n" .. LO["A UI reload is required to apply this change."],
-                button1 = LO["Reload Now"],
-                button2 = LO["Cancel"],
-                OnAccept = function() ReloadUI() end,
-                OnCancel = function()
-                    -- Revert the DB value if user cancels
-                    local oldStyle = (newStyle == "retailui") and "dragonflightui" or "retailui"
-                    C:SetDBValue("xprepbar.style", oldStyle)
-                    C:SetDBValue("style.xpbar", oldStyle)
-                    Panel:SelectTab("xprepbars")
-                end,
-                timeout = 0,
-                whileDead = true,
-                hideOnEscape = false,
-                preferredIndex = 3,
-            }
-            StaticPopup_Show("DRAGONUI_RELOAD_XPSTYLE")
+        getFunc = function() return addon.Reload.Get("xprepbar.style") end,
+        setFunc = function(val)
+            addon.Reload.Stage("xprepbar.style", val)
+            -- style.xpbar is a legacy mirror; it follows only a style change that is really staged.
+            local staged = addon.Reload.IsStaged("xprepbar.style")
+            addon.Reload.Stage("style.xpbar", staged and val or C:GetDBValue("style.xpbar"))
         end,
     })
 

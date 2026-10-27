@@ -117,10 +117,10 @@ local function BuildMicromenuTab(scroll)
 
     C:AddToggle(menu, {
         label = LO["Show Latency Indicator"],
-        desc = LO["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."],
+        desc = LO["Show a colored bar below the Help button indicating connection quality (green/yellow/red)."],
         dbPath = "micromenu.show_latency_indicator",
         callback = function()
-            StaticPopup_Show("DRAGONUI_RELOAD_UI")
+            if addon.RefreshMicromenuButtons then addon.RefreshMicromenuButtons() end
         end,
     })
 

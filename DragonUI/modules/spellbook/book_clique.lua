@@ -128,6 +128,7 @@ local function dock()
     if not config or Book.Locked() or not addon:IsModuleEnabled("spellbook") then return end
     if config:GetParent() == Book.root and config:IsShown() then return end
     HideUIPanel(config)
+    config._duiOwnParent = config._duiOwnParent or config:GetParent()
     config:SetParent(Book.root)
     -- The wide book can leave no room either side, so stay on screen and draw over its edge.
     config:SetClampedToScreen(true)
@@ -158,6 +159,7 @@ end
 function Book.AdoptSideTab()
     local borrowed = IsAddOnLoaded("Clique") and _G.CliqueSpellTab
     if not borrowed then return end
+    borrowed._duiOwnParent = borrowed._duiOwnParent or borrowed:GetParent()
     borrowed:SetParent(Book.root)
     if not borrowed._duiPlaced then
         borrowed._duiPlaced = true
@@ -166,6 +168,20 @@ function Book.AdoptSideTab()
     end
     placeSideTab(borrowed)
     borrowed:Show()
+end
+
+-- The book turned off: Clique's tab and window go back to the parents Clique gave them.
+function Book.ReleaseClique()
+    local tab = _G.CliqueSpellTab
+    if tab and tab._duiOwnParent and tab:GetParent() == Book.root then
+        tab:SetParent(tab._duiOwnParent)
+    end
+    local _, config = api()
+    if config and config._duiOwnParent and config:GetParent() == Book.root then
+        config:Hide()
+        config:SetParent(config._duiOwnParent)
+        config._duiDocked = nil
+    end
 end
 
 function Book.InstallClique()

@@ -205,7 +205,8 @@ function addon.RefreshCooldowns()
                 if cooldown.GetCooldown then
                     local start, duration = cooldown:GetCooldown()
                     if start and start > 0 then
-                        -- Always reapply cooldown to update settings
+                        -- Forget the dedupe values, or a running cooldown skips the enable/disable change.
+                        cooldown._dui_cdStart = nil
                         addon.CooldownText.OnSetCooldown(cooldown, start, duration)
                     elseif moduleDb.enabled and cooldown.text then
                         -- If cooldowns are enabled but no active cooldown, ensure text is hidden

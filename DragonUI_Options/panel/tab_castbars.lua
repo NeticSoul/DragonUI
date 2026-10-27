@@ -121,10 +121,7 @@ local function AddCastbarControls(parent, dbPrefix, refreshFunc, opts)
         label = LO["Text Mode"],
         dbPath = dbPrefix .. ".text_mode",
         values = textModeValues,
-        callback = function()
-            refreshFunc()
-            StaticPopup_Show("DRAGONUI_RELOAD_UI")
-        end,
+        callback = refreshFunc,
     })
 
     C:AddSlider(parent, {

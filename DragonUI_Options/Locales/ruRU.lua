@@ -32,6 +32,7 @@ L["Interface"] = "Интерфейс"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "Используйте вкладки слева для настройки модулей, панелей действий, фреймов, миникарты и многого другого."
 L["Editor Mode"] = "Режим редактора"
 L["Cannot open options during combat."] = "Невозможно открыть настройки во время боя."
+L["Options closed for combat."] = "Настройки закрыты из-за боя."
 L["Open DragonUI Settings"] = "Открыть настройки DragonUI"
 L["Open the DragonUI configuration panel."] = "Открыть панель настроек DragonUI."
 L["Use /dragonui to open the full settings panel."] = "Используйте /dragonui для открытия полной панели настроек."
@@ -745,7 +746,7 @@ L["Reverse the order of micromenu buttons in the grid."] = "Обращает п�
 L["Hide on Vehicle"] = "Скрыть на транспорте"
 L["Hide micromenu and bags while in a vehicle."] = "Скрыть микроменю и сумки при использовании транспорта."
 L["Show Latency Indicator"] = "Показать индикатор задержки"
-L["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."] = "Показать цветную полоску под кнопкой «Помощь», отображающую качество соединения (зелёный/жёлтый/красный). Требуется перезагрузка."
+L["Show a colored bar below the Help button indicating connection quality (green/yellow/red)."] = "Показать цветную полоску под кнопкой «Помощь», отображающую качество соединения (зелёный/жёлтый/красный)."
 
 -- Bags
 L["Bags"] = "Сумки"

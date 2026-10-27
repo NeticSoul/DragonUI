@@ -168,6 +168,7 @@ L["Total"] = "Total"
 
 -- Added by DragonUI (missing translations)
 L["Cannot toggle editor mode during combat!"] = "Não é possível alternar o modo editor durante o combate!"
+L["Editor mode closed for combat."] = "Modo editor fechado por causa do combate."
 L["Cannot reset positions during combat!"] = "Não é possível redefinir as posições durante o combate!"
 L["Cannot toggle keybind mode during combat!"] = "Não é possível alternar o modo de atalhos durante o combate!"
 L["Cannot move frames during combat!"] = "Não é possível mover os quadros durante o combate!"

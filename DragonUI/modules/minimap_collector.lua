@@ -474,10 +474,10 @@ local function ToggleInterfaceConfig()
     local a = deps.addon
     if not a then return end
     if a.OptionsPanel and a.OptionsPanel.Toggle then
-        a.OptionsPanel:Toggle("general")
+        a.OptionsPanel:Toggle()
         return
     end
-    if a.ToggleOptionsUI then a:ToggleOptionsUI("general") end
+    if a.ToggleOptionsUI then a:ToggleOptionsUI() end
 end
 
 -- ----------------------------------------------------------------------------

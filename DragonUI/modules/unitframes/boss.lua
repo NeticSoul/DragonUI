@@ -563,7 +563,61 @@ local function ReskinBossFrame(wrapperFrame, bossFrame, bossIndex)
     end
 
     bossFrame.HideTest = function(self)
-        self:Hide()
+        local unit = self.unit
+        if not (unit and UnitExists(unit)) then
+            self:Hide()
+            return
+        end
+
+        -- ShowTest painted the player over a real boss; repaint it the way TargetFrame_Update would.
+        local fn = self:GetName()
+        local p = _G[fn .. "Portrait"]
+        if p then SetPortraitTexture(p, unit) end
+
+        local bg = _G[fn .. "NameBackground"]
+        if bg then bg:SetVertexColor(UnitSelectionColor(unit)) end
+
+        local name = _G[fn .. "TextureFrameName"]
+        if name then name:SetText(GetUnitName(unit)) end
+
+        local level = _G[fn .. "TextureFrameLevelText"]
+        local highLevel = _G[fn .. "TextureFrameHighLevelTexture"]
+        local unitLevel = UnitLevel(unit)
+        local known = unitLevel > 0 and not UnitIsCorpse(unit)
+        if level then
+            if known then
+                level:SetText(unitLevel)
+                level:Show()
+            else
+                level:Hide()
+            end
+        end
+        if highLevel then
+            if known then highLevel:Hide() else highLevel:Show() end
+        end
+
+        local dead = _G[fn .. "TextureFrameDeadText"]
+        if dead then
+            if UnitHealth(unit) <= 0 and UnitIsConnected(unit) then dead:Show() else dead:Hide() end
+        end
+
+        local hp = _G[fn .. "HealthBar"]
+        if hp then
+            hp:SetMinMaxValues(0, UnitHealthMax(unit))
+            hp:SetValue(UnitHealth(unit))
+        end
+
+        local mp = _G[fn .. "ManaBar"]
+        if mp then
+            local powerType, powerToken = UnitPowerType(unit)
+            local maxPower = UnitPowerMax(unit, powerType)
+            mp:SetMinMaxValues(0, maxPower)
+            mp:SetValue(UnitPower(unit, powerType))
+            local color = PowerBarColor[powerToken] or PowerBarColor[powerType]
+            if color then mp:SetStatusBarColor(color.r, color.g, color.b) end
+        end
+
+        for _, texts in pairs(BossModule.textSystems) do texts.update() end
     end
 end
 
@@ -1069,7 +1123,7 @@ local function SetupEditorMode()
                 local bossFrame = _G["Boss" .. i .. "TargetFrame"]
                 if bossFrame and not InCombatLockdown() then
                     RegisterUnitWatch(bossFrame)
-                    if bossFrame.HideTest and not UnitExists("boss" .. i) then
+                    if bossFrame.HideTest then
                         bossFrame:HideTest()
                     end
                 end

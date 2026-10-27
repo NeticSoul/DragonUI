@@ -32,6 +32,7 @@ L["Interface"] = "인터페이스"
 L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "왼쪽 탭을 사용하여 모듈, 액션바, 유닛 프레임, 미니맵 등을 설정하세요."
 L["Editor Mode"] = "편집 모드"
 L["Cannot open options during combat."] = "전투 중 옵션 사용 불가"
+L["Options closed for combat."] = "전투로 인해 설정 창이 닫혔습니다."
 L["Open DragonUI Settings"] = "DragonUI 설정 열기"
 L["Open the DragonUI configuration panel."] = "DragonUI 설정 패널 열기"
 L["Use /dragonui to open the full settings panel."] = "/dragonui 입력 시 전체 설정 패널 열기"
@@ -753,7 +754,7 @@ L["Reverse the order of micromenu buttons in the grid."] = "그리드에서 마�
 L["Hide on Vehicle"] = "탈것 탑승 시 숨기기"
 L["Hide micromenu and bags while in a vehicle."] = "탈것 탑승 중 마이크로 메뉴 및 가방 숨김"
 L["Show Latency Indicator"] = "지연 시간 표시기"
-L["Show a colored bar below the Help button indicating connection quality (green/yellow/red). Requires UI reload."] = "도움말 버튼 아래 연결 상태 색상 바(녹색/황색/적색) 표시(UI 재실행 필요)"
+L["Show a colored bar below the Help button indicating connection quality (green/yellow/red)."] = "도움말 버튼 아래 연결 상태 색상 바(녹색/황색/적색) 표시"
 
 -- Bags
 L["Bags"] = "가방"

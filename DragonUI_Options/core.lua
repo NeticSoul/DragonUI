@@ -25,22 +25,13 @@ end
 
 addon.LO = LO  -- Expose for other option files
 
--- ============================================================================
--- STATIC POPUP FOR RELOAD
--- ============================================================================
-
-StaticPopupDialogs["DRAGONUI_RELOAD_UI"] = {
-    text = LO["Changing this setting requires a UI reload to apply correctly."],
-    button1 = LO["Reload UI"],
-    button2 = LO["Not Now"],
-    OnAccept = function()
-        ReloadUI()
-    end,
-    timeout = 0,
-    whileDead = 1,
-    hideOnEscape = 1,
-    preferredIndex = 3
-}
+-- Dropped reload-only changes: the open tab re-reads the saved values its toggles now show again.
+addon.Reload.OnDiscard(function()
+    local panel = addon.OptionsPanel
+    if panel and panel.frame and panel.frame:IsShown() and panel.currentTab then
+        panel:SelectTab(panel.currentTab)
+    end
+end)
 
 StaticPopupDialogs["DRAGONUI_DELETE_PROFILE"] = {
     text = LO["Are you sure you want to delete the profile '%s'? This cannot be undone."],

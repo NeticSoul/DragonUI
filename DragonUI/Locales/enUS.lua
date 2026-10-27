@@ -22,6 +22,7 @@ if not L then return end
 
 -- Combat lockdown messages
 L["Cannot toggle editor mode during combat!"] = true
+L["Editor mode closed for combat."] = true
 L["Cannot reset positions during combat!"] = true
 L["Cannot toggle keybind mode during combat!"] = true
 L["Cannot move frames during combat!"] = true

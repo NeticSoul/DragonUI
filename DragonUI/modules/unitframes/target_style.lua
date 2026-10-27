@@ -1464,7 +1464,56 @@ function UF.TargetStyle.Create(opts)
 
                 if not UnitExists(unitToken) then
                     self:Hide()
+                    return
                 end
+
+                -- ShowTest painted the player over a real unit; repaint it the way TargetFrame_Update would.
+                if NameText then NameText:SetText(GetUnitName(unitToken)) end
+                if LevelText then
+                    local level = UnitLevel(unitToken)
+                    local known = level > 0 and not UnitIsCorpse(unitToken)
+                    if known then
+                        LevelText:SetText(level)
+                        if UnitCanAttack("player", unitToken) then
+                            local color = GetQuestDifficultyColor(level)
+                            LevelText:SetVertexColor(color.r, color.g, color.b)
+                        else
+                            LevelText:SetVertexColor(1.0, 0.82, 0.0)
+                        end
+                        LevelText:Show()
+                    else
+                        LevelText:Hide()
+                    end
+                    if HighLevelTexture then
+                        if known then HighLevelTexture:Hide() else HighLevelTexture:Show() end
+                    end
+                end
+                if DeadText then
+                    if UnitHealth(unitToken) <= 0 and UnitIsConnected(unitToken) then
+                        DeadText:Show()
+                    else
+                        DeadText:Hide()
+                    end
+                end
+                if HealthBar then
+                    HealthBar:SetMinMaxValues(0, UnitHealthMax(unitToken))
+                    HealthBar:SetValue(UnitHealth(unitToken))
+                end
+                if ManaBar then
+                    local powerType = UnitPowerType(unitToken)
+                    local maxPower = UnitPowerMax(unitToken, powerType)
+                    ManaBar:SetMinMaxValues(0, maxPower)
+                    ManaBar:SetValue(UnitIsConnected(unitToken) and UnitPower(unitToken, powerType) or maxPower)
+                end
+                updateCache.lastPortraitClass = nil
+                UpdateClassPortrait()
+                UpdateNameBackground()
+                UpdateClassification()
+                UpdateThreat()
+                UpdateHealthBarColor(true)
+                ForceUpdatePowerBar()
+                ApplyPvPIconVisibility()
+                if Module.textSystem then Module.textSystem.update() end
             end
         end
     end -- InitializeFrame

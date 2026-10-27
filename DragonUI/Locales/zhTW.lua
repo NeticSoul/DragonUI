@@ -164,6 +164,7 @@ L["Total"] = "總計"
 
 -- Added by DragonUI (missing translations)
 L["Cannot toggle editor mode during combat!"] = "戰鬥中無法切換編輯模式！"
+L["Editor mode closed for combat."] = "進入戰鬥，編輯模式已關閉。"
 L["Cannot reset positions during combat!"] = "戰鬥中無法重置位置！"
 L["Cannot toggle keybind mode during combat!"] = "戰鬥中無法切換按鍵綁定模式！"
 L["Cannot move frames during combat!"] = "戰鬥中無法移動框體！"

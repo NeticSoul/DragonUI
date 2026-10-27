@@ -22,6 +22,7 @@ if not L then return end
 
 -- Combat lockdown messages
 L["Cannot toggle editor mode during combat!"] = "¡No se puede cambiar el modo editor durante combate!"
+L["Editor mode closed for combat."] = "Modo editor cerrado por el combate."
 L["Cannot reset positions during combat!"] = "¡No se pueden restablecer las posiciones durante combate!"
 L["Cannot toggle keybind mode during combat!"] = "¡No se puede cambiar el modo de atajos durante combate!"
 L["Cannot move frames during combat!"] = "¡No se pueden mover marcos durante combate!"

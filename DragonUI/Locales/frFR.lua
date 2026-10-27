@@ -164,6 +164,7 @@ L["Total"] = "Total"
 
 -- Added by DragonUI (missing translations)
 L["Cannot toggle editor mode during combat!"] = "Impossible de basculer le mode éditeur en combat !"
+L["Editor mode closed for combat."] = "Mode éditeur fermé pour le combat."
 L["Cannot reset positions during combat!"] = "Impossible de réinitialiser les positions en combat !"
 L["Cannot toggle keybind mode during combat!"] = "Impossible de basculer le mode raccourcis en combat !"
 L["Cannot move frames during combat!"] = "Impossible de déplacer les fenêtres en combat !"

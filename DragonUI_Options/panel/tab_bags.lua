@@ -472,20 +472,10 @@ local function BuildBagsTab(scroll)
     local sortSection = C:AddSection(scroll, LO["Bag Sort"] or "Bag Sort")
     C:AddDescription(sortSection, LO["Sort buttons for bags and bank. Sorts items by type, rarity, level, and name."] or "Sort buttons for bags and bank. Sorts items by type, rarity, level, and name.")
 
-    C:AddToggle(sortSection, {
+    C:AddModuleToggle(sortSection, {
         label = LO["Enable Bag Sort"] or "Enable Bag Sort",
         desc = LO["Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands."] or "Add sort buttons to bag and bank frames. Also enables /sort and /sortbank slash commands.",
-        getFunc = function()
-            local mc = GetBagSortConfig(false)
-            return mc and mc.enabled
-        end,
-        setFunc = function(val)
-            local cfg = GetBagSortConfig(true)
-            if cfg then
-                cfg.enabled = val
-            end
-        end,
-        requiresReload = true,
+        moduleName = "bagsort",
     })
 
     C:AddToggle(sortSection, {
@@ -629,16 +619,10 @@ local function BuildBagsTab(scroll)
     -- ====================================================================
     local mainSection = C:AddSection(scroll, LO["Bagster"])
 
-    C:AddToggle(mainSection, {
+    C:AddModuleToggle(mainSection, {
         label = LO["Enable Bagster"],
         desc = LO["All-in-one bag replacement with item filtering, search, quality indicators, and bank integration."],
-        getFunc = function() return IsBagsterEnabled() end,
-        setFunc = function(val)
-            if not addon.db.profile.modules then addon.db.profile.modules = {} end
-            if not addon.db.profile.modules.bagster then addon.db.profile.modules.bagster = {} end
-            addon.db.profile.modules.bagster.enabled = val
-        end,
-        requiresReload = true,
+        moduleName = "bagster",
     })
 
     -- Everything below is Bagster-only; the enable toggle reloads, so the panel rebuilds right

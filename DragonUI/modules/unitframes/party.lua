@@ -1981,7 +1981,12 @@ local function InitializePartyFramesForEditor()
             frame = PartyFrames.anchor,
             configPath = {"widgets", "party"}, -- Add configPath required by core.lua
             showTest = ShowPartyFramesTest,
-            hideTest = HidePartyFramesTest,
+            -- Styling and visibility skip while the editor is up, so roster changes made meanwhile land here.
+            hideTest = function()
+                HidePartyFramesTest()
+                StylePartyFrames()
+                RequestPartyVisibilityRefresh()
+            end,
             hasTarget = ShouldPartyFramesBeVisible -- Use hasTarget instead of shouldShow
         })
     end

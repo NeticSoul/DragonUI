@@ -30,18 +30,10 @@ local function BuildChatTab(scroll)
     -- ====================================================================
     local generalSection = C:AddSection(scroll, LO["Chat Mods"])
 
-    C:AddToggle(generalSection, {
+    C:AddModuleToggle(generalSection, {
         label = LO["Enable Chat Mods"],
         desc  = LO["Enables or disables Chat Mods."],
-        getFunc  = function()
-            return addon.db.profile.modules and addon.db.profile.modules.chatmods and addon.db.profile.modules.chatmods.enabled
-        end,
-        setFunc  = function(val)
-            if not addon.db.profile.modules then addon.db.profile.modules = {} end
-            if not addon.db.profile.modules.chatmods then addon.db.profile.modules.chatmods = {} end
-            addon.db.profile.modules.chatmods.enabled = val
-        end,
-        requiresReload = true,
+        moduleName = "chatmods",
     })
 
     C:AddToggle(generalSection, {
