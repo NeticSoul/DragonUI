@@ -290,6 +290,23 @@ local function restyleIcons(prefix, suffix, count)
     end
 end
 
+-- Questie swaps only the file, after our restyle; a whole-file icon must not keep our sheet crop.
+local function dropSheetCrop(icon)
+    if not QUEST_ICONS[fileName(icon)] then
+        icon:SetTexCoord(0, 1, 0, 1)
+        icon:SetSize(ICON_SIZE, ICON_SIZE)
+    end
+end
+
+local function guardIcons(prefix, suffix, count)
+    for index = 1, count do
+        local icon = _G[prefix .. index .. suffix]
+        if icon then
+            hooksecurefunc(icon, "SetTexture", dropSheetCrop)
+        end
+    end
+end
+
 local function raiseAbove(frame, base, locked)
     if frame:GetFrameLevel() <= base and not (locked and frame:IsProtected()) then
         frame:SetFrameLevel(base + 1)
@@ -337,6 +354,7 @@ local function buildQuestFrame()
     -- The XML binds this OnShow to the function itself, so hooking the global would never fire.
     local greeting = _G.QuestFrameGreetingPanel
     if greeting then
+        guardIcons("QuestTitleButton", "QuestIcon", MAX_NUM_QUESTS or 32)
         greeting:HookScript("OnShow", function()
             restyleIcons("QuestTitleButton", "QuestIcon", MAX_NUM_QUESTS or 32)
         end)
@@ -355,6 +373,7 @@ local function buildGossipFrame()
     settleLayers(window, inset, panels)
 
     if _G.GossipFrameUpdate then
+        guardIcons("GossipTitleButton", "GossipIcon", NUMGOSSIPBUTTONS or 32)
         hooksecurefunc("GossipFrameUpdate", function()
             restyleIcons("GossipTitleButton", "GossipIcon", NUMGOSSIPBUTTONS or 32)
             settleLayers(window, inset, panels)
