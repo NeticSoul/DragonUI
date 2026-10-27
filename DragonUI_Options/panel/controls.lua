@@ -444,20 +444,16 @@ local function SkinEditBoxWidget(widget)
         FUI.SkinButton(widget.button)
         widget.button:SetSize(EDIT_BUTTON_W, EDIT_BUTTON_H)
     end
-    if not widget._dragonEditWrapped then
-        widget._dragonEditWrapped = true
-        -- AceGUI rewrites the text insets on every SetText and keystroke.
-        local original = widget.SetText
-        widget.SetText = function(self, ...)
-            original(self, ...)
-            self.editbox:SetTextInsets(EDIT_INSET, EDIT_INSET, 0, 0)
-        end
-        box:HookScript("OnTextChanged", function(self)
-            local reserve = widget.button and widget.button:IsShown() and (EDIT_BUTTON_W + 6) or EDIT_INSET
-            self:SetTextInsets(EDIT_INSET, reserve, 0, 0)
-        end)
+    -- A text-inset change strands the native caret at the left; AceGUI makes one per click and keystroke.
+    if not box._dragonNativeInsets then
+        box._dragonNativeInsets = box.SetTextInsets
+        box.SetTextInsets = function() end
     end
-    box:SetTextInsets(EDIT_INSET, EDIT_INSET, 0, 0)
+    local right = (widget.button and not widget.disablebutton) and (EDIT_BUTTON_W + 6) or EDIT_INSET
+    if box._dragonInsetRight ~= right then
+        box._dragonInsetRight = right
+        box._dragonNativeInsets(box, EDIT_INSET, right, 0, 0)
+    end
     widget:SetDisabled(widget.disabled)
 end
 
