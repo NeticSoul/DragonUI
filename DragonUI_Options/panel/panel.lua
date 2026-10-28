@@ -614,7 +614,12 @@ scaleWaiter:Hide()
 scaleWaiter:SetScript("OnUpdate", function(self)
     if IsMouseButtonDown("LeftButton") then return end
     self:Hide()
-    Panel:ApplyScale()
+    if self.uiScale then
+        self.uiScale = nil
+        Panel:ApplyUIScale()
+    else
+        Panel:ApplyScale()
+    end
 end)
 
 function Panel:SetScale(value)
@@ -622,6 +627,27 @@ function Panel:SetScale(value)
         addon.db.global.optionsPanelScale = value
     end
     scaleWaiter:Show()
+end
+
+function Panel:SetUIScale(value)
+    addon.UIScale.SetValue(value)
+    scaleWaiter.uiScale = true
+    scaleWaiter:Show()
+end
+
+-- UIParent's rescale shifts windows anchored by offset; keep this one where it is on screen.
+function Panel:ApplyUIScale()
+    local frame = self.frame
+    local x, y
+    if frame then x, y = frame:GetCenter() end
+    local before = x and frame:GetEffectiveScale()
+    addon.UIScale.Apply()
+    if before then
+        local after = frame:GetEffectiveScale()
+        frame:ClearAllPoints()
+        frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x * before / after, y * before / after)
+    end
+    self:ApplyScale()
 end
 
 -- ============================================================================

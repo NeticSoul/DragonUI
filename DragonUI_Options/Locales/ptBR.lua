@@ -721,6 +721,12 @@ L["Auto Greed/DE"] = "Ganância/Desencantar automático"
 L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."] = "Seleciona automaticamente ganância ou desencantar (quando disponível) em itens de qualidade verde. Isso só funciona se você estiver no nível máximo."
 L["Settings Window"] = "Janela de configurações"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Tamanho desta janela sobre a sua escala de interface; 1.0 é o dos outros painéis. Nunca passa do tamanho da tela."
+L["UI Scale"] = "Escala da interface"
+L["Custom UI Scale"] = "Escala de interface própria"
+L["Lets the interface go smaller than Blizzard's 0.64. Replaces the UI Scale in Video options."] = "Permite reduzir a interface abaixo do 0.64 da Blizzard. Substitui a escala de interface das opções de vídeo."
+L["Size of the whole interface. Lower values fit more on screen."] = "Tamanho de toda a interface. Valores menores cabem mais na tela."
+L["Auto Scale"] = "Escala automática"
+L["Use the scale that draws one interface pixel per screen pixel at your resolution."] = "Usa a escala que desenha um pixel de interface por pixel de tela na sua resolução."
 
 -- Quest nameplate icons (loot providers + Questie coexistence)
 L["Resolve By Name"] = "Resolver por nome"
@@ -872,7 +878,6 @@ L["Also Show These Spells"] = "Mostrar também estas magias"
 L["Listed spells always show, buff or debuff, on top of everything above."] = "As magias listadas sempre aparecem, sejam bônus ou penalidades, além de tudo acima."
 
 -- Added by DragonUI (missing translations)
-L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "Use as abas à esquerda para configurar módulos, barras de ação, quadros de unidade, minimapa e mais."
 L["Editor Mode"] = "Modo editor"
 L["Cannot open options during combat."] = "Não é possível abrir as opções durante o combate."
 L["Options closed for combat."] = "Opções fechadas por causa do combate."

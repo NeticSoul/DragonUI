@@ -209,11 +209,13 @@ local function installEvents()
     ns.InstallGlyphEvents()
     ns.InstallOrbEvents()
     ns.InstallSharing()
-    ns.Listen("UI_SCALE_CHANGED", function()
+    local function scaleChanged()
         rescale()
         ns.PlaceCatcher()
-    end)
+    end
+    ns.Listen("UI_SCALE_CHANGED", scaleChanged)
     ns.Listen("DISPLAY_SIZE_CHANGED", rescale)
+    addon.core.RegisterMessage(ns, "DRAGONUI_UI_SCALE_CHANGED", scaleChanged)
 end
 
 -- Lifecycle ---------------------------------------------------------------------------------------

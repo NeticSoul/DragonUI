@@ -369,15 +369,57 @@ local function BuildGeneralTab(scroll)
 
     C:AddLabel(about, "|cff" .. C.Theme.accentHex .. LO["DragonUI"] .. " v2.5|r")
     C:AddDescription(about, LO["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."])
-    C:AddSpacer(about)
     C:AddDescription(about, LO["Created and maintained by NeticSoul, with community contributions."])
-    C:AddSpacer(about)
-    C:AddDescription(about, LO["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."])
-    C:AddSpacer(about)
-    C:AddDescription(about, LO["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"])
-    C:AddSpacer(about)
     C:AddDescription(about, LO["GitHub (select and Ctrl+C to copy):"])
     C:AddCopyableText(about, "https://github.com/NeticSoul/DragonUI")
+
+    C:AddSpacer(scroll)
+
+    -- ====================================================================
+    -- UI SCALE
+    -- ====================================================================
+    local UIScale = addon.UIScale
+    local uiScale = C:AddSection(scroll, LO["UI Scale"])
+    local scaleSlider, autoButton
+
+    C:AddToggle(uiScale, {
+        label = LO["Custom UI Scale"],
+        desc = LO["Lets the interface go smaller than Blizzard's 0.64. Replaces the UI Scale in Video options."],
+        getFunc = UIScale.IsEnabled,
+        setFunc = UIScale.SetEnabled,
+        callback = function(enabled)
+            scaleSlider:SetValue(UIScale.Get())
+            scaleSlider:SetDisabled(not enabled)
+            autoButton:SetDisabled(not enabled)
+            Panel:ApplyUIScale()
+        end,
+    })
+
+    scaleSlider = C:AddSlider(uiScale, {
+        label = LO["Scale"],
+        desc = LO["Size of the whole interface. Lower values fit more on screen."],
+        min = UIScale.MIN,
+        max = UIScale.MAX,
+        step = 0.01,
+        width = 200,
+        getFunc = UIScale.Get,
+        setFunc = function(val) Panel:SetUIScale(val) end,
+        disabled = function() return not UIScale.IsEnabled() end,
+    })
+
+    autoButton = C:AddButton(uiScale, {
+        label = LO["Auto Scale"],
+        desc = LO["Use the scale that draws one interface pixel per screen pixel at your resolution."],
+        width = 200,
+        disabled = function() return not UIScale.IsEnabled() end,
+        callback = function()
+            local auto = UIScale.GetAutoScale()
+            if not auto then return end
+            UIScale.SetValue(auto)
+            scaleSlider:SetValue(UIScale.Get())
+            Panel:ApplyUIScale()
+        end,
+    })
 
     C:AddSpacer(scroll)
 

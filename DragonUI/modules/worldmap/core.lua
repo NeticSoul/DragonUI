@@ -540,12 +540,14 @@ local function installHooks()
     end)
     hooksecurefunc("WorldMapFrame_SetOpacity", chromeAlpha)
 
+    local function relayout()
+        if WM:Config().maximized then WM.Layout(true) end
+    end
     local events = CreateFrame("Frame")
     events:RegisterEvent("DISPLAY_SIZE_CHANGED")
     events:RegisterEvent("UI_SCALE_CHANGED")
-    events:SetScript("OnEvent", function()
-        if WM:Config().maximized then WM.Layout(true) end
-    end)
+    events:SetScript("OnEvent", relayout)
+    addon.core.RegisterMessage(WM, "DRAGONUI_UI_SCALE_CHANGED", relayout)
 end
 
 -- ============================================================================

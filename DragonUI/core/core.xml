@@ -15,6 +15,7 @@
     <Script file="commands.lua"/>
     <Script file="visibility_fade.lua"/>
     <Script file="combatlog_fix.lua"/>
+    <Script file="uiscale.lua"/>
     <!-- module_base.lua / movers.lua removed — EditableFrames + PositionPresets own layout -->
     
 </Ui>

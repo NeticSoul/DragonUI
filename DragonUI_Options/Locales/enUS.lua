@@ -25,7 +25,6 @@ L["DragonUI"] = true
 L["Core"] = true
 L["Frames"] = true
 L["Interface"] = true
-L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = true
 L["Editor Mode"] = true
 L["Cannot open options during combat."] = true
 L["Options closed for combat."] = true
@@ -61,6 +60,14 @@ L["Automatically select greed or disenchant (when available) on green quality it
 -- Settings window
 L["Settings Window"] = true
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = true
+
+-- UI scale
+L["UI Scale"] = true
+L["Custom UI Scale"] = true
+L["Lets the interface go smaller than Blizzard's 0.64. Replaces the UI Scale in Video options."] = true
+L["Size of the whole interface. Lower values fit more on screen."] = true
+L["Auto Scale"] = true
+L["Use the scale that draws one interface pixel per screen pixel at your resolution."] = true
 
 L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = true
 L["GitHub (select and Ctrl+C to copy):"] = true

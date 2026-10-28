@@ -725,6 +725,12 @@ L["Auto Greed/DE"] = "Gourmandise/Désenchantement auto"
 L["Automatically select greed or disenchant (when available) on green quality items. This will only work if you are the max level."] = "Sélectionne automatiquement gourmandise ou désenchantement (si disponible) sur les objets de qualité verte. Cela ne fonctionne que si vous êtes au niveau maximal."
 L["Settings Window"] = "Fenêtre des réglages"
 L["Size of this window on top of your UI scale; 1.0 matches the other panels. It never grows past the screen."] = "Taille de cette fenêtre, en plus de votre échelle d'interface ; 1.0 correspond aux autres panneaux. Elle ne dépasse jamais de l'écran."
+L["UI Scale"] = "Échelle de l'interface"
+L["Custom UI Scale"] = "Échelle d'interface personnalisée"
+L["Lets the interface go smaller than Blizzard's 0.64. Replaces the UI Scale in Video options."] = "Permet de descendre sous le minimum de 0.64 de Blizzard. Remplace l'échelle d'interface des options vidéo."
+L["Size of the whole interface. Lower values fit more on screen."] = "Taille de toute l'interface. Une valeur plus basse laisse plus de place à l'écran."
+L["Auto Scale"] = "Échelle automatique"
+L["Use the scale that draws one interface pixel per screen pixel at your resolution."] = "Utilise l'échelle qui affiche un pixel d'interface par pixel d'écran à votre résolution."
 
 -- Quest nameplate icons (loot providers + Questie coexistence)
 L["Resolve By Name"] = "Résoudre par nom"
@@ -876,7 +882,6 @@ L["Also Show These Spells"] = "Afficher aussi ces sorts"
 L["Listed spells always show, buff or debuff, on top of everything above."] = "Les sorts listés apparaissent toujours, buff ou debuff, en plus de tout ce qui précède."
 
 -- Added by DragonUI (missing translations)
-L["Use the tabs on the left to configure modules, action bars, unit frames, minimap, and more."] = "Utilisez les onglets à gauche pour configurer les modules, barres d'action, fenêtres d'unité, minicarte et plus encore."
 L["Editor Mode"] = "Mode éditeur"
 L["Cannot open options during combat."] = "Impossible d'ouvrir les options en combat."
 L["Options closed for combat."] = "Options fermées pour le combat."
