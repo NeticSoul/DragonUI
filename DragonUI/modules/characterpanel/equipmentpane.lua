@@ -346,8 +346,12 @@ local function pickerOkay(...)
     local _, iconIndex = GetEquipmentSetIconInfo(popup.selectedIcon)
     local spec = orig and specForSet(orig)
     if specSection and specSection:IsShown() then spec = chosenSpec() end
+    local renaming = orig and newName ~= orig
+    -- At the cap the new name is an eleventh set, which SaveEquipmentSet raises on: free the old slot first.
+    local freedFirst = renaming and #setList() >= maxSets()
+    if freedFirst then DeleteEquipmentSet(orig) end
     SaveEquipmentSet(newName, iconIndex)
-    if orig and newName ~= orig then DeleteEquipmentSet(orig) end
+    if renaming and not freedFirst then DeleteEquipmentSet(orig) end
     local old = orig and specForSet(orig)
     if old then CP.AssignSpecSet(old, nil) end
     if spec then CP.AssignSpecSet(spec, newName) end
