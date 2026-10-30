@@ -249,13 +249,17 @@ local function CreateEditor()
     end)
     box:HookScript("OnDragStop", Detach)
 
-    -- On the box itself, under its outline and label, so the fake row never covers them.
+    -- Its own frame under the box: on the box itself the fake row would draw over its BACKGROUND fill.
+    local under = CreateFrame("Frame", nil, UIParent)
+    under:SetFrameStrata(box:GetFrameStrata())
+    under:SetFrameLevel(box:GetFrameLevel() - 1)
+    under:SetAllPoints(box)
     preview = {}
     for i = 1, MAX_BUTTONS do
-        local icon = box:CreateTexture(nil, "BORDER")
+        local icon = under:CreateTexture(nil, "BORDER")
         SetPortraitToTexture(icon, PREVIEW_ICONS[i])
         icon:Hide()
-        local ring = box:CreateTexture(nil, "ARTWORK")
+        local ring = under:CreateTexture(nil, "ARTWORK")
         ring:Hide()
         preview[i] = { icon = icon, ring = ring }
         rings[#rings + 1] = ring
