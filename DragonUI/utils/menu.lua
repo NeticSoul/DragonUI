@@ -10,6 +10,9 @@ local CHECK_W = 16
 local ARROW_W = 16
 local ICON_W = 16
 local DETAIL_GAP = 16
+local SLIDER_H = 24
+-- Leaves the track 100px once the steppers and the number have taken theirs.
+local SLIDER_ROW_W = 176
 -- UIDropDownMenu's own idle timeout.
 local HIDE_DELAY = 2
 
@@ -123,23 +126,60 @@ local function paintBackdrop(level, style)
     level:SetBackdropBorderColor(TOOLTIP_DEFAULT_COLOR.r, TOOLTIP_DEFAULT_COLOR.g, TOOLTIP_DEFAULT_COLOR.b)
 end
 
+local function visibleEntries(level)
+    local list = {}
+    for _, entry in ipairs(level.entries) do
+        if not (entry.hidden and entry.hidden()) then list[#list + 1] = entry end
+    end
+    return list
+end
+
+local function paintSlider(button, options, style)
+    local control = button.slider
+    if not options then
+        if control then control:Hide() end
+        return
+    end
+    if not control then
+        control = addon.ForeverUI.CreateSlider(button, {})
+        control.slider:HookScript("OnMouseDown", function() menu.sliding = true end)
+        control.slider:HookScript("OnMouseUp", function() menu.sliding = nil end)
+        button.slider = control
+    end
+    control.valueText:SetFontObject(style.text)
+    control:SetFormat(options.format)
+    control:Bind(options.get, options.set)
+    control:SetRange(options.min, options.max, options.step)
+    control:Refresh()
+    control:ClearAllPoints()
+    control:SetPoint("LEFT", button, "LEFT", 0, -style.row / 2)
+    control:SetPoint("RIGHT", button, "RIGHT", 0, -style.row / 2)
+    control:SetFrameLevel(button:GetFrameLevel() + 1)
+    control:Show()
+end
+
 local function refresh(level)
     if level == menu then releaseOverlays() end
     local style = menu.style
     paintBackdrop(level, style)
+    local entries = visibleEntries(level)
     local checkable, width = false, style.minW
     if level == menu and menu.minWidth then width = math.max(width, menu.minWidth) end
-    for _, entry in ipairs(level.entries) do
+    for _, entry in ipairs(entries) do
         if entry.checked ~= nil then checkable = true end
         if entry.tooltip then menu.tips = true end
+        if entry.slider then width = math.max(width, SLIDER_ROW_W) end
     end
     local indent = checkable and CHECK_W + 2 or 2
     local y = INSET_Y
-    for index, entry in ipairs(level.entries) do
+    for index, entry in ipairs(entries) do
         local button = level.buttons[index] or acquire(level, index)
         button.entry = entry
         local divider = entry.isDivider
-        button:SetHeight(divider and DIVIDER_H or style.row)
+        local slider = entry.slider
+        local height = divider and DIVIDER_H or style.row + (slider and SLIDER_H or 0)
+        local textY = slider and SLIDER_H / 2 or 0
+        button:SetHeight(height)
         if divider then button.divider:Show() else button.divider:Hide() end
         local font = entry.isTitle and style.title or entry.disabled and style.disabled or style.text
         button.text:SetFontObject(font)
@@ -158,20 +198,21 @@ local function refresh(level)
         else
             button.icon:Hide()
         end
-        button.text:SetPoint("LEFT", button, "LEFT", textLeft, 0)
+        button.text:SetPoint("LEFT", button, "LEFT", textLeft, textY)
         button.detail:SetText(not divider and entry.detail or "")
         button.detail:ClearAllPoints()
         button.detail:SetPoint("RIGHT", button, "RIGHT", entry.menu and -ARROW_W or 0, 0)
         button.text:SetPoint("RIGHT", entry.detail and button.detail or button, entry.detail and "LEFT" or "RIGHT",
-            entry.detail and -DETAIL_GAP or 0, 0)
+            entry.detail and -DETAIL_GAP or 0, textY)
         local checked = entry.checked
         if type(checked) == "function" then checked = checked() end
         button.check:SetPoint("LEFT", button, "LEFT", shift, 0)
         if checked then button.check:Show() else button.check:Hide() end
         if entry.menu then button.arrow:Show() else button.arrow:Hide() end
-        button:EnableMouse(not (entry.isTitle or entry.disabled or divider))
+        button:EnableMouse(not (entry.isTitle or entry.disabled or divider or slider))
         button:UnlockHighlight()
         button:SetFrameLevel(level:GetFrameLevel() + 1)
+        paintSlider(button, slider, style)
         button:ClearAllPoints()
         button:SetPoint("TOPLEFT", level, "TOPLEFT", INSET_X, -y)
         button:SetPoint("RIGHT", level, "RIGHT", -INSET_X, 0)
@@ -182,9 +223,9 @@ local function refresh(level)
             if entry.detail then w = w + DETAIL_GAP + button.detail:GetStringWidth() end
             width = math.max(width, w)
         end
-        y = y + (divider and DIVIDER_H or style.row)
+        y = y + height
     end
-    for index = #level.entries + 1, #level.buttons do level.buttons[index]:Hide() end
+    for index = #entries + 1, #level.buttons do level.buttons[index]:Hide() end
     level:SetSize(width + INSET_X * 2, y + INSET_Y)
 end
 
@@ -378,7 +419,8 @@ local function build()
             if pressedOutside() then self:Hide() end
             return
         end
-        if overAnyLevel() or (type(self.anchor) == "table" and self.anchor:IsMouseOver()) then
+        -- A drag may wander off the menu; the thumb keeps it until the button comes up.
+        if self.sliding or overAnyLevel() or (type(self.anchor) == "table" and self.anchor:IsMouseOver()) then
             self.idle = 0
             return
         end
@@ -389,6 +431,7 @@ local function build()
         -- Hidden through an ancestor (say Alt+Z): close for real so no loan outlives the menu.
         if self:IsShown() and not (InCombatLockdown() and #self.lent > 0) then self:Hide() end
         self.anchor = nil
+        self.sliding = nil
         closeFrom(2)
         releaseOverlays()
         if self.tipRow and GameTooltip:IsOwned(self.tipRow) then GameTooltip:Hide() end
@@ -407,7 +450,8 @@ end
 
 addon.Menu = {}
 
--- entries: { text, detail, func, checked, keepShown, isTitle, isDivider, disabled, overlay, menu, icon, tooltip, indent }; anchor: frame or "cursor".
+-- entries: { text, detail, func, checked, keepShown, isTitle, isDivider, disabled, overlay, menu, icon, tooltip, indent, hidden, slider }; anchor: frame or "cursor".
+-- hidden is a function, asked on every refresh; slider is { min, max, step, get, set, format } under the row's text.
 function addon.Menu.Open(anchor, entries, options)
     if not menu then build() end
     if menu:IsShown() and menu.anchor == anchor then

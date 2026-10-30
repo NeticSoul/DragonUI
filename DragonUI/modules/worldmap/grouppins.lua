@@ -176,9 +176,8 @@ function WM.RefreshGroupPins()
     dressAll()
 end
 
--- The quest log cog's copy of the option, listed only when there are group pins to restyle.
+-- The quest log cog's copy of the option; listed solo too, as many only open this menu once.
 function WM.AddGroupPinEntries(entries)
-    if GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 then return end
     entries[#entries + 1] = { isDivider = true }
     entries[#entries + 1] = { text = L["Group Member Pins"], isTitle = true }
     for _, option in ipairs(MENU_STYLES) do
@@ -190,6 +189,7 @@ function WM.AddGroupPinEntries(entries)
             func = function()
                 WM:Config().groupPins = style
                 WM.RefreshGroupPins()
+                addon.core:SendMessage("DRAGONUI_WINDOW_SETTING_CHANGED", "worldmap")
             end,
         }
     end

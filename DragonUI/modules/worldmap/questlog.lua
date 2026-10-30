@@ -928,6 +928,7 @@ local function buildSearch()
                 end,
             },
         }
+        WM.AddFadeEntries(entries)
         WM.AddGroupPinEntries(entries)
         addon.Menu.Open(self, entries)
     end)

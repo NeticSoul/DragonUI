@@ -47,6 +47,11 @@ local function choice(text, key, side)
     }
 end
 
+-- The options window only reads these toggles when it builds its tab.
+local function syncOptions()
+    addon.core:SendMessage("DRAGONUI_WINDOW_SETTING_CHANGED", "character")
+end
+
 -- `reads` turns the stored value into a tick, so each key keeps its own meaning for "absent".
 local function toggle(text, key, reads)
     local function ticked() return reads(CP:Config()[key]) end
@@ -54,7 +59,10 @@ local function toggle(text, key, reads)
         text = text,
         keepShown = true,
         checked = ticked,
-        func = function() store(key, not ticked()) end,
+        func = function()
+            store(key, not ticked())
+            syncOptions()
+        end,
     }
 end
 
@@ -64,6 +72,22 @@ end
 
 local function absentMeansOff(value)
     return value and true or false
+end
+
+-- Stored on Item Level, which draws these even with this panel turned off.
+local function itemLevelToggle(text, key)
+    local function ticked() return addon:GetModuleConfig("itemlevel")[key] == true end
+    return {
+        text = text,
+        keepShown = true,
+        disabled = not addon:IsModuleEnabled("itemlevel"),
+        checked = ticked,
+        func = function()
+            addon:GetModuleConfig("itemlevel")[key] = not ticked()
+            addon:RefreshItemLevel()
+            syncOptions()
+        end,
+    }
 end
 
 local function menuEntries()
@@ -86,6 +110,8 @@ local function menuEntries()
     add(heading(L["Gear summary"]))
     add(toggle(L["Item Level"], "show_item_level", absentMeansOn))
     add(toggle(L["GearScore"], "show_gear_score", absentMeansOff))
+    add(itemLevelToggle(L["Repair Cost"], "show_repair_cost"))
+    add(itemLevelToggle(_G.DURABILITY, "show_durability"))
 
     add({
         text = ACTION_COLOR .. L["Reset stat order"] .. "|r",
