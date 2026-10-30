@@ -132,8 +132,8 @@ Copyright (c) 2024 Dmitriy (a3st), https://github.com/a3st/RetailUI. Full text:
 - Textures taken from RetailUI: `DragonUI/Textures/UI/UnitFrame.blp`, `MicroMenu.blp`,
   `Minimap.blp`, `CastingBar.blp`, `QuestTracker.BLP`, `BagSlotsKey.blp`, `CollapseButton.blp`;
   `DragonUI/Textures/Minimap/Calendar.blp`, `GuildBanner.blp`, `MinimapBorder.blp`;
-  `DragonUI/Textures/UnitFrames/Player/ClassOverlayDeathKnightRunes.BLP` (and its recolour
-  `ClassOverlayDeathKnightRunes_Purple.blp`), `LFGRoleIcons.blp`, `PlayerRestFlipbook.blp`;
+  `DragonUI/Textures/UnitFrames/Player/ClassOverlayDeathKnightRunes.BLP` (its purple Death rune is a
+  recolour), `LFGRoleIcons.blp`, `PlayerRestFlipbook.blp`;
   `DragonUI/Textures/UnitFrames/uiunitframeboss2x.blp`;
   `DragonUI/Textures/UnitFrames/Target/NameBackground.tga`.
 
