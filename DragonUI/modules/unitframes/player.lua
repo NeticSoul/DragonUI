@@ -1263,7 +1263,8 @@ local function ApplyPVPIconVisibility()
             hitArea:SetSize(39, 37)
             hitArea:SetPoint("TOPLEFT", PlayerPVPIcon)
         end
-        if shown then hitArea:Show() else hitArea:Hide() end
+        -- Blizzard only fills its tooltip when flagged; the editor's preview emblem has none to show.
+        if shown and not preview then hitArea:Show() else hitArea:Hide() end
     end
 end
 
