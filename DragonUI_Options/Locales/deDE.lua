@@ -17,6 +17,11 @@ When adding new strings:
 local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "deDE")
 if not L then return end
 
+L["Forever (Thin)"] = "Forever (Schmal)"
+L["Highlight target and focus with the original Forever borders."] = "Ziel und Fokus mit den originalen Forever-Rändern hervorheben."
+L["Heritage uses DragonUI art. Modern uses retail chrome. Forever uses original WoW Forever borders, cast bars and a separate level badge. Each style remembers its layout."] = "Heritage verwendet DragonUI-Grafiken, Modern den Retail-Stil. Forever verwendet originale WoW-Forever-Ränder, Zauberleisten und eine eigene Level-Plakette. Jeder Stil merkt sich sein Layout."
+L["Forever displays levels in the original badge on the right. Unknown levels remain hidden until the client can identify the unit."] = "Forever zeigt das Level in der originalen Plakette rechts an. Unbekannte Level bleiben ausgeblendet, bis der Client die Einheit zuordnen kann."
+
 -- ============================================================================
 -- GENERAL / PANEL
 -- ============================================================================

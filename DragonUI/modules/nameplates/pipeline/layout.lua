@@ -457,6 +457,7 @@ end
 
 function NP.layout.HideMinaStack(plateData)
     if not plateData then return end
+    NP.forever.HideLevel(plateData)
     local hideTargets = {
         plateData.minaNameRow,
         plateData.minaHp,
@@ -1212,8 +1213,9 @@ function NP.layout.LayoutMinaStack(plateData)
             plateData.minaNameRow:SetPoint("LEFT", hp, "LEFT", padX, nameOverlayY)
             plateData.minaNameRow:SetPoint("RIGHT", hp, "RIGHT", -padX, nameOverlayY)
         else
-            plateData.minaNameRow:SetPoint("BOTTOMLEFT", hp, "TOPLEFT", padX, 3)
-            plateData.minaNameRow:SetPoint("BOTTOMRIGHT", hp, "TOPRIGHT", -padX, 3)
+            local nameGap = NP.config.IsForeverSkin() and 2 or 3
+            plateData.minaNameRow:SetPoint("BOTTOMLEFT", hp, "TOPLEFT", padX, nameGap)
+            plateData.minaNameRow:SetPoint("BOTTOMRIGHT", hp, "TOPRIGHT", -padX, nameGap)
         end
     end
     -- Child widths use row width minus padding.
@@ -1341,6 +1343,7 @@ function NP.layout.LayoutCastBarStack(plateData)
         bar:SetSize(visW, castH)
         bar:SetPoint("TOP", anchor, "BOTTOM", 0, -stackGap)
 
+        NP.forever.SyncCastFillStyle(bar)
         local iconSize = NP.castbar.LayoutCastSpellIcon(bar.minaCastIcon, bar, bar._notInterruptible)
         if plateData.castBarIcon then
             plateData.castBarIcon:Hide()

@@ -14,6 +14,11 @@
 local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "ptBR")
 if not L then return end
 
+L["Forever (Thin)"] = "Forever (Fino)"
+L["Highlight target and focus with the original Forever borders."] = "Destaca o alvo e o foco com as bordas originais do Forever."
+L["Heritage uses DragonUI art. Modern uses retail chrome. Forever uses original WoW Forever borders, cast bars and a separate level badge. Each style remembers its layout."] = "Heritage usa a arte do DragonUI. Modern usa o visual do jogo atual. Forever usa as bordas, as barras de conjuração e a placa de nível originais do WoW Forever. Cada estilo lembra seu layout."
+L["Forever displays levels in the original badge on the right. Unknown levels remain hidden until the client can identify the unit."] = "Forever mostra o nível na placa original à direita. Níveis desconhecidos ficam ocultos até o cliente identificar a unidade."
+
 L["Minimap Buttons Collector"] = "Coletor de Botões do Minimapa"
 L["Circle"] = "Círculo"
 L["Arrow"] = "Seta"

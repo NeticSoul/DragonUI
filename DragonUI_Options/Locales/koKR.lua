@@ -17,6 +17,11 @@ When adding new strings:
 local L = LibStub("AceLocale-3.0-DragonUI"):NewLocale("DragonUI_Options", "koKR")
 if not L then return end
 
+L["Forever (Thin)"] = "Forever (얇게)"
+L["Highlight target and focus with the original Forever borders."] = "원래 Forever 테두리로 대상과 주시 대상을 강조합니다."
+L["Heritage uses DragonUI art. Modern uses retail chrome. Forever uses original WoW Forever borders, cast bars and a separate level badge. Each style remembers its layout."] = "Heritage는 DragonUI 그래픽을 사용합니다. Modern은 최신 게임의 테두리를 사용합니다. Forever는 원래 WoW Forever 테두리, 시전 바, 별도의 레벨 표시를 사용합니다. 각 스타일은 자체 배치를 기억합니다."
+L["Forever displays levels in the original badge on the right. Unknown levels remain hidden until the client can identify the unit."] = "Forever는 오른쪽의 원래 레벨 표시에 레벨을 표시합니다. 알 수 없는 레벨은 클라이언트가 대상을 식별할 때까지 숨겨집니다."
+
 L["Minimap Buttons Collector"] = "미니맵 버튼 수집기"
 L["Circle"] = "원형"
 L["Arrow"] = "화살표"

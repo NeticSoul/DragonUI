@@ -1,0 +1,329 @@
+{
+  "product": "wowf",
+  "build": "1.60.1.70532",
+  "sourceFiles": {
+    "1300837": "d1e5004b675cf92a8cc9a370298f657d3ab131fdc218c42a96e9ded17fee15d5",
+    "7241122": "81654d31f31094ef4305c9eeb59ea79df4ee3f45488935785478bb29e8f92563",
+    "8165536": "92a1344ef676e7f99ed0866f3bbe1365df089a29e45f8621dc3a2c6b43f60bcb",
+    "8165540": "d93a575c27def50c515376d4daaf13ce5955eb58c247c20686a29e770ccc2737",
+    "8311982": "b81eb4bfb901eb2d8fbf7472d4a990ef46772024f24a10b8191b94e4f47b82bc"
+  },
+  "regions": [
+    {
+      "name": "barBg",
+      "fileDataID": 8165540,
+      "rect": [
+        175,
+        1,
+        439,
+        39
+      ],
+      "logicalSize": [
+        132,
+        19
+      ],
+      "margins": [
+        12,
+        7,
+        10,
+        11
+      ]
+    },
+    {
+      "name": "barFill",
+      "fileDataID": 8165540,
+      "rect": [
+        175,
+        75,
+        423,
+        95
+      ],
+      "logicalSize": [
+        124,
+        10
+      ],
+      "margins": [
+        4,
+        5,
+        4,
+        4
+      ]
+    },
+    {
+      "name": "selected",
+      "fileDataID": 8165540,
+      "rect": [
+        175,
+        41,
+        439,
+        73
+      ],
+      "logicalSize": [
+        132,
+        16
+      ],
+      "margins": [
+        8,
+        7,
+        8,
+        7
+      ]
+    },
+    {
+      "name": "deselected",
+      "fileDataID": 7241122,
+      "rect": [
+        1,
+        136,
+        211,
+        148
+      ],
+      "logicalSize": [
+        210,
+        12
+      ],
+      "margins": [
+        5,
+        5,
+        5,
+        5
+      ]
+    },
+    {
+      "name": "levelBg",
+      "fileDataID": 8165536,
+      "rect": [
+        97,
+        55,
+        127,
+        85
+      ],
+      "logicalSize": [
+        15,
+        15
+      ],
+      "margins": [
+        6,
+        6,
+        5,
+        5
+      ]
+    },
+    {
+      "name": "levelSelected",
+      "fileDataID": 8165536,
+      "rect": [
+        1,
+        55,
+        57,
+        99
+      ],
+      "logicalSize": [
+        28,
+        22
+      ],
+      "margins": [
+        7,
+        7,
+        7,
+        7
+      ]
+    },
+    {
+      "name": "levelSkull",
+      "fileDataID": 8165536,
+      "rect": [
+        1,
+        1,
+        53,
+        53
+      ],
+      "logicalSize": [
+        26,
+        26
+      ],
+      "margins": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "castBg",
+      "fileDataID": 8311982,
+      "rect": [
+        1,
+        188,
+        423,
+        214
+      ],
+      "logicalSize": [
+        211,
+        13
+      ],
+      "margins": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "castFrame",
+      "fileDataID": 8311982,
+      "rect": [
+        422,
+        1,
+        848,
+        31
+      ],
+      "logicalSize": [
+        213,
+        15
+      ],
+      "margins": [
+        12,
+        6,
+        12,
+        6
+      ]
+    },
+    {
+      "name": "castGlow",
+      "fileDataID": 8311982,
+      "rect": [
+        1,
+        124,
+        427,
+        154
+      ],
+      "logicalSize": [
+        213,
+        15
+      ],
+      "margins": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "castGlowChannel",
+      "fileDataID": 8311982,
+      "rect": [
+        429,
+        92,
+        855,
+        122
+      ],
+      "logicalSize": [
+        213,
+        15
+      ],
+      "margins": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "castShield",
+      "fileDataID": 1300837,
+      "rect": [
+        238,
+        30,
+        252,
+        46
+      ],
+      "logicalSize": [
+        14,
+        16
+      ],
+      "margins": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "castSpark",
+      "fileDataID": 8311982,
+      "rect": [
+        78,
+        436,
+        88,
+        440
+      ],
+      "logicalSize": [
+        10,
+        4
+      ],
+      "margins": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "cast-fill-standard",
+      "fileDataID": 8311982,
+      "rect": [
+        421,
+        264,
+        839,
+        286
+      ],
+      "resized": [
+        512,
+        32
+      ]
+    },
+    {
+      "name": "cast-fill-channel",
+      "fileDataID": 8311982,
+      "rect": [
+        1,
+        264,
+        419,
+        286
+      ],
+      "resized": [
+        512,
+        32
+      ]
+    },
+    {
+      "name": "cast-fill-interrupted",
+      "fileDataID": 8311982,
+      "rect": [
+        1,
+        336,
+        419,
+        358
+      ],
+      "resized": [
+        512,
+        32
+      ]
+    },
+    {
+      "name": "cast-fill-uninterruptible",
+      "fileDataID": 8311982,
+      "rect": [
+        421,
+        384,
+        839,
+        406
+      ],
+      "resized": [
+        512,
+        32
+      ]
+    }
+  ]
+}

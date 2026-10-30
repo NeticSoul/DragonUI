@@ -18,6 +18,11 @@ local Panel = addon.OptionsPanel
 local DB = "modules.nameplates"
 local AceGUI = LibStub("AceGUI-3.0")
 
+-- The Forever skin is drawn from its own art; retail-only art options are off.
+local function IsForeverStyle()
+    return C:GetDBValue(DB .. ".plateStyle") == "forever"
+end
+
 -- Blizzard nameplate visibility CVars (Interface → Names → Unit Nameplates).
 local function CVarBool(cvar)
     if not GetCVar then
@@ -274,11 +279,12 @@ local function BuildGeneralSubTab(scroll)
 
     C:AddDropdown(styleSection, {
         label = LO["Nameplate Art"],
-        desc = LO["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome and is still in beta."],
+        desc = LO["Heritage uses DragonUI art. Modern uses retail chrome. Forever uses original WoW Forever borders, cast bars and a separate level badge. Each style remembers its layout."],
         dbPath = DB .. ".plateStyle",
         values = {
             modern = LO["Modern (Beta)"],
             legacy = LO["Heritage"],
+            forever = LO["Forever (Thin)"],
         },
         width = 200,
         -- Each style is authored against its own bar size, so seed it on the switch;
@@ -287,25 +293,8 @@ local function BuildGeneralSubTab(scroll)
             local style = C:GetDBValue(DB .. ".plateStyle")
             -- Re-picking the value already selected fires this too, and would wipe tuned sliders.
             if style ~= seededStyle then
+                addon.Nameplates.config.ApplyPlateStyle(seededStyle)
                 seededStyle = style
-                local modern = style == "modern"
-                C:SetDBValue(DB .. ".barWidth", modern and 148 or 150)
-                C:SetDBValue(DB .. ".barHeight", modern and 16 or 9)
-                C:SetDBValue(DB .. ".castBarHeight", modern and 8 or 9)
-                -- Modern starts from the retail font and text sizes; all stay editable afterwards.
-                C:SetDBValue(DB .. ".fontSize", 2)
-                C:SetDBValue(DB .. ".castBarSpellNameFontSize", modern and 8 or 9)
-                -- The retail timer is 0.55 of the icon; Modern scales it up again on enlarged icons.
-                local iconSize = C:GetDBValue(DB .. ".debuffIconSize") or 24
-                C:SetDBValue(DB .. ".debuffCooldownFontSize",
-                    modern and math.min(16, math.max(8, math.floor(iconSize * 0.55 + 0.5))) or 10)
-                if modern then
-                    C:SetDBValue(DB .. ".nameFont", "primary")
-                    -- The modern cast bar is drawn around its spell name, so the skin needs it on.
-                    C:SetDBValue(DB .. ".showCastBarSpellName", true)
-                end
-                -- Retail plates show no aggro flare, while the legacy glow is part of that art.
-                C:SetDBValue(DB .. ".threatGlow", not modern)
             end
             RefreshNameplates()
             if Panel and Panel.SelectTab then
@@ -316,7 +305,9 @@ local function BuildGeneralSubTab(scroll)
 
     C:AddToggle(styleSection, {
         label = LO["Target Selection Border"],
-        desc = LO["Draw the white glowing border around the current target's health bar."],
+        desc = C:GetDBValue(DB .. ".plateStyle") == "forever"
+            and LO["Highlight target and focus with the original Forever borders."]
+            or LO["Draw the white glowing border around the current target's health bar."],
         dbPath = DB .. ".retailSelectionBorder",
         disabled = IsLegacyStyle,
         callback = RefreshNameplates,
@@ -859,6 +850,9 @@ local function BuildHealthSubTab(scroll)
     end
 
     local levelSection = C:AddSection(scroll, LO["Level"])
+    if IsForeverStyle() then
+        C:AddDescription(levelSection, LO["Forever displays levels in the original badge on the right. Unknown levels remain hidden until the client can identify the unit."])
+    end
 
     C:AddToggle(levelSection, {
         label = LO["Show Level Always"],
@@ -881,6 +875,7 @@ local function BuildHealthSubTab(scroll)
     C:AddDropdown(levelSection, {
         label = LO["Level Format"],
         dbPath = DB .. ".levelTextFormat",
+        disabled = IsForeverStyle,
         values = {
             brackets = "[LVL]",
             parentheses = "(LVL)",
@@ -1167,6 +1162,7 @@ local function BuildTargetSubTab(scroll)
             and LO["Color the glow and health bar by threat status (orange = tanking, yellow = gaining or losing)."]
             or LO["Color the glow and health bar by threat status (red = tanking, orange = losing, yellow = gaining)."],
         dbPath = DB .. ".threatGlow",
+        disabled = IsForeverStyle,
         callback = RefreshNameplates,
     })
 
@@ -1481,6 +1477,7 @@ local function BuildIconsSubTab(scroll)
         label = LO["Show Elite Icon"],
         desc = LO["Show elite/rare dragon icon on nameplates."],
         dbPath = DB .. ".showEliteIcon",
+        disabled = IsForeverStyle,
         callback = RefreshAndRebuildNameplates,
     })
 

@@ -58,7 +58,7 @@ end
 
 function NP.widgets.SyncEliteIcon(plateData, unit)
     local cfg = NP.config.GetCfg()
-    if cfg.showEliteIcon == false then
+    if cfg.showEliteIcon == false or NP.config.IsForeverSkin() then
         if plateData._eliteIcon then plateData._eliteIcon:Hide() end
         return
     end
