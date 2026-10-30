@@ -348,3 +348,23 @@ function CP.RestoreChrome()
 end
 
 CP:RegisterBuilder("chrome", build)
+
+-- The panes sit at CharacterFrame level + 10..30, above the gem window (same strata, lower level), so
+-- it opened behind the panel. Blizzard_ItemSocketingUI loads on demand: raise it once it exists.
+do
+    local function raiseSocketing()
+        local f = _G.ItemSocketingFrame
+        if not f or f._duiRaised then return end
+        f._duiRaised = true
+        f:SetFrameStrata("DIALOG")
+    end
+    local ev = CreateFrame("Frame")
+    ev:RegisterEvent("ADDON_LOADED")
+    ev:SetScript("OnEvent", function(self, _, addon)
+        if addon == "Blizzard_ItemSocketingUI" then
+            raiseSocketing()
+            self:UnregisterEvent("ADDON_LOADED")
+        end
+    end)
+    raiseSocketing()
+end
