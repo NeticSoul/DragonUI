@@ -58,6 +58,9 @@ local function GetMinimapSettings()
     return addon.db and addon.db.profile and addon.db.profile.minimap
 end
 
+-- The farm bonus means this at UI scale 0.8; any other keeps the farm map's size on screen.
+local FARM_REFERENCE_UI_SCALE = 0.8
+
 -- The player's minimap scale, times the farm bonus while farm mode is on.
 local function GetEffectiveMinimapScale()
     local settings = GetMinimapSettings()
@@ -65,8 +68,8 @@ local function GetEffectiveMinimapScale()
     if scale <= 0 then scale = 1 end
 
     if settings and settings.farm_mode_enabled == true then
-        local bonus = tonumber(settings.farm_mode_scale) or 1
-        scale = scale * math.min(math.max(bonus, 1), 2)
+        local bonus = math.min(math.max(tonumber(settings.farm_mode_scale) or 1, 1), 2)
+        scale = scale * math.max(bonus * FARM_REFERENCE_UI_SCALE / UIParent:GetEffectiveScale(), 1)
     end
 
     return scale
@@ -831,15 +834,15 @@ local function GetMinimapGrowthPivot(mover)
     return pivot ~= "" and pivot or "CENTER"
 end
 
--- The shift SetEditorBoxScale gives the editor box for that pivot, in the cluster's own units.
-local function GetClusterGrowthShift(mover)
+-- Farm parks the zone bar, so the map alone hugs the box's edges, as far in as it sits at scale 1.
+local function GetClusterGrowthShift(mover, clusterLift, mapOffsetY)
     local pivot = GetMinimapGrowthPivot(mover)
     if pivot == "CENTER" then return 0, 0 end
-    local grow = MinimapCluster:GetScale() - 1
-    local fromLeft = pivot:find("LEFT") and 0 or (pivot:find("RIGHT") and 1 or 0.5)
-    local fromTop = pivot:find("TOP") and 0 or (pivot:find("BOTTOM") and 1 or 0.5)
-    local ratio = mover:GetEffectiveScale() / MinimapCluster:GetEffectiveScale()
-    return mover:GetWidth() * grow * (0.5 - fromLeft) * ratio, mover:GetHeight() * grow * (fromTop - 0.5) * ratio
+    local scale = MinimapCluster:GetEffectiveScale() / mover:GetEffectiveScale()
+    local inward = mapUnscaledWidth * blipScale / 2 * (scale - 1) / scale
+    local shiftX = (pivot:find("RIGHT") and -inward) or (pivot:find("LEFT") and inward) or 0
+    local mapY = (pivot:find("TOP") and -inward) or (pivot:find("BOTTOM") and inward)
+    return shiftX, mapY and mapY - clusterLift - mapOffsetY or 0
 end
 
 -- Live style switches and farm growth; ReplaceBlizzardFrame anchors both frames itself on every apply.
@@ -847,7 +850,7 @@ local function ApplyStyleAnchors()
     local mover = MinimapModule.minimapFrame
     if not mover then return end
     local clusterLift, mapOffsetY = GetStyleOffsets()
-    local shiftX, shiftY = GetClusterGrowthShift(mover)
+    local shiftX, shiftY = GetClusterGrowthShift(mover, clusterLift, mapOffsetY)
     if MinimapModule.appliedMapOffsetY == mapOffsetY and MinimapModule.appliedShiftX == shiftX
         and MinimapModule.appliedShiftY == shiftY then
         return
@@ -3742,4 +3745,17 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         self:UnregisterAllEvents()
     end
 end)
+
+-- The farm map's size follows the UI scale, which changes without a reload.
+local function RefreshFarmForUIScale()
+    local settings = GetMinimapSettings()
+    if settings and settings.farm_mode_enabled == true then addon:RefreshMinimap() end
+end
+
+addon.core.RegisterMessage(MinimapModule, "DRAGONUI_UI_SCALE_CHANGED", RefreshFarmForUIScale)
+local uiScaleWatcher = CreateFrame("Frame")
+uiScaleWatcher:RegisterEvent("UI_SCALE_CHANGED")
+uiScaleWatcher:RegisterEvent("DISPLAY_SIZE_CHANGED")
+-- A frame later: the client settles UIParent's scale around these events.
+uiScaleWatcher:SetScript("OnEvent", function() addon:After(0, RefreshFarmForUIScale) end)
 
