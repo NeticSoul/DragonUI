@@ -303,6 +303,8 @@ function addon.ApplyTotemFrameSystem()
     if not FindAllPieces() then return end
     Totems.applied = true
     InstallHooks()
+    -- The combat and rest glows sit in LOW at levels 900+, out of reach of a level from BACKGROUND.
+    TotemFrame:SetFrameStrata("MEDIUM")
     for i = 1, MAX_BUTTONS do
         local button = _G["TotemFrameTotem" .. i]
         SkinButton(button)
