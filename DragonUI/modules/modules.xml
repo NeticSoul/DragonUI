@@ -145,6 +145,9 @@
     <!-- Auto-accept party invites from friends and guild members -->
     <Script file="autoaccept.lua"/>
 
+    <!-- Max camera distance past the Interface slider -->
+    <Script file="camera.lua"/>
+
     <!-- Addon Manager module -->
     <Script file="addonmanager_icons.lua"/>
     <Script file="addonmanager.lua"/>

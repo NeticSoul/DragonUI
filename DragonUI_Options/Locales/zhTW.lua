@@ -1781,6 +1781,10 @@ L["Accept Invites from Friends"] = "接受好友的邀請"
 L["Automatically accept party invites from players on your friends list."] = "自動接受好友名單中玩家的組隊邀請。"
 L["Accept Invites from Guild Members"] = "接受公會成員的邀請"
 L["Automatically accept party invites from members of your guild."] = "自動接受公會成員的組隊邀請。"
+L["Camera"] = "鏡頭"
+L["Max Camera Distance"] = "最大鏡頭距離"
+L["Let the camera zoom out further than the game's own slider allows."] = "讓鏡頭拉得比遊戲內建滑桿允許的更遠。"
+L["Camera Distance"] = "鏡頭距離"
 
 -- Farm mode
 L["Farm Mode"] = "刷怪模式"

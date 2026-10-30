@@ -949,6 +949,35 @@ local function BuildEnhancementsTab(scroll)
         callback = RefreshAutoAcceptCaches,
         requiresReload = false,
     })
+
+    -- ====================================================================
+    -- CAMERA
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local cameraSection = C:AddSection(scroll, LO["Camera"])
+
+    local function RefreshCamera()
+        if addon.RefreshCamera then addon.RefreshCamera() end
+    end
+
+    C:AddToggle(cameraSection, {
+        label = LO["Max Camera Distance"],
+        desc = LO["Let the camera zoom out further than the game's own slider allows."],
+        dbPath = "camera.max_distance",
+        callback = function()
+            RefreshCamera()
+            Panel:SelectTab("enhancements")
+        end,
+    })
+
+    C:AddSlider(cameraSection, {
+        label = LO["Camera Distance"],
+        dbPath = "camera.factor",
+        min = 1, max = 3.4, step = 0.1,
+        width = 200,
+        disabled = function() return not C:GetDBValue("camera.max_distance") end,
+        callback = RefreshCamera,
+    })
 end
 
 -- Register the tab (order 11 = after Quest Tracker, before Profiles)

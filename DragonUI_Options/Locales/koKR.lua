@@ -1775,6 +1775,10 @@ L["Accept Invites from Friends"] = "친구 초대 수락"
 L["Automatically accept party invites from players on your friends list."] = "친구 목록에 있는 플레이어의 그룹 초대를 자동으로 수락합니다."
 L["Accept Invites from Guild Members"] = "길드원 초대 수락"
 L["Automatically accept party invites from members of your guild."] = "길드원의 그룹 초대를 자동으로 수락합니다."
+L["Camera"] = "카메라"
+L["Max Camera Distance"] = "최대 카메라 거리"
+L["Let the camera zoom out further than the game's own slider allows."] = "게임 자체 슬라이더보다 카메라를 더 멀리 뺄 수 있습니다."
+L["Camera Distance"] = "카메라 거리"
 
 -- Farm mode
 L["Farm Mode"] = "파밍 모드"

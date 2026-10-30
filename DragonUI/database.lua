@@ -310,6 +310,10 @@ local defaults = {
             friends = false, -- Accept party invites from players on the friends list
             guild = false, -- Accept party invites from guild members
         },
+        camera = {
+            max_distance = false, -- Override cameraDistanceMaxFactor past the 2.0 the Interface slider allows
+            factor = 3.4, -- Factor applied while max_distance is on
+        },
         -- ACTIONBAR SETTINGS
         mainbars = {
             -- Per-bar layout (nested sub-tables with rows/columns/buttons_shown)

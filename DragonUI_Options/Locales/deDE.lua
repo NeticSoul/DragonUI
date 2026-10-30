@@ -1773,6 +1773,10 @@ L["Accept Invites from Friends"] = "Einladungen von Freunden annehmen"
 L["Automatically accept party invites from players on your friends list."] = "Nimmt Gruppeneinladungen von Spielern auf deiner Freundesliste automatisch an."
 L["Accept Invites from Guild Members"] = "Einladungen von Gildenmitgliedern annehmen"
 L["Automatically accept party invites from members of your guild."] = "Nimmt Gruppeneinladungen von Mitgliedern deiner Gilde automatisch an."
+L["Camera"] = "Kamera"
+L["Max Camera Distance"] = "Maximale Kameradistanz"
+L["Let the camera zoom out further than the game's own slider allows."] = "Lässt die Kamera weiter herauszoomen, als der Regler des Spiels erlaubt."
+L["Camera Distance"] = "Kameradistanz"
 
 -- Farm mode
 L["Farm Mode"] = "Farmmodus"

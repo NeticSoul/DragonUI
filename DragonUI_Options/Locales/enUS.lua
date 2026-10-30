@@ -1768,3 +1768,7 @@ L["Accept Invites from Friends"] = true
 L["Automatically accept party invites from players on your friends list."] = true
 L["Accept Invites from Guild Members"] = true
 L["Automatically accept party invites from members of your guild."] = true
+L["Camera"] = true
+L["Max Camera Distance"] = true
+L["Let the camera zoom out further than the game's own slider allows."] = true
+L["Camera Distance"] = true
