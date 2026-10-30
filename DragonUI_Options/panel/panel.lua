@@ -598,8 +598,8 @@ end
 -- ============================================================================
 
 function Panel:GetScale()
-    local global = addon.db and addon.db.global
-    return tonumber(global and global.optionsPanelScale) or 1
+    local profile = addon.db and addon.db.profile
+    return tonumber(profile and profile.optionsPanelScale) or 1
 end
 
 function Panel:ApplyScale()
@@ -623,8 +623,8 @@ scaleWaiter:SetScript("OnUpdate", function(self)
 end)
 
 function Panel:SetScale(value)
-    if addon.db and addon.db.global then
-        addon.db.global.optionsPanelScale = value
+    if addon.db and addon.db.profile then
+        addon.db.profile.optionsPanelScale = value
     end
     scaleWaiter:Show()
 end

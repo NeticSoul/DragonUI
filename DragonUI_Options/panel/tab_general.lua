@@ -22,7 +22,7 @@ local FUI = addon.ForeverUI
 -- ============================================================================
 
 -- Keys to exclude from preset snapshots (they are meta / self-referencing)
-local EXCLUDED_KEYS = { presets = true, version = true }
+local EXCLUDED_KEYS = { presets = true, version = true, optionsPanelScale = true }
 
 local Serializer = {}
 LibStub("AceSerializer-3.0"):Embed(Serializer)
