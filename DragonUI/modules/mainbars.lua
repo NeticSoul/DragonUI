@@ -231,6 +231,13 @@ local function UpdateMainBarColumnDividers(columns, rows, buttonsShown, buttonOr
     end
 end
 
+-- Main slots always show, except empty ones left to the grid by Hide Main Bar Background (buttons.lua).
+local function IsMainSlotShown(button)
+    if not (addon.MainSlotsFollowGrid and addon.MainSlotsFollowGrid()) then return true end
+    if (button:GetAttribute("showgrid") or 0) > 0 then return true end
+    return button.action ~= nil and HasAction(button.action) ~= nil
+end
+
 -- Arrange action bar buttons in a grid layout
 -- buttonPrefix: e.g. "ActionButton", "MultiBarBottomLeftButton"
 -- parentFrame: frame to resize (optional)
@@ -259,7 +266,7 @@ function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, r
     local edgePad = (heightPadding >= 2) and 2 or 0
     local step = ACTION_BUTTON_SIZE + spacing
 
-    -- Is this the MAIN bar?  Main bar buttons always show (Dragonflight look).
+    -- Is this the MAIN bar?  Main bar buttons show even when empty (Dragonflight look), see IsMainSlotShown.
     -- Multibar buttons must NOT be forced visible — Blizzard’s
     -- ActionButton_Update decides their visibility based on showgrid / CVar.
     local isMainBar = (buttonPrefix == "ActionButton")
@@ -273,8 +280,8 @@ function addon.ArrangeActionBarButtons(buttonPrefix, parentFrame, anchorFrame, r
                 local col = gridIndex % columns
 
                 SetBarGridButtonPoint(button, anchorFrame, row, col, buttonOrder, widthPadding, edgePad, step)
-                if isMainBar then
-                    button:Show()  -- Main bar: always visible
+                if isMainBar and IsMainSlotShown(button) then
+                    button:Show()
                 end
                 -- Multibar buttons: do NOT call Show() — let ActionButton_Update handle visibility
             else
@@ -3061,7 +3068,7 @@ local function GetMainBarVisibilityDBTable()
     }
 end
 
--- Blizzard hides empty action slots on its own (ActionButton_Update); DragonUI always shows all 12.
+-- Blizzard hides empty action slots on its own (ActionButton_Update); IsMainSlotShown picks which come back.
 local function ReassertMainBarShown()
     if InCombatLockdown() then return end
     -- The fade engine's own triggers (combat, hover) can fire mid-vehicle; never undo its Hide().
@@ -3069,7 +3076,7 @@ local function ReassertMainBarShown()
     if addon.MainBar then addon.MainBar:Show() end
     for i = 1, 12 do
         local btn = _G["ActionButton" .. i]
-        if btn then btn:Show() end
+        if btn and IsMainSlotShown(btn) then btn:Show() end
     end
 end
 

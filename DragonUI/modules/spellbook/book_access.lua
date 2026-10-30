@@ -8,7 +8,7 @@ local ipairs = ipairs
 local MULTIBARS = { "MultiBarBottomLeft", "MultiBarBottomRight", "MultiBarRight", "MultiBarLeft" }
 
 local keyOwner, lastKeys, catcher
-local gridsUp = false
+local gridsUp, mainGridShared = false, false
 
 local function enabled()
     return addon:IsModuleEnabled("spellbook")
@@ -129,11 +129,23 @@ local function shareGrid(delta)
     end
 end
 
+-- The main bar only hides empty slots under Hide Main Bar Background; otherwise they always show.
+local function shareMainGrid(delta)
+    for slot = 1, NUM_ACTIONBAR_BUTTONS do
+        local button = _G["ActionButton" .. slot]
+        local count = (button:GetAttribute("showgrid") or 0) + delta
+        if count >= 0 then button:SetAttribute("showgrid", count) end
+        if delta > 0 then ActionButton_ShowGrid(button) else ActionButton_HideGrid(button) end
+    end
+end
+
 function Book.ShowActionGrids()
     if gridsUp or Book.Locked() then return end
     gridsUp = true
     shareGrid(1)
     MultiActionBar_ShowAllGrids()
+    mainGridShared = addon.MainSlotsFollowGrid and addon.MainSlotsFollowGrid() or false
+    if mainGridShared then shareMainGrid(1) end
 end
 
 local function lowerGrids()
@@ -141,6 +153,10 @@ local function lowerGrids()
     gridsUp = false
     shareGrid(-1)
     MultiActionBar_HideAllGrids()
+    if mainGridShared then
+        mainGridShared = false
+        shareMainGrid(-1)
+    end
 end
 
 -- Showgrid and Hide on the action buttons are protected, so a close in combat waits.

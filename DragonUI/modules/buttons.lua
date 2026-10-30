@@ -228,19 +228,37 @@ function addon.buttons_iterator()
     return advance
 end
 
+-- With the art hidden the main bar's empty slots hide like the other bars', unless the game always shows them.
+function addon.MainSlotsFollowGrid()
+    local db = GetButtonsConfig()
+    return (db and db.hide_main_bar_background and GetCVar('alwaysShowActionBars') ~= '1') and true or false
+end
+
 function addon.RefreshButtonGrid()
     if not IsModuleEnabled() then return end
     if InCombatLockdown() then
         ButtonsModule.pendingRefresh = true
         return
     end
+    local follow = addon.MainSlotsFollowGrid()
     for slot = 1, NUM_ACTIONBAR_BUTTONS do
         local mainSlot = NumberedGlobal('ActionButton', slot)
-        if mainSlot then
+        if mainSlot and not follow then
             mainSlot:SetAttribute('showgrid', 1)
             ActionButton_ShowGrid(mainSlot)
+        elseif mainSlot then
+            -- Only the share a forced pass added goes, so a drag or the open spellbook keeps its own.
+            local count = mainSlot:GetAttribute('showgrid') or 0
+            if ButtonsModule.mainGridForced and count > 0 then
+                count = count - 1
+                mainSlot:SetAttribute('showgrid', count)
+            end
+            if count == 0 and not (mainSlot.action and HasAction(mainSlot.action)) then
+                mainSlot:Hide()
+            end
         end
     end
+    ButtonsModule.mainGridForced = not follow
 end
 
 local function HasPetSlotName(name)
@@ -1140,7 +1158,7 @@ local function SetupHooks()
     hooksecurefunc('ActionButton_HideGrid', function(button)
         if not IsModuleEnabled() then return end
         if InCombatLockdown() then return end
-        if not button then return end
+        if not button or addon.MainSlotsFollowGrid() then return end
         local name = button:GetName()
         if name and name:match("^ActionButton%d+$") then
             button:SetAttribute('showgrid', 1)
@@ -1202,6 +1220,7 @@ local function Initialize()
             RefreshFrameTint()
             if IsModuleEnabled() then
                 addon.RefreshAllHotkeys()
+                addon.RefreshButtonGrid()
             end
         end
         addon.db.RegisterCallback(ButtonsModule, "OnProfileChanged", OnProfileChanged)
@@ -1255,6 +1274,7 @@ end)
 hooksecurefunc("SetCVar", function(name, value)
     if name == "alwaysShowActionBars" then
         if not IsModuleEnabled() then return end
+        addon.RefreshButtonGrid()
         local mixin = addon.MainMenuBarMixin
         if mixin and mixin.update_main_bar_background then
             mixin:update_main_bar_background()

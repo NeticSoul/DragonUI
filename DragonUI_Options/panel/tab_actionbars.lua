@@ -211,7 +211,7 @@ local function BuildGeneralTab(scroll)
 
     C:AddToggle(buttons, {
         label = LO["Hide Main Bar Background"],
-        desc = LO["Hide the background texture of the main action bar."],
+        desc = LO["Hide the main bar's art and gryphons, leaving only the buttons."],
         dbPath = "buttons.hide_main_bar_background",
         requiresReload = true,
         callback = RefreshBars,
