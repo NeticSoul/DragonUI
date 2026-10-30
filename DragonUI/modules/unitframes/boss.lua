@@ -65,14 +65,6 @@ local TEXTURES = UF.TEXTURES.targetStyle
 local BOSS_COORDS = UF.BOSS_COORDS.targetStyle
 local PORTRAIT_MASK = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask"
 
--- Atlas border name by classification (boss frames always >= elite)
-local CLASSIFICATION_ATLAS = {
-    worldboss = "TargetFrame-TextureFrame-Elite",
-    elite     = "TargetFrame-TextureFrame-Elite",
-    rareelite = "TargetFrame-TextureFrame-RareElite",
-    rare      = "TargetFrame-TextureFrame-Rare",
-}
-
 local function ApplyEliteDecoration(bossFrame, portrait)
     local elite = bossFrame.DragonUI_Elite
     if not elite or not portrait then return end

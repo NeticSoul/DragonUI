@@ -320,7 +320,7 @@ local function SlashCommandHandler(input)
         -- Tint DragonUI_TargetBG bright red/green to visualize its full extent
         local bg = _G["DragonUI_TargetBG"]
         if not bg then
-            print(L["BG texture not found"])
+            addon:Print(L["BG texture not found"])
         else
             if arg == "red" then
                 bg:SetVertexColor(1, 0, 0, 1)
@@ -371,7 +371,7 @@ local function SlashCommandHandler(input)
             if b and b > 0 and b <= 128 and r > 0 and r <= 256 then
                 bg:SetTexCoord(0, r/256, 0, b/128)
                 bg:SetSize(r, b)
-                print("|cFFFFD700" .. string.format(L["Crop applied: showing %dx%d of 256x128 (texcoord 0-%.3f, 0-%.3f)"], r, b, r/256, b/128) .. "|r")
+                addon:Print("|cFFFFD700" .. string.format(L["Crop applied: showing %dx%d of 256x128 (texcoord 0-%.3f, 0-%.3f)"], r, b, r/256, b/128) .. "|r")
             else
                 print(L["Invalid values. Height 1-128, Width 1-256"])
             end
@@ -407,7 +407,7 @@ local function SlashCommandHandler(input)
         local n = tonumber(arg)
         if not n then
             -- List all elements
-            print("|cFF00FF00" .. L["=== TargetFrame elements (use /dui shadowtest N to toggle) ==="] .. "|r")
+            addon:Print("|cFF00FF00" .. L["=== TargetFrame elements (use /dui shadowtest N to toggle) ==="] .. "|r")
             for i, e in ipairs(elements) do
                 local vis = e.visible and ("|cFF00FF00" .. L["VIS"] .. "|r") or ("|cFFFF0000" .. L["inv"] .. "|r")
                 local sh = e.shown and L["SHOWN"] or L["hidden"]

@@ -108,16 +108,6 @@ function UF.SmallFrame.Create(opts)
     -- UNIT HELPERS
     -- ========================================================================
 
-    local function GetUnit()
-        if not UnitExists(opts.parentUnit) then
-            return nil
-        end
-        if UnitExists(opts.unitToken) then
-            return opts.unitToken
-        end
-        return nil
-    end
-
     local function ShouldShow()
         if not IsNativeVisibilityEnabled() then
             return false
