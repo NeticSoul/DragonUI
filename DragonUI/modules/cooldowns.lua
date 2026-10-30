@@ -202,17 +202,20 @@ function addon.RefreshCooldowns()
                 end
 
                 -- Refresh active cooldowns or force check if cooldowns are enabled
-                if cooldown.GetCooldown then
-                    local start, duration = cooldown:GetCooldown()
-                    if start and start > 0 then
-                        -- Forget the dedupe values, or a running cooldown skips the enable/disable change.
-                        cooldown._dui_cdStart = nil
-                        addon.CooldownText.OnSetCooldown(cooldown, start, duration)
-                    elseif moduleDb.enabled and cooldown.text then
-                        -- If cooldowns are enabled but no active cooldown, ensure text is hidden
-                        cooldown.text:Hide()
-                        cooldown.remain = nil
-                    end
+                -- 3.3.5a Cooldown has no GetCooldown; OnSetCooldown caches the last pair it was given.
+                local start, duration = cooldown._dui_cdStart, cooldown._dui_cdDur
+                local now = GetTime()
+                local cached = type(start) == 'number' and type(duration) == 'number'
+                -- OnSetCooldown rebased this future start to "now"; replaying it would restart the countdown.
+                local rebased = cached and start > now + 2
+                if cached and not rebased and start > 0 and start + duration > now then
+                    -- Forget the dedupe values, or a running cooldown skips the enable/disable change.
+                    cooldown._dui_cdStart = nil
+                    addon.CooldownText.OnSetCooldown(cooldown, start, duration)
+                elseif not rebased and moduleDb.enabled and cooldown.text then
+                    -- If cooldowns are enabled but no active cooldown, ensure text is hidden
+                    cooldown.text:Hide()
+                    cooldown.remain = nil
                 end
             end
         end
