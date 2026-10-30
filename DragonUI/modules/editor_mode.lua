@@ -46,6 +46,18 @@ end
 
 addon.ApplyErrorMessagesPosition = ApplyErrorMessagesPosition
 
+local errorMessagesFadeRegistered = false
+
+local function RegisterErrorMessagesFade()
+    if errorMessagesFadeRegistered or not (UIErrorsFrame and addon.VisibilityFade) then return end
+    errorMessagesFadeRegistered = true
+    -- The error frame spans the screen centre, so it must never take the mouse.
+    addon.VisibilityFade.Register("errorMessages", UIErrorsFrame, {
+        dbTable = function() return GetWidgetConfig("errorMessages") end,
+        enableMouse = false,
+    })
+end
+
 -- ApplyErrorMessagesPosition leaves the frame alone without a custom spot, so the reset puts it back itself.
 local function RestoreErrorMessagesDefaultPosition()
     if not UIErrorsFrame then return end
@@ -639,6 +651,8 @@ errorFrameInit:RegisterEvent("PLAYER_ENTERING_WORLD")
 errorFrameInit:SetScript("OnEvent", function()
     SetupErrorMessagesMover()
     ApplyErrorMessagesPosition()
+    RegisterErrorMessagesFade()
+    if addon.VisibilityFade then addon.VisibilityFade.Update("errorMessages") end
 end)
 
 

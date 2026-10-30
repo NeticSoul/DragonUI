@@ -1775,3 +1775,5 @@ L["Camera"] = true
 L["Max Camera Distance"] = true
 L["Let the camera zoom out further than the game's own slider allows."] = true
 L["Camera Distance"] = true
+L["Error Messages"] = true
+L["The red errors and yellow quest updates in the middle of the screen."] = true

@@ -368,6 +368,9 @@ R.partyVisibility = function()
     end
     R.partyText()
 end
+R.errorMessagesVisibility = function()
+    if addon.VisibilityFade then addon.VisibilityFade.Update("errorMessages") end
+end
 -- Same as the Options toggles: apply the bar, then push the flags to Blizzard's own action bar settings.
 R.barToggle = function()
     R.barVisibility()
@@ -613,13 +616,17 @@ local function VisibilityRows(field, refresh, o)
     if o.alwaysHidden then
         rows[#rows + 1] = Check(T("Always Hidden"), field("always_hidden"), refresh)
     end
-    rows[#rows + 1] = Check(T("Show on Hover Only"), field("show_on_hover"), refresh)
+    if not o.noHover then
+        rows[#rows + 1] = Check(T("Show on Hover Only"), field("show_on_hover"), refresh)
+    end
     rows[#rows + 1] = CombatSwitch(T("Show in Combat Only"), field, "show_in_combat", "hide_in_combat", refresh)
     if o.hideInCombat then
         rows[#rows + 1] = CombatSwitch(T("Hide in Combat"), field, "hide_in_combat", "show_in_combat", refresh)
     end
-    rows[#rows + 1] = Drop(T("Hover/Combat Logic"), field("visibility_logic"), LOGIC_ITEMS, refresh, {
-        get = function() return GetDB(field("visibility_logic")) == "or" and "or" or "and" end })
+    if not o.noHover then
+        rows[#rows + 1] = Drop(T("Hover/Combat Logic"), field("visibility_logic"), LOGIC_ITEMS, refresh, {
+            get = function() return GetDB(field("visibility_logic")) == "or" and "or" or "and" end })
+    end
     return rows
 end
 
@@ -2010,6 +2017,10 @@ Fades("focus", Dotted("unitframe.focus"), R.focus)
 Fades("PetFrame", Dotted("unitframe.pet"), R.pet)
 Fades("party", Dotted("unitframe.party"), R.partyVisibility, { alwaysHidden = true })
 Fades("boss", Dotted("unitframe.boss"), R.boss)
+-- The error frame never takes the mouse, so hover rows would do nothing.
+E.Register("errorMessages", { compact = true, settings = {} })
+Fades("errorMessages", Dotted("widgets.errorMessages"), R.errorMessagesVisibility,
+    { alwaysHidden = true, hideInCombat = true, noHover = true })
 
 -- Dialogs with few settings and no wide dropdowns shrink to the width of their coordinate rows.
 for _, frameName in ipairs({

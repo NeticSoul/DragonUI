@@ -1781,6 +1781,8 @@ L["Camera"] = "Камера"
 L["Max Camera Distance"] = "Максимальная дальность камеры"
 L["Let the camera zoom out further than the game's own slider allows."] = "Позволяет отодвинуть камеру дальше, чем разрешает ползунок игры."
 L["Camera Distance"] = "Дальность камеры"
+L["Error Messages"] = "Сообщения об ошибках"
+L["The red errors and yellow quest updates in the middle of the screen."] = "Красные ошибки и жёлтые сообщения о заданиях в центре экрана."
 
 -- Farm mode
 L["Farm Mode"] = "Режим фарма"

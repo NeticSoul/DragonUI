@@ -978,6 +978,24 @@ local function BuildEnhancementsTab(scroll)
         disabled = function() return not C:GetDBValue("camera.max_distance") end,
         callback = RefreshCamera,
     })
+
+    -- ====================================================================
+    -- ERROR MESSAGES
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local errorSection = C:AddSection(scroll, LO["Error Messages"])
+
+    C:AddDescription(errorSection, LO["The red errors and yellow quest updates in the middle of the screen."])
+
+    C:AddVisibilityFadeToggles(errorSection, {
+        dbPrefix = "widgets.errorMessages",
+        alwaysHidden = true,
+        hideInCombat = true,
+        noHover = true,
+        callback = function()
+            if addon.VisibilityFade then addon.VisibilityFade.Update("errorMessages") end
+        end,
+    })
 end
 
 -- Register the tab (order 11 = after Quest Tracker, before Profiles)

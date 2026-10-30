@@ -1778,6 +1778,8 @@ L["Camera"] = "镜头"
 L["Max Camera Distance"] = "最大镜头距离"
 L["Let the camera zoom out further than the game's own slider allows."] = "让镜头拉得比游戏自带滑块允许的更远。"
 L["Camera Distance"] = "镜头距离"
+L["Error Messages"] = "错误信息"
+L["The red errors and yellow quest updates in the middle of the screen."] = "屏幕中央的红色错误和黄色任务进度信息。"
 
 -- Farm mode
 L["Farm Mode"] = "刷怪模式"

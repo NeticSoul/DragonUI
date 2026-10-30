@@ -187,7 +187,10 @@ local defaults = {
                 anchor = "CENTER",
                 posX = 0,
                 posY = 160,
-                custom_position = false
+                custom_position = false,
+                always_hidden = false,
+                show_in_combat = false,
+                hide_in_combat = false,
             },
             positionPresetPanel = {
                 anchor = "TOP",
