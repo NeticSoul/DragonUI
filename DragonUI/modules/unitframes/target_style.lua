@@ -247,6 +247,20 @@ function UF.TargetStyle.Create(opts)
         local config = GetConfig()
         if not config then return end
 
+        -- Called from TargetFrame_Update too, so the portrait is only redrawn for a new unit.
+        if config.racePortrait and UnitExists(unitToken) and UnitIsPlayer(unitToken) then
+            local guid = UnitGUID(unitToken)
+            if guid and updateCache.lastPortraitRace == guid then
+                return
+            end
+            if UF.ApplyRacePortraitToTexture(unitToken, Portrait) then
+                updateCache.lastPortraitRace = guid
+                updateCache.lastPortraitClass = nil
+                return
+            end
+        end
+        updateCache.lastPortraitRace = nil
+
         local useAlternative = config.alternativeClassIcons and true or false
 
         if config.classPortrait and UnitExists(unitToken) and UnitIsPlayer(unitToken) then
@@ -709,6 +723,7 @@ function UF.TargetStyle.Create(opts)
             hooksecurefunc("UnitFramePortrait_Update", function(frame)
                 if frame == BlizzFrame then
                     updateCache.lastPortraitClass = nil
+                    updateCache.lastPortraitRace = nil
                     UpdateClassPortrait()
                 end
             end)
@@ -1338,6 +1353,9 @@ function UF.TargetStyle.Create(opts)
                 -- Player portrait
                 if Portrait then
                     SetPortraitTexture(Portrait, "player")
+                    Portrait:SetTexCoord(0, 1, 0, 1)
+                    UF.ApplyPortraitStyle("player", Portrait, GetConfig())
+                    updateCache.lastPortraitRace = nil
                 end
 
                 -- Name background with player color
@@ -1501,6 +1519,7 @@ function UF.TargetStyle.Create(opts)
                     ManaBar:SetValue(UnitIsConnected(unitToken) and UnitPower(unitToken, powerType) or maxPower)
                 end
                 updateCache.lastPortraitClass = nil
+                updateCache.lastPortraitRace = nil
                 UpdateClassPortrait()
                 UpdateNameBackground()
                 UpdateClassification()
@@ -1552,6 +1571,7 @@ function UF.TargetStyle.Create(opts)
             -- Unit changed (target/focus) — clear throttle caches so first update is immediate
             updateCache.lastColorFrame = nil
             updateCache.lastPortraitClass = nil
+            updateCache.lastPortraitRace = nil
             if UnitExists(unitToken) and opts.forceLayoutOnUnitChange then
                 ForceReapplyLayout()
             end
@@ -1568,6 +1588,7 @@ function UF.TargetStyle.Create(opts)
             local unit = ...
             if unit == unitToken and UnitExists(unitToken) then
                 updateCache.lastPortraitClass = nil
+                updateCache.lastPortraitRace = nil
                 UpdateClassPortrait()
 
                 if event == "UNIT_MODEL_CHANGED" then
@@ -1725,6 +1746,9 @@ function UF.TargetStyle.Create(opts)
                 DeadText:SetPoint("CENTER", HealthBar, "CENTER", opts.deadTextOffsetX or 0, opts.deadTextOffsetY or 0)
             end
             UpdateNameBackground()
+            updateCache.lastPortraitClass = nil
+            updateCache.lastPortraitRace = nil
+            UpdateClassPortrait()
             UpdateClassification()
             UpdateThreat()
             UpdateHealthBarColor()

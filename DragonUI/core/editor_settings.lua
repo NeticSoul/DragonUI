@@ -931,12 +931,22 @@ local function PortraitRows(key, refresh)
         Check(T("Class Portrait"), base .. ".classPortrait", refresh, {
             set = function(value)
                 SetDB(base .. ".classPortrait", value)
-                if value then SetDB(base .. ".alternativeClassIcons", true) end
+                if value then
+                    SetDB(base .. ".alternativeClassIcons", true)
+                    SetDB(base .. ".racePortrait", false)
+                end
                 Immediate(refresh)
                 E.Rebuild()
             end }),
         Check(T("Alternative Class Icons"), base .. ".alternativeClassIcons", refresh, {
             disabled = function() return not GetDB(base .. ".classPortrait") end }),
+        Check(T("Race Portrait"), base .. ".racePortrait", refresh, {
+            set = function(value)
+                SetDB(base .. ".racePortrait", value)
+                if value then SetDB(base .. ".classPortrait", false) end
+                Immediate(refresh)
+                E.Rebuild()
+            end }),
     }
 end
 
@@ -1084,6 +1094,7 @@ E.Register("party", { settings = Join({
     Section(T("Appearance"), true),
     Check(T("Class Color Health"), "unitframe.party.classcolor", R.partyText),
     Drop(T("PvP Icon Style"), "unitframe.party.pvp_icon_style", PVP_STYLES, R.partyText),
+    PortraitRows("party", R.partyText),
     Section(T("Text Display"), true, nil, PreviewTexts("party")),
     TextRows("party", R.partyText),
 }) })

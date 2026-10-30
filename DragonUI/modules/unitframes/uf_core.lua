@@ -93,6 +93,7 @@ UF.TEXTURES = {
     -- Shared class icon texture (used by class portrait system)
     CLASS_ICON_ALTERNATIVE_PREFIX = "Interface\\AddOns\\DragonUI\\Textures\\ClassIcons\\",
     CLASS_ICON_ALTERNATIVE_SUFFIX = ".blp",
+    RACE_PORTRAIT_PREFIX = "Interface\\AddOns\\DragonUI\\Textures\\RacePortraits\\",
     CLASS_ICON = "Interface\\TargetingFrame\\UI-Classes-Circles",
 }
 
@@ -383,6 +384,46 @@ function UF.ApplyClassPortraitToTexture(unit, portraitTexture, useAlternative)
         return true
     end
 
+    return false
+end
+
+-- A custom race keeps its 3D portrait. The files say Undead where the API says Scourge.
+local RACE_PORTRAIT_FILES = {
+    Human = "Human", Orc = "Orc", Dwarf = "Dwarf", NightElf = "NightElf", Scourge = "Undead",
+    Tauren = "Tauren", Gnome = "Gnome", Troll = "Troll", BloodElf = "BloodElf", Draenei = "Draenei",
+}
+
+-- The one place that knows where race portraits come from; file is "Human_Male" and the like.
+function UF.SetRacePortraitFile(texture, file)
+    -- SetTexture answers nil until a client restart picks up these files after an update.
+    if not texture:SetTexture(UF.TEXTURES.RACE_PORTRAIT_PREFIX .. file) then
+        return false
+    end
+    texture:SetTexCoord(0, 1, 0, 1)
+    return true
+end
+
+function UF.ApplyRacePortraitToTexture(unit, portraitTexture)
+    if not portraitTexture or not unit or not UnitExists(unit) or not UnitIsPlayer(unit) then
+        return false
+    end
+    local _, raceFile = UnitRace(unit)
+    local race = raceFile and RACE_PORTRAIT_FILES[raceFile]
+    if not race or not UF.SetRacePortraitFile(portraitTexture, race .. (UnitSex(unit) == 3 and "_Female" or "_Male")) then
+        return false
+    end
+    portraitTexture:SetAlpha(1)
+    return true
+end
+
+-- The menus keep the two exclusive; race goes first if an old profile somehow holds both.
+function UF.ApplyPortraitStyle(unit, portraitTexture, config)
+    if config.racePortrait and UF.ApplyRacePortraitToTexture(unit, portraitTexture) then
+        return true
+    end
+    if config.classPortrait then
+        return UF.ApplyClassPortraitToTexture(unit, portraitTexture, config.alternativeClassIcons)
+    end
     return false
 end
 

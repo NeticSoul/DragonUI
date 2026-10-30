@@ -2512,8 +2512,8 @@ local function RestorePlayerPortraitTexture()
     if not IsInVehicle() then
         -- No SetDrawLayer here: BigDebuffs moves the portrait's layer so its icon draws on top (#242).
         SetPortraitTexture(PlayerPortrait, "player")
-        PlayerPortrait:SetTexCoord(0, 1, 0, 1)
     end
+    PlayerPortrait:SetTexCoord(0, 1, 0, 1)
     PlayerPortrait:SetAlpha(1)
 end
 
@@ -2522,12 +2522,8 @@ local function UpdatePlayerClassPortrait()
     local config = GetPlayerConfig()
     if not config then return end
 
-    local useClassPortrait = config.classPortrait and not IsInVehicle()
-    if useClassPortrait and UF.ApplyClassPortraitToTexture(
-        "player",
-        PlayerPortrait,
-        config.alternativeClassIcons
-    ) then
+    local useClassPortrait = (config.classPortrait or config.racePortrait) and not IsInVehicle()
+    if useClassPortrait and UF.ApplyPortraitStyle("player", PlayerPortrait, config) then
         local dragonFrame = _G["DragonUIUnitframeFrame"]
         if dragonFrame and dragonFrame.ClassPortraitOverlay then
             dragonFrame.ClassPortraitOverlay:Hide()
@@ -2553,12 +2549,8 @@ local function RefreshPlayerPortraitState(unit)
        and dragonFrame.PortraitOverlay
        and dragonFrame.PortraitOverlay:IsShown() then
         local pConfig = GetPlayerConfig()
-        if pConfig and pConfig.classPortrait and not IsInVehicle() and portraitUnit ~= "vehicle" then
-            if not UF.ApplyClassPortraitToTexture(
-                "player",
-                dragonFrame.PortraitOverlayTexture,
-                pConfig.alternativeClassIcons
-            ) then
+        if pConfig and (pConfig.classPortrait or pConfig.racePortrait) and not IsInVehicle() and portraitUnit ~= "vehicle" then
+            if not UF.ApplyPortraitStyle("player", dragonFrame.PortraitOverlayTexture, pConfig) then
                 SetPortraitTexture(dragonFrame.PortraitOverlayTexture, portraitUnit)
             end
         else

@@ -85,6 +85,7 @@ end
 local function HandleClassPortraitToggle(unitKey, refreshFunc, enabled)
     if enabled then
         C:SetDBValue("unitframe." .. unitKey .. ".alternativeClassIcons", true)
+        C:SetDBValue("unitframe." .. unitKey .. ".racePortrait", false)
     end
     RefreshUnitFramesTabAfterToggle(refreshFunc)
 end
@@ -154,6 +155,21 @@ local function AddClassPortraitToggles(parent, unitKey, refreshFunc)
             return not C:GetDBValue("unitframe." .. unitKey .. ".classPortrait") or IsPortraitOff(unitKey)
         end,
         callback = refreshFunc,
+    })
+
+    C:AddToggle(parent, {
+        label = LO["Race Portrait"],
+        desc = LO["Race icon instead of 3D model for players."],
+        dbPath = "unitframe." .. unitKey .. ".racePortrait",
+        disabled = function()
+            return IsPortraitOff(unitKey)
+        end,
+        callback = function(value)
+            if value then
+                C:SetDBValue("unitframe." .. unitKey .. ".classPortrait", false)
+            end
+            RefreshUnitFramesTabAfterToggle(refreshFunc)
+        end,
     })
 end
 
@@ -819,6 +835,8 @@ local function BuildPartySection(scroll)
         dbPath = "unitframe.party.classcolor",
         callback = refreshParty,
     })
+
+    AddClassPortraitToggles(s, "party", refreshParty)
 
     C:AddToggle(s, {
         label = LO["Format Large Numbers"],

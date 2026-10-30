@@ -50,6 +50,26 @@ PartyFrames.initialized = false
 -- Texture paths from shared core (single source of truth)
 local TEXTURES = UF.TEXTURES.party
 
+local PREVIEW_MEMBERS = {
+    Alliance = {
+        { name = "Aldric", class = "WARRIOR", portrait = "Human_Male", health = 1, mana = 0.35, powerBar = "rageBar", maxPower = 100 },
+        { name = "Sylwen", class = "DRUID", portrait = "NightElf_Female", health = 0.82, mana = 0.64, powerBar = "manaBar" },
+        { name = "Tobbin", class = "ROGUE", portrait = "Gnome_Male", health = 0.57, mana = 0.91, powerBar = "energyBar", maxPower = 100 },
+        { name = "Durgrim", class = "DEATHKNIGHT", portrait = "Dwarf_Male", health = 0.36, mana = 0.48, powerBar = "runicPowerBar", maxPower = 100 },
+    },
+    Horde = {
+        { name = "Grushak", class = "WARRIOR", portrait = "Orc_Male", health = 1, mana = 0.35, powerBar = "rageBar", maxPower = 100 },
+        { name = "Hanoka", class = "DRUID", portrait = "Tauren_Male", health = 0.82, mana = 0.64, powerBar = "manaBar" },
+        { name = "Morvane", class = "ROGUE", portrait = "Undead_Female", health = 0.57, mana = 0.91, powerBar = "energyBar", maxPower = 100 },
+        { name = "Sarethil", class = "DEATHKNIGHT", portrait = "BloodElf_Female", health = 0.36, mana = 0.48, powerBar = "runicPowerBar", maxPower = 100 },
+    },
+}
+
+local function GetPreviewMember(index)
+    local members = PREVIEW_MEMBERS[UnitFactionGroup("player")] or PREVIEW_MEMBERS.Alliance
+    return members[index]
+end
+
 -- ===============================================================
 -- CENTRALIZED SYSTEM INTEGRATION
 -- ===============================================================
@@ -307,9 +327,9 @@ local function ShowPartyFramesTest()
         if frame then
             frame:SetFrameStrata('BACKGROUND')
             frame:SetFrameLevel(1)
-            frame:Show()
         end
     end
+    PartyFrames:UpdateEditorPreview()
 end
 
 local function HidePartyFramesTest()
@@ -323,6 +343,17 @@ local function HidePartyFramesTest()
         local frame = _G['PartyMemberFrame' .. i]
         if frame and not UnitExists("party" .. i) then
             frame:Hide()
+            if not GetPartyMember(i) then
+                local name = _G[frame:GetName() .. 'Name']
+                local portrait = _G[frame:GetName() .. 'Portrait']
+                if name then
+                    name:SetText("")
+                end
+                -- If SetPortraitTexture fails on a far-away member, the race portrait could stay behind.
+                if portrait then
+                    portrait:SetTexture(nil)
+                end
+            end
         end
     end
 end
@@ -998,7 +1029,14 @@ local function UpdatePartyBarText(kind, statusBar, forceShow)
     end
 
     local current, max = spec.GetValues(partyUnit)
-    if fake then current, max = TextSystem.ScalePreviewValues(kind, current, max) end
+    if fake then
+        local member = GetPreviewMember(tonumber(frameIndex))
+        current, max = TextSystem.ScalePreviewValues(kind, current, max)
+        if kind == "mana" and member.maxPower then
+            max = member.maxPower
+        end
+        current = math.floor(max * member[kind])
+    end
 
     if current and max and max > 0 then
         local textFormat = settings and settings.textFormat or "formatted"
@@ -1587,6 +1625,118 @@ local function ShouldShowDragonUIPartySlot(index)
     return UnitExists("party" .. index)
 end
 
+-- Anything but a class icon needs the whole texture back: the classic icon leaves a crop on it.
+local function UpdatePartyClassPortrait(frame)
+    local unit = "party" .. frame:GetID()
+    local portrait = _G[frame:GetName() .. 'Portrait']
+    if not portrait or not UnitExists(unit) then return end
+    local settings = GetSettings()
+    -- In a vehicle frame.unit is the vehicle's token and the slot keeps the vehicle's portrait.
+    if (settings.classPortrait or settings.racePortrait) and frame.unit == unit
+        and UF.ApplyPortraitStyle(unit, portrait, settings) then
+        return
+    end
+    SetPortraitTexture(portrait, frame.unit or unit)
+    portrait:SetTexCoord(0, 1, 0, 1)
+end
+
+local function PaintPreviewMember(frame, member)
+    UpdateDisconnectedState(frame)
+
+    local name = _G[frame:GetName() .. 'Name']
+    if name then
+        name:SetText(member.name)
+    end
+
+    local portrait = _G[frame:GetName() .. 'Portrait']
+    if portrait then
+        local settings = GetSettings()
+        if settings.classPortrait then
+            UF.ApplyClassPortraitIcon(portrait, member.class, settings.alternativeClassIcons)
+        elseif not UF.SetRacePortraitFile(portrait, member.portrait) then
+            SetPortraitTexture(portrait, "player")
+            portrait:SetTexCoord(0, 1, 0, 1)
+        end
+        SetDesaturation(portrait, nil)
+    end
+
+    local disconnect = _G[frame:GetName() .. 'Disconnect']
+    if disconnect then
+        disconnect:Hide()
+    end
+
+    -- Blizzard only updates this voice button on slots with a unit, and the template shows it.
+    local speaker = _G[frame:GetName() .. 'Speaker']
+    if speaker then
+        speaker:Hide()
+    end
+
+    local healthBar = EnsureDragonHealthBar(frame)
+    local healthTexture = healthBar and healthBar:GetStatusBarTexture()
+    if healthTexture then
+        -- Not UpdatePartyHealthBarColor: it returns early without a unit.
+        local color = GetSettings().classcolor and RAID_CLASS_COLORS[member.class]
+        local texturePath = color and TEXTURES.healthBarStatus or TEXTURES.healthBar
+        if healthTexture:GetTexture() ~= texturePath then
+            healthTexture:SetTexture(texturePath)
+        end
+        if color then
+            healthBar:SetStatusBarColor(color.r, color.g, color.b, 1)
+        else
+            healthBar:SetStatusBarColor(1, 1, 1, 1)
+        end
+
+        healthBar:SetMinMaxValues(0, 1)
+        healthBar:SetValue(member.health)
+        healthTexture:SetTexCoord(0, member.health, 0, 1)
+    end
+
+    local manaBar = EnsureDragonManaBar(frame)
+    if manaBar then
+        local powerTexture = TEXTURES[member.powerBar]
+        if manaBar.__dui_powerTex ~= powerTexture then
+            manaBar:SetStatusBarTexture(powerTexture)
+            manaBar.__dui_powerTex = powerTexture
+        end
+        manaBar:SetStatusBarColor(1, 1, 1, 1)
+        manaBar:SetMinMaxValues(0, 1)
+        manaBar:SetValue(member.mana)
+
+        local manaTexture = manaBar:GetStatusBarTexture()
+        if manaTexture then
+            manaTexture:SetTexCoord(0, member.mana, 0, 1)
+        end
+    end
+
+    UpdateHealthText(healthBar, false)
+    UpdateManaText(manaBar, false)
+end
+
+function PartyFrames:UpdateEditorPreview()
+    if not (addon.EditorMode and addon.EditorMode:IsActive()) or InCombatLockdown() then
+        return
+    end
+
+    for i = 1, MAX_PARTY_MEMBERS do
+        local frame = _G['PartyMemberFrame' .. i]
+        if frame then
+            -- Blizzard decides by GetPartyMember, and UnitExists can briefly return false.
+            if UnitExists("party" .. i) or GetPartyMember(i) then
+                frame:Show()
+            elseif GetSettings().always_hidden then
+                frame:Hide()
+            else
+                frame:Show()
+                -- Leaving a group while hidden strands alpha 0: the engine stops managing the slot.
+                if addon.VisibilityFade and not ShouldPartyFramesBeVisible() then
+                    addon.VisibilityFade.Reset("party" .. i)
+                end
+                PaintPreviewMember(frame, GetPreviewMember(i))
+            end
+        end
+    end
+end
+
 local function RefreshSinglePartyFrameVisibility(index)
     local frame = _G['PartyMemberFrame' .. index]
     if not frame then
@@ -1831,6 +1981,12 @@ local function SetupPartyHooks()
         end
     end)
 
+    hooksecurefunc("UnitFramePortrait_Update", function(frame)
+        if frame and frame:GetName() and frame:GetName():match("^PartyMemberFrame%d+$") then
+            UpdatePartyClassPortrait(frame)
+        end
+    end)
+
     -- ===============================================================
     -- DISCONNECT VISUAL FIX (mod-playerbots compatibility)
     -- ===============================================================
@@ -1920,6 +2076,7 @@ function PartyFrames:UpdateSettings()
             -- Re-apply disconnected state AFTER styling (gray name, hidden texts, etc.)
             -- StylePartyFrames resets name color to yellow, so this must come last
             UpdateDisconnectedState(frame)
+            UpdatePartyClassPortrait(frame)
 
             if addon.VisibilityFade then
                 local hoverFrames = { frame }
@@ -1938,6 +2095,7 @@ function PartyFrames:UpdateSettings()
 
     -- Single source of truth for Show/Hide decisions.
     RefreshAllPartyFrameVisibility()
+    self:UpdateEditorPreview()
 end
 
 -- ===============================================================
@@ -2046,6 +2204,8 @@ connectionFrame:SetScript("OnEvent", function(self, event)
             end
         end
     end
+    -- The loop above copies the native bars onto every overlay, invented members included.
+    PartyFrames:UpdateEditorPreview()
 end)
 
 -- ===============================================================
@@ -2089,6 +2249,8 @@ recoveryFrame:SetScript("OnEvent", function(self, event, unit)
     if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
         -- Skip refresh while editor mode is active (test frames are intentionally shown)
         if addon.EditorMode and addon.EditorMode:IsActive() then
+            -- Blizzard blanks empty slots on roster changes, so this waits for its handler.
+            addon:After(0, function() PartyFrames:UpdateEditorPreview() end)
             return
         end
         RequestPartyVisibilityRefresh()
