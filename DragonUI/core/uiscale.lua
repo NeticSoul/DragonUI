@@ -5,7 +5,7 @@ local addon = select(2, ...)
 local abs, floor, max, min = math.abs, math.floor, math.max, math.min
 
 -- Blizzard's Video slider stops at 0.64; UIParent:SetScale has no such floor.
-local UIScale = { MIN = 0.4, MAX = 1 }
+local UIScale = { MIN = 0.4, MAX = 1.15 }
 addon.UIScale = UIScale
 
 local EPSILON = 0.001
