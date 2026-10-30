@@ -1057,6 +1057,9 @@ local defaults = {
             combopoints = {
                 enabled = true, -- Retail orb bar under the player and/or small orbs on the target (Options > Unit Frames)
             },
+            totemframe = {
+                enabled = true, -- Round totem timers under the player: HD ring, editor spot (shamans)
+            },
             swingtimer = {
                 enabled = false, -- Main hand, off hand and ranged swing bars (settings in editor mode)
             },

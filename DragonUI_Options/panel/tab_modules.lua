@@ -47,7 +47,7 @@ end
 
 -- Sections of the individual module list; the titles are the options tab and group names (LO keys).
 local ADVANCED_SECTIONS = {
-    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "auraborders", "auracooldowns" } },
+    { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "totemframe", "auraborders", "auracooldowns" } },
     { title = "Bars", modules = { "mainbars", "vehicle", "stance", "petbar", "multicast", "extrabar1", "buttons", "cooldowns", "noop", "keybinding" } },
     { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance", "addonmanager" } },
     { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "professions", "talents", "worldmap", "loot_skin", "mail", "taxiframe" } },
@@ -256,6 +256,9 @@ local function BuildModulesTab(scroll)
         local _, playerClass = UnitClass("player")
         if playerClass ~= "ROGUE" and playerClass ~= "DRUID" then
             hiddenAdvancedModules.combopoints = true
+        end
+        if playerClass ~= "SHAMAN" then
+            hiddenAdvancedModules.totemframe = true
         end
 
         local function AddAdvancedToggle(section, moduleName)

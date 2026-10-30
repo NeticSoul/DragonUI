@@ -277,6 +277,10 @@ for row, key in ipairs({ "blue", "green", "orange", "red", "yellow", "grey" }) d
 end
 
 -- Forever's level badge, cut from the c60 sheet at its 1x atlas sizes.
+-- Both looks of the totem timers' ring on one sheet (scripts/foreverui/gen_totem_art.py).
+UF.SKINS.dragonui.totem = { file = ART .. "TotemRing", tc = { 2 / 128, 62 / 128, 2 / 64, 62 / 64 } }
+UF.SKINS.forever.totem = { file = ART .. "TotemRing", tc = { 66 / 128, 126 / 128, 2 / 64, 62 / 64 } }
+
 UF.LEVEL_ART = {
     file = ART .. "Forever\\Level",
     circle = { w = 39, h = 39, tc = { 0, 78 / 128, 0, 78 / 128 } },
@@ -558,5 +562,8 @@ function UF.RefreshSkins()
     -- Combo points' Auto location and orb style follow the frame art.
     if addon.RefreshComboPointsSystem then
         addon.RefreshComboPointsSystem()
+    end
+    if addon.RefreshTotemFrameSystem then
+        addon.RefreshTotemFrameSystem()
     end
 end

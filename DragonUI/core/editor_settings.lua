@@ -1812,6 +1812,7 @@ E.Register("combopoints", { settings = {
 
 -- Position only: the dialog keeps its coordinate rows and the reset that re-attaches them to the player frame.
 E.Register("dkrunes", { settings = {} })
+E.Register("totemframe", { settings = {} })
 
 -- Forever's swing timer rows, ranges at our HUD's 0.72 (see swingtimer.lua), one dialog per bar.
 local function SwingTimerSettings(hand)
@@ -2044,7 +2045,7 @@ Fades("errorMessages", Dotted("widgets.errorMessages"), R.errorMessagesVisibilit
 -- Dialogs with few settings and no wide dropdowns shrink to the width of their coordinate rows.
 for _, frameName in ipairs({
     "boss", "bagsbar", "stance", "totembar", "xpbar", "repbar", "tooltip", "questtracker",
-    "weapon_enchants", "tot", "fot", "petbar", "combopoints", "dkrunes",
+    "weapon_enchants", "tot", "fot", "petbar", "combopoints", "dkrunes", "totemframe",
 }) do
     local def = E.Get(frameName)
     if def then def.compact = true end
