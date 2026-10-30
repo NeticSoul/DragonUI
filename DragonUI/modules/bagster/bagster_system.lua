@@ -103,7 +103,7 @@ local function ApplyBagsterSystem()
     mod.BagsterModule.originalStates.ToggleBag = _G.ToggleBag
     mod.BagsterModule.originalStates.ToggleKeyRing = _G.ToggleKeyRing
 
-    -- Hook bag functions
+    -- Replaced on purpose, not hooked: a post-hook would still open the stock bags as well.
     _G.OpenBackpack = AutoShowInventory
     if not mod.BagsterModule.hooks.closeBackpack then
         hooksecurefunc("CloseBackpack", AutoHideInventory)
@@ -184,15 +184,11 @@ local function ApplyBagsterSystem()
     BankFrame:UnregisterAllEvents()
     BankFrame:Hide()
 
-    -- The stock guild vault is load-on-demand; blanking its loader keeps it from ever existing
+    -- Blanking the loader keeps the stock vault unloaded; one loaded by another addon owns the bank.
     if mod.BagsterModule.originalStates.GuildBankFrame_LoadUI == nil then
         mod.BagsterModule.originalStates.GuildBankFrame_LoadUI = _G.GuildBankFrame_LoadUI
     end
     _G.GuildBankFrame_LoadUI = function() end
-    if _G.GuildBankFrame then
-        GuildBankFrame:UnregisterAllEvents()
-        GuildBankFrame:Hide()
-    end
 
     if not mod.BagsterModule.hooks.inventoryEvents then
         mod("InventoryEvents"):Register(mod, "BANK_OPENED", function()

@@ -1042,7 +1042,10 @@ do
     watcher:SetScript("OnEvent", function(_, event)
         if not mod.BagsterModule.applied then return end
         if event == "GUILDBANKFRAME_OPENED" then
-            mod.ShowGuildFrame()
+            -- UIParent already shows a stock vault another addon loaded; two windows would share one session.
+            if not _G.GuildBankFrame then
+                mod.ShowGuildFrame()
+            end
         else
             mod.HideGuildFrame()
         end
