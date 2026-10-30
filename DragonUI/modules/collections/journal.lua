@@ -357,6 +357,12 @@ local function buildRow(parent)
         CO.MarkSeen(kind(), self._entry.creatureID)
         refresh()
     end)
+    -- The first click of the pair already selected the row through OnClick.
+    row:SetScript("OnDoubleClick", function(self, button)
+        if button ~= "LeftButton" or not (self._entry and self._entry.index) then return end
+        CO.Summon(kind(), self._entry)
+        refresh()
+    end)
     row:SetScript("OnEnter", function(self)
         if not (self._entry and self._entry.spellID) then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
