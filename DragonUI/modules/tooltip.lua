@@ -400,7 +400,7 @@ local function EnsureTooltipWidget()
             blizzardFrame = GameTooltip,
             configPath = {"widgets", "tooltip"},
             editorVisible = function()
-                return not IsTooltipCursorAnchored()
+                return IsModuleEnabled() and not IsTooltipCursorAnchored()
             end,
             showTest = ShowTooltipEditorPreview,
             hideTest = HideTooltipEditorPreview,
@@ -428,6 +428,7 @@ local function EnsureTooltipAnchorHook()
     end)
 
     hooksecurefunc("GameTooltip_SetDefaultAnchor", function(tooltip, parent)
+        if not IsModuleEnabled() then return end
         if tooltip ~= GameTooltip then return end
 
         if IsTooltipCursorAnchored() then
@@ -710,6 +711,7 @@ local function RestoreTooltipSystem()
     -- Hooks can't be removed, but they check IsModuleEnabled()
     UnstyleHealthBar()
     currentTooltipBarColor = nil
+    cursorFollow = false
     -- The bar's XML BarColor; HealthBar_OnValueChanged recolours it by health from the next value on.
     if GameTooltipStatusBar then
         GameTooltipStatusBar:SetStatusBarColor(0, 1, 0)
