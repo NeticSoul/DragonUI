@@ -1131,6 +1131,7 @@ L["Fade party frames until you hover over them."] = "Estompe les fenêtres de gr
 L["Fade party frames until you enter combat."] = "Estompe les fenêtres de groupe jusqu'à ce que vous entriez en combat."
 L["Buff Tooltip"] = "Infobulle des améliorations"
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = "Quand afficher le cadre des améliorations et affaiblissements qui s'ouvre au survol d'un membre du groupe."
+L["Hide the party frames at all times."] = "Masque les cadres de groupe en permanence."
 L["Fade boss frames until you hover over them."] = "Estompe les fenêtres de boss jusqu'à ce que la souris les survole."
 L["Fade boss frames until you enter combat."] = "Estompe les fenêtres de boss jusqu'à ce que vous entriez en combat."
 L["Fade the stance bar until you hover over it."] = "Estompe la barre de postures jusqu'à ce que la souris la survole."

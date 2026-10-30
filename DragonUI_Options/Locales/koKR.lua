@@ -1547,6 +1547,7 @@ L["Fade party frames until you hover over them."] = "마우스를 올릴 때까�
 L["Fade party frames until you enter combat."] = "전투에 들어갈 때까지 파티 창을 흐리게 합니다."
 L["Buff Tooltip"] = "강화 효과 툴팁"
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = "파티원 위에 마우스를 올렸을 때 열리는 강화/약화 효과 창을 언제 표시할지 정합니다."
+L["Hide the party frames at all times."] = "파티 프레임을 항상 숨깁니다."
 L["Fade boss frames until you hover over them."] = "마우스를 올릴 때까지 우두머리 창을 흐리게 합니다."
 L["Fade boss frames until you enter combat."] = "전투에 들어갈 때까지 우두머리 창을 흐리게 합니다."
 L["Boss"] = "우두머리"

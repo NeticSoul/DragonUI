@@ -869,6 +869,7 @@ local defaults = {
                 x = 10,
                 y = -200,
                 buff_tooltip = "always", -- "always" | "combat" (hidden in combat) | "never": Blizzard's buff box on hover
+                always_hidden = false,
                 show_on_hover = false,
                 show_in_combat = false,
                 visibility_logic = "and",

@@ -1543,6 +1543,7 @@ L["Fade party frames until you hover over them."] = "在鼠标悬停之前淡出
 L["Fade party frames until you enter combat."] = "在进入战斗之前淡出队伍框体。"
 L["Buff Tooltip"] = "增益提示"
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = "鼠标悬停在队友上时弹出的增益和减益框何时显示。"
+L["Hide the party frames at all times."] = "始终隐藏小队框体。"
 L["Fade boss frames until you hover over them."] = "在鼠标悬停之前淡出首领框体。"
 L["Fade boss frames until you enter combat."] = "在进入战斗之前淡出首领框体。"
 L["Boss"] = "首领"

@@ -1130,6 +1130,7 @@ L["Fade party frames until you hover over them."] = "Esmaece os quadros do grupo
 L["Fade party frames until you enter combat."] = "Esmaece os quadros do grupo até você entrar em combate."
 L["Buff Tooltip"] = "Dica de bônus"
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = "Quando mostrar o quadro de bônus e penalidades que abre ao passar o mouse sobre um membro do grupo."
+L["Hide the party frames at all times."] = "Oculta os quadros de grupo o tempo todo."
 L["Fade boss frames until you hover over them."] = "Esmaece os quadros de chefes até você passar o mouse sobre eles."
 L["Fade boss frames until you enter combat."] = "Esmaece os quadros de chefes até você entrar em combate."
 L["Boss"] = "Chefe"

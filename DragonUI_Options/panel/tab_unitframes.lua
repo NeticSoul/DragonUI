@@ -893,6 +893,8 @@ local function BuildPartySection(scroll)
     C:AddHeading(s, LO["Visibility"])
     C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.party",
+        alwaysHidden = true,
+        alwaysHiddenDesc = LO["Hide the party frames at all times."],
         hoverDesc = LO["Fade party frames until you hover over them."],
         combatDesc = LO["Fade party frames until you enter combat."],
         callback = refreshParty,

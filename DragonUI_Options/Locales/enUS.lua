@@ -722,6 +722,7 @@ L["Fade party frames until you hover over them."] = true
 L["Fade party frames until you enter combat."] = true
 L["Buff Tooltip"] = true
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = true
+L["Hide the party frames at all times."] = true
 L["Fade boss frames until you hover over them."] = true
 L["Fade boss frames until you enter combat."] = true
 L["Boss"] = true

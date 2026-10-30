@@ -928,6 +928,15 @@ function Controls:AddVisibilityFadeToggles(parent, opts)
     local dbPrefix = opts.dbPrefix
     local callback = opts.callback
 
+    if opts.alwaysHidden then
+        self:AddToggle(parent, {
+            label = LO["Always Hidden"],
+            desc = opts.alwaysHiddenDesc,
+            dbPath = dbPrefix .. ".always_hidden",
+            callback = callback,
+        })
+    end
+
     self:AddToggle(parent, {
         label = LO["Show on Hover Only"],
         desc = opts.hoverDesc,

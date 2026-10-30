@@ -2008,7 +2008,7 @@ Fades("player", Dotted("unitframe.player"), R.player)
 Fades("target", Dotted("unitframe.target"), R.target)
 Fades("focus", Dotted("unitframe.focus"), R.focus)
 Fades("PetFrame", Dotted("unitframe.pet"), R.pet)
-Fades("party", Dotted("unitframe.party"), R.partyVisibility)
+Fades("party", Dotted("unitframe.party"), R.partyVisibility, { alwaysHidden = true })
 Fades("boss", Dotted("unitframe.boss"), R.boss)
 
 -- Dialogs with few settings and no wide dropdowns shrink to the width of their coordinate rows.

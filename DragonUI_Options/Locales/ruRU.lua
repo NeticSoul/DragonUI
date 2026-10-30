@@ -1546,6 +1546,7 @@ L["Fade party frames until you hover over them."] = "Скрывать рамки
 L["Fade party frames until you enter combat."] = "Скрывать рамки группы, пока вы не вступите в бой."
 L["Buff Tooltip"] = "Подсказка эффектов"
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = "Когда показывать окно с положительными и отрицательными эффектами при наведении на участника группы."
+L["Hide the party frames at all times."] = "Всегда скрывать рамки группы."
 L["Fade boss frames until you hover over them."] = "Скрывать рамки боссов, пока на них не наведён курсор."
 L["Fade boss frames until you enter combat."] = "Скрывать рамки боссов, пока вы не вступите в бой."
 L["Boss"] = "Босс"

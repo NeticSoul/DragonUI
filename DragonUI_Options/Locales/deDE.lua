@@ -1545,6 +1545,7 @@ L["Fade party frames until you hover over them."] = "Blendet die Gruppenfenster 
 L["Fade party frames until you enter combat."] = "Blendet die Gruppenfenster aus, bis du in den Kampf gehst."
 L["Buff Tooltip"] = "Buff-Tooltip"
 L["When to show the box of buffs and debuffs that opens as you hover a party member."] = "Wann das Fenster mit Buffs und Debuffs erscheint, das sich beim Überfahren eines Gruppenmitglieds öffnet."
+L["Hide the party frames at all times."] = "Blendet die Gruppenrahmen dauerhaft aus."
 L["Fade boss frames until you hover over them."] = "Blendet die Bossfenster aus, bis die Maus darüber liegt."
 L["Fade boss frames until you enter combat."] = "Blendet die Bossfenster aus, bis du in den Kampf gehst."
 L["Fade the stance bar until you hover over it."] = "Blendet die Haltungsleiste aus, bis die Maus darüber liegt."
