@@ -519,6 +519,7 @@ local defaults = {
         buttons = {
             only_actionbackground = true,
             hide_main_bar_background = false,
+            hide_slot_backgrounds = false, -- Every button shows only its frame, whatever only_actionbackground says
             tooltips = "always", -- "always", "combat" (hidden in combat) or "never"
             count = {
                 show = true

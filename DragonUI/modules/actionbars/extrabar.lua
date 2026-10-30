@@ -217,9 +217,9 @@ local function SkinButton(button)
         slotFill:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
         button.background = slotFill
     end
-    -- Hide slot fill when only_actionbackground (same as pet/stance in buttons.lua).
+    -- Same slot fill rule as pet/stance in buttons.lua.
     local buttonsDb = addon.db and addon.db.profile and addon.db.profile.buttons
-    if buttonsDb and buttonsDb.only_actionbackground then
+    if buttonsDb and (buttonsDb.hide_slot_backgrounds or buttonsDb.only_actionbackground) then
         button.background:Hide()
     else
         button.background:Show()

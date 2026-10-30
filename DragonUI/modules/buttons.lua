@@ -228,7 +228,7 @@ function addon.buttons_iterator()
     return advance
 end
 
--- With the art hidden the main bar's empty slots hide like the other bars', unless the game always shows them.
+-- With the bar's art hidden its empty slots hide like the other bars', unless the game always shows them.
 function addon.MainSlotsFollowGrid()
     local db = GetButtonsConfig()
     return (db and db.hide_main_bar_background and GetCVar('alwaysShowActionBars') ~= '1') and true or false
@@ -672,6 +672,10 @@ function addon.GetButtonFrameColor()
     return frameColor[1], frameColor[2], frameColor[3], frameColor[4]
 end
 
+local function IsSlotFillHidden(db, isMainSlot)
+    return db.hide_slot_backgrounds or (not isMainSlot and db.only_actionbackground)
+end
+
 local function StyleActionSlot(slotButton, skipCombatGuard)
     if not IsModuleEnabled() then return end
     if not skipCombatGuard and InCombatLockdown() then return end
@@ -700,7 +704,13 @@ local function StyleActionSlot(slotButton, skipCombatGuard)
     if equipRing then DressLayer(equipRing, ATLAS_CHECKED, art) end
     SeatStateArt(slotButton, art, true)
 
-    slotButton.background = AddSlotBackdrop(slotButton, art, true)
+    local backdrop = AddSlotBackdrop(slotButton, art, true)
+    slotButton.background = backdrop
+    local db = GetButtonsConfig()
+    -- Hidden right away so the slot art never flashes for one frame before RefreshButtons.
+    if backdrop and db and IsSlotFillHidden(db, id and id:match('^ActionButton%d+$')) then
+        backdrop:Hide()
+    end
     slotButton._duiStyled = true
 end
 
@@ -742,7 +752,7 @@ local function StyleExtraSlot(slotButton)
     slotButton.background = backdrop
     local db = GetButtonsConfig()
     -- Hidden right away so the slot art never flashes for one frame before RefreshButtons.
-    if backdrop and db and db.only_actionbackground then
+    if backdrop and db and IsSlotFillHidden(db) then
         backdrop:Hide()
     end
 end
@@ -921,7 +931,7 @@ function addon.RefreshButtons()
                 local isMainActionButton = buttonName:match("^ActionButton%d+$")
 
                 -- show/hide action backgrounds
-                if db.only_actionbackground and not isMainActionButton then
+                if IsSlotFillHidden(db, isMainActionButton) then
                     button.background:Hide()
                 else
                     button.background:Show()
@@ -964,7 +974,7 @@ function addon.RefreshButtons()
         for index = 1, bar.count do
             local button = _G[bar.prefix .. index]
             if button and button.background then
-                if db.only_actionbackground then
+                if IsSlotFillHidden(db) then
                     button.background:Hide()
                 else
                     button.background:Show()

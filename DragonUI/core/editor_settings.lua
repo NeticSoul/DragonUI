@@ -248,6 +248,9 @@ R.bars = function()
     local refresh = addon.RefreshMainbars or addon.RefreshMainbarsSystem
     if refresh then refresh() end
 end
+R.mainBarArt = function()
+    if addon.RefreshMainBarArt then addon.RefreshMainBarArt() end
+end
 R.extrabar = function()
     if addon.RefreshExtrabarFrame then addon.RefreshExtrabarFrame() end
 end
@@ -1968,8 +1971,13 @@ E.Register("__manager", { settings = {
         after = function() E.SyncFrames(); E.Rebuild() end }),
 
     Section(T("Button Appearance"), true, NoButtons),
-    Check(T("Main Bar Only Background"), "buttons.only_actionbackground", R.buttons, { hidden = NoButtons }),
-    ReloadCheck(T("Hide Main Bar Background"), "buttons.hide_main_bar_background", { hidden = NoButtons }),
+    Check(T("Hide Main Bar Art"), "buttons.hide_main_bar_background", R.mainBarArt, { hidden = NoButtons }),
+    Check(T("Hide Button Backgrounds"), "buttons.hide_slot_backgrounds", R.buttons, {
+        hidden = NoButtons,
+        after = function() E.Rebuild() end }),
+    Check(T("Main Bar Only Background"), "buttons.only_actionbackground", R.buttons, {
+        hidden = NoButtons,
+        disabled = function() return GetDB("buttons.hide_slot_backgrounds") end }),
     Drop(T("Button Tooltips"), "buttons.tooltips", {
         { "always", T("Always") },
         { "combat", T("Hide in Combat") },

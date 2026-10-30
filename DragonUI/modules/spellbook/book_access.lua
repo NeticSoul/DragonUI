@@ -129,7 +129,7 @@ local function shareGrid(delta)
     end
 end
 
--- The main bar only hides empty slots under Hide Main Bar Background; otherwise they always show.
+-- The main bar only hides empty slots under Hide Main Bar Art; otherwise they always show.
 local function shareMainGrid(delta)
     for slot = 1, NUM_ACTIONBAR_BUTTONS do
         local button = _G["ActionButton" .. slot]

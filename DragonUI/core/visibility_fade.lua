@@ -115,7 +115,8 @@ local function ApplyMouseState(entry, cfg, shouldShow)
     local inCombat = InCombatLockdown()
     if inCombat and not entry.mouseSafeInCombat then return end
     for _, frame in ipairs(entry.hoverFrames) do
-        if frame and frame.EnableMouse and not (inCombat and frame:IsProtected()) then
+        if frame and frame.EnableMouse and frame ~= entry.noMouseFrame
+            and not (inCombat and frame:IsProtected()) then
             pcall(frame.EnableMouse, frame, shouldShow)
         end
     end
@@ -265,6 +266,7 @@ function VF.Register(key, frame, opts)
     end
     entry.dbTable = opts.dbTable
     entry.clickThrough = opts.clickThrough
+    entry.noMouseFrame = opts.noMouseFrame
     entry.pollHover = opts.pollHover
     entry.mouseSafeInCombat = opts.mouseSafeInCombat
     entry.shouldManage = opts.shouldManage

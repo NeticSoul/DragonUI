@@ -178,13 +178,18 @@ local function AnchorMainBarDividerOnButton(div, button)
     end
 end
 
+local function IsMainBarBackgroundHidden()
+    local buttons = addon.db and addon.db.profile and addon.db.profile.buttons
+    return buttons and buttons.hide_main_bar_background
+end
+
 -- Dividers sit on visual column boundaries (left-to-right), not slot index order.
 local function UpdateMainBarColumnDividers(columns, rows, buttonsShown, buttonOrder)
     if not addon.MainBarDividers then
         return
     end
 
-    if columns <= 1 then
+    if IsMainBarBackgroundHidden() or columns <= 1 then
         for i = 1, 11 do
             local div = addon.MainBarDividers[i]
             if div then
@@ -231,7 +236,7 @@ local function UpdateMainBarColumnDividers(columns, rows, buttonsShown, buttonOr
     end
 end
 
--- Main slots always show, except empty ones left to the grid by Hide Main Bar Background (buttons.lua).
+-- Main slots always show, except empty ones left to the grid by Hide Main Bar Art (buttons.lua).
 local function IsMainSlotShown(button)
     if not (addon.MainSlotsFollowGrid and addon.MainSlotsFollowGrid()) then return true end
     if (button:GetAttribute("showgrid") or 0) > 0 then return true end
@@ -509,11 +514,6 @@ local hiddenBackgroundBottomY = { bottombarleft = 64.35, bottombarright = 104 }
 local FRAMED_STACK_DROP = 1.32
 local framedStackWidgets = { bottombarleft = true, bottombarright = true, petbar = true }
 
-local function IsMainBarBackgroundHidden()
-    local buttons = addon.db and addon.db.profile and addon.db.profile.buttons
-    return buttons and buttons.hide_main_bar_background
-end
-
 -- With neither XP nor rep the bars drop only this far: a full slot sank the gryphons off screen.
 local EMPTY_BARS_DROP = 6
 
@@ -529,13 +529,21 @@ end
 
 -- Where a bar left at its default is drawn, given the main bar art; nil when the stored Y applies.
 local function ArtDefaultY(widgetName)
-    if IsMainBarBackgroundHidden() then
-        return hiddenBackgroundBottomY[widgetName]
-    end
     local known = defaultBottomPositions[widgetName]
-    if known and framedStackWidgets[widgetName] then
-        return known.posY - FRAMED_STACK_DROP
+    if not (known and framedStackWidgets[widgetName]) then return nil end
+    if IsMainBarBackgroundHidden() then
+        return hiddenBackgroundBottomY[widgetName] or known.posY
     end
+    return known.posY - FRAMED_STACK_DROP
+end
+
+-- The editor saves the Y a bar stands at, so a bar never moved can hold either art's default.
+local function IsNearArtDefaultY(widgetName, savedY, slot)
+    local known = defaultBottomPositions[widgetName]
+    if not (known and framedStackWidgets[widgetName]) then return false end
+    local hiddenY = hiddenBackgroundBottomY[widgetName]
+    return NearBaseY(savedY, known.posY - FRAMED_STACK_DROP, slot)
+        or (hiddenY ~= nil and NearBaseY(savedY, hiddenY, slot))
 end
 
 -- Y for a bar still at its default spot; a moved bar keeps whatever it has.
@@ -775,11 +783,12 @@ function MainMenuBarMixin:SetupActionButtons()
 
     addon.MainBarDividers = addon.MainBarDividers or {}
     -- AddBarDividers hangs the pieces on the button's parent, so the buttons must already be ours.
-    if not config.buttons.hide_main_bar_background then
-        for slot = 1, 11 do
-            functions.AddBarDividers(_G["ActionButton" .. slot])
-            RecordMainBarDivider(slot)
-        end
+    for slot = 1, 11 do
+        functions.AddBarDividers(_G["ActionButton" .. slot])
+        RecordMainBarDivider(slot)
+    end
+    if IsMainBarBackgroundHidden() then
+        UpdateMainBarColumnDividers()
     end
 
     local barsDb = addon.db and addon.db.profile and addon.db.profile.mainbars
@@ -2578,8 +2587,7 @@ local function InitializeMainbars()
         if math.abs(savedX - known.posX) > 1 then return false end
         local slot = GetXpBarHeight() + 2
         if NearBaseY(savedY, known.posY, slot) then return true end
-        local artY = ArtDefaultY(widgetName)
-        return not not (artY and NearBaseY(savedY, artY, slot))
+        return IsNearArtDefaultY(widgetName, savedY, slot)
     end
 
     addon.GetDualBarVerticalOffset = GetDualBarVerticalOffset
@@ -3173,7 +3181,7 @@ local function SyncMainBarVisibility()
     end
 
     -- Decorative background art (gryphons, NineSlice border, loose textures) — Hide Main Bar
-    -- Background pins all of it to 0 and skips the fade; otherwise it fades with the rest of the bar.
+    -- Art pins all of it to 0 and skips the fade; otherwise it fades with the rest of the bar.
     local backgroundFrames = {}
     if MainMenuBarLeftEndCap then table.insert(backgroundFrames, MainMenuBarLeftEndCap) end
     if MainMenuBarRightEndCap then table.insert(backgroundFrames, MainMenuBarRightEndCap) end
@@ -3183,7 +3191,6 @@ local function SyncMainBarVisibility()
 
     local buttonsCfg = addon.db and addon.db.profile and addon.db.profile.buttons
     if buttonsCfg and buttonsCfg.hide_main_bar_background then
-        -- requiresReload=true on this setting in the options panel, so a plain snap is enough here.
         for _, f in ipairs(backgroundFrames) do f:SetAlpha(0) end
     else
         for _, f in ipairs(backgroundFrames) do table.insert(alphaFrames, f) end
@@ -3215,13 +3222,19 @@ local function SyncMainBarVisibility()
     if ActionBarUpButton and ActionBarUpButton:IsShown() then table.insert(hoverFrames, ActionBarUpButton) end
     if ActionBarDownButton and ActionBarDownButton:IsShown() then table.insert(hoverFrames, ActionBarDownButton) end
 
+    -- Without its art the bar frame is an invisible rectangle eating world clicks; hover is polled, not moused.
+    local artHidden = IsMainBarBackgroundHidden()
     addon.VisibilityFade.Register("main", mainAlphaAnchor, {
         frames = alphaFrames,
         hoverFrames = hoverFrames,
         clickThrough = true,
+        noMouseFrame = artHidden and mainBarFrame or nil,
         onVisibilityChange = ReassertMainBarShown,
         dbTable = GetMainBarVisibilityDBTable,
     })
+    if not InCombatLockdown() then
+        mainBarFrame:EnableMouse(not artHidden)
+    end
     addon.VisibilityFade.Update("main")
 end
 
@@ -3662,3 +3675,15 @@ end
 
 -- Alias for compatibility
 addon.RefreshMainbars = addon.RefreshMainbarsSystem
+
+-- The grid goes first: arranging the bar reads each slot's showgrid. Stance and pet sit by the art too.
+function addon.RefreshMainBarArt()
+    if not IsModuleEnabled() then return end
+    if InCombatLockdown() then
+        addon.CombatQueue:Add("mainbars_art", addon.RefreshMainBarArt)
+        return
+    end
+    if addon.RefreshButtonGrid then addon.RefreshButtonGrid() end
+    addon.RefreshMainbars()
+    NotifyDualBarOffsetChanged()
+end
