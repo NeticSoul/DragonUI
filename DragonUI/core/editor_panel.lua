@@ -97,9 +97,35 @@ local function UpdateCoords()
     end
 end
 
+-- Edge anchor like a drag's: CENTER anchors push edge frames off screen at a bigger UI scale.
+local function EdgeAnchorFor(frame, x, y)
+    local s = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+    local width, height = UIParent:GetWidth(), UIParent:GetHeight()
+    local cx, cy = width / 2 + x * s, height / 2 + y * s
+    local halfW, halfH = frame:GetWidth() * s / 2, frame:GetHeight() * s / 2
+
+    local vertical, offY = "", cy - height / 2
+    if cy >= height * 2 / 3 then
+        vertical, offY = "TOP", cy + halfH - height
+    elseif cy <= height / 3 then
+        vertical, offY = "BOTTOM", cy - halfH
+    end
+    local horizontal, offX = "", cx - width / 2
+    if cx >= width * 2 / 3 then
+        horizontal, offX = "RIGHT", cx + halfW - width
+    elseif cx <= width / 3 then
+        horizontal, offX = "LEFT", cx - halfW
+    end
+
+    local point = vertical .. horizontal
+    if point == "" then point = "CENTER" end
+    return point, offX / s, offY / s
+end
+
 local function MoveSelectedTo(x, y)
+    local point, anchorX, anchorY = EdgeAnchorFor(selectedEditorFrame, x, y)
     selectedEditorFrame:ClearAllPoints()
-    selectedEditorFrame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    selectedEditorFrame:SetPoint(point, UIParent, point, anchorX, anchorY)
     selectedEditorFrame.DragonUI_WasAdjustedByEditor = true
     selectedEditorFrame.DragonUI_WasDragged = true
     selectedEditorFrame.DragonUI_LayoutOffset = nil
