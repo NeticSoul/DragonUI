@@ -126,7 +126,6 @@ function UF.TargetStyle.Create(opts)
     }
 
     local updateCache = {
-        lastHealthUpdate  = 0,
         lastPowerUpdate   = 0,
         lastThreatUpdate  = 0,
         lastFamousMessage = 0,
@@ -630,11 +629,7 @@ function UF.TargetStyle.Create(opts)
                 -- Color: always update immediately (no throttle)
                 UpdateHealthBarColor()
 
-                -- TexCoord: throttled for performance
-                local now = GetTime()
-                if now - updateCache.lastHealthUpdate < 0.05 then return end
-                updateCache.lastHealthUpdate = now
-
+                -- Never throttled: the art is a dark-to-light gradient, so a skipped crop darkens the whole bar.
                 local texture = self:GetStatusBarTexture()
                 if texture then
                     local _, max = self:GetMinMaxValues()
