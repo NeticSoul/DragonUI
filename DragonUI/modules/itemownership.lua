@@ -377,6 +377,17 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "BANKFRAME_OPENED" then
         bankOpen = true
     elseif event == "BANKFRAME_CLOSED" then
+        -- A scan still in its debounce would run after close, when ScanBank refuses to read the bank.
+        if pendingScans.bank and IsModuleEnabled() then
+            pendingScans.bank = false
+            local data = GetCharacterData()
+            local previous, previousTime = data and data.bank, data and data.bankUpdated
+            ScanBank()
+            -- Nothing read over a non-empty bank means the client had already dropped it: keep the old counts.
+            if data and type(previous) == "table" and next(previous) and not next(data.bank or {}) then
+                data.bank, data.bankUpdated = previous, previousTime
+            end
+        end
         bankOpen = false
     end
 
