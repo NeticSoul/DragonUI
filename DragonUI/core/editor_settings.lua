@@ -1175,7 +1175,10 @@ local function GCDSettings()
             end,
         }),
         ColorRow(T("GCD Color"), {
-            disabled = GCDOff,
+            disabled = function()
+                local style = GetDB("castbar.gcd.style")
+                return GCDOff() or style == nil or style == "castbar"
+            end,
             get = function()
                 local color = GetDB("castbar.gcd.color")
                 if type(color) ~= "table" then return { 1, 0.7, 0, 1 } end
@@ -1187,7 +1190,8 @@ local function GCDSettings()
             end,
         }),
         Check(T("Always Show GCD Track"), "castbar.gcd.alwaysShow", refresh, { disabled = GCDOff }),
-        Drop(T("GCD Style"), "castbar.gcd.style", GCD_STYLE_ITEMS, refresh, { disabled = GCDOff }),
+        Drop(T("GCD Style"), "castbar.gcd.style", GCD_STYLE_ITEMS, refresh, {
+            disabled = GCDOff, after = function() E.Rebuild() end }),
         Drop(T("GCD Background"), "castbar.gcd.background", GCD_BACKGROUND_ITEMS, refresh, { disabled = GCDOff }),
         Check(T("Show GCD Spark"), "castbar.gcd.spark", refresh, { disabled = GCDOff }),
     }) }

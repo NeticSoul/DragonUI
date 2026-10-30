@@ -146,8 +146,13 @@ local function ApplyLook(gcfg)
 
     GCD.sparkOn = gcfg.spark == true
     if not GCD.sparkOn then GCD.spark:Hide() end
-    local color = gcfg.color or {}
-    bar:SetStatusBarColor(color.r or 1, color.g or 0.7, color.b or 0, color.a or 1)
+    -- The cast bar fill is already coloured art; tinting it on top turns it orange.
+    if fill == FILLS.castbar then
+        bar:SetStatusBarColor(1, 1, 1, 1)
+    else
+        local color = gcfg.color or {}
+        bar:SetStatusBarColor(color.r or 1, color.g or 0.7, color.b or 0, color.a or 1)
+    end
 end
 
 local function Layout(gcfg)

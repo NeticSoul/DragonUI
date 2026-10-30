@@ -296,7 +296,11 @@ local function BuildPlayerCastbar(scroll)
         label = LO["GCD Color"],
         dbPath = "castbar.gcd.color",
         hasAlpha = true,
-        disabled = gcdDisabled,
+        -- The Cast Bar style draws its own coloured art, so a tint has nothing to do there.
+        disabled = function()
+            local style = C:GetDBValue("castbar.gcd.style")
+            return gcdDisabled() or style == nil or style == "castbar"
+        end,
         callback = gcdRefresh,
     })
 
@@ -319,7 +323,10 @@ local function BuildPlayerCastbar(scroll)
             smooth = LO["Smooth"],
         },
         disabled = gcdDisabled,
-        callback = gcdRefresh,
+        callback = function()
+            gcdRefresh()
+            Panel:SelectTab("castbars")
+        end,
     })
 
     C:AddDropdown(gcd, {
