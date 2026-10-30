@@ -591,7 +591,6 @@ L["Border Color"] = "Color del Borde"
 -- Gryphons
 L["Gryphons"] = "Grifos"
 L["End-cap ornaments flanking the main action bar."] = "Ornamentos laterales que flanquean la barra de acción principal."
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = "Las previsualizaciones de grifos se ocultan mientras D3D9Ex está activo para evitar cierres del cliente."
 L["Style"] = "Estilo"
 L["Gryphon Scale"] = "Escala de Grifo"
 L["Gryphon Offset X"] = "Desplazamiento X de Grifo"

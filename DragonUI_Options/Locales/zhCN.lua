@@ -514,7 +514,6 @@ L["Border Color"] = "边框颜色"
 -- 狮鹫装饰
 L["Gryphons"] = "狮鹫装饰"
 L["End-cap ornaments flanking the main action bar."] = "主动作条两端的装饰纹样。"
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = "启用 D3D9Ex 时会隐藏狮鹫预览，以避免客户端崩溃。"
 L["Style"] = "样式"
 L["Gryphon Scale"] = "狮鹫缩放"
 L["Gryphon Offset X"] = "狮鹫水平偏移"

@@ -516,7 +516,6 @@ L["Border Color"] = "邊框顏色"
 -- 獅鷲裝飾
 L["Gryphons"] = "獅鷲裝飾"
 L["End-cap ornaments flanking the main action bar."] = "主動作條兩端的裝飾紋樣。"
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = "啟用 D3D9Ex 時會隱藏獅鷲預覽，以避免客戶端當機。"
 L["Style"] = "樣式"
 L["Gryphon Scale"] = "獅鷲縮放"
 L["Gryphon Offset X"] = "獅鷲水平偏移"

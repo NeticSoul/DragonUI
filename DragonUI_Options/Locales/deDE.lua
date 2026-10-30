@@ -569,7 +569,6 @@ L["Border Color"] = "Rahmenfarbe"
 -- Gryphons
 L["Gryphons"] = "Greifen"
 L["End-cap ornaments flanking the main action bar."] = "Endkappen-Ornamente links/rechts der Hauptaktionsleiste."
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = "Greifen-Vorschauen werden ausgeblendet, solange D3D9Ex aktiv ist, um Client-Abstürze zu vermeiden."
 L["Style"] = "Stil"
 L["Gryphon Scale"] = "Greifen-Skalierung"
 L["Gryphon Offset X"] = "Greifen-Versatz X"

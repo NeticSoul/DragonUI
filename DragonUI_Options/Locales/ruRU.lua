@@ -565,7 +565,6 @@ L["Border Color"] = "Цвет рамки"
 -- Gryphons
 L["Gryphons"] = "Грифоны"
 L["End-cap ornaments flanking the main action bar."] = "Декоративные элементы по краям основной панели действий."
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = "Предпросмотр грифонов скрыт при активном D3D9Ex, чтобы избежать вылетов клиента."
 L["Style"] = "Стиль"
 L["Gryphon Scale"] = "Масштаб грифонов"
 L["Gryphon Offset X"] = "Смещение грифонов по X"

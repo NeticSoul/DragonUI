@@ -581,7 +581,6 @@ L["Border Color"] = "테두리 색상"
 -- Gryphons
 L["Gryphons"] = "그리핀"
 L["End-cap ornaments flanking the main action bar."] = "주 단축바 양 끝 장식 문양"
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = "클라이언트 충돌을 막기 위해 D3D9Ex 사용 중에는 그리핀 미리보기를 숨깁니다."
 L["Style"] = "스타일"
 L["Gryphon Scale"] = "그리핀 크기"
 L["Gryphon Offset X"] = "그리핀 가로 위치"

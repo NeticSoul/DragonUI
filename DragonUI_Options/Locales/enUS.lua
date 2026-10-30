@@ -653,7 +653,6 @@ L["Border Color"] = true
 -- Gryphons
 L["Gryphons"] = true
 L["End-cap ornaments flanking the main action bar."] = true
-L["Gryphon previews are hidden while D3D9Ex is active to avoid client crashes."] = true
 L["Style"] = true
 L["Gryphon Scale"] = true
 L["Gryphon Offset X"] = true
