@@ -206,7 +206,6 @@ do
         item:SetScript("OnLeave", self.OnLeave)
         item:SetScript("OnShow", self.OnShow)
         item:SetScript("OnHide", self.OnHide)
-        item:SetScript("OnUpdate", self.OnUpdate)
         item:RegisterForClicks("anyUp")
         item.UpdateTooltip = nil
 
@@ -271,6 +270,8 @@ do
     end
 
     function ItemSlot:OnHide()
+        self._lastShiftState = nil
+        self:SetScript("OnUpdate", nil)
         if self.hasStackSplit and self.hasStackSplit == 1 then
             StackSplitFrame:Hide()
         end
@@ -293,6 +294,7 @@ do
         else
             dummySlot:Hide()
             self._lastShiftState = nil  -- reset so OnUpdate detects shift on first hover
+            self:SetScript("OnUpdate", ItemSlot.OnUpdate)
             if self:IsBank() then
                 -- BANK_CONTAINER slots need the bank-specific tooltip API
                 if self:GetItem() then
@@ -338,6 +340,7 @@ do
 
     function ItemSlot:OnLeave()
         self._lastShiftState = nil
+        self:SetScript("OnUpdate", nil)
         self.UpdateTooltip = nil
         GameTooltip:Hide()
         if GameTooltip.shoppingTooltips then
