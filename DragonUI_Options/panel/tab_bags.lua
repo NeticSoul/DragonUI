@@ -614,6 +614,41 @@ local function BuildBagsTab(scroll)
         end,
     })
 
+    local knownCharacters = addon.GetKnownCharacters and addon.GetKnownCharacters() or {}
+    local noKnownCharacters = function() return next(knownCharacters) == nil end
+    local forgetKey
+    C:AddDropdown(altMoneySection, {
+        label = LO["Character"],
+        values = knownCharacters,
+        width = 220,
+        getFunc = function() return forgetKey end,
+        setFunc = function(val) forgetKey = val end,
+        disabled = noKnownCharacters,
+    })
+    C:AddButton(altMoneySection, {
+        label = LO["Forget Character"],
+        desc = LO["Delete the selected character's saved gold, item counts and offline bank. Your current character is never listed."],
+        disabled = noKnownCharacters,
+        callback = function()
+            if not (forgetKey and knownCharacters[forgetKey]) then return end
+            StaticPopupDialogs["DRAGONUI_FORGET_CHARACTER"] = StaticPopupDialogs["DRAGONUI_FORGET_CHARACTER"] or {
+                text = LO["Forget all saved data of %s?"],
+                button1 = LO["Yes"],
+                button2 = LO["No"],
+                OnAccept = function(_, key)
+                    local realm, name = string.match(key or "", "^(.-)|(.+)$")
+                    if name and addon.ForgetCharacter then addon.ForgetCharacter(realm, name) end
+                    if Panel and Panel.SelectTab then Panel:SelectTab("bags") end
+                end,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                preferredIndex = 3,
+            }
+            StaticPopup_Show("DRAGONUI_FORGET_CHARACTER", knownCharacters[forgetKey], nil, forgetKey)
+        end,
+    })
+
     -- ====================================================================
     -- BAGSTER ENABLE
     -- ====================================================================

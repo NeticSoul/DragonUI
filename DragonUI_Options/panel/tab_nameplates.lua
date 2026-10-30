@@ -1781,6 +1781,29 @@ local function BuildQuestSubTab(scroll)
         disabled = IsQuestIconsDisabled,
         callback = RefreshAndRebuildNameplates,
     })
+    C:AddButton(general, {
+        label = LO["Reset Learned Quest Loot"],
+        desc = LO["Forget which mobs nameplates learned drop your quest items. They are learned again as you play."],
+        callback = function()
+            StaticPopupDialogs["DRAGONUI_RESET_QUEST_LOOT"] = StaticPopupDialogs["DRAGONUI_RESET_QUEST_LOOT"] or {
+                text = LO["Forget every quest item source that nameplates have learned?"],
+                button1 = LO["Yes"],
+                button2 = LO["No"],
+                OnAccept = function()
+                    local global = addon.db and addon.db.global
+                    if global and type(global.questLootLearned) == "table" then
+                        wipe(global.questLootLearned)
+                    end
+                    RefreshQuestNameResolution()
+                end,
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                preferredIndex = 3,
+            }
+            StaticPopup_Show("DRAGONUI_RESET_QUEST_LOOT")
+        end,
+    })
 
     -- Test preview (tuning aid)
     local test = C:AddSection(scroll, LO["Test Preview"])
