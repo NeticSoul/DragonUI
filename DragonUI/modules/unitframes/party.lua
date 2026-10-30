@@ -1638,6 +1638,15 @@ end
 
 -- Setup all necessary hooks for party frames
 local function SetupPartyHooks()
+    -- PetFrame's hover shows the same PartyMemberBuffTooltip, so only party callers are filtered.
+    hooksecurefunc("PartyMemberBuffTooltip_Update", function(frame)
+        if not (frame and frame:GetName() and frame:GetName():match("^PartyMemberFrame%d+$")) then return end
+        local mode = UF.GetConfig("party").buff_tooltip
+        if mode == "never" or (mode == "combat" and UnitAffectingCombat("player")) then
+            PartyMemberBuffTooltip:Hide()
+        end
+    end)
+
     hooksecurefunc("PartyMemberFrame_UpdateMember", function(frame)
         -- Skip restyling during editor mode (fake frames should stay as-is)
         if addon.EditorMode and addon.EditorMode:IsActive() then return end

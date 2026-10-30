@@ -878,6 +878,18 @@ local function BuildPartySection(scroll)
         callback = refreshParty,
     })
 
+    C:AddDropdown(s, {
+        label = LO["Buff Tooltip"],
+        desc = LO["When to show the box of buffs and debuffs that opens as you hover a party member."],
+        dbPath = "unitframe.party.buff_tooltip",
+        values = {
+            always = LO["Always"],
+            combat = LO["Hide in Combat"],
+            never  = LO["Never"],
+        },
+        width = 200,
+    })
+
     C:AddHeading(s, LO["Visibility"])
     C:AddVisibilityFadeToggles(s, {
         dbPrefix = "unitframe.party",
