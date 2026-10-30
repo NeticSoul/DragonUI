@@ -599,7 +599,7 @@ L["You are about to sell all junk items and will not be able to buy them back.\n
 L["Repaired all items for %s."] = "已修理所有物品，花費 %s。"
 L["Repaired all items for %s using guild funds."] = "已使用公會資金修理所有物品，花費 %s。"
 L["Not enough gold to repair all items."] = "金幣不足，無法修理所有物品。"
-L["Sold %d junk item(s) for %s."] = "已售出 %d 件垃圾物品，收入 %s。"
+L["Selling %d junk item(s) for %s."] = "正在出售 %d 件垃圾物品，價值 %s。"
 
 -- World Map
 L["World Map"] = "世界地圖"

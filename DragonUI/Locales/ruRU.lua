@@ -668,7 +668,7 @@ L["You are about to sell all junk items and will not be able to buy them back.\n
 L["Repaired all items for %s."] = "Все предметы отремонтированы за %s."
 L["Repaired all items for %s using guild funds."] = "Все предметы отремонтированы за %s за счёт средств гильдии."
 L["Not enough gold to repair all items."] = "Недостаточно золота, чтобы отремонтировать все предметы."
-L["Sold %d junk item(s) for %s."] = "Продано %d предмет(а/ов) хлама за %s."
+L["Selling %d junk item(s) for %s."] = "Продажа хлама: %d предмет(а/ов) за %s."
 
 -- World Map
 L["World Map"] = "Карта мира"

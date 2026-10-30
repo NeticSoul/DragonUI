@@ -58,7 +58,7 @@ local function sellEveryJunkItem()
         end
     end)
     if items > 0 then
-        addon:Print(string.format(localized("Sold %d junk item(s) for %s."), items, GetMoneyString(copper)))
+        addon:Print(string.format(localized("Selling %d junk item(s) for %s."), items, GetMoneyString(copper)))
     end
     return items, copper
 end

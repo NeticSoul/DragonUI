@@ -679,7 +679,7 @@ L["You are about to sell all junk items and will not be able to buy them back.\n
 L["Repaired all items for %s."] = true
 L["Repaired all items for %s using guild funds."] = true
 L["Not enough gold to repair all items."] = true
-L["Sold %d junk item(s) for %s."] = true
+L["Selling %d junk item(s) for %s."] = true
 
 -- World Map
 L["World Map"] = true

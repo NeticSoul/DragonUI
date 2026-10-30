@@ -666,7 +666,7 @@ L["You are about to sell all junk items and will not be able to buy them back.\n
 L["Repaired all items for %s."] = "모든 아이템을 %s에 수리했습니다."
 L["Repaired all items for %s using guild funds."] = "길드 자금으로 모든 아이템을 %s에 수리했습니다."
 L["Not enough gold to repair all items."] = "모든 아이템을 수리할 골드가 충분하지 않습니다."
-L["Sold %d junk item(s) for %s."] = "잡동사니 아이템 %d개를 %s에 판매했습니다."
+L["Selling %d junk item(s) for %s."] = "잡동사니 아이템 %d개를 %s에 판매하는 중입니다."
 
 -- World Map
 L["World Map"] = "세계 지도"
