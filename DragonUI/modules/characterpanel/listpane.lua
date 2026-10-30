@@ -229,6 +229,8 @@ local function buildFilterMenu(btn, name, build)
     blocker:SetScript("OnClick", closeFilterMenu)
     blocker:Hide()
     menu.Blocker = blocker
+    -- Whatever hides the menu must hide its full-screen blocker too, or it swallows every click.
+    menu:HookScript("OnHide", function() blocker:Hide() end)
 
     function menu:Populate()
         local entries = build() or {}
@@ -365,6 +367,7 @@ function CP.CreateFilterDropdown(parent, name, width, build)
     -- Closing the panel with a list open would strand it on screen: it is parented to UIParent.
     parent:HookScript("OnHide", function()
         if openMenu == menu then closeFilterMenu() end
+        menu.Blocker:Hide()
     end)
     return btn
 end
