@@ -551,12 +551,22 @@ function NP.quest.TickDeferredRebuild(currentFrame)
     end
 end
 
+-- Gathering, opening and skinning are casts: loot right after one did not come from the dead target.
+local lastPlayerCast = 0
+local castWatcher = CreateFrame("Frame")
+castWatcher:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+castWatcher:SetScript("OnEvent", function(_, _, unit)
+    if unit == "player" then lastPlayerCast = GetTime() end
+end)
+
 -- Loot fallback for the rare mob whose tooltip omits its loot objective; skips if token already taught it.
 function NP.quest.OnLootOpened()
     local q = NP.config.GetCfg().questIcons
     if not q or q.enabled ~= true or q.nameResolution ~= true then return end
     if not next(objectiveTypeIndex) then return end
     if not (UnitExists("target") and UnitIsDead("target") and not UnitIsPlayer("target")) then return end
+    if IsFishingLoot() or not CheckInteractDistance("target", 3) then return end
+    if GetTime() - lastPlayerCast < 2 then return end
     local mobKey = NormalizeName(UnitName("target"))
     if not mobKey or mobKey == "" then return end
     if LearnedLootActive(mobKey) then return end
