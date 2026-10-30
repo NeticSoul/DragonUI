@@ -23,7 +23,8 @@ local SECONDARY = { "Cooking", "Fishing", "FirstAid" }
 local BAR_W, SMALL_BAR_W = 441, 190
 local FRAME_H, ART_H, FILL_H = 18, 23, 18
 -- overrideMaskRightOffset per width: the mask stops this short of bar width x progress.
-local MASK_OFFSET = { [BAR_W] = -7, [SMALL_BAR_W] = -5 }
+-- Not Forever's -5 on the small bar: its three-sliced frame keeps the rim 3 in, so -5 ran past it.
+local MASK_OFFSET = { [BAR_W] = -7, [SMALL_BAR_W] = -7 }
 
 -- GameFontHighlightSmall2 (11 pt) does not exist in 3.3.5a.
 local missingFont = CreateFont("DragonUI_ProfessionsMissingFont")
