@@ -25,3 +25,5 @@ function addon.RefreshCamera()
 end
 
 addon.package:Subscribe(addon.RefreshCamera, "PLAYER_LOGIN")
+-- Blizzard's slider stops at 2 and writes that over the CVar when it fills in on the first PLAYER_ENTERING_WORLD.
+InterfaceOptionsCameraPanelMaxDistanceSlider:HookScript("OnValueChanged", function() addon.RefreshCamera() end)

@@ -1793,7 +1793,7 @@ L["Max Camera Distance"] = "최대 카메라 거리"
 L["Let the camera zoom out further than the game's own slider allows."] = "게임 자체 슬라이더보다 카메라를 더 멀리 뺄 수 있습니다."
 L["Camera Distance"] = "카메라 거리"
 L["Error Messages"] = "오류 메시지"
-L["The red errors and yellow quest updates in the middle of the screen."] = "화면 가운데의 빨간 오류와 노란 퀘스트 진행 메시지입니다."
+L["The red errors in the middle of the screen. Yellow quest updates always show."] = "화면 가운데의 빨간 오류입니다. 노란 퀘스트 진행 메시지는 항상 표시됩니다."
 
 -- Farm mode
 L["Farm Mode"] = "파밍 모드"

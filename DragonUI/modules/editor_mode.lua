@@ -47,14 +47,28 @@ end
 addon.ApplyErrorMessagesPosition = ApplyErrorMessagesPosition
 
 local errorMessagesFadeRegistered = false
+local redErrorsMuted = false
+
+-- The frame also carries the yellow quest updates, so only its red event goes; other addons may mute it too.
+local function SetRedErrorsShown(shown)
+    if shown == not redErrorsMuted then return end
+    redErrorsMuted = not shown
+    if shown then
+        UIErrorsFrame:RegisterEvent("UI_ERROR_MESSAGE")
+    else
+        UIErrorsFrame:UnregisterEvent("UI_ERROR_MESSAGE")
+    end
+end
 
 local function RegisterErrorMessagesFade()
     if errorMessagesFadeRegistered or not (UIErrorsFrame and addon.VisibilityFade) then return end
     errorMessagesFadeRegistered = true
-    -- The error frame spans the screen centre, so it must never take the mouse.
-    addon.VisibilityFade.Register("errorMessages", UIErrorsFrame, {
+    -- A stand-in frame takes the fade: the combat and hidden rows only drive the callback.
+    addon.VisibilityFade.Register("errorMessages", CreateFrame("Frame"), {
         dbTable = function() return GetWidgetConfig("errorMessages") end,
         enableMouse = false,
+        immediateHideCallback = true,
+        onVisibilityChange = SetRedErrorsShown,
     })
 end
 

@@ -961,7 +961,7 @@ local function BuildEnhancementsTab(scroll)
     C:AddSpacer(scroll)
     local errorSection = C:AddSection(scroll, LO["Error Messages"])
 
-    C:AddDescription(errorSection, LO["The red errors and yellow quest updates in the middle of the screen."])
+    C:AddDescription(errorSection, LO["The red errors in the middle of the screen. Yellow quest updates always show."])
 
     C:AddVisibilityFadeToggles(errorSection, {
         dbPrefix = "widgets.errorMessages",
