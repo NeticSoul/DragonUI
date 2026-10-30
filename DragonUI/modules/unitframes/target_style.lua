@@ -547,14 +547,23 @@ function UF.TargetStyle.Create(opts)
         UF.PlaceTargetPvPIcon = PlacePvPIcon
     end
 
+    local function PlaceRaidMark()
+        local raidTargetIcon = _G[namePrefix .. "FrameTextureFrameRaidTargetIcon"]
+        if raidTargetIcon and Portrait and not UF.IsCompact(configKey) then
+            local aside = configKey == "target" and UF.ComboArcOverPortrait and UF.ComboArcOverPortrait()
+                and UF.TARGET_ICONS.raidOffCombo
+            raidTargetIcon:ClearAllPoints()
+            raidTargetIcon:SetPoint("CENTER", Portrait, "TOP", aside and aside.x or 0, aside and aside.y or 0)
+        end
+    end
+    if configKey == "target" then
+        UF.PlaceTargetRaidMark = PlaceRaidMark
+    end
+
     -- Retail's spots: the crown left of the portrait above the name strip, the raid mark centred on its top.
     local function ApplyStatusIcons()
         ApplyLeaderArt()
-        local raidTargetIcon = _G[namePrefix .. "FrameTextureFrameRaidTargetIcon"]
-        if raidTargetIcon and Portrait and not UF.IsCompact(configKey) then
-            raidTargetIcon:ClearAllPoints()
-            raidTargetIcon:SetPoint("CENTER", Portrait, "TOP", 0, 0)
-        end
+        PlaceRaidMark()
         -- Portrait off, the raid mark is placed with the PvP emblem.
         PlacePvPIcon()
     end

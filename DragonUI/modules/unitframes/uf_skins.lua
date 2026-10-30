@@ -325,6 +325,8 @@ UF.PLAYER_ICONS = {
 UF.TARGET_ICONS = {
     leader = { x = 126.5, y = -2, w = 16, h = 16 },
     foreverLeader = { x = 126.5, y = -3.75, w = 16, h = 12.5 },
+    -- Off the portrait's top, round the ring: clear of the crown's art and of Forever's first combo orb.
+    raidOffCombo = { x = -17, y = -2.5 },
 }
 
 -- Party, TOPLEFT on the member frame: retail's spots, the crown 1 higher to clear our name at (46, -5).

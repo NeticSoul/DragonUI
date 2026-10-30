@@ -19,9 +19,13 @@ local PREVIEW_POINTS = 3
 -- ComboFrame.lua's COMBOFRAME_FADE_IN and COMBOFRAME_FADE_OUT.
 local FADE_IN, FADE_OUT = 0.3, 0.5
 -- Forever's arc over the 54-unit portrait's top right, in degrees: 2 into its ring (26.5..30).
-local ARC = { radius = 32.5, first = 92, step = -18 }
+local ARC_FOREVER = { radius = 32.5, first = 92, step = -18 }
+-- Blizzard's gems by angle on our smaller ring, clear of the raid mark on the portrait's top; higher over a level circle.
+local ARC_VANILLA = { radius = 32.5, first = 48, step = -17, circleFirst = 58 }
 -- Round a dragon: down the ring's right, filling upwards; above Forever's level circle when shown.
 local ARC_DRAGON = { radius = 28.5, first = -50, step = 20, circleFirst = 0 }
+-- An arc reaching past this angle runs over the raid mark on the portrait's top.
+local RAID_MARK_ANGLE = 60
 local ARC_PORTRAIT = 54
 
 local floor, min = math.floor, math.min
@@ -215,6 +219,7 @@ if addon.RegisterModule then
 end
 
 local bar, arc, column, editorBox
+local arcInUse, orbsCanShow, arcOverPortrait = false, false, false
 local views = {}
 local parked
 local previewing = false
@@ -494,14 +499,36 @@ local function LayoutColumn(family)
     column:SetPoint("BOTTOM", UF.GetComboSlot(), "CENTER", 0, 0)
 end
 
--- Left to right over the portrait's top-right ring, or bottom up its right side round a dragon.
-local function PlaceArc()
+local function ArcSpot()
     local elite = _G.DragonUI_TargetElite
-    local spot = elite and elite:IsShown() and ARC_DRAGON or ARC
-    local first = spot.first
-    if spot == ARC_DRAGON and UF.GetLevelSpot("target") then
-        first = spot.circleFirst
+    if elite and elite:IsShown() then return ARC_DRAGON end
+    return UF.GetFrameStyle() == "forever" and ARC_FOREVER or ARC_VANILLA
+end
+
+local function ArcFirst(spot)
+    return spot.circleFirst and UF.GetLevelSpot("target") and spot.circleFirst or spot.first
+end
+
+-- The raid mark steps aside while orbs can show on an arc that reaches it.
+local function SyncRaidMark()
+    local spot = ArcSpot()
+    local first = ArcFirst(spot)
+    local top = math.max(first, first + (MAX_POINTS - 1) * spot.step)
+    local over = not not (arcInUse and orbsCanShow and top > RAID_MARK_ANGLE)
+    if over ~= arcOverPortrait then
+        arcOverPortrait = over
+        if UF.PlaceTargetRaidMark then UF.PlaceTargetRaidMark() end
     end
+end
+
+function UF.ComboArcOverPortrait()
+    return arcOverPortrait
+end
+
+-- Over the portrait's top-right ring, or bottom up its right side round a dragon.
+local function PlaceArc()
+    local spot = ArcSpot()
+    local first = ArcFirst(spot)
     -- The skin, not the texture: the target module may size its portrait after this runs at boot.
     local portrait = UF.GetFrameSkin().target.portrait
     local radius = spot.radius * (portrait and portrait.w or ARC_PORTRAIT) / ARC_PORTRAIT / SmallScale()
@@ -522,6 +549,7 @@ end
 -- target_style.lua calls this whenever the target's dragon shows or goes.
 function UF.OnTargetDragon()
     if arc and arc.art then PlaceArc() end
+    SyncRaidMark()
 end
 
 -- =============================================================================
@@ -666,14 +694,19 @@ local function Update(animate)
     local count = GetComboPoints(unit, "target") or 0
     local wanted = count > 0 or (Eligible(unit) and not Cfg().hide_empty)
     -- Points only build on what can be attacked: the target's orbs never show empty on yourself or a friend.
-    local onTarget = count > 0 or (wanted and UnitCanAttack(unit, "target") and true or false)
+    local attackable = UnitCanAttack(unit, "target") and true or false
+    local onTarget = count > 0 or (wanted and attackable)
+    local exists = UnitExists("target") and true or false
+    -- Not hide_empty's call: stepping back at every finisher would make the raid mark hop through a fight.
+    orbsCanShow = exists and (count > 0 or (Eligible(unit) and attackable))
+    SyncRaidMark()
     for _, view in ipairs(views) do
         if view == bar and previewing then
             UpdateView(view, PREVIEW_POINTS, true, false)
         elseif view == bar then
             UpdateView(view, count, wanted, animate)
         else
-            UpdateView(view, count, onTarget and UnitExists("target") and true or false, animate)
+            UpdateView(view, count, onTarget and exists, animate)
         end
     end
 end
@@ -783,6 +816,8 @@ local function ApplyNow()
         table.insert(views, bar)
     end
     local onColumn = onTarget and UF.IsCompact("target")
+    arcInUse = onTarget and not onColumn
+    SyncRaidMark()
     if onColumn then
         LayoutColumn(family)
         table.insert(views, column)
@@ -824,6 +859,8 @@ end
 
 local function RestoreNow()
     ComboPoints.applied = false
+    arcInUse = false
+    SyncRaidMark()
     eventFrame:UnregisterAllEvents()
     driver:SetScript("OnUpdate", nil)
     if bar then bar:Hide() end
