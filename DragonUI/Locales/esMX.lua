@@ -1149,7 +1149,24 @@ L["Guaranteed chance of gaining %d skill ups"] = "Probabilidad garantizada de ob
 L["High chance of gaining skill"] = "Alta probabilidad de mejorar la habilidad"
 L["Low chance of gaining skill"] = "Baja probabilidad de mejorar la habilidad"
 
+-- addon manager
+L["Addon Manager"] = "Gestor de addons"
+L["Enable and disable your addons in game from an AddOns button in the Esc menu"] = "Activa y desactiva tus addons en el juego desde un botón AddOns en el menú Esc"
+L["Load out of date AddOns"] = "Cargar AddOns desactualizados"
+L["Search..."] = "Buscar..."
+L["Addon Memory:"] = "Memoria de addons:"
+L["Enable All"] = "Activar todos"
+L["Disable All"] = "Desactivar todos"
+L["OK / Reload"] = "Aceptar / Recargar"
+L["Parent Disabled"] = "Addon principal desactivado"
+L["Protected"] = "Protegido"
+
 -- ============================================================================
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "Mapa de vuelo"
+L["Retail-style flight master map window chrome"] = "Apariencia estilo Retail para la ventana del mapa de vuelo"
+L["Mail"] = "Correo"
+L["Retail-style mail window with Open All button"] = "Ventana de correo estilo Retail con botón Abrir todo"
+L["Open All"] = "Abrir todo"
+L["Opening..."] = "Abriendo..."

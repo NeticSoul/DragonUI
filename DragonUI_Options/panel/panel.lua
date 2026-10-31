@@ -83,7 +83,7 @@ local function PanelControls()
 end
 
 local function GetVersion()
-    return addon.RELEASE_VERSION or "2.5"
+    return addon.RELEASE_VERSION
 end
 
 local function GetTitle()

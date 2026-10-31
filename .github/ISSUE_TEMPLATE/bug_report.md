@@ -16,7 +16,6 @@ How can I reproduce it?
 ## Additional information
 - Are you using the latest release or the main branch?:
 - Server:
-- Does `/reload` fix it?:
 - Does it happen with default DragonUI settings/profile?:
 
 ## Screenshots

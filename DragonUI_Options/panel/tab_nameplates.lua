@@ -274,10 +274,10 @@ local function BuildGeneralSubTab(scroll)
 
     C:AddDropdown(styleSection, {
         label = LO["Nameplate Art"],
-        desc = LO["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome and is still in beta."],
+        desc = LO["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome."],
         dbPath = DB .. ".plateStyle",
         values = {
-            modern = LO["Modern (Beta)"],
+            modern = LO["Modern"],
             legacy = LO["Heritage"],
         },
         width = 200,

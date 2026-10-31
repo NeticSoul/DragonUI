@@ -1140,7 +1140,26 @@ L["Guaranteed chance of gaining %d skill ups"] = "必定获得%d点技能"
 L["High chance of gaining skill"] = "提升技能的几率很高"
 L["Low chance of gaining skill"] = "提升技能的几率很低"
 
+-- addon manager
+L["Addon Manager"] = "插件管理器"
+L["Enable and disable your addons in game from an AddOns button in the Esc menu"] = "通过 Esc 菜单中的插件按钮在游戏内启用和禁用插件"
+L["Load out of date AddOns"] = "加载过期插件"
+L["Search..."] = "搜索..."
+L["Addon Memory:"] = "插件内存："
+L["Enable All"] = "全部启用"
+L["Disable All"] = "全部禁用"
+L["OK / Reload"] = "确定 / 重载"
+L["Parent Disabled"] = "父插件已禁用"
+L["Protected"] = "受保护"
+L["Turn it back on from the AddOns button in the Esc menu."] = "可在 Esc 菜单的插件按钮中重新启用。"
+L["Turn it back on from the AddOns list at character selection."] = "可在角色选择界面的插件列表中重新启用。"
+
 -- ============================================================================
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "飞行地图"
+L["Retail-style flight master map window chrome"] = "飞行管理员地图窗口的正式服风格皮肤"
+L["Mail"] = "邮件"
+L["Retail-style mail window with Open All button"] = "带有全部打开按钮的正式服风格邮件窗口"
+L["Open All"] = "全部打开"
+L["Opening..."] = "正在打开..."

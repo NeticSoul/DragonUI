@@ -35,7 +35,8 @@ end
 -- ============================================================================
 
 -- Addon message prefix (max 16 chars for CHAT_MSG_ADDON)
-local ADDON_PREFIX = "DUI_Version"
+-- A fork announces its own 3.x releases on "DUI_Version"; a separate prefix keeps those out of our update notice.
+local ADDON_PREFIX = "DragonUI_Version"
 
 -- ============================================================================
 -- STATE

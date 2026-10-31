@@ -1078,7 +1078,26 @@ L["Guaranteed chance of gaining %d skill ups"] = "Chance garantie de gagner %d p
 L["High chance of gaining skill"] = "Forte chance de gagner en compétence"
 L["Low chance of gaining skill"] = "Faible chance de gagner en compétence"
 
+-- addon manager
+L["Addon Manager"] = "Gestionnaire d'addons"
+L["Enable and disable your addons in game from an AddOns button in the Esc menu"] = "Activez et désactivez vos addons en jeu depuis un bouton AddOns dans le menu Échap"
+L["Load out of date AddOns"] = "Charger les AddOns périmés"
+L["Search..."] = "Rechercher..."
+L["Addon Memory:"] = "Mémoire des addons :"
+L["Enable All"] = "Tout activer"
+L["Disable All"] = "Tout désactiver"
+L["OK / Reload"] = "OK / Recharger"
+L["Parent Disabled"] = "Addon parent désactivé"
+L["Protected"] = "Protégé"
+L["Turn it back on from the AddOns button in the Esc menu."] = "Réactivez-le depuis le bouton AddOns du menu Échap."
+L["Turn it back on from the AddOns list at character selection."] = "Réactivez-le depuis la liste des AddOns à la sélection du personnage."
+
 -- ============================================================================
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "Carte des trajets aériens"
+L["Retail-style flight master map window chrome"] = "Apparence Retail pour la fenêtre de la carte des trajets aériens"
+L["Mail"] = "Courrier"
+L["Retail-style mail window with Open All button"] = "Fenêtre de courrier Retail avec un bouton Tout ouvrir"
+L["Open All"] = "Tout ouvrir"
+L["Opening..."] = "Ouverture..."

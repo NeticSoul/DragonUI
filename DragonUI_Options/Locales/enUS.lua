@@ -43,7 +43,7 @@ L["Heal prediction, absorb shields and animated health loss."] = true
 L["Change columns, rows, and buttons shown per action bar."] = true
 L["Switch micro menu icons between colored and grayscale style."] = true
 L["About"] = true
-L["Bringing the retail WoW look to 3.3.5a, inspired by Dragonflight UI."] = true
+L["Bringing the retail WoW look to 3.3.5a."] = true
 L["Created and maintained by NeticSoul, with community contributions."] = true
 
 -- Language
@@ -1235,8 +1235,8 @@ L["Enable Nameplates Module"] = true
 L["Apply DragonUI nameplate styling."] = true
 L["Plate Style"] = true
 L["Nameplate Art"] = true
-L["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome and is still in beta."] = true
-L["Modern (Beta)"] = true
+L["Heritage is the DragonUI art. Modern draws the current World of Warcraft nameplate chrome."] = true
+L["Modern"] = true
 L["Heritage"] = true
 L["Mouseover Highlight"] = true
 L["Wash the health bar with a bright overlay while the cursor is over the nameplate."] = true

@@ -1133,6 +1133,8 @@ L["Disable All"] = "Отключить все"
 L["OK / Reload"] = "ОК / Релоад"
 L["Parent Disabled"] = "Родитель отключен"
 L["Protected"] = "Защищено"
+L["Turn it back on from the AddOns button in the Esc menu."] = "Включите его снова кнопкой AddOns в меню Esc."
+L["Turn it back on from the AddOns list at character selection."] = "Включите его снова в списке модификаций на экране выбора персонажа."
 
 -- ============================================================================
 -- PROFESSIONS

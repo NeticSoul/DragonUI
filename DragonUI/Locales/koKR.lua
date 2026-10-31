@@ -1145,7 +1145,26 @@ L["Guaranteed chance of gaining %d skill ups"] = "숙련도 %d 상승 확정"
 L["High chance of gaining skill"] = "숙련도 상승 확률 높음"
 L["Low chance of gaining skill"] = "숙련도 상승 확률 낮음"
 
+-- addon manager
+L["Addon Manager"] = "애드온 관리자"
+L["Enable and disable your addons in game from an AddOns button in the Esc menu"] = "Esc 메뉴의 애드온 버튼으로 게임 안에서 애드온을 켜고 끕니다"
+L["Load out of date AddOns"] = "오래된 애드온 불러오기"
+L["Search..."] = "검색..."
+L["Addon Memory:"] = "애드온 메모리:"
+L["Enable All"] = "모두 사용"
+L["Disable All"] = "모두 사용 안 함"
+L["OK / Reload"] = "확인 / 리로드"
+L["Parent Disabled"] = "상위 애드온 꺼짐"
+L["Protected"] = "보호됨"
+L["Turn it back on from the AddOns button in the Esc menu."] = "Esc 메뉴의 애드온 버튼에서 다시 켤 수 있습니다."
+L["Turn it back on from the AddOns list at character selection."] = "캐릭터 선택 화면의 애드온 목록에서 다시 켤 수 있습니다."
+
 -- ============================================================================
 -- FLIGHT MAP & MAIL
 -- ============================================================================
 L["Flight Map"] = "비행 지도"
+L["Retail-style flight master map window chrome"] = "비행 조련사 지도 창에 정식 서버 스타일 스킨 적용"
+L["Mail"] = "우편"
+L["Retail-style mail window with Open All button"] = "모두 열기 버튼이 있는 정식 서버 스타일 우편 창"
+L["Open All"] = "모두 열기"
+L["Opening..."] = "여는 중..."
