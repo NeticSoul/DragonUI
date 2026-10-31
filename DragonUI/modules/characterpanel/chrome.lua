@@ -296,8 +296,9 @@ local function hookSubframes()
             frame:HookScript("OnShow", function(self)
                 CP.ApplyChromeForTab(self:GetName())
             end)
+            -- Once only: the client compresses levels, so a later re-base lands on the sidebar tabs.
+            if cf then frame:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL) end
         end
-        if cf then frame:SetFrameLevel(cf:GetFrameLevel() + CP.SUBFRAME_LEVEL) end
     end
     CP.ApplyChromeForTab(CP.ActiveTabName and CP.ActiveTabName() or "PaperDollFrame")
     hookFrameShow()

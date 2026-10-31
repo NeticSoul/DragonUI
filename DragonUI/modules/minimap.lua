@@ -1062,6 +1062,10 @@ local function ReplaceBlizzardFrame(frame)
     local minimapCluster = MinimapCluster
     minimapCluster:ClearAllPoints()
     minimapCluster:SetPoint("CENTER", frame, "CENTER", 0, clusterLift)
+    -- Blizzard caps UIPanels at a minimap still in its place; ours can be anywhere.
+    minimapCluster:SetMovable(true)
+    minimapCluster:SetDontSavePosition(true)
+    minimapCluster:SetUserPlaced(true)
     MinimapModule.appliedShiftX, MinimapModule.appliedShiftY = 0, 0
 
     -- In hybrid mode with SexyMap, skip border/zone text customization
@@ -2853,6 +2857,11 @@ function MinimapModule:RestoreMinimapSystem()
     RestoreCollectedButtonsToOrigin()
     self._releasingLaunchers = nil
 
+    if MinimapCluster then
+        MinimapCluster:SetUserPlaced(false)
+        MinimapCluster:SetDontSavePosition(false)
+        MinimapCluster:SetMovable(false)
+    end
     -- Restore original MinimapCluster state
     if MinimapCluster and self.originalStates.MinimapCluster then
         MinimapCluster:ClearAllPoints()
