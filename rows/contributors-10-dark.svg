@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="32" viewBox="0 0 420 32" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<clipPath id="a"><circle cx="32" cy="12" r="12"/></clipPath>
+<circle cx="32" cy="12" r="12" fill="#21262d"/>
+<image href="data:image/jpeg;base64,/9j/2wCEAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDIBCQkJDAsMGA0NGDIhHCEyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMv/AABEIADAAMAMBIgACEQEDEQH/xAGiAAABBQEBAQEBAQAAAAAAAAAAAQIDBAUGBwgJCgsQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+gEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoLEQACAQIEBAMEBwUEBAABAncAAQIDEQQFITEGEkFRB2FxEyIygQgUQpGhscEJIzNS8BVictEKFiQ04SXxFxgZGiYnKCkqNTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqCg4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2dri4+Tl5ufo6ery8/T19vf4+fr/2gAMAwEAAhEDEQA/APBqTFSeWc4xTo0UPmQEqvJHTPtQBM9kYdPjuZD80pOxPRR/Ef6fSkhaU2sjKcquAymo7i5luSvmNkKNqqOAo9APxNFvOYJASC0ZI3JnG6gBBub+PGaVG2PzzUjQvI7eUjMucqQOo7VLBpdxK/KMgHdhigCNwQ3qaACc571bjh3EA4JPFT3caebgR+WigKFxzx6+9AGUYl9aZsBbFXmiXtVcxAmgDUhuVtbZER8EAZx3qCbUZH6Nx7Gk09UkleCZlWExu7Mw6FUYjB9zj68VO1hBGpLyquOuTQA6IeXKjODsBG7HpUNzcNI7OcHJz0rUjiVyyuMn+VUbqFYpNo6elAFNZVxzVi10jUdRiknsrG4uIkba7RIWwffFQThcjaMGrWnarqmkpKmn389ss2PM8psZx0oArWTpa6rA1zEuIpgXjlBAODyGFVL3clzPEZd4Ryu4HIbB606ZXaRndizMclmOSTUUgLHLHJxigD//2Q==" x="20" y="0" width="24" height="24" clip-path="url(#a)"/>
+<text x="54" y="16" font-size="13" fill="#e6edf3">Stefan2102</text>
+<rect x="210" y="6" width="176" height="12" rx="6" fill="#21262d"/>
+<rect x="210" y="6" width="59" height="12" rx="6" fill="#2f9be0"/>
+<text x="420" y="16" font-size="13" font-weight="600" text-anchor="end" fill="#e6edf3">4</text>
+</svg>
