@@ -118,12 +118,14 @@ Join the Discord to get help, share your setup and follow development:
 
 ## 🏆 Hall of Fame
 
-The people who have opened the most issues and pull requests. Updated every day.
+The people who have opened the most issues and pull requests. Updated every month.
 
+<!-- hall-of-fame:start -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NeticSoul/DragonUI/hall-of-fame/hall-of-fame-dark.svg">
   <img alt="Top issuers and top contributors" src="https://raw.githubusercontent.com/NeticSoul/DragonUI/hall-of-fame/hall-of-fame-light.svg">
 </picture>
+<!-- hall-of-fame:end -->
 
 ## 🙏 Credits and References
 

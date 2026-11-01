@@ -1,8 +1,12 @@
 name: Hall of Fame
 
 on:
+  # Runs after the download link on a release: both push the README to main and would race.
+  workflow_run:
+    workflows: ["Update download link"]
+    types: [completed]
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 6 1 * *"
   workflow_dispatch:
 
 permissions:
@@ -12,12 +16,22 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to a commit: a moved tag must not change what runs with write access.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
 
       - name: Draw the charts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 .github/hall_of_fame.py out
+        run: python3 .github/hall_of_fame.py out README.md
+
+      # Pushed before the images, so a rejected push leaves the links and the rows matching.
+      - name: Point the README links at the new order
+        run: |
+          git diff --quiet -- README.md && exit 0
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "docs(readme): hall of fame links follow the new ranking" -- README.md
+          git push -q origin main
 
       # Its own orphan branch, so main's history and the release zip never carry the images.
       - name: Publish to the hall-of-fame branch
