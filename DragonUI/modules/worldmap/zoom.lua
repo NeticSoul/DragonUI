@@ -7,7 +7,9 @@ local WM = addon.WorldMap
 
 local LEVELS = { 1, 1.5, 2, 2.5, 3 }
 -- The blob, button and POI frames are anchored to the detail frame, so moving it pans them all.
-local CANVAS = { WorldMapDetailFrame, WorldMapBlobFrame, WorldMapButton, WorldMapPOIFrame }
+local CANVAS = { WorldMapDetailFrame, WorldMapBlobFrame, WorldMapButton, WorldMapPOIFrame,
+    -- Scrolled frames draw in child order, ignoring levels, so these go last to stay on top.
+    WorldMapCorpse, WorldMapDeathRelease }
 
 WM.zoom = 1
 

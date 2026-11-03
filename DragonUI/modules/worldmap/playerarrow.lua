@@ -8,6 +8,7 @@ local WM = addon.WorldMap
 
 local ARROW = addon._dir .. "Minimap\\poi-player"
 local SIZE = 36
+local CORPSE_SIZE = 14
 
 local arrow, driver, facing
 
@@ -19,6 +20,14 @@ local function tick()
     arrow:SetRotation(now)
 end
 
+local function placeMarker(marker, scale)
+    -- Zoom hands these to the scroll child, which lacks the scale Blizzard's anchor offsets assume.
+    marker:SetScale(WorldMapButton:GetEffectiveScale() / marker:GetParent():GetEffectiveScale())
+    marker:SetSize(CORPSE_SIZE / scale, CORPSE_SIZE / scale)
+    -- Over the pins and the arrow, as retail: its stock level ties our pins and they bury it.
+    marker:SetFrameLevel(WORLDMAP_POI_FRAMELEVEL + 102)
+end
+
 -- WorldMapPlayer hangs off WorldMapButton, which carries the canvas scale; retail keeps pins one size.
 -- The level is re-asserted here because a size toggle re-levels the button and leaves its children put.
 function WM.RefreshPlayerArrow()
@@ -27,6 +36,8 @@ function WM.RefreshPlayerArrow()
     arrow:SetSize(SIZE / scale, SIZE / scale)
     -- Where the client drew its own arrow: over the quest pins, which would bury it otherwise.
     WorldMapPlayer:SetFrameLevel(WORLDMAP_POI_FRAMELEVEL + 100)
+    placeMarker(WorldMapCorpse, scale)
+    placeMarker(WorldMapDeathRelease, scale)
     -- A carried flag sits on its carrier, you included; under the arrow it would vanish.
     for i = 1, NUM_WORLDMAP_FLAGS do
         _G["WorldMapFlag" .. i]:SetFrameLevel(WORLDMAP_POI_FRAMELEVEL + 101)
