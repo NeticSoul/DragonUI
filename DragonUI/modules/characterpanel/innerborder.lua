@@ -13,14 +13,8 @@ local OUTSET = 2
 
 local pieces = {}
 
-local function build()
-    local cf = _G.CharacterFrame
-    local pd = _G.PaperDollFrame
-    local model = _G.CharacterModelFrame
-    if not cf or not pd or not model or not cf.Inset or cf._duiInnerBorder then return end
-    cf._duiInnerBorder = true
-    local inset = cf.Inset
-
+-- Shared with the inspect window, whose paperdoll, model and ground take these three roles.
+function CP.DrawModelTrim(pd, model, inset, out)
     -- Owned by PaperDollFrame so it stacks with the slots and hides with the tab, and tagged so
     -- chrome.lua's sweep tells our art from Blizzard's by identity rather than by path.
     local function corner(atlas, point, x, y)
@@ -29,7 +23,7 @@ local function build()
         t:SetAtlasTexture(atlas, true)
         t:SetSize(CORNER_SIZE, CORNER_SIZE)
         t:SetPoint(point, model, point, x, y)
-        pieces[#pieces + 1] = t
+        out[#out + 1] = t
         return t
     end
 
@@ -46,7 +40,7 @@ local function build()
         if vertical then t:SetWidth(EDGE_THICKNESS) else t:SetHeight(EDGE_THICKNESS) end
         t:SetPoint(p1, a1, r1)
         t:SetPoint(p2, a2, r2)
-        pieces[#pieces + 1] = t
+        out[#out + 1] = t
         return t
     end
 
@@ -63,7 +57,16 @@ local function build()
     divider:SetPoint("LEFT", inset, "LEFT", 0, 0)
     divider:SetPoint("RIGHT", inset, "RIGHT", 0, 0)
     divider:SetPoint("BOTTOM", model, "BOTTOM", 0, -OUTSET)
-    pieces[#pieces + 1] = divider
+    out[#out + 1] = divider
+end
+
+local function build()
+    local cf = _G.CharacterFrame
+    local pd = _G.PaperDollFrame
+    local model = _G.CharacterModelFrame
+    if not cf or not pd or not model or not cf.Inset or cf._duiInnerBorder then return end
+    cf._duiInnerBorder = true
+    CP.DrawModelTrim(pd, model, cf.Inset, pieces)
 end
 
 CP.InnerBorderPieces = pieces

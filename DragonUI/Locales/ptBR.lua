@@ -1097,6 +1097,8 @@ L["Turn it back on from the AddOns list at character selection."] = "Reative-o p
 -- ============================================================================
 L["Flight Map"] = "Mapa de voo"
 L["Retail-style flight master map window chrome"] = "Visual estilo Retail para a janela do mapa de voo"
+L["Inspect Window"] = "Janela de inspeção"
+L["Retail-style frame and tabs for the inspect window"] = "Moldura e abas estilo Retail para a janela de inspeção"
 L["Mail"] = "Correio"
 L["Retail-style mail window with Open All button"] = "Janela de correio estilo Retail com botão Abrir tudo"
 L["Open All"] = "Abrir tudo"

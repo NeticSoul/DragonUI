@@ -155,11 +155,15 @@ local TINTS = {
     dark = { body = 0.45, paper = 0.8, streak = 0.35 },
 }
 
+function CP.BodyTint()
+    return CP:Config().dark_background and TINTS.dark or TINTS.stone
+end
+
 function CP.ApplyBodyBackground()
     local cf = _G.CharacterFrame
     if not cf then return end
 
-    local tint = CP:Config().dark_background and TINTS.dark or TINTS.stone
+    local tint = CP.BodyTint()
 
     if cf._duiRockBg then
         cf._duiRockBg:SetVertexColor(tint.body, tint.body, tint.body)

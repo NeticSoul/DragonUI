@@ -15,6 +15,8 @@
 	<!-- slots before model/innerborder: both frame the column geometry it establishes. -->
 	<Script file="slots.lua"/>
 	<Script file="model.lua"/>
+	<!-- /dui racebg: shows every race's backdrop in the inspect window. -->
+	<Script file="racebgtool.lua"/>
 	<!-- after model.lua: the controls anchor to the resized viewport. -->
 	<Script file="modelcontrols.lua"/>
 	<Script file="innerborder.lua"/>

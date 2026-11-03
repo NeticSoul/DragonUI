@@ -60,6 +60,8 @@ local function styleButton(btn, glyph)
     hl:SetAlpha(0.45)
 end
 
+CP.StyleModelButton = styleButton
+
 -- Blizzard's rotate buttons stay parented to the model: their OnClick passes self:GetParent() on.
 local function isSibling(btn)
     return btn:GetParent() ~= bar

@@ -14,6 +14,7 @@ local SLICE = {
     gapLeft = { 6, 54, 0.70703125, 0.73046875, 0.4375, 0.85938 },
     gapRight = { 7, 54, 0.671875, 0.69921875, 0.4375, 0.85938 },
 }
+CP.SLOT_PARTS, CP.SLOT_SLICE = PARTS, SLICE
 
 local function slotNames(...)
     local names = {}

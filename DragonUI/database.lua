@@ -1426,6 +1426,9 @@ local defaults = {
             taxiframe = {
                 enabled = true, -- Retail-style flight master map window
             },
+            inspectframe = {
+                enabled = true, -- Retail-style frame and tabs for the inspect window
+            },
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)

@@ -1159,6 +1159,8 @@ L["Turn it back on from the AddOns list at character selection."] = "可在角�
 -- ============================================================================
 L["Flight Map"] = "飞行地图"
 L["Retail-style flight master map window chrome"] = "飞行管理员地图窗口的正式服风格皮肤"
+L["Inspect Window"] = "观察窗口"
+L["Retail-style frame and tabs for the inspect window"] = "观察窗口的正式服风格边框和标签"
 L["Mail"] = "邮件"
 L["Retail-style mail window with Open All button"] = "带有全部打开按钮的正式服风格邮件窗口"
 L["Open All"] = "全部打开"

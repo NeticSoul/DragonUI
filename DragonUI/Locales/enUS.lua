@@ -1165,6 +1165,8 @@ L["Low chance of gaining skill"] = true
 -- ============================================================================
 L["Flight Map"] = true
 L["Retail-style flight master map window chrome"] = true
+L["Inspect Window"] = true
+L["Retail-style frame and tabs for the inspect window"] = true
 L["Mail"] = true
 L["Retail-style mail window with Open All button"] = true
 L["Open All"] = true

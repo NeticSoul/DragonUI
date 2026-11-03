@@ -1164,6 +1164,8 @@ L["Turn it back on from the AddOns list at character selection."] = "캐릭터 �
 -- ============================================================================
 L["Flight Map"] = "비행 지도"
 L["Retail-style flight master map window chrome"] = "비행 조련사 지도 창에 정식 서버 스타일 스킨 적용"
+L["Inspect Window"] = "살펴보기 창"
+L["Retail-style frame and tabs for the inspect window"] = "살펴보기 창에 정식 서버 스타일 테두리와 탭 적용"
 L["Mail"] = "우편"
 L["Retail-style mail window with Open All button"] = "모두 열기 버튼이 있는 정식 서버 스타일 우편 창"
 L["Open All"] = "모두 열기"

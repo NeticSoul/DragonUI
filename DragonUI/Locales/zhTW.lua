@@ -1097,6 +1097,8 @@ L["Turn it back on from the AddOns list at character selection."] = "可在角�
 -- ============================================================================
 L["Flight Map"] = "飛行地圖"
 L["Retail-style flight master map window chrome"] = "飛行管理員地圖視窗的正式服風格外觀"
+L["Inspect Window"] = "觀察視窗"
+L["Retail-style frame and tabs for the inspect window"] = "觀察視窗的正式服風格外框和標籤"
 L["Mail"] = "郵件"
 L["Retail-style mail window with Open All button"] = "附有全部開啟按鈕的正式服風格郵件視窗"
 L["Open All"] = "全部開啟"

@@ -1166,6 +1166,8 @@ L["Protected"] = "Protegido"
 -- ============================================================================
 L["Flight Map"] = "Mapa de vuelo"
 L["Retail-style flight master map window chrome"] = "Apariencia estilo Retail para la ventana del mapa de vuelo"
+L["Inspect Window"] = "Ventana de inspección"
+L["Retail-style frame and tabs for the inspect window"] = "Marco y pestañas estilo Retail para la ventana de inspección"
 L["Mail"] = "Correo"
 L["Retail-style mail window with Open All button"] = "Ventana de correo estilo Retail con botón Abrir todo"
 L["Open All"] = "Abrir todo"

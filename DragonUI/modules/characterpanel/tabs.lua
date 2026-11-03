@@ -8,6 +8,7 @@ local NUM_TABS = 6
 
 local TAB_START_X = 11
 local TAB_GAP = 1
+CP.TAB_START_X, CP.TAB_GAP = TAB_START_X, TAB_GAP
 
 -- Same sheet and texcoords bagster uses, so the character tabs read as the same retail metal as
 -- the bag windows. Blizzard's CharacterFrameTabButtonTemplate already provides every region.

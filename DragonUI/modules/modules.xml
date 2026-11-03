@@ -83,6 +83,9 @@
     <!-- Retail-style character window reskin -->
     <Include file="characterpanel\characterpanel.xml"/>
 
+    <!-- Retail-style inspect window reskin (after characterpanel: reuses its chrome, tabs and slot art) -->
+    <Script file="inspectframe.lua"/>
+
     <!-- Retail-style vendor window reskin -->
     <Include file="merchant\merchant.xml"/>
 

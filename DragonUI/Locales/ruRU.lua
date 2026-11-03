@@ -1166,6 +1166,8 @@ L["Low chance of gaining skill"] = "Низкий шанс повысить на�
 -- ============================================================================
 L["Flight Map"] = "Карта полетов"
 L["Retail-style flight master map window chrome"] = "Окно распорядителя полетов в стиле Retail"
+L["Inspect Window"] = "Окно осмотра"
+L["Retail-style frame and tabs for the inspect window"] = "Рамка и вкладки окна осмотра в стиле Retail"
 L["Mail"] = "Почта"
 L["Retail-style mail window with Open All button"] = "Окно почты в стиле Retail с кнопкой «Открыть все»"
 L["Open All"] = "Открыть все"

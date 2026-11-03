@@ -1166,6 +1166,8 @@ L["Turn it back on from the AddOns list at character selection."] = "Aktiviere e
 -- ============================================================================
 L["Flight Map"] = "Flugkarte"
 L["Retail-style flight master map window chrome"] = "Retail-Design für das Flugmeister-Kartenfenster"
+L["Inspect Window"] = "Betrachtungsfenster"
+L["Retail-style frame and tabs for the inspect window"] = "Retail-Design für Rahmen und Reiter des Betrachtungsfensters"
 L["Mail"] = "Post"
 L["Retail-style mail window with Open All button"] = "Retail-Design für das Postfenster mit „Alle öffnen“-Schaltfläche"
 L["Open All"] = "Alle öffnen"
