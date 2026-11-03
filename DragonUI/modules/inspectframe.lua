@@ -44,9 +44,12 @@ local WEAPON_CAPS = {
 -- Same lift as the character panel's: the weapon row now covers the model's foot.
 local ITEM_LEVEL_LIFT = 24
 
+-- InspectModelFrame's anchor in Blizzard's XML.
+local MODEL_X, MODEL_Y = 65, -78
+
 local NUM_TABS = 3
 
-local chrome
+local chrome, stage, raceArt, raceShade
 
 local function hideStockArt()
     for frameName, layer in pairs(STOCK_ART) do
@@ -142,22 +145,31 @@ end
 -- Flush with the columns' metal on both sides, as the character panel's Inset is.
 local function buildGround()
     local paperDoll = _G.InspectPaperDollFrame
-    local model = _G.InspectModelFrame
     if not paperDoll then return end
     local ground = paperDoll:CreateTexture(nil, "BACKGROUND", nil, -8)
     ground:SetAtlasTexture("character-panel-background")
     ground:SetPoint("TOPLEFT", chrome, "TOPLEFT", 6, -60)
     ground:SetPoint("BOTTOMRIGHT", chrome, "BOTTOMRIGHT", -6, 4)
     CP.DrawPaneBorder(paperDoll, ground)
-    if model then CP.DrawModelTrim(paperDoll, model, ground, {}) end
+    if stage then CP.DrawModelTrim(paperDoll, stage, ground, {}) end
 end
 
 -- The race art only matches each race's camera at retail's 231x320; Blizzard's TOPLEFT is retail's.
 local function fitViewport()
-    local model = _G.InspectModelFrame
-    if not model then return end
+    local model, paperDoll = _G.InspectModelFrame, _G.InspectPaperDollFrame
+    if not (model and paperDoll) then return end
+    -- The model's own rect, which everything else holds to so a form's model can move alone.
+    stage = CreateFrame("Frame", nil, paperDoll)
+    stage:SetSize(CP.MODEL_W, CP.MODEL_H)
+    stage:SetPoint("TOPLEFT", paperDoll, "TOPLEFT", MODEL_X, MODEL_Y)
+    -- Under the model, not in it: a translucent model (Ghost Wolf) fades its whole frame.
+    stage:SetFrameLevel(model:GetFrameLevel())
+    model:SetFrameLevel(model:GetFrameLevel() + 1)
     model:SetSize(CP.MODEL_W, CP.MODEL_H)
+    model:ClearAllPoints()
+    model:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, 0)
     model._duiItemLevelY = ITEM_LEVEL_LIFT
+    model._duiItemLevelAnchor = stage
     -- Siblings at one level, so the weapon row over the model's foot needs the higher level.
     local level = model:GetFrameLevel() + 2
     for _, group in ipairs(SLOT_GROUPS) do
@@ -170,29 +182,92 @@ end
 
 local function buildBackdrop()
     local model = _G.InspectModelFrame
-    if not model then return end
-    model._duiRaceBg, model._duiRaceBgShade = CP.CreateRaceBackdrop(model)
+    if not (model and stage) then return end
+    raceArt, raceShade = CP.CreateRaceBackdrop(stage)
 end
 
-local function paintBackdrop()
-    if CP.InspectPreview then return CP.InspectPreview() end
-    local model = _G.InspectModelFrame
-    local unit = _G.InspectFrame and _G.InspectFrame.unit
-    if not (model and model._duiRaceBg and unit) then return end
-    local _, fileName = UnitRace(unit)
-    CP.PaintRaceBackdrop(model._duiRaceBg, model._duiRaceBgShade, fileName, UnitSex(unit))
+-- Form auras (spellId is UnitAura's 11th return) and the form whose model each one shows.
+local FORM_BY_SPELL = {
+    [768] = "CAT", [57655] = "CAT", [5487] = "BEAR", [9634] = "BEAR", [24858] = "MOONKIN",
+    [33891] = "TREE", [783] = "TRAVEL", [1066] = "AQUATIC", [33943] = "FLIGHT", [40120] = "SWIFTFLIGHT",
+    [47241] = "DEMON", [2645] = "WOLF",
+}
+
+-- Px each form's model moves on top of its race art's lift; colour variants share one model.
+local FORM_SHIFT = {
+    ["CAT@NIGHTELF"] = -107, ["CAT@TAUREN"] = -55,
+    ["BEAR@NIGHTELF"] = -70, ["BEAR@TAUREN"] = -60,
+    ["MOONKIN@NIGHTELF"] = -65, ["MOONKIN@TAUREN"] = -45,
+    ["TREE@NIGHTELF"] = -50, ["TREE@TAUREN"] = 0,
+    ["TRAVEL@NIGHTELF"] = -65, ["TRAVEL@TAUREN"] = -48,
+    ["AQUATIC@NIGHTELF"] = -34, ["AQUATIC@TAUREN"] = -25,
+    ["FLIGHT@NIGHTELF"] = -70, ["FLIGHT@TAUREN"] = -40,
+    ["SWIFTFLIGHT@NIGHTELF"] = -65, ["SWIFTFLIGHT@TAUREN"] = -30,
+    ["DEMON@HUMAN"] = -30, ["DEMON@GNOME"] = 0, ["DEMON@ORC"] = -17, ["DEMON@SCOURGE"] = -31,
+    ["DEMON@BLOODELF"] = -45,
+    ["WOLF@TAUREN"] = -62, ["WOLF@ORC"] = -45, ["WOLF@TROLL"] = -50, ["WOLF@DRAENEI"] = -55,
+}
+
+-- Classless races get the server's fallback model: Night Elf's, or Tauren's for a Horde Moonkin.
+local FALLBACK_RACE = { DEMON = "HUMAN", WOLF = "ORC" }
+
+local function shiftFor(form, race, horde)
+    local value = FORM_SHIFT[form .. "@" .. race]
+    if value then return value end
+    if form == "MOONKIN" and horde then return FORM_SHIFT["MOONKIN@TAUREN"] end
+    return FORM_SHIFT[form .. "@" .. (FALLBACK_RACE[form] or "NIGHTELF")]
 end
-CP.RepaintInspectBackdrop = paintBackdrop
+
+local function formShift(form, race, sex, horde)
+    local base = form and race and shiftFor(form, strupper(race), horde)
+    if not base then return 0 end
+    return base + CP.RaceBackdropLift(CP.RaceLiftKey(race, sex))
+end
+
+local function unitForm(unit)
+    for i = 1, 40 do
+        local name, _, _, _, _, _, _, _, _, _, spellId = UnitAura(unit, i, "HELPFUL")
+        if not name then return nil end
+        if FORM_BY_SPELL[spellId] then return FORM_BY_SPELL[spellId] end
+    end
+end
+
+-- Moving the frame, never SetPosition: model loads re-fit the view but leave anchors alone.
+local shift = 0
+local function setShift(px)
+    local model = _G.InspectModelFrame
+    if not (model and stage) or px == shift then return end
+    shift = px
+    model:ClearAllPoints()
+    model:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, px)
+end
+
+local function placeModel()
+    local unit = _G.InspectFrame and _G.InspectFrame.unit
+    if not unit then return setShift(0) end
+    local _, race = UnitRace(unit)
+    setShift(formShift(unitForm(unit), race, UnitSex(unit), UnitFactionGroup(unit) == "Horde"))
+end
+
+local function refreshModel()
+    local unit = _G.InspectFrame and _G.InspectFrame.unit
+    if raceArt and unit then
+        local _, fileName = UnitRace(unit)
+        CP.PaintRaceBackdrop(raceArt, raceShade, fileName, UnitSex(unit))
+    end
+    placeModel()
+end
 
 local function styleRotateButtons()
+    local left, right = _G.InspectModelRotateLeftButton, _G.InspectModelRotateRightButton
+    if left and stage then
+        left:ClearAllPoints()
+        left:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, 0)
+    end
     if not CP.StyleModelButton then return end
     -- Same glyph pairing as the character panel: retail names the arrows the other way round.
-    if _G.InspectModelRotateLeftButton then
-        CP.StyleModelButton(_G.InspectModelRotateLeftButton, "common-icon-rotateright")
-    end
-    if _G.InspectModelRotateRightButton then
-        CP.StyleModelButton(_G.InspectModelRotateRightButton, "common-icon-rotateleft")
-    end
+    if left then CP.StyleModelButton(left, "common-icon-rotateright") end
+    if right then CP.StyleModelButton(right, "common-icon-rotateleft") end
 end
 
 local function chainTabs()
@@ -252,12 +327,26 @@ local function build()
     dressTabs()
 
     frame:HookScript("OnShow", tintBody)
-    if _G.InspectPaperDollFrame then
-        _G.InspectPaperDollFrame:HookScript("OnShow", paintBackdrop)
+    local paperDoll = _G.InspectPaperDollFrame
+    if paperDoll then
+        local auras = CreateFrame("Frame")
+        auras:SetScript("OnEvent", function(_, _, unit)
+            if unit == frame.unit then placeModel() end
+        end)
+        paperDoll:HookScript("OnShow", function()
+            auras:RegisterEvent("UNIT_AURA")
+            refreshModel()
+        end)
+        paperDoll:HookScript("OnHide", function() auras:UnregisterEvent("UNIT_AURA") end)
+        -- A shapeshift reloads the model, and servers set the unit's sex to the form model's: repaint.
+        paperDoll:HookScript("OnEvent", function(_, event, unit)
+            if event == "UNIT_MODEL_CHANGED" and unit == frame.unit then refreshModel() end
+        end)
+        if paperDoll:IsVisible() then auras:RegisterEvent("UNIT_AURA") end
     end
     -- Called directly on a target switch, so the paperdoll's OnShow never fires for it.
-    hooksecurefunc("InspectFrame_UnitChanged", paintBackdrop)
-    if frame:IsShown() then paintBackdrop() end
+    hooksecurefunc("InspectFrame_UnitChanged", refreshModel)
+    if frame:IsShown() then refreshModel() end
 end
 
 local function safeBuild()

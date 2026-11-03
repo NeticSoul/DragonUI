@@ -225,8 +225,6 @@ local function SlashCommandHandler(input)
         if addon.DebugVehicle then addon.DebugVehicle() else addon:Print(L["Vehicle debug not available"]) end
     elseif cmd == "ufl" then
         if addon.DiagnoseUnitFrameLayers then addon.DiagnoseUnitFrameLayers() else addon:Print(L["UFL diagnostic not available"]) end
-    elseif cmd == "racebg" then
-        if addon.ToggleRaceBackdropTool then addon.ToggleRaceBackdropTool() end
     elseif cmd == "castlog" then
         local NP = addon.Nameplates
         if not (NP and NP.castbar and NP.castbar.SetCastLog) then
