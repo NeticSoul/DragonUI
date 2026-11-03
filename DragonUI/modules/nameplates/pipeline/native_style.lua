@@ -273,15 +273,8 @@ local function CaptureNativePlateClassification(plateData)
     if not plateData then
         return nil
     end
-    local eliteC = NativeTextureClassification(plateData.eliteIcon)
-    local bossC = NativeTextureClassification(plateData.bossIcon)
-    if eliteC == "rare" or bossC == "rare" then
-        return "rare"
-    end
-    if eliteC == "elite" or bossC == "elite" then
-        return "elite"
-    end
-    return nil
+    -- The client gives this icon to elites and bosses; the skull also marks any hostile 10 levels up.
+    return NativeTextureClassification(plateData.eliteIcon)
 end
 
 function NP.native_style.NoteNativePlateClassification(plateData)
@@ -295,13 +288,15 @@ function NP.native_style.ResetPlateEliteIfIdentityChanged(plateData, freshName)
     if not plateData or not freshName then
         return
     end
-    if plateData._eliteIdentityName and plateData._eliteIdentityName ~= freshName then
+    local changed = plateData._eliteIdentityName and plateData._eliteIdentityName ~= freshName
+    if changed then
         plateData._plateClassification = nil
         if plateData._eliteIcon then
             plateData._eliteIcon:Hide()
         end
     end
     plateData._eliteIdentityName = freshName
+    return changed
 end
 
 function NP.native_style.SuppressNativePlateIcon(tex)

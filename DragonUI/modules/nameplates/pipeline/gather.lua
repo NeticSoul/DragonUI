@@ -34,7 +34,10 @@ function NP.gather.PreparePlateForRefresh(plateData, snapshot)
     -- Invalidate gate memos before identity/color/config may change.
     NP.gather.InvalidatePlateGates(plateData)
     local freshName = snapshot.plateName
-    NP.native_style.ResetPlateEliteIfIdentityChanged(plateData, freshName)
+    -- Name, health, power and aura refreshes also land here but never sync Elite back on.
+    if NP.native_style.ResetPlateEliteIfIdentityChanged(plateData, freshName) then
+        NP.engine.QueuePlate(plateData, NP.engine.Callbacks.OnUpdateNameplate)
+    end
     NP.castbar.ResetPlateCastIfIdentityChanged(plateData, freshName)
     NP.gather.ResetPlateDebuffsIfIdentityChanged(plateData, freshName)
     if freshName then

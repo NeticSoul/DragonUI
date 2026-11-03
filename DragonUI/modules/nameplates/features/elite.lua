@@ -76,9 +76,8 @@ function NP.widgets.SyncEliteIcon(plateData, unit)
         if plateData._eliteIcon then plateData._eliteIcon:Hide() end
         return
     end
-    local retail = NP.config.IsRetailSkin()
-    -- Retail gives no dragon to friendly elites (city guards); only gate when we know the unit.
-    if retail and unit and UnitExists(unit) and UnitCanAttack and not UnitCanAttack("player", unit) then
+    -- Retail gives no dragon to friendly elites (city guards); the bar colour knows it with no unit.
+    if NP.config.IsRetailSkin() and NP.native_style.GetPlateReaction(plateData) == "FRIENDLY" then
         if plateData._eliteIcon then plateData._eliteIcon:Hide() end
         return
     end
