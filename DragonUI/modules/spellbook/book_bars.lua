@@ -144,6 +144,7 @@ local hovered, hoverOwner
 local sourceA, sourceB, shownExact, shownTop, shownPet
 
 local function buildMark(button, checked)
+    -- Never Checked's layer: the bars keep it in HIGHLIGHT, which only draws under the mouse.
     local mark = button:CreateTexture(nil, "OVERLAY")
     mark:SetBlendMode("ADD")
     mark:SetAllPoints(checked)
@@ -163,7 +164,6 @@ local function light(button)
     local checked = button:GetCheckedTexture()
     if not checked then return end
     local mark = marks[button] or buildMark(button, checked)
-    mark:SetDrawLayer(checked:GetDrawLayer())
     mark:SetTexture(checked:GetTexture())
     mark:SetTexCoord(checked:GetTexCoord())
     lit[button] = mark
