@@ -28,7 +28,7 @@ local _actionbarFont = addon.Fonts.ACTIONBAR
 -- Static assets (not backed by database)
 local static_assets = {
 	font = _actionbarFont,
-	normal = addon._dir..'ActionBars\\uiactionbariconframe.tga',
+	normal = addon._dir..'ActionBars\\uiactionbar2x_new',
 	highlight = addon._dir..'ActionBars\\uiactionbariconframehighlight.tga',
 };
 

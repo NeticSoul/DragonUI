@@ -265,12 +265,20 @@ local function HasPetSlotName(name)
     return name ~= nil and name:find('PetActionButton', 1, true) ~= nil
 end
 
+local ATLAS_FRAME = 'ui-hud-actionbar-iconframe'
+
+-- A sheet path set without its texcoords would draw the whole sheet inside the button.
+local function SetFrameTexture(button)
+    button:SetNormalTexture(config.assets.normal)
+    local art = button:GetNormalTexture()
+    if art then art:SetAtlasTexture(ATLAS_FRAME) end
+end
+
 -- PetActionBar_Update swaps in the stock quickslot art; put ours back after it.
 local function KeepPetFrameArt(petSlot, texturePath)
     if not IsModuleEnabled() then return end
-    local ours = config.assets.normal
-    if texturePath and texturePath ~= ours then
-        petSlot:SetNormalTexture(ours)
+    if texturePath and texturePath ~= config.assets.normal then
+        SetFrameTexture(petSlot)
     end
 end
 
@@ -279,16 +287,10 @@ local function PinCorners(region, target, right, top, left, bottom)
     region:SetPoint('BOTTOMLEFT', target, 'BOTTOMLEFT', left, bottom)
 end
 
-local function AddSlotBackdrop(owner, frameRegion, withShadow)
-    if not IsModuleEnabled() or not owner or owner.shadow then return end
-    if withShadow then
-        local glow = owner:CreateTexture(nil, 'ARTWORK', nil, 1)
-        PinCorners(glow, frameRegion, 3.8, 3.8, -3.8, -3.8)
-        glow:SetAtlasTexture('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
-        owner.shadow = glow
-    end
+local function AddSlotBackdrop(owner)
+    if not IsModuleEnabled() or not owner or owner.background then return end
     local backdrop = owner:CreateTexture(nil, 'BACKGROUND')
-    backdrop:SetAllPoints(frameRegion)
+    backdrop:SetAllPoints(owner)
     backdrop:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
     backdrop:Show()
     return backdrop
@@ -511,14 +513,16 @@ local function StoreOriginalButtonState(button)
     if not name then return end
     
     local normal = _G[name..'NormalTexture'] or button:GetNormalTexture()
-    
+
     ButtonsModule.originalValues[button] = {
         normalTexture = normal and normal:GetTexture(),
+        normalSize = normal and {normal:GetSize()},
         normalPoints = {},
         normalVertexColor = normal and {normal:GetVertexColor()},
         normalDrawLayer = normal and normal:GetDrawLayer(),
         size = {button:GetSize()},
         checkedTexture = button:GetCheckedTexture() and button:GetCheckedTexture():GetTexture(),
+        checkedDrawLayer = button:GetCheckedTexture() and button:GetCheckedTexture():GetDrawLayer(),
         pushedTexture = button:GetPushedTexture() and button:GetPushedTexture():GetTexture(),
         highlightTexture = button:GetHighlightTexture() and button:GetHighlightTexture():GetTexture(),
     }
@@ -535,6 +539,7 @@ end
 local ICON_CROP = { 0.05, 0.95, 0.05, 0.95 }
 local ATLAS_CHECKED = '_ui-hud-actionbar-iconborder-checked'
 local ATLAS_PUSHED = '_ui-hud-actionbar-iconborder-pushed'
+local ATLAS_EQUIPPED = '_ui-hud-actionbar-iconborder-equipped'
 local ATLAS_FLASH = 'ui-hud-actionbar-iconframe-flash'
 local AUTOCAST_EDGES = { { 'TOP', 14 }, { 'BOTTOM', -15 } }
 
@@ -548,11 +553,112 @@ local function DropToplevel(frame)
     end
 end
 
-local function SeatFrameArt(art, owner)
+-- All states share retail's 92x90 canvas; its 79 pixel opening, 4 in from top left, holds the icon.
+local function FitFrameArt(art, owner)
+    local cell = owner:GetWidth() / 79
     art:ClearAllPoints()
-    PinCorners(art, owner, 2.2, 2.3, -2.2, -2.2)
-    art:SetDrawLayer('OVERLAY')
+    PinCorners(art, owner, 9 * cell, 4 * cell, -4 * cell, -7 * cell)
 end
+
+-- Retail's icon runs under the band: its inner edge is soft, so stopping there lets the world through.
+local ICON_BLEED = 0.6 / 79
+-- What each corner gives up, measured from the bled rect, to clear the chamfer's soft outer edge.
+local ICON_CORNER = 3.1 / 79
+local ICON_MIRRORS = {}
+
+-- Blizzard only knows the icon, so the strips copy every call that changes how it looks.
+for _, method in ipairs({ 'SetTexture', 'SetVertexColor', 'SetDesaturated', 'Show', 'Hide' }) do
+    ICON_MIRRORS[method] = function(face, ...)
+        if not face.__duiCut then return end
+        local strips = face.__duiStrips
+        strips[1][method](strips[1], ...)
+        strips[2][method](strips[2], ...)
+    end
+end
+
+-- 3.3.5a has no icon mask: a column and two side strips skip the corners and never overlap.
+local function FitIcon(face, owner)
+    local left, right, top, bottom = unpack(ICON_CROP)
+    local width, height = owner:GetWidth(), owner:GetHeight()
+    local bleedX, bleedY = width * ICON_BLEED, height * ICON_BLEED
+    local cutX, cutY = width * ICON_CORNER, height * ICON_CORNER
+    local corner = ICON_CORNER / (1 + 2 * ICON_BLEED)
+    local trimU, trimV = (right - left) * corner, (bottom - top) * corner
+    local leftStrip, rightStrip = face.__duiStrips[1], face.__duiStrips[2]
+
+    face:ClearAllPoints()
+    face:SetPoint('TOPLEFT', owner, 'TOPLEFT', cutX - bleedX, bleedY)
+    face:SetPoint('BOTTOMRIGHT', owner, 'BOTTOMRIGHT', bleedX - cutX, -bleedY)
+    face:SetTexCoord(left + trimU, right - trimU, top, bottom)
+
+    leftStrip:ClearAllPoints()
+    leftStrip:SetPoint('TOPRIGHT', face, 'TOPLEFT', 0, -cutY)
+    leftStrip:SetPoint('BOTTOMLEFT', owner, 'BOTTOMLEFT', -bleedX, cutY - bleedY)
+    leftStrip:SetTexCoord(left, left + trimU, top + trimV, bottom - trimV)
+
+    rightStrip:ClearAllPoints()
+    rightStrip:SetPoint('TOPLEFT', face, 'TOPRIGHT', 0, -cutY)
+    rightStrip:SetPoint('BOTTOMRIGHT', owner, 'BOTTOMRIGHT', bleedX, cutY - bleedY)
+    rightStrip:SetTexCoord(right - trimU, right, top + trimV, bottom - trimV)
+end
+
+local function SeatIcon(face, owner)
+    face:SetDrawLayer('BORDER')
+    if not face.__duiStrips then
+        face.__duiStrips = { owner:CreateTexture(nil, 'BORDER'), owner:CreateTexture(nil, 'BORDER') }
+        for method, mirror in pairs(ICON_MIRRORS) do
+            hooksecurefunc(face, method, mirror)
+        end
+    end
+    local shown = face:IsShown()
+    for _, strip in ipairs(face.__duiStrips) do
+        strip:SetTexture(face:GetTexture())
+        strip:SetVertexColor(face:GetVertexColor())
+        strip:SetDesaturated(face:IsDesaturated())
+        if shown then strip:Show() else strip:Hide() end
+    end
+    face.__duiCut = true
+    owner.__duiFitIcon = face
+    FitIcon(face, owner)
+end
+
+addon.SeatButtonIcon = SeatIcon
+
+local function SeatFrameArt(art, owner)
+    art:SetAtlasTexture(ATLAS_FRAME)
+    owner.__duiFitArt = art
+    FitFrameArt(art, owner)
+    -- Over the cooldown swipe, which the client draws in ARTWORK at the button's level.
+    art:SetDrawLayer('OVERLAY')
+    if not owner.__duiFitHooked then
+        owner.__duiFitHooked = true
+        owner:HookScript('OnSizeChanged', function(self)
+            if self.__duiFitArt then FitFrameArt(self.__duiFitArt, self) end
+            if self.__duiFitIcon then FitIcon(self.__duiFitIcon, self) end
+        end)
+    end
+end
+
+addon.SeatButtonFrameArt = SeatFrameArt
+
+-- Retail's TextOverlayContainer: the rings draw in HIGHLIGHT, over anything in the button's own layers.
+local function RaiseLabels(button, ...)
+    -- Region SetParent is protected, and the vehicle bar can be styled in combat after a /reload.
+    local inCombat = InCombatLockdown()
+    if not button.__duiLabels and not inCombat then
+        button.__duiLabels = CreateFrame('Frame', nil, button)
+        button.__duiLabels:SetAllPoints(button)
+    end
+    for i = 1, select('#', ...) do
+        local label = select(i, ...)
+        if label then
+            label:SetDrawLayer('OVERLAY')
+            if not inCombat then label:SetParent(button.__duiLabels) end
+        end
+    end
+end
+
+addon.RaiseButtonLabels = RaiseLabels
 
 local function SeatCooldown(swipe, owner)
     swipe:ClearAllPoints()
@@ -560,32 +666,90 @@ local function SeatCooldown(swipe, owner)
     swipe:SetFrameLevel(owner:GetParent():GetFrameLevel() + 1)
 end
 
-local function DressLayer(layer, atlas, target, onOverlay)
-    if atlas then
-        layer:SetAtlasTexture(atlas)
-    end
-    if onOverlay then
-        layer:SetDrawLayer('OVERLAY')
-    end
+local function DressLayer(layer, atlas, target)
+    layer:SetAtlasTexture(atlas)
     layer:SetAllPoints(target)
 end
 
 local STATE_LAYERS = {
-    { 'GetCheckedTexture', ATLAS_CHECKED },
-    { 'GetPushedTexture', ATLAS_PUSHED },
-    { 'GetHighlightTexture' },
+    { 'GetPushedTexture', ATLAS_PUSHED, 'OVERLAY' },
+    { 'GetHighlightTexture', ATLAS_CHECKED, 'HIGHLIGHT' },
 }
 
--- Only the checked and pushed layers (the atlas ones) move up to OVERLAY when asked.
-local function SeatStateArt(owner, art, onOverlay)
+-- The lock keeps the layer lit off hover too, so hover's ring has to wait for the mouse.
+local function SyncHoverRing(button)
+    if not button.__duiRing then return end
+    local waiting = button:GetChecked() and not button.__duiHover
+    button:GetHighlightTexture():SetAlpha(waiting and 0 or 1)
+end
+
+local function SyncCheckedRing(button)
+    if not button.__duiRing then return end
+    if button:GetChecked() then
+        button:LockHighlight()
+    else
+        button:UnlockHighlight()
+    end
+    SyncHoverRing(button)
+end
+
+local function RingHoverOn(button)
+    button.__duiHover = true
+    SyncHoverRing(button)
+end
+
+local function RingHoverOff(button)
+    button.__duiHover = nil
+    SyncHoverRing(button)
+end
+
+-- Retail stacks both regions; only hover's layer is sure to land over the frame, so Checked joins it.
+local function DriveRingFromChecked(button)
+    local ring = button:GetCheckedTexture()
+    ring:SetDrawLayer('HIGHLIGHT')
+    ring:SetBlendMode('BLEND')
+    button.__duiRing = true
+    if not button.__duiRingHooked then
+        button.__duiRingHooked = true
+        hooksecurefunc(button, 'SetChecked', SyncCheckedRing)
+        button:HookScript('OnEnter', RingHoverOn)
+        button:HookScript('OnLeave', RingHoverOff)
+        button:HookScript('OnHide', RingHoverOff)
+    end
+    SyncCheckedRing(button)
+end
+
+addon.DriveButtonRingFromChecked = DriveRingFromChecked
+
+-- Blizzard's 3.3.5 template makes hover ADD; retail's art is meant to be BLEND.
+local function DressStates(owner, art)
     owner:SetHighlightTexture(config.assets.highlight)
     for _, entry in ipairs(STATE_LAYERS) do
-        local getter, atlas = entry[1], entry[2]
-        DressLayer(owner[getter](owner), atlas, art, onOverlay and atlas ~= nil)
+        local getter, atlas, drawLayer = entry[1], entry[2], entry[3]
+        local layer = owner[getter](owner)
+        DressLayer(layer, atlas, art)
+        layer:SetDrawLayer(drawLayer)
+        layer:SetBlendMode('BLEND')
     end
 end
 
--- Frame tint: border_color times the colour Blizzard gives the frame (blue when out of mana).
+local function SeatStateArt(owner, art)
+    DressStates(owner, art)
+    DressLayer(owner:GetCheckedTexture(), ATLAS_CHECKED, art)
+    DriveRingFromChecked(owner)
+end
+
+-- A plain Button with an icon, outside the bars: the frame must be its Normal so pressing swaps it.
+function addon.SkinIconButton(button, face)
+    button:SetNormalTexture(config.assets.normal)
+    button:SetPushedTexture(config.assets.normal)
+    local art = button:GetNormalTexture()
+    SeatFrameArt(art, button)
+    DressStates(button, art)
+    SeatIcon(face, button)
+end
+
+-- Frame tint: border_color alone. Retail's usable tint stops at the icon; 3.3.5 also turns the frame blue.
 local frameColor = { 1, 1, 1, 1 }
 local frameIsPlain = true
 local trackedFrameArt = {}
@@ -604,12 +768,12 @@ local function DarkModeOwnsFrames()
 end
 
 local function PaintFrameArt(art, withColor)
-    local r, g, b, a = 1, 1, 1, 1
+    local r, g, b, a = art.__duiR, art.__duiG, art.__duiB, 1
     if withColor then
         r, g, b, a = frameColor[1], frameColor[2], frameColor[3], frameColor[4]
     end
     art.__duiPainting = true
-    art:SetVertexColor(art.__duiR * r, art.__duiG * g, art.__duiB * b, a)
+    art:SetVertexColor(r, g, b, a)
     art.__duiPainting = nil
 end
 
@@ -618,7 +782,8 @@ local function OnFrameArtColored(art, r, g, b, a)
     -- Dark mode flags its own writes, and its first apply runs before IsDarkModeApplied turns true.
     if art.__duiPainting or art.__DragonUI_SettingDark or DarkModeOwnsFrames() then return end
     art.__duiR, art.__duiG, art.__duiB = r or 1, g or 1, b or 1
-    if frameIsPlain and (a == nil or a == 1) then return end
+    local isWhite = art.__duiR == 1 and art.__duiG == 1 and art.__duiB == 1 and (a == nil or a == 1)
+    if frameIsPlain and isWhite then return end
     if IsModuleEnabled() then
         PaintFrameArt(art, true)
     end
@@ -695,16 +860,17 @@ local function StyleActionSlot(slotButton, skipCombatGuard)
 
     local flash, face = Part(id, 'Flash'), Part(id, 'Icon')
     local swipe, equipRing = Part(id, 'Cooldown'), Part(id, 'Border')
-    if flash then flash:SetAtlasTexture(ATLAS_FLASH) end
-    if face then
-        face:SetTexCoord(unpack(ICON_CROP))
-        face:SetDrawLayer('BORDER')
-    end
+    if flash then DressLayer(flash, ATLAS_FLASH, art) end
+    if face then SeatIcon(face, slotButton) end
     if swipe then SeatCooldown(swipe, slotButton) end
-    if equipRing then DressLayer(equipRing, ATLAS_CHECKED, art) end
-    SeatStateArt(slotButton, art, true)
+    if equipRing then
+        DressLayer(equipRing, ATLAS_EQUIPPED, art)
+        equipRing:SetBlendMode('BLEND')
+    end
+    SeatStateArt(slotButton, art)
+    RaiseLabels(slotButton, Part(id, 'HotKey'), Part(id, 'Count'))
 
-    local backdrop = AddSlotBackdrop(slotButton, art, true)
+    local backdrop = AddSlotBackdrop(slotButton)
     slotButton.background = backdrop
     local db = GetButtonsConfig()
     -- Hidden right away so the slot art never flashes for one frame before RefreshButtons.
@@ -719,25 +885,21 @@ local function StyleExtraSlot(slotButton)
     DropToplevel(slotButton)
     DropToplevel(slotButton:GetParent())
     StoreOriginalButtonState(slotButton)
-    slotButton:SetNormalTexture(config.assets.normal)
+    SetFrameTexture(slotButton)
     TrackFrameArt(slotButton)
     if slotButton.background then return end
 
     local id = slotButton:GetName()
     local art = Part(id, 'NormalTexture2') or Part(id, 'NormalTexture')
     SeatFrameArt(art, slotButton)
-    SeatStateArt(slotButton, art, false)
+    SeatStateArt(slotButton, art)
+    RaiseLabels(slotButton, Part(id, 'HotKey'), Part(id, 'Count'))
 
     local swipe, face = Part(id, 'Cooldown'), Part(id, 'Icon')
     local flash, autocast = Part(id, 'Flash'), Part(id, 'AutoCastable')
     if swipe then SeatCooldown(swipe, slotButton) end
-    if face then
-        face:ClearAllPoints()
-        face:SetTexCoord(unpack(ICON_CROP))
-        face:SetAllPoints(slotButton)
-        face:SetDrawLayer('BORDER')
-    end
-    if flash then flash:SetAtlasTexture(ATLAS_FLASH) end
+    if face then SeatIcon(face, slotButton) end
+    if flash then DressLayer(flash, ATLAS_FLASH, art) end
     if autocast then
         autocast:ClearAllPoints()
         for _, edge in ipairs(AUTOCAST_EDGES) do
@@ -748,7 +910,7 @@ local function StyleExtraSlot(slotButton)
         hooksecurefunc(slotButton, 'SetNormalTexture', KeepPetFrameArt)
     end
 
-    local backdrop = AddSlotBackdrop(slotButton, art, false)
+    local backdrop = AddSlotBackdrop(slotButton)
     slotButton.background = backdrop
     local db = GetButtonsConfig()
     -- Hidden right away so the slot art never flashes for one frame before RefreshButtons.
@@ -767,19 +929,44 @@ local function RestoreButtonToOriginal(button)
     local original = ButtonsModule.originalValues[button]
     local name = button:GetName()
     if not name then return end
-    
+
+    button.__duiFitArt = nil
+    button.__duiFitIcon = nil
+    button.__duiRing = nil
+    button:UnlockHighlight()
+    button:GetHighlightTexture():SetAlpha(1)
+    button:GetCheckedTexture():SetDrawLayer(original.checkedDrawLayer)
+    local flash = _G[name..'Flash']
+    if flash then
+        flash:ClearAllPoints()
+        flash:SetAllPoints(button)
+    end
+    local face = _G[name..'Icon']
+    if face and face.__duiCut then
+        face.__duiCut = nil
+        face.__duiStrips[1]:Hide()
+        face.__duiStrips[2]:Hide()
+        face:ClearAllPoints()
+        face:SetAllPoints(button)
+        face:SetTexCoord(unpack(ICON_CROP))
+    end
     local normal = _G[name..'NormalTexture'] or button:GetNormalTexture()
-    
+
     -- Restore normal texture
     if normal and original.normalTexture then
         normal:SetTexture(original.normalTexture)
-        
+        normal:SetTexCoord(0, 1, 0, 1)
+
         -- Restore points
         normal:ClearAllPoints()
         for _, point in ipairs(original.normalPoints) do
             normal:SetPoint(unpack(point))
         end
-        
+        -- SetAtlasTexture stamped the fitted size, and a single anchor would keep it.
+        if original.normalSize then
+            normal:SetSize(unpack(original.normalSize))
+        end
+
         -- Restore vertex color
         if original.normalVertexColor then
             normal:SetVertexColor(unpack(original.normalVertexColor))
@@ -790,23 +977,18 @@ local function RestoreButtonToOriginal(button)
             normal:SetDrawLayer(original.normalDrawLayer)
         end
     end
-    
+
     -- Restore size
     if original.size then
         button:SetSize(unpack(original.size))
     end
     
-    -- Remove custom backgrounds and shadows
+    -- Remove custom backgrounds
     if button.background then
         button.background:Hide()
         button.background = nil
     end
-    
-    if button.shadow then
-        button.shadow:Hide()
-        button.shadow = nil
-    end
-    
+
     -- Reset styled flag
     button._duiStyled = nil
     
@@ -899,7 +1081,10 @@ local function refreshSlotButton(slotButton)
     if not slotButton then return end
     local id = slotButton:GetName()
     if id and id:find('MultiCast', 1, true) then return end
-    slotButton:SetNormalTexture(config.assets.normal)
+    SetFrameTexture(slotButton)
+    -- Retail paints this ring at 0.5; 3.3.5 writes 0.35 on every update.
+    local equipRing = Part(id, 'Border')
+    if equipRing then equipRing:SetVertexColor(0, 1, 0, 0.5) end
     -- Blizzard grays an empty slot's hotkey here, and the range recolor below never revisits it.
     if hotkeyStyle.recolor and not slotButton.rangeTimer then
         local hotkey = Part(id, 'HotKey')
@@ -1054,7 +1239,7 @@ function addon.SetKeybindVisualMode(active)
 
             -- Keep DragonUI border texture stable while LibKeyBound is active.
             if active then
-                button:SetNormalTexture(config.assets.normal)
+                SetFrameTexture(button)
             end
         end
     end

@@ -166,11 +166,7 @@ local function SkinButton(button)
     local art = config.assets
     button:SetNormalTexture(art.normal)
     local normal = button:GetNormalTexture()
-    normal:ClearAllPoints()
-    normal:SetPoint('TOPRIGHT', button, 'TOPRIGHT', 2.2, 2.3)
-    normal:SetPoint('BOTTOMLEFT', button, 'BOTTOMLEFT', -2.2, -2.2)
-    -- Layer normal before checked/pushed exist so OVERLAY stacks normal, checked, pushed.
-    normal:SetDrawLayer('OVERLAY')
+    addon.SeatButtonFrameArt(normal, button)
     normal:SetVertexColor(1, 1, 1, 1)
     if addon.TrackButtonFrameArt then addon.TrackButtonFrameArt(button) end
 
@@ -183,12 +179,12 @@ local function SkinButton(button)
     button:SetHighlightTexture(art.highlight)
 
     local highlight = button:GetHighlightTexture()
+    highlight:SetAtlasTexture('_ui-hud-actionbar-iconborder-checked')
+    highlight:SetBlendMode('BLEND')
     for _, region in ipairs({ checked, pushed, highlight }) do
         region:SetAllPoints(normal)
-        if region ~= highlight then
-            region:SetDrawLayer('OVERLAY')
-        end
     end
+    pushed:SetDrawLayer('OVERLAY')
 
     -- ActionButtonTemplate $parentBorder with ActionButton_Update's equipped tint.
     if not button.border then
@@ -196,24 +192,15 @@ local function SkinButton(button)
         border:Hide()
         button.border = border
     end
-    button.border:SetAtlasTexture('_ui-hud-actionbar-iconborder-checked')
+    button.border:SetAtlasTexture('_ui-hud-actionbar-iconborder-equipped')
     button.border:SetAllPoints(normal)
-    button.border:SetVertexColor(0, 1, 0, 0.35)
+    button.border:SetVertexColor(0, 1, 0, 0.5)
 
-    button.icon:SetTexCoord(.05, .95, .05, .95)
-    button.icon:SetAllPoints(button)
-    button.icon:SetDrawLayer('BORDER')
+    addon.SeatButtonIcon(button.icon, button)
 
-    if not button.shadow then
-        local shadow = button:CreateTexture(nil, 'ARTWORK', nil, 1)
-        shadow:SetPoint('TOPRIGHT', normal, 'TOPRIGHT', 3.8, 3.8)
-        shadow:SetPoint('BOTTOMLEFT', normal, 'BOTTOMLEFT', -3.8, -3.8)
-        shadow:SetAtlasTexture('ui-hud-actionbar-iconframe-flyoutbordershadow', true)
-        button.shadow = shadow
-    end
     if not button.background then
         local slotFill = button:CreateTexture(nil, 'BACKGROUND')
-        slotFill:SetAllPoints(normal)
+        slotFill:SetAllPoints(button)
         slotFill:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
         button.background = slotFill
     end
@@ -1628,6 +1615,7 @@ function BarProto:CreateButton(index)
         end
         ApplyBoundHotkeyColor(hotkey)
         button.hotkey = hotkey
+        addon.RaiseButtonLabels(button, hotkey, count)
 
         button:SetScript("OnDragStart", Button_OnDragStart)
         button:SetScript("OnReceiveDrag", AssignFromCursor)
@@ -1637,7 +1625,8 @@ function BarProto:CreateButton(index)
         button:SetScript("OnEnter", SetExtrabarTooltip)
         button:SetScript("OnLeave", Button_OnLeave)
 
-        -- After OnEnter SetScript: MakeButtonBindable HookScript is wiped by a later SetScript.
+        -- After OnEnter SetScript: both of these HookScript, and a later SetScript wipes that.
+        addon.DriveButtonRingFromChecked(button)
         if addon.KeyBindingModule then
             addon.KeyBindingModule:MakeButtonBindable(button, "CLICK " .. name .. ":LeftButton",
                 self.bindingLabel .. index)

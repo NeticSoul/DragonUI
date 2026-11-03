@@ -170,8 +170,6 @@ local retailHudSheets = {
 		{ "ui-hud-actionbar-gryphon-thick-left", 104.5, 98, 1, 357, 209, 543 },
 		{ "ui-hud-actionbar-gryphon-thick-right", 104.5, 98, 1, 357, 545, 879 },
 		{ "ui-hud-actionbar-iconframe", 64, 64, 359, 451, 649, 739 },
-		{ "_ui-hud-actionbar-iconborder-checked", 64, 64, 359, 451, 881, 971 },
-		{ "_ui-hud-actionbar-iconborder-pushed", 64, 64, 359, 451, 881, 971 },
 		{ "ui-hud-actionbar-iconframe-flyoutbordershadow", 52, 52, 359, 463, 335, 439 },
 		{ "ui-hud-actionbar-flyout-2x", 18, 7, 453, 489, 899, 913 },
 		{ "ui-hud-actionbar-flyout-mouseover-2x", 18, 7, 453, 489, 915, 929 },
@@ -183,10 +181,16 @@ local retailHudSheets = {
 	sheet(uiactionbar2x_new2, 512, 1024, {
 		{ "ui-hud-actionbar-wyvern-thick-left", 104.5, 98, 1, 357, 1, 335 },
 		{ "ui-hud-actionbar-wyvern-thick-right", 104.5, 98, 1, 357, 337, 671 },
-		{ "_ui-hud-actionbar-iconborder-highlight", 64, 64, 359, 451, 185, 275 },
+		-- Retail's 1x mouseover ring fitted to this sheet's frame: its 2x cell is a thinner, dimmer drawing.
+		{ "_ui-hud-actionbar-iconborder-highlight", 64, 64, 360, 452, 186, 276 },
+		{ "_ui-hud-actionbar-iconborder-checked", 64, 64, 360, 452, 186, 276 },
+		-- Retail's down cell centred on the frame, minus its dark bevel, over the frame's own silhouette.
+		{ "_ui-hud-actionbar-iconborder-pushed", 64, 64, 361, 453, 353, 443 },
 		{ "ui-hud-actionbar-iconframe-flyoutbutton-2x", 47, 29, 359, 453, 277, 335 },
 		{ "ui-hud-actionbar-iconframe-flyoutbottom-2x", 47, 5, 359, 453, 337, 347 },
-		{ "ui-hud-actionbar-iconframe-flash", 64, 64, 359, 451, 93, 183 },
+		-- Retail's equipped border is the 1x ring in white, so the green tint reads true.
+		{ "_ui-hud-actionbar-iconborder-equipped", 64, 64, 361, 453, 449, 539 },
+		{ "ui-hud-actionbar-iconframe-flash", 64, 64, 358, 450, 92, 182 },
 	}),
 	-- No pixel grid on record for this sheet, so every texcoord is a literal.
 	sheet(assets .. "ActionBars\\mainmenubar", nil, nil, {
@@ -465,7 +469,7 @@ local atlasinfo = {
 	['ActionBar-ButtonDown-Normal'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 605/1024, 633/1024 },
 	['ActionBar-ButtonDown-Highlight'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 575/1024, 603/1024 },
 	['ActionBar-ButtonDown-Pushed'] = { rui_ActionBarHorizontal, 34, 28, 463/512, 497/512, 545/1024, 573/1024 },
-	['ActionBar-ActionButton-Highlight'] = { uiactionbar2x_new2, 92, 90, 359/512, 451/512, 185/1024, 275/1024 },
+	['ActionBar-ActionButton-Highlight'] = { uiactionbar2x_new2, 92, 90, 360/512, 452/512, 186/1024, 276/1024 },
 	['ActionBar-ActionButton-Pushed'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 881/1024, 971/1024 },
 	['ActionBar-ActionButton-Flash'] = { uiactionbar2x_new2, 92, 90, 359/512, 451/512, 93/1024, 183/1024 },
 	['ActionBar-ActionButton-Border'] = { rui_ActionBarHorizontal, 92, 90, 359/512, 451/512, 649/1024, 739/1024 },

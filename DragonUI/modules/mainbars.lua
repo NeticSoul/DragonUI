@@ -3149,21 +3149,6 @@ local function CollectMainBarLooseArtRegions(mainBarFrame)
     return regions
 end
 
--- On one framed row the rails and dividers fill every gap; the slot shadow would only darken the rails.
-local function UpdateMainSlotShadows()
-    local buttonsCfg = addon.db and addon.db.profile and addon.db.profile.buttons
-    local playerCfg = addon.db and addon.db.profile and addon.db.profile.mainbars
-        and addon.db.profile.mainbars.player or {}
-    local rows = math.ceil((playerCfg.buttons_shown or 12) / (playerCfg.columns or 12))
-    local framed = rows == 1 and not (buttonsCfg and buttonsCfg.hide_main_bar_background)
-    for slot = 1, NUM_ACTIONBAR_BUTTONS do
-        local button = _G["ActionButton" .. slot]
-        if button and button.shadow then
-            button.shadow:SetShownCompat(not framed)
-        end
-    end
-end
-
 local function SyncMainBarVisibility()
     local mainBarFrame = addon.MainBar
     local mainAlphaAnchor = ActionButton1
@@ -3171,7 +3156,6 @@ local function SyncMainBarVisibility()
     -- Re-seat once buttons.lua has grown the slots to 37; both read the live slot size.
     SeatBorderArt()
     addon.UpdateGryphonStyle()
-    UpdateMainSlotShadows()
 
     -- Buttons always fade with hover/combat state, regardless of the background toggle.
     local alphaFrames = {}
@@ -3551,7 +3535,6 @@ function addon.ApplyAllBarButtonCounts()
 
     -- Dividers on visual column boundaries (unchanged when button order changes).
     UpdateMainBarColumnDividers(mainColumns, mainRows, mainCount, mainOrder)
-    UpdateMainSlotShadows()
 
     -- Reposition gryphons to hug the resized main bar
     addon.UpdateGryphonStyle()
