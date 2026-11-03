@@ -126,7 +126,7 @@ local DRUID_LAYERS = {
     { "shadow", "druid_shadow", 25, 25, 0, -2, "BACKGROUND" },
     { "bgActive", "druid_bg", 22, 22, 0, 0, "BORDER" },
     { "bgInactive", "druid_bgdis", 22, 22, 0, 0, "BORDER" },
-    { "bgGlow", "druid_bgglow", 36, 36, 0, 0, "ARTWORK" },
+    { "halo", "druid_bgglow", 36, 36, 0, 0, "ARTWORK" },
     { "deplete", "druid_deplete", 16, 15, 0, 0, "ARTWORK" },
     { "icon", "druid_icon", 14, 14, 0, 0, "OVERLAY" },
     { "ringGlow", "druid_ringglow", 23, 23, 0, 0, "BACKGROUND", true },
@@ -157,7 +157,7 @@ local DRUID_GAIN = {
     { "ringGlow", 0, 0.27, 0, 1 }, { "ringGlow", 0.27, 0.47, 1, 0 },
     { "bgActive", 0, 0.27, 0, 0 }, { "bgActive", 0.27, 0.01, 0, 1 },
     { "bgInactive", 0, 0.27, 1, 1 }, { "bgInactive", 0.27, 0.01, 1, 0 },
-    { "bgGlow", 0, 0.17, 0, 0 }, { "bgGlow", 0.17, 0.13, 0, 1 }, { "bgGlow", 0.3, 0.4, 1, 0 },
+    { "halo", 0, 0.17, 0, 0 }, { "halo", 0.17, 0.13, 0, 1 }, { "halo", 0.3, 0.4, 1, 0 },
 }
 
 -- Retail leaves the lit socket up after a spend; the cross-fade makes an empty druid pip read as empty.
@@ -221,6 +221,9 @@ end
 local bar, arc, column, editorBox
 local arcInUse, orbsCanShow, arcOverPortrait = false, false, false
 local views = {}
+-- The ring art, baked in with its socket (the gem is apart); dark mode tints these, never the glows.
+local RING_KEYS = { bgActive = true, bgInactive = true, bgGlow = true }
+local rings = {}
 local parked
 local previewing = false
 
@@ -298,6 +301,7 @@ local function PipTexture(pip, key, onFx)
     if not texture then
         texture = (onFx and pip.fx or pip):CreateTexture(nil, "ARTWORK")
         pip.all[id] = texture
+        if RING_KEYS[key] then rings[#rings + 1] = texture end
     end
     return texture
 end
@@ -855,6 +859,8 @@ local function ApplyNow()
         eventFrame:SetScript("OnEvent", OnEvent)
         Update(false)
     end
+    -- Dark mode's first sweep may run before the orbs exist, and each view builds its own on first use.
+    if addon.RefreshDarkModeUnitFrames then addon.RefreshDarkModeUnitFrames() end
 end
 
 local function RestoreNow()
@@ -877,6 +883,10 @@ end
 
 function addon.RestoreComboPointsSystem()
     addon:SafeExecute(KEY, "apply", RestoreNow)
+end
+
+function addon.GetComboPointRings()
+    return rings
 end
 
 function addon.RefreshComboPointsSystem()

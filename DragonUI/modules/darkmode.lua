@@ -493,6 +493,9 @@ local function DarkenUnitFrameBorders(tint)
     if addon.GetTotemRings then
         for _, ring in ipairs(addon.GetTotemRings()) do DarkenTexture(ring, tint) end
     end
+    if addon.GetComboPointRings then
+        for _, ring in ipairs(addon.GetComboPointRings()) do DarkenTexture(ring, tint) end
+    end
 
     -- Vehicle border (when in vehicle)
     local vehicleTex = _G["PlayerFrameVehicleTexture"]
