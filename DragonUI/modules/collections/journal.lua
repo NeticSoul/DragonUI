@@ -11,14 +11,8 @@ local ROW_H = 46
 local ICON_SIZE = 38
 local SEARCH_H = 20
 local INFO_ICON = 40
-
--- The opening is measured where the ring turns solid: its fully transparent core is far smaller
--- than the gold bars actually enclose, and its centre sits high and left of the art.
-local INFO_FRAME_TEX = addon._dir .. "Collections\\IconFrameGold"
-local INFO_FRAME_OPEN, INFO_FRAME_CX, INFO_FRAME_CY = 0.4922, 0.4727, 0.4336
-local INFO_FRAME_SIZE = INFO_ICON / INFO_FRAME_OPEN
-local INFO_FRAME_X = (0.5 - INFO_FRAME_CX) * INFO_FRAME_SIZE
-local INFO_FRAME_Y = (INFO_FRAME_CY - 0.5) * INFO_FRAME_SIZE
+local INFO_ICON_X, INFO_ICON_Y = 20.4, -17.2
+local INFO_TEXT_X, INFO_TEXT_Y = 14, -87.3
 local ACTIVE_STROKE = 2
 local ACTIVE_SIZE = ICON_SIZE * 64 / (64 - 2 * ACTIVE_STROKE)
 
@@ -43,7 +37,7 @@ local frame, scroll, content, rows
 local searchBox, filterButton
 local rowMenuEntries
 local countBox, countText, countLabel, randomButton
-local infoIcon, infoFrame, infoDrag, infoName, infoSource, infoDesc, infoStar, model, actionButton
+local infoIcon, infoDrag, infoName, infoSource, infoDesc, infoStar, model, actionButton
 local emptyText, uncollectedHint
 
 local flat = {}
@@ -73,6 +67,16 @@ end
 
 local function selectedEntry()
     return CO.Find(kind(), selected[kind()])
+end
+
+-- Protected in combat: Blizzard's panel may call it because it is secure, this window is not.
+local function pickupEntry(entry)
+    if not (entry and entry.index) then return end
+    if InCombatLockdown() then
+        UIErrorsFrame:AddMessage(ERR_NOT_IN_COMBAT, 1, 0.1, 0.1, 1)
+        return
+    end
+    PickupCompanion(kind(), entry.index)
 end
 
 local function insertChatLink(entry)
@@ -124,7 +128,6 @@ local function updateInfo()
 
     if not entry then
         infoIcon:Hide()
-        infoFrame:Hide()
         infoDrag:Hide()
         infoStar:Hide()
         infoName:SetText("")
@@ -139,7 +142,6 @@ local function updateInfo()
 
     infoIcon:SetTexture(entry.icon)
     infoIcon:Show()
-    infoFrame:Show()
     infoDrag:Show()
     infoName:SetText(entry.name)
 
@@ -186,27 +188,15 @@ local function buildInfo(host)
     bg:SetTexture(CO.TEX.modelBg)
     bg:SetTexCoord(unpack(CO.MODEL_BG_COORD))
 
-    -- The ornament is pinned, and the icon hangs off its opening: the flourishes run past the frame
-    -- on two sides, so anchoring the other way round would push them outside the pane.
-    infoFrame = parent:CreateTexture(nil, "OVERLAY")
-    infoFrame:SetTexture(INFO_FRAME_TEX)
-    infoFrame:SetSize(INFO_FRAME_SIZE, INFO_FRAME_SIZE)
-    infoFrame:SetPoint("TOPLEFT", parent, "TOPLEFT", 2, -2)
-
-    infoIcon = parent:CreateTexture(nil, "ARTWORK")
-    infoIcon:SetSize(INFO_ICON, INFO_ICON)
-    infoIcon:SetPoint("CENTER", infoFrame, "CENTER", -INFO_FRAME_X, -INFO_FRAME_Y)
-    infoIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-
-    -- The ornament is a texture, and textures take no input, so it cannot shadow this button: the
-    -- whole opening stays clickable even where the gold overlaps the icon.
     infoDrag = CreateFrame("Button", nil, parent)
-    infoDrag:SetAllPoints(infoIcon)
+    infoDrag:SetSize(INFO_ICON, INFO_ICON)
+    infoDrag:SetPoint("TOPLEFT", parent, "TOPLEFT", INFO_ICON_X, INFO_ICON_Y)
+    infoIcon = infoDrag:CreateTexture(nil, "BORDER")
+    addon.SkinIconButton(infoDrag, infoIcon)
     infoDrag:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     infoDrag:RegisterForDrag("LeftButton")
     infoDrag:SetScript("OnDragStart", function()
-        local entry = selectedEntry()
-        if entry and entry.index then PickupCompanion(kind(), entry.index) end
+        pickupEntry(selectedEntry())
     end)
     infoDrag:SetScript("OnClick", function(_, button)
         local entry = selectedEntry()
@@ -257,9 +247,7 @@ local function buildInfo(host)
     infoStar:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     infoName = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    -- Off the icon, not the ornament: the frame's right side is mostly transparent margin, so
-    -- anchoring there left the title floating away from what it names.
-    infoName:SetPoint("LEFT", infoIcon, "RIGHT", 14, 0)
+    infoName:SetPoint("LEFT", infoDrag, "RIGHT", 14, 0)
     infoName:SetPoint("RIGHT", infoStar, "LEFT", -8, 0)
     infoName:SetJustifyH("LEFT")
 
@@ -267,8 +255,7 @@ local function buildInfo(host)
     local textWidth = 320
 
     infoSource = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    -- Below the whole ornament rather than the icon: the flourishes hang past the icon's bottom.
-    infoSource:SetPoint("TOPLEFT", infoFrame, "BOTTOMLEFT", 12, -4)
+    infoSource:SetPoint("TOPLEFT", parent, "TOPLEFT", INFO_TEXT_X, INFO_TEXT_Y)
     infoSource:SetWidth(textWidth)
     infoSource:SetJustifyH("LEFT")
 
@@ -343,7 +330,7 @@ local function buildRow(parent)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:RegisterForDrag("LeftButton")
     row:SetScript("OnDragStart", function(self)
-        if self._entry and self._entry.index then PickupCompanion(kind(), self._entry.index) end
+        pickupEntry(self._entry)
     end)
     row:SetScript("OnClick", function(self, button)
         if not self._entry then return end

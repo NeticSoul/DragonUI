@@ -29,7 +29,7 @@ local WINDOWS = {
     },
     collections = {
         "ActionBars\\uiactionbariconframe_white", "CharacterPanel\\scrollbararrows", "CharacterPanel\\scrollbarthumb",
-        "Collections\\FavoritesIcon", "Collections\\IconFrameGold", "Collections\\ListButtons",
+        "Collections\\FavoritesIcon", "Collections\\ListButtons",
         "Collections\\MountJournal-BG", "Collections\\MountJournalIcons", "Collections\\MountPortrait",
         "UI\\ui-background-marble", "UI\\ui-background-rock", "UI\\uiframe-inner", "UI\\uiframe-inner-vertical",
         "UI\\uiframeinner",
