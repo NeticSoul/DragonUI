@@ -617,7 +617,8 @@ local function CreateCard(parent)
 
     -- FRIZQT at 8, which is what retail's GameFontWhiteTiny2 resolves to.
     card.rarity = card:CreateFontString(nil, "ARTWORK", "GameFontWhiteTiny")
-    card.rarity:SetFont(card.rarity:GetFont(), 8)
+    -- koKR's Fonts.xml misspells SystemFont_Tiny, so this template has no face there and GetFont is nil.
+    card.rarity:SetFont(card.rarity:GetFont() or addon.Fonts.PRIMARY, 8)
     card.rarity:SetPoint("TOPRIGHT", card, "TOPRIGHT", TAG_TEXT_X, TAG_TEXT_Y)
     card.rarity:SetJustifyH("RIGHT")
 

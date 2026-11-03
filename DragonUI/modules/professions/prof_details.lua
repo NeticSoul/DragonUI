@@ -14,12 +14,7 @@ local FORM_X, FORM_Y, FORM_W, FORM_H = 16, -22, 316, 440
 local REAGENT_W = 150
 local BAR_FILL_W = 441
 
-local outputFont = CreateFont("DragonUI_ProfessionsOutputFont")
-outputFont:CopyFontObject(GameFontNormal)
-do
-    local path, _, flags = GameFontNormal:GetFont()
-    outputFont:SetFont(path, 14, flags)
-end
+local outputFont = addon.ForeverUI.MakeFont("DragonUI_ProfessionsOutputFont", GameFontNormal, 14)
 
 local function buildRankBar(craft, win)
     -- ProfessionsRankBarTemplate is 18 high and its 29-high art hangs from the top; the link button anchors to the 18.

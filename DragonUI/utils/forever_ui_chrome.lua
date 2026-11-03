@@ -44,7 +44,7 @@ local function MakeFont(name, base, size)
     if path then
         font:SetFont(path, size, flags)
     end
-    -- On CJK clients the base's own path can leave the copy faceless (#519): try the locale font, then the base.
+    -- CJK clients can leave the copy faceless even with the base's own path: try the locale font, then the base.
     if not Draws(font) then
         font:SetFont(addon.Fonts.PRIMARY, size, flags)
         if not Draws(font) then
@@ -53,6 +53,7 @@ local function MakeFont(name, base, size)
     end
     return font
 end
+ForeverUI.MakeFont = MakeFont
 
 Fonts.Normal = Fonts.Normal or GameFontNormal
 Fonts.Highlight = Fonts.Highlight or GameFontHighlight

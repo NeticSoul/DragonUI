@@ -28,12 +28,7 @@ local FRAME_H, ART_H, FILL_H = 18, 23, 17
 local MASK_OFFSET = { [BAR_W] = -7, [SMALL_BAR_W] = -7 }
 
 -- GameFontHighlightSmall2 (11 pt) does not exist in 3.3.5a.
-local missingFont = CreateFont("DragonUI_ProfessionsMissingFont")
-missingFont:CopyFontObject(GameFontHighlightSmall)
-do
-    local path, _, flags = GameFontHighlightSmall:GetFont()
-    missingFont:SetFont(path, 11, flags)
-end
+local missingFont = addon.ForeverUI.MakeFont("DragonUI_ProfessionsMissingFont", GameFontHighlightSmall, 11)
 
 -- PROFESSIONS_*_MISSING in Forever.
 local MISSING = {
@@ -190,7 +185,7 @@ local function newPrimary(parent)
     card.draw:SetPoint("TOPLEFT", card, "TOPLEFT", layout.bannerDraw[1], layout.bannerDraw[2])
     card.name = card:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     card.name:SetPoint("TOPLEFT", card, "TOPLEFT", 20, -24)
-    card.missing = card:CreateFontString(nil, "ARTWORK")
+    card.missing = card:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     card.missing:SetFontObject(missingFont)
     card.missing:SetJustifyH("LEFT")
     card.missing:SetWidth(485)
@@ -233,7 +228,7 @@ local function newSecondary(parent)
     card.bg:SetAllPoints()
     card.name = card:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     card.name:SetPoint("TOP", card, "TOP", 0, -25)
-    card.missing = card:CreateFontString(nil, "ARTWORK")
+    card.missing = card:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     card.missing:SetFontObject(missingFont)
     card.missing:SetJustifyH("LEFT")
     card.missing:SetWidth(175)
