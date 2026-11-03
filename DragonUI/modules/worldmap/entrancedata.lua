@@ -12,9 +12,9 @@ addon.WorldMap.Entrances = {
     { x = 0.4250, y = 0.1150, lfg = 22, raid = false, name = "Uldaman", header = "Uldaman" },
   },
   ["Barrens"] = {
-    { x = 0.4900, y = 0.9460, lfg = 20, raid = false, name = "Razorfen Downs", header = "Razorfen Downs" },
+    { x = 0.5090, y = 0.9290, lfg = 20, raid = false, name = "Razorfen Downs", header = "Razorfen Downs" },
     { x = 0.4240, y = 0.8990, lfg = 16, raid = false, name = "Razorfen Kraul", header = "Razorfen Kraul" },
-    { x = 0.4260, y = 0.6660, lfg = 1, raid = false, name = "Wailing Caverns", header = "Wailing Caverns" },
+    { x = 0.4600, y = 0.3650, lfg = 1, raid = false, name = "Wailing Caverns", header = "Wailing Caverns" },
   },
   ["BladesEdgeMountains"] = {
     { x = 0.6823, y = 0.2441, lfg = 177, raid = true, name = "Gruul's Lair", header = "Gruul's Lair" },
