@@ -2046,6 +2046,10 @@ local function UpdatePlayerDragonDecoration()
                 PlayerFrameVehicleTexture:Show()
                 PlayerFrameVehicleTexture:SetAlpha(1)
             end
+            -- The frame slides back in before dark mode's timers would re-tint the reset above.
+            if addon.RefreshDarkModeUnitFrames then
+                addon.RefreshDarkModeUnitFrames()
+            end
 
             -- Hide our custom bg/border (designed for normal player frame, not vehicle layout)
             if dragonFrame.PlayerFrameBackground then
