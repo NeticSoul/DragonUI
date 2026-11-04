@@ -16,6 +16,7 @@ local ROOM = LIST_H - AREA_TOP - AREA_BOTTOM
 local WHEEL_STEP = 3
 -- ProfessionsRecipeListMixin's tree view: indent, edge padding, spacing, and the padding round a group's recipes.
 local INDENT, SPACING, PAD_EDGE, GROUP_TOP, GROUP_BOTTOM = 10, 1, 5, 1, 10
+local MAX_ROWS = math.floor((ROOM + SPACING) / (ROW_H + SPACING))
 local RECIPE_W = ROW_W - INDENT
 local RECIPE_COLOR = { 0.886, 0.863, 0.839 }
 local SKILL_UP = {
@@ -427,6 +428,8 @@ function List.Build()
     List.area = CreateFrame("Frame", nil, frame)
     List.area:SetPoint("TOPLEFT", frame, "TOPLEFT", AREA_X, -AREA_TOP)
     List.area:SetSize(ROW_W, ROOM)
+    -- A row made later, with the window above level 127, is born at 128 under the window's background.
+    for n = 1, MAX_ROWS do newRow(n):Hide() end
 
     buildFilterButton(frame)
 
