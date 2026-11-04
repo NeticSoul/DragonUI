@@ -664,6 +664,30 @@ local function HookVehicleSlotUpdates()
     end)
 end
 
+-- VehicleMenuBar stays hidden, so ActionButtonDown pushes the hidden ActionButtonN instead of ours.
+local keyPushed = {}
+local keyPressesHooked = false
+local function HookVehicleKeyPresses()
+    if keyPressesHooked then return end
+    keyPressesHooked = true
+    hooksecurefunc("ActionButtonDown", function(id)
+        if not (vehiclebar and vehiclebar:IsVisible()) or id > VEHICLE_MAX_ACTIONBUTTONS then return end
+        local button = _G["VehicleMenuBarActionButton" .. id]
+        if button and button:GetButtonState() == "NORMAL" then
+            button:SetButtonState("PUSHED")
+            keyPushed[id] = button
+        end
+    end)
+    hooksecurefunc("ActionButtonUp", function(id)
+        local button = keyPushed[id]
+        if not button then return end
+        keyPushed[id] = nil
+        if button:GetButtonState() == "PUSHED" then
+            button:SetButtonState("NORMAL")
+        end
+    end)
+end
+
 -- Restore all vehicle buttons to normal state when exiting vehicle
 local function RestoreVehicleButtons()
     -- Seat swaps fire EXITED while still mounted; restoring there re-lights the empty slots.
@@ -1000,6 +1024,7 @@ local function ApplyVehicleSystem()
         positionVehicleButtons()
 
         HookVehicleSlotUpdates()
+        HookVehicleKeyPresses()
 
         -- Pre-style vehicle buttons NOW so they already have Dragonflight
         -- borders when the state driver shows them. Without this, buttons

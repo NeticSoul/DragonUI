@@ -136,7 +136,11 @@ end
 
 local function CurrentSlotButton(slot)
     local vehicle, bonus = _G.VehicleMenuBar, _G.BonusActionBarFrame
-    if vehicle and vehicle:IsProtected() and vehicle:IsShown() and slot <= (VEHICLE_MAX_ACTIONBUTTONS or 6) then
+    local ourVehicle = _G.DragonUI_VehicleBar
+    local vehicleShown = (vehicle and vehicle:IsProtected() and vehicle:IsShown())
+        or (ourVehicle and ourVehicle:IsVisible())
+    -- Only the flash goes to our bar's button; the click still fires from ActionButtonN on the vehicle page.
+    if vehicleShown and slot <= (VEHICLE_MAX_ACTIONBUTTONS or 6) then
         return _G["VehicleMenuBarActionButton" .. slot]
     elseif bonus and bonus:IsProtected() and bonus:IsShown() then
         return _G["BonusActionButton" .. slot]
