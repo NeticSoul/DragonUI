@@ -287,11 +287,25 @@ local function PinCorners(region, target, right, top, left, bottom)
     region:SetPoint('BOTTOMLEFT', target, 'BOTTOMLEFT', left, bottom)
 end
 
+-- Retail's slot fills the whole 45 point button, 90x90 of the frame canvas, so it runs under the band.
+local function FitSlotArt(slot, owner)
+    local cell = owner:GetWidth() / 79
+    slot:ClearAllPoints()
+    PinCorners(slot, owner, 7 * cell, 4 * cell, -4 * cell, -7 * cell)
+end
+
+local function SeatSlotArt(slot, owner)
+    owner.__duiFitSlot = slot
+    FitSlotArt(slot, owner)
+end
+
+addon.SeatButtonSlotArt = SeatSlotArt
+
 local function AddSlotBackdrop(owner)
     if not IsModuleEnabled() or not owner or owner.background then return end
     local backdrop = owner:CreateTexture(nil, 'BACKGROUND')
-    backdrop:SetAllPoints(owner)
     backdrop:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
+    SeatSlotArt(backdrop, owner)
     backdrop:Show()
     return backdrop
 end
@@ -635,6 +649,7 @@ local function SeatFrameArt(art, owner)
         owner:HookScript('OnSizeChanged', function(self)
             if self.__duiFitArt then FitFrameArt(self.__duiFitArt, self) end
             if self.__duiFitIcon then FitIcon(self.__duiFitIcon, self) end
+            if self.__duiFitSlot then FitSlotArt(self.__duiFitSlot, self) end
         end)
     end
 end
@@ -932,6 +947,7 @@ local function RestoreButtonToOriginal(button)
 
     button.__duiFitArt = nil
     button.__duiFitIcon = nil
+    button.__duiFitSlot = nil
     button.__duiRing = nil
     button:UnlockHighlight()
     button:GetHighlightTexture():SetAlpha(1)

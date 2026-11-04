@@ -200,8 +200,8 @@ local function SkinButton(button)
 
     if not button.background then
         local slotFill = button:CreateTexture(nil, 'BACKGROUND')
-        slotFill:SetAllPoints(button)
         slotFill:SetAtlasTexture('ui-hud-actionbar-iconframe-slot')
+        addon.SeatButtonSlotArt(slotFill, button)
         button.background = slotFill
     end
     -- Same slot fill rule as pet/stance in buttons.lua.
