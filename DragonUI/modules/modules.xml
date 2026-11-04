@@ -131,6 +131,7 @@
     <Include file="talents\talents.xml"/>
 
     <!-- Version Check module (cross-player version broadcast) -->
+    <Script file="versioncheck_signature.lua"/>
     <Script file="versioncheck.lua"/>
 
     <!-- Level Up Enhance (level-up banner with the unlocks list; reads spellbook\trainerdata.lua) -->

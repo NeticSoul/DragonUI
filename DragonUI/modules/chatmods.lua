@@ -1574,3 +1574,11 @@ end)
 -- Export for external use
 addon.ApplyChatModsSystem = ApplyChatModsSystem
 addon.RestoreChatModsSystem = RestoreChatModsSystem
+
+-- Only our click handler knows url: links (SetItemRef doesn't), so print plain text without it.
+function addon:ChatURL(url, label)
+    if ChatModsModule.applied and ChatModsModule.originalStates.ChatFrame_OnHyperlinkShow then
+        return format("|cffffffff|Hurl:%s|h[%s]|h|r", url, label or url)
+    end
+    return url
+end

@@ -71,6 +71,7 @@ L["Use the scale that draws one interface pixel per screen pixel at your resolut
 
 L["Commands: /dragonui, /dui, /pi \226\128\148 /dragonui edit (editor) \226\128\148 /dragonui help"] = true
 L["GitHub (select and Ctrl+C to copy):"] = true
+L["New version available! (v%s)"] = true
 L["All"] = true
 L["Error:"] = true
 L["Error: DragonUI addon not found!"] = true

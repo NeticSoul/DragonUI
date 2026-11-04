@@ -904,6 +904,7 @@ L["Bringing the retail WoW look to 3.3.5a."] = "L'apparence de WoW retail sur 3.
 L["Created and maintained by NeticSoul, with community contributions."] = "Créé et maintenu par NeticSoul, avec les contributions de la communauté."
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "Commandes : /dragonui, /dui, /pi — /dragonui edit (éditeur) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (sélectionnez et Ctrl+C pour copier) :"
+L["New version available! (v%s)"] = "Nouvelle version disponible ! (v%s)"
 L["Error:"] = "Erreur :"
 L["Error: DragonUI addon not found!"] = "Erreur : addon DragonUI introuvable !"
 L["Changing this setting requires a UI reload to apply correctly."] = "Modifier ce réglage nécessite un rechargement de l'interface."

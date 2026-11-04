@@ -487,6 +487,10 @@ L["Copy Text"] = "Копировать текст"
 
 L["Version Check"] = "Проверка версий"
 L["Broadcast and detect addon version updates across group members"] = "Обнаруживает обновления аддона среди участников группы, отправляя и получая версию"
+L["New version available! %s"] = "Доступна новая версия! %s"
+L["Download"] = "Скачать"
+L["Restart the game to finish updating DragonUI. If this message keeps showing, reinstall it."] = "Перезапустите игру, чтобы завершить обновление DragonUI. Если это сообщение не исчезнет, переустановите его."
+L["DragonUI and DragonUI_Options are from different versions. Install both from the same download."] = "DragonUI и DragonUI_Options разных версий. Установите оба из одной загрузки."
 
 -- Quest nameplate icons wizard (Questie coexistence)
 L["Quest Icons on Nameplates"] = "Значки заданий на табличках"

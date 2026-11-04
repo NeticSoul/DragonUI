@@ -217,6 +217,9 @@ local function SlashCommandHandler(input)
         end
     elseif cmd == "version" or cmd == "ver" then
         ShowVersion()
+        if addon.VersionCheck then
+            addon.VersionCheck.PrintUpdateNotice()
+        end
     elseif cmd == "debugvehicle" then
         if not addon.debugMode then
             addon:Print(L["Enable debug mode first with /dragonui debug on"])

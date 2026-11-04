@@ -61,6 +61,7 @@ L["Automatically select greed or disenchant (when available) on green quality it
 
 L["Commands: /dragonui, /dui, /pi — /dragonui edit (editor) — /dragonui help"] = "Команды: /dragonui, /dui, /pi — /dragonui edit (редактор) — /dragonui help"
 L["GitHub (select and Ctrl+C to copy):"] = "GitHub (выделите и нажмите Ctrl+C для копирования):"
+L["New version available! (v%s)"] = "Доступна новая версия! (v%s)"
 L["All"] = "Все"
 L["Error:"] = "Ошибка:"
 L["Error: DragonUI addon not found!"] = "Ошибка: Аддон DragonUI не найден!"

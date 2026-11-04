@@ -486,6 +486,10 @@ L["Copy Text"] = "텍스트 복사"
 -- Version Check Module
 L["Version Check"] = "버전 확인"
 L["Broadcast and detect addon version updates across group members"] = "그룹원 간 애드온 버전 업데이트를 감지하고 방송합니다"
+L["New version available! %s"] = "새 버전이 나왔습니다! %s"
+L["Download"] = "다운로드"
+L["Restart the game to finish updating DragonUI. If this message keeps showing, reinstall it."] = "DragonUI 업데이트를 마치려면 게임을 재시작하세요. 이 메시지가 계속 나오면 다시 설치하세요."
+L["DragonUI and DragonUI_Options are from different versions. Install both from the same download."] = "DragonUI와 DragonUI_Options의 버전이 다릅니다. 같은 다운로드에서 둘 다 설치하세요."
 
 -- Quest nameplate icons wizard (Questie coexistence)
 L["Quest Icons on Nameplates"] = "이름표의 퀘스트 아이콘"

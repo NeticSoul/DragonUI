@@ -23,6 +23,7 @@ local defaults = {
         auraDurations = {}, -- Observed debuff durations for nameplates: [spellId] = seconds
         addonIcons = {}, -- Addon manager icons learned from loaded addons: [lowercase folder] = { icon, coords }
         itemOwnership = { version = 1, realms = {} }, -- Per-realm, per-character item counts for the tooltip module
+        versionCheck = {}, -- Newest signed DragonUI version seen from other players: update = { version, key, signature }
         uiScaleEnabled = false, -- DragonUI sets UIParent's scale itself, which can go below Blizzard's 0.64
         uiScale = false -- That scale; false until first enabled, then seeded from the scale on screen
     },
