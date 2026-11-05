@@ -217,6 +217,60 @@ function CP.ModernizeCloseButton(cb, owner, x, y)
     dress("GetHighlightTexture", 115/256, 151/256, 1/128, 39/128, "ADD")
 end
 
+local WINDOW_NINESLICE = {
+    "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner",
+    "TopEdge", "BottomEdge", "LeftEdge", "RightEdge",
+}
+
+-- For a Blizzard window kept at its own size: the chrome fills the rect its stock art showed.
+function CP.BuildWindowChrome(frame, left, top, right, bottom)
+    local chrome = CreateFrame("Frame", nil, frame)
+    chrome:SetPoint("TOPLEFT", frame, "TOPLEFT", left, top)
+    chrome:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", right, bottom)
+
+    local rock = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
+    rock:SetTexture(ROCK, "REPEAT", "REPEAT")
+    rock:SetHorizTile(true)
+    rock:SetVertTile(true)
+    rock:SetPoint("TOPLEFT", chrome, "TOPLEFT", 2, -STREAK_Y)
+    rock:SetPoint("BOTTOMRIGHT", chrome, "BOTTOMRIGHT", -2, 2)
+    chrome.rock = rock
+
+    local streaks = frame:CreateTexture(nil, "BORDER")
+    streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
+    streaks:SetHorizTile(true)
+    streaks:SetHeight(STREAK_H)
+    streaks:SetPoint("TOPLEFT", chrome, "TOPLEFT", 6, -STREAK_Y)
+    streaks:SetPoint("TOPRIGHT", chrome, "TOPRIGHT", -2, -STREAK_Y)
+    chrome.streaks = streaks
+
+    -- On the window, under every subframe like Blizzard's art; on `chrome` it would share their level.
+    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
+    if layout then
+        for _, key in ipairs(WINDOW_NINESLICE) do
+            chrome[key] = frame:CreateTexture(nil, layout[key].layer or "OVERLAY")
+        end
+        DragonUI_NineSlice.ApplyLayout(chrome, layout)
+    end
+
+    frame:SetHitRectInsets(left, -right, -top, bottom)
+    return chrome
+end
+
+function CP.TintWindowChrome(chrome)
+    local tint = CP.BodyTint()
+    chrome.rock:SetVertexColor(tint.body, tint.body, tint.body)
+    chrome.streaks:SetAlpha(tint.streak)
+end
+
+-- The character panel's face portrait: same centre as Blizzard's 60x60, shrunk to clear the ring.
+function CP.FitWindowPortrait(portrait, chrome)
+    if not portrait then return end
+    portrait:SetSize(56, 56)
+    portrait:ClearAllPoints()
+    portrait:SetPoint("TOPLEFT", chrome, "TOPLEFT", -2, 4)
+end
+
 -- SetPoint without a ClearAllPoints ADDS an anchor, so one stray re-anchor from outside leaves the
 -- button pinned twice and stretched rather than merely moved.
 function CP.ReanchorCloseButton()

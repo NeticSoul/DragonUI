@@ -12,15 +12,8 @@ if addon.RegisterModule then
         { lifecyclePrefix = "InspectFrame", loadOnce = true })
 end
 
-local ROCK = addon._dir .. "UI\\ui-background-rock"
-
 -- Where Blizzard's 384x512 art shows: from here the retail ring circles Blizzard's own portrait.
 local LEFT, TOP, RIGHT, BOTTOM = 11, -12, -32, 76
-
-local NINESLICE_PIECES = {
-    "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner",
-    "TopEdge", "BottomEdge", "LeftEdge", "RightEdge",
-}
 
 -- Blizzard's frame art in each subframe: unnamed textures in one layer, which no Blizzard code reaches.
 local STOCK_ART = {
@@ -65,52 +58,8 @@ local function hideStockArt()
     end
 end
 
-local function buildChrome(frame)
-    chrome = CreateFrame("Frame", nil, frame)
-    chrome:SetPoint("TOPLEFT", frame, "TOPLEFT", LEFT, TOP)
-    chrome:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", RIGHT, BOTTOM)
-
-    local rock = frame:CreateTexture(nil, "BACKGROUND", nil, -6)
-    rock:SetTexture(ROCK, "REPEAT", "REPEAT")
-    rock:SetHorizTile(true)
-    rock:SetVertTile(true)
-    rock:SetPoint("TOPLEFT", chrome, "TOPLEFT", 2, -21)
-    rock:SetPoint("BOTTOMRIGHT", chrome, "BOTTOMRIGHT", -2, 2)
-    chrome.rock = rock
-
-    local streaks = frame:CreateTexture(nil, "BORDER")
-    streaks:SetAtlasTexture("_UI-Frame-TopTileStreaks")
-    streaks:SetHorizTile(true)
-    streaks:SetHeight(43)
-    streaks:SetPoint("TOPLEFT", chrome, "TOPLEFT", 6, -21)
-    streaks:SetPoint("TOPRIGHT", chrome, "TOPRIGHT", -2, -21)
-    chrome.streaks = streaks
-
-    -- On the window, under every subframe like Blizzard's art; on `chrome` it would share their level.
-    local layout = DragonUI_NineSlice and DragonUI_NineSlice.GetLayout("PortraitFrameTemplate")
-    if layout then
-        for _, key in ipairs(NINESLICE_PIECES) do
-            chrome[key] = frame:CreateTexture(nil, layout[key].layer or "OVERLAY")
-        end
-        DragonUI_NineSlice.ApplyLayout(chrome, layout)
-    end
-
-    frame:SetHitRectInsets(LEFT, -RIGHT, -TOP, BOTTOM)
-end
-
--- The character panel's face portrait: same centre as Blizzard's 60x60, shrunk to clear the ring.
-local function fitPortrait()
-    local portrait = _G.InspectFramePortrait
-    if not portrait then return end
-    portrait:SetSize(56, 56)
-    portrait:ClearAllPoints()
-    portrait:SetPoint("TOPLEFT", chrome, "TOPLEFT", -2, 4)
-end
-
 local function tintBody()
-    local tint = CP.BodyTint()
-    chrome.rock:SetVertexColor(tint.body, tint.body, tint.body)
-    chrome.streaks:SetAlpha(tint.streak)
+    CP.TintWindowChrome(chrome)
 end
 
 local function dressSlots()
@@ -311,8 +260,8 @@ local function build()
     frame._duiSkinned = true
 
     hideStockArt()
-    buildChrome(frame)
-    fitPortrait()
+    chrome = CP.BuildWindowChrome(frame, LEFT, TOP, RIGHT, BOTTOM)
+    CP.FitWindowPortrait(_G.InspectFramePortrait, chrome)
     tintBody()
 
     CP.ModernizeCloseButton(_G.InspectFrameCloseButton, chrome)
@@ -324,6 +273,7 @@ local function build()
     buildGround()
     buildBackdrop()
     styleRotateButtons()
+    addon:WireModelDragRotate(_G.InspectModelFrame)
     dressTabs()
 
     frame:HookScript("OnShow", tintBody)

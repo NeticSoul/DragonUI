@@ -216,6 +216,33 @@ function addon:WireModelView(model, opts)
     model._duiViewInput = { down = onDown, up = onUp, wheel = onWheel, native = native }
 end
 
+-- Rotate only: a zoom would break the fit the backdrop matches. `surface`, if given, takes the drag.
+function addon:WireModelDragRotate(model, surface)
+    if not model or model._duiDragRotate then return end
+    model._duiDragRotate = true
+    surface = surface or model
+
+    local drag = CreateFrame("Frame", nil, model)
+    drag:Hide()
+    -- Polled, not taken from OnMouseUp: releasing with the cursor off the model never delivers it.
+    drag:SetScript("OnUpdate", function()
+        if not IsMouseButtonDown("LeftButton") then drag:Hide(); return end
+        local x = cursor(model)
+        -- Blizzard's held rotate buttons carry on from this same field.
+        model.rotation = (model.rotation or DEFAULT_FACING) + (x - drag.x) * ROTATE_SPEED
+        drag.x = x
+        model:SetRotation(model.rotation)
+    end)
+
+    surface:EnableMouse(true)
+    surface:HookScript("OnMouseDown", function(_, button)
+        if button ~= "LeftButton" then return end
+        drag.x = cursor(model)
+        drag:Show()
+    end)
+    model:HookScript("OnHide", function() drag:Hide() end)
+end
+
 -- Anything drawn over a model swallows its input, so overlays hand the gestures back to it.
 function addon:ForwardModelInput(frame, model, exceptLeft)
     local input = model and model._duiViewInput

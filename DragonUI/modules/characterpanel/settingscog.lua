@@ -121,10 +121,10 @@ local function menuEntries()
 end
 
 -- The same gear as the world map's quest settings and the talent window.
-local function gearLayer(layer, alpha, blend)
-    local tex = cog:CreateTexture(nil, layer)
+local function gearLayer(button, layer, alpha, blend)
+    local tex = button:CreateTexture(nil, layer)
     tex:SetAtlasTexture("questlog-icon-setting", true)
-    tex:SetPoint("CENTER", cog, "CENTER", 0, 0)
+    tex:SetPoint("CENTER", button, "CENTER", 0, 0)
     tex:SetAlpha(alpha)
     tex:SetBlendMode(blend or "BLEND")
     return tex
@@ -145,28 +145,32 @@ local function hideTip()
     GameTooltip:Hide()
 end
 
+-- Shared with the dressing room: the gear sits under the window's close button.
+function CP.CreateSettingsCog(name, frame, closeButton, onClick)
+    local button = CreateFrame("Button", name, frame)
+    button:SetSize(20, 20)
+    if closeButton then
+        button:SetPoint("TOPRIGHT", closeButton, "BOTTOMRIGHT", -6, -3)
+    else
+        button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -27)
+    end
+
+    button.Icon = gearLayer(button, "ARTWORK", 1)
+    gearLayer(button, "HIGHLIGHT", 0.4, "ADD")
+
+    button:SetScript("OnClick", onClick)
+    button:SetScript("OnEnter", showTip)
+    button:SetScript("OnLeave", hideTip)
+    return button
+end
+
 local function createCog()
     local frame = _G.CharacterFrame
     if cog or not frame then return end
 
-    cog = CreateFrame("Button", "DragonUICharacterSettingsCog", frame)
-    cog:SetSize(20, 20)
+    cog = CP.CreateSettingsCog("DragonUICharacterSettingsCog", frame, _G.CharacterFrameCloseButton, openMenu)
     -- Like the close button, it has to clear the nine-slice corner and the title band.
     cog:SetFrameLevel(frame:GetFrameLevel() + CP.SUBFRAME_LEVEL + 20)
-
-    local closeButton = _G.CharacterFrameCloseButton
-    if closeButton then
-        cog:SetPoint("TOPRIGHT", closeButton, "BOTTOMRIGHT", -6, -3)
-    else
-        cog:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -27)
-    end
-
-    cog.Icon = gearLayer("ARTWORK", 1)
-    gearLayer("HIGHLIGHT", 0.4, "ADD")
-
-    cog:SetScript("OnClick", openMenu)
-    cog:SetScript("OnEnter", showTip)
-    cog:SetScript("OnLeave", hideTip)
 end
 
 function CP.SettingsCog()

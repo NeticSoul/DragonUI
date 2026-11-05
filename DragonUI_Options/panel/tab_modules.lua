@@ -50,7 +50,7 @@ local ADVANCED_SECTIONS = {
     { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "totemframe", "auraborders", "auracooldowns" } },
     { title = "Bars", modules = { "mainbars", "vehicle", "stance", "petbar", "multicast", "extrabar1", "buttons", "cooldowns", "noop", "keybinding" } },
     { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance", "addonmanager" } },
-    { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "professions", "talents", "worldmap", "loot_skin", "mail", "taxiframe", "inspectframe" } },
+    { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "professions", "talents", "worldmap", "loot_skin", "mail", "taxiframe", "inspectframe", "dressupframe" } },
     { title = "Bags", modules = { "bagster", "bags_skin", "bagsort", "altmoney", "itemlevel", "itemquality" } },
 }
 

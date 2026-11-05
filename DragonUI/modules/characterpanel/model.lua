@@ -63,8 +63,27 @@ local QUARTERS = {
 }
 CP.MODEL_W, CP.MODEL_H = MODEL_W, MODEL_H
 
+-- The dressing room's full 318 px of art; the 231 cut above is its middle, 44 px in.
+CP.FULL_ART_W = 318
+local FULL_QUARTERS = {
+    { key = "TopLeft", suffix = 1, w = 256, h = 245, tc = { 0, 1, 0.0392156862745098, 1 },
+      point = "TOPLEFT", rel = "TOPLEFT" },
+    { key = "TopRight", suffix = 2, w = 62, h = 245, tc = { 0, 62 / 64, 0.0392156862745098, 1 },
+      point = "TOPLEFT", rel = "TOPRIGHT" },
+    { key = "BotLeft", suffix = 3, w = 256, h = 75, tc = { 0, 1, 0, BOTTOM_CROP },
+      point = "TOPLEFT", rel = "BOTTOMLEFT" },
+    { key = "BotRight", suffix = 4, w = 62, h = 75, tc = { 0, 62 / 64, 0, BOTTOM_CROP },
+      point = "TOPLEFT", rel = "BOTTOMRIGHT" },
+}
+local layoutOf = {}
+
 -- Down uses the top pair's 10 cropped rows; up past 0 needs a FLOOR race's rebuilt rows.
 local LIFT_MIN, LIFT_MAX = -10, 53
+
+-- Painted rows above the art for lifts under LIFT_MIN; they also take over the top pair's first CAP_RIM.
+local CAP = { DWARF = true }
+local CAP_ROWS, CAP_RIM, CAP_FILE_W = 64, 32, 512
+local capOf = {}
 
 local RACE_LIFT = {
     BLOODELFF = 25, BLOODELFM = 34, DRAENEIF = 7, DRAENEIM = 7, DWARFF = -10, DWARFM = -10,
@@ -86,10 +105,16 @@ end
 
 -- Slides the art up `lift` px and keeps the 320 total by trading top rows for bottom ones.
 local function layoutQuarters(bySuffix, lift)
-    for _, q in ipairs(QUARTERS) do
+    local cap = capOf[bySuffix]
+    local over = cap and cap.active and math.max(0, LIFT_MIN - lift) or 0
+    local capped = over > 0 and over + CAP_RIM or 0
+    for _, q in ipairs(layoutOf[bySuffix] or QUARTERS) do
         local piece = bySuffix[q.suffix]
         if piece then
-            if q.suffix <= 2 then
+            if q.suffix <= 2 and capped > 0 then
+                piece:SetHeight(q.h - LIFT_MIN - CAP_RIM)
+                piece:SetTexCoord(q.tc[1], q.tc[2], CAP_RIM / 256, 1)
+            elseif q.suffix <= 2 then
                 piece:SetHeight(q.h - lift)
                 piece:SetTexCoord(q.tc[1], q.tc[2], q.tc[3] + lift / 256, 1)
             else
@@ -98,12 +123,30 @@ local function layoutQuarters(bySuffix, lift)
             end
         end
     end
+    if not cap then return end
+    bySuffix[1]:SetPoint("TOPLEFT", cap.viewport, "TOPLEFT", 0, -capped)
+    if capped > 0 then
+        cap.piece:SetHeight(capped)
+        cap.piece:SetTexCoord(cap.u0, cap.u1, 1 - capped / CAP_ROWS, 1)
+        cap.piece:Show()
+    else
+        cap.piece:Hide()
+    end
 end
 
--- Shared with the inspect window, which paints other units' races.
-function CP.PaintRaceBackdrop(bySuffix, shade, fileName, sex)
+-- The dressing room's wider view needs its own lifts; returns the one applied after clamping.
+function CP.SlideRaceBackdrop(bySuffix, lift)
+    local cap = capOf[bySuffix]
+    local low = cap and cap.active and LIFT_MIN - CAP_ROWS + CAP_RIM or LIFT_MIN
+    lift = math.max(low, math.min(LIFT_MAX, lift or 0))
+    layoutQuarters(bySuffix, lift)
+    return lift
+end
+
+-- Shared with the inspect window and the dressing room; `colour` ignores the grey setting.
+function CP.PaintRaceBackdrop(bySuffix, shade, fileName, sex, colour)
     -- Plain truth test: the pre-database config is {}, and a missing key must read as colour.
-    local desaturate = CP:Config().grey_model_backdrop and true or false
+    local desaturate = not colour and CP:Config().grey_model_backdrop and true or false
     for suffix, piece in pairs(bySuffix) do
         piece:SetTexture(artPath(fileName, suffix))
         piece:SetDesaturated(desaturate)
@@ -113,7 +156,24 @@ function CP.PaintRaceBackdrop(bySuffix, shade, fileName, sex)
         shade:SetAlpha(desaturate and shadeFor(fileName) or 0)
         shade:Show()
     end
+    local cap, race = capOf[bySuffix], artRace(fileName)
+    if cap then
+        cap.active = CAP[race] or false
+        cap.piece:Hide()
+        if cap.active then
+            cap.piece:SetTexture(FLOOR_ART .. strlower(race) .. "-cap")
+            cap.piece:SetDesaturated(desaturate)
+        end
+    end
     layoutQuarters(bySuffix, CP.RaceBackdropLift(CP.RaceLiftKey(fileName, sex)))
+end
+
+-- The cap is no quarter: hiding bySuffix alone would leave it over whatever art replaces the race's.
+function CP.HideRaceBackdrop(bySuffix, shade)
+    for _, piece in pairs(bySuffix) do piece:Hide() end
+    if shade then shade:Hide() end
+    local cap = capOf[bySuffix]
+    if cap then cap.piece:Hide() end
 end
 
 local function addQuarter(viewport, entry, relativeTo)
@@ -126,11 +186,12 @@ local function addQuarter(viewport, entry, relativeTo)
     return piece
 end
 
--- Returns the quarters by file suffix and the shade, for any 231x320 viewport.
-function CP.CreateRaceBackdrop(viewport)
+-- Returns the quarters by file suffix and the shade, for any 231x320 viewport (fullWidth: 318x320).
+function CP.CreateRaceBackdrop(viewport, fullWidth)
+    local quarters = fullWidth and FULL_QUARTERS or QUARTERS
     -- Every other quarter anchors to the top-left one, so it is made before the rest.
     local anchorEntry
-    for _, entry in ipairs(QUARTERS) do
+    for _, entry in ipairs(quarters) do
         if entry.key == "TopLeft" then anchorEntry = entry break end
     end
     if not anchorEntry then return end
@@ -138,16 +199,24 @@ function CP.CreateRaceBackdrop(viewport)
     local bySuffix = {}
     local anchorPiece = addQuarter(viewport, anchorEntry, viewport)
     bySuffix[anchorEntry.suffix] = anchorPiece
-    for _, entry in ipairs(QUARTERS) do
+    for _, entry in ipairs(quarters) do
         if entry ~= anchorEntry then
             bySuffix[entry.suffix] = addQuarter(viewport, entry, anchorPiece)
         end
     end
+    layoutOf[bySuffix] = quarters
 
-    -- Held to the viewport's corner, not the art's, so the shade ends exactly where the model does.
+    local left, width = fullWidth and 0 or 44, fullWidth and CP.FULL_ART_W or MODEL_W
+    local cap = viewport:CreateTexture(nil, "BACKGROUND")
+    cap:SetWidth(width)
+    cap:SetPoint("BOTTOMLEFT", anchorPiece, "TOPLEFT")
+    cap:Hide()
+    capOf[bySuffix] = { piece = cap, viewport = viewport,
+        u0 = left / CAP_FILE_W, u1 = (left + width) / CAP_FILE_W }
+
+    -- Held to the viewport, not the art, so the shade ends where the model does and covers a cap.
     local shade = viewport:CreateTexture(nil, "BORDER")
-    shade:SetPoint("BOTTOMRIGHT", viewport)
-    shade:SetPoint("TOPLEFT", anchorPiece)
+    shade:SetAllPoints(viewport)
     shade:SetTexture(0, 0, 0)
     shade:SetAlpha(0)
     return bySuffix, shade

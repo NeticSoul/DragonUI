@@ -86,6 +86,9 @@
     <!-- Retail-style inspect window reskin (after characterpanel: reuses its chrome, tabs and slot art) -->
     <Script file="inspectframe.lua"/>
 
+    <!-- Retail-style dressing room reskin (after characterpanel: reuses its chrome and model art) -->
+    <Script file="dressupframe.lua"/>
+
     <!-- Retail-style vendor window reskin -->
     <Include file="merchant\merchant.xml"/>
 

@@ -1430,6 +1430,10 @@ local defaults = {
             inspectframe = {
                 enabled = true, -- Retail-style frame and tabs for the inspect window
             },
+            dressupframe = {
+                enabled = true, -- Retail-style frame for the dressing room
+                backdrop = "wotlk", -- "wotlk" = race art with the dressing room's own lifts, "retail" = class art
+            },
         },
 
         -- LAYOUT PRESETS (user-saved UI snapshots within this profile)
