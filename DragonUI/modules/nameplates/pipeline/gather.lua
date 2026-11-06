@@ -863,9 +863,13 @@ function NP.gather.SyncName(plateData, unit)
         end
     end
     -- Headline base colour only when no name colour option above tinted it; headline class colour still wins below.
+    -- Friendly NPC headlines (name only) take the Friendly NPC Color, like their normal plates do.
+    local npcHeadlineColor = headline and NP.gather.IsFriendlyNPCNameOnlyActive(plateData) and cfg.friendlyNPCColor
     if headline and not tinted then
         local nc = cfg.friendlyNameOnlyColor
-        if nc then
+        if npcHeadlineColor then
+            r, g, b = npcHeadlineColor.r or 0, npcHeadlineColor.g or 1, npcHeadlineColor.b or 0
+        elseif nc then
             r, g, b = nc.r or 1, nc.g or 1, nc.b or 1
         else
             r, g, b = 1, 1, 1
@@ -956,6 +960,17 @@ function NP.gather.SyncName(plateData, unit)
         end
         if nameOnly and cfg.friendlyNameOnlyAFK and plateData._afkState then
             parts[#parts + 1] = "<AFK>"
+        end
+
+        -- The title follows the name colour for friendly NPCs; the string is reused, so reset it for the rest.
+        local sub = plateData.minaSubTitle
+        local sr, sg, sb = 0.8, 0.8, 0.8
+        if npcHeadlineColor then
+            sr, sg, sb = npcHeadlineColor.r or 0, npcHeadlineColor.g or 1, npcHeadlineColor.b or 0
+        end
+        if sub._subR ~= sr or sub._subG ~= sg or sub._subB ~= sb then
+            sub._subR, sub._subG, sub._subB = sr, sg, sb
+            sub:SetTextColor(sr, sg, sb)
         end
 
         if #parts > 0 then
