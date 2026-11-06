@@ -1417,6 +1417,32 @@ local defaults = {
                 flashOpacity = 0.35, -- Max alpha of the flash (0.0–1.0)
                 flashExtent = 40,  -- Pixels from screen edges toward center
             },
+            speedometer = {
+                enabled = true,
+                showBorder = true,
+                frameLocked = false,
+                showPercent = true,
+                showBar = true,
+                absoluteSpeed = false,
+                rightClickOpensConfig = true,
+                hideUnmounted = false,
+                hideWhenIdle = false,
+                width = 110,
+                height = 30,
+                point = { anchor = "TOP", x = 0, y = -50 },
+                frameColor = { r = 0, g = 0, b = 0, a = 1 },
+                borderColor = { r = 1, g = 0.7, b = 0 },
+                speedColor1 = { r = 1, g = 0, b = 0 },
+                speedColor2 = { r = 1, g = 0.5, b = 0 },
+                speedColor3 = { r = 1, g = 1, b = 0 },
+                speedColor4 = { r = 0, g = 1, b = 0 },
+                speedColor5 = { r = 0, g = 1, b = 0.5 },
+                speedColor6 = { r = 0, g = 1, b = 1 },
+                speedColor7 = { r = 1, g = 0, b = 1 },
+                speedColor8 = { r = 0.5, g = 0, b = 1 },
+                speedColor9 = { r = 0, g = 0, b = 1 },
+                speedColor10 = { r = 0, g = 0, b = 0.5 },
+            },
             addonmanager = {
                 enabled = true, -- AddOns button in the Esc menu opening the in-game addon list
                 scale = 1, -- Addon list window scale on top of the UI scale

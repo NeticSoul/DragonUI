@@ -654,7 +654,7 @@ end
 -- OPEN / CLOSE / TOGGLE
 -- ============================================================================
 
-function Panel:Open(selectTab)
+function Panel:Open(selectTab, highlight)
     if InCombatLockdown() then
         addon:Error(LO["Cannot open options during combat."])
         return
@@ -672,7 +672,7 @@ function Panel:Open(selectTab)
 
     local tab = selectTab or self.currentTab or (self.tabOrder[1] or nil)
     if tab then
-        self:SelectTab(tab)
+        self:SelectTab(tab, highlight)
     end
 end
 
