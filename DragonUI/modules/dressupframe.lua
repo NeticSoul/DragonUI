@@ -14,6 +14,7 @@ end
 
 -- The inspect window's rect: Blizzard draws both windows on the same 384x512 sheets.
 local LEFT, TOP, RIGHT, BOTTOM = 11, -12, -32, 76
+local STOCK_W, STOCK_H = 384, 512
 
 -- Retail look: Blizzard's top-left backdrop quarter takes the whole art rect, under the stock model.
 local ART_W, ART_H = 318, 331
@@ -186,9 +187,14 @@ local function refresh()
     paintArt()
 end
 
+-- ezCollections swaps in its own 450x545 retail window under the same global names.
+local function isStockFrame(frame)
+    return math.abs(frame:GetWidth() - STOCK_W) < 1 and math.abs(frame:GetHeight() - STOCK_H) < 1
+end
+
 local function build()
     local frame = _G.DressUpFrame
-    if not frame or frame._duiSkinned then return end
+    if not frame or frame._duiSkinned or not isStockFrame(frame) then return end
     frame._duiSkinned = true
 
     hideStockArt(frame)
@@ -227,7 +233,8 @@ local function ApplyDressUpFrameSystem()
     if not addon:IsModuleEnabled("dressupframe") then return end
     DressUpModule.initialized = true
     DressUpModule.applied = true
-    safeBuild()
+    -- RefreshConfig's ADDON_LOADED pass runs before later addons can swap or resize the window.
+    if IsLoggedIn() then safeBuild() end
 end
 
 local function RestoreDressUpFrameSystem()
@@ -239,4 +246,6 @@ addon.RestoreDressUpFrameSystem = RestoreDressUpFrameSystem
 
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
-boot:SetScript("OnEvent", ApplyDressUpFrameSystem)
+boot:SetScript("OnEvent", function()
+    if addon:IsModuleEnabled("dressupframe") then safeBuild() end
+end)
