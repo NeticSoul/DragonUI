@@ -569,6 +569,189 @@ local function BuildEnhancementsTab(scroll)
     })
 
     -- ====================================================================
+    -- SPEEDOMETER MODULE
+    -- ====================================================================
+    C:AddSpacer(scroll)
+    local spdSection = C:AddSection(scroll, LO["Speedometer"])
+
+    C:AddDescription(spdSection, LO["Shows a speed bar and percent readout at the top center."])
+    C:AddDescription(spdSection, LO["Drag the bar to move it and drag the bottom-right corner to resize it."])
+
+    C:AddToggle(spdSection, {
+        label = LO["Enable Speedometer"],
+        getFunc = function() return GetModuleField("speedometer", "enabled") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.enabled = val
+            if addon.RefreshSpeedometerSystem then addon.RefreshSpeedometerSystem() end
+        end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Show Border"],
+        getFunc = function() return GetModuleField("speedometer", "showBorder") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.showBorder = val
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Lock Position"],
+        getFunc = function() return GetModuleField("speedometer", "frameLocked") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.frameLocked = val
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Show Percent"],
+        getFunc = function() return GetModuleField("speedometer", "showPercent") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.showPercent = val
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Show Bar"],
+        getFunc = function() return GetModuleField("speedometer", "showBar") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.showBar = val
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Absolute Speed"],
+        desc = LO["Ignore pitch correction when flying or swimming."],
+        getFunc = function() return GetModuleField("speedometer", "absoluteSpeed") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.absoluteSpeed = val
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Right-Click Opens Config"],
+        getFunc = function() return GetModuleField("speedometer", "rightClickOpensConfig") ~= false end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.rightClickOpensConfig = val
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Hide While Not Mounted"],
+        desc = LO["Hide the speedometer when you are not mounted or in a vehicle."],
+        getFunc = function() return GetModuleField("speedometer", "hideUnmounted") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.hideUnmounted = val
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddToggle(spdSection, {
+        label = LO["Hide When Idle"],
+        desc = LO["Hide the speedometer while you are standing still."],
+        getFunc = function() return GetModuleField("speedometer", "hideWhenIdle") == true end,
+        setFunc = function(val)
+            EnsureModuleTable("speedometer")
+            addon.db.profile.modules.speedometer.hideWhenIdle = val
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    C:AddButton(spdSection, {
+        label = LO["Reset Position"],
+        desc = LO["Move the speedometer back to the top center and restore its default size."],
+        callback = function()
+            local m = EnsureModuleTable("speedometer")
+            m.point = { anchor = "TOP", x = 0, y = -50 }
+            m.width = 110
+            m.height = 30
+            if addon.RefreshSpeedometerPosition then addon.RefreshSpeedometerPosition() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+    })
+
+    local function AddSpeedColor(field, label, default)
+        C:AddColorPicker(spdSection, {
+            label = LO[label],
+            getFunc = function()
+                local c = GetModuleField("speedometer", field) or default
+                return c.r or default.r, c.g or default.g, c.b or default.b
+            end,
+            setFunc = function(r, g, b)
+                EnsureModuleTable("speedometer")[field] = { r = r, g = g, b = b }
+            end,
+            callback = function()
+                if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+            end,
+            disabled = function() return not IsEnabled("speedometer") end,
+            hasAlpha = false,
+        })
+    end
+
+    C:AddColorPicker(spdSection, {
+        label = LO["Frame Color"],
+        getFunc = function()
+            local c = GetModuleField("speedometer", "frameColor")
+            if c then return c.r or 0, c.g or 0, c.b or 0, c.a or 1 end
+            return 0, 0, 0, 1
+        end,
+        setFunc = function(r, g, b, a)
+            EnsureModuleTable("speedometer").frameColor = { r = r, g = g, b = b, a = a or 1 }
+        end,
+        callback = function()
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+        hasAlpha = true,
+    })
+
+    C:AddColorPicker(spdSection, {
+        label = LO["Border Color"],
+        getFunc = function()
+            local c = GetModuleField("speedometer", "borderColor")
+            if c then return c.r or 1, c.g or 0.7, c.b or 0 end
+            return 1, 0.7, 0
+        end,
+        setFunc = function(r, g, b)
+            EnsureModuleTable("speedometer").borderColor = { r = r, g = g, b = b }
+        end,
+        callback = function()
+            if addon.RefreshSpeedometerVisuals then addon.RefreshSpeedometerVisuals() end
+        end,
+        disabled = function() return not IsEnabled("speedometer") end,
+        hasAlpha = false,
+    })
+
+    AddSpeedColor("speedColor1",  "Bar Color at 0%",   { r = 1,   g = 0,   b = 0 })
+    AddSpeedColor("speedColor2",  "Bar Color below 100%", { r = 1, g = 0.5, b = 0 })
+    AddSpeedColor("speedColor3",  "Bar Color at 100%",  { r = 1,   g = 1,   b = 0 })
+    AddSpeedColor("speedColor4",  "Bar Color below 200%", { r = 0, g = 1,   b = 0 })
+    AddSpeedColor("speedColor5",  "Bar Color at 200%",  { r = 0,   g = 1,   b = 0.5 })
+    AddSpeedColor("speedColor6",  "Bar Color below 380%", { r = 0, g = 1,   b = 1 })
+    AddSpeedColor("speedColor7",  "Bar Color at 380%",  { r = 1,   g = 0,   b = 1 })
+    AddSpeedColor("speedColor8",  "Bar Color below 410%", { r = 0.5, g = 0, b = 1 })
+    AddSpeedColor("speedColor9",  "Bar Color at 410%",  { r = 0,   g = 0,   b = 1 })
+    AddSpeedColor("speedColor10", "Bar Color above 410%", { r = 0, g = 0,   b = 0.5 })
+
+    -- ====================================================================
     -- PERSONAL RESOURCE DISPLAY
     -- ====================================================================
     C:AddSpacer(scroll)

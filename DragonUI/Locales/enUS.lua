@@ -765,6 +765,14 @@ L["Pet Level-Up Banner"] = true
 
 L["Low HP Alert"] = true
 L["Plays a sound and flashes the screen edges when your HP drops below the threshold."] = true
+
+-- ============================================================================
+-- SPEEDOMETER MODULE
+-- ============================================================================
+
+L["Speedometer"] = true
+L["Shows a speed bar and percent readout at the top center."] = true
+
 L["Personal Resource Display"] = true
 L["PersonalResource"] = true
 L["Add Health and Resource below your Character."] = true
