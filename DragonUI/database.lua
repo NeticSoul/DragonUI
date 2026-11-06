@@ -967,6 +967,7 @@ local defaults = {
                 debuffs = {
                     icon_size = 0,
                     icon_scale = 1,
+                    own_scale = 1,
                     stack_font_size = 0,
                 },
                 target = {

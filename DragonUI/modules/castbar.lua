@@ -292,9 +292,9 @@ local function GetExtraAuraRowOffset(auraRows)
     -- _G.SMALL_AURA_SIZE never exists (FrameXML local); honor DragonUI custom sizes when active.
     local smallSize = 17
     if addon.GetCustomAuraSizes then
-        local buffSize, debuffSize = addon.GetCustomAuraSizes()
+        local buffSize, debuffSize, ownDebuffSize = addon.GetCustomAuraSizes()
         if buffSize then
-            smallSize = math.max(buffSize, debuffSize or buffSize)
+            smallSize = math.max(buffSize, debuffSize or buffSize, ownDebuffSize or 0)
         end
     end
 

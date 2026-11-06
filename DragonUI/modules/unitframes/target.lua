@@ -56,7 +56,7 @@ end
 
 local PLAYER_CAST_UNITS = { player = true, pet = true, vehicle = true }
 
--- Returns buffSize, debuffSize when custom sizing is active; nil when Blizzard defaults apply.
+-- Returns buffSize, debuffSize, ownDebuffSize when custom sizing is active; nil when Blizzard defaults apply.
 local function GetCustomAuraSizes()
     local cfg = addon.db and addon.db.profile and addon.db.profile.modules
         and addon.db.profile.modules.auracooldowns
@@ -80,11 +80,21 @@ local function GetCustomAuraSizes()
 
     local buffSize = Resolve("buffs")
     local debuffSize = Resolve("debuffs")
-    if buffSize == SMALL_AURA_SIZE and debuffSize == SMALL_AURA_SIZE then
+    local ownScale = tonumber((cfg.debuffs or {}).own_scale) or 1
+    if ownScale < 1 then
+        ownScale = 1
+    end
+    local largeDelta = LARGE_AURA_SIZE - SMALL_AURA_SIZE
+    local ownDebuffSize = math.floor((debuffSize + largeDelta) * ownScale + 0.5)
+    if ownDebuffSize < 8 then
+        ownDebuffSize = 8
+    end
+
+    if buffSize == SMALL_AURA_SIZE and debuffSize == SMALL_AURA_SIZE and ownScale == 1 then
         return nil
     end
 
-    return buffSize, debuffSize
+    return buffSize, debuffSize, ownDebuffSize
 end
 
 addon.GetCustomAuraSizes = GetCustomAuraSizes
@@ -303,7 +313,7 @@ local function ApplyDragonAuraLayout(frame)
     -- Blizzard's 2 short rows are a FrameXML local; the ToT at retail's spot leaves room for a third.
     local shortRows = not detached and not frame.buffsOnTop and frame.totFrame and frame.totFrame:IsShown()
         and 3 or nil
-    local buffSize, debuffSize = GetCustomAuraSizes()
+    local buffSize, debuffSize, ownDebuffSize = GetCustomAuraSizes()
     local blizzardSpacing = not detached and not buffSize
     -- With Blizzard's spacing only a third row beside the lowered ToT differs from Blizzard's own pass.
     if blizzardSpacing and not hiding and (not shortRows or (frame.auraRows or 0) <= 2) then
@@ -312,6 +322,7 @@ local function ApplyDragonAuraLayout(frame)
     buffSize = buffSize or SMALL_AURA_SIZE
     debuffSize = debuffSize or SMALL_AURA_SIZE
     local largeDelta = LARGE_AURA_SIZE - SMALL_AURA_SIZE
+    ownDebuffSize = ownDebuffSize or (debuffSize + largeDelta)
 
     local numBuffs, numDebuffs, largeBuffList, largeDebuffList = GetAuraCountsAndSizes(frame)
     if numBuffs == 0 and numDebuffs == 0 and not hiding then
@@ -327,7 +338,7 @@ local function ApplyDragonAuraLayout(frame)
     local totRowWidth = frame.TOT_AURA_ROW_WIDTH or 101
     local chromeGap = not blizzardSpacing and addon.GetAuraChromeGap
     local buffGap = chromeGap and chromeGap(buffSize + largeDelta) or 0
-    local debuffGap = chromeGap and chromeGap(debuffSize + largeDelta) or 0
+    local debuffGap = chromeGap and chromeGap(math.max(debuffSize + largeDelta, ownDebuffSize)) or 0
     local debuffOffsetX = (detached and 3 or 4) + debuffGap
 
     local totRows = shortRows or _G.NUM_TOT_AURA_ROWS or 2
@@ -337,7 +348,7 @@ local function ApplyDragonAuraLayout(frame)
         buffGap, totRows)
     maxRowWidth = (haveToT and frame.auraRows < totRows and totRowWidth) or DEFAULT_AURA_ROW_WIDTH
     UpdateAuraPositionsDetached(frame, frameName .. "Debuff", numDebuffs, numBuffs, largeDebuffList,
-        UpdateDebuffAnchorDetached, maxRowWidth, debuffOffsetX, mirrorAurasVertically, debuffSize, debuffSize + largeDelta,
+        UpdateDebuffAnchorDetached, maxRowWidth, debuffOffsetX, mirrorAurasVertically, debuffSize, ownDebuffSize,
         debuffGap, totRows)
 
     if frame.spellbar and _G.Target_Spellbar_AdjustPosition then
