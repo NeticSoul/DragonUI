@@ -353,6 +353,7 @@ local TAB_GROUPS = {
     { label = "Frames", tabs = { "unitframes", "nameplates", "auras" } },
     { label = "Bars", tabs = { "actionbars", "additionalbars", "xprepbars", "castbars" } },
     { label = "Interface", tabs = { "minimap", "questtracker", "chat", "micromenu", "bags", "panels" } },
+    { label = "System", tabs = { "graphics", "audio" } },
 }
 
 local function GroupedTabs()

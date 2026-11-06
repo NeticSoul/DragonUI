@@ -22,6 +22,7 @@ local hookInstalled = false
 local updateHookInstalled = false
 local onShowHookInstalled = false
 local ascensionHookInstalled = false
+local systemRedirectHookInstalled = false
 local CreateDragonUIButton
 
 local KNOWN_MENU_BUTTON_NAMES = {
@@ -256,6 +257,56 @@ local function OpenDragonUIConfig()
 end
 
 -- ============================================================================
+-- SYSTEM CATEGORY REDIRECT (#621)
+-- ============================================================================
+
+local function RedirectToSystemTab(frame, tab)
+    if not frame then return end
+    if InCombatLockdown and InCombatLockdown() then return end
+    if IsOptionsAddonUnavailable() then return end
+
+    HideUIPanel(frame)
+
+    local menuHost = GetMenuHostFrame()
+    if menuHost then
+        HideUIPanel(menuHost)
+    end
+
+    local panel = addon.OptionsPanel
+    if panel and panel.IsOpen and panel:IsOpen() then
+        panel:Open(tab)
+    elseif addon.ToggleOptionsUI then
+        addon:ToggleOptionsUI(tab)
+    end
+end
+
+local function InstallSystemRedirectHooks()
+    if systemRedirectHookInstalled then return true end
+
+    local installed = false
+
+    local videoFrame = _G and _G.VideoOptionsFrame
+    if videoFrame and videoFrame.HookScript then
+        videoFrame:HookScript("OnShow", function()
+            RedirectToSystemTab(videoFrame, "graphics")
+        end)
+        installed = true
+    end
+
+    local audioFrame = _G and _G.AudioOptionsFrame
+    if audioFrame and audioFrame.HookScript then
+        audioFrame:HookScript("OnShow", function()
+            RedirectToSystemTab(audioFrame, "audio")
+        end)
+        installed = true
+    end
+
+    -- Retry on the next attempt if the frames don't exist yet.
+    systemRedirectHookInstalled = installed
+    return installed
+end
+
+-- ============================================================================
 -- BUTTON CREATION
 -- ============================================================================
 
@@ -363,12 +414,14 @@ eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:SetScript("OnEvent", function(self, event, arg1)
     if event == "ADDON_LOADED" and arg1 == "DragonUI" then
         InstallGameMenuHook()
+        InstallSystemRedirectHooks()
         TryCreateButton()
 
     elseif event == "PLAYER_LOGIN" then
         -- Second attempt in case the first ran before GameMenuFrame existed.
         addon:After(1.0, function()
             InstallGameMenuHook()
+            InstallSystemRedirectHooks()
             if not buttonAdded then TryCreateButton() end
         end)
         self:UnregisterEvent("PLAYER_LOGIN")
