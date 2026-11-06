@@ -1044,6 +1044,25 @@ local function BuildTargetFocusAuras(scroll)
     end)
 
     RegisterDynamicWidget(C:AddSlider(iconSection, {
+        label = LO["Own Debuff Scale"],
+        desc = LO["Scale your own debuffs. 1.0 is the default."],
+        dbPath = "modules.auracooldowns.debuffs.own_scale",
+        min = 1, max = 2, step = 0.05,
+        width = 220,
+        disabled = function()
+            return not IsIconCustomizationEnabled()
+        end,
+        callback = function()
+            if isRefreshingAuraWidgets then return end
+            RefreshAuraUI()
+        end,
+    }), function()
+        return not IsIconCustomizationEnabled()
+    end, function()
+        return GetAuraCooldownConfig().debuffs.own_scale or 1
+    end)
+
+    RegisterDynamicWidget(C:AddSlider(iconSection, {
         label = LO["Debuff Stack Font Size"],
         dbPath = "modules.auracooldowns.debuffs.stack_font_size",
         min = 0, max = 30, step = 1,
