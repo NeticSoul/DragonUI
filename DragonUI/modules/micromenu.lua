@@ -2620,6 +2620,20 @@ local function ApplyMicromenuSystem()
         end, 0.2)
     end
 
+    -- MainMenuBar_ToPlayerArt (every login and zone change) runs VehicleMenuBar_MoveMicroButtons, which parents
+    -- the micro buttons back to the stock bar. DragonUI hides that bar, so put them back into its own.
+    if not MicromenuModule.hooks.VehicleMenuBar_MoveMicroButtons then
+        MicromenuModule.hooks.VehicleMenuBar_MoveMicroButtons = true
+        hooksecurefunc('VehicleMenuBar_MoveMicroButtons', function()
+            local menu = _G.DragonUI_MicroButtonBar
+            if not menu or not IsModuleEnabled() then return end
+            for i = 1, #MICRO_BUTTONS do
+                local button = MICRO_BUTTONS[i]
+                if button and not button.dragonUISuppressed then button:SetParent(menu) end
+            end
+        end)
+    end
+
     -- Setup all hooks
     if not MicromenuModule.hooks.MiniMapLFG_UpdateIsShown then
         MicromenuModule.hooks.MiniMapLFG_UpdateIsShown = true
