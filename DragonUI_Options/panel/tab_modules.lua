@@ -215,6 +215,12 @@ local function BuildModulesTab(scroll)
         moduleName = "questdialog",
     })
 
+    ModuleToggle(uiSection, {
+        label = LO["Game Menu"],
+        desc = LO["Retail-style Game Menu chrome"],
+        moduleName = "gamemenu_skin",
+    })
+
     -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================
@@ -250,6 +256,7 @@ local function BuildModulesTab(scroll)
             buffs = true,
             merchant = true,
             questdialog = true,
+            gamemenu_skin = true,
             keypress = true,
         }
         -- Like its Unit Frames section: classes without combo points only meet them in a few vehicles.
