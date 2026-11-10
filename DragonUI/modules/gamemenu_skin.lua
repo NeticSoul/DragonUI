@@ -14,19 +14,10 @@ local GameMenuSkinModule = {
     applied = false,
 }
 
-local function localized(key)
-    local strings = addon.L
-    local text = strings and strings[key]
-    if type(text) ~= "string" or text == "" then
-        return key
-    end
-    return text
-end
-
 if addon.RegisterModule then
     addon:RegisterModule("gamemenu_skin", GameMenuSkinModule,
-        localized("Game Menu"),
-        localized("Retail-style Game Menu chrome"),
+        addon.L["Game Menu"],
+        addon.L["Retail-style Game Menu chrome"],
         { lifecyclePrefix = "GameMenuSkin", loadOnce = true })
 end
 
@@ -52,6 +43,7 @@ local CORNER_DOTS = {
     { "ui-frame-diamondmetal-cornerbottomright", 128 - PLAQUE_DOT_INSET - PLAQUE_DOT_ART, 128 - PLAQUE_DOT_INSET - PLAQUE_DOT_ART, "BOTTOMRIGHT", -2, 2 },
 }
 local BUTTON_PREFIXES = { "^GameMenuButton", "^EscapeMenuButton", "^DragonUIGameMenuButton" }
+local STOCK_CHROME = { "GameMenuFrameHeader", "GameMenuFrameTitle", "GameMenuFrameCloseButton" }
 -- Every stock menu button shares one size; the injected buttons do not, so match this one.
 local REFERENCE_BUTTONS = {
     "GameMenuButtonOptions", "GameMenuButtonSoundOptions", "GameMenuButtonUIOptions",
@@ -71,7 +63,7 @@ local function stockTitle()
     if type(text) == "string" and text ~= "" then
         return text
     end
-    return _G.MAIN_MENU or localized("Game Menu")
+    return _G.MAIN_MENU or addon.L["Game Menu"]
 end
 
 -- 3.3.5a draws the menu with a tiled dialog backdrop, border, header art and a title
@@ -81,7 +73,7 @@ local function hideStockChrome(frame)
     if frame.SetBackdrop then
         frame:SetBackdrop(nil)
     end
-    for _, name in ipairs({ "GameMenuFrameHeader", "GameMenuFrameTitle", "GameMenuFrameCloseButton" }) do
+    for _, name in ipairs(STOCK_CHROME) do
         local region = _G[name]
         if region and region.Hide then
             region:Hide()
@@ -199,7 +191,6 @@ local function createTitlePlaque(frame, title)
 
     plaque:SetWidth(max(PLAQUE_MIN_WIDTH, label:GetStringWidth() + PLAQUE_PAD))
     plaque:SetFrameLevel(frame:GetFrameLevel() + 1)
-    return plaque
 end
 
 local function skinFrame(frame, title)
@@ -214,10 +205,17 @@ local function skinFrame(frame, title)
     if frame.TitleText then
         frame.TitleText:Hide()
     end
-    frame._duiTitlePlaque = createTitlePlaque(frame, title)
+    createTitlePlaque(frame, title)
 end
 
 local hooked = false
+
+-- Everything that can come back after the first pass: a client re-showing its regions,
+-- buttons added by later OnShow hooks, a custom client rebuilding its button list.
+local function redress(frame)
+    hideStockChrome(frame)
+    skinButtons(frame)
+end
 
 local function dress(frame)
     -- Read the client's title before hiding the fontstring that carries it.
@@ -229,8 +227,7 @@ local function dress(frame)
     -- any stock region a custom client re-shows.
     addon:After(0, function()
         if frame:IsShown() then
-            hideStockChrome(frame)
-            skinButtons(frame)
+            redress(frame)
         end
     end)
 end
@@ -251,9 +248,8 @@ local function ensureHooks(frame)
     if _G.GameMenuFrame_UpdateVisibleButtons then
         hooksecurefunc("GameMenuFrame_UpdateVisibleButtons", function()
             local menu = _G.GameMenuFrame
-            if menu and IsModuleEnabled() then
-                hideStockChrome(menu)
-                skinButtons(menu)
+            if menu and menu:IsShown() and IsModuleEnabled() then
+                redress(menu)
             end
         end)
     end
