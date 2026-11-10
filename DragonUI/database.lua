@@ -1023,6 +1023,9 @@ local defaults = {
             questdialog = {
                 enabled = true -- Retail-style quest and gossip window chrome
             },
+            gamemenu_skin = {
+                enabled = true -- Retail-style Esc menu chrome
+            },
             minimap = {
                 enabled = true, -- Apply DragonUI minimap enhancements including custom styling, positioning, tracking icons, and calendar
                 sexymap_mode = false, -- Must stay falsy: unset means "not chosen yet", so detecting SexyMap asks again

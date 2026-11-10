@@ -49,7 +49,7 @@ end
 local ADVANCED_SECTIONS = {
     { title = "Frames", modules = { "nameplates", "unitframe_layers", "hp_low_alert", "personalresource", "swingtimer", "combopoints", "totemframe", "auraborders", "auracooldowns" } },
     { title = "Bars", modules = { "mainbars", "vehicle", "stance", "petbar", "multicast", "extrabar1", "buttons", "cooldowns", "noop", "keybinding" } },
-    { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance", "addonmanager" } },
+    { title = "Interface", modules = { "minimap", "MinimapDecorations", "micromenu", "questtracker", "chatmods", "tooltip", "darkmode", "levelupenhance", "addonmanager", "gamemenu_skin" } },
     { title = "Panels", modules = { "characterpanel", "collections", "spellbook", "professions", "talents", "worldmap", "loot_skin", "mail", "taxiframe", "inspectframe", "dressupframe" } },
     { title = "Bags", modules = { "bagster", "bags_skin", "bagsort", "altmoney", "itemlevel", "itemquality" } },
 }
@@ -215,6 +215,12 @@ local function BuildModulesTab(scroll)
         moduleName = "questdialog",
     })
 
+    ModuleToggle(uiSection, {
+        label = LO["Game Menu"],
+        desc = LO["Retail-style Game Menu chrome"],
+        moduleName = "gamemenu_skin",
+    })
+
     -- ====================================================================
     -- UNIT FRAME LAYERS
     -- ====================================================================
@@ -250,6 +256,7 @@ local function BuildModulesTab(scroll)
             buffs = true,
             merchant = true,
             questdialog = true,
+            gamemenu_skin = true,
             keypress = true,
         }
         -- Like its Unit Frames section: classes without combo points only meet them in a few vehicles.

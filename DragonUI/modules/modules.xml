@@ -53,6 +53,7 @@
     <!-- Game Menu module -->
     <Script file="gamemenu_dragons.lua"/>
     <Script file="gamemenu.lua"/>
+    <Script file="gamemenu_skin.lua"/>
     
     <!-- Editor Mode module -->
     <Script file="editor_mode.lua"/>
