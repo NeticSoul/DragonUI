@@ -22,7 +22,7 @@ local CLASS_ARMOR = {
     DRUID = { cloth = true, leather = true },
     HUNTER = { cloth = true, leather = true, mail = 40 },
     SHAMAN = { cloth = true, leather = true, mail = 40 },
-    WARRIOR = { cloth = true, leather = true, mail = 40, plate = 40 },
+    WARRIOR = { cloth = true, leather = true, mail = true, plate = 40 },
     PALADIN = { cloth = true, leather = true, mail = true, plate = 40 },
     DEATHKNIGHT = { cloth = true, leather = true, mail = true, plate = true },
 }
@@ -35,7 +35,7 @@ local CLASS_WEAPONS = {
     PRIEST = { dagger = true, mace1h = true, staff = true, wand = true },
     WARLOCK = { dagger = true, staff = true, sword1h = true, wand = true },
     ROGUE = {
-        bow = true, crossbow = true, dagger = true, fist = true, gun = true,
+        axe1h = true, bow = true, crossbow = true, dagger = true, fist = true, gun = true,
         mace1h = true, sword1h = true, thrown = true,
     },
     DRUID = {
